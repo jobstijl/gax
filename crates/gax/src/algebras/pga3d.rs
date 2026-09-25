@@ -477,6 +477,53 @@ where
     }
 }
 
+impl<T: gx::Real> Scalar<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (4 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Scalar<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t2 = x[0] * t1;
+        let t3 = t2.recip();
+        let t4 = t1 * t3;
+        Scalar::from_coeffs([t4])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        gx::Unit::new_unchecked(Scalar::from_coeffs([t0]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Scalar::from_coeffs(c).normalized()
+    }
+
+}
+
 #[doc = "A plane `a x + b y + c z + d = 0`, stored as `a e1 + b e2 + c e3 + d e0`: the vectors (grade 1). As a versor it is a reflection."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3, e0]`.
@@ -962,6 +1009,76 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Plane<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        t4
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (17 mul, 7 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Plane<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 * t0;
+        let t4 = t0 * t1;
+        let t5 = t0 * t2;
+        let t6 = t1 * t1;
+        let t7 = t1 * t2;
+        let t8 = t2 * t2;
+        let t9 = t3 + t6;
+        let t10 = t8 + t9;
+        let t11 = t4 + t5;
+        let t12 = t7 + t11;
+        let t13 = t12 * T::from_i64(2);
+        let t14 = t10 + t13;
+        let t15 = t14.recip();
+        let t16 = t0 * t15;
+        let t17 = t1 * t15;
+        let t18 = t2 * t15;
+        let t19 = t16 + t17;
+        let t20 = t18 + t19;
+        let t21 = x[0] * t20;
+        let t22 = x[1] * t20;
+        let t23 = x[2] * t20;
+        let t24 = x[3] * t20;
+        Plane::from_coeffs([t21, t22, t23, t24])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = p0 + p1;
+        let p4 = p2 + p3;
+        let s0 = (p4).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Plane::from_coeffs([t0, t1, t2, t3]))
+    }
+
 }
 
 #[doc = "A line, or a twist or forque: the bivectors. `e23, e31, e12` hold the direction (the Euclidean part), `e01, e02, e03` the moment. As a versor it is a half turn."]
@@ -1463,6 +1580,162 @@ where
     }
 }
 
+impl<T: gx::Real> Line<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        t4
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (41 mul, 18 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Line<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 * t0;
+        let t4 = t0 * t1;
+        let t5 = t0 * t2;
+        let t6 = t1 * t1;
+        let t7 = t1 * t2;
+        let t8 = t2 * t2;
+        let t9 = t3 + t6;
+        let t10 = t8 + t9;
+        let t11 = t4 + t5;
+        let t12 = t7 + t11;
+        let t13 = t12 * T::from_i64(2);
+        let t14 = t10 + t13;
+        let t15 = t14.recip();
+        let t16 = t0 * t15;
+        let t17 = t1 * t15;
+        let t18 = t2 * t15;
+        let t19 = t16 + t17;
+        let t20 = t18 + t19;
+        let t21 = t16 - t17;
+        let t22 = x[2] * t15;
+        let t23 = x[0] * t15;
+        let t24 = x[2] * t22;
+        let t25 = x[0] * x[5];
+        let t26 = x[1] * x[4];
+        let t27 = x[1] * x[5];
+        let t28 = x[0] * t20;
+        let t29 = x[1] * t20;
+        let t30 = x[2] * t20;
+        let t31 = t23 * t26;
+        let t32 = t22 * t25;
+        let t33 = x[3] * t24;
+        let t34 = x[3] * t21;
+        let t35 = x[1] * x[3];
+        let t36 = t23 * t35;
+        let t37 = t22 * t27;
+        let t38 = x[4] * t24;
+        let t39 = x[4] * t21;
+        let t40 = t23 * t25;
+        let t41 = x[0] * x[3];
+        let t42 = t22 * t41;
+        let t43 = x[1] * t15;
+        let t44 = t27 * t43;
+        let t45 = t22 * t26;
+        let t46 = x[5] * t24;
+        let t47 = -t28;
+        let t48 = -t29;
+        let t49 = -t30;
+        let t50 = t34 - t33;
+        let t51 = t31 + t32;
+        let t52 = t51 * T::from_i64(2);
+        let t53 = t50 + t52;
+        let t54 = t38 + t39;
+        let t55 = t36 + t37;
+        let t56 = t55 * T::from_i64(2);
+        let t57 = t56 - t54;
+        let t58 = t46 - t40;
+        let t59 = t58 - t44;
+        let t60 = t42 + t45;
+        let t61 = t60 * T::from_i64(2);
+        let t62 = t59 + t61;
+        Line::from_coeffs([t47, t48, t49, t53, t57, t62])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[0] * x[3];
+        let p4 = x[1] * x[4];
+        let p5 = x[2] * x[5];
+        let p6 = p0 + p1;
+        let p7 = p2 + p6;
+        let p8 = p3 + p4;
+        let p9 = p5 + p8;
+        let p10 = p9 * T::from_i64(2);
+        let p11 = -p10;
+        let [s0, s1] = gx::study::rsqrt(0, p7, p11);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[0] * s1;
+        let t4 = x[3] * s0;
+        let t5 = x[1] * s1;
+        let t6 = x[4] * s0;
+        let t7 = x[2] * s1;
+        let t8 = x[5] * s0;
+        let t9 = t4 - t3;
+        let t10 = t6 - t5;
+        let t11 = t8 - t7;
+        gx::Unit::new_unchecked(Line::from_coeffs([t0, t1, t2, t9, t10, t11]))
+    }
+
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Motor<(), T>> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[0] * x[3];
+        let p4 = x[1] * x[4];
+        let p5 = x[2] * x[5];
+        let p6 = p0 + p1;
+        let p7 = p2 + p6;
+        let p8 = -p7;
+        let p9 = p3 + p4;
+        let p10 = p5 + p9;
+        let p11 = p10 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs(0, p8, p11);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[0] * s1;
+        let t4 = x[3] * s0;
+        let t5 = x[1] * s1;
+        let t6 = x[4] * s0;
+        let t7 = x[2] * s1;
+        let t8 = x[5] * s0;
+        let t9 = t4 - t3;
+        let t10 = t6 - t5;
+        let t11 = t8 - t7;
+        gx::Unit::new_unchecked(Motor::from_coeffs([c0, t0, t1, t2, t9, t10, t11, c1]))
+    }
+
+}
+
 #[doc = "A point `(x, y, z)` with weight `w`, stored as `x e032 + y e013 + z e021 + w e123`: the trivectors. With `w = 0` it is a direction. As a versor it is a point reflection."]
 ///
 /// Blades, in coefficient order: `[e032, e013, e021, e123]`.
@@ -1948,6 +2221,56 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Point<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[3] * x[3];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (8 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Point<(), T> {
+        let x = self.c;
+        let t0 = x[3] * x[3];
+        let t1 = x[3] * t0;
+        let t2 = x[3] * t1;
+        let t3 = t2.recip();
+        let t4 = t0 * t3;
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = x[3] * t4;
+        let t9 = -t5;
+        let t10 = -t6;
+        let t11 = -t7;
+        let t12 = -t8;
+        Point::from_coeffs([t9, t10, t11, t12])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[3] * x[3];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Point::from_coeffs([t0, t1, t2, t3]))
+    }
+
 }
 
 #[doc = "The pseudoscalar `e0123`."]
@@ -2906,6 +3229,122 @@ where
     }
 }
 
+impl<T: gx::Real> Rotor<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = t0 + t1;
+        let t5 = t2 + t4;
+        let t6 = t3 + t5;
+        t6
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (23 mul, 12 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Rotor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = t0 * t0;
+        let t5 = t0 * t1;
+        let t6 = t0 * t2;
+        let t7 = t0 * t3;
+        let t8 = t1 * t1;
+        let t9 = t1 * t2;
+        let t10 = t1 * t3;
+        let t11 = t2 * t2;
+        let t12 = t2 * t3;
+        let t13 = t3 * t3;
+        let t14 = t4 + t8;
+        let t15 = t11 + t14;
+        let t16 = t13 + t15;
+        let t17 = t5 + t6;
+        let t18 = t7 + t17;
+        let t19 = t9 + t18;
+        let t20 = t10 + t19;
+        let t21 = t12 + t20;
+        let t22 = t21 * T::from_i64(2);
+        let t23 = t16 + t22;
+        let t24 = t23.recip();
+        let t25 = t0 * t24;
+        let t26 = t1 * t24;
+        let t27 = t2 * t24;
+        let t28 = t3 * t24;
+        let t29 = t25 + t26;
+        let t30 = t27 + t29;
+        let t31 = t28 + t30;
+        let t32 = x[0] * t31;
+        let t33 = x[1] * t31;
+        let t34 = x[2] * t31;
+        let t35 = x[3] * t31;
+        let t36 = -t33;
+        let t37 = -t34;
+        let t38 = -t35;
+        Rotor::from_coeffs([t32, t36, t37, t38])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[3] * x[3];
+        let p4 = p0 + p1;
+        let p5 = p2 + p4;
+        let p6 = p3 + p5;
+        let s0 = (p6).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Rotor::from_coeffs([t0, t1, t2, t3]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Rotor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Rotor<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Line<(), T> {
+        let x = self.into_inner().c;
+        let p0 = x[1] * x[1];
+        let p1 = x[2] * x[2];
+        let p2 = x[3] * x[3];
+        let p3 = p0 + p1;
+        let p4 = p2 + p3;
+        let p5 = -p4;
+        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (p5, T::from_i64(0)));
+        let t0 = x[1] * h0;
+        let t1 = x[2] * h0;
+        let t2 = x[3] * h0;
+        Line::from_coeffs([t0, t1, t2, T::from_i64(0), T::from_i64(0), T::from_i64(0)])
+    }
+}
+
 #[doc = "A translation, `1 + (dx e01 + dy e02 + dz e03) / 2`."]
 ///
 /// Blades, in coefficient order: `[1, e01, e02, e03]`.
@@ -3390,6 +3829,77 @@ where
     #[inline(always)]
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real> Translator<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (8 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Translator<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t2 = x[0] * t1;
+        let t3 = t2.recip();
+        let t4 = t0 * t3;
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = x[3] * t4;
+        let t9 = -t6;
+        let t10 = -t7;
+        let t11 = -t8;
+        Translator::from_coeffs([t5, t9, t10, t11])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Translator::from_coeffs([t0, t1, t2, t3]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Translator::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Translator<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Line<(), T> {
+        let x = self.into_inner().c;
+        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (T::from_i64(0), T::from_i64(0)));
+        let t0 = x[1] * h0;
+        let t1 = x[2] * h0;
+        let t2 = x[3] * h0;
+        Line::from_coeffs([T::from_i64(0), T::from_i64(0), T::from_i64(0), t0, t1, t2])
     }
 }
 
@@ -3904,6 +4414,206 @@ where
     }
 }
 
+impl<T: gx::Real> Motor<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = t0 + t1;
+        let t5 = t2 + t4;
+        let t6 = t3 + t5;
+        t6
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (55 mul, 29 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Motor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = t0 * t0;
+        let t5 = t0 * t1;
+        let t6 = t0 * t2;
+        let t7 = t0 * t3;
+        let t8 = t1 * t1;
+        let t9 = t1 * t2;
+        let t10 = t1 * t3;
+        let t11 = t2 * t2;
+        let t12 = t2 * t3;
+        let t13 = t3 * t3;
+        let t14 = t4 + t8;
+        let t15 = t11 + t14;
+        let t16 = t13 + t15;
+        let t17 = t5 + t6;
+        let t18 = t7 + t17;
+        let t19 = t9 + t18;
+        let t20 = t10 + t19;
+        let t21 = t12 + t20;
+        let t22 = t21 * T::from_i64(2);
+        let t23 = t16 + t22;
+        let t24 = t23.recip();
+        let t25 = t0 * t24;
+        let t26 = t1 * t24;
+        let t27 = t2 * t24;
+        let t28 = t3 * t24;
+        let t29 = t25 + t26;
+        let t30 = t27 + t29;
+        let t31 = t28 + t30;
+        let t32 = t25 - t26;
+        let t33 = x[0] * x[7];
+        let t34 = t24 * t33;
+        let t35 = x[1] * x[4];
+        let t36 = t24 * t35;
+        let t37 = t34 - t36;
+        let t38 = t27 - t28;
+        let t39 = t27 + t28;
+        let t40 = x[2] * x[5];
+        let t41 = t24 * t40;
+        let t42 = x[3] * x[6];
+        let t43 = t24 * t42;
+        let t44 = t41 + t43;
+        let t45 = x[0] * x[1];
+        let t46 = x[2] * x[3];
+        let t47 = t24 * t45;
+        let t48 = t24 * t46;
+        let t49 = x[0] * t31;
+        let t50 = x[1] * t31;
+        let t51 = x[2] * t31;
+        let t52 = x[3] * t31;
+        let t53 = x[7] * t47;
+        let t54 = x[1] * t44;
+        let t55 = x[4] * t32;
+        let t56 = x[4] * t39;
+        let t57 = x[6] * t48;
+        let t58 = x[2] * t37;
+        let t59 = x[5] * t29;
+        let t60 = x[5] * t38;
+        let t61 = x[5] * t48;
+        let t62 = x[3] * t37;
+        let t63 = x[6] * t29;
+        let t64 = x[6] * t38;
+        let t65 = x[4] * t47;
+        let t66 = x[0] * t44;
+        let t67 = x[7] * t32;
+        let t68 = x[7] * t39;
+        let t69 = -t50;
+        let t70 = -t51;
+        let t71 = -t52;
+        let t72 = t55 + t56;
+        let t73 = t54 - t53;
+        let t74 = t73 * T::from_i64(2);
+        let t75 = t74 - t72;
+        let t76 = t60 - t59;
+        let t77 = t57 - t58;
+        let t78 = t77 * T::from_i64(2);
+        let t79 = t76 + t78;
+        let t80 = t63 + t64;
+        let t81 = t61 - t62;
+        let t82 = t81 * T::from_i64(2);
+        let t83 = t82 - t80;
+        let t84 = t68 - t67;
+        let t85 = t65 + t66;
+        let t86 = t85 * T::from_i64(2);
+        let t87 = t84 + t86;
+        Motor::from_coeffs([t49, t69, t70, t71, t75, t79, t83, t87])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[3] * x[3];
+        let p4 = x[0] * x[7];
+        let p5 = x[1] * x[4];
+        let p6 = x[2] * x[5];
+        let p7 = x[3] * x[6];
+        let p8 = p0 + p1;
+        let p9 = p2 + p8;
+        let p10 = p3 + p9;
+        let p11 = p4 - p5;
+        let p12 = p11 - p6;
+        let p13 = p12 - p7;
+        let p14 = p13 * T::from_i64(2);
+        let [s0, s1] = gx::study::rsqrt(0, p10, p14);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        let t4 = x[1] * s1;
+        let t5 = x[4] * s0;
+        let t6 = x[2] * s1;
+        let t7 = x[5] * s0;
+        let t8 = x[3] * s1;
+        let t9 = x[6] * s0;
+        let t10 = x[0] * s1;
+        let t11 = x[7] * s0;
+        let t12 = t5 - t4;
+        let t13 = t7 - t6;
+        let t14 = t9 - t8;
+        let t15 = t10 + t11;
+        gx::Unit::new_unchecked(Motor::from_coeffs([t0, t1, t2, t3, t12, t13, t14, t15]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Motor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Motor<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Line<(), T> {
+        let x = self.into_inner().c;
+        let p0 = x[1] * x[1];
+        let p1 = x[2] * x[2];
+        let p2 = x[3] * x[3];
+        let p3 = x[1] * x[4];
+        let p4 = x[2] * x[5];
+        let p5 = x[3] * x[6];
+        let p6 = p0 + p1;
+        let p7 = p2 + p6;
+        let p8 = -p7;
+        let p9 = p3 + p4;
+        let p10 = p5 + p9;
+        let p11 = p10 * T::from_i64(2);
+        let [h0, h1] = gx::study::log_coeffs(0, (x[0], x[7]), (p8, p11));
+        let t0 = x[1] * h0;
+        let t1 = x[2] * h0;
+        let t2 = x[3] * h0;
+        let t3 = x[1] * h1;
+        let t4 = x[4] * h0;
+        let t5 = x[2] * h1;
+        let t6 = x[5] * h0;
+        let t7 = x[3] * h1;
+        let t8 = x[6] * h0;
+        let t9 = t4 - t3;
+        let t10 = t6 - t5;
+        let t11 = t8 - t7;
+        Line::from_coeffs([t0, t1, t2, t9, t10, t11])
+    }
+}
+
 #[doc = "An improper rigid motion: the odd subalgebra."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3, e0, e032, e013, e021, e123]`.
@@ -4413,6 +5123,162 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Flector<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[7] * x[7];
+        let t4 = t0 + t1;
+        let t5 = t2 + t4;
+        let t6 = t3 + t5;
+        t6
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (55 mul, 29 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Flector<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[7] * x[7];
+        let t4 = t0 * t0;
+        let t5 = t0 * t1;
+        let t6 = t0 * t2;
+        let t7 = t0 * t3;
+        let t8 = t1 * t1;
+        let t9 = t1 * t2;
+        let t10 = t1 * t3;
+        let t11 = t2 * t2;
+        let t12 = t2 * t3;
+        let t13 = t3 * t3;
+        let t14 = t4 + t8;
+        let t15 = t11 + t14;
+        let t16 = t13 + t15;
+        let t17 = t5 + t6;
+        let t18 = t7 + t17;
+        let t19 = t9 + t18;
+        let t20 = t10 + t19;
+        let t21 = t12 + t20;
+        let t22 = t21 * T::from_i64(2);
+        let t23 = t16 + t22;
+        let t24 = t23.recip();
+        let t25 = t0 * t24;
+        let t26 = t1 * t24;
+        let t27 = t2 * t24;
+        let t28 = t3 * t24;
+        let t29 = t25 + t26;
+        let t30 = t27 + t29;
+        let t31 = t28 + t30;
+        let t32 = t25 - t26;
+        let t33 = x[0] * x[4];
+        let t34 = t24 * t33;
+        let t35 = x[1] * x[5];
+        let t36 = t24 * t35;
+        let t37 = t34 + t36;
+        let t38 = t27 - t28;
+        let t39 = t27 + t28;
+        let t40 = x[2] * x[6];
+        let t41 = t24 * t40;
+        let t42 = x[3] * x[7];
+        let t43 = t24 * t42;
+        let t44 = t41 + t43;
+        let t45 = x[0] * x[1];
+        let t46 = x[2] * x[7];
+        let t47 = t24 * t45;
+        let t48 = t24 * t46;
+        let t49 = x[0] * t31;
+        let t50 = x[1] * t31;
+        let t51 = x[2] * t31;
+        let t52 = x[6] * t48;
+        let t53 = x[3] * t29;
+        let t54 = x[3] * t38;
+        let t55 = x[7] * t37;
+        let t56 = x[5] * t47;
+        let t57 = x[0] * t44;
+        let t58 = x[4] * t32;
+        let t59 = x[4] * t39;
+        let t60 = x[4] * t47;
+        let t61 = x[1] * t44;
+        let t62 = x[5] * t32;
+        let t63 = x[5] * t39;
+        let t64 = x[3] * t48;
+        let t65 = x[2] * t37;
+        let t66 = x[6] * t29;
+        let t67 = x[6] * t38;
+        let t68 = x[7] * t31;
+        let t69 = t53 + t54;
+        let t70 = t52 + t55;
+        let t71 = t70 * T::from_i64(2);
+        let t72 = t69 - t71;
+        let t73 = t58 - t59;
+        let t74 = t56 + t57;
+        let t75 = t74 * T::from_i64(2);
+        let t76 = t73 + t75;
+        let t77 = t62 + t63;
+        let t78 = t60 + t61;
+        let t79 = t78 * T::from_i64(2);
+        let t80 = t79 - t77;
+        let t81 = t67 - t66;
+        let t82 = t64 + t65;
+        let t83 = t82 * T::from_i64(2);
+        let t84 = t81 + t83;
+        let t85 = -t68;
+        Flector::from_coeffs([t49, t50, t51, t72, t76, t80, t84, t85])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[7] * x[7];
+        let p4 = x[0] * x[4];
+        let p5 = x[1] * x[5];
+        let p6 = x[2] * x[6];
+        let p7 = x[3] * x[7];
+        let p8 = p0 + p1;
+        let p9 = p2 + p8;
+        let p10 = p3 + p9;
+        let p11 = p4 + p5;
+        let p12 = p6 + p11;
+        let p13 = p7 + p12;
+        let p14 = p13 * T::from_i64(2);
+        let p15 = -p14;
+        let [s0, s1] = gx::study::rsqrt(0, p10, p15);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        let t4 = x[7] * s1;
+        let t5 = x[0] * s1;
+        let t6 = x[4] * s0;
+        let t7 = x[1] * s1;
+        let t8 = x[5] * s0;
+        let t9 = x[2] * s1;
+        let t10 = x[6] * s0;
+        let t11 = x[7] * s0;
+        let t12 = t3 - t4;
+        let t13 = t6 - t5;
+        let t14 = t8 - t7;
+        let t15 = t10 - t9;
+        gx::Unit::new_unchecked(Flector::from_coeffs([t0, t1, t2, t12, t13, t14, t15, t11]))
+    }
+
 }
 
 #[doc = "A general multivector, in the bivector.net order."]
@@ -4974,6 +5840,37 @@ where
     }
 }
 
+impl<T: gx::Real> Multivector<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[2] * x[2];
+        let t2 = x[3] * x[3];
+        let t3 = x[4] * x[4];
+        let t4 = x[8] * x[8];
+        let t5 = x[9] * x[9];
+        let t6 = x[10] * x[10];
+        let t7 = x[14] * x[14];
+        let t8 = t0 + t1;
+        let t9 = t2 + t8;
+        let t10 = t3 + t9;
+        let t11 = t4 + t10;
+        let t12 = t5 + t11;
+        let t13 = t6 + t12;
+        let t14 = t7 + t13;
+        t14
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline]
@@ -5453,13 +6350,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Line<S1
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Line<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[1] * b[0])).0,
@@ -5816,13 +6715,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Plane<S2, T>> for Pseudos
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn gp(self, rhs: Line<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[0] * b[1])).0,
@@ -10804,13 +11705,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Point<S2, T>> for Line<S1
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Line<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn lc(self, rhs: Pseudoscalar<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn lc(self, rhs: Pseudoscalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[1] * b[0])).0,
@@ -12585,13 +13488,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Plane<S2, T>> for Pseudos
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Line<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn rc(self, rhs: Line<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn rc(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[0] * b[1])).0,
@@ -14079,13 +14984,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Point<S2, T>> for Line<S
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Line<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn dot(self, rhs: Pseudoscalar<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn dot(self, rhs: Pseudoscalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[1] * b[0])).0,
@@ -14427,13 +15334,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Plane<S2, T>> for Pseudo
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Line<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn dot(self, rhs: Line<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn dot(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[0] * b[1])).0,
@@ -16562,13 +17471,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Translator<S2, T>> for Line<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Translator<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Translator<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[1] * b[3]) + a[2] * b[2]).0,
                 (a[0] * b[3] - a[2] * b[1]).0,
@@ -16679,13 +17590,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Line<S2, T>> for 
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Point<S2, T>> for Point<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Point<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Point<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (a[0] * b[3] - a[3] * b[0]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
@@ -16947,30 +17860,34 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Point<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Rotor<S1, T> {
-    type Output = Rotor<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Rotor<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Rotor {
+        Line {
             c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[3]) + a[3] * b[2]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
                 (-(a[1] * b[2]) + a[2] * b[1]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Translator<S2, T>> for Rotor<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Translator<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Translator<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[3]) + a[3] * b[2]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
@@ -17067,13 +17984,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Plane<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Line<S2, T>> for Translator<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Line<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[2]) + a[3] * b[1]).0,
                 (a[1] * b[2] - a[3] * b[0]).0,
@@ -17101,13 +18020,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Point<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Translator<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Rotor<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Rotor<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[3]) + a[3] * b[2]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
@@ -17118,13 +18039,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for Translator<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Motor<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Motor<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[3]) + a[3] * b[2]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
@@ -17265,13 +18188,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Translator<S2, T>> for Motor<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn commutator(self, rhs: Translator<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Translator<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[2] * b[3]) + a[3] * b[2]).0,
                 (a[1] * b[3] - a[3] * b[1]).0,
@@ -18241,13 +19166,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Point<S2, T>>
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Line<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[1] * b[0])).0,
@@ -18561,13 +19488,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Line<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Translator<gx::Cat<S1, S2>, T>;
+    type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline]
-    fn anticommutator(self, rhs: Line<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Translator {
+        Line {
             c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(a[0] * b[0])).0,
                 (-(a[0] * b[1])).0,

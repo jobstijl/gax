@@ -94,3 +94,10 @@ unary_trait!(
     /// Left complement, the inverse of [`Dual`].
     Undual, undual
 );
+
+/// The logarithm of a unit versor, a bivector (implemented by the generated algebras for
+/// `Unit<K>`; call it as `unit.log()`).
+pub trait Log<Out> {
+    /// The logarithm: `exp(self.log()) == self`.
+    fn log(self) -> Out;
+}

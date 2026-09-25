@@ -56,3 +56,37 @@ where
         crate::ops::TransformInv::transform_inv(self, rhs)
     }
 }
+
+impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
+    /// The inverse of a unit versor: its reverse (no arithmetic).
+    #[inline(always)]
+    pub fn inverse(self) -> Unit<M> {
+        Unit(self.0.reverse())
+    }
+
+    /// The reverse, which for a unit versor is also its inverse.
+    #[inline(always)]
+    pub fn reverse(self) -> Unit<M> {
+        Unit(self.0.reverse())
+    }
+}
+
+impl<M> Unit<M> {
+    /// The logarithm, a bivector `B` with `B.exp() == self`.
+    #[inline(always)]
+    pub fn log<B>(self) -> B
+    where
+        Self: crate::ops::Log<B>,
+    {
+        crate::ops::Log::log(self)
+    }
+}
+
+/// The product of unit versors is a unit versor.
+impl<M: crate::ops::Gp<N>, N> core::ops::Mul<Unit<N>> for Unit<M> {
+    type Output = Unit<M::Output>;
+    #[inline(always)]
+    fn mul(self, rhs: Unit<N>) -> Self::Output {
+        Unit(self.0.gp(rhs.0))
+    }
+}

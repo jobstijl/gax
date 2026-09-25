@@ -7,6 +7,7 @@
 pub mod algebra;
 pub mod cse;
 pub mod emit;
+pub mod emit_values;
 pub mod groebner;
 pub mod poly;
 pub mod slp;

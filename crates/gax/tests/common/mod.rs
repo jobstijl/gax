@@ -194,3 +194,105 @@ impl Oracle {
         None
     }
 }
+
+fn max_abs(v: &[f64]) -> f64 {
+    v.iter().fold(0.0f64, |m, x| m.max(x.abs()))
+}
+
+/// `x * inverse(x) == 1`, relative to `|x| |inverse(x)|`.
+pub fn inverse<X, R>(o: &Oracle, rng: &mut Rng, f: impl Fn(X) -> R)
+where
+    X: Extensor<Slots = (), Coef = f64>,
+    R: Extensor<Slots = (), Coef = f64>,
+{
+    for _ in 0..8 {
+        let x: X = random(rng);
+        let (dx, di) = (o.dense(&x), o.dense(&f(x)));
+        let p = o.binop(BinOp::Gp, &dx, &di);
+        let scale = max_abs(&dx) * max_abs(&di) * 1e-12;
+        for (i, c) in p.iter().enumerate() {
+            let want = if i == 0 { 1.0 } else { 0.0 };
+            assert!(
+                (c - want).abs() <= scale.max(1e-12),
+                "x x⁻¹ = 1 for {}: {p:?}",
+                std::any::type_name::<X>()
+            );
+        }
+    }
+}
+
+/// `normalized(x) ~normalized(x) == ±1`.
+pub fn normalized<X>(o: &Oracle, rng: &mut Rng, f: impl Fn(X) -> X)
+where
+    X: Extensor<Slots = (), Coef = f64>,
+{
+    for _ in 0..8 {
+        let x: X = random(rng);
+        let d = o.dense(&f(x));
+        let n = o.binop(BinOp::Gp, &d, &o.unop(UnOp::Reverse, &d));
+        assert!(
+            (n[0].abs() - 1.0).abs() < 1e-10,
+            "normalized scalar for {}: {n:?}",
+            std::any::type_name::<X>()
+        );
+        assert!(
+            n[1..].iter().all(|c| c.abs() < 1e-10),
+            "normalized: other parts vanish for {}: {n:?}",
+            std::any::type_name::<X>()
+        );
+    }
+}
+
+/// `exp(B)` is a unit versor, `log(exp(B)) == B`, and `exp(log(R)) == R`.
+pub fn exp_log<B, R>(
+    o: &Oracle,
+    rng: &mut Rng,
+    exp: impl Fn(B) -> gax::Unit<R>,
+    log: impl Fn(gax::Unit<R>) -> B,
+) where
+    B: Extensor<Slots = (), Coef = f64> + gax::Gp<f64, Output = B>,
+    R: Extensor<Slots = (), Coef = f64>,
+{
+    for _ in 0..8 {
+        let b: B = random::<B>(rng).gp(0.5);
+        let r = exp(b);
+        let d = o.dense(&r.into_inner());
+        let n = o.binop(BinOp::Gp, &d, &o.unop(UnOp::Reverse, &d));
+        assert!(
+            (n[0] - 1.0).abs() < 1e-12 && n[1..].iter().all(|c| c.abs() < 1e-12),
+            "exp is unit: {n:?}"
+        );
+        assert_close(&o.dense(&log(r)), &o.dense(&b), "log(exp(B)) == B");
+        assert_close(&o.dense(&exp(log(r)).into_inner()), &d, "exp(log(R)) == R");
+    }
+}
+
+/// `sqrt(R)² == R` for unit versors `R = exp(B)`.
+pub fn sqrt<R>(
+    o: &Oracle,
+    rng: &mut Rng,
+    sqrt: impl Fn(gax::Unit<R>) -> R,
+    square: impl Fn(gax::Unit<R>) -> R,
+) where
+    R: Extensor<Slots = (), Coef = f64>,
+{
+    for _ in 0..8 {
+        let Some(r) = o.random_unit::<R>(rng) else {
+            continue;
+        };
+        // R and -R are the same transformation; the principal root needs the representative
+        // with a non-negative scalar part (it is undefined at a scalar part of exactly -1).
+        let d = o.dense(&r);
+        let r: R = if d[0] < 0.0 {
+            o.from_dense(&d.iter().map(|c| -c).collect::<Vec<_>>())
+        } else {
+            r
+        };
+        let u = gax::Unit::new_unchecked(r);
+        let s = gax::Unit::new_unchecked(sqrt(u));
+        let back = square(s);
+        let (db, dr) = (o.dense(&back), o.dense(&r));
+        // The principal root of R and of -R differ; both square to R.
+        assert_close(&db, &dr, "sqrt(R)² == R");
+    }
+}

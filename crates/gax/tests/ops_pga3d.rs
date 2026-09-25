@@ -925,6 +925,32 @@ fn undual() {
 }
 
 #[test]
+fn value_methods() {
+    let o = Oracle::from_spec(SPEC);
+    let mut rng = Rng::new(77);
+    common::inverse::<Scalar<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Scalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Plane<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Plane<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Line<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Line<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::exp_log::<Line<(), f64>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::inverse::<Point<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Point<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Rotor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Rotor<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::sqrt::<Rotor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
+    common::inverse::<Translator<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Translator<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::sqrt::<Translator<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
+    common::inverse::<Motor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Motor<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::sqrt::<Motor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
+    common::inverse::<Flector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Flector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+}
+
+#[test]
 fn sandwiches() {
     let o = Oracle::from_spec(SPEC);
     let mut rng = Rng::new(99);

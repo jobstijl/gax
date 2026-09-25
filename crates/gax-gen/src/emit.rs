@@ -31,6 +31,8 @@ pub struct Stats {
     pub sandwich_costs: Vec<(String, String, bool, crate::slp::Cost)>,
     /// Every generated binary impl: `(op, left, right)`.
     pub binary: Vec<(BinOp, String, String)>,
+    /// The value methods emitted per kind.
+    pub values: Vec<crate::emit_values::ValueMethods>,
 }
 
 /// Emit the module source for an algebra.
@@ -44,6 +46,9 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     e.header();
     for k in &spec.kinds {
         e.kind(k);
+        let (methods, meta) = crate::emit_values::value_methods(spec, k);
+        e.out.push_str(&methods);
+        e.stats.values.push(meta);
     }
     for op in BinOp::ALL {
         for a in &spec.kinds {
@@ -887,6 +892,41 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
         }
         t.push_str("}\n\n");
     }
+    t.push_str("#[test]\nfn value_methods() {\n    let o = Oracle::from_spec(SPEC);\n    let mut rng = Rng::new(77);\n");
+    for v in &stats.values {
+        let k = &v.kind;
+        if v.inverse.is_some() {
+            let _ = writeln!(
+                t,
+                "    common::inverse::<{k}<(), f64>, _>(&o, &mut rng, |x| x.inverse());"
+            );
+        }
+        if v.normalized {
+            let _ = writeln!(
+                t,
+                "    common::normalized::<{k}<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());"
+            );
+        }
+        if let Some(on) = &v.exp {
+            let has_log = stats
+                .values
+                .iter()
+                .any(|w| &w.kind == on && w.log.as_deref() == Some(k.as_str()));
+            if has_log {
+                let _ = writeln!(
+                    t,
+                    "    common::exp_log::<{k}<(), f64>, {on}<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());"
+                );
+            }
+        }
+        if v.sqrt && v.log.is_some() {
+            let _ = writeln!(
+                t,
+                "    common::sqrt::<{k}<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());"
+            );
+        }
+    }
+    t.push_str("}\n\n");
     t.push_str("#[test]\nfn sandwiches() {\n    let o = Oracle::from_spec(SPEC);\n    let mut rng = Rng::new(99);\n");
     for (v, x, unit, _) in &stats.sandwich_costs {
         if *unit {

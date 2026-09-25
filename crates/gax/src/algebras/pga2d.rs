@@ -476,6 +476,53 @@ where
     }
 }
 
+impl<T: gx::Real> Scalar<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (4 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Scalar<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t2 = x[0] * t1;
+        let t3 = t2.recip();
+        let t4 = t1 * t3;
+        Scalar::from_coeffs([t4])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        gx::Unit::new_unchecked(Scalar::from_coeffs([t0]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Scalar::from_coeffs(c).normalized()
+    }
+
+}
+
 #[doc = "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e0]`.
@@ -957,6 +1004,61 @@ where
     }
 }
 
+impl<T: gx::Real> Line<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 + t1;
+        t2
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (11 mul, 3 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Line<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 * t0;
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t2 + t4;
+        let t6 = t3 * T::from_i64(2);
+        let t7 = t5 + t6;
+        let t8 = t7.recip();
+        let t9 = t0 * t8;
+        let t10 = t1 * t8;
+        let t11 = t9 + t10;
+        let t12 = x[0] * t11;
+        let t13 = x[1] * t11;
+        let t14 = x[2] * t11;
+        Line::from_coeffs([t12, t13, t14])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = p0 + p1;
+        let s0 = (p2).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        gx::Unit::new_unchecked(Line::from_coeffs([t0, t1, t2]))
+    }
+
+}
+
 #[doc = "A point `(x, y)` with weight `w`, stored as `x e20 + y e01 + w e12`: the bivectors. With `w = 0` it is a direction, a point at infinity. As a versor it is a half turn."]
 ///
 /// Blades, in coefficient order: `[e20, e01, e12]`.
@@ -1436,6 +1538,67 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Point<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[2] * x[2];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (7 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Point<(), T> {
+        let x = self.c;
+        let t0 = x[2] * x[2];
+        let t1 = x[2] * t0;
+        let t2 = x[2] * t1;
+        let t3 = t2.recip();
+        let t4 = t0 * t3;
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = -t5;
+        let t9 = -t6;
+        let t10 = -t7;
+        Point::from_coeffs([t8, t9, t10])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[2] * x[2];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        gx::Unit::new_unchecked(Point::from_coeffs([t0, t1, t2]))
+    }
+
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Motor<(), T>> {
+        let x = self.c;
+        let p0 = x[2] * x[2];
+        let p1 = -p0;
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs(-1, p1, T::from_i64(0));
+        let t0 = x[2] * s0;
+        let t1 = x[0] * s0;
+        let t2 = x[1] * s0;
+        gx::Unit::new_unchecked(Motor::from_coeffs([c0, t0, t1, t2]))
+    }
+
 }
 
 #[doc = "The pseudoscalar `e012`."]
@@ -2382,6 +2545,82 @@ where
     }
 }
 
+impl<T: gx::Real> Rotor<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 + t1;
+        t2
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Rotor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 * t0;
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t2 + t4;
+        let t6 = t3 * T::from_i64(2);
+        let t7 = t5 + t6;
+        let t8 = t7.recip();
+        let t9 = t0 * t8;
+        let t10 = t1 * t8;
+        let t11 = t9 + t10;
+        let t12 = x[0] * t11;
+        let t13 = x[1] * t11;
+        let t14 = -t13;
+        Rotor::from_coeffs([t12, t14])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = p0 + p1;
+        let s0 = (p2).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        gx::Unit::new_unchecked(Rotor::from_coeffs([t0, t1]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Rotor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Rotor<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Point<(), T> {
+        let x = self.into_inner().c;
+        let p0 = x[1] * x[1];
+        let p1 = -p0;
+        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (p1, T::from_i64(0)));
+        let t0 = x[1] * h0;
+        Point::from_coeffs([T::from_i64(0), T::from_i64(0), t0])
+    }
+}
+
 #[doc = "A translation, `1 + (dx e20 + dy e01) / 2`."]
 ///
 /// Blades, in coefficient order: `[1, e20, e01]`.
@@ -2860,6 +3099,73 @@ where
     #[inline(always)]
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real> Translator<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        t0
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (7 mul, 0 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Translator<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t2 = x[0] * t1;
+        let t3 = t2.recip();
+        let t4 = t0 * t3;
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = -t6;
+        let t9 = -t7;
+        Translator::from_coeffs([t5, t8, t9])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let s0 = (p0).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        gx::Unit::new_unchecked(Translator::from_coeffs([t0, t1, t2]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Translator::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Translator<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Point<(), T> {
+        let x = self.into_inner().c;
+        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (T::from_i64(0), T::from_i64(0)));
+        let t0 = x[1] * h0;
+        let t1 = x[2] * h0;
+        Point::from_coeffs([t0, t1, T::from_i64(0)])
     }
 }
 
@@ -3350,6 +3656,90 @@ where
     }
 }
 
+impl<T: gx::Real> Motor<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 + t1;
+        t2
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (12 mul, 3 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Motor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 * t0;
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t2 + t4;
+        let t6 = t3 * T::from_i64(2);
+        let t7 = t5 + t6;
+        let t8 = t7.recip();
+        let t9 = t0 * t8;
+        let t10 = t1 * t8;
+        let t11 = t9 + t10;
+        let t12 = x[0] * t11;
+        let t13 = x[1] * t11;
+        let t14 = x[2] * t11;
+        let t15 = x[3] * t11;
+        let t16 = -t13;
+        let t17 = -t14;
+        let t18 = -t15;
+        Motor::from_coeffs([t12, t16, t17, t18])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = p0 + p1;
+        let s0 = (p2).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Motor::from_coeffs([t0, t1, t2, t3]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Motor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Motor<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Point<(), T> {
+        let x = self.into_inner().c;
+        let p0 = x[1] * x[1];
+        let p1 = -p0;
+        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (p1, T::from_i64(0)));
+        let t0 = x[2] * h0;
+        let t1 = x[3] * h0;
+        let t2 = x[1] * h0;
+        Point::from_coeffs([t0, t1, t2])
+    }
+}
+
 #[doc = "An improper rigid motion (a glide reflection): the odd subalgebra."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e0, e012]`.
@@ -3835,6 +4225,64 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Flector<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 + t1;
+        t2
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (12 mul, 3 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Flector<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = t0 * t0;
+        let t3 = t0 * t1;
+        let t4 = t1 * t1;
+        let t5 = t2 + t4;
+        let t6 = t3 * T::from_i64(2);
+        let t7 = t5 + t6;
+        let t8 = t7.recip();
+        let t9 = t0 * t8;
+        let t10 = t1 * t8;
+        let t11 = t9 + t10;
+        let t12 = x[0] * t11;
+        let t13 = x[1] * t11;
+        let t14 = x[2] * t11;
+        let t15 = x[3] * t11;
+        let t16 = -t15;
+        Flector::from_coeffs([t12, t13, t14, t16])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = p0 + p1;
+        let s0 = (p2).abs().sqrt().recip();
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[3] * s0;
+        gx::Unit::new_unchecked(Flector::from_coeffs([t0, t1, t2, t3]))
+    }
+
 }
 
 #[doc = "A general multivector, in the bivector.net order."]
@@ -4346,6 +4794,29 @@ where
     fn shl(self, rhs: R) -> Self::Output {
         gx::TransformInv::transform_inv(self, rhs)
     }
+}
+
+impl<T: gx::Real> Multivector<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[2] * x[2];
+        let t2 = x[3] * x[3];
+        let t3 = x[6] * x[6];
+        let t4 = t0 + t1;
+        let t5 = t2 + t4;
+        let t6 = t3 + t5;
+        t6
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {

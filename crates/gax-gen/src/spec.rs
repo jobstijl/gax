@@ -364,12 +364,17 @@ impl AlgebraSpec {
             .expect("validated")
     }
 
-    /// The smallest declared kind whose blades contain `support` (first declared on ties).
+    /// The declared kind for a result with blades `support`: among the kinds containing it,
+    /// one that adds no grade the support lacks if possible (a bivector stays a bivector
+    /// kind even when a smaller even kind would hold it), then the smallest, then the first
+    /// declared.
     pub fn kind_for_support(&self, support: &std::collections::BTreeSet<u32>) -> Option<&KindSpec> {
+        let grades: std::collections::BTreeSet<u32> =
+            support.iter().map(|m| m.count_ones()).collect();
         self.kinds
             .iter()
             .filter(|k| support.is_subset(&k.layout.support()))
-            .min_by_key(|k| k.layout.len())
+            .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
     }
 }
 

@@ -13,6 +13,7 @@ pub mod ops;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod slots;
+pub mod study;
 pub mod trace;
 pub mod unit;
 
@@ -21,8 +22,8 @@ pub use coef::{Coef, Elem, Real};
 pub use extensor::{Endomorphism, Form, SquareMap};
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
-    Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Rc, Reverse, ScalarProduct,
-    Transform, TransformInv, Undual, Vee, Wedge,
+    Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Rc, Reverse,
+    ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
 };
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
 pub use trace::Traceable;
