@@ -1,0 +1,28 @@
+# cargo-deny policy: https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+all-features = true
+# The benchmark crate is not published; it depends on nalgebra and ultraviolet only to compare
+# against them (which bring an unmaintained `paste` and an older `wide`).
+exclude = ["gax-bench", "gax-example-traced"]
+
+[advisories]
+version = 2
+yanked = "deny"
+
+[licenses]
+version = 2
+# Permissive licenses only: those of the published dependency tree (libm, wide, safe_arch,
+# bytemuck) and of gax itself.
+allow = ["MIT", "Apache-2.0", "Zlib"]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies inside the workspace have no version requirement on purpose.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.rust }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, "1.89"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      - uses: Swatinem/rust-cache@v2
+      # Compile-fail messages are pinned for the current stable compiler only.
+      - name: test (default features)
+        run: cargo test --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
+      - name: test (all algebras, SIMD)
+        run: cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
+      - name: no_std build of the core
+        run: cargo build -p gax-core --no-default-features
+
+  generated:
+    name: generated algebras are up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run --release -p gax-gen --bin gax-regen -- --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide
+      - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  miri:
+    name: miri (core)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - run: cargo miri test -p gax-core --lib
+        env:
+          RUSTFLAGS: ""
+
+  fuzz:
+    name: fuzz the spec parser (short)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo install cargo-fuzz --locked
+      - run: cd fuzz && cargo fuzz run spec_parse -- -max_total_time=120 -max_len=512
+        env:
+          RUSTFLAGS: ""
