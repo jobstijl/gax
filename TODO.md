@@ -33,7 +33,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
 - [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees
-- [ ] Optional `mul_add` emission when FMA is available
+- [x] `mul_add` fusion in emitted programs (hardware FMA when available)
 - [ ] Multi-slot `trace::<I>`; outermorphism
 - [ ] Better line sandwich kernel (58 mul now)
 - [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)

@@ -1090,11 +1090,9 @@ impl<T: gx::Real> Vector<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = x[0].mul_add(x[0], t1);
+        let t4 = x[2].mul_add(x[2], t3);
         t4
     }
 
@@ -1111,24 +1109,17 @@ impl<T: gx::Real> Vector<(), T> {
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
         let t2 = x[2] * x[2];
-        let t3 = t0 * t0;
-        let t4 = t0 * t1;
         let t5 = t0 * t2;
         let t6 = t1 * t1;
-        let t7 = t1 * t2;
-        let t8 = t2 * t2;
-        let t9 = t3 + t6;
-        let t10 = t8 + t9;
-        let t11 = t4 + t5;
-        let t12 = t7 + t11;
-        let t13 = t12 * T::from_i64(2);
-        let t14 = t10 + t13;
+        let t9 = t0.mul_add(t0, t6);
+        let t10 = t2.mul_add(t2, t9);
+        let t11 = t0.mul_add(t1, t5);
+        let t12 = t1.mul_add(t2, t11);
+        let t14 = t12.mul_add(T::from_i64(2), t10);
         let t15 = t14.recip();
-        let t16 = t0 * t15;
         let t17 = t1 * t15;
-        let t18 = t2 * t15;
-        let t19 = t16 + t17;
-        let t20 = t18 + t19;
+        let t19 = t0.mul_add(t15, t17);
+        let t20 = t2.mul_add(t15, t19);
         let t21 = x[0] * t20;
         let t22 = x[1] * t20;
         let t23 = x[2] * t20;
@@ -1139,11 +1130,9 @@ impl<T: gx::Real> Vector<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = x[2] * x[2];
-        let p3 = p0 + p1;
-        let p4 = p2 + p3;
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
         let s0 = (p4).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -1680,11 +1669,9 @@ impl<T: gx::Real> Bivector<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = x[0].mul_add(x[0], t1);
+        let t4 = x[2].mul_add(x[2], t3);
         t4
     }
 
@@ -1701,24 +1688,17 @@ impl<T: gx::Real> Bivector<(), T> {
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
         let t2 = x[2] * x[2];
-        let t3 = t0 * t0;
-        let t4 = t0 * t1;
         let t5 = t0 * t2;
         let t6 = t1 * t1;
-        let t7 = t1 * t2;
-        let t8 = t2 * t2;
-        let t9 = t3 + t6;
-        let t10 = t8 + t9;
-        let t11 = t4 + t5;
-        let t12 = t7 + t11;
-        let t13 = t12 * T::from_i64(2);
-        let t14 = t10 + t13;
+        let t9 = t0.mul_add(t0, t6);
+        let t10 = t2.mul_add(t2, t9);
+        let t11 = t0.mul_add(t1, t5);
+        let t12 = t1.mul_add(t2, t11);
+        let t14 = t12.mul_add(T::from_i64(2), t10);
         let t15 = t14.recip();
-        let t16 = t0 * t15;
         let t17 = t1 * t15;
-        let t18 = t2 * t15;
-        let t19 = t16 + t17;
-        let t20 = t18 + t19;
+        let t19 = t0.mul_add(t15, t17);
+        let t20 = t2.mul_add(t15, t19);
         let t21 = x[0] * t20;
         let t22 = x[1] * t20;
         let t23 = x[2] * t20;
@@ -1732,11 +1712,9 @@ impl<T: gx::Real> Bivector<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = x[2] * x[2];
-        let p3 = p0 + p1;
-        let p4 = p2 + p3;
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
         let s0 = (p4).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -1749,11 +1727,9 @@ impl<T: gx::Real> Bivector<(), T> {
     #[allow(unused_variables)]
     pub fn exp(self) -> gx::Unit<Rotor<(), T>> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = x[2] * x[2];
-        let p3 = p0 + p1;
-        let p4 = p2 + p3;
+        let p3 = x[0].mul_add(x[0], p1);
+        let p4 = x[2].mul_add(x[2], p3);
         let p5 = -p4;
         let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation(p5, T::from_i64(0));
         let t0 = x[0] * s0;
@@ -2847,12 +2823,10 @@ impl<T: gx::Real> Rotor<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = x[0].mul_add(x[0], t1);
+        let t5 = x[2].mul_add(x[2], t3);
         let t6 = t4 + t5;
         t6
     }
@@ -2871,33 +2845,24 @@ impl<T: gx::Real> Rotor<(), T> {
         let t1 = x[1] * x[1];
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
-        let t4 = t0 * t0;
-        let t5 = t0 * t1;
         let t6 = t0 * t2;
-        let t7 = t0 * t3;
         let t8 = t1 * t1;
-        let t9 = t1 * t2;
         let t10 = t1 * t3;
-        let t11 = t2 * t2;
-        let t12 = t2 * t3;
         let t13 = t3 * t3;
-        let t14 = t4 + t8;
-        let t15 = t11 + t13;
+        let t14 = t0.mul_add(t0, t8);
+        let t15 = t2.mul_add(t2, t13);
         let t16 = t14 + t15;
-        let t17 = t5 + t6;
-        let t18 = t7 + t17;
-        let t19 = t9 + t10;
-        let t20 = t12 + t19;
+        let t17 = t0.mul_add(t1, t6);
+        let t18 = t0.mul_add(t3, t17);
+        let t19 = t1.mul_add(t2, t10);
+        let t20 = t2.mul_add(t3, t19);
         let t21 = t18 + t20;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = t16 + t22;
+        let t23 = t21.mul_add(T::from_i64(2), t16);
         let t24 = t23.recip();
-        let t25 = t0 * t24;
         let t26 = t1 * t24;
-        let t27 = t2 * t24;
         let t28 = t3 * t24;
-        let t29 = t25 + t26;
-        let t30 = t27 + t28;
+        let t29 = t0.mul_add(t24, t26);
+        let t30 = t2.mul_add(t24, t28);
         let t31 = t29 + t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
@@ -2913,12 +2878,10 @@ impl<T: gx::Real> Rotor<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
-        let p4 = p0 + p1;
-        let p5 = p2 + p3;
+        let p4 = x[0].mul_add(x[0], p1);
+        let p5 = x[2].mul_add(x[2], p3);
         let p6 = p4 + p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
@@ -2944,11 +2907,9 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Rotor<(), T>> {
     #[allow(unused_variables)]
     fn log(self) -> Bivector<(), T> {
         let x = self.into_inner().c;
-        let p0 = x[1] * x[1];
         let p1 = x[2] * x[2];
-        let p2 = x[3] * x[3];
-        let p3 = p0 + p1;
-        let p4 = p2 + p3;
+        let p3 = x[1].mul_add(x[1], p1);
+        let p4 = x[3].mul_add(x[3], p3);
         let p5 = -p4;
         let [h0, h1] = gx::study::log_coeffs_rotation((x[0], T::from_i64(0)), (p5, T::from_i64(0)));
         let t0 = x[1] * h0;
@@ -3491,12 +3452,10 @@ impl<T: gx::Real> Odd<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = x[0].mul_add(x[0], t1);
+        let t5 = x[2].mul_add(x[2], t3);
         let t6 = t4 + t5;
         t6
     }
@@ -3515,33 +3474,24 @@ impl<T: gx::Real> Odd<(), T> {
         let t1 = x[1] * x[1];
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
-        let t4 = t0 * t0;
-        let t5 = t0 * t1;
         let t6 = t0 * t2;
-        let t7 = t0 * t3;
         let t8 = t1 * t1;
-        let t9 = t1 * t2;
         let t10 = t1 * t3;
-        let t11 = t2 * t2;
-        let t12 = t2 * t3;
         let t13 = t3 * t3;
-        let t14 = t4 + t8;
-        let t15 = t11 + t13;
+        let t14 = t0.mul_add(t0, t8);
+        let t15 = t2.mul_add(t2, t13);
         let t16 = t14 + t15;
-        let t17 = t5 + t6;
-        let t18 = t7 + t17;
-        let t19 = t9 + t10;
-        let t20 = t12 + t19;
+        let t17 = t0.mul_add(t1, t6);
+        let t18 = t0.mul_add(t3, t17);
+        let t19 = t1.mul_add(t2, t10);
+        let t20 = t2.mul_add(t3, t19);
         let t21 = t18 + t20;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = t16 + t22;
+        let t23 = t21.mul_add(T::from_i64(2), t16);
         let t24 = t23.recip();
-        let t25 = t0 * t24;
         let t26 = t1 * t24;
-        let t27 = t2 * t24;
         let t28 = t3 * t24;
-        let t29 = t25 + t26;
-        let t30 = t27 + t28;
+        let t29 = t0.mul_add(t24, t26);
+        let t30 = t2.mul_add(t24, t28);
         let t31 = t29 + t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
@@ -3555,12 +3505,10 @@ impl<T: gx::Real> Odd<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
-        let p4 = p0 + p1;
-        let p5 = p2 + p3;
+        let p4 = x[0].mul_add(x[0], p1);
+        let p5 = x[2].mul_add(x[2], p3);
         let p6 = p4 + p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
@@ -4129,19 +4077,15 @@ impl<T: gx::Real> Multivector<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
-        let t4 = x[4] * x[4];
         let t5 = x[5] * x[5];
-        let t6 = x[6] * x[6];
         let t7 = x[7] * x[7];
-        let t8 = t0 + t1;
-        let t9 = t2 + t3;
+        let t8 = x[0].mul_add(x[0], t1);
+        let t9 = x[2].mul_add(x[2], t3);
         let t10 = t8 + t9;
-        let t11 = t4 + t5;
-        let t12 = t6 + t7;
+        let t11 = x[4].mul_add(x[4], t5);
+        let t12 = x[6].mul_add(x[6], t7);
         let t13 = t11 + t12;
         let t14 = t10 + t13;
         t14
@@ -10858,19 +10802,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(v[0], t1);
+        let t4 = v[2].mul_add(v[2], t3);
         let t5 = xv[0] * t4;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t5]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
-        let m3 = m0 + m1;
-        let m4 = m2 + m3;
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m4)).0] }
     }
@@ -10889,11 +10829,9 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Vector<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Vector, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
-        let m3 = m0 + m1;
-        let m4 = m2 + m3;
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         gx::Prepared::from_entries([m4])
     }
 }
@@ -10983,24 +10921,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Vector<(), T> {
         let t8 = t2 + t6;
         let t9 = t0 + t1;
         let t10 = t9 - t2;
-        let t11 = xv[0] * t7;
-        let t12 = xv[1] * t3;
         let t13 = xv[2] * t4;
-        let t14 = xv[0] * t3;
-        let t15 = xv[1] * t8;
         let t16 = xv[2] * t5;
-        let t17 = xv[0] * t4;
         let t18 = xv[1] * t5;
-        let t19 = xv[2] * t10;
-        let t20 = t12 + t13;
+        let t20 = xv[1].mul_add(t3, t13);
         let t21 = t20 * T::from_i64(2);
-        let t22 = t11 + t21;
-        let t23 = t14 + t16;
+        let t22 = xv[0].mul_add(t7, t21);
+        let t23 = xv[0].mul_add(t3, t16);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t24 - t15;
-        let t26 = t17 + t18;
+        let t25 = (-xv[1]).mul_add(t8, t24);
+        let t26 = xv[0].mul_add(t4, t18);
         let t27 = t26 * T::from_i64(2);
-        let t28 = t27 - t19;
+        let t28 = (-xv[2]).mul_add(t10, t27);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t22, t25, t28]) };
         }
         let m0 = v[0] * v[0];
@@ -11080,20 +11012,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t8 - xv[0];
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - xv[1];
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t12 - xv[2];
+        let t9 = t5.mul_add(T::from_i64(2), -xv[0]);
+        let t11 = t6.mul_add(T::from_i64(2), -xv[1]);
+        let t13 = t7.mul_add(T::from_i64(2), -xv[2]);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t9, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -11184,24 +11111,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> 
         let t8 = t2 + t6;
         let t9 = t0 + t1;
         let t10 = t9 - t2;
-        let t11 = xv[0] * t7;
-        let t12 = xv[1] * t3;
         let t13 = xv[2] * t4;
-        let t14 = xv[0] * t3;
-        let t15 = xv[1] * t8;
         let t16 = xv[2] * t5;
-        let t17 = xv[0] * t4;
         let t18 = xv[1] * t5;
-        let t19 = xv[2] * t10;
-        let t20 = t12 + t13;
+        let t20 = xv[1].mul_add(t3, t13);
         let t21 = t20 * T::from_i64(2);
-        let t22 = t11 + t21;
-        let t23 = t14 + t16;
+        let t22 = xv[0].mul_add(t7, t21);
+        let t23 = xv[0].mul_add(t3, t16);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t24 - t15;
-        let t26 = t17 + t18;
+        let t25 = (-xv[1]).mul_add(t8, t24);
+        let t26 = xv[0].mul_add(t4, t18);
         let t27 = t26 * T::from_i64(2);
-        let t28 = t27 - t19;
+        let t28 = (-xv[2]).mul_add(t10, t27);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t22, t25, t28]) };
         }
         let m0 = v[0] * v[0];
@@ -11281,20 +11202,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vecto
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t8 - xv[0];
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - xv[1];
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t12 - xv[2];
+        let t9 = t5.mul_add(T::from_i64(2), -xv[0]);
+        let t11 = t6.mul_add(T::from_i64(2), -xv[1]);
+        let t13 = t7.mul_add(T::from_i64(2), -xv[2]);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t9, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -11374,19 +11290,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(),
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(v[0], t1);
+        let t4 = v[2].mul_add(v[2], t3);
         let t5 = xv[0] * t4;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t5]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
-        let m3 = m0 + m1;
-        let m4 = m2 + m3;
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m4)).0] }
     }
@@ -11405,11 +11317,9 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Vector<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Vector, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
-        let m3 = m0 + m1;
-        let m4 = m2 + m3;
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         gx::Prepared::from_entries([m4])
     }
 }
@@ -11501,24 +11411,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Vector<(), T> {
         let t10 = t2 + t6;
         let t11 = t7 - t2;
         let t12 = xv[0] * t8;
-        let t13 = xv[1] * t9;
-        let t14 = xv[2] * t3;
         let t15 = xv[3] * t4;
-        let t16 = xv[1] * t3;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t5;
-        let t19 = xv[1] * t4;
         let t20 = xv[2] * t5;
-        let t21 = xv[3] * t11;
-        let t22 = t14 + t15;
+        let t22 = xv[2].mul_add(t3, t15);
         let t23 = t22 * T::from_i64(2);
-        let t24 = t13 + t23;
-        let t25 = t16 + t18;
+        let t24 = xv[1].mul_add(t9, t23);
+        let t25 = xv[1].mul_add(t3, t18);
         let t26 = t25 * T::from_i64(2);
-        let t27 = t26 - t17;
-        let t28 = t19 + t20;
+        let t27 = (-xv[2]).mul_add(t10, t26);
+        let t28 = xv[1].mul_add(t4, t20);
         let t29 = t28 * T::from_i64(2);
-        let t30 = t29 - t21;
+        let t30 = (-xv[3]).mul_add(t11, t29);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([t12, t24, t27, t30]) };
         }
         let m0 = v[0] * v[0];
@@ -11600,20 +11504,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Vector<(
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[2];
-        let t2 = v[2] * xv[3];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(xv[1], t1);
+        let t4 = v[2].mul_add(xv[3], t3);
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t8 - xv[1];
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - xv[2];
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t12 - xv[3];
+        let t9 = t5.mul_add(T::from_i64(2), -xv[1]);
+        let t11 = t6.mul_add(T::from_i64(2), -xv[2]);
+        let t13 = t7.mul_add(T::from_i64(2), -xv[3]);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t9, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -11705,25 +11604,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Vector<(), T> {
         let t9 = t2 + t6;
         let t10 = t7 - t2;
         let t11 = t2 + t7;
-        let t12 = xv[0] * t8;
-        let t13 = xv[1] * t3;
         let t14 = xv[2] * t4;
-        let t15 = xv[0] * t3;
-        let t16 = xv[1] * t9;
         let t17 = xv[2] * t5;
-        let t18 = xv[0] * t4;
         let t19 = xv[1] * t5;
-        let t20 = xv[2] * t10;
         let t21 = xv[3] * t11;
-        let t22 = t13 + t14;
+        let t22 = xv[1].mul_add(t3, t14);
         let t23 = t22 * T::from_i64(2);
-        let t24 = t12 + t23;
-        let t25 = t15 + t17;
+        let t24 = xv[0].mul_add(t8, t23);
+        let t25 = xv[0].mul_add(t3, t17);
         let t26 = t25 * T::from_i64(2);
-        let t27 = t26 - t16;
-        let t28 = t18 + t19;
+        let t27 = (-xv[1]).mul_add(t9, t26);
+        let t28 = xv[0].mul_add(t4, t19);
         let t29 = t28 * T::from_i64(2);
-        let t30 = t29 - t20;
+        let t30 = (-xv[2]).mul_add(t10, t29);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t24, t27, t30, t21]) };
         }
         let m0 = v[0] * v[0];
@@ -11805,20 +11698,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(),
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t8 - xv[0];
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - xv[1];
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t12 - xv[2];
+        let t9 = t5.mul_add(T::from_i64(2), -xv[0]);
+        let t11 = t6.mul_add(T::from_i64(2), -xv[1]);
+        let t13 = t7.mul_add(T::from_i64(2), -xv[2]);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t9, t11, t13, xv[3]]) };
         }
         let m0 = v[0] * v[0];
@@ -11911,43 +11799,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), 
         let t10 = t2 + t6;
         let t11 = t7 - t2;
         let t12 = xv[0] * t8;
-        let t13 = xv[1] * t9;
-        let t14 = xv[2] * t3;
         let t15 = xv[3] * t4;
-        let t16 = xv[1] * t3;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t5;
-        let t19 = xv[1] * t4;
         let t20 = xv[2] * t5;
-        let t21 = xv[3] * t11;
-        let t22 = xv[4] * t9;
-        let t23 = xv[5] * t3;
         let t24 = xv[6] * t4;
-        let t25 = xv[4] * t3;
-        let t26 = xv[5] * t10;
         let t27 = xv[6] * t5;
-        let t28 = xv[4] * t4;
         let t29 = xv[5] * t5;
-        let t30 = xv[6] * t11;
         let t31 = xv[7] * t8;
-        let t32 = t14 + t15;
+        let t32 = xv[2].mul_add(t3, t15);
         let t33 = t32 * T::from_i64(2);
-        let t34 = t13 + t33;
-        let t35 = t16 + t18;
+        let t34 = xv[1].mul_add(t9, t33);
+        let t35 = xv[1].mul_add(t3, t18);
         let t36 = t35 * T::from_i64(2);
-        let t37 = t36 - t17;
-        let t38 = t19 + t20;
+        let t37 = (-xv[2]).mul_add(t10, t36);
+        let t38 = xv[1].mul_add(t4, t20);
         let t39 = t38 * T::from_i64(2);
-        let t40 = t39 - t21;
-        let t41 = t23 + t24;
+        let t40 = (-xv[3]).mul_add(t11, t39);
+        let t41 = xv[5].mul_add(t3, t24);
         let t42 = t41 * T::from_i64(2);
-        let t43 = t22 + t42;
-        let t44 = t25 + t27;
+        let t43 = xv[4].mul_add(t9, t42);
+        let t44 = xv[4].mul_add(t3, t27);
         let t45 = t44 * T::from_i64(2);
-        let t46 = t45 - t26;
-        let t47 = t28 + t29;
+        let t46 = (-xv[5]).mul_add(t10, t45);
+        let t47 = xv[4].mul_add(t4, t29);
         let t48 = t47 * T::from_i64(2);
-        let t49 = t48 - t30;
+        let t49 = (-xv[6]).mul_add(t11, t48);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t12, t34, t37, t40, t43, t46, t49, t31]) };
         }
         let m0 = v[0] * v[0];
@@ -12031,34 +11907,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ve
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[2];
-        let t2 = v[2] * xv[3];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
-        let t5 = v[0] * xv[4];
+        let t3 = v[0].mul_add(xv[1], t1);
+        let t4 = v[2].mul_add(xv[3], t3);
         let t6 = v[1] * xv[5];
-        let t7 = v[2] * xv[6];
-        let t8 = t5 + t6;
-        let t9 = t7 + t8;
+        let t8 = v[0].mul_add(xv[4], t6);
+        let t9 = v[2].mul_add(xv[6], t8);
         let t10 = v[0] * t4;
         let t11 = v[1] * t4;
         let t12 = v[2] * t4;
         let t13 = v[0] * t9;
         let t14 = v[1] * t9;
         let t15 = v[2] * t9;
-        let t16 = t10 * T::from_i64(2);
-        let t17 = t16 - xv[1];
-        let t18 = t11 * T::from_i64(2);
-        let t19 = t18 - xv[2];
-        let t20 = t12 * T::from_i64(2);
-        let t21 = t20 - xv[3];
-        let t22 = t13 * T::from_i64(2);
-        let t23 = t22 - xv[4];
-        let t24 = t14 * T::from_i64(2);
-        let t25 = t24 - xv[5];
-        let t26 = t15 * T::from_i64(2);
-        let t27 = t26 - xv[6];
+        let t17 = t10.mul_add(T::from_i64(2), -xv[1]);
+        let t19 = t11.mul_add(T::from_i64(2), -xv[2]);
+        let t21 = t12.mul_add(T::from_i64(2), -xv[3]);
+        let t23 = t13.mul_add(T::from_i64(2), -xv[4]);
+        let t25 = t14.mul_add(T::from_i64(2), -xv[5]);
+        let t27 = t15.mul_add(T::from_i64(2), -xv[6]);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t17, t19, t21, t23, t25, t27, xv[7]]) };
         }
         let m0 = v[0] * v[0];
@@ -12140,22 +12006,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
         let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m6)).0] }
@@ -12175,12 +12037,10 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Rotor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Rotor, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
@@ -12283,24 +12143,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Rotor<(), T> {
         let t20 = t5 + t8;
         let t21 = t4 - t9;
         let t22 = t10 - t11;
-        let t23 = xv[0] * t14;
         let t24 = xv[1] * t15;
-        let t25 = xv[2] * t16;
-        let t26 = xv[0] * t17;
-        let t27 = xv[1] * t18;
         let t28 = xv[2] * t19;
         let t29 = xv[0] * t20;
-        let t30 = xv[1] * t21;
-        let t31 = xv[2] * t22;
-        let t32 = t24 - t25;
+        let t32 = (-xv[2]).mul_add(t16, t24);
         let t33 = t32 * T::from_i64(2);
-        let t34 = t23 + t33;
-        let t35 = t28 - t26;
+        let t34 = xv[0].mul_add(t14, t33);
+        let t35 = (-xv[0]).mul_add(t17, t28);
         let t36 = t35 * T::from_i64(2);
-        let t37 = t27 + t36;
-        let t38 = t29 - t30;
+        let t37 = xv[1].mul_add(t18, t36);
+        let t38 = (-xv[1]).mul_add(t21, t29);
         let t39 = t38 * T::from_i64(2);
-        let t40 = t31 + t39;
+        let t40 = xv[2].mul_add(t22, t39);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t34, t37, t40]) };
         }
         let m0 = v[0] * v[0];
@@ -12408,36 +12262,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Rotor<(
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
-        let t1 = v[2] * xv[2];
         let t2 = v[3] * xv[1];
-        let t3 = t0 + t2;
-        let t4 = t3 - t1;
-        let t5 = v[0] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t2);
+        let t4 = (-v[2]).mul_add(xv[2], t3);
         let t6 = v[1] * xv[2];
-        let t7 = v[3] * xv[0];
-        let t8 = t5 + t6;
-        let t9 = t8 - t7;
-        let t10 = v[0] * xv[2];
-        let t11 = v[1] * xv[1];
+        let t8 = v[0].mul_add(xv[1], t6);
+        let t9 = (-v[3]).mul_add(xv[0], t8);
         let t12 = v[2] * xv[0];
-        let t13 = t10 + t12;
-        let t14 = t13 - t11;
-        let t15 = v[2] * t14;
+        let t13 = v[0].mul_add(xv[2], t12);
+        let t14 = (-v[1]).mul_add(xv[1], t13);
         let t16 = v[3] * t9;
         let t17 = v[1] * t14;
-        let t18 = v[3] * t4;
-        let t19 = v[1] * t9;
         let t20 = v[2] * t4;
-        let t21 = t16 - t15;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = xv[1] + t25;
-        let t27 = t20 - t19;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = xv[2] + t28;
+        let t21 = (-v[2]).mul_add(t14, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t4, t17);
+        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
+        let t27 = (-v[1]).mul_add(t9, t20);
+        let t29 = t27.mul_add(T::from_i64(2), xv[2]);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -12568,24 +12410,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Rotor<(), T> {
         let t20 = t5 + t8;
         let t21 = t4 - t9;
         let t22 = t10 - t11;
-        let t23 = xv[0] * t14;
         let t24 = xv[1] * t15;
-        let t25 = xv[2] * t16;
-        let t26 = xv[0] * t17;
-        let t27 = xv[1] * t18;
         let t28 = xv[2] * t19;
         let t29 = xv[0] * t20;
-        let t30 = xv[1] * t21;
-        let t31 = xv[2] * t22;
-        let t32 = t24 - t25;
+        let t32 = (-xv[2]).mul_add(t16, t24);
         let t33 = t32 * T::from_i64(2);
-        let t34 = t23 + t33;
-        let t35 = t28 - t26;
+        let t34 = xv[0].mul_add(t14, t33);
+        let t35 = (-xv[0]).mul_add(t17, t28);
         let t36 = t35 * T::from_i64(2);
-        let t37 = t27 + t36;
-        let t38 = t29 - t30;
+        let t37 = xv[1].mul_add(t18, t36);
+        let t38 = (-xv[1]).mul_add(t21, t29);
         let t39 = t38 * T::from_i64(2);
-        let t40 = t31 + t39;
+        let t40 = xv[2].mul_add(t22, t39);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t34, t37, t40]) };
         }
         let m0 = v[0] * v[0];
@@ -12693,36 +12529,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Rotor
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
-        let t1 = v[2] * xv[2];
         let t2 = v[3] * xv[1];
-        let t3 = t0 + t2;
-        let t4 = t3 - t1;
-        let t5 = v[0] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t2);
+        let t4 = (-v[2]).mul_add(xv[2], t3);
         let t6 = v[1] * xv[2];
-        let t7 = v[3] * xv[0];
-        let t8 = t5 + t6;
-        let t9 = t8 - t7;
-        let t10 = v[0] * xv[2];
-        let t11 = v[1] * xv[1];
+        let t8 = v[0].mul_add(xv[1], t6);
+        let t9 = (-v[3]).mul_add(xv[0], t8);
         let t12 = v[2] * xv[0];
-        let t13 = t10 + t12;
-        let t14 = t13 - t11;
-        let t15 = v[2] * t14;
+        let t13 = v[0].mul_add(xv[2], t12);
+        let t14 = (-v[1]).mul_add(xv[1], t13);
         let t16 = v[3] * t9;
         let t17 = v[1] * t14;
-        let t18 = v[3] * t4;
-        let t19 = v[1] * t9;
         let t20 = v[2] * t4;
-        let t21 = t16 - t15;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = xv[1] + t25;
-        let t27 = t20 - t19;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = xv[2] + t28;
+        let t21 = (-v[2]).mul_add(t14, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t4, t17);
+        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
+        let t27 = (-v[1]).mul_add(t9, t20);
+        let t29 = t27.mul_add(T::from_i64(2), xv[2]);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -12830,22 +12654,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), 
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
         let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m6)).0] }
@@ -12865,12 +12685,10 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Rotor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Rotor, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
@@ -12975,24 +12793,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Rotor<(), T> {
         let t22 = t4 - t9;
         let t23 = t10 - t12;
         let t24 = xv[0] * t14;
-        let t25 = xv[1] * t15;
         let t26 = xv[2] * t16;
-        let t27 = xv[3] * t17;
-        let t28 = xv[1] * t18;
-        let t29 = xv[2] * t19;
         let t30 = xv[3] * t20;
         let t31 = xv[1] * t21;
-        let t32 = xv[2] * t22;
-        let t33 = xv[3] * t23;
-        let t34 = t26 - t27;
+        let t34 = (-xv[3]).mul_add(t17, t26);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t25 + t35;
-        let t37 = t30 - t28;
+        let t36 = xv[1].mul_add(t15, t35);
+        let t37 = (-xv[1]).mul_add(t18, t30);
         let t38 = t37 * T::from_i64(2);
-        let t39 = t29 + t38;
-        let t40 = t31 - t32;
+        let t39 = xv[2].mul_add(t19, t38);
+        let t40 = (-xv[2]).mul_add(t22, t31);
         let t41 = t40 * T::from_i64(2);
-        let t42 = t33 + t41;
+        let t42 = xv[3].mul_add(t23, t41);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([t24, t36, t39, t42]) };
         }
         let m0 = v[0] * v[0];
@@ -13102,36 +12914,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[1];
-        let t1 = v[2] * xv[3];
         let t2 = v[3] * xv[2];
-        let t3 = t0 + t2;
-        let t4 = t3 - t1;
-        let t5 = v[0] * xv[2];
+        let t3 = v[0].mul_add(xv[1], t2);
+        let t4 = (-v[2]).mul_add(xv[3], t3);
         let t6 = v[1] * xv[3];
-        let t7 = v[3] * xv[1];
-        let t8 = t5 + t6;
-        let t9 = t8 - t7;
-        let t10 = v[0] * xv[3];
-        let t11 = v[1] * xv[2];
+        let t8 = v[0].mul_add(xv[2], t6);
+        let t9 = (-v[3]).mul_add(xv[1], t8);
         let t12 = v[2] * xv[1];
-        let t13 = t10 + t12;
-        let t14 = t13 - t11;
-        let t15 = v[2] * t14;
+        let t13 = v[0].mul_add(xv[3], t12);
+        let t14 = (-v[1]).mul_add(xv[2], t13);
         let t16 = v[3] * t9;
         let t17 = v[1] * t14;
-        let t18 = v[3] * t4;
-        let t19 = v[1] * t9;
         let t20 = v[2] * t4;
-        let t21 = t16 - t15;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[1] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = xv[2] + t25;
-        let t27 = t20 - t19;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = xv[3] + t28;
+        let t21 = (-v[2]).mul_add(t14, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
+        let t24 = (-v[3]).mul_add(t4, t17);
+        let t26 = t24.mul_add(T::from_i64(2), xv[2]);
+        let t27 = (-v[1]).mul_add(t9, t20);
+        let t29 = t27.mul_add(T::from_i64(2), xv[3]);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -13263,25 +13063,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Rotor<(), T> {
         let t21 = t4 - t9;
         let t22 = t10 - t12;
         let t23 = t11 + t13;
-        let t24 = xv[0] * t14;
         let t25 = xv[1] * t15;
-        let t26 = xv[2] * t16;
-        let t27 = xv[0] * t17;
-        let t28 = xv[1] * t18;
         let t29 = xv[2] * t19;
         let t30 = xv[0] * t20;
-        let t31 = xv[1] * t21;
-        let t32 = xv[2] * t22;
         let t33 = xv[3] * t23;
-        let t34 = t25 - t26;
+        let t34 = (-xv[2]).mul_add(t16, t25);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t24 + t35;
-        let t37 = t29 - t27;
+        let t36 = xv[0].mul_add(t14, t35);
+        let t37 = (-xv[0]).mul_add(t17, t29);
         let t38 = t37 * T::from_i64(2);
-        let t39 = t28 + t38;
-        let t40 = t30 - t31;
+        let t39 = xv[1].mul_add(t18, t38);
+        let t40 = (-xv[1]).mul_add(t21, t30);
         let t41 = t40 * T::from_i64(2);
-        let t42 = t32 + t41;
+        let t42 = xv[2].mul_add(t22, t41);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t36, t39, t42, t33]) };
         }
         let m0 = v[0] * v[0];
@@ -13391,36 +13185,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Rotor<(), 
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[0];
-        let t1 = v[2] * xv[2];
         let t2 = v[3] * xv[1];
-        let t3 = t0 + t2;
-        let t4 = t3 - t1;
-        let t5 = v[0] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t2);
+        let t4 = (-v[2]).mul_add(xv[2], t3);
         let t6 = v[1] * xv[2];
-        let t7 = v[3] * xv[0];
-        let t8 = t5 + t6;
-        let t9 = t8 - t7;
-        let t10 = v[0] * xv[2];
-        let t11 = v[1] * xv[1];
+        let t8 = v[0].mul_add(xv[1], t6);
+        let t9 = (-v[3]).mul_add(xv[0], t8);
         let t12 = v[2] * xv[0];
-        let t13 = t10 + t12;
-        let t14 = t13 - t11;
-        let t15 = v[2] * t14;
+        let t13 = v[0].mul_add(xv[2], t12);
+        let t14 = (-v[1]).mul_add(xv[1], t13);
         let t16 = v[3] * t9;
         let t17 = v[1] * t14;
-        let t18 = v[3] * t4;
-        let t19 = v[1] * t9;
         let t20 = v[2] * t4;
-        let t21 = t16 - t15;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = xv[1] + t25;
-        let t27 = t20 - t19;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = xv[2] + t28;
+        let t21 = (-v[2]).mul_add(t14, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t4, t17);
+        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
+        let t27 = (-v[1]).mul_add(t9, t20);
+        let t29 = t27.mul_add(T::from_i64(2), xv[2]);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t23, t26, t29, xv[3]]) };
         }
         let m0 = v[0] * v[0];
@@ -13553,43 +13335,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Rotor<(), T
         let t22 = t4 - t9;
         let t23 = t10 - t12;
         let t24 = xv[0] * t14;
-        let t25 = xv[1] * t15;
         let t26 = xv[2] * t16;
-        let t27 = xv[3] * t17;
-        let t28 = xv[1] * t18;
-        let t29 = xv[2] * t19;
         let t30 = xv[3] * t20;
         let t31 = xv[1] * t21;
-        let t32 = xv[2] * t22;
-        let t33 = xv[3] * t23;
-        let t34 = xv[4] * t15;
         let t35 = xv[5] * t16;
-        let t36 = xv[6] * t17;
-        let t37 = xv[4] * t18;
-        let t38 = xv[5] * t19;
         let t39 = xv[6] * t20;
         let t40 = xv[4] * t21;
-        let t41 = xv[5] * t22;
-        let t42 = xv[6] * t23;
         let t43 = xv[7] * t14;
-        let t44 = t26 - t27;
+        let t44 = (-xv[3]).mul_add(t17, t26);
         let t45 = t44 * T::from_i64(2);
-        let t46 = t25 + t45;
-        let t47 = t30 - t28;
+        let t46 = xv[1].mul_add(t15, t45);
+        let t47 = (-xv[1]).mul_add(t18, t30);
         let t48 = t47 * T::from_i64(2);
-        let t49 = t29 + t48;
-        let t50 = t31 - t32;
+        let t49 = xv[2].mul_add(t19, t48);
+        let t50 = (-xv[2]).mul_add(t22, t31);
         let t51 = t50 * T::from_i64(2);
-        let t52 = t33 + t51;
-        let t53 = t35 - t36;
+        let t52 = xv[3].mul_add(t23, t51);
+        let t53 = (-xv[6]).mul_add(t17, t35);
         let t54 = t53 * T::from_i64(2);
-        let t55 = t34 + t54;
-        let t56 = t39 - t37;
+        let t55 = xv[4].mul_add(t15, t54);
+        let t56 = (-xv[4]).mul_add(t18, t39);
         let t57 = t56 * T::from_i64(2);
-        let t58 = t38 + t57;
-        let t59 = t40 - t41;
+        let t58 = xv[5].mul_add(t19, t57);
+        let t59 = (-xv[5]).mul_add(t22, t40);
         let t60 = t59 * T::from_i64(2);
-        let t61 = t42 + t60;
+        let t61 = xv[6].mul_add(t23, t60);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t24, t46, t49, t52, t55, t58, t61, t43]) };
         }
         let m0 = v[0] * v[0];
@@ -13715,56 +13485,41 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let t7 = v[2] * v[3];
         let t8 = v[3] * v[3];
         let t9 = t6 + t8;
-        let t10 = t9 * T::from_i64(2);
-        let t11 = T::from_i64(1) - t10;
+        let t11 = (-t9).mul_add(T::from_i64(2), T::from_i64(1));
         let t12 = t2 + t4;
         let t13 = t1 - t5;
         let t14 = t2 - t4;
         let t15 = t3 + t8;
-        let t16 = t15 * T::from_i64(2);
-        let t17 = T::from_i64(1) - t16;
+        let t17 = (-t15).mul_add(T::from_i64(2), T::from_i64(1));
         let t18 = t0 + t7;
         let t19 = t1 + t5;
         let t20 = t0 - t7;
         let t21 = t3 + t6;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = T::from_i64(1) - t22;
-        let t24 = xv[1] * t11;
+        let t23 = (-t21).mul_add(T::from_i64(2), T::from_i64(1));
         let t25 = xv[2] * t12;
-        let t26 = xv[3] * t13;
-        let t27 = xv[1] * t14;
-        let t28 = xv[2] * t17;
         let t29 = xv[3] * t18;
         let t30 = xv[1] * t19;
-        let t31 = xv[2] * t20;
-        let t32 = xv[3] * t23;
-        let t33 = xv[4] * t11;
         let t34 = xv[5] * t12;
-        let t35 = xv[6] * t13;
-        let t36 = xv[4] * t14;
-        let t37 = xv[5] * t17;
         let t38 = xv[6] * t18;
         let t39 = xv[4] * t19;
-        let t40 = xv[5] * t20;
-        let t41 = xv[6] * t23;
-        let t42 = t25 - t26;
+        let t42 = (-xv[3]).mul_add(t13, t25);
         let t43 = t42 * T::from_i64(2);
-        let t44 = t24 + t43;
-        let t45 = t29 - t27;
+        let t44 = xv[1].mul_add(t11, t43);
+        let t45 = (-xv[1]).mul_add(t14, t29);
         let t46 = t45 * T::from_i64(2);
-        let t47 = t28 + t46;
-        let t48 = t30 - t31;
+        let t47 = xv[2].mul_add(t17, t46);
+        let t48 = (-xv[2]).mul_add(t20, t30);
         let t49 = t48 * T::from_i64(2);
-        let t50 = t32 + t49;
-        let t51 = t34 - t35;
+        let t50 = xv[3].mul_add(t23, t49);
+        let t51 = (-xv[6]).mul_add(t13, t34);
         let t52 = t51 * T::from_i64(2);
-        let t53 = t33 + t52;
-        let t54 = t38 - t36;
+        let t53 = xv[4].mul_add(t11, t52);
+        let t54 = (-xv[4]).mul_add(t14, t38);
         let t55 = t54 * T::from_i64(2);
-        let t56 = t37 + t55;
-        let t57 = t39 - t40;
+        let t56 = xv[5].mul_add(t17, t55);
+        let t57 = (-xv[5]).mul_add(t20, t39);
         let t58 = t57 * T::from_i64(2);
-        let t59 = t41 + t58;
+        let t59 = xv[6].mul_add(t23, t58);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t44, t47, t50, t53, t56, t59, xv[7]]) };
         }
         let m0 = v[0] * v[0];
@@ -13878,22 +13633,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
         let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m6)).0] }
@@ -13913,12 +13664,10 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Odd<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Odd, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
@@ -14021,24 +13770,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
         let t20 = t0 + t1;
         let t21 = t2 + t3;
         let t22 = t20 - t21;
-        let t23 = xv[0] * t12;
-        let t24 = xv[1] * t13;
         let t25 = xv[2] * t14;
         let t26 = xv[0] * t15;
-        let t27 = xv[1] * t16;
-        let t28 = xv[2] * t17;
-        let t29 = xv[0] * t18;
         let t30 = xv[1] * t19;
-        let t31 = xv[2] * t22;
-        let t32 = t24 + t25;
+        let t32 = xv[1].mul_add(t13, t25);
         let t33 = t32 * T::from_i64(2);
-        let t34 = t23 + t33;
-        let t35 = t26 - t28;
+        let t34 = xv[0].mul_add(t12, t33);
+        let t35 = (-xv[2]).mul_add(t17, t26);
         let t36 = t35 * T::from_i64(2);
-        let t37 = t36 - t27;
-        let t38 = t29 + t30;
+        let t37 = (-xv[1]).mul_add(t16, t36);
+        let t38 = xv[0].mul_add(t18, t30);
         let t39 = t38 * T::from_i64(2);
-        let t40 = t39 - t31;
+        let t40 = (-xv[2]).mul_add(t22, t39);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t34, t37, t40]) };
         }
         let m0 = v[0] * v[0];
@@ -14148,36 +13891,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
-        let t5 = v[0] * xv[1];
-        let t6 = v[1] * xv[0];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t7 = v[3] * xv[2];
-        let t8 = t5 + t7;
-        let t9 = t8 - t6;
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
         let t10 = v[0] * xv[2];
-        let t11 = v[2] * xv[0];
-        let t12 = v[3] * xv[1];
-        let t13 = t10 - t11;
-        let t14 = t13 - t12;
-        let t15 = v[1] * t9;
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[3]).mul_add(xv[1], t13);
         let t16 = v[2] * t14;
         let t17 = v[1] * t4;
-        let t18 = v[3] * t14;
-        let t19 = v[2] * t4;
         let t20 = v[3] * t9;
-        let t21 = t15 + t16;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = t25 - xv[1];
-        let t27 = t19 + t20;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = t28 - xv[2];
+        let t21 = v[1].mul_add(t9, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t14, t17);
+        let t26 = t24.mul_add(T::from_i64(2), -xv[1]);
+        let t27 = v[2].mul_add(t4, t20);
+        let t29 = t27.mul_add(T::from_i64(2), -xv[2]);
             return Vector { c: gx::slots::from_values::<S, T, 3>([t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -14310,24 +14041,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
         let t20 = t0 + t1;
         let t21 = t2 + t3;
         let t22 = t20 - t21;
-        let t23 = xv[0] * t12;
-        let t24 = xv[1] * t13;
         let t25 = xv[2] * t14;
         let t26 = xv[0] * t15;
-        let t27 = xv[1] * t16;
-        let t28 = xv[2] * t17;
-        let t29 = xv[0] * t18;
         let t30 = xv[1] * t19;
-        let t31 = xv[2] * t22;
-        let t32 = t24 + t25;
+        let t32 = xv[1].mul_add(t13, t25);
         let t33 = t32 * T::from_i64(2);
-        let t34 = t23 + t33;
-        let t35 = t26 - t28;
+        let t34 = xv[0].mul_add(t12, t33);
+        let t35 = (-xv[2]).mul_add(t17, t26);
         let t36 = t35 * T::from_i64(2);
-        let t37 = t36 - t27;
-        let t38 = t29 + t30;
+        let t37 = (-xv[1]).mul_add(t16, t36);
+        let t38 = xv[0].mul_add(t18, t30);
         let t39 = t38 * T::from_i64(2);
-        let t40 = t39 - t31;
+        let t40 = (-xv[2]).mul_add(t22, t39);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t34, t37, t40]) };
         }
         let m0 = v[0] * v[0];
@@ -14437,36 +14162,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
-        let t5 = v[0] * xv[1];
-        let t6 = v[1] * xv[0];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t7 = v[3] * xv[2];
-        let t8 = t5 + t7;
-        let t9 = t8 - t6;
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
         let t10 = v[0] * xv[2];
-        let t11 = v[2] * xv[0];
-        let t12 = v[3] * xv[1];
-        let t13 = t10 - t11;
-        let t14 = t13 - t12;
-        let t15 = v[1] * t9;
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[3]).mul_add(xv[1], t13);
         let t16 = v[2] * t14;
         let t17 = v[1] * t4;
-        let t18 = v[3] * t14;
-        let t19 = v[2] * t4;
         let t20 = v[3] * t9;
-        let t21 = t15 + t16;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = t25 - xv[1];
-        let t27 = t19 + t20;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = t28 - xv[2];
+        let t21 = v[1].mul_add(t9, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t14, t17);
+        let t26 = t24.mul_add(T::from_i64(2), -xv[1]);
+        let t27 = v[2].mul_add(t4, t20);
+        let t29 = t27.mul_add(T::from_i64(2), -xv[2]);
             return Bivector { c: gx::slots::from_values::<S, T, 3>([t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -14576,22 +14289,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
         let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m6)).0] }
@@ -14611,12 +14320,10 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Odd<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Odd, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
-        let m4 = m0 + m1;
-        let m5 = m2 + m3;
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
         let m6 = m4 + m5;
         gx::Prepared::from_entries([m6])
     }
@@ -14721,24 +14428,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Odd<(), T> {
         let t22 = t6 + t7;
         let t23 = t11 - t13;
         let t24 = xv[0] * t14;
-        let t25 = xv[1] * t15;
-        let t26 = xv[2] * t16;
         let t27 = xv[3] * t17;
         let t28 = xv[1] * t18;
-        let t29 = xv[2] * t19;
-        let t30 = xv[3] * t20;
-        let t31 = xv[1] * t21;
         let t32 = xv[2] * t22;
-        let t33 = xv[3] * t23;
-        let t34 = t26 + t27;
+        let t34 = xv[2].mul_add(t16, t27);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t25 + t35;
-        let t37 = t28 - t30;
+        let t36 = xv[1].mul_add(t15, t35);
+        let t37 = (-xv[3]).mul_add(t20, t28);
         let t38 = t37 * T::from_i64(2);
-        let t39 = t38 - t29;
-        let t40 = t31 + t32;
+        let t39 = (-xv[2]).mul_add(t19, t38);
+        let t40 = xv[1].mul_add(t21, t32);
         let t41 = t40 * T::from_i64(2);
-        let t42 = t41 - t33;
+        let t42 = (-xv[3]).mul_add(t23, t41);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([t24, t36, t39, t42]) };
         }
         let m0 = v[0] * v[0];
@@ -14850,36 +14551,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Odd<(), 
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[2];
-        let t2 = v[2] * xv[3];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
-        let t5 = v[0] * xv[2];
-        let t6 = v[1] * xv[1];
+        let t3 = v[0].mul_add(xv[1], t1);
+        let t4 = v[2].mul_add(xv[3], t3);
         let t7 = v[3] * xv[3];
-        let t8 = t5 + t7;
-        let t9 = t8 - t6;
+        let t8 = v[0].mul_add(xv[2], t7);
+        let t9 = (-v[1]).mul_add(xv[1], t8);
         let t10 = v[0] * xv[3];
-        let t11 = v[2] * xv[1];
-        let t12 = v[3] * xv[2];
-        let t13 = t10 - t11;
-        let t14 = t13 - t12;
-        let t15 = v[1] * t9;
+        let t13 = (-v[2]).mul_add(xv[1], t10);
+        let t14 = (-v[3]).mul_add(xv[2], t13);
         let t16 = v[2] * t14;
         let t17 = v[1] * t4;
-        let t18 = v[3] * t14;
-        let t19 = v[2] * t4;
         let t20 = v[3] * t9;
-        let t21 = t15 + t16;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[1] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = t25 - xv[2];
-        let t27 = t19 + t20;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = t28 - xv[3];
+        let t21 = v[1].mul_add(t9, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
+        let t24 = (-v[3]).mul_add(t14, t17);
+        let t26 = t24.mul_add(T::from_i64(2), -xv[2]);
+        let t27 = v[2].mul_add(t4, t20);
+        let t29 = t27.mul_add(T::from_i64(2), -xv[3]);
             return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
         }
         let m0 = v[0] * v[0];
@@ -15013,25 +14702,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Odd<(), T> {
         let t21 = t6 + t7;
         let t22 = t11 - t13;
         let t23 = t11 + t13;
-        let t24 = xv[0] * t14;
-        let t25 = xv[1] * t15;
         let t26 = xv[2] * t16;
         let t27 = xv[0] * t17;
-        let t28 = xv[1] * t18;
-        let t29 = xv[2] * t19;
-        let t30 = xv[0] * t20;
         let t31 = xv[1] * t21;
-        let t32 = xv[2] * t22;
         let t33 = xv[3] * t23;
-        let t34 = t25 + t26;
+        let t34 = xv[1].mul_add(t15, t26);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t24 + t35;
-        let t37 = t27 - t29;
+        let t36 = xv[0].mul_add(t14, t35);
+        let t37 = (-xv[2]).mul_add(t19, t27);
         let t38 = t37 * T::from_i64(2);
-        let t39 = t38 - t28;
-        let t40 = t30 + t31;
+        let t39 = (-xv[1]).mul_add(t18, t38);
+        let t40 = xv[0].mul_add(t20, t31);
         let t41 = t40 * T::from_i64(2);
-        let t42 = t41 - t32;
+        let t42 = (-xv[2]).mul_add(t22, t41);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t36, t39, t42, t33]) };
         }
         let m0 = v[0] * v[0];
@@ -15143,36 +14826,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * xv[0];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * xv[2];
-        let t3 = t0 + t1;
-        let t4 = t2 + t3;
-        let t5 = v[0] * xv[1];
-        let t6 = v[1] * xv[0];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
         let t7 = v[3] * xv[2];
-        let t8 = t5 + t7;
-        let t9 = t8 - t6;
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
         let t10 = v[0] * xv[2];
-        let t11 = v[2] * xv[0];
-        let t12 = v[3] * xv[1];
-        let t13 = t10 - t11;
-        let t14 = t13 - t12;
-        let t15 = v[1] * t9;
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[3]).mul_add(xv[1], t13);
         let t16 = v[2] * t14;
         let t17 = v[1] * t4;
-        let t18 = v[3] * t14;
-        let t19 = v[2] * t4;
         let t20 = v[3] * t9;
-        let t21 = t15 + t16;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = xv[0] + t22;
-        let t24 = t17 - t18;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = t25 - xv[1];
-        let t27 = t19 + t20;
-        let t28 = t27 * T::from_i64(2);
-        let t29 = t28 - xv[2];
+        let t21 = v[1].mul_add(t9, t16);
+        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
+        let t24 = (-v[3]).mul_add(t14, t17);
+        let t26 = t24.mul_add(T::from_i64(2), -xv[1]);
+        let t27 = v[2].mul_add(t4, t20);
+        let t29 = t27.mul_add(T::from_i64(2), -xv[2]);
             return Odd { c: gx::slots::from_values::<S, T, 4>([t23, t26, t29, xv[3]]) };
         }
         let m0 = v[0] * v[0];
@@ -15307,43 +14978,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> 
         let t22 = t6 + t7;
         let t23 = t11 - t13;
         let t24 = xv[0] * t14;
-        let t25 = xv[1] * t15;
-        let t26 = xv[2] * t16;
         let t27 = xv[3] * t17;
         let t28 = xv[1] * t18;
-        let t29 = xv[2] * t19;
-        let t30 = xv[3] * t20;
-        let t31 = xv[1] * t21;
         let t32 = xv[2] * t22;
-        let t33 = xv[3] * t23;
-        let t34 = xv[4] * t15;
-        let t35 = xv[5] * t16;
         let t36 = xv[6] * t17;
         let t37 = xv[4] * t18;
-        let t38 = xv[5] * t19;
-        let t39 = xv[6] * t20;
-        let t40 = xv[4] * t21;
         let t41 = xv[5] * t22;
-        let t42 = xv[6] * t23;
         let t43 = xv[7] * t14;
-        let t44 = t26 + t27;
+        let t44 = xv[2].mul_add(t16, t27);
         let t45 = t44 * T::from_i64(2);
-        let t46 = t25 + t45;
-        let t47 = t28 - t30;
+        let t46 = xv[1].mul_add(t15, t45);
+        let t47 = (-xv[3]).mul_add(t20, t28);
         let t48 = t47 * T::from_i64(2);
-        let t49 = t48 - t29;
-        let t50 = t31 + t32;
+        let t49 = (-xv[2]).mul_add(t19, t48);
+        let t50 = xv[1].mul_add(t21, t32);
         let t51 = t50 * T::from_i64(2);
-        let t52 = t51 - t33;
-        let t53 = t35 + t36;
+        let t52 = (-xv[3]).mul_add(t23, t51);
+        let t53 = xv[5].mul_add(t16, t36);
         let t54 = t53 * T::from_i64(2);
-        let t55 = t34 + t54;
-        let t56 = t37 - t39;
+        let t55 = xv[4].mul_add(t15, t54);
+        let t56 = (-xv[6]).mul_add(t20, t37);
         let t57 = t56 * T::from_i64(2);
-        let t58 = t57 - t38;
-        let t59 = t40 + t41;
+        let t58 = (-xv[5]).mul_add(t19, t57);
+        let t59 = xv[4].mul_add(t21, t41);
         let t60 = t59 * T::from_i64(2);
-        let t61 = t60 - t42;
+        let t61 = (-xv[6]).mul_add(t23, t60);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t24, t46, t49, t52, t55, t58, t61, t43]) };
         }
         let m0 = v[0] * v[0];
@@ -15469,56 +15128,41 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Od
         let t7 = v[2] * v[3];
         let t8 = v[3] * v[3];
         let t9 = t3 + t6;
-        let t10 = t9 * T::from_i64(2);
-        let t11 = T::from_i64(1) - t10;
+        let t11 = (-t9).mul_add(T::from_i64(2), T::from_i64(1));
         let t12 = t0 - t7;
         let t13 = t1 + t5;
         let t14 = t0 + t7;
         let t15 = t3 + t8;
-        let t16 = t15 * T::from_i64(2);
-        let t17 = T::from_i64(1) - t16;
+        let t17 = (-t15).mul_add(T::from_i64(2), T::from_i64(1));
         let t18 = t2 - t4;
         let t19 = t1 - t5;
         let t20 = t2 + t4;
         let t21 = t6 + t8;
-        let t22 = t21 * T::from_i64(2);
-        let t23 = T::from_i64(1) - t22;
-        let t24 = xv[1] * t11;
-        let t25 = xv[2] * t12;
+        let t23 = (-t21).mul_add(T::from_i64(2), T::from_i64(1));
         let t26 = xv[3] * t13;
         let t27 = xv[1] * t14;
-        let t28 = xv[2] * t17;
-        let t29 = xv[3] * t18;
-        let t30 = xv[1] * t19;
         let t31 = xv[2] * t20;
-        let t32 = xv[3] * t23;
-        let t33 = xv[4] * t11;
-        let t34 = xv[5] * t12;
         let t35 = xv[6] * t13;
         let t36 = xv[4] * t14;
-        let t37 = xv[5] * t17;
-        let t38 = xv[6] * t18;
-        let t39 = xv[4] * t19;
         let t40 = xv[5] * t20;
-        let t41 = xv[6] * t23;
-        let t42 = t25 + t26;
+        let t42 = xv[2].mul_add(t12, t26);
         let t43 = t42 * T::from_i64(2);
-        let t44 = t24 + t43;
-        let t45 = t27 - t29;
+        let t44 = xv[1].mul_add(t11, t43);
+        let t45 = (-xv[3]).mul_add(t18, t27);
         let t46 = t45 * T::from_i64(2);
-        let t47 = t46 - t28;
-        let t48 = t30 + t31;
+        let t47 = (-xv[2]).mul_add(t17, t46);
+        let t48 = xv[1].mul_add(t19, t31);
         let t49 = t48 * T::from_i64(2);
-        let t50 = t49 - t32;
-        let t51 = t34 + t35;
+        let t50 = (-xv[3]).mul_add(t23, t49);
+        let t51 = xv[5].mul_add(t12, t35);
         let t52 = t51 * T::from_i64(2);
-        let t53 = t33 + t52;
-        let t54 = t36 - t38;
+        let t53 = xv[4].mul_add(t11, t52);
+        let t54 = (-xv[6]).mul_add(t18, t36);
         let t55 = t54 * T::from_i64(2);
-        let t56 = t55 - t37;
-        let t57 = t39 + t40;
+        let t56 = (-xv[5]).mul_add(t17, t55);
+        let t57 = xv[4].mul_add(t19, t40);
         let t58 = t57 * T::from_i64(2);
-        let t59 = t58 - t41;
+        let t59 = (-xv[6]).mul_add(t23, t58);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t44, t47, t50, t53, t56, t59, xv[7]]) };
         }
         let m0 = v[0] * v[0];

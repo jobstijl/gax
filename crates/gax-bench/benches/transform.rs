@@ -177,6 +177,11 @@ fn motors(c: &mut Criterion) {
     g.bench_function("glam Quat::from_axis_angle", |b| {
         b.iter(|| glam::Quat::from_axis_angle(black_box(axis), black_box(0.7)))
     });
+    // The fair comparison for an exponential: the rotation vector's length must be computed.
+    let scaled = glam::Vec3::new(0.2, 0.4, 0.6);
+    g.bench_function("glam Quat::from_scaled_axis", |b| {
+        b.iter(|| glam::Quat::from_scaled_axis(black_box(scaled)))
+    });
     g.bench_function("gax Unit<Motor>::log", |b| {
         b.iter(|| -> Line { black_box(m1).log() })
     });

@@ -1,6 +1,6 @@
 # Performance
 
-All measurements are on an AMD Ryzen 7 5800X with rustc 1.98.1. They use `--release`, and
+All measurements are on an AMD Ryzen 7 5800X with rustc 1.98.1. They were taken on an otherwise idle machine, and any outlier was re-run in isolation. They use `--release`, and
 `-C target-cpu=native` (AVX2 and FMA) where stated. Assembly counts come from the
 `#[inline(never)]` probes in `crates/gax-bench/src/lib.rs`
 (`cargo rustc -p gax-bench --release --lib -- --emit asm`).
@@ -17,15 +17,15 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 
 | operation | gax | glam 0.30 |
 |---|---|---|
-| transform one point: `Unit<Motor> >> Point` (fused) | 6.3 ns | `Affine3A::transform_point3a`: 2.2 ns; `Quat * Vec3A` (rotation only): 3.2 ns |
+| transform one point: `Unit<Motor> >> Point` (fused, FMA) | 5.3 ns | `Affine3A::transform_point3a`: 2.2 ns; `Quat * Vec3A` (rotation only): 3.2 ns |
 | transform one point: prepared sparse map `m.prepare::<Point>() >> p` | 4.2 ns | |
 | transform one point: dense map `Point<(Point,)>::of` | 3.9 ns | |
 | transform 1024 points, AoS: direct / prepared / dense map | 1.87 / 1.39 / 1.48 µs | `Affine3A` loop: 1.18 µs |
-| transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.66 / **0.43 µs** | (2.7x faster than glam) |
+| transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.51 / **0.43 µs** | (2.7x faster than glam) |
 | compose motors `Unit<Motor> * Unit<Motor>` | 7.6 ns | `Affine3A * Affine3A`: 5.3 ns; `Quat * Quat`: 2.0 ns |
 | invert a unit motor (the reverse) | **1.9 ns** | `Affine3A::inverse`: 8.6–13.7 ns |
 | normalize a motor (Study-number `rsqrt`) | 5.8 ns | `Quat::normalize`: 2.4 ns |
-| motor exponential `Line::exp` | 24 ns | `Quat::from_axis_angle`: 3.2–5.6 ns |
+| motor exponential `Line::exp` (rotation and translation) | 24 ns | `Quat::from_scaled_axis` (rotation only, the same work of finding the angle): 9.5 ns; `Quat::from_axis_angle` (angle given): 5.6 ns |
 | motor logarithm `Unit<Motor>::log` | 24 ns | — |
 | build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 7.1 / 11.9 ns | `Affine3A::from_rotation_translation`: 2.9–4.1 ns |
 
@@ -64,8 +64,12 @@ Ranges show run-to-run variation, measured in separate runs of the suite.
   from 20 ns to 5.8 ns;
 * prepared sparse maps.
 
-**Still open:** emitting `mul_add` when FMA is available, and SIMD-friendly layouts for single
-values.
+Fused kernels emit `mul_add` for every product that feeds a single sum. It is a hardware fused
+multiply-add when the target has FMA (for example with `-C target-cpu=native`), and `a*b + c`
+otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA direct batch from
+0.66 µs to 0.51 µs.
+
+**Still open:** SIMD-friendly layouts for single values.
 
 ## Against nalgebra, ultraviolet and `geometric_algebra` (`benches/compare.rs`)
 

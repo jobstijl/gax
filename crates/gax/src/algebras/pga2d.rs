@@ -1090,9 +1090,8 @@ impl<T: gx::Real> Line<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 + t1;
+        let t2 = x[0].mul_add(x[0], t1);
         t2
     }
 
@@ -1108,16 +1107,13 @@ impl<T: gx::Real> Line<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 * t0;
         let t3 = t0 * t1;
         let t4 = t1 * t1;
-        let t5 = t2 + t4;
-        let t6 = t3 * T::from_i64(2);
-        let t7 = t5 + t6;
+        let t5 = t0.mul_add(t0, t4);
+        let t7 = t3.mul_add(T::from_i64(2), t5);
         let t8 = t7.recip();
-        let t9 = t0 * t8;
         let t10 = t1 * t8;
-        let t11 = t9 + t10;
+        let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
         let t14 = x[2] * t11;
@@ -1128,9 +1124,8 @@ impl<T: gx::Real> Line<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = p0 + p1;
+        let p2 = x[0].mul_add(x[0], p1);
         let s0 = (p2).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -2754,9 +2749,8 @@ impl<T: gx::Real> Rotor<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 + t1;
+        let t2 = x[0].mul_add(x[0], t1);
         t2
     }
 
@@ -2772,16 +2766,13 @@ impl<T: gx::Real> Rotor<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 * t0;
         let t3 = t0 * t1;
         let t4 = t1 * t1;
-        let t5 = t2 + t4;
-        let t6 = t3 * T::from_i64(2);
-        let t7 = t5 + t6;
+        let t5 = t0.mul_add(t0, t4);
+        let t7 = t3.mul_add(T::from_i64(2), t5);
         let t8 = t7.recip();
-        let t9 = t0 * t8;
         let t10 = t1 * t8;
-        let t11 = t9 + t10;
+        let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
         let t14 = -t13;
@@ -2792,9 +2783,8 @@ impl<T: gx::Real> Rotor<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = p0 + p1;
+        let p2 = x[0].mul_add(x[0], p1);
         let s0 = (p2).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -3947,9 +3937,8 @@ impl<T: gx::Real> Motor<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 + t1;
+        let t2 = x[0].mul_add(x[0], t1);
         t2
     }
 
@@ -3965,16 +3954,13 @@ impl<T: gx::Real> Motor<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 * t0;
         let t3 = t0 * t1;
         let t4 = t1 * t1;
-        let t5 = t2 + t4;
-        let t6 = t3 * T::from_i64(2);
-        let t7 = t5 + t6;
+        let t5 = t0.mul_add(t0, t4);
+        let t7 = t3.mul_add(T::from_i64(2), t5);
         let t8 = t7.recip();
-        let t9 = t0 * t8;
         let t10 = t1 * t8;
-        let t11 = t9 + t10;
+        let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
         let t14 = x[2] * t11;
@@ -3989,9 +3975,8 @@ impl<T: gx::Real> Motor<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = p0 + p1;
+        let p2 = x[0].mul_add(x[0], p1);
         let s0 = (p2).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -4559,9 +4544,8 @@ impl<T: gx::Real> Flector<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 + t1;
+        let t2 = x[0].mul_add(x[0], t1);
         t2
     }
 
@@ -4577,16 +4561,13 @@ impl<T: gx::Real> Flector<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
-        let t2 = t0 * t0;
         let t3 = t0 * t1;
         let t4 = t1 * t1;
-        let t5 = t2 + t4;
-        let t6 = t3 * T::from_i64(2);
-        let t7 = t5 + t6;
+        let t5 = t0.mul_add(t0, t4);
+        let t7 = t3.mul_add(T::from_i64(2), t5);
         let t8 = t7.recip();
-        let t9 = t0 * t8;
         let t10 = t1 * t8;
-        let t11 = t9 + t10;
+        let t11 = t0.mul_add(t8, t10);
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
         let t14 = x[2] * t11;
@@ -4599,9 +4580,8 @@ impl<T: gx::Real> Flector<(), T> {
     #[inline]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
-        let p0 = x[0] * x[0];
         let p1 = x[1] * x[1];
-        let p2 = p0 + p1;
+        let p2 = x[0].mul_add(x[0], p1);
         let s0 = (p2).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -5169,12 +5149,10 @@ impl<T: gx::Real> Multivector<(), T> {
     #[inline]
     pub fn norm_squared(self) -> T {
         let x = self.c;
-        let t0 = x[0] * x[0];
         let t1 = x[2] * x[2];
-        let t2 = x[3] * x[3];
         let t3 = x[6] * x[6];
-        let t4 = t0 + t1;
-        let t5 = t2 + t3;
+        let t4 = x[0].mul_add(x[0], t1);
+        let t5 = x[3].mul_add(x[3], t3);
         let t6 = t4 + t5;
         t6
     }
@@ -16073,15 +16051,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Line<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m2)).0] }
     }
@@ -16100,9 +16076,8 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Line<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Line, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -16188,20 +16163,16 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Line<(), T> {
         let t4 = v[1] * v[2];
         let t5 = t0 - t1;
         let t6 = t0 + t1;
-        let t7 = xv[0] * t5;
         let t8 = xv[1] * t2;
         let t9 = xv[0] * t2;
-        let t10 = xv[1] * t5;
-        let t11 = xv[0] * t3;
         let t12 = xv[1] * t4;
-        let t13 = xv[2] * t6;
         let t14 = t8 * T::from_i64(2);
-        let t15 = t7 + t14;
+        let t15 = xv[0].mul_add(t5, t14);
         let t16 = t9 * T::from_i64(2);
-        let t17 = t16 - t10;
-        let t18 = t11 + t12;
+        let t17 = (-xv[1]).mul_add(t5, t16);
+        let t18 = xv[0].mul_add(t3, t12);
         let t19 = t18 * T::from_i64(2);
-        let t20 = t19 - t13;
+        let t20 = (-xv[2]).mul_add(t6, t19);
             return Line { c: gx::slots::from_values::<S, T, 3>([t15, t17, t20]) };
         }
         let m0 = v[0] * v[0];
@@ -16276,32 +16247,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Line<(), 
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t4 = v[1] * v[2];
-        let t5 = t0 - t1;
-        let t6 = xv[0] * t5;
+        let t5 = (-v[1]).mul_add(v[1], t0);
         let t7 = xv[1] * t2;
         let t8 = xv[0] * t2;
-        let t9 = xv[1] * t5;
-        let t10 = xv[0] * t3;
         let t11 = xv[1] * t4;
         let t12 = t7 * T::from_i64(2);
-        let t13 = t6 + t12;
+        let t13 = xv[0].mul_add(t5, t12);
         let t14 = t8 * T::from_i64(2);
-        let t15 = t14 - t9;
-        let t16 = t10 + t11;
-        let t17 = t16 * T::from_i64(2);
-        let t18 = t17 - xv[2];
+        let t15 = (-xv[1]).mul_add(t5, t14);
+        let t16 = xv[0].mul_add(t3, t11);
+        let t18 = t16.mul_add(T::from_i64(2), -xv[2]);
             return Line { c: gx::slots::from_values::<S, T, 3>([t13, t15, t18]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
@@ -16327,10 +16292,9 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
@@ -16372,19 +16336,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Line<(), T> {
         let t4 = v[1] * v[2];
         let t5 = t0 - t1;
         let t6 = t0 + t1;
-        let t7 = xv[0] * t5;
-        let t8 = xv[1] * t2;
         let t9 = xv[2] * t3;
-        let t10 = xv[0] * t2;
-        let t11 = xv[1] * t5;
         let t12 = xv[2] * t4;
         let t13 = xv[2] * t6;
-        let t14 = t8 + t9;
+        let t14 = xv[1].mul_add(t2, t9);
         let t15 = t14 * T::from_i64(2);
-        let t16 = t7 + t15;
-        let t17 = t10 + t12;
+        let t16 = xv[0].mul_add(t5, t15);
+        let t17 = xv[0].mul_add(t2, t12);
         let t18 = t17 * T::from_i64(2);
-        let t19 = t18 - t11;
+        let t19 = (-xv[1]).mul_add(t5, t18);
         let t20 = -t13;
             return Point { c: gx::slots::from_values::<S, T, 3>([t16, t19, t20]) };
         }
@@ -16460,31 +16420,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
-        let t2 = t0 - t1;
+        let t2 = (-v[1]).mul_add(v[1], t0);
         let t3 = v[0] * v[1];
         let t4 = v[2] * xv[2];
-        let t5 = xv[1] * t3;
         let t6 = v[0] * t4;
-        let t7 = xv[0] * t2;
-        let t8 = xv[0] * t3;
         let t9 = v[1] * t4;
-        let t10 = xv[1] * t2;
-        let t11 = t5 + t6;
+        let t11 = xv[1].mul_add(t3, t6);
         let t12 = t11 * T::from_i64(2);
-        let t13 = t7 + t12;
-        let t14 = t8 + t9;
+        let t13 = xv[0].mul_add(t2, t12);
+        let t14 = xv[0].mul_add(t3, t9);
         let t15 = t14 * T::from_i64(2);
-        let t16 = t15 - t10;
+        let t16 = (-xv[1]).mul_add(t2, t15);
         let t17 = -xv[2];
             return Point { c: gx::slots::from_values::<S, T, 3>([t13, t16, t17]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
         let m8 = -m5;
@@ -16510,10 +16464,9 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
         let m8 = -m5;
@@ -16548,15 +16501,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Line<(), T
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
@@ -16575,9 +16526,8 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Line<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Line, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -16656,9 +16606,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Line<(), T> {
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = v[2] * xv[1];
         let t4 = xv[0] * t2;
         let t5 = xv[1] * t2;
@@ -16669,11 +16618,10 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Line<(), T> {
         let t10 = t7 * T::from_i64(2);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t4, t8, t9, t10]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[2];
         let m3 = v[1] * v[2];
-        let m4 = m0 + m1;
+        let m4 = v[0].mul_add(v[0], m1);
         let m5 = -m4;
         let m6 = m2 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
@@ -16695,11 +16643,10 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for Line<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Line, Rotor, T, 4> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[2];
         let m3 = v[1] * v[2];
-        let m4 = m0 + m1;
+        let m4 = v[0].mul_add(v[0], m1);
         let m5 = -m4;
         let m6 = m2 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
@@ -16803,14 +16750,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for Line<(), T> 
         let t3 = t0 + t1;
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
-        let t6 = xv[1] * t4;
         let t7 = xv[2] * t2;
         let t8 = xv[1] * t2;
-        let t9 = xv[2] * t4;
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
+        let t11 = xv[1].mul_add(t4, t10);
         let t12 = t8 * T::from_i64(2);
-        let t13 = t12 - t9;
+        let t13 = (-xv[2]).mul_add(t4, t12);
             return Translator { c: gx::slots::from_values::<S, T, 3>([t5, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -16875,23 +16820,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Lin
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[1] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
-        let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
+        let t9 = xv[1].mul_add(t3, t8);
         let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - t7;
+        let t11 = (-xv[2]).mul_add(t3, t10);
             return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -16914,8 +16855,7 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -16955,19 +16895,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Line<(), T> {
         let t5 = v[2] * xv[1];
         let t6 = xv[0] * t3;
         let t7 = xv[1] * t3;
-        let t8 = xv[3] * t4;
         let t9 = v[0] * t5;
-        let t10 = xv[2] * t2;
-        let t11 = xv[2] * t4;
         let t12 = v[1] * t5;
-        let t13 = xv[3] * t2;
         let t14 = -t7;
-        let t15 = t8 + t9;
+        let t15 = xv[3].mul_add(t4, t9);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t10 + t16;
-        let t18 = t11 + t12;
+        let t17 = xv[2].mul_add(t2, t16);
+        let t18 = xv[2].mul_add(t4, t12);
         let t19 = t18 * T::from_i64(2);
-        let t20 = t19 - t13;
+        let t20 = (-xv[3]).mul_add(t2, t19);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t6, t14, t17, t20]) };
         }
         let m0 = v[0] * v[0];
@@ -17042,31 +16978,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Line<(),
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
-        let t2 = t0 - t1;
+        let t2 = (-v[1]).mul_add(v[1], t0);
         let t3 = v[0] * v[1];
         let t4 = v[2] * xv[1];
-        let t5 = xv[3] * t3;
         let t6 = v[0] * t4;
-        let t7 = xv[2] * t2;
-        let t8 = xv[2] * t3;
         let t9 = v[1] * t4;
-        let t10 = xv[3] * t2;
         let t11 = -xv[1];
-        let t12 = t5 + t6;
+        let t12 = xv[3].mul_add(t3, t6);
         let t13 = t12 * T::from_i64(2);
-        let t14 = t7 + t13;
-        let t15 = t8 + t9;
+        let t14 = xv[2].mul_add(t2, t13);
+        let t15 = xv[2].mul_add(t3, t9);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t16 - t10;
+        let t17 = (-xv[3]).mul_add(t2, t16);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t11, t14, t17]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = -T::from_i64(1);
         let m7 = m3 * T::from_i64(2);
         let m8 = m1 * T::from_i64(2);
@@ -17092,10 +17022,9 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = -T::from_i64(1);
         let m7 = m3 * T::from_i64(2);
         let m8 = m1 * T::from_i64(2);
@@ -17137,21 +17066,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Line<(), T> {
         let t4 = v[1] * v[2];
         let t5 = t0 - t1;
         let t6 = t0 + t1;
-        let t7 = xv[0] * t5;
         let t8 = xv[1] * t2;
         let t9 = xv[0] * t2;
-        let t10 = xv[1] * t5;
-        let t11 = xv[0] * t3;
         let t12 = xv[1] * t4;
-        let t13 = xv[2] * t6;
         let t14 = xv[3] * t6;
         let t15 = t8 * T::from_i64(2);
-        let t16 = t7 + t15;
+        let t16 = xv[0].mul_add(t5, t15);
         let t17 = t9 * T::from_i64(2);
-        let t18 = t17 - t10;
-        let t19 = t11 + t12;
+        let t18 = (-xv[1]).mul_add(t5, t17);
+        let t19 = xv[0].mul_add(t3, t12);
         let t20 = t19 * T::from_i64(2);
-        let t21 = t20 - t13;
+        let t21 = (-xv[2]).mul_add(t6, t20);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t16, t18, t21, t14]) };
         }
         let m0 = v[0] * v[0];
@@ -17226,32 +17151,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t4 = v[1] * v[2];
-        let t5 = t0 - t1;
-        let t6 = xv[0] * t5;
+        let t5 = (-v[1]).mul_add(v[1], t0);
         let t7 = xv[1] * t2;
         let t8 = xv[0] * t2;
-        let t9 = xv[1] * t5;
-        let t10 = xv[0] * t3;
         let t11 = xv[1] * t4;
         let t12 = t7 * T::from_i64(2);
-        let t13 = t6 + t12;
+        let t13 = xv[0].mul_add(t5, t12);
         let t14 = t8 * T::from_i64(2);
-        let t15 = t14 - t9;
-        let t16 = t10 + t11;
-        let t17 = t16 * T::from_i64(2);
-        let t18 = t17 - xv[2];
+        let t15 = (-xv[1]).mul_add(t5, t14);
+        let t16 = xv[0].mul_add(t3, t11);
+        let t18 = t16.mul_add(T::from_i64(2), -xv[2]);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t13, t15, t18, xv[3]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
@@ -17277,10 +17196,9 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = m1 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
@@ -17323,34 +17241,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Line<(), T>
         let t5 = t0 + t1;
         let t6 = t0 - t1;
         let t7 = xv[0] * t5;
-        let t8 = xv[1] * t5;
-        let t9 = xv[2] * t2;
         let t10 = xv[3] * t3;
-        let t11 = xv[2] * t6;
         let t12 = xv[3] * t4;
         let t13 = xv[2] * t4;
-        let t14 = xv[3] * t6;
-        let t15 = xv[4] * t6;
-        let t16 = xv[5] * t4;
         let t17 = xv[6] * t3;
-        let t18 = xv[4] * t4;
-        let t19 = xv[5] * t6;
         let t20 = xv[6] * t2;
         let t21 = xv[6] * t5;
         let t22 = xv[7] * t5;
-        let t23 = t9 + t10;
+        let t23 = xv[2].mul_add(t2, t10);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t24 - t8;
+        let t25 = (-xv[1]).mul_add(t5, t24);
         let t26 = t12 * T::from_i64(2);
-        let t27 = t11 + t26;
+        let t27 = xv[2].mul_add(t6, t26);
         let t28 = t13 * T::from_i64(2);
-        let t29 = t28 - t14;
-        let t30 = t16 + t17;
+        let t29 = (-xv[3]).mul_add(t6, t28);
+        let t30 = xv[5].mul_add(t4, t17);
         let t31 = t30 * T::from_i64(2);
-        let t32 = t31 - t15;
-        let t33 = t18 + t20;
+        let t32 = (-xv[4]).mul_add(t6, t31);
+        let t33 = xv[4].mul_add(t4, t20);
         let t34 = t33 * T::from_i64(2);
-        let t35 = t19 + t34;
+        let t35 = xv[5].mul_add(t6, t34);
         let t36 = -t21;
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t7, t25, t27, t29, t32, t35, t36, t22]) };
         }
@@ -17428,43 +17338,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Li
         let t0 = v[0] * v[2];
         let t1 = v[1] * v[2];
         let t2 = v[0] * v[0];
-        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
-        let t5 = t2 - t3;
-        let t6 = xv[2] * t0;
+        let t5 = (-v[1]).mul_add(v[1], t2);
         let t7 = xv[3] * t1;
-        let t8 = xv[2] * t5;
         let t9 = xv[3] * t4;
         let t10 = xv[2] * t4;
-        let t11 = xv[3] * t5;
-        let t12 = xv[4] * t5;
-        let t13 = xv[5] * t4;
         let t14 = xv[6] * t1;
-        let t15 = xv[4] * t4;
-        let t16 = xv[5] * t5;
         let t17 = xv[6] * t0;
-        let t18 = t6 + t7;
-        let t19 = t18 * T::from_i64(2);
-        let t20 = t19 - xv[1];
+        let t18 = xv[2].mul_add(t0, t7);
+        let t20 = t18.mul_add(T::from_i64(2), -xv[1]);
         let t21 = t9 * T::from_i64(2);
-        let t22 = t8 + t21;
+        let t22 = xv[2].mul_add(t5, t21);
         let t23 = t10 * T::from_i64(2);
-        let t24 = t23 - t11;
-        let t25 = t13 + t14;
+        let t24 = (-xv[3]).mul_add(t5, t23);
+        let t25 = xv[5].mul_add(t4, t14);
         let t26 = t25 * T::from_i64(2);
-        let t27 = t26 - t12;
-        let t28 = t15 + t17;
+        let t27 = (-xv[4]).mul_add(t5, t26);
+        let t28 = xv[4].mul_add(t4, t17);
         let t29 = t28 * T::from_i64(2);
-        let t30 = t16 + t29;
+        let t30 = xv[5].mul_add(t5, t29);
         let t31 = -xv[6];
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t20, t22, t24, t27, t30, t31, xv[7]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = -T::from_i64(1);
         let m7 = m3 * T::from_i64(2);
         let m8 = m4 * T::from_i64(2);
@@ -17490,10 +17390,9 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Line<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = m0 - m2;
+        let m5 = (-v[1]).mul_add(v[1], m0);
         let m6 = -T::from_i64(1);
         let m7 = m3 * T::from_i64(2);
         let m8 = m4 * T::from_i64(2);
@@ -17638,15 +17537,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Point<(), T> {
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
         let t3 = v[0] * v[2];
-        let t4 = xv[0] * t3;
         let t5 = v[1] * v[2];
         let t6 = xv[1] * t5;
-        let t7 = xv[2] * t0;
         let t8 = -t1;
         let t9 = -t2;
-        let t10 = t4 + t6;
+        let t10 = xv[0].mul_add(t3, t6);
         let t11 = t10 * T::from_i64(2);
-        let t12 = t7 + t11;
+        let t12 = xv[2].mul_add(t0, t11);
             return Line { c: gx::slots::from_values::<S, T, 3>([t8, t9, t12]) };
         }
         let m0 = v[2] * v[2];
@@ -17712,15 +17609,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Point<(),
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
         let t3 = v[0] * v[2];
-        let t4 = xv[0] * t3;
         let t5 = v[1] * v[2];
         let t6 = xv[1] * t5;
-        let t7 = xv[2] * t0;
         let t8 = -t1;
         let t9 = -t2;
-        let t10 = t4 + t6;
+        let t10 = xv[0].mul_add(t3, t6);
         let t11 = t10 * T::from_i64(2);
-        let t12 = t7 + t11;
+        let t12 = xv[2].mul_add(t0, t11);
             return Line { c: gx::slots::from_values::<S, T, 3>([t8, t9, t12]) };
         }
         let m0 = v[2] * v[2];
@@ -17785,14 +17680,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Point<(), T> {
         let t0 = v[2] * v[2];
         let t1 = v[2] * xv[2];
         let t2 = v[0] * t1;
-        let t3 = xv[0] * t0;
         let t4 = v[1] * t1;
-        let t5 = xv[1] * t0;
         let t6 = xv[2] * t0;
         let t7 = t2 * T::from_i64(2);
-        let t8 = t7 - t3;
+        let t8 = (-xv[0]).mul_add(t0, t7);
         let t9 = t4 * T::from_i64(2);
-        let t10 = t9 - t5;
+        let t10 = (-xv[1]).mul_add(t0, t9);
             return Point { c: gx::slots::from_values::<S, T, 3>([t8, t10, t6]) };
         }
         let m0 = v[2] * v[2];
@@ -17857,14 +17750,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Point<()
         let t0 = v[2] * v[2];
         let t1 = v[2] * xv[2];
         let t2 = v[0] * t1;
-        let t3 = xv[0] * t0;
         let t4 = v[1] * t1;
-        let t5 = xv[1] * t0;
         let t6 = xv[2] * t0;
         let t7 = t2 * T::from_i64(2);
-        let t8 = t7 - t3;
+        let t8 = (-xv[0]).mul_add(t0, t7);
         let t9 = t4 * T::from_i64(2);
-        let t10 = t9 - t5;
+        let t10 = (-xv[1]).mul_add(t0, t9);
             return Point { c: gx::slots::from_values::<S, T, 3>([t8, t10, t6]) };
         }
         let m0 = v[2] * v[2];
@@ -18289,13 +18180,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Point<(), T> {
         let t2 = xv[0] * t0;
         let t3 = xv[1] * t0;
         let t4 = v[0] * t1;
-        let t5 = xv[2] * t0;
         let t6 = v[1] * t1;
-        let t7 = xv[3] * t0;
         let t8 = t4 * T::from_i64(2);
-        let t9 = t8 - t5;
+        let t9 = (-xv[2]).mul_add(t0, t8);
         let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - t7;
+        let t11 = (-xv[3]).mul_add(t0, t10);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t2, t3, t9, t11]) };
         }
         let m0 = v[2] * v[2];
@@ -18362,13 +18251,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Point<()
         let t2 = xv[0] * t0;
         let t3 = xv[1] * t0;
         let t4 = v[0] * t1;
-        let t5 = xv[2] * t0;
         let t6 = v[1] * t1;
-        let t7 = xv[3] * t0;
         let t8 = t4 * T::from_i64(2);
-        let t9 = t8 - t5;
+        let t9 = (-xv[2]).mul_add(t0, t8);
         let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - t7;
+        let t11 = (-xv[3]).mul_add(t0, t10);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t2, t3, t9, t11]) };
         }
         let m0 = v[2] * v[2];
@@ -18434,16 +18321,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Point<(), T> {
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
         let t3 = v[0] * v[2];
-        let t4 = xv[0] * t3;
         let t5 = v[1] * v[2];
         let t6 = xv[1] * t5;
-        let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
         let t9 = -t1;
         let t10 = -t2;
-        let t11 = t4 + t6;
+        let t11 = xv[0].mul_add(t3, t6);
         let t12 = t11 * T::from_i64(2);
-        let t13 = t7 + t12;
+        let t13 = xv[2].mul_add(t0, t12);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t9, t10, t13, t8]) };
         }
         let m0 = v[2] * v[2];
@@ -18509,16 +18394,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Point<
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
         let t3 = v[0] * v[2];
-        let t4 = xv[0] * t3;
         let t5 = v[1] * v[2];
         let t6 = xv[1] * t5;
-        let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
         let t9 = -t1;
         let t10 = -t2;
-        let t11 = t4 + t6;
+        let t11 = xv[0].mul_add(t3, t6);
         let t12 = t11 * T::from_i64(2);
-        let t13 = t7 + t12;
+        let t13 = xv[2].mul_add(t0, t12);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t9, t10, t13, t8]) };
         }
         let m0 = v[2] * v[2];
@@ -18584,26 +18467,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Point<(), T
         let t1 = v[0] * v[2];
         let t2 = v[1] * v[2];
         let t3 = xv[0] * t0;
-        let t4 = xv[2] * t1;
         let t5 = xv[3] * t2;
-        let t6 = xv[1] * t0;
         let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
         let t9 = xv[6] * t2;
-        let t10 = xv[4] * t0;
         let t11 = xv[6] * t1;
-        let t12 = xv[5] * t0;
         let t13 = xv[6] * t0;
         let t14 = xv[7] * t0;
-        let t15 = t4 + t5;
+        let t15 = xv[2].mul_add(t1, t5);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t6 + t16;
+        let t17 = xv[1].mul_add(t0, t16);
         let t18 = -t7;
         let t19 = -t8;
         let t20 = t9 * T::from_i64(2);
-        let t21 = t20 - t10;
+        let t21 = (-xv[4]).mul_add(t0, t20);
         let t22 = t11 * T::from_i64(2);
-        let t23 = t22 - t12;
+        let t23 = (-xv[5]).mul_add(t0, t22);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t3, t17, t18, t19, t21, t23, t13, t14]) };
         }
         let m0 = v[2] * v[2];
@@ -18669,26 +18548,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Po
         let t1 = v[0] * v[2];
         let t2 = v[1] * v[2];
         let t3 = xv[0] * t0;
-        let t4 = xv[2] * t1;
         let t5 = xv[3] * t2;
-        let t6 = xv[1] * t0;
         let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
         let t9 = xv[6] * t2;
-        let t10 = xv[4] * t0;
         let t11 = xv[6] * t1;
-        let t12 = xv[5] * t0;
         let t13 = xv[6] * t0;
         let t14 = xv[7] * t0;
-        let t15 = t4 + t5;
+        let t15 = xv[2].mul_add(t1, t5);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t6 + t16;
+        let t17 = xv[1].mul_add(t0, t16);
         let t18 = -t7;
         let t19 = -t8;
         let t20 = t9 * T::from_i64(2);
-        let t21 = t20 - t10;
+        let t21 = (-xv[4]).mul_add(t0, t20);
         let t22 = t11 * T::from_i64(2);
-        let t23 = t22 - t12;
+        let t23 = (-xv[5]).mul_add(t0, t22);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t3, t17, t18, t19, t21, t23, t13, t14]) };
         }
         let m0 = v[2] * v[2];
@@ -18750,15 +18625,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m2)).0] }
     }
@@ -18777,9 +18650,8 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Rotor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Rotor, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -18863,15 +18735,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Rotor<(), T> {
         let t2 = v[0] * v[1];
         let t3 = t0 - t1;
         let t4 = t0 + t1;
-        let t5 = xv[0] * t3;
         let t6 = xv[1] * t2;
         let t7 = xv[0] * t2;
         let t8 = xv[1] * t3;
         let t9 = xv[2] * t4;
         let t10 = t6 * T::from_i64(2);
-        let t11 = t5 + t10;
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t8 - t12;
+        let t11 = xv[0].mul_add(t3, t10);
+        let t13 = (-t7).mul_add(T::from_i64(2), t8);
             return Line { c: gx::slots::from_values::<S, T, 3>([t11, t13, t9]) };
         }
         let m0 = v[0] * v[0];
@@ -18936,23 +18806,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Rotor<(),
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[0] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[0].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Line { c: gx::slots::from_values::<S, T, 3>([t9, t11, xv[2]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -18975,8 +18841,7 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -19013,15 +18878,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Rotor<(), T> {
         let t2 = v[0] * v[1];
         let t3 = t0 - t1;
         let t4 = t0 + t1;
-        let t5 = xv[0] * t3;
         let t6 = xv[1] * t2;
         let t7 = xv[0] * t2;
         let t8 = xv[1] * t3;
         let t9 = xv[2] * t4;
         let t10 = t6 * T::from_i64(2);
-        let t11 = t5 + t10;
-        let t12 = t7 * T::from_i64(2);
-        let t13 = t8 - t12;
+        let t11 = xv[0].mul_add(t3, t10);
+        let t13 = (-t7).mul_add(T::from_i64(2), t8);
             return Point { c: gx::slots::from_values::<S, T, 3>([t11, t13, t9]) };
         }
         let m0 = v[0] * v[0];
@@ -19086,23 +18949,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Rotor<()
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[0] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[0].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Point { c: gx::slots::from_values::<S, T, 3>([t9, t11, xv[2]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -19125,8 +18984,7 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -19158,15 +19016,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), 
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
@@ -19185,9 +19041,8 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Rotor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Rotor, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -19266,16 +19121,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Rotor<(), T> {
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
         let t4 = xv[1] * t2;
             return Rotor { c: gx::slots::from_values::<S, T, 2>([t3, t4]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Rotor { c: [(x[0].scale(m2)).0, (x[1].scale(m2)).0] }
     }
@@ -19294,9 +19147,8 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for Rotor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Rotor, Rotor, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -19381,14 +19233,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for Rotor<(), T>
         let t3 = t0 + t1;
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
-        let t6 = xv[1] * t4;
         let t7 = xv[2] * t2;
         let t8 = xv[1] * t2;
         let t9 = xv[2] * t4;
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
-        let t12 = t8 * T::from_i64(2);
-        let t13 = t9 - t12;
+        let t11 = xv[1].mul_add(t4, t10);
+        let t13 = (-t8).mul_add(T::from_i64(2), t9);
             return Translator { c: gx::slots::from_values::<S, T, 3>([t5, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -19453,23 +19303,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Rot
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[1] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[1].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -19492,8 +19338,7 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -19532,14 +19377,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Rotor<(), T> {
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
         let t6 = xv[1] * t3;
-        let t7 = xv[2] * t4;
         let t8 = xv[3] * t2;
         let t9 = xv[2] * t2;
         let t10 = xv[3] * t4;
         let t11 = t8 * T::from_i64(2);
-        let t12 = t7 + t11;
-        let t13 = t9 * T::from_i64(2);
-        let t14 = t10 - t13;
+        let t12 = xv[2].mul_add(t4, t11);
+        let t14 = (-t9).mul_add(T::from_i64(2), t10);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t5, t6, t12, t14]) };
         }
         let m0 = v[0] * v[0];
@@ -19604,23 +19447,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Rotor<()
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[2] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[3] * t2;
         let t6 = xv[2] * t2;
         let t7 = xv[3] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[2].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -19643,8 +19482,7 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -19681,16 +19519,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Rotor<(), T> {
         let t2 = v[0] * v[1];
         let t3 = t0 - t1;
         let t4 = t0 + t1;
-        let t5 = xv[0] * t3;
         let t6 = xv[1] * t2;
         let t7 = xv[0] * t2;
         let t8 = xv[1] * t3;
         let t9 = xv[2] * t4;
         let t10 = xv[3] * t4;
         let t11 = t6 * T::from_i64(2);
-        let t12 = t5 + t11;
-        let t13 = t7 * T::from_i64(2);
-        let t14 = t8 - t13;
+        let t12 = xv[0].mul_add(t3, t11);
+        let t14 = (-t7).mul_add(T::from_i64(2), t8);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t12, t14, t9, t10]) };
         }
         let m0 = v[0] * v[0];
@@ -19755,23 +19591,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Rotor<
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[0] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[0].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t9, t11, xv[2], xv[3]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -19794,8 +19626,7 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -19834,24 +19665,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Rotor<(), T
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
         let t6 = xv[1] * t3;
-        let t7 = xv[2] * t4;
         let t8 = xv[3] * t2;
         let t9 = xv[2] * t2;
         let t10 = xv[3] * t4;
         let t11 = xv[4] * t4;
         let t12 = xv[5] * t2;
         let t13 = xv[4] * t2;
-        let t14 = xv[5] * t4;
         let t15 = xv[6] * t3;
         let t16 = xv[7] * t3;
         let t17 = t8 * T::from_i64(2);
-        let t18 = t7 + t17;
-        let t19 = t9 * T::from_i64(2);
-        let t20 = t10 - t19;
-        let t21 = t12 * T::from_i64(2);
-        let t22 = t11 - t21;
+        let t18 = xv[2].mul_add(t4, t17);
+        let t20 = (-t9).mul_add(T::from_i64(2), t10);
+        let t22 = (-t12).mul_add(T::from_i64(2), t11);
         let t23 = t13 * T::from_i64(2);
-        let t24 = t14 + t23;
+        let t24 = xv[5].mul_add(t4, t23);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t5, t6, t18, t20, t22, t24, t15, t16]) };
         }
         let m0 = v[0] * v[0];
@@ -19916,31 +19743,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[2] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[3] * t2;
         let t6 = xv[2] * t2;
         let t7 = xv[3] * t3;
         let t8 = xv[4] * t3;
         let t9 = xv[5] * t2;
         let t10 = xv[4] * t2;
-        let t11 = xv[5] * t3;
         let t12 = t5 * T::from_i64(2);
-        let t13 = t4 + t12;
-        let t14 = t6 * T::from_i64(2);
-        let t15 = t7 - t14;
-        let t16 = t9 * T::from_i64(2);
-        let t17 = t8 - t16;
+        let t13 = xv[2].mul_add(t3, t12);
+        let t15 = (-t6).mul_add(T::from_i64(2), t7);
+        let t17 = (-t9).mul_add(T::from_i64(2), t8);
         let t18 = t10 * T::from_i64(2);
-        let t19 = t11 + t18;
+        let t19 = xv[5].mul_add(t3, t18);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], xv[1], t13, t15, t17, t19, xv[6], xv[7]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -19963,8 +19784,7 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Rotor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -20105,14 +19925,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Translator<(), T> 
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
-        let t3 = xv[2] * t0;
         let t4 = v[0] * v[1];
-        let t5 = xv[1] * t4;
         let t6 = v[0] * v[2];
         let t7 = xv[0] * t6;
-        let t8 = t7 - t5;
+        let t8 = (-xv[1]).mul_add(t4, t7);
         let t9 = t8 * T::from_i64(2);
-        let t10 = t3 + t9;
+        let t10 = xv[2].mul_add(t0, t9);
             return Line { c: gx::slots::from_values::<S, T, 3>([t1, t2, t10]) };
         }
         let m0 = v[0] * v[0];
@@ -20177,14 +19995,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Translato
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
-        let t3 = xv[2] * t0;
         let t4 = v[0] * v[1];
-        let t5 = xv[1] * t4;
         let t6 = v[0] * v[2];
         let t7 = xv[0] * t6;
-        let t8 = t7 - t5;
+        let t8 = (-xv[1]).mul_add(t4, t7);
         let t9 = t8 * T::from_i64(2);
-        let t10 = t3 + t9;
+        let t10 = xv[2].mul_add(t0, t9);
             return Line { c: gx::slots::from_values::<S, T, 3>([t1, t2, t10]) };
         }
         let m0 = v[0] * v[0];
@@ -20250,13 +20066,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Translator<(), T>
         let t1 = v[0] * xv[2];
         let t2 = xv[0] * t0;
         let t3 = v[2] * t1;
-        let t4 = xv[1] * t0;
         let t5 = v[1] * t1;
         let t6 = xv[2] * t0;
-        let t7 = t3 * T::from_i64(2);
-        let t8 = t2 - t7;
+        let t8 = (-t3).mul_add(T::from_i64(2), t2);
         let t9 = t5 * T::from_i64(2);
-        let t10 = t4 + t9;
+        let t10 = xv[1].mul_add(t0, t9);
             return Point { c: gx::slots::from_values::<S, T, 3>([t8, t10, t6]) };
         }
         let m0 = v[0] * v[0];
@@ -20322,13 +20136,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Translat
         let t1 = v[0] * xv[2];
         let t2 = xv[0] * t0;
         let t3 = v[2] * t1;
-        let t4 = xv[1] * t0;
         let t5 = v[1] * t1;
         let t6 = xv[2] * t0;
-        let t7 = t3 * T::from_i64(2);
-        let t8 = t2 - t7;
+        let t8 = (-t3).mul_add(T::from_i64(2), t2);
         let t9 = t5 * T::from_i64(2);
-        let t10 = t4 + t9;
+        let t10 = xv[1].mul_add(t0, t9);
             return Point { c: gx::slots::from_values::<S, T, 3>([t8, t10, t6]) };
         }
         let m0 = v[0] * v[0];
@@ -20752,12 +20564,10 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Translator<(), T>
         let t3 = xv[1] * t0;
         let t4 = xv[2] * t0;
         let t5 = v[2] * t1;
-        let t6 = xv[3] * t0;
         let t7 = v[1] * t1;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t4 - t8;
+        let t9 = (-t5).mul_add(T::from_i64(2), t4);
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
+        let t11 = xv[3].mul_add(t0, t10);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t2, t3, t9, t11]) };
         }
         let m0 = v[0] * v[0];
@@ -20825,12 +20635,10 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Translat
         let t3 = xv[1] * t0;
         let t4 = xv[2] * t0;
         let t5 = v[2] * t1;
-        let t6 = xv[3] * t0;
         let t7 = v[1] * t1;
-        let t8 = t5 * T::from_i64(2);
-        let t9 = t4 - t8;
+        let t9 = (-t5).mul_add(T::from_i64(2), t4);
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
+        let t11 = xv[3].mul_add(t0, t10);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t2, t3, t9, t11]) };
         }
         let m0 = v[0] * v[0];
@@ -20895,15 +20703,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Translator<(), 
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
-        let t3 = xv[2] * t0;
         let t4 = v[0] * v[1];
-        let t5 = xv[1] * t4;
         let t6 = v[0] * v[2];
         let t7 = xv[0] * t6;
         let t8 = xv[3] * t0;
-        let t9 = t7 - t5;
+        let t9 = (-xv[1]).mul_add(t4, t7);
         let t10 = t9 * T::from_i64(2);
-        let t11 = t3 + t10;
+        let t11 = xv[2].mul_add(t0, t10);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t1, t2, t11, t8]) };
         }
         let m0 = v[0] * v[0];
@@ -20968,15 +20774,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Transl
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
         let t2 = xv[1] * t0;
-        let t3 = xv[2] * t0;
         let t4 = v[0] * v[1];
-        let t5 = xv[1] * t4;
         let t6 = v[0] * v[2];
         let t7 = xv[0] * t6;
         let t8 = xv[3] * t0;
-        let t9 = t7 - t5;
+        let t9 = (-xv[1]).mul_add(t4, t7);
         let t10 = t9 * T::from_i64(2);
-        let t11 = t3 + t10;
+        let t11 = xv[2].mul_add(t0, t10);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t1, t2, t11, t8]) };
         }
         let m0 = v[0] * v[0];
@@ -21042,24 +20846,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Translator<
         let t1 = v[0] * v[1];
         let t2 = v[0] * v[2];
         let t3 = xv[0] * t0;
-        let t4 = xv[1] * t0;
-        let t5 = xv[3] * t1;
         let t6 = xv[2] * t2;
         let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
-        let t9 = xv[4] * t0;
         let t10 = xv[6] * t1;
         let t11 = xv[5] * t0;
         let t12 = xv[6] * t2;
         let t13 = xv[6] * t0;
         let t14 = xv[7] * t0;
-        let t15 = t6 - t5;
+        let t15 = (-xv[3]).mul_add(t1, t6);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t4 + t16;
+        let t17 = xv[1].mul_add(t0, t16);
         let t18 = t10 * T::from_i64(2);
-        let t19 = t9 + t18;
-        let t20 = t12 * T::from_i64(2);
-        let t21 = t11 - t20;
+        let t19 = xv[4].mul_add(t0, t18);
+        let t21 = (-t12).mul_add(T::from_i64(2), t11);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t3, t17, t7, t8, t19, t21, t13, t14]) };
         }
         let m0 = v[0] * v[0];
@@ -21127,24 +20927,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Tr
         let t1 = v[0] * v[1];
         let t2 = v[0] * v[2];
         let t3 = xv[0] * t0;
-        let t4 = xv[1] * t0;
-        let t5 = xv[3] * t1;
         let t6 = xv[2] * t2;
         let t7 = xv[2] * t0;
         let t8 = xv[3] * t0;
-        let t9 = xv[4] * t0;
         let t10 = xv[6] * t1;
         let t11 = xv[5] * t0;
         let t12 = xv[6] * t2;
         let t13 = xv[6] * t0;
         let t14 = xv[7] * t0;
-        let t15 = t6 - t5;
+        let t15 = (-xv[3]).mul_add(t1, t6);
         let t16 = t15 * T::from_i64(2);
-        let t17 = t4 + t16;
+        let t17 = xv[1].mul_add(t0, t16);
         let t18 = t10 * T::from_i64(2);
-        let t19 = t9 + t18;
-        let t20 = t12 * T::from_i64(2);
-        let t21 = t11 - t20;
+        let t19 = xv[4].mul_add(t0, t18);
+        let t21 = (-t12).mul_add(T::from_i64(2), t11);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t3, t17, t7, t8, t19, t21, t13, t14]) };
         }
         let m0 = v[0] * v[0];
@@ -21208,15 +21004,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Motor<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m2)).0] }
     }
@@ -21235,9 +21029,8 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Motor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Motor, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -21319,43 +21112,35 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Motor<(), T> {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[3];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t6 = v[1] * v[3];
         let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
+        let t8 = v[0].mul_add(v[3], t4);
+        let t9 = (-v[1]).mul_add(v[3], t5);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
         let t12 = xv[1] * t2;
         let t13 = xv[0] * t2;
         let t14 = xv[1] * t7;
         let t15 = xv[0] * t8;
-        let t16 = xv[1] * t9;
-        let t17 = xv[2] * t10;
         let t18 = t12 * T::from_i64(2);
-        let t19 = t11 + t18;
-        let t20 = t13 * T::from_i64(2);
-        let t21 = t14 - t20;
-        let t22 = t15 - t16;
+        let t19 = xv[0].mul_add(t7, t18);
+        let t21 = (-t13).mul_add(T::from_i64(2), t14);
+        let t22 = (-xv[1]).mul_add(t9, t15);
         let t23 = t22 * T::from_i64(2);
-        let t24 = t17 + t23;
+        let t24 = xv[2].mul_add(t10, t23);
             return Line { c: gx::slots::from_values::<S, T, 3>([t19, t21, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -21379,16 +21164,14 @@ impl<T: gx::Coef> gx::Prepare<Line> for Motor<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
@@ -21421,43 +21204,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Motor<(),
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[3];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t6 = v[1] * v[3];
-        let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
-        let t10 = xv[0] * t7;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = v[0].mul_add(v[3], t4);
+        let t9 = (-v[1]).mul_add(v[3], t5);
         let t11 = xv[1] * t2;
         let t12 = xv[0] * t2;
         let t13 = xv[1] * t7;
         let t14 = xv[0] * t8;
-        let t15 = xv[1] * t9;
         let t16 = t11 * T::from_i64(2);
-        let t17 = t10 + t16;
-        let t18 = t12 * T::from_i64(2);
-        let t19 = t13 - t18;
-        let t20 = t14 - t15;
-        let t21 = t20 * T::from_i64(2);
-        let t22 = xv[2] + t21;
+        let t17 = xv[0].mul_add(t7, t16);
+        let t19 = (-t12).mul_add(T::from_i64(2), t13);
+        let t20 = (-xv[1]).mul_add(t9, t14);
+        let t22 = t20.mul_add(T::from_i64(2), xv[2]);
             return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t22]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Line { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2]).0] }
@@ -21479,17 +21252,14 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         gx::Prepared::from_entries([m7, m8, m9, m11, m13])
     }
@@ -21524,41 +21294,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Motor<(), T> {
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[3];
-        let t4 = v[1] * v[2];
-        let t5 = v[0] * v[2];
         let t6 = v[1] * v[3];
         let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
+        let t8 = (-v[1]).mul_add(v[2], t3);
+        let t9 = v[0].mul_add(v[2], t6);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
         let t12 = xv[1] * t2;
-        let t13 = xv[2] * t8;
-        let t14 = xv[0] * t2;
-        let t15 = xv[1] * t7;
         let t16 = xv[2] * t9;
         let t17 = xv[2] * t10;
-        let t18 = t12 - t13;
+        let t18 = (-xv[2]).mul_add(t8, t12);
         let t19 = t18 * T::from_i64(2);
-        let t20 = t11 + t19;
-        let t21 = t16 - t14;
+        let t20 = xv[0].mul_add(t7, t19);
+        let t21 = (-xv[0]).mul_add(t2, t16);
         let t22 = t21 * T::from_i64(2);
-        let t23 = t15 + t22;
+        let t23 = xv[1].mul_add(t7, t22);
             return Point { c: gx::slots::from_values::<S, T, 3>([t20, t23, t17]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -21582,16 +21344,14 @@ impl<T: gx::Coef> gx::Prepare<Point> for Motor<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         gx::Prepared::from_entries([m7, m8, m10, m11, m13, m14])
@@ -21624,42 +21384,32 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[3];
-        let t4 = v[1] * v[2];
-        let t5 = v[0] * v[2];
         let t6 = v[1] * v[3];
-        let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
-        let t10 = xv[0] * t7;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = (-v[1]).mul_add(v[2], t3);
+        let t9 = v[0].mul_add(v[2], t6);
         let t11 = xv[1] * t2;
-        let t12 = xv[2] * t8;
-        let t13 = xv[0] * t2;
-        let t14 = xv[1] * t7;
         let t15 = xv[2] * t9;
-        let t16 = t11 - t12;
+        let t16 = (-xv[2]).mul_add(t8, t11);
         let t17 = t16 * T::from_i64(2);
-        let t18 = t10 + t17;
-        let t19 = t15 - t13;
+        let t18 = xv[0].mul_add(t7, t17);
+        let t19 = (-xv[0]).mul_add(t2, t15);
         let t20 = t19 * T::from_i64(2);
-        let t21 = t14 + t20;
+        let t21 = xv[1].mul_add(t7, t20);
             return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, xv[2]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Point { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m10)).0, (x[0].scale(m11) + x[1].scale(m7) + x[2].scale(m13)).0, (x[2]).0] }
@@ -21681,17 +21431,14 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         gx::Prepared::from_entries([m7, m8, m10, m11, m13])
     }
@@ -21722,15 +21469,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Motor<(), 
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
@@ -21749,9 +21494,8 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Motor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Motor, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -21830,33 +21574,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Motor<(), T> {
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = v[0] * xv[1];
         let t4 = v[1] * xv[1];
         let t5 = xv[0] * t2;
         let t6 = xv[1] * t2;
-        let t7 = v[3] * t3;
         let t8 = v[2] * t4;
-        let t9 = v[2] * t3;
         let t10 = v[3] * t4;
-        let t11 = t8 - t7;
+        let t11 = (-v[3]).mul_add(t3, t8);
         let t12 = t11 * T::from_i64(2);
-        let t13 = t9 + t10;
+        let t13 = v[2].mul_add(t3, t10);
         let t14 = t13 * T::from_i64(2);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t5, t6, t12, t14]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[0] * v[3];
         let m3 = v[1] * v[2];
-        let m4 = v[0] * v[2];
         let m5 = v[1] * v[3];
-        let m6 = m0 + m1;
-        let m7 = m3 - m2;
+        let m6 = v[0].mul_add(v[0], m1);
+        let m7 = (-v[0]).mul_add(v[3], m3);
         let m8 = m7 * T::from_i64(2);
-        let m9 = m4 + m5;
+        let m9 = v[0].mul_add(v[2], m5);
         let m10 = m9 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Motor { c: [(x[0].scale(m6)).0, (x[1].scale(m6)).0, (x[1].scale(m8)).0, (x[1].scale(m10)).0] }
@@ -21876,16 +21614,13 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for Motor<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Motor, Rotor, T, 3> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[0] * v[3];
         let m3 = v[1] * v[2];
-        let m4 = v[0] * v[2];
         let m5 = v[1] * v[3];
-        let m6 = m0 + m1;
-        let m7 = m3 - m2;
+        let m6 = v[0].mul_add(v[0], m1);
+        let m7 = (-v[0]).mul_add(v[3], m3);
         let m8 = m7 * T::from_i64(2);
-        let m9 = m4 + m5;
+        let m9 = v[0].mul_add(v[2], m5);
         let m10 = m9 * T::from_i64(2);
         gx::Prepared::from_entries([m6, m8, m10])
     }
@@ -21918,23 +21653,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Motor<()
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[1];
-        let t2 = v[3] * t0;
         let t3 = v[2] * t1;
-        let t4 = v[2] * t0;
         let t5 = v[3] * t1;
-        let t6 = t3 - t2;
+        let t6 = (-v[3]).mul_add(t0, t3);
         let t7 = t6 * T::from_i64(2);
-        let t8 = t4 + t5;
+        let t8 = v[2].mul_add(t0, t5);
         let t9 = t8 * T::from_i64(2);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t7, t9]) };
         }
-        let m0 = v[0] * v[3];
         let m1 = v[1] * v[2];
-        let m2 = v[0] * v[2];
         let m3 = v[1] * v[3];
-        let m4 = m1 - m0;
+        let m4 = (-v[0]).mul_add(v[3], m1);
         let m5 = m4 * T::from_i64(2);
-        let m6 = m2 + m3;
+        let m6 = v[0].mul_add(v[2], m3);
         let m7 = m6 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Motor { c: [(x[0]).0, (x[1]).0, (x[1].scale(m5)).0, (x[1].scale(m7)).0] }
@@ -21954,13 +21685,11 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Motor<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 2> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[3];
         let m1 = v[1] * v[2];
-        let m2 = v[0] * v[2];
         let m3 = v[1] * v[3];
-        let m4 = m1 - m0;
+        let m4 = (-v[0]).mul_add(v[3], m1);
         let m5 = m4 * T::from_i64(2);
-        let m6 = m2 + m3;
+        let m6 = v[0].mul_add(v[2], m3);
         let m7 = m6 * T::from_i64(2);
         gx::Prepared::from_entries([m5, m7])
     }
@@ -21997,14 +21726,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for Motor<(), T>
         let t3 = t0 + t1;
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
-        let t6 = xv[1] * t4;
         let t7 = xv[2] * t2;
         let t8 = xv[1] * t2;
         let t9 = xv[2] * t4;
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
-        let t12 = t8 * T::from_i64(2);
-        let t13 = t9 - t12;
+        let t11 = xv[1].mul_add(t4, t10);
+        let t13 = (-t8).mul_add(T::from_i64(2), t9);
             return Translator { c: gx::slots::from_values::<S, T, 3>([t5, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -22069,23 +21796,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Mot
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[1] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
-        let t10 = t6 * T::from_i64(2);
-        let t11 = t7 - t10;
+        let t9 = xv[1].mul_add(t3, t8);
+        let t11 = (-t6).mul_add(T::from_i64(2), t7);
             return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -22108,8 +21831,7 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -22144,43 +21866,35 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Motor<(), T> {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[3];
-        let t3 = v[1] * v[2];
         let t4 = v[0] * v[1];
-        let t5 = v[0] * v[2];
         let t6 = v[1] * v[3];
         let t7 = t0 + t1;
-        let t8 = t2 - t3;
+        let t8 = (-v[1]).mul_add(v[2], t2);
         let t9 = t0 - t1;
-        let t10 = t5 + t6;
+        let t10 = v[0].mul_add(v[2], t6);
         let t11 = xv[0] * t7;
         let t12 = xv[1] * t7;
-        let t13 = xv[1] * t8;
-        let t14 = xv[2] * t9;
         let t15 = xv[3] * t4;
         let t16 = xv[1] * t10;
-        let t17 = xv[2] * t4;
-        let t18 = xv[3] * t9;
-        let t19 = t15 - t13;
+        let t19 = (-xv[1]).mul_add(t8, t15);
         let t20 = t19 * T::from_i64(2);
-        let t21 = t14 + t20;
-        let t22 = t16 - t17;
+        let t21 = xv[2].mul_add(t9, t20);
+        let t22 = (-xv[2]).mul_add(t4, t16);
         let t23 = t22 * T::from_i64(2);
-        let t24 = t18 + t23;
+        let t24 = xv[3].mul_add(t9, t23);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t11, t12, t21, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = m2 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -m11;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -22204,16 +21918,14 @@ impl<T: gx::Coef> gx::Prepare<Motor> for Motor<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
-        let m9 = m4 - m3;
+        let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = m2 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -m11;
         gx::Prepared::from_entries([m8, m10, m7, m11, m13, m14])
@@ -22246,41 +21958,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Motor<()
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[3];
-        let t1 = v[1] * v[2];
         let t2 = v[0] * v[0];
-        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
-        let t5 = v[0] * v[2];
         let t6 = v[1] * v[3];
-        let t7 = t0 - t1;
-        let t8 = t2 - t3;
-        let t9 = t5 + t6;
-        let t10 = xv[1] * t7;
-        let t11 = xv[2] * t8;
+        let t7 = (-v[1]).mul_add(v[2], t0);
+        let t8 = (-v[1]).mul_add(v[1], t2);
+        let t9 = v[0].mul_add(v[2], t6);
         let t12 = xv[3] * t4;
         let t13 = xv[1] * t9;
-        let t14 = xv[2] * t4;
-        let t15 = xv[3] * t8;
-        let t16 = t12 - t10;
+        let t16 = (-xv[1]).mul_add(t7, t12);
         let t17 = t16 * T::from_i64(2);
-        let t18 = t11 + t17;
-        let t19 = t13 - t14;
+        let t18 = xv[2].mul_add(t8, t17);
+        let t19 = (-xv[2]).mul_add(t4, t13);
         let t20 = t19 * T::from_i64(2);
-        let t21 = t15 + t20;
+        let t21 = xv[3].mul_add(t8, t20);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t18, t21]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
-        let m8 = m4 - m3;
+        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m8 = (-v[0]).mul_add(v[3], m4);
         let m9 = m8 * T::from_i64(2);
         let m10 = m1 * T::from_i64(2);
-        let m11 = m5 + m6;
+        let m11 = v[0].mul_add(v[2], m6);
         let m12 = m11 * T::from_i64(2);
         let m13 = -m10;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -22303,16 +22005,13 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
-        let m8 = m4 - m3;
+        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m8 = (-v[0]).mul_add(v[3], m4);
         let m9 = m8 * T::from_i64(2);
         let m10 = m1 * T::from_i64(2);
-        let m11 = m5 + m6;
+        let m11 = v[0].mul_add(v[2], m6);
         let m12 = m11 * T::from_i64(2);
         let m13 = -m10;
         gx::Prepared::from_entries([m9, m7, m10, m12, m13])
@@ -22347,45 +22046,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Motor<(), T> {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[3];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t6 = v[1] * v[3];
         let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
+        let t8 = v[0].mul_add(v[3], t4);
+        let t9 = (-v[1]).mul_add(v[3], t5);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
         let t12 = xv[1] * t2;
         let t13 = xv[0] * t2;
         let t14 = xv[1] * t7;
         let t15 = xv[0] * t8;
-        let t16 = xv[1] * t9;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t10;
         let t19 = t12 * T::from_i64(2);
-        let t20 = t11 + t19;
-        let t21 = t13 * T::from_i64(2);
-        let t22 = t14 - t21;
-        let t23 = t15 - t16;
+        let t20 = xv[0].mul_add(t7, t19);
+        let t22 = (-t13).mul_add(T::from_i64(2), t14);
+        let t23 = (-xv[1]).mul_add(t9, t15);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t17 + t24;
+        let t25 = xv[2].mul_add(t10, t24);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t20, t22, t25, t18]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = m2 * T::from_i64(2);
         let m10 = -m9;
-        let m11 = m3 + m4;
+        let m11 = v[0].mul_add(v[3], m4);
         let m12 = m11 * T::from_i64(2);
-        let m13 = m6 - m5;
+        let m13 = (-v[0]).mul_add(v[2], m6);
         let m14 = m13 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Flector { c: [(x[0].scale(m7) + x[1].scale(m9)).0, (x[0].scale(m10) + x[1].scale(m7)).0, (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m8)).0, (x[3].scale(m8)).0] }
@@ -22408,17 +22099,15 @@ impl<T: gx::Coef> gx::Prepare<Flector> for Motor<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = m2 * T::from_i64(2);
         let m10 = -m9;
-        let m11 = m3 + m4;
+        let m11 = v[0].mul_add(v[3], m4);
         let m12 = m11 * T::from_i64(2);
-        let m13 = m6 - m5;
+        let m13 = (-v[0]).mul_add(v[2], m6);
         let m14 = m13 * T::from_i64(2);
         gx::Prepared::from_entries([m7, m9, m10, m12, m14, m8])
     }
@@ -22450,43 +22139,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Motor<
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[3];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t6 = v[1] * v[3];
-        let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
-        let t10 = xv[0] * t7;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = v[0].mul_add(v[3], t4);
+        let t9 = (-v[1]).mul_add(v[3], t5);
         let t11 = xv[1] * t2;
         let t12 = xv[0] * t2;
         let t13 = xv[1] * t7;
         let t14 = xv[0] * t8;
-        let t15 = xv[1] * t9;
         let t16 = t11 * T::from_i64(2);
-        let t17 = t10 + t16;
-        let t18 = t12 * T::from_i64(2);
-        let t19 = t13 - t18;
-        let t20 = t14 - t15;
-        let t21 = t20 * T::from_i64(2);
-        let t22 = xv[2] + t21;
+        let t17 = xv[0].mul_add(t7, t16);
+        let t19 = (-t12).mul_add(T::from_i64(2), t13);
+        let t20 = (-xv[1]).mul_add(t9, t14);
+        let t22 = t20.mul_add(T::from_i64(2), xv[2]);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t22, xv[3]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Flector { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2]).0, (x[3]).0] }
@@ -22508,17 +22187,14 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[3];
         let m4 = v[1] * v[2];
-        let m5 = v[0] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
         gx::Prepared::from_entries([m7, m8, m9, m11, m13])
     }
@@ -22563,34 +22239,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Motor<(), T
         let t11 = t1 + t5;
         let t12 = t2 - t4;
         let t13 = xv[0] * t7;
-        let t14 = xv[1] * t7;
         let t15 = xv[2] * t8;
-        let t16 = xv[3] * t9;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t6;
         let t19 = xv[2] * t6;
         let t20 = xv[3] * t10;
-        let t21 = xv[4] * t10;
-        let t22 = xv[5] * t6;
         let t23 = xv[6] * t11;
         let t24 = xv[4] * t6;
-        let t25 = xv[5] * t10;
-        let t26 = xv[6] * t12;
         let t27 = xv[6] * t7;
         let t28 = xv[7] * t7;
-        let t29 = t15 - t16;
+        let t29 = (-xv[3]).mul_add(t9, t15);
         let t30 = t29 * T::from_i64(2);
-        let t31 = t14 + t30;
+        let t31 = xv[1].mul_add(t7, t30);
         let t32 = t18 * T::from_i64(2);
-        let t33 = t17 + t32;
-        let t34 = t19 * T::from_i64(2);
-        let t35 = t20 - t34;
-        let t36 = t23 - t22;
+        let t33 = xv[2].mul_add(t10, t32);
+        let t35 = (-t19).mul_add(T::from_i64(2), t20);
+        let t36 = (-xv[5]).mul_add(t6, t23);
         let t37 = t36 * T::from_i64(2);
-        let t38 = t21 + t37;
-        let t39 = t24 - t26;
+        let t38 = xv[4].mul_add(t10, t37);
+        let t39 = (-xv[6]).mul_add(t12, t24);
         let t40 = t39 * T::from_i64(2);
-        let t41 = t25 + t40;
+        let t41 = xv[5].mul_add(t10, t40);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t13, t31, t33, t35, t38, t41, t27, t28]) };
         }
         let m0 = v[0] * v[0];
@@ -22683,48 +22351,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Mo
         let t2 = v[1] * v[2];
         let t3 = v[1] * v[3];
         let t4 = v[0] * v[0];
-        let t5 = v[1] * v[1];
         let t6 = v[0] * v[1];
         let t7 = t1 + t2;
         let t8 = t0 - t3;
-        let t9 = t4 - t5;
+        let t9 = (-v[1]).mul_add(v[1], t4);
         let t10 = t0 + t3;
         let t11 = t1 - t2;
         let t12 = xv[2] * t7;
-        let t13 = xv[3] * t8;
-        let t14 = xv[2] * t9;
         let t15 = xv[3] * t6;
         let t16 = xv[2] * t6;
         let t17 = xv[3] * t9;
-        let t18 = xv[4] * t9;
-        let t19 = xv[5] * t6;
         let t20 = xv[6] * t10;
         let t21 = xv[4] * t6;
-        let t22 = xv[5] * t9;
-        let t23 = xv[6] * t11;
-        let t24 = t12 - t13;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = xv[1] + t25;
+        let t24 = (-xv[3]).mul_add(t8, t12);
+        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
         let t27 = t15 * T::from_i64(2);
-        let t28 = t14 + t27;
-        let t29 = t16 * T::from_i64(2);
-        let t30 = t17 - t29;
-        let t31 = t20 - t19;
+        let t28 = xv[2].mul_add(t9, t27);
+        let t30 = (-t16).mul_add(T::from_i64(2), t17);
+        let t31 = (-xv[5]).mul_add(t6, t20);
         let t32 = t31 * T::from_i64(2);
-        let t33 = t18 + t32;
-        let t34 = t21 - t23;
+        let t33 = xv[4].mul_add(t9, t32);
+        let t34 = (-xv[6]).mul_add(t11, t21);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t22 + t35;
+        let t36 = xv[5].mul_add(t9, t35);
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t26, t28, t30, t33, t36, xv[6], xv[7]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m4 + m5;
         let m9 = m8 * T::from_i64(2);
         let m10 = m6 - m3;
@@ -22755,12 +22413,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Motor<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m4 + m5;
         let m9 = m8 * T::from_i64(2);
         let m10 = m6 - m3;
@@ -22800,15 +22457,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Flector<(), T> {
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m2)).0] }
     }
@@ -22827,9 +22482,8 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for Flector<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Flector, Scalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -22912,42 +22566,34 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for Flector<(), T> {
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
-        let t4 = v[1] * v[3];
-        let t5 = v[0] * v[3];
         let t6 = v[1] * v[2];
         let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
+        let t8 = (-v[1]).mul_add(v[3], t3);
+        let t9 = v[0].mul_add(v[3], t6);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
         let t12 = xv[1] * t2;
         let t13 = xv[0] * t2;
-        let t14 = xv[1] * t7;
-        let t15 = xv[0] * t8;
         let t16 = xv[1] * t9;
-        let t17 = xv[2] * t10;
         let t18 = t12 * T::from_i64(2);
-        let t19 = t11 + t18;
+        let t19 = xv[0].mul_add(t7, t18);
         let t20 = t13 * T::from_i64(2);
-        let t21 = t20 - t14;
-        let t22 = t15 + t16;
+        let t21 = (-xv[1]).mul_add(t7, t20);
+        let t22 = xv[0].mul_add(t8, t16);
         let t23 = t22 * T::from_i64(2);
-        let t24 = t23 - t17;
+        let t24 = (-xv[2]).mul_add(t10, t23);
             return Line { c: gx::slots::from_values::<S, T, 3>([t19, t21, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let m15 = -m14;
@@ -22973,15 +22619,13 @@ impl<T: gx::Coef> gx::Prepare<Line> for Flector<(), T> {
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let m15 = -m14;
@@ -23015,43 +22659,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Flector<(
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
-        let t4 = v[1] * v[3];
-        let t5 = v[0] * v[3];
         let t6 = v[1] * v[2];
-        let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
-        let t10 = xv[0] * t7;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = (-v[1]).mul_add(v[3], t3);
+        let t9 = v[0].mul_add(v[3], t6);
         let t11 = xv[1] * t2;
         let t12 = xv[0] * t2;
-        let t13 = xv[1] * t7;
-        let t14 = xv[0] * t8;
         let t15 = xv[1] * t9;
         let t16 = t11 * T::from_i64(2);
-        let t17 = t10 + t16;
+        let t17 = xv[0].mul_add(t7, t16);
         let t18 = t12 * T::from_i64(2);
-        let t19 = t18 - t13;
-        let t20 = t14 + t15;
-        let t21 = t20 * T::from_i64(2);
-        let t22 = t21 - xv[2];
+        let t19 = (-xv[1]).mul_add(t7, t18);
+        let t20 = xv[0].mul_add(t8, t15);
+        let t22 = t20.mul_add(T::from_i64(2), -xv[2]);
             return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t22]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -23074,17 +22708,14 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
@@ -23119,43 +22750,35 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for Flector<(), T> {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[2];
         let t4 = v[1] * v[3];
         let t5 = v[0] * v[3];
-        let t6 = v[1] * v[2];
         let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
+        let t8 = v[0].mul_add(v[2], t4);
+        let t9 = (-v[1]).mul_add(v[2], t5);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
-        let t12 = xv[1] * t2;
         let t13 = xv[2] * t8;
         let t14 = xv[0] * t2;
-        let t15 = xv[1] * t7;
-        let t16 = xv[2] * t9;
         let t17 = xv[2] * t10;
-        let t18 = t12 + t13;
+        let t18 = xv[1].mul_add(t2, t13);
         let t19 = t18 * T::from_i64(2);
-        let t20 = t11 + t19;
-        let t21 = t14 - t16;
+        let t20 = xv[0].mul_add(t7, t19);
+        let t21 = (-xv[2]).mul_add(t9, t14);
         let t22 = t21 * T::from_i64(2);
-        let t23 = t22 - t15;
+        let t23 = (-xv[1]).mul_add(t7, t22);
         let t24 = -t17;
             return Point { c: gx::slots::from_values::<S, T, 3>([t20, t23, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let m15 = -m14;
@@ -23180,16 +22803,14 @@ impl<T: gx::Coef> gx::Prepare<Point> for Flector<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m2 * T::from_i64(2);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = m0 + m1;
         let m15 = -m14;
@@ -23223,43 +22844,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = v[0] * v[2];
         let t4 = v[1] * v[3];
         let t5 = v[0] * v[3];
-        let t6 = v[1] * v[2];
-        let t7 = t0 - t1;
-        let t8 = t3 + t4;
-        let t9 = t5 - t6;
-        let t10 = xv[0] * t7;
-        let t11 = xv[1] * t2;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = v[0].mul_add(v[2], t4);
+        let t9 = (-v[1]).mul_add(v[2], t5);
         let t12 = xv[2] * t8;
         let t13 = xv[0] * t2;
-        let t14 = xv[1] * t7;
-        let t15 = xv[2] * t9;
-        let t16 = t11 + t12;
+        let t16 = xv[1].mul_add(t2, t12);
         let t17 = t16 * T::from_i64(2);
-        let t18 = t10 + t17;
-        let t19 = t13 - t15;
+        let t18 = xv[0].mul_add(t7, t17);
+        let t19 = (-xv[2]).mul_add(t9, t13);
         let t20 = t19 * T::from_i64(2);
-        let t21 = t20 - t14;
+        let t21 = (-xv[1]).mul_add(t7, t20);
         let t22 = -xv[2];
             return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, t22]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -23282,17 +22893,14 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         gx::Prepared::from_entries([m7, m8, m10, m11, m13, m14])
@@ -23324,15 +22932,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Flector<()
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = xv[0] * t2;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
@@ -23351,9 +22957,8 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Flector<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Flector, Pseudoscalar, T, 1> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = m0 + m1;
+        let m2 = v[0].mul_add(v[0], m1);
         gx::Prepared::from_entries([m2])
     }
 }
@@ -23432,35 +23037,29 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Flector<(), T> {
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-        let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = t0 + t1;
+        let t2 = v[0].mul_add(v[0], t1);
         let t3 = v[0] * xv[1];
         let t4 = v[1] * xv[1];
         let t5 = xv[0] * t2;
         let t6 = xv[1] * t2;
-        let t7 = v[2] * t3;
         let t8 = v[3] * t4;
-        let t9 = v[3] * t3;
         let t10 = v[2] * t4;
         let t11 = -t6;
-        let t12 = t7 + t8;
+        let t12 = v[2].mul_add(t3, t8);
         let t13 = t12 * T::from_i64(2);
-        let t14 = t10 - t9;
+        let t14 = (-v[3]).mul_add(t3, t10);
         let t15 = t14 * T::from_i64(2);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t5, t11, t13, t15]) };
         }
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[0] * v[2];
         let m3 = v[1] * v[3];
-        let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
-        let m6 = m0 + m1;
+        let m6 = v[0].mul_add(v[0], m1);
         let m7 = -m6;
-        let m8 = m2 + m3;
+        let m8 = v[0].mul_add(v[2], m3);
         let m9 = m8 * T::from_i64(2);
-        let m10 = m5 - m4;
+        let m10 = (-v[0]).mul_add(v[3], m5);
         let m11 = m10 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Motor { c: [(x[0].scale(m6)).0, (x[1].scale(m7)).0, (x[1].scale(m9)).0, (x[1].scale(m11)).0] }
@@ -23480,17 +23079,14 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for Flector<(), T> {
     #[inline]
     fn prepare(self) -> gx::Prepared<Flector, Rotor, T, 4> {
         let v = self.c;
-        let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
-        let m2 = v[0] * v[2];
         let m3 = v[1] * v[3];
-        let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
-        let m6 = m0 + m1;
+        let m6 = v[0].mul_add(v[0], m1);
         let m7 = -m6;
-        let m8 = m2 + m3;
+        let m8 = v[0].mul_add(v[2], m3);
         let m9 = m8 * T::from_i64(2);
-        let m10 = m5 - m4;
+        let m10 = (-v[0]).mul_add(v[3], m5);
         let m11 = m10 * T::from_i64(2);
         gx::Prepared::from_entries([m6, m7, m9, m11])
     }
@@ -23523,25 +23119,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Flector<
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[1];
-        let t2 = v[2] * t0;
         let t3 = v[3] * t1;
-        let t4 = v[3] * t0;
         let t5 = v[2] * t1;
         let t6 = -xv[1];
-        let t7 = t2 + t3;
+        let t7 = v[2].mul_add(t0, t3);
         let t8 = t7 * T::from_i64(2);
-        let t9 = t5 - t4;
+        let t9 = (-v[3]).mul_add(t0, t5);
         let t10 = t9 * T::from_i64(2);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t6, t8, t10]) };
         }
-        let m0 = v[0] * v[2];
         let m1 = v[1] * v[3];
-        let m2 = v[0] * v[3];
         let m3 = v[1] * v[2];
         let m4 = -T::from_i64(1);
-        let m5 = m0 + m1;
+        let m5 = v[0].mul_add(v[2], m1);
         let m6 = m5 * T::from_i64(2);
-        let m7 = m3 - m2;
+        let m7 = (-v[0]).mul_add(v[3], m3);
         let m8 = m7 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Motor { c: [(x[0]).0, (x[1].scale(m4)).0, (x[1].scale(m6)).0, (x[1].scale(m8)).0] }
@@ -23561,14 +23153,12 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 3> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[2];
         let m1 = v[1] * v[3];
-        let m2 = v[0] * v[3];
         let m3 = v[1] * v[2];
         let m4 = -T::from_i64(1);
-        let m5 = m0 + m1;
+        let m5 = v[0].mul_add(v[2], m1);
         let m6 = m5 * T::from_i64(2);
-        let m7 = m3 - m2;
+        let m7 = (-v[0]).mul_add(v[3], m3);
         let m8 = m7 * T::from_i64(2);
         gx::Prepared::from_entries([m4, m6, m8])
     }
@@ -23605,14 +23195,12 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for Flector<(), 
         let t3 = t0 + t1;
         let t4 = t0 - t1;
         let t5 = xv[0] * t3;
-        let t6 = xv[1] * t4;
         let t7 = xv[2] * t2;
         let t8 = xv[1] * t2;
-        let t9 = xv[2] * t4;
         let t10 = t7 * T::from_i64(2);
-        let t11 = t6 + t10;
+        let t11 = xv[1].mul_add(t4, t10);
         let t12 = t8 * T::from_i64(2);
-        let t13 = t12 - t9;
+        let t13 = (-xv[2]).mul_add(t4, t12);
             return Translator { c: gx::slots::from_values::<S, T, 3>([t5, t11, t13]) };
         }
         let m0 = v[0] * v[0];
@@ -23677,23 +23265,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Fle
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = t0 - t1;
-        let t4 = xv[1] * t3;
+        let t3 = (-v[1]).mul_add(v[1], t0);
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
-        let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
-        let t9 = t4 + t8;
+        let t9 = xv[1].mul_add(t3, t8);
         let t10 = t6 * T::from_i64(2);
-        let t11 = t10 - t7;
+        let t11 = (-xv[2]).mul_add(t3, t10);
             return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -23716,8 +23300,7 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = m0 - m2;
+        let m3 = (-v[1]).mul_add(v[1], m0);
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
         gx::Prepared::from_entries([m3, m4, m5])
@@ -23751,46 +23334,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for Flector<(), T> {
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
-        let t2 = v[0] * v[2];
         let t3 = v[1] * v[3];
         let t4 = v[0] * v[1];
         let t5 = v[0] * v[3];
-        let t6 = v[1] * v[2];
         let t7 = t0 + t1;
-        let t8 = t2 + t3;
+        let t8 = v[0].mul_add(v[2], t3);
         let t9 = t0 - t1;
-        let t10 = t5 - t6;
+        let t10 = (-v[1]).mul_add(v[2], t5);
         let t11 = xv[0] * t7;
         let t12 = xv[1] * t7;
-        let t13 = xv[1] * t8;
-        let t14 = xv[2] * t9;
         let t15 = xv[3] * t4;
-        let t16 = xv[1] * t10;
         let t17 = xv[2] * t4;
-        let t18 = xv[3] * t9;
         let t19 = -t12;
-        let t20 = t13 + t15;
+        let t20 = xv[1].mul_add(t8, t15);
         let t21 = t20 * T::from_i64(2);
-        let t22 = t14 + t21;
-        let t23 = t17 - t16;
+        let t22 = xv[2].mul_add(t9, t21);
+        let t23 = (-xv[1]).mul_add(t10, t17);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t24 - t18;
+        let t25 = (-xv[3]).mul_add(t9, t24);
             return Motor { c: gx::slots::from_values::<S, T, 4>([t11, t19, t22, t25]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[2], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = m2 * T::from_i64(2);
-        let m13 = m6 - m5;
+        let m13 = (-v[0]).mul_add(v[3], m6);
         let m14 = m13 * T::from_i64(2);
         let m15 = -m7;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -23814,17 +23389,15 @@ impl<T: gx::Coef> gx::Prepare<Motor> for Flector<(), T> {
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = -m8;
-        let m10 = m3 + m4;
+        let m10 = v[0].mul_add(v[2], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = m2 * T::from_i64(2);
-        let m13 = m6 - m5;
+        let m13 = (-v[0]).mul_add(v[3], m6);
         let m14 = m13 * T::from_i64(2);
         let m15 = -m7;
         gx::Prepared::from_entries([m8, m9, m11, m7, m12, m14, m15])
@@ -23856,44 +23429,34 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Flector<
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[0] * v[2];
         let t1 = v[1] * v[3];
         let t2 = v[0] * v[0];
-        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
         let t5 = v[0] * v[3];
-        let t6 = v[1] * v[2];
-        let t7 = t0 + t1;
-        let t8 = t2 - t3;
-        let t9 = t5 - t6;
-        let t10 = xv[1] * t7;
-        let t11 = xv[2] * t8;
+        let t7 = v[0].mul_add(v[2], t1);
+        let t8 = (-v[1]).mul_add(v[1], t2);
+        let t9 = (-v[1]).mul_add(v[2], t5);
         let t12 = xv[3] * t4;
-        let t13 = xv[1] * t9;
         let t14 = xv[2] * t4;
-        let t15 = xv[3] * t8;
         let t16 = -xv[1];
-        let t17 = t10 + t12;
+        let t17 = xv[1].mul_add(t7, t12);
         let t18 = t17 * T::from_i64(2);
-        let t19 = t11 + t18;
-        let t20 = t14 - t13;
+        let t19 = xv[2].mul_add(t8, t18);
+        let t20 = (-xv[1]).mul_add(t9, t14);
         let t21 = t20 * T::from_i64(2);
-        let t22 = t21 - t15;
+        let t22 = (-xv[3]).mul_add(t8, t21);
             return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t16, t19, t22]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = -T::from_i64(1);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = m1 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -m7;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -23916,17 +23479,14 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
-        let m3 = v[0] * v[2];
         let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = -T::from_i64(1);
-        let m9 = m3 + m4;
+        let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = m1 * T::from_i64(2);
-        let m12 = m6 - m5;
+        let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -m7;
         gx::Prepared::from_entries([m8, m10, m7, m11, m13, m14])
@@ -23962,44 +23522,36 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for Flector<(), T> 
         let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
-        let t4 = v[1] * v[3];
-        let t5 = v[0] * v[3];
         let t6 = v[1] * v[2];
         let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
+        let t8 = (-v[1]).mul_add(v[3], t3);
+        let t9 = v[0].mul_add(v[3], t6);
         let t10 = t0 + t1;
-        let t11 = xv[0] * t7;
         let t12 = xv[1] * t2;
         let t13 = xv[0] * t2;
-        let t14 = xv[1] * t7;
-        let t15 = xv[0] * t8;
         let t16 = xv[1] * t9;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t10;
         let t19 = t12 * T::from_i64(2);
-        let t20 = t11 + t19;
+        let t20 = xv[0].mul_add(t7, t19);
         let t21 = t13 * T::from_i64(2);
-        let t22 = t21 - t14;
-        let t23 = t15 + t16;
+        let t22 = (-xv[1]).mul_add(t7, t21);
+        let t23 = xv[0].mul_add(t8, t16);
         let t24 = t23 * T::from_i64(2);
-        let t25 = t24 - t17;
+        let t25 = (-xv[2]).mul_add(t10, t24);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t20, t22, t25, t18]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = m2 * T::from_i64(2);
         let m10 = -m7;
-        let m11 = m3 - m4;
+        let m11 = (-v[1]).mul_add(v[3], m3);
         let m12 = m11 * T::from_i64(2);
-        let m13 = m5 + m6;
+        let m13 = v[0].mul_add(v[3], m6);
         let m14 = m13 * T::from_i64(2);
         let m15 = -m8;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -24024,16 +23576,14 @@ impl<T: gx::Coef> gx::Prepare<Flector> for Flector<(), T> {
         let m1 = v[1] * v[1];
         let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
         let m7 = m0 - m1;
         let m8 = m0 + m1;
         let m9 = m2 * T::from_i64(2);
         let m10 = -m7;
-        let m11 = m3 - m4;
+        let m11 = (-v[1]).mul_add(v[3], m3);
         let m12 = m11 * T::from_i64(2);
-        let m13 = m5 + m6;
+        let m13 = v[0].mul_add(v[3], m6);
         let m14 = m13 * T::from_i64(2);
         let m15 = -m8;
         gx::Prepared::from_entries([m7, m9, m10, m12, m14, m15, m8])
@@ -24066,43 +23616,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
-        let t4 = v[1] * v[3];
-        let t5 = v[0] * v[3];
         let t6 = v[1] * v[2];
-        let t7 = t0 - t1;
-        let t8 = t3 - t4;
-        let t9 = t5 + t6;
-        let t10 = xv[0] * t7;
+        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t8 = (-v[1]).mul_add(v[3], t3);
+        let t9 = v[0].mul_add(v[3], t6);
         let t11 = xv[1] * t2;
         let t12 = xv[0] * t2;
-        let t13 = xv[1] * t7;
-        let t14 = xv[0] * t8;
         let t15 = xv[1] * t9;
         let t16 = t11 * T::from_i64(2);
-        let t17 = t10 + t16;
+        let t17 = xv[0].mul_add(t7, t16);
         let t18 = t12 * T::from_i64(2);
-        let t19 = t18 - t13;
-        let t20 = t14 + t15;
-        let t21 = t20 * T::from_i64(2);
-        let t22 = t21 - xv[2];
+        let t19 = (-xv[1]).mul_add(t7, t18);
+        let t20 = xv[0].mul_add(t8, t15);
+        let t22 = t20.mul_add(T::from_i64(2), -xv[2]);
             return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t22, xv[3]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -24125,17 +23665,14 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
-        let m4 = v[1] * v[3];
-        let m5 = v[0] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = m1 * T::from_i64(2);
         let m9 = -m7;
-        let m10 = m3 - m4;
+        let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
-        let m12 = m5 + m6;
+        let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
         let m14 = -T::from_i64(1);
         gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
@@ -24181,34 +23718,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Flector<(),
         let t11 = t2 - t4;
         let t12 = t1 + t5;
         let t13 = xv[0] * t7;
-        let t14 = xv[1] * t7;
-        let t15 = xv[2] * t8;
         let t16 = xv[3] * t9;
-        let t17 = xv[2] * t10;
         let t18 = xv[3] * t6;
         let t19 = xv[2] * t6;
-        let t20 = xv[3] * t10;
-        let t21 = xv[4] * t10;
         let t22 = xv[5] * t6;
-        let t23 = xv[6] * t11;
-        let t24 = xv[4] * t6;
-        let t25 = xv[5] * t10;
         let t26 = xv[6] * t12;
         let t27 = xv[6] * t7;
         let t28 = xv[7] * t7;
-        let t29 = t15 + t16;
+        let t29 = xv[2].mul_add(t8, t16);
         let t30 = t29 * T::from_i64(2);
-        let t31 = t30 - t14;
+        let t31 = (-xv[1]).mul_add(t7, t30);
         let t32 = t18 * T::from_i64(2);
-        let t33 = t17 + t32;
+        let t33 = xv[2].mul_add(t10, t32);
         let t34 = t19 * T::from_i64(2);
-        let t35 = t34 - t20;
-        let t36 = t22 - t23;
+        let t35 = (-xv[3]).mul_add(t10, t34);
+        let t36 = (-xv[6]).mul_add(t11, t22);
         let t37 = t36 * T::from_i64(2);
-        let t38 = t37 - t21;
-        let t39 = t24 + t26;
+        let t38 = (-xv[4]).mul_add(t10, t37);
+        let t39 = xv[4].mul_add(t6, t26);
         let t40 = t39 * T::from_i64(2);
-        let t41 = t25 + t40;
+        let t41 = xv[5].mul_add(t10, t40);
         let t42 = -t27;
             return Multivector { c: gx::slots::from_values::<S, T, 8>([t13, t31, t33, t35, t38, t41, t42, t28]) };
         }
@@ -24304,49 +23833,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Fl
         let t2 = v[1] * v[2];
         let t3 = v[1] * v[3];
         let t4 = v[0] * v[0];
-        let t5 = v[1] * v[1];
         let t6 = v[0] * v[1];
         let t7 = t0 - t3;
         let t8 = t1 + t2;
-        let t9 = t4 - t5;
+        let t9 = (-v[1]).mul_add(v[1], t4);
         let t10 = t1 - t2;
         let t11 = t0 + t3;
-        let t12 = xv[2] * t7;
         let t13 = xv[3] * t8;
-        let t14 = xv[2] * t9;
         let t15 = xv[3] * t6;
         let t16 = xv[2] * t6;
-        let t17 = xv[3] * t9;
-        let t18 = xv[4] * t9;
         let t19 = xv[5] * t6;
-        let t20 = xv[6] * t10;
-        let t21 = xv[4] * t6;
-        let t22 = xv[5] * t9;
         let t23 = xv[6] * t11;
-        let t24 = t12 + t13;
-        let t25 = t24 * T::from_i64(2);
-        let t26 = t25 - xv[1];
+        let t24 = xv[2].mul_add(t7, t13);
+        let t26 = t24.mul_add(T::from_i64(2), -xv[1]);
         let t27 = t15 * T::from_i64(2);
-        let t28 = t14 + t27;
+        let t28 = xv[2].mul_add(t9, t27);
         let t29 = t16 * T::from_i64(2);
-        let t30 = t29 - t17;
-        let t31 = t19 - t20;
+        let t30 = (-xv[3]).mul_add(t9, t29);
+        let t31 = (-xv[6]).mul_add(t10, t19);
         let t32 = t31 * T::from_i64(2);
-        let t33 = t32 - t18;
-        let t34 = t21 + t23;
+        let t33 = (-xv[4]).mul_add(t9, t32);
+        let t34 = xv[4].mul_add(t6, t23);
         let t35 = t34 * T::from_i64(2);
-        let t36 = t22 + t35;
+        let t36 = xv[5].mul_add(t9, t35);
         let t37 = -xv[6];
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t26, t28, t30, t33, t36, t37, xv[7]]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = -T::from_i64(1);
         let m9 = m3 - m6;
         let m10 = m9 * T::from_i64(2);
@@ -24378,12 +23897,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Flector<(), T>> {
         let v = self.into_inner().c;
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = m0 - m2;
+        let m7 = (-v[1]).mul_add(v[1], m0);
         let m8 = -T::from_i64(1);
         let m9 = m3 - m6;
         let m10 = m9 * T::from_i64(2);

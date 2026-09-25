@@ -26,6 +26,10 @@ macro_rules! lanes {
             fn from_f64(f: f64) -> Self {
                 $t::splat(f as $s)
             }
+            #[inline(always)]
+            fn mul_add(self, a: Self, b: Self) -> Self {
+                $t::mul_add(self, a, b)
+            }
         }
 
         impl Real for $t {
@@ -89,10 +93,6 @@ macro_rules! lanes {
             #[inline(always)]
             fn epsilon() -> Self {
                 $t::splat(<$s>::EPSILON)
-            }
-            #[inline(always)]
-            fn mul_add(self, a: Self, b: Self) -> Self {
-                $t::mul_add(self, a, b)
             }
         }
     };

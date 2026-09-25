@@ -288,19 +288,77 @@ impl Program {
     /// `var` renders an input variable, and temporaries are named `{prefix}{k}`.
     pub fn emit_lets(&self, var: &impl Fn(Var) -> String, prefix: &str, out: &mut String) {
         let live = self.live();
+        // Uses of each temporary (outputs count), to fuse single-use products into their sum.
+        let mut uses = vec![0usize; self.instrs.len()];
+        for (k, i) in self.instrs.iter().enumerate() {
+            if live[k] {
+                for o in operands(i) {
+                    if let Operand::Temp(j) = o {
+                        uses[j] += 1;
+                    }
+                }
+            }
+        }
+        for o in &self.outputs {
+            if let Operand::Temp(j) = o {
+                uses[*j] += 1;
+            }
+        }
+        let single_mul = |o: &Operand| match o {
+            Operand::Temp(j) if uses[*j] == 1 => match &self.instrs[*j] {
+                Instr::Mul(x, y)
+                    if !matches!(x, Operand::Const(_)) || !matches!(y, Operand::Const(_)) =>
+                {
+                    Some((*j, *x, *y))
+                }
+                _ => None,
+            },
+            _ => None,
+        };
+        // Decide the fusions first, so the fused products are not emitted.
+        let mut fused = vec![false; self.instrs.len()];
+        let mut plan: Vec<Option<String>> = vec![None; self.instrs.len()];
+        let r = |o: &Operand| render(o, var, prefix);
         for (k, i) in self.instrs.iter().enumerate() {
             if !live[k] {
                 continue;
             }
-            let r = |o: &Operand| render(o, var, prefix);
-            let rhs = match i {
-                Instr::Add(a, b) => format!("{} + {}", r(a), r(b)),
-                Instr::Sub(a, b) => format!("{} - {}", r(a), r(b)),
-                Instr::Mul(a, b) => format!("{} * {}", r(a), r(b)),
-                Instr::Neg(a) => format!("-{}", r(a)),
-                Instr::Div(a, b) => format!("{} / {}", r(a), r(b)),
-                Instr::Atan2(a, b) => format!("{}.atan2({})", r(a), r(b)),
-                Instr::Call(f, a) => format!("{}.{}()", r(a), f.method()),
+            let fma = match i {
+                Instr::Add(a, b) => single_mul(a)
+                    .map(|(j, x, y)| (j, format!("{}.mul_add({}, {})", r(&x), r(&y), r(b))))
+                    .or_else(|| {
+                        single_mul(b)
+                            .map(|(j, x, y)| (j, format!("{}.mul_add({}, {})", r(&x), r(&y), r(a))))
+                    }),
+                Instr::Sub(a, b) => single_mul(b)
+                    .map(|(j, x, y)| (j, format!("(-{}).mul_add({}, {})", r(&x), r(&y), r(a))))
+                    .or_else(|| {
+                        single_mul(a).map(|(j, x, y)| {
+                            (j, format!("{}.mul_add({}, -{})", r(&x), r(&y), r(b)))
+                        })
+                    }),
+                _ => None,
+            };
+            if let Some((j, e)) = fma
+                && !fused[j]
+            {
+                fused[j] = true;
+                plan[k] = Some(e);
+            }
+        }
+        for (k, i) in self.instrs.iter().enumerate() {
+            if !live[k] || fused[k] {
+                continue;
+            }
+            let rhs = match (&plan[k], i) {
+                (Some(e), _) => e.clone(),
+                (None, Instr::Add(a, b)) => format!("{} + {}", r(a), r(b)),
+                (None, Instr::Sub(a, b)) => format!("{} - {}", r(a), r(b)),
+                (None, Instr::Mul(a, b)) => format!("{} * {}", r(a), r(b)),
+                (None, Instr::Neg(a)) => format!("-{}", r(a)),
+                (None, Instr::Div(a, b)) => format!("{} / {}", r(a), r(b)),
+                (None, Instr::Atan2(a, b)) => format!("{}.atan2({})", r(a), r(b)),
+                (None, Instr::Call(f, a)) => format!("{}.{}()", r(a), f.method()),
             };
             let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
         }

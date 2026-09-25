@@ -524,17 +524,19 @@ pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
     let (sin, cos) = a.sin_cos();
     let k = |v: f64| T::from_f64(v);
     let small = k(1e-4);
+    // One reciprocal serves both quotients (it is infinite at a = 0, where the series is used).
+    let inv = a.recip();
     let s = T::select_lt(
         a2,
         small,
         T::one() - a2 * k(1.0 / 6.0) + a2 * a2 * k(1.0 / 120.0),
-        sin / a,
+        sin * inv,
     );
     let ds = T::select_lt(
         a2,
         small,
         k(1.0 / 6.0) - a2 * k(1.0 / 60.0),
-        (s - cos) / (a2 + a2),
+        (s - cos) * inv * inv * k(0.5),
     );
     [cos, mu * s * k(0.5), s, mu * ds]
 }

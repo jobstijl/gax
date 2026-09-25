@@ -27,6 +27,12 @@ pub trait Coef:
     fn from_i64(i: i64) -> Self;
     /// Convert a constant.
     fn from_f64(f: f64) -> Self;
+    /// `self * a + b`. Fused (one rounding) where the target has a fused multiply-add, which
+    /// generated kernels use for every product that feeds a single sum.
+    #[inline(always)]
+    fn mul_add(self, a: Self, b: Self) -> Self {
+        self * a + b
+    }
 }
 
 /// A real field with the elementary functions used by norms, inverses, solvers and exp/log.
@@ -85,11 +91,6 @@ pub trait Real: Coef + Div<Output = Self> {
     }
     /// Machine epsilon of the lane type.
     fn epsilon() -> Self;
-    /// `self * a + b`, fused where the platform supports it cheaply.
-    #[inline(always)]
-    fn mul_add(self, a: Self, b: Self) -> Self {
-        self * a + b
-    }
 }
 
 macro_rules! float_impl {
@@ -110,6 +111,19 @@ macro_rules! float_impl {
             #[inline(always)]
             fn from_f64(f: f64) -> Self {
                 f as $t
+            }
+            #[inline(always)]
+            fn mul_add(self, a: Self, b: Self) -> Self {
+                // Only with hardware FMA: the software fallback is much slower than `*` and `+`.
+                #[cfg(all(target_feature = "fma", feature = "std"))]
+                {
+                    extern crate std;
+                    <$t>::mul_add(self, a, b)
+                }
+                #[cfg(not(all(target_feature = "fma", feature = "std")))]
+                {
+                    self * a + b
+                }
             }
         }
         impl Real for $t {
