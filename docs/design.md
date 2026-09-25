@@ -180,7 +180,7 @@ files in `gax/src/algebras/`, behind cargo features.
   the examples follow this.
 
 ## ADR-010: The symbolic coefficient `Sym` is a `Copy` handle to hash-consed polynomials
-*Status: accepted.*
+*Status: accepted, implemented (`gax-gen/src/sym.rs`).*
 
 * **Why `Copy`:** tracing runs ordinary generic user code with `T = Sym`, so `Sym` must satisfy the same
   `Coef` bound as `f32`, including `Copy`.
@@ -192,9 +192,21 @@ files in `gax/src/algebras/`, behind cargo features.
   once. That is reciprocal hoisting at the source.
 * **Branches cannot be traced.** `select_lt` on `Sym` panics with a message that names the kernel, so a
   traced kernel must be branch free.
+* **Bounded expansion (added during implementation).** Expanding a whole chain of products into flat
+  polynomials destroys its factored structure. The first version made the fused kernel for "move,
+  join, meet" cost 163 mul against 49 for the generic code. A sum or product whose expanded result
+  exceeds a term *limit* therefore becomes an opaque node variable defined by its operation, so the
+  trace keeps its DAG structure.
+  * The tracer runs the closure under the limits `0, 1, 8, 32, 128, ∞`, compiles each result, and keeps
+    the cheapest verified program.
+  * Limit 0 is the computation as written, with constants folded and common subexpressions shared, so
+    a fused kernel is never worse than the generic code.
+* **Runtime model.** A second trace with every operation a node and every constant opaque gives the
+  cost of the generic code *as it runs*: IEEE forbids folding `0 * x`. This is the baseline the tracer
+  reports against.
 
 ## ADR-011: The simplifier: ideal reduction plus a verified CSE portfolio
-*Status: proposed (GAmphetamine's pipeline, made sound).*
+*Status: accepted, implemented (`gax-gen/src/cse.rs`, `groebner.rs`).*
 
 1. **Type conditions.** A kind can carry conditions: `unit` means `x ~x = 1`, and fixed coefficients such
    as `e123 = 1` can also be declared. The tracer turns the conditions of each input into polynomial
@@ -212,6 +224,17 @@ files in `gax/src/algebras/`, behind cargo features.
    polynomials in tests.
 3. **Regression targets** are GAmphetamine's measured op counts
    ([research/codegen.md §1.10](research/codegen.md)).
+4. **What was built:**
+   * **Kernel extraction.** A Brayton–McMullen style pass looks for sums shared across outputs under
+     different co-kernels, up to a rational factor, trying every subset of each residual. It brought
+     the unit motor–point sandwich from 39 mul / 30 add to 25 / 18. GAmphetamine's 21 / 18 is for a point
+     with the fixed coefficient `e123 = 1`; in `gax`, fixed coefficients come from constants in traced
+     code.
+   * **Three reduction strategies** compete in the portfolio: none, greedy term reduction (square-sum
+     completion), and the normal form modulo a Gröbner basis (Buchberger, grevlex).
+   * **Exact verification.** Every winning program is expanded back to polynomials. Its difference from
+     the traced polynomials must have Gröbner normal form zero, modulo the type conditions and the atom
+     identities `r·x = 1` and `s² = x`.
 
 ## ADR-012: The value/map tier dispatch is a method on `Slots`
 *Status: accepted. Changes the mechanism of hypothesis 5.*
@@ -228,7 +251,7 @@ files in `gax/src/algebras/`, behind cargo features.
   beyond `S: Slots`.
 
 ## ADR-013: Versor transport: `v >> x` pushes forward, `v << x` pulls back
-*Status: proposed.*
+*Status: accepted, implemented.*
 
 * **The operators:** `v >> x` is `v x ~v`, following numga, and `v << x` is `~v x v`.
 * **Value versor:** when `v` is a value, `>>` dispatches (ADR-012) as follows:
@@ -240,7 +263,7 @@ files in `gax/src/algebras/`, behind cargo features.
   is measured (hypothesis 6).
 
 ## ADR-014: Binding and composition API
-*Status: proposed.*
+*Status: accepted, implemented.*
 
 * **`m.of(x)`:** binds the first slot. `x` can be a value, which fills the slot, or a map, which composes
   it: the slot is replaced by `x`'s own slots, spliced in place.
@@ -250,12 +273,21 @@ files in `gax/src/algebras/`, behind cargo features.
   This is a blade-matching contraction with no metric (numga's `trace(slot)`). A contraction between two
   *inputs* needs a pairing and is written with `&` or `|`. That is why the brief's
   `.trace::<I, J>()` is not provided.
-* **`m.adjoint()`:** for a map `B <- A`, returns the map `A* <- B*` that satisfies
-  `adjoint(y) & x == y & m(x)`, where `A*` is the complement kind (Plane for Point). For the complement
-  pairing this is a signed transpose, so no solve is needed.
+* **Adjoints: no `m.adjoint()` method.** An adjoint is written as numga writes it, as a pairing solve.
+  For example, `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)` is the map on planes induced by
+  a point map `t`, and it satisfies `induced(l) & p == l & t(p)`. It exists even when `t` is singular.
+  * `Pairing::solve` accepts a right-hand side with leading slots, which become slots of the solution.
+  * We dropped the dedicated method because the pairing has to be named anyway (`&` or `|`), and the
+    solve says which one.
+* **Maps (`K<(A,), T>`):** `inverse`, `det`, `solve` (right-hand sides keep their slots), `svd` (typed
+  singular vectors) and `trace`.
+* **Forms (`Scalar<(A, A)>`):** `eigh_with(metric)`, which returns the modes as values of the slot kind,
+  and `eigh`.
+* **Values:** `inverse`, `normalized` (returns `Unit<K>`), `norm`, `exp`, `Unit<K>::log` and `sqrt`.
+  Each is emitted only where the kind has the structure its closed form needs (ADR-019).
 
 ## ADR-015: Equal slots are grouped by kind by default
-*Status: proposed. Changes hypothesis 3.*
+*Status: accepted, implemented; explicit labels not implemented. Changes hypothesis 3.*
 
 * **Why not labels per call:** Rust cannot create a fresh type for each call of `Motor::slot()`.
   Type-level labels would need either a closed family of label types or type equality, which stable Rust
@@ -264,13 +296,15 @@ files in `gax/src/algebras/`, behind cargo features.
   type-level kind equality (`KindEq`) for each pair of kinds.
 * **`m.fill(x)`:** binds *every* slot of `x`'s kind. It is the natural equality group, as in
   `Point<(Motor, Point, Motor)>.fill(motor)`.
-* **Explicit labels** (`Motor::labelled::<L1>()`, from a small provided family `L1..L8`) refine this when
-  two slots of the same kind must stay independent.
+* **Explicit labels, not implemented.** The plan was `Motor::labelled::<L1>()` from a small provided
+  family `L1..L8`, for when two slots of the same kind must stay independent. Every use case so far is
+  served by kinds plus `at::<I>()`, which binds one slot of a kind while leaving the others open. The
+  machinery (`KindEq`, `FillList`) extends to a label family unchanged if one is needed.
 * **Where the performance comes from instead:** symmetrizing tables over equal slots is left to tier 2
   and tier 3. There the symbolic tracer sees the repeated variables directly, which subsumes it.
 
 ## ADR-016: Build-time tracing through a shared module
-*Status: proposed (hypothesis 4).*
+*Status: accepted, implemented (`examples/traced`).*
 
 * **Where the user writes kernels:** in an ordinary module, `src/kernels.rs`. It holds generic functions
   over `T: Coef` and `S: Slots`.
@@ -282,31 +316,92 @@ files in `gax/src/algebras/`, behind cargo features.
 * **The crate** uses `include!(concat!(env!("OUT_DIR"), "/fused.rs"))`.
 * **Why this shape:** no user macro is needed, and the traced function is the very function the crate
   compiles, so they cannot drift apart.
-* **Type conditions** come from the input kinds (for example, `Motor` is `unit`), with an explicit
-  `.assume_unit()` override.
+* **Type conditions.** A `Unit<K>` argument contributes `x ~x = 1`. The tracer computes it by running the
+  library's own generated products on symbolic coefficients, so it needs no algebra metadata.
+* **Measured.** In the example, "move a point by a motor, cast its shadow on the floor `z = 0`":
+  * fused: 31 mul / 21 add;
+  * the generic code at run time: 46 / 32.
+
+  Without build-time constants the fused kernels match the generic code, which is the guarantee the
+  limit-0 trace gives.
 
 ## ADR-017: Own small-matrix math core, generic over `Real`
-*Status: proposed (hypothesis 8).*
+*Status: accepted, implemented (`gax-core/src/linalg.rs`, `extensor.rs`).*
 
 * **Solvers:** unrolled Cholesky/LDLᵀ, partial-pivot LU, cyclic Jacobi eigen and one-sided Jacobi SVD.
   They are written over `[[T; N]; N]` with const `N`; sizes are small and known per algebra.
 * **Branch free:** all use `Real::select_lt` instead of branches, so they batch over SIMD lanes. Jacobi
   runs a fixed number of sweeps.
-* **Glue:** each kind gets generated glue that calls them with its literal `N`.
+* **No glue needed.** The solvers are generic over `SquareArr`, which is implemented for `[[T; N]; N]`.
+  The extensor methods require `Coeffs<Self>: SquareArr<T>`, so a non-square map simply has no
+  `inverse()`: a compile-time shape check, with no per-kind glue and no `generic_const_exprs`.
 * **Closed forms by type:**
-  * a unit versor inverts by its reverse;
-  * a versor's matrix inverts by the matrix of the reverse;
-  * principal inertia has a compact representation.
+  * a unit versor (`Unit<K>`) inverts by its reverse (implemented);
+  * a versor's matrix inverts by the matrix of the reverse, `m << X` (implemented; the inverse test
+    checks that it equals the LU inverse);
+  * a compact principal-inertia representation (not yet implemented).
 * **Generalized symmetric eigenproblems** go through a Cholesky reduction.
 * **exp/log:** closed forms for PGA2D/3D (De Keninck & Roelfs 2022), and the invariant decomposition
   elsewhere.
 
 ## ADR-018: Batching through SIMD coefficient types
-*Status: proposed (hypothesis 9).*
+*Status: accepted, implemented. See [performance.md](performance.md).*
 
 * **Lanes are coefficients:** `wide::f32x8` and `f64x4` implement `Coef` and `Real` (feature `wide`), so
   `Point<(), f32x8>` is eight points in SoA form. Every kernel, including solvers, runs unchanged.
 * **Slices:** helpers convert between `&[Point<(), f32>]` and lane chunks.
+
+## ADR-019: Exponentials, logarithms, inverses and normalization through Study numbers
+*Status: accepted, implemented (`gax-core/src/study.rs`, `gax-gen/src/emit_values.rs`).*
+
+* **The common structure.** In an algebra of dimension at most 4, `x ~x` of a versor and `B²` of a
+  bivector are Study numbers `a + bI`, with `I²` in `{0, +1, −1}`. Every analytic function extends to
+  them through two channels:
+  * real `a ± b` when `I² = 1`;
+  * complex `a + ib` when `I² = −1`;
+  * dual `f(a) + b f'(a) I` when `I² = 0`.
+* **Written once.** `exp` (`C = cosh√x`, `S = sinh√x/√x`), `log` (`2 atanh(t)/(t(1+c))` with
+  `t = √u/(1+c)`, stable near the identity), `rsqrt` and the inverse are written once over complex and
+  dual-complex numbers. They cover PGA (dual), STA boosts and rotations (complex) and Euclidean rotors
+  alike.
+* **Generation checks the structure first.** The generator verifies it symbolically per kind and emits
+  the method only when it holds, so a kind without it has no method.
+* **Limitation.** In 5D algebras (CGA3D, STAP), `B²` has several grade-4 components, and bivector
+  exp/log are not generated. numga handles these by a numerical invariant decomposition; see the TODO.
+
+## ADR-020: Certification by a wrapper type, `Unit<M>`
+*Status: accepted.*
+
+* **The choice.** numga attaches traits such as "certified unit versor" to its runtime types. Here the
+  certificate is a wrapper, `Unit<M>`, in the style of `nalgebra::Unit`, rather than a second kind with
+  the same blades.
+* **What `Unit` provides:**
+  * its inverse is its reverse;
+  * the product of units is a unit;
+  * its sandwiches use kernels simplified with `x ~x = 1`;
+  * tracing adds the condition to the ideal.
+* **Why a wrapper:** kinds stay plain subspaces, and the number of generated pairs does not double.
+
+## ADR-021: Output kinds
+*Status: accepted.*
+
+* **The rule.** The output kind of a product is the declared kind that contains the support of the
+  result, chosen as follows:
+  1. prefer one that adds no grade the result lacks (a bivector stays a bivector kind);
+  2. then the smallest;
+  3. then the first declared.
+* **Structural zeros.** Rounding a result up to a larger kind introduces zero coefficients. These are
+  the only structural zeros that reach runtime data. Fused kernels (tier 2 and 3) avoid them.
+
+## ADR-022: User algebras through `algebra!`, with the generator optimized at build time
+*Status: accepted.*
+
+* **One text format.** `algebra!` parses the same format as the committed `.gax` files and emits the
+  same code. Missing `Scalar` and `Multivector` kinds are added in canonical order, so a user only
+  declares the kinds they want.
+* **Build time.** The generator runs inside the proc macro. Unoptimized it is slow, so the workspace sets
+  `[profile.dev.build-override] opt-level = 3`, and the macro documents the same setting for users.
+  Re-expanding STAP (5D) and CSTA (6D) then takes about 6 s.
 
 ---
 
@@ -316,10 +411,10 @@ files in `gax/src/algebras/`, behind cargo features.
 |---|---|---|---|
 | 1 | Types generic over open slots; ops written once; `S ++ () = S` for generic `S` | **kept** | ADR-003, ADR-005; compiled experiments e11, e14 |
 | 2 | Plain generic functions are the composition language | **kept** | ADR-014; API names adjusted (`trace::<I>`, `adjoint` via complement) |
-| 3 | Labelled slots record equality groups | **changed** | ADR-015: equality by kind (`fill`), with explicit labels from a closed family |
-| 4 | Build-time tracing with a symbolic coefficient type | **kept** | ADR-010, ADR-016 |
+| 3 | Labelled slots record equality groups | **changed** | ADR-015: equality by kind (`fill`, type-level `KindEq`); symmetrization over equal slots left to tracing |
+| 4 | Build-time tracing with a symbolic coefficient type | **kept, refined** | ADR-010, ADR-016: bounded expansion; verified; never worse than the generic code |
 | 5 | Three performance tiers | **changed** | Tier 1 is emitted straight-line code, not constant tables (ADR-006); dispatch by `Slots` methods (ADR-012) |
-| 6 | Build the map, then apply it | pending | ADR-013; crossover measured in `gax-bench` |
+| 6 | Build the map, then apply it | **kept** | For 1024 points the map path beats the direct sandwich: 1.44 µs vs 1.88 µs (AoS), 0.50 µs vs 0.72 µs (SoA, AVX2); see performance.md |
 | 7 | IEEE float semantics limit folding | **confirmed** | ADR-007; asm evidence in research.md §6 |
-| 8 | Own solvers with closed forms by type | pending | ADR-017 |
-| 9 | Batching via SoA and SIMD coefficients | pending | ADR-018 |
+| 8 | Own solvers with closed forms by type | **kept** | ADR-017, ADR-019, ADR-020; property-tested, branch free, SIMD lanes match scalar |
+| 9 | Batching via SoA and SIMD coefficients | **kept** | 1024 rigid transforms: 0.50 µs (gax f32x8) vs 1.11 µs (glam Affine3A loop) |
