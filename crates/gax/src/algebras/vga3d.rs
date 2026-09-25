@@ -264,6 +264,16 @@ impl<T: gx::Coef> Scalar<(), T> {
         Scalar { c: [s] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Scalar`: a `Scalar` with one open `Scalar` slot.
     #[inline(always)]
     pub fn slot() -> Scalar<(Scalar,), T> {
@@ -809,6 +819,16 @@ impl<T: gx::Coef> Vector<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1: T, e2: T, e3: T) -> Self {
         Vector { c: [e1, e2, e3] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Vector`: a `Vector` with one open `Vector` slot.
@@ -1391,6 +1411,16 @@ impl<T: gx::Coef> Bivector<(), T> {
         Bivector { c: [e23, e31, e12] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Bivector`: a `Bivector` with one open `Bivector` slot.
     #[inline(always)]
     pub fn slot() -> Bivector<(Bivector,), T> {
@@ -1726,7 +1756,7 @@ impl<T: gx::Real> Bivector<(), T> {
         let p3 = p0 + p1;
         let p4 = p2 + p3;
         let p5 = -p4;
-        let [c0, c1, s0, s1] = gx::study::exp_coeffs(-1, p5, T::from_i64(0));
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation(p5, T::from_i64(0));
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
         let t2 = x[2] * s0;
@@ -1990,6 +2020,16 @@ impl<T: gx::Coef> Pseudoscalar<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e123: T) -> Self {
         Pseudoscalar { c: [e123] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Pseudoscalar`: a `Pseudoscalar` with one open `Pseudoscalar` slot.
@@ -2532,6 +2572,16 @@ impl<T: gx::Coef> Rotor<(), T> {
         Rotor { c: [s, e23, e31, e12] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Rotor`: a `Rotor` with one open `Rotor` slot.
     #[inline(always)]
     pub fn slot() -> Rotor<(Rotor,), T> {
@@ -2803,8 +2853,8 @@ impl<T: gx::Real> Rotor<(), T> {
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         t6
     }
 
@@ -2833,13 +2883,13 @@ impl<T: gx::Real> Rotor<(), T> {
         let t12 = t2 * t3;
         let t13 = t3 * t3;
         let t14 = t4 + t8;
-        let t15 = t11 + t14;
-        let t16 = t13 + t15;
+        let t15 = t11 + t13;
+        let t16 = t14 + t15;
         let t17 = t5 + t6;
         let t18 = t7 + t17;
-        let t19 = t9 + t18;
-        let t20 = t10 + t19;
-        let t21 = t12 + t20;
+        let t19 = t9 + t10;
+        let t20 = t12 + t19;
+        let t21 = t18 + t20;
         let t22 = t21 * T::from_i64(2);
         let t23 = t16 + t22;
         let t24 = t23.recip();
@@ -2848,8 +2898,8 @@ impl<T: gx::Real> Rotor<(), T> {
         let t27 = t2 * t24;
         let t28 = t3 * t24;
         let t29 = t25 + t26;
-        let t30 = t27 + t29;
-        let t31 = t28 + t30;
+        let t30 = t27 + t28;
+        let t31 = t29 + t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
         let t34 = x[2] * t31;
@@ -2869,8 +2919,8 @@ impl<T: gx::Real> Rotor<(), T> {
         let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
         let p4 = p0 + p1;
-        let p5 = p2 + p4;
-        let p6 = p3 + p5;
+        let p5 = p2 + p3;
+        let p6 = p4 + p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -2901,7 +2951,7 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Rotor<(), T>> {
         let p3 = p0 + p1;
         let p4 = p2 + p3;
         let p5 = -p4;
-        let [h0, h1] = gx::study::log_coeffs(-1, (x[0], T::from_i64(0)), (p5, T::from_i64(0)));
+        let [h0, h1] = gx::study::log_coeffs_rotation((x[0], T::from_i64(0)), (p5, T::from_i64(0)));
         let t0 = x[1] * h0;
         let t1 = x[2] * h0;
         let t2 = x[3] * h0;
@@ -3164,6 +3214,16 @@ impl<T: gx::Coef> Odd<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e1: T, e2: T, e3: T, e123: T) -> Self {
         Odd { c: [e1, e2, e3, e123] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Odd`: a `Odd` with one open `Odd` slot.
@@ -3437,8 +3497,8 @@ impl<T: gx::Real> Odd<(), T> {
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         t6
     }
 
@@ -3467,13 +3527,13 @@ impl<T: gx::Real> Odd<(), T> {
         let t12 = t2 * t3;
         let t13 = t3 * t3;
         let t14 = t4 + t8;
-        let t15 = t11 + t14;
-        let t16 = t13 + t15;
+        let t15 = t11 + t13;
+        let t16 = t14 + t15;
         let t17 = t5 + t6;
         let t18 = t7 + t17;
-        let t19 = t9 + t18;
-        let t20 = t10 + t19;
-        let t21 = t12 + t20;
+        let t19 = t9 + t10;
+        let t20 = t12 + t19;
+        let t21 = t18 + t20;
         let t22 = t21 * T::from_i64(2);
         let t23 = t16 + t22;
         let t24 = t23.recip();
@@ -3482,8 +3542,8 @@ impl<T: gx::Real> Odd<(), T> {
         let t27 = t2 * t24;
         let t28 = t3 * t24;
         let t29 = t25 + t26;
-        let t30 = t27 + t29;
-        let t31 = t28 + t30;
+        let t30 = t27 + t28;
+        let t31 = t29 + t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
         let t34 = x[2] * t31;
@@ -3501,8 +3561,8 @@ impl<T: gx::Real> Odd<(), T> {
         let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
         let p4 = p0 + p1;
-        let p5 = p2 + p4;
-        let p6 = p3 + p5;
+        let p5 = p2 + p3;
+        let p6 = p4 + p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -3768,6 +3828,16 @@ impl<T: gx::Coef> Multivector<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T, e1: T, e2: T, e3: T, e23: T, e31: T, e12: T, e123: T) -> Self {
         Multivector { c: [s, e1, e2, e3, e23, e31, e12, e123] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot.
@@ -4069,12 +4139,12 @@ impl<T: gx::Real> Multivector<(), T> {
         let t6 = x[6] * x[6];
         let t7 = x[7] * x[7];
         let t8 = t0 + t1;
-        let t9 = t2 + t8;
-        let t10 = t3 + t9;
-        let t11 = t4 + t10;
-        let t12 = t5 + t11;
-        let t13 = t6 + t12;
-        let t14 = t7 + t13;
+        let t9 = t2 + t3;
+        let t10 = t8 + t9;
+        let t11 = t4 + t5;
+        let t12 = t6 + t7;
+        let t13 = t11 + t12;
+        let t14 = t10 + t13;
         t14
     }
 
@@ -4284,7 +4354,7 @@ impl gx::KindEq<Multivector> for Multivector {
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4298,7 +4368,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4314,7 +4384,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4330,7 +4400,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scal
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4344,7 +4414,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4361,7 +4431,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Scalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4378,7 +4448,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4399,7 +4469,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4415,16 +4485,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -4432,16 +4502,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -4449,7 +4519,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4465,16 +4535,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3] + a[2] * b[2]).0,
-                (a[0] * b[3] + a[1] * b[0] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[0] + a[2] * b[2]) - a[1] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[0]) - a[2] * b[1])).0,
+                (((a[1] * b[1] + a[2] * b[0]) - a[0] * b[2])).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -4482,16 +4552,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Vector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
-                (a[0] * b[3] + a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[3] + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0] + a[2] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                (((a[0] * b[3] + a[1] * b[2]) - a[2] * b[1])).0,
+                (((a[1] * b[3] + a[2] * b[0]) - a[0] * b[2])).0,
+                (((a[0] * b[1] + a[2] * b[3]) - a[1] * b[0])).0,
             ],
         }
     }
@@ -4499,20 +4569,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] - a[1] * b[6] + a[2] * b[5]).0,
-                (a[0] * b[6] + a[1] * b[0] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4] + a[2] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[1] * b[7] + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[2] * b[5]) - a[1] * b[6])).0,
+                (((a[0] * b[6] + a[1] * b[0]) - a[2] * b[4])).0,
+                (((a[1] * b[4] + a[2] * b[0]) - a[0] * b[5])).0,
+                (((a[0] * b[7] + a[1] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[7] + a[2] * b[1]) - a[0] * b[3])).0,
+                (((a[0] * b[2] + a[2] * b[7]) - a[1] * b[1])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
             ],
         }
     }
@@ -4520,7 +4590,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4536,16 +4606,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -4553,16 +4623,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -4570,15 +4640,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -4586,16 +4656,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
-                (a[0] * b[0] - a[1] * b[3] + a[2] * b[2]).0,
-                (a[0] * b[3] + a[1] * b[0] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[2] * b[0]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[2] * b[2]) - a[1] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[0]) - a[2] * b[1])).0,
+                (((a[1] * b[1] + a[2] * b[0]) - a[0] * b[2])).0,
             ],
         }
     }
@@ -4603,16 +4673,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Bivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[3]) - a[1] * b[2] + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[3] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[2] * b[3]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] - a[1] * b[3]) - a[2] * b[0])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[2] * b[3])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -4620,20 +4690,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
-                (-(a[0] * b[7]) - a[1] * b[3] + a[2] * b[2]).0,
-                (a[0] * b[3] - a[1] * b[7] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[2] * b[7]).0,
-                (a[0] * b[0] - a[1] * b[6] + a[2] * b[5]).0,
-                (a[0] * b[6] + a[1] * b[0] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4] + a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                (((a[2] * b[2] - a[0] * b[7]) - a[1] * b[3])).0,
+                (((a[0] * b[3] - a[1] * b[7]) - a[2] * b[1])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[2] * b[7])).0,
+                (((a[0] * b[0] + a[2] * b[5]) - a[1] * b[6])).0,
+                (((a[0] * b[6] + a[1] * b[0]) - a[2] * b[4])).0,
+                (((a[1] * b[4] + a[2] * b[0]) - a[0] * b[5])).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -4641,7 +4711,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4655,7 +4725,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4671,15 +4741,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -4687,13 +4757,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -4701,15 +4771,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -4718,13 +4788,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Pseudos
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -4735,16 +4805,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudosca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[4])).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[4]).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -4756,7 +4826,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4773,16 +4843,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[2] * b[2] + a[3] * b[1]).0,
-                (a[0] * b[1] + a[1] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[0]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[3] * b[1]) - a[2] * b[2])).0,
+                (((a[0] * b[1] + a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] + a[2] * b[0]) - a[1] * b[1])).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -4790,16 +4860,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (a[0] * b[0] - a[2] * b[2] + a[3] * b[1]).0,
-                (a[0] * b[1] + a[1] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[0]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[3] * b[1]) - a[2] * b[2])).0,
+                (((a[0] * b[1] + a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] + a[2] * b[0]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -4807,15 +4877,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Roto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -4824,16 +4894,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[3] + a[3] * b[2]).0,
-                (a[0] * b[2] + a[1] * b[3] + a[2] * b[0] - a[3] * b[1]).0,
-                (a[0] * b[3] - a[1] * b[2] + a[2] * b[1] + a[3] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[2] - a[2] * b[3]))).0,
+                (((a[0] * b[2] + a[1] * b[3]) + (a[2] * b[0] - a[3] * b[1]))).0,
+                (((a[0] * b[3] + a[2] * b[1]) + (a[3] * b[0] - a[1] * b[2]))).0,
             ],
         }
     }
@@ -4841,16 +4911,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Rotor<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3] - a[2] * b[2] + a[3] * b[1]).0,
-                (a[0] * b[1] + a[1] * b[2] - a[2] * b[3] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[0] - a[3] * b[3]).0,
-                (a[0] * b[3] + a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[3] * b[1]) - (a[1] * b[3] + a[2] * b[2]))).0,
+                (((a[0] * b[1] + a[1] * b[2]) - (a[2] * b[3] + a[3] * b[0]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) - (a[1] * b[1] + a[3] * b[3]))).0,
+                (((a[0] * b[3] + a[1] * b[0]) + (a[2] * b[1] + a[3] * b[2]))).0,
             ],
         }
     }
@@ -4858,20 +4928,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Rotor<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
-                (a[0] * b[1] - a[1] * b[7] - a[2] * b[3] + a[3] * b[2]).0,
-                (a[0] * b[2] + a[1] * b[3] - a[2] * b[7] - a[3] * b[1]).0,
-                (a[0] * b[3] - a[1] * b[2] + a[2] * b[1] - a[3] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[0] - a[2] * b[6] + a[3] * b[5]).0,
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[0] - a[3] * b[4]).0,
-                (a[0] * b[6] - a[1] * b[5] + a[2] * b[4] + a[3] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
+                (((a[0] * b[1] + a[3] * b[2]) - (a[1] * b[7] + a[2] * b[3]))).0,
+                (((a[0] * b[2] + a[1] * b[3]) - (a[2] * b[7] + a[3] * b[1]))).0,
+                (((a[0] * b[3] + a[2] * b[1]) - (a[1] * b[2] + a[3] * b[7]))).0,
+                (((a[0] * b[4] + a[1] * b[0]) + (a[3] * b[5] - a[2] * b[6]))).0,
+                (((a[0] * b[5] + a[1] * b[6]) + (a[2] * b[0] - a[3] * b[4]))).0,
+                (((a[0] * b[6] + a[2] * b[4]) + (a[3] * b[0] - a[1] * b[5]))).0,
+                (((a[0] * b[7] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -4879,7 +4949,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for R
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -4896,16 +4966,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
-                (a[1] * b[2] - a[2] * b[1] + a[3] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0] + a[3] * b[1]).0,
-                (a[0] * b[1] - a[1] * b[0] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                (((a[1] * b[2] + a[3] * b[0]) - a[2] * b[1])).0,
+                (((a[2] * b[0] + a[3] * b[1]) - a[0] * b[2])).0,
+                (((a[0] * b[1] + a[3] * b[2]) - a[1] * b[0])).0,
             ],
         }
     }
@@ -4913,16 +4983,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[2] * b[0] - a[3] * b[1]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[3] * b[2]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[3] * b[1])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[3] * b[2])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -4930,13 +5000,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -4947,16 +5017,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3] + a[2] * b[2] - a[3] * b[1]).0,
-                (a[0] * b[3] + a[1] * b[0] - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[2] * b[0] - a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[0]).0,
+                (((a[0] * b[0] + a[2] * b[2]) - (a[1] * b[3] + a[3] * b[1]))).0,
+                (((a[0] * b[3] + a[1] * b[0]) - (a[2] * b[1] + a[3] * b[2]))).0,
+                (((a[1] * b[1] + a[2] * b[0]) - (a[0] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -4964,16 +5034,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Odd<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[3] + a[2] * b[0] + a[3] * b[1]).0,
-                (a[0] * b[1] - a[1] * b[0] + a[2] * b[3] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
+                (((a[0] * b[3] + a[1] * b[2]) + (a[3] * b[0] - a[2] * b[1]))).0,
+                (((a[1] * b[3] + a[2] * b[0]) + (a[3] * b[1] - a[0] * b[2]))).0,
+                (((a[0] * b[1] + a[2] * b[3]) + (a[3] * b[2] - a[1] * b[0]))).0,
             ],
         }
     }
@@ -4981,20 +5051,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
-                (a[0] * b[0] - a[1] * b[6] + a[2] * b[5] - a[3] * b[4]).0,
-                (a[0] * b[6] + a[1] * b[0] - a[2] * b[4] - a[3] * b[5]).0,
-                (-(a[0] * b[5]) + a[1] * b[4] + a[2] * b[0] - a[3] * b[6]).0,
-                (a[0] * b[7] + a[1] * b[3] - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[3]) + a[1] * b[7] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[7] + a[3] * b[3]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
+                (((a[0] * b[0] + a[2] * b[5]) - (a[1] * b[6] + a[3] * b[4]))).0,
+                (((a[0] * b[6] + a[1] * b[0]) - (a[2] * b[4] + a[3] * b[5]))).0,
+                (((a[1] * b[4] + a[2] * b[0]) - (a[0] * b[5] + a[3] * b[6]))).0,
+                (((a[0] * b[7] + a[1] * b[3]) + (a[3] * b[1] - a[2] * b[2]))).0,
+                (((a[1] * b[7] + a[2] * b[1]) + (a[3] * b[2] - a[0] * b[3]))).0,
+                (((a[0] * b[2] + a[2] * b[7]) + (a[3] * b[3] - a[1] * b[1]))).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -5002,7 +5072,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5023,20 +5093,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[0] * b[0] - a[5] * b[2] + a[6] * b[1]).0,
-                (a[0] * b[1] + a[4] * b[2] - a[6] * b[0]).0,
-                (a[0] * b[2] - a[4] * b[1] + a[5] * b[0]).0,
-                (a[2] * b[2] - a[3] * b[1] + a[7] * b[0]).0,
-                (-(a[1] * b[2]) + a[3] * b[0] + a[7] * b[1]).0,
-                (a[1] * b[1] - a[2] * b[0] + a[7] * b[2]).0,
-                (a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[6] * b[1]) - a[5] * b[2])).0,
+                (((a[0] * b[1] + a[4] * b[2]) - a[6] * b[0])).0,
+                (((a[0] * b[2] + a[5] * b[0]) - a[4] * b[1])).0,
+                (((a[2] * b[2] + a[7] * b[0]) - a[3] * b[1])).0,
+                (((a[3] * b[0] + a[7] * b[1]) - a[1] * b[2])).0,
+                (((a[1] * b[1] + a[7] * b[2]) - a[2] * b[0])).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
             ],
         }
     }
@@ -5044,20 +5114,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
-                (-(a[2] * b[2]) + a[3] * b[1] - a[7] * b[0]).0,
-                (a[1] * b[2] - a[3] * b[0] - a[7] * b[1]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] - a[7] * b[2]).0,
-                (a[0] * b[0] - a[5] * b[2] + a[6] * b[1]).0,
-                (a[0] * b[1] + a[4] * b[2] - a[6] * b[0]).0,
-                (a[0] * b[2] - a[4] * b[1] + a[5] * b[0]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[2]) - a[7] * b[0])).0,
+                (((a[1] * b[2] - a[3] * b[0]) - a[7] * b[1])).0,
+                (((a[2] * b[0] - a[1] * b[1]) - a[7] * b[2])).0,
+                (((a[0] * b[0] + a[6] * b[1]) - a[5] * b[2])).0,
+                (((a[0] * b[1] + a[4] * b[2]) - a[6] * b[0])).0,
+                (((a[0] * b[2] + a[5] * b[0]) - a[4] * b[1])).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -5065,16 +5135,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[7] * b[0])).0,
-                (-(a[4] * b[0])).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
+                (-a[7] * b[0]).0,
+                (-a[4] * b[0]).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -5086,20 +5156,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
-                (a[1] * b[0] - a[2] * b[3] + a[3] * b[2] - a[7] * b[1]).0,
-                (a[1] * b[3] + a[2] * b[0] - a[3] * b[1] - a[7] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[3] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[1] + a[4] * b[0] - a[5] * b[3] + a[6] * b[2]).0,
-                (a[0] * b[2] + a[4] * b[3] + a[5] * b[0] - a[6] * b[1]).0,
-                (a[0] * b[3] - a[4] * b[2] + a[5] * b[1] + a[6] * b[0]).0,
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[0]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
+                (((a[1] * b[0] + a[3] * b[2]) - (a[2] * b[3] + a[7] * b[1]))).0,
+                (((a[1] * b[3] + a[2] * b[0]) - (a[3] * b[1] + a[7] * b[2]))).0,
+                (((a[2] * b[1] + a[3] * b[0]) - (a[1] * b[2] + a[7] * b[3]))).0,
+                (((a[0] * b[1] + a[4] * b[0]) + (a[6] * b[2] - a[5] * b[3]))).0,
+                (((a[0] * b[2] + a[4] * b[3]) + (a[5] * b[0] - a[6] * b[1]))).0,
+                (((a[0] * b[3] + a[5] * b[1]) + (a[6] * b[0] - a[4] * b[2]))).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[0]))).0,
             ],
         }
     }
@@ -5107,20 +5177,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Multive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
-                (a[0] * b[0] - a[4] * b[3] - a[5] * b[2] + a[6] * b[1]).0,
-                (a[0] * b[1] + a[4] * b[2] - a[5] * b[3] - a[6] * b[0]).0,
-                (a[0] * b[2] - a[4] * b[1] + a[5] * b[0] - a[6] * b[3]).0,
-                (a[1] * b[3] + a[2] * b[2] - a[3] * b[1] + a[7] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[3] + a[3] * b[0] + a[7] * b[1]).0,
-                (a[1] * b[1] - a[2] * b[0] + a[3] * b[3] + a[7] * b[2]).0,
-                (a[0] * b[3] + a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
+                (((a[0] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[5] * b[2]))).0,
+                (((a[0] * b[1] + a[4] * b[2]) - (a[5] * b[3] + a[6] * b[0]))).0,
+                (((a[0] * b[2] + a[5] * b[0]) - (a[4] * b[1] + a[6] * b[3]))).0,
+                (((a[1] * b[3] + a[2] * b[2]) + (a[7] * b[0] - a[3] * b[1]))).0,
+                (((a[2] * b[3] + a[3] * b[0]) + (a[7] * b[1] - a[1] * b[2]))).0,
+                (((a[1] * b[1] + a[3] * b[3]) + (a[7] * b[2] - a[2] * b[0]))).0,
+                (((a[0] * b[3] + a[4] * b[0]) + (a[5] * b[1] + a[6] * b[2]))).0,
             ],
         }
     }
@@ -5128,20 +5198,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[6] + a[3] * b[5] - a[4] * b[7] - a[5] * b[3] + a[6] * b[2] - a[7] * b[4]).0,
-                (a[0] * b[2] + a[1] * b[6] + a[2] * b[0] - a[3] * b[4] + a[4] * b[3] - a[5] * b[7] - a[6] * b[1] - a[7] * b[5]).0,
-                (a[0] * b[3] - a[1] * b[5] + a[2] * b[4] + a[3] * b[0] - a[4] * b[2] + a[5] * b[1] - a[6] * b[7] - a[7] * b[6]).0,
-                (a[0] * b[4] + a[1] * b[7] + a[2] * b[3] - a[3] * b[2] + a[4] * b[0] - a[5] * b[6] + a[6] * b[5] + a[7] * b[1]).0,
-                (a[0] * b[5] - a[1] * b[3] + a[2] * b[7] + a[3] * b[1] + a[4] * b[6] + a[5] * b[0] - a[6] * b[4] + a[7] * b[2]).0,
-                (a[0] * b[6] + a[1] * b[2] - a[2] * b[1] + a[3] * b[7] - a[4] * b[5] + a[5] * b[4] + a[6] * b[0] + a[7] * b[3]).0,
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[5] + a[6] * b[2])) - ((a[2] * b[6] + a[4] * b[7]) + (a[5] * b[3] + a[7] * b[4])))).0,
+                ((((a[0] * b[2] + a[1] * b[6]) + (a[2] * b[0] + a[4] * b[3])) - ((a[3] * b[4] + a[5] * b[7]) + (a[6] * b[1] + a[7] * b[5])))).0,
+                ((((a[0] * b[3] + a[2] * b[4]) + (a[3] * b[0] + a[5] * b[1])) - ((a[1] * b[5] + a[4] * b[2]) + (a[6] * b[7] + a[7] * b[6])))).0,
+                ((((a[0] * b[4] + a[1] * b[7]) + (a[2] * b[3] + a[4] * b[0])) + ((a[6] * b[5] + a[7] * b[1]) - (a[3] * b[2] + a[5] * b[6])))).0,
+                ((((a[0] * b[5] + a[2] * b[7]) + (a[3] * b[1] + a[4] * b[6])) + ((a[5] * b[0] + a[7] * b[2]) - (a[1] * b[3] + a[6] * b[4])))).0,
+                ((((a[0] * b[6] + a[1] * b[2]) + (a[3] * b[7] + a[5] * b[4])) + ((a[6] * b[0] + a[7] * b[3]) - (a[2] * b[1] + a[4] * b[5])))).0,
+                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0])))).0,
             ],
         }
     }
@@ -5149,7 +5219,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5163,7 +5233,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5179,7 +5249,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5195,7 +5265,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5209,7 +5279,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5226,7 +5296,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Scal
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5243,7 +5313,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5264,7 +5334,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5280,15 +5350,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -5296,13 +5366,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5310,7 +5380,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5319,7 +5389,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Vect
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -5327,15 +5397,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Vect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -5343,7 +5413,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5353,10 +5423,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6]).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[0] * b[2] - a[1] * b[1])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
             ],
         }
     }
@@ -5364,7 +5434,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5380,13 +5450,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5394,7 +5464,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5410,13 +5480,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5424,7 +5494,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5437,7 +5507,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -5445,7 +5515,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5459,7 +5529,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5473,7 +5543,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Pseu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5487,7 +5557,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5504,7 +5574,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Rot
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5513,7 +5583,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Rot
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -5521,7 +5591,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Rot
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5537,7 +5607,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for R
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5551,16 +5621,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
                 (a[0] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -5568,7 +5638,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Roto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5577,7 +5647,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Rotor<
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[0] * b[3] + a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[0] * b[3] + a[1] * b[0]) + (a[2] * b[1] + a[3] * b[2]))).0,
             ],
         }
     }
@@ -5585,7 +5655,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5595,10 +5665,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[0] * b[4] + a[1] * b[0]).0,
-                (a[0] * b[5] + a[2] * b[0]).0,
-                (a[0] * b[6] + a[3] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                ((a[0] * b[4] + a[1] * b[0])).0,
+                ((a[0] * b[5] + a[2] * b[0])).0,
+                ((a[0] * b[6] + a[3] * b[0])).0,
+                (((a[0] * b[7] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -5606,7 +5676,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5623,15 +5693,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -5639,13 +5709,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5653,7 +5723,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5662,7 +5732,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Odd<
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -5670,15 +5740,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Odd<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -5686,7 +5756,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5696,10 +5766,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[0]).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[0] * b[2] - a[1] * b[1])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -5707,7 +5777,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5728,7 +5798,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5738,10 +5808,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (a[1] * b[1] - a[2] * b[0]).0,
-                (a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[1] * b[1] - a[2] * b[0])).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
             ],
         }
     }
@@ -5749,7 +5819,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5762,7 +5832,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -5770,7 +5840,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5784,7 +5854,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5794,10 +5864,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Mult
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (a[0] * b[1] + a[4] * b[0]).0,
-                (a[0] * b[2] + a[5] * b[0]).0,
-                (a[0] * b[3] + a[6] * b[0]).0,
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[0]).0,
+                ((a[0] * b[1] + a[4] * b[0])).0,
+                ((a[0] * b[2] + a[5] * b[0])).0,
+                ((a[0] * b[3] + a[6] * b[0])).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[0]))).0,
             ],
         }
     }
@@ -5805,7 +5875,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5815,10 +5885,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multiv
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (a[1] * b[1] - a[2] * b[0]).0,
-                (a[0] * b[3] + a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[1] * b[1] - a[2] * b[0])).0,
+                (((a[0] * b[3] + a[4] * b[0]) + (a[5] * b[1] + a[6] * b[2]))).0,
             ],
         }
     }
@@ -5826,20 +5896,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 (a[0] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[0] * b[4] + a[2] * b[3] - a[3] * b[2] + a[4] * b[0]).0,
-                (a[0] * b[5] - a[1] * b[3] + a[3] * b[1] + a[5] * b[0]).0,
-                (a[0] * b[6] + a[1] * b[2] - a[2] * b[1] + a[6] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                (((a[0] * b[4] + a[2] * b[3]) + (a[4] * b[0] - a[3] * b[2]))).0,
+                (((a[0] * b[5] + a[3] * b[1]) + (a[5] * b[0] - a[1] * b[3]))).0,
+                (((a[0] * b[6] + a[1] * b[2]) + (a[6] * b[0] - a[2] * b[1]))).0,
+                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0])))).0,
             ],
         }
     }
@@ -5847,7 +5917,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5861,7 +5931,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5875,7 +5945,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5889,13 +5959,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5903,7 +5973,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5919,13 +5989,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -5933,7 +6003,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5949,13 +6019,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6]).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -5970,13 +6040,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -5984,15 +6054,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -6000,7 +6070,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6016,15 +6086,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1]).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[0] * b[2] - a[1] * b[1])).0,
             ],
         }
     }
@@ -6032,13 +6102,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[0] * b[3]).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
@@ -6049,16 +6119,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[1] * b[6] - a[2] * b[5]).0,
-                (-(a[0] * b[6]) + a[2] * b[4]).0,
-                (a[0] * b[5] - a[1] * b[4]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                ((a[1] * b[6] - a[2] * b[5])).0,
+                ((a[2] * b[4] - a[0] * b[6])).0,
+                ((a[0] * b[5] - a[1] * b[4])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -6070,7 +6140,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6084,7 +6154,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6100,7 +6170,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6116,7 +6186,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6130,7 +6200,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6147,7 +6217,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6164,7 +6234,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6185,13 +6255,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -6199,15 +6269,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Rotor
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (a[1] * b[1] - a[2] * b[0]).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[1] * b[1] - a[2] * b[0])).0,
             ],
         }
     }
@@ -6215,7 +6285,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Rot
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6232,15 +6302,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
             ],
         }
     }
@@ -6248,13 +6318,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[3] + a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[0] * b[3] + a[1] * b[0]) + (a[2] * b[1] + a[3] * b[2]))).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
                 (a[3] * b[3]).0,
@@ -6265,16 +6335,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Rotor<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[7] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[2] * b[6] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[3] * b[4]).0,
-                (a[1] * b[5] - a[2] * b[4]).0,
+                (((a[0] * b[7] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[2] * b[6] - a[3] * b[5])).0,
+                ((a[3] * b[4] - a[1] * b[6])).0,
+                ((a[1] * b[5] - a[2] * b[4])).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
                 (a[3] * b[7]).0,
@@ -6286,7 +6356,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6300,7 +6370,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6316,13 +6386,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[3] * b[0]).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
@@ -6333,7 +6403,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6350,13 +6420,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[0]))).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
                 (a[3] * b[3]).0,
@@ -6367,15 +6437,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[1] * b[3] + a[3] * b[1]).0,
-                (a[2] * b[3] + a[3] * b[2]).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                ((a[1] * b[3] + a[3] * b[1])).0,
+                ((a[2] * b[3] + a[3] * b[2])).0,
                 (a[3] * b[3]).0,
             ],
         }
@@ -6384,16 +6454,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[0]).0,
-                (a[0] * b[7] + a[3] * b[1]).0,
-                (a[1] * b[7] + a[3] * b[2]).0,
-                (a[2] * b[7] + a[3] * b[3]).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[0]))).0,
+                ((a[0] * b[7] + a[3] * b[1])).0,
+                ((a[1] * b[7] + a[3] * b[2])).0,
+                ((a[2] * b[7] + a[3] * b[3])).0,
                 (a[3] * b[4]).0,
                 (a[3] * b[5]).0,
                 (a[3] * b[6]).0,
@@ -6405,7 +6475,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6419,13 +6489,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -6440,16 +6510,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[4] * b[2]) + a[6] * b[0]).0,
-                (a[4] * b[1] - a[5] * b[0]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                ((a[6] * b[0] - a[4] * b[2])).0,
+                ((a[4] * b[1] - a[5] * b[0])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -6461,7 +6531,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6482,16 +6552,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[0]).0,
-                (a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[4] * b[3]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[5] * b[1]).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[0]))).0,
+                ((a[5] * b[3] - a[6] * b[2])).0,
+                ((a[6] * b[1] - a[4] * b[3])).0,
+                ((a[4] * b[2] - a[5] * b[1])).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
@@ -6503,16 +6573,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Rotor<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[3] + a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
-                (a[1] * b[3] + a[7] * b[0]).0,
-                (a[2] * b[3] + a[7] * b[1]).0,
-                (a[3] * b[3] + a[7] * b[2]).0,
+                (((a[0] * b[3] + a[4] * b[0]) + (a[5] * b[1] + a[6] * b[2]))).0,
+                ((a[1] * b[3] + a[7] * b[0])).0,
+                ((a[2] * b[3] + a[7] * b[1])).0,
+                ((a[3] * b[3] + a[7] * b[2])).0,
                 (a[4] * b[3]).0,
                 (a[5] * b[3]).0,
                 (a[6] * b[3]).0,
@@ -6524,19 +6594,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
-                (a[1] * b[7] + a[5] * b[6] - a[6] * b[5] + a[7] * b[1]).0,
-                (a[2] * b[7] - a[4] * b[6] + a[6] * b[4] + a[7] * b[2]).0,
-                (a[3] * b[7] + a[4] * b[5] - a[5] * b[4] + a[7] * b[3]).0,
-                (a[4] * b[7] + a[7] * b[4]).0,
-                (a[5] * b[7] + a[7] * b[5]).0,
-                (a[6] * b[7] + a[7] * b[6]).0,
+                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0])))).0,
+                (((a[1] * b[7] + a[5] * b[6]) + (a[7] * b[1] - a[6] * b[5]))).0,
+                (((a[2] * b[7] + a[6] * b[4]) + (a[7] * b[2] - a[4] * b[6]))).0,
+                (((a[3] * b[7] + a[4] * b[5]) + (a[7] * b[3] - a[5] * b[4]))).0,
+                ((a[4] * b[7] + a[7] * b[4])).0,
+                ((a[5] * b[7] + a[7] * b[5])).0,
+                ((a[6] * b[7] + a[7] * b[6])).0,
                 (a[7] * b[7]).0,
             ],
         }
@@ -6545,7 +6615,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6559,7 +6629,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6575,7 +6645,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6591,7 +6661,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scal
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6605,7 +6675,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6622,7 +6692,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Scalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6639,7 +6709,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6660,13 +6730,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -6674,15 +6744,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -6690,7 +6760,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6706,15 +6776,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
             ],
         }
     }
@@ -6722,13 +6792,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Vector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[0] * b[3]).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
@@ -6739,16 +6809,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -6760,13 +6830,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -6774,15 +6844,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -6790,13 +6860,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -6804,15 +6874,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Bivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[3])).0,
-                (-(a[1] * b[3])).0,
-                (-(a[2] * b[3])).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
             ],
         }
     }
@@ -6820,16 +6890,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
-                (-(a[0] * b[7])).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -6841,13 +6911,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -6855,13 +6925,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -6869,13 +6939,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Pseudosca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
             ],
         }
     }
@@ -6883,7 +6953,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6897,7 +6967,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6913,13 +6983,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -6930,15 +7000,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Roto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -6947,13 +7017,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -6964,15 +7034,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Rotor<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3]).0,
-                (a[0] * b[1] - a[2] * b[3]).0,
-                (a[0] * b[2] - a[3] * b[3]).0,
+                ((a[0] * b[0] - a[1] * b[3])).0,
+                ((a[0] * b[1] - a[2] * b[3])).0,
+                ((a[0] * b[2] - a[3] * b[3])).0,
                 (a[0] * b[3]).0,
             ],
         }
@@ -6981,16 +7051,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Rotor<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
-                (a[0] * b[1] - a[1] * b[7]).0,
-                (a[0] * b[2] - a[2] * b[7]).0,
-                (a[0] * b[3] - a[3] * b[7]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
+                ((a[0] * b[1] - a[1] * b[7])).0,
+                ((a[0] * b[2] - a[2] * b[7])).0,
+                ((a[0] * b[3] - a[3] * b[7])).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
@@ -7002,13 +7072,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for R
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -7016,15 +7086,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -7032,13 +7102,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -7049,15 +7119,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
             ],
         }
     }
@@ -7065,13 +7135,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Odd<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
                 (a[0] * b[3]).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
@@ -7082,16 +7152,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -7103,7 +7173,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7117,13 +7187,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -7138,16 +7208,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -7159,16 +7229,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[7] * b[0])).0,
-                (-(a[4] * b[0])).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
+                (-a[7] * b[0]).0,
+                (-a[4] * b[0]).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -7180,16 +7250,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -7201,16 +7271,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Rotor<S2, T>> for Multive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
-                (a[0] * b[0] - a[4] * b[3]).0,
-                (a[0] * b[1] - a[5] * b[3]).0,
-                (a[0] * b[2] - a[6] * b[3]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
+                ((a[0] * b[0] - a[4] * b[3])).0,
+                ((a[0] * b[1] - a[5] * b[3])).0,
+                ((a[0] * b[2] - a[6] * b[3])).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
                 (a[3] * b[3]).0,
@@ -7222,19 +7292,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] - a[2] * b[6] + a[3] * b[5] - a[4] * b[7]).0,
-                (a[0] * b[2] + a[1] * b[6] - a[3] * b[4] - a[5] * b[7]).0,
-                (a[0] * b[3] - a[1] * b[5] + a[2] * b[4] - a[6] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[7]).0,
-                (a[0] * b[5] + a[2] * b[7]).0,
-                (a[0] * b[6] + a[3] * b[7]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[0] * b[1] + a[3] * b[5]) - (a[2] * b[6] + a[4] * b[7]))).0,
+                (((a[0] * b[2] + a[1] * b[6]) - (a[3] * b[4] + a[5] * b[7]))).0,
+                (((a[0] * b[3] + a[2] * b[4]) - (a[1] * b[5] + a[6] * b[7]))).0,
+                ((a[0] * b[4] + a[1] * b[7])).0,
+                ((a[0] * b[5] + a[2] * b[7])).0,
+                ((a[0] * b[6] + a[3] * b[7])).0,
                 (a[0] * b[7]).0,
             ],
         }
@@ -7243,7 +7313,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7257,7 +7327,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7271,7 +7341,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Scalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7285,7 +7355,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7301,13 +7371,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -7315,7 +7385,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7331,13 +7401,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Vector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -7345,13 +7415,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -7366,7 +7436,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7382,15 +7452,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -7398,13 +7468,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -7412,13 +7482,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -7429,15 +7499,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Bivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -7445,16 +7515,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -7466,7 +7536,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7480,7 +7550,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7496,15 +7566,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -7512,13 +7582,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -7526,15 +7596,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -7543,13 +7613,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Pseudos
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -7560,16 +7630,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudosca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[4])).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[4]).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -7581,7 +7651,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7598,15 +7668,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
             ],
         }
     }
@@ -7614,13 +7684,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -7628,13 +7698,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Roto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -7645,15 +7715,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Rotor<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
             ],
         }
     }
@@ -7661,16 +7731,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Rotor<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -7682,7 +7752,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for R
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7699,13 +7769,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[3] * b[0]).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
@@ -7716,15 +7786,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[3] * b[0])).0,
-                (-(a[3] * b[1])).0,
-                (-(a[3] * b[2])).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
             ],
         }
     }
@@ -7732,13 +7802,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -7746,15 +7816,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[3] * b[1]).0,
-                (a[1] * b[0] - a[3] * b[2]).0,
-                (a[2] * b[0] - a[3] * b[3]).0,
+                ((a[0] * b[0] - a[3] * b[1])).0,
+                ((a[1] * b[0] - a[3] * b[2])).0,
+                ((a[2] * b[0] - a[3] * b[3])).0,
                 (a[3] * b[0]).0,
             ],
         }
@@ -7763,13 +7833,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Odd<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
                 (a[3] * b[0]).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
@@ -7780,16 +7850,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
-                (a[0] * b[0] - a[3] * b[4]).0,
-                (a[1] * b[0] - a[3] * b[5]).0,
-                (a[2] * b[0] - a[3] * b[6]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
+                ((a[0] * b[0] - a[3] * b[4])).0,
+                ((a[1] * b[0] - a[3] * b[5])).0,
+                ((a[2] * b[0] - a[3] * b[6])).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
                 (a[3] * b[3]).0,
@@ -7801,7 +7871,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7822,16 +7892,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[4] * b[1]) + a[5] * b[0]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -7843,16 +7913,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
-                (-(a[7] * b[0])).0,
-                (-(a[7] * b[1])).0,
-                (-(a[7] * b[2])).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                (-a[7] * b[0]).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -7864,13 +7934,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
             ],
         }
     }
@@ -7878,16 +7948,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
-                (a[1] * b[0] - a[7] * b[1]).0,
-                (a[2] * b[0] - a[7] * b[2]).0,
-                (a[3] * b[0] - a[7] * b[3]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
+                ((a[1] * b[0] - a[7] * b[1])).0,
+                ((a[2] * b[0] - a[7] * b[2])).0,
+                ((a[3] * b[0] - a[7] * b[3])).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
@@ -7899,16 +7969,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Multive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[4] * b[1]) + a[5] * b[0]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -7920,19 +7990,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[1] * b[0] - a[5] * b[3] + a[6] * b[2] - a[7] * b[4]).0,
-                (a[2] * b[0] + a[4] * b[3] - a[6] * b[1] - a[7] * b[5]).0,
-                (a[3] * b[0] - a[4] * b[2] + a[5] * b[1] - a[7] * b[6]).0,
-                (a[4] * b[0] + a[7] * b[1]).0,
-                (a[5] * b[0] + a[7] * b[2]).0,
-                (a[6] * b[0] + a[7] * b[3]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[1] * b[0] + a[6] * b[2]) - (a[5] * b[3] + a[7] * b[4]))).0,
+                (((a[2] * b[0] + a[4] * b[3]) - (a[6] * b[1] + a[7] * b[5]))).0,
+                (((a[3] * b[0] + a[5] * b[1]) - (a[4] * b[2] + a[7] * b[6]))).0,
+                ((a[4] * b[0] + a[7] * b[1])).0,
+                ((a[5] * b[0] + a[7] * b[2])).0,
+                ((a[6] * b[0] + a[7] * b[3])).0,
                 (a[7] * b[0]).0,
             ],
         }
@@ -7941,7 +8011,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7955,7 +8025,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Scala
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7971,7 +8041,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scala
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7987,7 +8057,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8001,7 +8071,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8018,7 +8088,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8035,7 +8105,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8056,7 +8126,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8072,13 +8142,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Vecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -8086,15 +8156,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -8102,7 +8172,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8118,15 +8188,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[0] - a[1] * b[3] + a[2] * b[2]).0,
-                (a[0] * b[3] + a[1] * b[0] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[2] * b[0]).0,
+                (((a[0] * b[0] + a[2] * b[2]) - a[1] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[0]) - a[2] * b[1])).0,
+                (((a[1] * b[1] + a[2] * b[0]) - a[0] * b[2])).0,
             ],
         }
     }
@@ -8134,13 +8204,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Vector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[0] * b[3]).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
@@ -8151,16 +8221,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] - a[1] * b[6] + a[2] * b[5]).0,
-                (a[0] * b[6] + a[1] * b[0] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4] + a[2] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[2] * b[5]) - a[1] * b[6])).0,
+                (((a[0] * b[6] + a[1] * b[0]) - a[2] * b[4])).0,
+                (((a[1] * b[4] + a[2] * b[0]) - a[0] * b[5])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -8172,7 +8242,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8188,15 +8258,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -8204,13 +8274,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -8218,15 +8288,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -8234,13 +8304,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -8251,15 +8321,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[3]) - a[1] * b[2] + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[3] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[2] * b[3]).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] - a[1] * b[3]) - a[2] * b[0])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -8267,16 +8337,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
-                (-(a[0] * b[7]) - a[1] * b[3] + a[2] * b[2]).0,
-                (a[0] * b[3] - a[1] * b[7] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[2] * b[7]).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                (((a[2] * b[2] - a[0] * b[7]) - a[1] * b[3])).0,
+                (((a[0] * b[3] - a[1] * b[7]) - a[2] * b[1])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[2] * b[7])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -8288,7 +8358,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8302,7 +8372,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8318,15 +8388,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -8334,13 +8404,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -8348,15 +8418,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -8365,13 +8435,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -8382,16 +8452,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[4])).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[4]).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -8403,7 +8473,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8420,15 +8490,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Rotor
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[0] - a[2] * b[2] + a[3] * b[1]).0,
-                (a[0] * b[1] + a[1] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[0]).0,
+                (((a[0] * b[0] + a[3] * b[1]) - a[2] * b[2])).0,
+                (((a[0] * b[1] + a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] + a[2] * b[0]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -8436,13 +8506,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Rotor
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -8453,15 +8523,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Rot
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -8470,16 +8540,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -8487,15 +8557,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Rotor<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3] - a[2] * b[2] + a[3] * b[1]).0,
-                (a[0] * b[1] + a[1] * b[2] - a[2] * b[3] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] + a[2] * b[0] - a[3] * b[3]).0,
+                (((a[0] * b[0] + a[3] * b[1]) - (a[1] * b[3] + a[2] * b[2]))).0,
+                (((a[0] * b[1] + a[1] * b[2]) - (a[2] * b[3] + a[3] * b[0]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) - (a[1] * b[1] + a[3] * b[3]))).0,
                 (a[0] * b[3]).0,
             ],
         }
@@ -8504,19 +8574,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Rotor<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
-                (a[0] * b[1] - a[1] * b[7] - a[2] * b[3] + a[3] * b[2]).0,
-                (a[0] * b[2] + a[1] * b[3] - a[2] * b[7] - a[3] * b[1]).0,
-                (a[0] * b[3] - a[1] * b[2] + a[2] * b[1] - a[3] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[0]).0,
-                (a[0] * b[5] + a[2] * b[0]).0,
-                (a[0] * b[6] + a[3] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
+                (((a[0] * b[1] + a[3] * b[2]) - (a[1] * b[7] + a[2] * b[3]))).0,
+                (((a[0] * b[2] + a[1] * b[3]) - (a[2] * b[7] + a[3] * b[1]))).0,
+                (((a[0] * b[3] + a[2] * b[1]) - (a[1] * b[2] + a[3] * b[7]))).0,
+                ((a[0] * b[4] + a[1] * b[0])).0,
+                ((a[0] * b[5] + a[2] * b[0])).0,
+                ((a[0] * b[6] + a[3] * b[0])).0,
                 (a[0] * b[7]).0,
             ],
         }
@@ -8525,7 +8595,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8542,13 +8612,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[3] * b[0]).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
@@ -8559,15 +8629,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1] - a[3] * b[0]).0,
-                (a[0] * b[2] - a[2] * b[0] - a[3] * b[1]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[3] * b[2]).0,
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[3] * b[1])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[3] * b[2])).0,
             ],
         }
     }
@@ -8575,13 +8645,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -8592,15 +8662,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3] + a[2] * b[2] - a[3] * b[1]).0,
-                (a[0] * b[3] + a[1] * b[0] - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[2] * b[0] - a[3] * b[3]).0,
+                (((a[0] * b[0] + a[2] * b[2]) - (a[1] * b[3] + a[3] * b[1]))).0,
+                (((a[0] * b[3] + a[1] * b[0]) - (a[2] * b[1] + a[3] * b[2]))).0,
+                (((a[1] * b[1] + a[2] * b[0]) - (a[0] * b[2] + a[3] * b[3]))).0,
                 (a[3] * b[0]).0,
             ],
         }
@@ -8609,16 +8679,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[1] * b[3] + a[3] * b[1]).0,
-                (a[2] * b[3] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                ((a[1] * b[3] + a[3] * b[1])).0,
+                ((a[2] * b[3] + a[3] * b[2])).0,
             ],
         }
     }
@@ -8626,19 +8696,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
-                (a[0] * b[0] - a[1] * b[6] + a[2] * b[5] - a[3] * b[4]).0,
-                (a[0] * b[6] + a[1] * b[0] - a[2] * b[4] - a[3] * b[5]).0,
-                (-(a[0] * b[5]) + a[1] * b[4] + a[2] * b[0] - a[3] * b[6]).0,
-                (a[0] * b[7] + a[3] * b[1]).0,
-                (a[1] * b[7] + a[3] * b[2]).0,
-                (a[2] * b[7] + a[3] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
+                (((a[0] * b[0] + a[2] * b[5]) - (a[1] * b[6] + a[3] * b[4]))).0,
+                (((a[0] * b[6] + a[1] * b[0]) - (a[2] * b[4] + a[3] * b[5]))).0,
+                (((a[1] * b[4] + a[2] * b[0]) - (a[0] * b[5] + a[3] * b[6]))).0,
+                ((a[0] * b[7] + a[3] * b[1])).0,
+                ((a[1] * b[7] + a[3] * b[2])).0,
+                ((a[2] * b[7] + a[3] * b[3])).0,
                 (a[3] * b[0]).0,
             ],
         }
@@ -8647,7 +8717,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8668,16 +8738,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[0] * b[0] - a[5] * b[2] + a[6] * b[1]).0,
-                (a[0] * b[1] + a[4] * b[2] - a[6] * b[0]).0,
-                (a[0] * b[2] - a[4] * b[1] + a[5] * b[0]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[6] * b[1]) - a[5] * b[2])).0,
+                (((a[0] * b[1] + a[4] * b[2]) - a[6] * b[0])).0,
+                (((a[0] * b[2] + a[5] * b[0]) - a[4] * b[1])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -8689,16 +8759,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
-                (-(a[2] * b[2]) + a[3] * b[1] - a[7] * b[0]).0,
-                (a[1] * b[2] - a[3] * b[0] - a[7] * b[1]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] - a[7] * b[2]).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[2]) - a[7] * b[0])).0,
+                (((a[1] * b[2] - a[3] * b[0]) - a[7] * b[1])).0,
+                (((a[2] * b[0] - a[1] * b[1]) - a[7] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -8710,16 +8780,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[7] * b[0])).0,
-                (-(a[4] * b[0])).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
+                (-a[7] * b[0]).0,
+                (-a[4] * b[0]).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -8731,19 +8801,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
-                (a[1] * b[0] - a[2] * b[3] + a[3] * b[2] - a[7] * b[1]).0,
-                (a[1] * b[3] + a[2] * b[0] - a[3] * b[1] - a[7] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[3] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[1] + a[4] * b[0]).0,
-                (a[0] * b[2] + a[5] * b[0]).0,
-                (a[0] * b[3] + a[6] * b[0]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
+                (((a[1] * b[0] + a[3] * b[2]) - (a[2] * b[3] + a[7] * b[1]))).0,
+                (((a[1] * b[3] + a[2] * b[0]) - (a[3] * b[1] + a[7] * b[2]))).0,
+                (((a[2] * b[1] + a[3] * b[0]) - (a[1] * b[2] + a[7] * b[3]))).0,
+                ((a[0] * b[1] + a[4] * b[0])).0,
+                ((a[0] * b[2] + a[5] * b[0])).0,
+                ((a[0] * b[3] + a[6] * b[0])).0,
                 (a[7] * b[0]).0,
             ],
         }
@@ -8752,19 +8822,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Rotor<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
-                (a[0] * b[0] - a[4] * b[3] - a[5] * b[2] + a[6] * b[1]).0,
-                (a[0] * b[1] + a[4] * b[2] - a[5] * b[3] - a[6] * b[0]).0,
-                (a[0] * b[2] - a[4] * b[1] + a[5] * b[0] - a[6] * b[3]).0,
-                (a[1] * b[3] + a[7] * b[0]).0,
-                (a[2] * b[3] + a[7] * b[1]).0,
-                (a[3] * b[3] + a[7] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
+                (((a[0] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[5] * b[2]))).0,
+                (((a[0] * b[1] + a[4] * b[2]) - (a[5] * b[3] + a[6] * b[0]))).0,
+                (((a[0] * b[2] + a[5] * b[0]) - (a[4] * b[1] + a[6] * b[3]))).0,
+                ((a[1] * b[3] + a[7] * b[0])).0,
+                ((a[2] * b[3] + a[7] * b[1])).0,
+                ((a[3] * b[3] + a[7] * b[2])).0,
                 (a[0] * b[3]).0,
             ],
         }
@@ -8773,20 +8843,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[6] + a[3] * b[5] - a[4] * b[7] - a[5] * b[3] + a[6] * b[2] - a[7] * b[4]).0,
-                (a[0] * b[2] + a[1] * b[6] + a[2] * b[0] - a[3] * b[4] + a[4] * b[3] - a[5] * b[7] - a[6] * b[1] - a[7] * b[5]).0,
-                (a[0] * b[3] - a[1] * b[5] + a[2] * b[4] + a[3] * b[0] - a[4] * b[2] + a[5] * b[1] - a[6] * b[7] - a[7] * b[6]).0,
-                (a[0] * b[4] + a[1] * b[7] + a[4] * b[0] + a[7] * b[1]).0,
-                (a[0] * b[5] + a[2] * b[7] + a[5] * b[0] + a[7] * b[2]).0,
-                (a[0] * b[6] + a[3] * b[7] + a[6] * b[0] + a[7] * b[3]).0,
-                (a[0] * b[7] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[5] + a[6] * b[2])) - ((a[2] * b[6] + a[4] * b[7]) + (a[5] * b[3] + a[7] * b[4])))).0,
+                ((((a[0] * b[2] + a[1] * b[6]) + (a[2] * b[0] + a[4] * b[3])) - ((a[3] * b[4] + a[5] * b[7]) + (a[6] * b[1] + a[7] * b[5])))).0,
+                ((((a[0] * b[3] + a[2] * b[4]) + (a[3] * b[0] + a[5] * b[1])) - ((a[1] * b[5] + a[4] * b[2]) + (a[6] * b[7] + a[7] * b[6])))).0,
+                (((a[0] * b[4] + a[1] * b[7]) + (a[4] * b[0] + a[7] * b[1]))).0,
+                (((a[0] * b[5] + a[2] * b[7]) + (a[5] * b[0] + a[7] * b[2]))).0,
+                (((a[0] * b[6] + a[3] * b[7]) + (a[6] * b[0] + a[7] * b[3]))).0,
+                ((a[0] * b[7] + a[7] * b[0])).0,
             ],
         }
     }
@@ -8794,7 +8864,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8808,7 +8878,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8822,7 +8892,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8836,13 +8906,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -8850,13 +8920,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -8864,13 +8934,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -8878,13 +8948,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -8892,13 +8962,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -8906,13 +8976,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
             ],
         }
     }
@@ -8920,13 +8990,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -8934,13 +9004,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -8948,13 +9018,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
             ],
         }
     }
@@ -8962,7 +9032,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8976,13 +9046,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -8990,13 +9060,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -9004,13 +9074,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
             ],
         }
     }
@@ -9018,13 +9088,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9032,13 +9102,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -9046,13 +9116,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
             ],
         }
     }
@@ -9060,13 +9130,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
             ],
         }
     }
@@ -9074,7 +9144,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9088,13 +9158,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -9102,13 +9172,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
             ],
         }
     }
@@ -9116,13 +9186,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
             ],
         }
     }
@@ -9130,13 +9200,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Rotor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
             ],
         }
     }
@@ -9144,13 +9214,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Rotor<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
             ],
         }
     }
@@ -9158,13 +9228,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
             ],
         }
     }
@@ -9172,15 +9242,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -9188,15 +9258,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -9204,15 +9274,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
             ],
         }
     }
@@ -9220,15 +9290,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -9236,19 +9306,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1]).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[0] * b[2] - a[1] * b[1])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9257,15 +9327,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -9273,15 +9343,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -9289,15 +9359,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
             ],
         }
     }
@@ -9305,15 +9375,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -9321,19 +9391,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9342,15 +9412,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
             ],
         }
     }
@@ -9358,15 +9428,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
             ],
         }
     }
@@ -9374,15 +9444,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
             ],
         }
     }
@@ -9390,15 +9460,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
             ],
         }
     }
@@ -9406,19 +9476,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for R
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[2] * b[6]) + a[3] * b[5]).0,
-                (a[1] * b[6] - a[3] * b[4]).0,
-                (-(a[1] * b[5]) + a[2] * b[4]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[3] * b[5] - a[2] * b[6])).0,
+                ((a[1] * b[6] - a[3] * b[4])).0,
+                ((a[2] * b[4] - a[1] * b[5])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9427,15 +9497,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Odd<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -9443,15 +9513,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
             ],
         }
     }
@@ -9459,15 +9529,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[3]) + a[2] * b[2]).0,
-                (a[0] * b[3] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
             ],
         }
     }
@@ -9475,15 +9545,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Odd<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
             ],
         }
     }
@@ -9491,19 +9561,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (-(a[0] * b[5]) + a[1] * b[4]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (a[0] * b[2] - a[1] * b[1]).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[0] * b[2] - a[1] * b[1])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9512,19 +9582,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[4] * b[1]) + a[5] * b[0]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (a[1] * b[1] - a[2] * b[0]).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[1] * b[1] - a[2] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9533,19 +9603,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[4] * b[1]) + a[5] * b[0]).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9554,19 +9624,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[5] * b[3]) + a[6] * b[2]).0,
-                (a[4] * b[3] - a[6] * b[1]).0,
-                (-(a[4] * b[2]) + a[5] * b[1]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[6] * b[2] - a[5] * b[3])).0,
+                ((a[4] * b[3] - a[6] * b[1])).0,
+                ((a[5] * b[1] - a[4] * b[2])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9575,19 +9645,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Rotor<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[4] * b[1]) + a[5] * b[0]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (a[1] * b[1] - a[2] * b[0]).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[1] * b[1] - a[2] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9596,19 +9666,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[6]) + a[3] * b[5] - a[5] * b[3] + a[6] * b[2]).0,
-                (a[1] * b[6] - a[3] * b[4] + a[4] * b[3] - a[6] * b[1]).0,
-                (-(a[1] * b[5]) + a[2] * b[4] - a[4] * b[2] + a[5] * b[1]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[5] * b[6] + a[6] * b[5]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] + a[4] * b[6] - a[6] * b[4]).0,
-                (a[1] * b[2] - a[2] * b[1] - a[4] * b[5] + a[5] * b[4]).0,
+                (((a[3] * b[5] + a[6] * b[2]) - (a[2] * b[6] + a[5] * b[3]))).0,
+                (((a[1] * b[6] + a[4] * b[3]) - (a[3] * b[4] + a[6] * b[1]))).0,
+                (((a[2] * b[4] + a[5] * b[1]) - (a[1] * b[5] + a[4] * b[2]))).0,
+                (((a[2] * b[3] + a[6] * b[5]) - (a[3] * b[2] + a[5] * b[6]))).0,
+                (((a[3] * b[1] + a[4] * b[6]) - (a[1] * b[3] + a[6] * b[4]))).0,
+                (((a[1] * b[2] + a[5] * b[4]) - (a[2] * b[1] + a[4] * b[5]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9617,7 +9687,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9631,7 +9701,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9647,7 +9717,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9663,7 +9733,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9677,7 +9747,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Scalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9694,7 +9764,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9711,7 +9781,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9732,7 +9802,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9748,13 +9818,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9762,13 +9832,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9776,7 +9846,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9792,7 +9862,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9801,7 +9871,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -9809,13 +9879,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Vector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[0] * b[3]).0,
                 (a[1] * b[3]).0,
                 (a[2] * b[3]).0,
@@ -9826,20 +9896,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6]).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
             ],
         }
     }
@@ -9847,7 +9917,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9863,13 +9933,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9877,13 +9947,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9891,15 +9961,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -9907,13 +9977,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Bivector<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -9924,16 +9994,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[3])).0,
-                (-(a[1] * b[3])).0,
-                (-(a[2] * b[3])).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -9941,20 +10011,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6]).0,
-                (-(a[0] * b[7])).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
+                (-((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
             ],
         }
     }
@@ -9962,7 +10032,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9976,7 +10046,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9992,15 +10062,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -10008,13 +10078,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -10022,15 +10092,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -10039,13 +10109,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -10056,16 +10126,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[4])).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[4]).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -10077,7 +10147,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10094,7 +10164,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10103,7 +10173,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -10111,13 +10181,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -10128,15 +10198,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -10145,16 +10215,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Rotor<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -10162,16 +10232,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Rotor<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[3]).0,
-                (a[0] * b[1] - a[2] * b[3]).0,
-                (a[0] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[3] + a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                ((a[0] * b[0] - a[1] * b[3])).0,
+                ((a[0] * b[1] - a[2] * b[3])).0,
+                ((a[0] * b[2] - a[3] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[0]) + (a[2] * b[1] + a[3] * b[2]))).0,
             ],
         }
     }
@@ -10179,20 +10249,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Rotor<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6]).0,
-                (a[0] * b[1] - a[1] * b[7]).0,
-                (a[0] * b[2] - a[2] * b[7]).0,
-                (a[0] * b[3] - a[3] * b[7]).0,
-                (a[0] * b[4] + a[1] * b[0]).0,
-                (a[0] * b[5] + a[2] * b[0]).0,
-                (a[0] * b[6] + a[3] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[4]) - (a[2] * b[5] + a[3] * b[6]))).0,
+                ((a[0] * b[1] - a[1] * b[7])).0,
+                ((a[0] * b[2] - a[2] * b[7])).0,
+                ((a[0] * b[3] - a[3] * b[7])).0,
+                ((a[0] * b[4] + a[1] * b[0])).0,
+                ((a[0] * b[5] + a[2] * b[0])).0,
+                ((a[0] * b[6] + a[3] * b[0])).0,
+                (((a[0] * b[7] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -10200,7 +10270,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10217,13 +10287,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 (a[3] * b[0]).0,
                 (a[3] * b[1]).0,
                 (a[3] * b[2]).0,
@@ -10234,16 +10304,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[3] * b[0])).0,
-                (-(a[3] * b[1])).0,
-                (-(a[3] * b[2])).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -10251,13 +10321,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (-(a[3] * b[0])).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10268,16 +10338,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[3] * b[1]).0,
-                (a[1] * b[0] - a[3] * b[2]).0,
-                (a[2] * b[0] - a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[0]).0,
+                ((a[0] * b[0] - a[3] * b[1])).0,
+                ((a[1] * b[0] - a[3] * b[2])).0,
+                ((a[2] * b[0] - a[3] * b[3])).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -10285,16 +10355,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Odd<S1, T> {
     type Output = Rotor<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Rotor {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[1] * b[3] + a[3] * b[1]).0,
-                (a[2] * b[3] + a[3] * b[2]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] - a[3] * b[3]))).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                ((a[1] * b[3] + a[3] * b[1])).0,
+                ((a[2] * b[3] + a[3] * b[2])).0,
             ],
         }
     }
@@ -10302,20 +10372,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[7]).0,
-                (a[0] * b[0] - a[3] * b[4]).0,
-                (a[1] * b[0] - a[3] * b[5]).0,
-                (a[2] * b[0] - a[3] * b[6]).0,
-                (a[0] * b[7] + a[3] * b[1]).0,
-                (a[1] * b[7] + a[3] * b[2]).0,
-                (a[2] * b[7] + a[3] * b[3]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] - a[3] * b[7]))).0,
+                ((a[0] * b[0] - a[3] * b[4])).0,
+                ((a[1] * b[0] - a[3] * b[5])).0,
+                ((a[2] * b[0] - a[3] * b[6])).0,
+                ((a[0] * b[7] + a[3] * b[1])).0,
+                ((a[1] * b[7] + a[3] * b[2])).0,
+                ((a[2] * b[7] + a[3] * b[3])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[0]))).0,
             ],
         }
     }
@@ -10323,7 +10393,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10344,20 +10414,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
-                (a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
             ],
         }
     }
@@ -10365,20 +10435,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2]).0,
-                (-(a[7] * b[0])).0,
-                (-(a[7] * b[1])).0,
-                (-(a[7] * b[2])).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                (-a[7] * b[0]).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
             ],
         }
     }
@@ -10386,16 +10456,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[7] * b[0])).0,
-                (-(a[4] * b[0])).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
+                (-a[7] * b[0]).0,
+                (-a[4] * b[0]).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -10407,20 +10477,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3]).0,
-                (a[1] * b[0] - a[7] * b[1]).0,
-                (a[2] * b[0] - a[7] * b[2]).0,
-                (a[3] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[1] + a[4] * b[0]).0,
-                (a[0] * b[2] + a[5] * b[0]).0,
-                (a[0] * b[3] + a[6] * b[0]).0,
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[0]).0,
+                (((a[0] * b[0] - a[4] * b[1]) - (a[5] * b[2] + a[6] * b[3]))).0,
+                ((a[1] * b[0] - a[7] * b[1])).0,
+                ((a[2] * b[0] - a[7] * b[2])).0,
+                ((a[3] * b[0] - a[7] * b[3])).0,
+                ((a[0] * b[1] + a[4] * b[0])).0,
+                ((a[0] * b[2] + a[5] * b[0])).0,
+                ((a[0] * b[3] + a[6] * b[0])).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[0]))).0,
             ],
         }
     }
@@ -10428,20 +10498,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Rotor<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[7] * b[3]).0,
-                (a[0] * b[0] - a[4] * b[3]).0,
-                (a[0] * b[1] - a[5] * b[3]).0,
-                (a[0] * b[2] - a[6] * b[3]).0,
-                (a[1] * b[3] + a[7] * b[0]).0,
-                (a[2] * b[3] + a[7] * b[1]).0,
-                (a[3] * b[3] + a[7] * b[2]).0,
-                (a[0] * b[3] + a[4] * b[0] + a[5] * b[1] + a[6] * b[2]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
+                ((a[0] * b[0] - a[4] * b[3])).0,
+                ((a[0] * b[1] - a[5] * b[3])).0,
+                ((a[0] * b[2] - a[6] * b[3])).0,
+                ((a[1] * b[3] + a[7] * b[0])).0,
+                ((a[2] * b[3] + a[7] * b[1])).0,
+                ((a[3] * b[3] + a[7] * b[2])).0,
+                (((a[0] * b[3] + a[4] * b[0]) + (a[5] * b[1] + a[6] * b[2]))).0,
             ],
         }
     }
@@ -10449,20 +10519,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[4] * b[7] - a[7] * b[4]).0,
-                (a[0] * b[2] + a[2] * b[0] - a[5] * b[7] - a[7] * b[5]).0,
-                (a[0] * b[3] + a[3] * b[0] - a[6] * b[7] - a[7] * b[6]).0,
-                (a[0] * b[4] + a[1] * b[7] + a[4] * b[0] + a[7] * b[1]).0,
-                (a[0] * b[5] + a[2] * b[7] + a[5] * b[0] + a[7] * b[2]).0,
-                (a[0] * b[6] + a[3] * b[7] + a[6] * b[0] + a[7] * b[3]).0,
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[0] * b[1] + a[1] * b[0]) - (a[4] * b[7] + a[7] * b[4]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) - (a[5] * b[7] + a[7] * b[5]))).0,
+                (((a[0] * b[3] + a[3] * b[0]) - (a[6] * b[7] + a[7] * b[6]))).0,
+                (((a[0] * b[4] + a[1] * b[7]) + (a[4] * b[0] + a[7] * b[1]))).0,
+                (((a[0] * b[5] + a[2] * b[7]) + (a[5] * b[0] + a[7] * b[2]))).0,
+                (((a[0] * b[6] + a[3] * b[7]) + (a[6] * b[0] + a[7] * b[3]))).0,
+                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0])))).0,
             ],
         }
     }
@@ -10785,7 +10855,7 @@ impl<S: gx::Slots, T: gx::Coef> gx::Undual for Multivector<S, T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -10809,15 +10879,48 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Vector<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Scalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Scalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = m0 + m1;
+        let m4 = m2 + m3;
+        gx::Prepared::from_entries([m4])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Vector, Scalar, T, 1> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Scalar, T, 1>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Scalar, T, 1>) -> Self {
+        let m = p.m;
+        Scalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -10830,15 +10933,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Vector<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Vector>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Vector<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -10895,15 +11026,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Vector<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Vector, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Vector, T, 6> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Vector, Vector, T, 6> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Vector, T, 6>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Vector, T, 6>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -10945,15 +11119,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Vector, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Vector, T, 6> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Vector>, Vector, T, 6> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Vector, T, 6>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 6>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11010,15 +11227,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Vector<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Bivector, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Bivector, T, 6> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Vector, Bivector, T, 6> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Bivector, T, 6>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Bivector, T, 6>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11060,15 +11320,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vecto
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Bivector, T, 6> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Vector>, Bivector, T, 6> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11092,15 +11395,48 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Vector<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Pseudoscalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = m0 + m1;
+        let m4 = m2 + m3;
+        gx::Prepared::from_entries([m4])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Vector, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11113,15 +11449,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<V
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Vector<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -11181,15 +11545,59 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for Vector<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Rotor, T, 7>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Rotor, T, 7> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        gx::Prepared::from_entries([m8, m9, m10, m11, m13, m14, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<Vector, Rotor, T, 7> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Rotor, T, 7>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Rotor, T, 7>) -> Self {
+        let m = p.m;
+        Rotor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -11209,21 +11617,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Vector<(
         let t13 = t12 - xv[3];
             return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t9, t11, t13]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m4 = v[1] * v[1];
-        let m5 = v[2] * v[2];
-        let m6 = m3 * T::from_i64(2);
-        let m7 = m6 - T::from_i64(1);
-        let m8 = m0 * T::from_i64(2);
-        let m9 = m1 * T::from_i64(2);
-        let m10 = m4 * T::from_i64(2);
-        let m11 = m10 - T::from_i64(1);
-        let m12 = m2 * T::from_i64(2);
-        let m13 = m5 * T::from_i64(2);
-        let m14 = m13 - T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Rotor { c: [(x[0]).0, (x[1].scale(m7) + x[2].scale(m8) + x[3].scale(m9)).0, (x[1].scale(m8) + x[2].scale(m11) + x[3].scale(m12)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0] }
     }
@@ -11231,15 +11639,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Vector<(
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Rotor, T, 6> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Vector>, Rotor, T, 6> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>) -> Self {
+        let m = p.m;
+        Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Vector<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -11299,15 +11750,59 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Vector<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Odd, T, 7>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Odd, T, 7> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m6 - m2;
+        let m9 = m3 * T::from_i64(2);
+        let m10 = m4 * T::from_i64(2);
+        let m11 = m2 + m6;
+        let m12 = -m11;
+        let m13 = m5 * T::from_i64(2);
+        let m14 = m2 - m7;
+        let m15 = m2 + m7;
+        gx::Prepared::from_entries([m8, m9, m10, m12, m13, m14, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Vector, Odd, T, 7> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3].scale(m[6])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Odd, T, 7>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Odd, T, 7>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), m[6]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -11327,21 +11822,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(),
         let t13 = t12 - xv[2];
             return Odd { c: gx::slots::from_values::<S, T, 4>([t9, t11, t13, xv[3]]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m4 = v[1] * v[1];
-        let m5 = v[2] * v[2];
-        let m6 = m3 * T::from_i64(2);
-        let m7 = m6 - T::from_i64(1);
-        let m8 = m0 * T::from_i64(2);
-        let m9 = m1 * T::from_i64(2);
-        let m10 = m4 * T::from_i64(2);
-        let m11 = m10 - T::from_i64(1);
-        let m12 = m2 * T::from_i64(2);
-        let m13 = m5 * T::from_i64(2);
-        let m14 = m13 - T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Odd { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m9)).0, (x[0].scale(m8) + x[1].scale(m11) + x[2].scale(m12)).0, (x[0].scale(m9) + x[1].scale(m12) + x[2].scale(m14)).0, (x[3]).0] }
     }
@@ -11349,15 +11844,58 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Odd, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Odd, T, 6> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m6 - m2;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 + m6;
+        let m11 = -m10;
+        let m12 = m5 * T::from_i64(2);
+        let m13 = m2 - m0;
+        let m14 = m13 - m1;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Vector>, Odd, T, 6> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Odd, T, 6>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Odd, T, 6>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -11437,15 +11975,60 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Vector<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Multivector, T, 7>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Multivector, T, 7> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 - m6;
+        let m9 = m2 + m6;
+        let m10 = m2 - m7;
+        let m11 = m2 + m7;
+        let m12 = -m8;
+        let m13 = m3 * T::from_i64(2);
+        let m14 = m4 * T::from_i64(2);
+        let m15 = -m9;
+        let m16 = m5 * T::from_i64(2);
+        gx::Prepared::from_entries([m11, m12, m13, m14, m15, m16, m10])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Vector, Multivector, T, 7> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[3]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[7].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Multivector, T, 7>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Multivector, T, 7>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -11479,37 +12062,82 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ve
         let t27 = t26 - xv[6];
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t17, t19, t21, t23, t25, t27, xv[7]]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m4 = v[1] * v[1];
-        let m5 = v[2] * v[2];
-        let m6 = m3 * T::from_i64(2);
-        let m7 = m6 - T::from_i64(1);
-        let m8 = m0 * T::from_i64(2);
-        let m9 = m1 * T::from_i64(2);
-        let m10 = m4 * T::from_i64(2);
-        let m11 = m10 - T::from_i64(1);
-        let m12 = m2 * T::from_i64(2);
-        let m13 = m5 * T::from_i64(2);
-        let m14 = m13 - T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 - m6;
+        let m9 = m2 + m6;
+        let m10 = m2 - m7;
+        let m11 = -m8;
+        let m12 = m3 * T::from_i64(2);
+        let m13 = m4 * T::from_i64(2);
+        let m14 = -m9;
+        let m15 = m5 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m7) + x[2].scale(m8) + x[3].scale(m9)).0, (x[1].scale(m8) + x[2].scale(m11) + x[3].scale(m12)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0, (x[4].scale(m7) + x[5].scale(m8) + x[6].scale(m9)).0, (x[4].scale(m8) + x[5].scale(m11) + x[6].scale(m12)).0, (x[4].scale(m9) + x[5].scale(m12) + x[6].scale(m14)).0, (x[7]).0] }
+        Multivector { c: [(x[0]).0, (x[1].scale(m11) + x[2].scale(m12) + x[3].scale(m13)).0, (x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m15)).0, (x[1].scale(m13) + x[2].scale(m15) + x[3].scale(m10)).0, (x[4].scale(m11) + x[5].scale(m12) + x[6].scale(m13)).0, (x[4].scale(m12) + x[5].scale(m14) + x[6].scale(m15)).0, (x[4].scale(m13) + x[5].scale(m15) + x[6].scale(m10)).0, (x[7]).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Multivector, T, 6> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 - m6;
+        let m9 = m2 + m6;
+        let m10 = m2 - m7;
+        let m11 = -m8;
+        let m12 = m3 * T::from_i64(2);
+        let m13 = m4 * T::from_i64(2);
+        let m14 = -m9;
+        let m15 = m5 * T::from_i64(2);
+        gx::Prepared::from_entries([m11, m12, m13, m14, m15, m10])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Vector>, Multivector, T, 6> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[1]) + x[5].scale(m[3]) + x[6].scale(m[4])).0, (x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[7]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[3], m[4], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11518,8 +12146,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
@@ -11528,8 +12156,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m0 + m1;
-        let m5 = m2 + m4;
-        let m6 = m3 + m5;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m6)).0] }
     }
@@ -11537,15 +12165,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Rotor<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Scalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Scalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m0 + m1;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Rotor, Scalar, T, 1> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Scalar, T, 1>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Scalar, T, 1>) -> Self {
+        let m = p.m;
+        Scalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11558,15 +12221,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Rotor<(
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Rotor<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11583,8 +12274,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Rotor<(), T> {
         let t10 = t0 - t1;
         let t11 = t2 - t3;
         let t12 = t0 + t1;
-        let t13 = t12 - t2;
-        let t14 = t13 - t3;
+        let t13 = t2 + t3;
+        let t14 = t12 - t13;
         let t15 = t6 + t7;
         let t16 = t5 - t8;
         let t17 = t6 - t7;
@@ -11626,8 +12317,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Rotor<(), T> {
         let m10 = m0 - m1;
         let m11 = m2 - m3;
         let m12 = m0 + m1;
-        let m13 = m12 - m2;
-        let m14 = m13 - m3;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
         let m15 = m6 + m7;
         let m16 = m15 * T::from_i64(2);
         let m17 = m8 - m5;
@@ -11649,15 +12340,72 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Rotor<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Rotor<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Vector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Vector, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Rotor, Vector, T, 9> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Vector, T, 9>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Vector, T, 9>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11706,8 +12454,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Rotor<(
         let m10 = m0 - m1;
         let m11 = m2 - m3;
         let m12 = m0 + m1;
-        let m13 = m12 - m2;
-        let m14 = m13 - m3;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
         let m15 = m6 + m7;
         let m16 = m15 * T::from_i64(2);
         let m17 = m8 - m5;
@@ -11729,15 +12477,72 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Rotor<(
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Vector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Vector, T, 9> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Rotor<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11754,8 +12559,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Rotor<(), T> {
         let t10 = t0 - t1;
         let t11 = t2 - t3;
         let t12 = t0 + t1;
-        let t13 = t12 - t2;
-        let t14 = t13 - t3;
+        let t13 = t2 + t3;
+        let t14 = t12 - t13;
         let t15 = t6 + t7;
         let t16 = t5 - t8;
         let t17 = t6 - t7;
@@ -11797,8 +12602,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Rotor<(), T> {
         let m10 = m0 - m1;
         let m11 = m2 - m3;
         let m12 = m0 + m1;
-        let m13 = m12 - m2;
-        let m14 = m13 - m3;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
         let m15 = m6 + m7;
         let m16 = m15 * T::from_i64(2);
         let m17 = m8 - m5;
@@ -11820,15 +12625,72 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Rotor<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Rotor<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Bivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Bivector, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Rotor, Bivector, T, 9> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Bivector, T, 9>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Bivector, T, 9>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -11877,8 +12739,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Rotor
         let m10 = m0 - m1;
         let m11 = m2 - m3;
         let m12 = m0 + m1;
-        let m13 = m12 - m2;
-        let m14 = m13 - m3;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
         let m15 = m6 + m7;
         let m16 = m15 * T::from_i64(2);
         let m17 = m8 - m5;
@@ -11900,15 +12762,72 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Rotor
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11917,8 +12836,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), 
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
@@ -11927,8 +12846,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), 
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m0 + m1;
-        let m5 = m2 + m4;
-        let m6 = m3 + m5;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m6)).0] }
     }
@@ -11936,15 +12855,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Rotor<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Pseudoscalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m0 + m1;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Rotor, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -11957,15 +12911,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<R
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Rotor<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -12051,15 +13033,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Rotor<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for Rotor<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Rotor, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Rotor, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 + m13;
+        let m15 = m11 - m13;
+        let m16 = m6 + m7;
+        let m17 = m16 * T::from_i64(2);
+        let m18 = m8 - m5;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = m7 - m6;
+        let m21 = m20 * T::from_i64(2);
+        let m22 = m10 + m12;
+        let m23 = m4 + m9;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m5 + m8;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m9 - m4;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m10 - m12;
+        gx::Prepared::from_entries([m14, m15, m17, m19, m21, m22, m24, m26, m28, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<Rotor, Rotor, T, 10> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Rotor, T, 10>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Rotor, T, 10>) -> Self {
+        let m = p.m;
+        Rotor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -12106,41 +13146,97 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
         let m10 = m0 - m1;
-        let m11 = m0 + m1;
-        let m12 = m2 - m3;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
         let m13 = m2 + m3;
-        let m14 = m11 + m13;
-        let m15 = m11 - m13;
-        let m16 = m6 + m7;
-        let m17 = m16 * T::from_i64(2);
-        let m18 = m8 - m5;
-        let m19 = m18 * T::from_i64(2);
-        let m20 = m7 - m6;
-        let m21 = m20 * T::from_i64(2);
-        let m22 = m10 + m12;
-        let m23 = m4 + m9;
-        let m24 = m23 * T::from_i64(2);
-        let m25 = m5 + m8;
-        let m26 = m25 * T::from_i64(2);
-        let m27 = m9 - m4;
-        let m28 = m27 * T::from_i64(2);
-        let m29 = m10 - m12;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m17) + x[3].scale(m19)).0, (x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m24)).0, (x[1].scale(m26) + x[2].scale(m28) + x[3].scale(m29)).0] }
+        Rotor { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>) -> Self {
+        let m = p.m;
+        Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Rotor<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -12226,15 +13322,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Rotor<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Rotor<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Odd, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Odd, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m12;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m12;
+        let m29 = m11 + m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Rotor, Odd, T, 10> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3].scale(m[9])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Odd, T, 10>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Odd, T, 10>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), m[9]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -12281,41 +13435,97 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Rotor<(), 
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
         let m10 = m0 - m1;
-        let m11 = m0 + m1;
-        let m12 = m2 - m3;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
         let m13 = m2 + m3;
-        let m14 = m11 - m13;
+        let m14 = m12 - m13;
         let m15 = m6 + m7;
         let m16 = m15 * T::from_i64(2);
         let m17 = m8 - m5;
         let m18 = m17 * T::from_i64(2);
         let m19 = m7 - m6;
         let m20 = m19 * T::from_i64(2);
-        let m21 = m10 + m12;
+        let m21 = m10 + m11;
         let m22 = m4 + m9;
         let m23 = m22 * T::from_i64(2);
         let m24 = m5 + m8;
         let m25 = m24 * T::from_i64(2);
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
-        let m28 = m10 - m12;
-        let m29 = m11 + m13;
+        let m28 = m10 - m11;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Odd { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3].scale(m29)).0] }
+        Odd { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3]).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Odd, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 - m13;
+        let m15 = m6 + m7;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m8 - m5;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m7 - m6;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m11;
+        let m22 = m4 + m9;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m5 + m8;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m9 - m4;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m10 - m11;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Rotor>, Odd, T, 9> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Rotor<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -12423,15 +13633,76 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Rotor<(), T
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Rotor<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Rotor<(), T> {
+    type Output = gx::Prepared<Rotor, Multivector, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Rotor, Multivector, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m4 - m9;
+        let m15 = m4 + m9;
+        let m16 = m5 - m8;
+        let m17 = m5 + m8;
+        let m18 = m6 - m7;
+        let m19 = m6 + m7;
+        let m20 = m10 - m12;
+        let m21 = m10 + m12;
+        let m22 = m11 - m13;
+        let m23 = m11 + m13;
+        let m24 = m19 * T::from_i64(2);
+        let m25 = m16 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m18 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m15 * T::from_i64(2);
+        let m30 = m17 * T::from_i64(2);
+        let m31 = m14 * T::from_i64(2);
+        let m32 = -m31;
+        gx::Prepared::from_entries([m23, m22, m24, m26, m28, m21, m29, m30, m32, m20])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Rotor, Multivector, T, 10> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[4].scale(m[7]) + x[5].scale(m[8]) + x[6].scale(m[9])).0, (x[7].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Rotor, Multivector, T, 10>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Rotor, Multivector, T, 10>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[8], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -12508,8 +13779,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
         let m10 = m0 - m1;
-        let m11 = m0 + m1;
-        let m12 = m2 - m3;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
         let m13 = m2 + m3;
         let m14 = m4 - m9;
         let m15 = m4 + m9;
@@ -12517,35 +13788,94 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let m17 = m5 + m8;
         let m18 = m6 - m7;
         let m19 = m6 + m7;
-        let m20 = m10 - m12;
-        let m21 = m10 + m12;
-        let m22 = m11 - m13;
-        let m23 = m11 + m13;
-        let m24 = m19 * T::from_i64(2);
-        let m25 = m16 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m18 * T::from_i64(2);
-        let m28 = -m27;
-        let m29 = m15 * T::from_i64(2);
-        let m30 = m17 * T::from_i64(2);
-        let m31 = m14 * T::from_i64(2);
-        let m32 = -m31;
+        let m20 = m10 - m11;
+        let m21 = m10 + m11;
+        let m22 = m12 - m13;
+        let m23 = m19 * T::from_i64(2);
+        let m24 = m16 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m18 * T::from_i64(2);
+        let m27 = -m26;
+        let m28 = m15 * T::from_i64(2);
+        let m29 = m17 * T::from_i64(2);
+        let m30 = m14 * T::from_i64(2);
+        let m31 = -m30;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0].scale(m23)).0, (x[1].scale(m22) + x[2].scale(m24) + x[3].scale(m26)).0, (x[1].scale(m28) + x[2].scale(m21) + x[3].scale(m29)).0, (x[1].scale(m30) + x[2].scale(m32) + x[3].scale(m20)).0, (x[4].scale(m22) + x[5].scale(m24) + x[6].scale(m26)).0, (x[4].scale(m28) + x[5].scale(m21) + x[6].scale(m29)).0, (x[4].scale(m30) + x[5].scale(m32) + x[6].scale(m20)).0, (x[7].scale(m23)).0] }
+        Multivector { c: [(x[0]).0, (x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m25)).0, (x[1].scale(m27) + x[2].scale(m21) + x[3].scale(m28)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m20)).0, (x[4].scale(m22) + x[5].scale(m23) + x[6].scale(m25)).0, (x[4].scale(m27) + x[5].scale(m21) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m31) + x[6].scale(m20)).0, (x[7]).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Rotor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m4 - m9;
+        let m15 = m4 + m9;
+        let m16 = m5 - m8;
+        let m17 = m5 + m8;
+        let m18 = m6 - m7;
+        let m19 = m6 + m7;
+        let m20 = m10 - m11;
+        let m21 = m10 + m11;
+        let m22 = m12 - m13;
+        let m23 = m19 * T::from_i64(2);
+        let m24 = m16 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m18 * T::from_i64(2);
+        let m27 = -m26;
+        let m28 = m15 * T::from_i64(2);
+        let m29 = m17 * T::from_i64(2);
+        let m30 = m14 * T::from_i64(2);
+        let m31 = -m30;
+        gx::Prepared::from_entries([m22, m23, m25, m27, m21, m28, m29, m31, m20])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[7]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -12554,8 +13884,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
@@ -12564,8 +13894,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m0 + m1;
-        let m5 = m2 + m4;
-        let m6 = m3 + m5;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m6)).0] }
     }
@@ -12573,15 +13903,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Odd<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Scalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Scalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m0 + m1;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Odd, Scalar, T, 1> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Scalar, T, 1>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Scalar, T, 1>) -> Self {
+        let m = p.m;
+        Scalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -12594,15 +13959,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Odd<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Odd>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -12627,8 +14020,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
         let t18 = t5 - t8;
         let t19 = t6 + t7;
         let t20 = t0 + t1;
-        let t21 = t20 - t2;
-        let t22 = t21 - t3;
+        let t21 = t2 + t3;
+        let t22 = t20 - t21;
         let t23 = xv[0] * t12;
         let t24 = xv[1] * t13;
         let t25 = xv[2] * t14;
@@ -12677,8 +14070,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
         let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
         let m27 = m2 + m3;
-        let m28 = m27 - m0;
-        let m29 = m28 - m1;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Vector { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m16)).0, (x[0].scale(m18) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0] }
     }
@@ -12686,15 +14079,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Odd<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Vector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Vector, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Odd, Vector, T, 9> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Vector, T, 9>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Vector, T, 9>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -12758,8 +14209,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
         let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
         let m27 = m2 + m3;
-        let m28 = m27 - m0;
-        let m29 = m28 - m1;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Vector { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m16)).0, (x[0].scale(m18) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0] }
     }
@@ -12767,15 +14218,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Vector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Vector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Odd>, Vector, T, 9> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Vector, T, 9>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 9>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -12800,8 +14309,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
         let t18 = t5 - t8;
         let t19 = t6 + t7;
         let t20 = t0 + t1;
-        let t21 = t20 - t2;
-        let t22 = t21 - t3;
+        let t21 = t2 + t3;
+        let t22 = t20 - t21;
         let t23 = xv[0] * t12;
         let t24 = xv[1] * t13;
         let t25 = xv[2] * t14;
@@ -12850,8 +14359,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
         let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
         let m27 = m2 + m3;
-        let m28 = m27 - m0;
-        let m29 = m28 - m1;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Bivector { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m16)).0, (x[0].scale(m18) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0] }
     }
@@ -12859,15 +14368,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Odd<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Bivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Bivector, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Odd, Bivector, T, 9> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Bivector, T, 9>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Bivector, T, 9>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
@@ -12931,8 +14498,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
         let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
         let m27 = m2 + m3;
-        let m28 = m27 - m0;
-        let m29 = m28 - m1;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Bivector { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m16)).0, (x[0].scale(m18) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0] }
     }
@@ -12940,15 +14507,73 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Bivector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Odd>, Bivector, T, 9> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -12957,8 +14582,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = xv[0] * t6;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
@@ -12967,8 +14592,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m0 + m1;
-        let m5 = m2 + m4;
-        let m6 = m3 + m5;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m6)).0] }
     }
@@ -12976,15 +14601,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Odd<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Pseudoscalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m0 + m1;
+        let m5 = m2 + m3;
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Odd, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -12997,15 +14657,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<O
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Odd<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -13092,15 +14780,74 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for Odd<(), T> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Rotor, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Rotor, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 + m13;
+        let m15 = m10 - m12;
+        let m16 = m4 - m9;
+        let m17 = m16 * T::from_i64(2);
+        let m18 = m5 + m8;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = m4 + m9;
+        let m21 = m20 * T::from_i64(2);
+        let m22 = m10 + m12;
+        let m23 = -m22;
+        let m24 = m7 - m6;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m5 - m8;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = m6 + m7;
+        let m29 = m28 * T::from_i64(2);
+        let m30 = m13 - m11;
+        gx::Prepared::from_entries([m14, m15, m17, m19, m21, m23, m25, m27, m29, m30])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<Odd, Rotor, T, 10> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Rotor, T, 10>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Rotor, T, 10>) -> Self {
+        let m = p.m;
+        Rotor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -13136,52 +14883,110 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Odd<(), 
         let t29 = t28 - xv[3];
             return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = m3 + m6;
-        let m10 = m9 * T::from_i64(2);
-        let m11 = T::from_i64(1) - m10;
-        let m12 = m0 - m7;
-        let m13 = m12 * T::from_i64(2);
-        let m14 = m1 + m5;
-        let m15 = m14 * T::from_i64(2);
-        let m16 = m0 + m7;
-        let m17 = m16 * T::from_i64(2);
-        let m18 = m3 + m8;
-        let m19 = m18 * T::from_i64(2);
-        let m20 = m19 - T::from_i64(1);
-        let m21 = m4 - m2;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
         let m22 = m21 * T::from_i64(2);
-        let m23 = m1 - m5;
+        let m23 = m5 - m8;
         let m24 = m23 * T::from_i64(2);
-        let m25 = m2 + m4;
+        let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
-        let m27 = m6 + m8;
-        let m28 = m27 * T::from_i64(2);
-        let m29 = m28 - T::from_i64(1);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0]).0, (x[1].scale(m11) + x[2].scale(m13) + x[3].scale(m15)).0, (x[1].scale(m17) + x[2].scale(m20) + x[3].scale(m22)).0, (x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m29)).0] }
+        Rotor { c: [(x[0]).0, (x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m16)).0, (x[1].scale(m18) + x[2].scale(m20) + x[3].scale(m22)).0, (x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m29)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Rotor<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Rotor<S, T>) -> Rotor<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Rotor, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Odd>, Rotor, T, 9> {
+    type Output = Rotor<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Rotor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>> for Rotor<(Rotor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>) -> Self {
+        let m = p.m;
+        Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Odd<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -13268,15 +15073,74 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Odd<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Odd, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Odd, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m10 - m12;
+        let m15 = m4 - m9;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m5 + m8;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m4 + m9;
+        let m20 = m19 * T::from_i64(2);
+        let m21 = m10 + m12;
+        let m22 = -m21;
+        let m23 = m7 - m6;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m5 - m8;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m6 + m7;
+        let m28 = m27 * T::from_i64(2);
+        let m29 = m13 - m11;
+        let m30 = m11 + m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m22, m24, m26, m28, m29, m30])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Odd, Odd, T, 10> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3].scale(m[9])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Odd, T, 10>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Odd, T, 10>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), m[9]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -13312,52 +15176,110 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>
         let t29 = t28 - xv[2];
             return Odd { c: gx::slots::from_values::<S, T, 4>([t23, t26, t29, xv[3]]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = m3 + m6;
-        let m10 = m9 * T::from_i64(2);
-        let m11 = T::from_i64(1) - m10;
-        let m12 = m0 - m7;
-        let m13 = m12 * T::from_i64(2);
-        let m14 = m1 + m5;
-        let m15 = m14 * T::from_i64(2);
-        let m16 = m0 + m7;
-        let m17 = m16 * T::from_i64(2);
-        let m18 = m3 + m8;
-        let m19 = m18 * T::from_i64(2);
-        let m20 = m19 - T::from_i64(1);
-        let m21 = m4 - m2;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
         let m22 = m21 * T::from_i64(2);
-        let m23 = m1 - m5;
+        let m23 = m5 - m8;
         let m24 = m23 * T::from_i64(2);
-        let m25 = m2 + m4;
+        let m25 = m6 + m7;
         let m26 = m25 * T::from_i64(2);
-        let m27 = m6 + m8;
-        let m28 = m27 * T::from_i64(2);
-        let m29 = m28 - T::from_i64(1);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Odd { c: [(x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m15)).0, (x[0].scale(m17) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0, (x[3]).0] }
+        Odd { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m16)).0, (x[0].scale(m18) + x[1].scale(m20) + x[2].scale(m22)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29)).0, (x[3]).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Odd, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Odd, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m10 - m11;
+        let m13 = m4 - m9;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = m4 + m9;
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m10 + m11;
+        let m20 = -m19;
+        let m21 = m7 - m6;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = m5 - m8;
+        let m24 = m23 * T::from_i64(2);
+        let m25 = m6 + m7;
+        let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m3;
+        let m28 = m0 + m1;
+        let m29 = m27 - m28;
+        gx::Prepared::from_entries([m12, m14, m16, m18, m20, m22, m24, m26, m29])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Odd>, Odd, T, 9> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Odd, T, 9>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Odd, T, 9>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -13465,15 +15387,76 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Odd<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Multivector, T, 10>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Multivector, T, 10> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m4 - m9;
+        let m15 = m4 + m9;
+        let m16 = m5 - m8;
+        let m17 = m5 + m8;
+        let m18 = m6 - m7;
+        let m19 = m6 + m7;
+        let m20 = m10 - m12;
+        let m21 = m10 + m12;
+        let m22 = m11 - m13;
+        let m23 = m11 + m13;
+        let m24 = m14 * T::from_i64(2);
+        let m25 = m17 * T::from_i64(2);
+        let m26 = m15 * T::from_i64(2);
+        let m27 = -m21;
+        let m28 = m18 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m16 * T::from_i64(2);
+        let m31 = m19 * T::from_i64(2);
+        let m32 = -m22;
+        gx::Prepared::from_entries([m23, m20, m24, m25, m26, m27, m29, m30, m31, m32])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Odd, Multivector, T, 10> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[4].scale(m[7]) + x[5].scale(m[8]) + x[6].scale(m[9])).0, (x[7].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Multivector, T, 10>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Multivector, T, 10>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[8], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -13539,47 +15522,108 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Od
         let t59 = t58 - t41;
             return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t44, t47, t50, t53, t56, t59, xv[7]]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = m0 - m7;
-        let m10 = m0 + m7;
-        let m11 = m1 - m5;
-        let m12 = m1 + m5;
-        let m13 = m2 - m4;
-        let m14 = m2 + m4;
-        let m15 = m3 + m6;
-        let m16 = m3 + m8;
-        let m17 = m6 + m8;
-        let m18 = m15 * T::from_i64(2);
-        let m19 = T::from_i64(1) - m18;
-        let m20 = m9 * T::from_i64(2);
-        let m21 = m12 * T::from_i64(2);
-        let m22 = m10 * T::from_i64(2);
-        let m23 = m16 * T::from_i64(2);
-        let m24 = m23 - T::from_i64(1);
-        let m25 = m13 * T::from_i64(2);
-        let m26 = -m25;
-        let m27 = m11 * T::from_i64(2);
-        let m28 = m14 * T::from_i64(2);
-        let m29 = m17 * T::from_i64(2);
-        let m30 = m29 - T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m4 - m9;
+        let m15 = m4 + m9;
+        let m16 = m5 - m8;
+        let m17 = m5 + m8;
+        let m18 = m6 - m7;
+        let m19 = m6 + m7;
+        let m20 = m10 - m11;
+        let m21 = m10 + m11;
+        let m22 = m12 - m13;
+        let m23 = m14 * T::from_i64(2);
+        let m24 = m17 * T::from_i64(2);
+        let m25 = m15 * T::from_i64(2);
+        let m26 = -m21;
+        let m27 = m18 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m16 * T::from_i64(2);
+        let m30 = m19 * T::from_i64(2);
+        let m31 = -m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m22) + x[2].scale(m24) + x[3].scale(m26)).0, (x[1].scale(m27) + x[2].scale(m28) + x[3].scale(m30)).0, (x[4].scale(m19) + x[5].scale(m20) + x[6].scale(m21)).0, (x[4].scale(m22) + x[5].scale(m24) + x[6].scale(m26)).0, (x[4].scale(m27) + x[5].scale(m28) + x[6].scale(m30)).0, (x[7]).0] }
+        Multivector { c: [(x[0]).0, (x[1].scale(m20) + x[2].scale(m23) + x[3].scale(m24)).0, (x[1].scale(m25) + x[2].scale(m26) + x[3].scale(m28)).0, (x[1].scale(m29) + x[2].scale(m30) + x[3].scale(m31)).0, (x[4].scale(m20) + x[5].scale(m23) + x[6].scale(m24)).0, (x[4].scale(m25) + x[5].scale(m26) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m30) + x[6].scale(m31)).0, (x[7]).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Multivector, T, 9> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m4 - m9;
+        let m15 = m4 + m9;
+        let m16 = m5 - m8;
+        let m17 = m5 + m8;
+        let m18 = m6 - m7;
+        let m19 = m6 + m7;
+        let m20 = m10 - m11;
+        let m21 = m10 + m11;
+        let m22 = m12 - m13;
+        let m23 = m14 * T::from_i64(2);
+        let m24 = m17 * T::from_i64(2);
+        let m25 = m15 * T::from_i64(2);
+        let m26 = -m21;
+        let m27 = m18 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m16 * T::from_i64(2);
+        let m30 = m19 * T::from_i64(2);
+        let m31 = -m22;
+        gx::Prepared::from_entries([m20, m23, m24, m25, m26, m28, m29, m30, m31])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Odd>, Multivector, T, 9> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[7]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
     }
 }
 

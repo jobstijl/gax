@@ -113,3 +113,20 @@ fn generalized_eigenproblem_returns_modes_of_the_slot_kind() {
         "form solve",
     );
 }
+
+#[test]
+fn prepared_maps_convert_to_dense_maps() {
+    let mut rng = Rng::new(25);
+    for _ in 0..5 {
+        let m = unit_motor(&mut rng);
+        let dense: Point<(Point,), f64> = m.prepare::<Point>().to_map();
+        assert_close(
+            &flat(&dense),
+            &flat(&(m >> Point::slot())),
+            "to_map == m >> slot",
+        );
+        let l: Line<(), f64> = random(&mut rng);
+        let lines: Line<(Line,), f64> = m.prepare::<Line>().to_map();
+        assert_close(&flat(&lines.of(l)), &flat(&(m >> l)), "line map");
+    }
+}

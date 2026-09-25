@@ -52,6 +52,14 @@ fn study_structure(alg: &Algebra, mv: &SymMv) -> Option<Study> {
     }
 }
 
+/// Whether `p` is minus a sum of squares of single variables, hence never positive.
+fn nonpositive(p: &Poly) -> bool {
+    !p.is_zero()
+        && p.0
+            .iter()
+            .all(|(m, c)| *c < Rational::ZERO && m.0.len() == 2 && m.0[0] == m.0[1])
+}
+
 fn coef(mv: &SymMv, blade: u32) -> Poly {
     mv.get(&blade).cloned().unwrap_or_default()
 }
@@ -160,11 +168,19 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 pre.emit_lets(&xvar, "p", &mut lets);
                 let lam_e = render(&pre.outputs[0], &xvar, "p");
                 let mu_e = render(&pre.outputs[1], &xvar, "p");
-                let _ = writeln!(
-                    lets,
-                    "        let [c0, c1, s0, s1] = gx::study::exp_coeffs({}, {lam_e}, {mu_e});",
-                    study.isq
-                );
+                if nonpositive(&coef(&bsq, 0)) && (study.isq == 0 || study.blade.is_none()) {
+                    // A rotation (the scalar part of B² is minus a sum of squares): real trig.
+                    let _ = writeln!(
+                        lets,
+                        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation({lam_e}, {mu_e});"
+                    );
+                } else {
+                    let _ = writeln!(
+                        lets,
+                        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs({}, {lam_e}, {mu_e});",
+                        study.isq
+                    );
+                }
                 prog.emit_lets(&names, "t", &mut lets);
                 let outs: Vec<String> = prog
                     .outputs
@@ -290,11 +306,18 @@ fn emit_normalized(
     let a = render(&pre.outputs[0], &xvar, "p");
     if study.blade.is_some() {
         let b = render(&pre.outputs[1], &xvar, "p");
-        let _ = writeln!(
-            lets,
-            "        let [s0, s1] = gx::study::rsqrt({}, {a}, {b});",
-            study.isq
-        );
+        if study.isq == 0 {
+            let _ = writeln!(
+                lets,
+                "        let [s0, s1] = gx::study::rsqrt_nil({a}, {b});"
+            );
+        } else {
+            let _ = writeln!(
+                lets,
+                "        let [s0, s1] = gx::study::rsqrt({}, {a}, {b});",
+                study.isq
+            );
+        }
     } else {
         let _ = writeln!(lets, "        let s0 = ({a}).abs().sqrt().recip();");
     }
@@ -383,11 +406,19 @@ fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) ->
     let mut lets = String::new();
     pre.emit_lets(&xvar, "p", &mut lets);
     let r: Vec<String> = pre.outputs.iter().map(|o| render(o, &xvar, "p")).collect();
-    let _ = writeln!(
-        lets,
-        "        let [h0, h1] = gx::study::log_coeffs({isq}, ({}, {}), ({}, {}));",
-        r[0], r[1], r[2], r[3]
-    );
+    if nonpositive(&coef(&u, 0)) && (isq == 0 || blade.is_none()) {
+        let _ = writeln!(
+            lets,
+            "        let [h0, h1] = gx::study::log_coeffs_rotation(({}, {}), ({}, {}));",
+            r[0], r[1], r[2], r[3]
+        );
+    } else {
+        let _ = writeln!(
+            lets,
+            "        let [h0, h1] = gx::study::log_coeffs({isq}, ({}, {}), ({}, {}));",
+            r[0], r[1], r[2], r[3]
+        );
+    }
     prog.emit_lets(&names, "t", &mut lets);
     let outs: Vec<String> = prog
         .outputs

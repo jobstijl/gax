@@ -12,6 +12,7 @@ pub mod kind;
 pub mod linalg;
 pub mod ops;
 pub mod permute;
+pub mod prepared;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod slots;
@@ -29,6 +30,7 @@ pub use ops::{
     ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
 };
 pub use permute::MoveToFront;
+pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
 pub use trace::Traceable;
 pub use unit::Unit;

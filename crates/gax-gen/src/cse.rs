@@ -696,15 +696,30 @@ fn signed_sum(b: &mut Builder, items: &[(bool, Operand)]) -> (bool, Operand) {
         }
     }
     items.sort_by_key(|x| x.0);
-    let mut acc = items[0].1;
-    for &(neg, o) in &items[1..] {
-        acc = if neg {
-            b.emit(Instr::Sub(acc, o))
-        } else {
-            b.emit(Instr::Add(acc, o))
-        };
+    // A balanced tree of additions: log2(n) dependent steps instead of n - 1, which is what
+    // limits the latency of a single kernel call (floating-point sums cannot be reassociated
+    // by the compiler).
+    let (neg, acc) = balanced(b, &items);
+    (all_negative ^ neg, acc)
+}
+
+/// Sum `±x_i` as a balanced tree; returns `(negated, value)`.
+fn balanced(b: &mut Builder, items: &[(bool, Operand)]) -> (bool, Operand) {
+    match items {
+        [] => (false, Operand::Const(Rational::ZERO)),
+        [x] => *x,
+        _ => {
+            let (l, r) = items.split_at(items.len().div_ceil(2));
+            let (ln, lv) = balanced(b, l);
+            let (rn, rv) = balanced(b, r);
+            match (ln, rn) {
+                (false, false) => (false, b.emit(Instr::Add(lv, rv))),
+                (false, true) => (false, b.emit(Instr::Sub(lv, rv))),
+                (true, false) => (false, b.emit(Instr::Sub(rv, lv))),
+                (true, true) => (true, b.emit(Instr::Add(lv, rv))),
+            }
+        }
     }
-    (all_negative, acc)
 }
 
 /// Add multiples of the relations (`r = 0`) to `p` while that reduces the number of terms.

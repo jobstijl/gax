@@ -28,6 +28,12 @@ pub fn gax_apply_matrix(t: Point<(Point,)>, p: Point) -> Point {
     t.of(p)
 }
 
+/// gax: apply a prepared (sparse) motor action to a point.
+#[inline(never)]
+pub fn gax_apply_prepared(t: gax::Prepared<Unit<Motor>, Point, f32, 12>, p: Point) -> Point {
+    t >> p
+}
+
 /// gax: motor composition (geometric product, tier 1).
 #[inline(never)]
 pub fn gax_motor_motor(a: Motor, b: Motor) -> Motor {

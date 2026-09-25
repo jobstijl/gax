@@ -11,49 +11,61 @@ Reproduce the timings with:
 RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench transform
 ```
 
-## Rigid transforms of points (PGA3D, f32)
+## Common PGA3D operations against glam (f32, `-C target-cpu=native`)
+
+Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench transform`.
 
 | operation | gax | glam 0.30 |
 |---|---|---|
-| one point, direct fused sandwich `Unit<Motor> >> Point` | 6.6 ns | quaternion rotation only (`Quat * Vec3A`): 3.2 ns |
-| one point, precomputed map `Point<(Point,)>::of` | 4.0 ns | `Affine3A::transform_point3a`: 2.2 ns |
-| 1024 points, direct sandwich (AoS) | 1.88 µs | — |
-| 1024 points, map built once, then applied (AoS) | 1.44 µs | `Affine3A` loop: 1.11 µs |
-| 1024 points, direct sandwich (SoA `f32x8`) | 0.72 µs | — |
-| 1024 points, map built once (SoA `f32x8`) | **0.50 µs** | — |
+| transform one point: `Unit<Motor> >> Point` (fused) | 6.3 ns | `Affine3A::transform_point3a`: 2.2 ns; `Quat * Vec3A` (rotation only): 3.2 ns |
+| transform one point: prepared sparse map `m.prepare::<Point>() >> p` | 4.2 ns | |
+| transform one point: dense map `Point<(Point,)>::of` | 3.9 ns | |
+| transform 1024 points, AoS: direct / prepared / dense map | 1.87 / 1.39 / 1.48 µs | `Affine3A` loop: 1.18 µs |
+| transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.66 / **0.43 µs** | (2.7x faster than glam) |
+| compose motors `Unit<Motor> * Unit<Motor>` | 7.6 ns | `Affine3A * Affine3A`: 5.3 ns; `Quat * Quat`: 2.0 ns |
+| invert a unit motor (the reverse) | **1.9 ns** | `Affine3A::inverse`: 8.6–13.7 ns |
+| normalize a motor (Study-number `rsqrt`) | 5.8 ns | `Quat::normalize`: 2.4 ns |
+| motor exponential `Line::exp` | 24 ns | `Quat::from_axis_angle`: 3.2–5.6 ns |
+| motor logarithm `Unit<Motor>::log` | 24 ns | — |
+| build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 7.1 / 11.9 ns | `Affine3A::from_rotation_translation`: 2.9–4.1 ns |
 
-The `-C target-cpu=native` figures are the ones above. On the baseline x86-64 target, where `f32x8`
-is emulated with two SSE registers:
-
-* the SoA map path takes 1.12 µs, against 1.48 µs for glam;
-* the direct single transform takes 7.9 ns, against glam's 3.0 ns (affine) and 3.5 ns (quaternion).
+Ranges show run-to-run variation, measured in separate runs of the suite.
 
 ### Where gax is faster
 
-**Batches in struct-of-arrays form.** A `Point<(), f32x8>` holds eight points, and every generated
-kernel runs on it unchanged. Transforming 1024 points through the motor's map takes 16 lane FMAs per
-eight points, 2.2x faster than a glam `Affine3A` loop. This is hypothesis 9, and the reason to batch.
+* **Batches in struct-of-arrays form.** A `Point<(), f32x8>` holds eight points, and every generated
+  kernel runs on it unchanged. The prepared action of a unit motor needs 12 multiplications per
+  eight points, with no structural zeros. That transforms 1024 points 2.7x faster than a glam
+  `Affine3A` loop (hypotheses 6 and 9).
+* **Inverting a unit motor** costs only negations: the certificate in `Unit` makes the inverse the
+  reverse.
 
 ### Where gax is slower, and why
 
-**Single transforms in array-of-structs form are 1.8–3x slower than glam.**
+* **Single operations in array-of-structs form** take 1.4–3x as long as glam:
+  * gax's kernels are generic over the coefficient type, so they are scalar code, and LLVM only partly
+    recovers SIMD from them;
+  * glam writes the same operations by hand with SSE shuffles on 4-lane registers, and stores
+    matrices column-major for broadcasts.
+* **A motor holds a rotation and a translation in 8 numbers.** Composing, normalizing and
+  exponentiating it do more work than the quaternion alone, which is what glam's `Quat` timings
+  measure. `Affine3A` is the fair comparison for rigid motions: gax is at 1.4x for composition and
+  faster for inversion.
+* **exp and log** go through closed forms with a series near zero (ADR-019). They take 24 ns, against
+  glam's 3–6 ns for building a quaternion from an axis and angle. A motor's exponential also produces
+  its translation part and needs the square root of the bivector's norm.
 
-* The fused sandwich of a unit motor on a general point is 25 mul and 18 add, all scalar: the 43
-  arithmetic instructions in the assembly. glam's quaternion rotation is 27 instructions *because it
-  is written with SSE shuffles on a 4-lane `Vec3A`*. glam's affine transform is 9 instructions for the
-  same reason, and because its matrix is stored column-major for broadcasts.
-* gax's kernels are generic over the coefficient type, so they are scalar code, and LLVM's SLP
-  vectorizer only partly recovers SIMD from them.
-* The output-first (row-major) storage of a map makes each output a dot product. That suits SoA lanes
-  and not single-point SIMD.
+**Changes that closed part of the gap:**
 
-**Planned improvements**, tracked in `TODO.md`:
+* balanced summation trees (floating-point sums cannot be reassociated by the compiler), which took
+  motor composition from 12.6 ns to 7.6 ns;
+* real-trigonometric fast paths when the generator proves the square of a bivector is non-positive
+  (a rotation), which took `exp` from 174 ns to 24 ns, `log` from 61 ns to 24 ns and `normalized`
+  from 20 ns to 5.8 ns;
+* prepared sparse maps.
 
-* a prepared sparse map type for versor-to-kind transforms, which skips the structural zeros of the
-  motor's point map: 12 mul and 9 add instead of 16 and 12;
-* optional `mul_add` emission when FMA is available;
-* for users who need single-point speed, tracing a kernel with the point's weight fixed at 1 (see
-  below).
+**Still open:** emitting `mul_add` when FMA is available, and SIMD-friendly layouts for single
+values.
 
 ## Fused sandwich kernels (op counts from the generator)
 

@@ -265,6 +265,16 @@ impl<T: gx::Coef> Scalar<(), T> {
         Scalar { c: [s] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Scalar`: a `Scalar` with one open `Scalar` slot.
     #[inline(always)]
     pub fn slot() -> Scalar<(Scalar,), T> {
@@ -812,6 +822,16 @@ impl<T: gx::Coef> Vector<(), T> {
         Vector { c: [e0, e1, e2, e3] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Vector`: a `Vector` with one open `Vector` slot.
     #[inline(always)]
     pub fn slot() -> Vector<(Vector,), T> {
@@ -1083,8 +1103,8 @@ impl<T: gx::Real> Vector<(), T> {
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         t6
     }
 
@@ -1113,13 +1133,13 @@ impl<T: gx::Real> Vector<(), T> {
         let t12 = t2 * t3;
         let t13 = t3 * t3;
         let t14 = t4 + t8;
-        let t15 = t11 + t14;
-        let t16 = t13 + t15;
+        let t15 = t11 + t13;
+        let t16 = t14 + t15;
         let t17 = t9 + t10;
         let t18 = t12 + t17;
-        let t19 = t18 - t5;
-        let t20 = t19 - t6;
-        let t21 = t20 - t7;
+        let t19 = t5 + t6;
+        let t20 = t7 + t19;
+        let t21 = t18 - t20;
         let t22 = t21 * T::from_i64(2);
         let t23 = t16 + t22;
         let t24 = t23.recip();
@@ -1128,8 +1148,8 @@ impl<T: gx::Real> Vector<(), T> {
         let t27 = t2 * t24;
         let t28 = t3 * t24;
         let t29 = t25 - t26;
-        let t30 = t29 - t27;
-        let t31 = t30 - t28;
+        let t30 = t27 + t28;
+        let t31 = t29 - t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
         let t34 = x[2] * t31;
@@ -1146,8 +1166,8 @@ impl<T: gx::Real> Vector<(), T> {
         let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
         let p4 = p0 - p1;
-        let p5 = p4 - p2;
-        let p6 = p5 - p3;
+        let p5 = p2 + p3;
+        let p6 = p4 - p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -1413,6 +1433,16 @@ impl<T: gx::Coef> Bivector<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e10: T, e20: T, e30: T, e23: T, e31: T, e12: T) -> Self {
         Bivector { c: [e10, e20, e30, e23, e31, e12] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Bivector`: a `Bivector` with one open `Bivector` slot.
@@ -1701,9 +1731,9 @@ impl<T: gx::Real> Bivector<(), T> {
         let t5 = x[5] * x[5];
         let t6 = t3 + t4;
         let t7 = t5 + t6;
-        let t8 = t7 - t0;
-        let t9 = t8 - t1;
-        let t10 = t9 - t2;
+        let t8 = t0 + t1;
+        let t9 = t2 + t8;
+        let t10 = t7 - t9;
         t10
     }
 
@@ -1752,23 +1782,23 @@ impl<T: gx::Real> Bivector<(), T> {
         let t32 = t5 * t5;
         let t33 = t9 + t17;
         let t34 = t23 + t33;
-        let t35 = t27 + t34;
-        let t36 = t30 + t35;
-        let t37 = t32 + t36;
+        let t35 = t27 + t30;
+        let t36 = t32 + t35;
+        let t37 = t34 + t36;
         let t38 = t10 + t11;
-        let t39 = t12 + t38;
-        let t40 = t18 + t39;
-        let t41 = t20 + t40;
-        let t42 = t26 + t41;
-        let t43 = t28 + t42;
-        let t44 = t29 + t43;
-        let t45 = t31 + t44;
-        let t46 = t45 - t13;
-        let t47 = t46 - t14;
-        let t48 = t47 - t19;
-        let t49 = t48 - t21;
-        let t50 = t49 - t24;
-        let t51 = t50 - t25;
+        let t39 = t12 + t18;
+        let t40 = t38 + t39;
+        let t41 = t20 + t26;
+        let t42 = t28 + t29;
+        let t43 = t41 + t42;
+        let t44 = t40 + t43;
+        let t45 = t31 - t13;
+        let t46 = t14 + t19;
+        let t47 = t45 - t46;
+        let t48 = t21 + t24;
+        let t49 = t25 + t48;
+        let t50 = t47 - t49;
+        let t51 = t44 + t50;
         let t52 = t51 * T::from_i64(2);
         let t53 = t15 + t16;
         let t54 = t22 + t53;
@@ -1826,8 +1856,8 @@ impl<T: gx::Real> Bivector<(), T> {
         let t106 = x[2] * t74;
         let t107 = x[5] * t81;
         let t108 = t90 + t91;
-        let t109 = t108 - t88;
-        let t110 = t109 - t89;
+        let t109 = t88 + t89;
+        let t110 = t108 - t109;
         let t111 = t92 + t93;
         let t112 = t94 * T::from_i64(2);
         let t113 = t112 - t111;
@@ -1835,8 +1865,8 @@ impl<T: gx::Real> Bivector<(), T> {
         let t115 = t97 * T::from_i64(2);
         let t116 = t115 - t114;
         let t117 = t99 + t100;
-        let t118 = t117 - t98;
-        let t119 = t118 - t101;
+        let t118 = t98 + t101;
+        let t119 = t117 - t118;
         let t120 = t103 + t104;
         let t121 = t102 * T::from_i64(2);
         let t122 = t120 - t121;
@@ -1861,9 +1891,9 @@ impl<T: gx::Real> Bivector<(), T> {
         let p8 = x[2] * x[5];
         let p9 = p3 + p4;
         let p10 = p5 + p9;
-        let p11 = p10 - p0;
-        let p12 = p11 - p1;
-        let p13 = p12 - p2;
+        let p11 = p0 + p1;
+        let p12 = p2 + p11;
+        let p13 = p10 - p12;
         let p14 = p6 + p7;
         let p15 = p8 + p14;
         let p16 = p15 * T::from_i64(2);
@@ -1905,9 +1935,9 @@ impl<T: gx::Real> Bivector<(), T> {
         let p8 = x[2] * x[5];
         let p9 = p0 + p1;
         let p10 = p2 + p9;
-        let p11 = p10 - p3;
-        let p12 = p11 - p4;
-        let p13 = p12 - p5;
+        let p11 = p3 + p4;
+        let p12 = p5 + p11;
+        let p13 = p10 - p12;
         let p14 = p6 + p7;
         let p15 = p8 + p14;
         let p16 = p15 * T::from_i64(2);
@@ -2193,6 +2223,16 @@ impl<T: gx::Coef> Trivector<(), T> {
         Trivector { c: [e123, e032, e013, e021] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Trivector`: a `Trivector` with one open `Trivector` slot.
     #[inline(always)]
     pub fn slot() -> Trivector<(Trivector,), T> {
@@ -2464,8 +2504,8 @@ impl<T: gx::Real> Trivector<(), T> {
         let t2 = x[2] * x[2];
         let t3 = x[3] * x[3];
         let t4 = t1 + t2;
-        let t5 = t3 + t4;
-        let t6 = t5 - t0;
+        let t5 = t3 - t0;
+        let t6 = t4 + t5;
         t6
     }
 
@@ -2494,13 +2534,13 @@ impl<T: gx::Real> Trivector<(), T> {
         let t12 = t2 * t3;
         let t13 = t3 * t3;
         let t14 = t4 + t8;
-        let t15 = t11 + t14;
-        let t16 = t13 + t15;
+        let t15 = t11 + t13;
+        let t16 = t14 + t15;
         let t17 = t9 + t10;
         let t18 = t12 + t17;
-        let t19 = t18 - t5;
-        let t20 = t19 - t6;
-        let t21 = t20 - t7;
+        let t19 = t5 + t6;
+        let t20 = t7 + t19;
+        let t21 = t18 - t20;
         let t22 = t21 * T::from_i64(2);
         let t23 = t16 + t22;
         let t24 = t23.recip();
@@ -2509,8 +2549,8 @@ impl<T: gx::Real> Trivector<(), T> {
         let t27 = t2 * t24;
         let t28 = t3 * t24;
         let t29 = t25 - t26;
-        let t30 = t29 - t27;
-        let t31 = t30 - t28;
+        let t30 = t27 + t28;
+        let t31 = t29 - t30;
         let t32 = x[0] * t31;
         let t33 = x[1] * t31;
         let t34 = x[2] * t31;
@@ -2527,8 +2567,8 @@ impl<T: gx::Real> Trivector<(), T> {
         let p2 = x[2] * x[2];
         let p3 = x[3] * x[3];
         let p4 = p1 + p2;
-        let p5 = p3 + p4;
-        let p6 = p5 - p0;
+        let p5 = p3 - p0;
+        let p6 = p4 + p5;
         let s0 = (p6).abs().sqrt().recip();
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
@@ -2794,6 +2834,16 @@ impl<T: gx::Coef> Pseudoscalar<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e0123: T) -> Self {
         Pseudoscalar { c: [e0123] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Pseudoscalar`: a `Pseudoscalar` with one open `Pseudoscalar` slot.
@@ -3338,6 +3388,16 @@ impl<T: gx::Coef> Even<(), T> {
         Even { c: [s, e10, e20, e30, e23, e31, e12, e0123] }
     }
 
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
     /// The identity map on `Even`: a `Even` with one open `Even` slot.
     #[inline(always)]
     pub fn slot() -> Even<(Even,), T> {
@@ -3637,12 +3697,12 @@ impl<T: gx::Real> Even<(), T> {
         let t6 = x[6] * x[6];
         let t7 = x[7] * x[7];
         let t8 = t0 + t4;
-        let t9 = t5 + t8;
-        let t10 = t6 + t9;
-        let t11 = t10 - t1;
-        let t12 = t11 - t2;
-        let t13 = t12 - t3;
-        let t14 = t13 - t7;
+        let t9 = t5 + t6;
+        let t10 = t8 + t9;
+        let t11 = t1 + t2;
+        let t12 = t3 + t7;
+        let t13 = t11 + t12;
+        let t14 = t10 - t13;
         t14
     }
 
@@ -3652,7 +3712,7 @@ impl<T: gx::Real> Even<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (108 mul, 86 add, 1 div).
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (108 mul, 85 add, 1 div).
     #[inline]
     pub fn inverse(self) -> Even<(), T> {
         let x = self.c;
@@ -3711,45 +3771,45 @@ impl<T: gx::Real> Even<(), T> {
         let t52 = t6 * t7;
         let t53 = t7 * t7;
         let t54 = t12 + t23;
-        let t55 = t32 + t54;
-        let t56 = t39 + t55;
-        let t57 = t44 + t56;
-        let t58 = t48 + t57;
-        let t59 = t51 + t58;
-        let t60 = t53 + t59;
+        let t55 = t32 + t39;
+        let t56 = t54 + t55;
+        let t57 = t44 + t48;
+        let t58 = t51 + t53;
+        let t59 = t57 + t58;
+        let t60 = t56 + t59;
         let t61 = t16 + t17;
-        let t62 = t18 + t61;
-        let t63 = t19 + t62;
-        let t64 = t24 + t63;
-        let t65 = t25 + t64;
-        let t66 = t26 + t65;
-        let t67 = t29 + t66;
-        let t68 = t33 + t67;
-        let t69 = t35 + t68;
-        let t70 = t37 + t69;
-        let t71 = t42 + t70;
-        let t72 = t43 + t71;
-        let t73 = t45 + t72;
-        let t74 = t46 + t73;
-        let t75 = t49 + t74;
-        let t76 = t75 - t13;
-        let t77 = t76 - t14;
-        let t78 = t77 - t15;
-        let t79 = t78 - t27;
-        let t80 = t79 - t28;
-        let t81 = t80 - t34;
-        let t82 = t81 - t36;
-        let t83 = t82 - t40;
-        let t84 = t83 - t41;
-        let t85 = t84 - t47;
-        let t86 = t85 - t50;
-        let t87 = t86 - t52;
+        let t62 = t18 + t19;
+        let t63 = t61 + t62;
+        let t64 = t24 + t25;
+        let t65 = t26 + t64;
+        let t66 = t63 + t65;
+        let t67 = t29 + t33;
+        let t68 = t35 + t37;
+        let t69 = t67 + t68;
+        let t70 = t42 + t43;
+        let t71 = t45 + t70;
+        let t72 = t69 + t71;
+        let t73 = t66 + t72;
+        let t74 = t46 + t49;
+        let t75 = t13 + t14;
+        let t76 = t74 - t75;
+        let t77 = t15 + t27;
+        let t78 = t28 + t77;
+        let t79 = t76 - t78;
+        let t80 = t34 + t36;
+        let t81 = t40 + t41;
+        let t82 = t80 + t81;
+        let t83 = t47 + t50;
+        let t84 = t52 + t83;
+        let t85 = t82 + t84;
+        let t86 = t79 - t85;
+        let t87 = t73 + t86;
         let t88 = t87 * T::from_i64(2);
         let t89 = t20 + t21;
         let t90 = t22 + t89;
-        let t91 = t30 + t90;
-        let t92 = t31 + t91;
-        let t93 = t38 + t92;
+        let t91 = t30 + t31;
+        let t92 = t38 + t91;
+        let t93 = t90 + t92;
         let t94 = t93 * T::from_i64(8);
         let t95 = t60 + t88;
         let t96 = t94 + t95;
@@ -3771,91 +3831,90 @@ impl<T: gx::Real> Even<(), T> {
         let t112 = t7 * t97;
         let t113 = t107 + t110;
         let t114 = t111 + t113;
-        let t115 = t114 - t108;
-        let t116 = t115 - t109;
-        let t117 = t116 - t112;
+        let t115 = t108 + t109;
+        let t116 = t112 + t115;
+        let t117 = t114 - t116;
         let t118 = t100 + t101;
         let t119 = t102 * T::from_f64(1.0 / 2.0);
         let t120 = t118 + t119;
         let t121 = t1 * t97;
         let t122 = t4 * t97;
         let t123 = t113 + t122;
-        let t124 = t123 - t108;
-        let t125 = t124 - t112;
-        let t126 = t125 - t121;
+        let t124 = t108 + t112;
+        let t125 = t121 + t124;
+        let t126 = t123 - t125;
         let t127 = t99 + t103;
         let t128 = t127 * T::from_i64(2);
         let t129 = t98 + t128;
-        let t130 = t108 + t109;
-        let t131 = t121 + t130;
-        let t132 = t131 - t110;
-        let t133 = t132 - t111;
-        let t134 = t133 - t122;
-        let t135 = t100 + t102;
-        let t136 = t135 * T::from_i64(2);
-        let t137 = t101 + t136;
-        let t138 = t107 + t111;
-        let t139 = t122 + t138;
-        let t140 = t139 - t109;
-        let t141 = t140 - t112;
-        let t142 = t141 - t121;
-        let t143 = x[0] * t0;
-        let t144 = t97 * t143;
-        let t145 = x[0] * t134;
-        let t146 = x[7] * t129;
-        let t147 = x[1] * t1;
-        let t148 = t97 * t147;
-        let t149 = x[1] * t117;
-        let t150 = x[4] * t106;
-        let t151 = x[2] * t2;
-        let t152 = t97 * t151;
-        let t153 = x[2] * t142;
-        let t154 = x[5] * t137;
-        let t155 = x[3] * t3;
-        let t156 = t97 * t155;
-        let t157 = x[3] * t126;
-        let t158 = x[6] * t120;
-        let t159 = x[1] * t106;
-        let t160 = x[4] * t4;
-        let t161 = t97 * t160;
-        let t162 = x[4] * t117;
-        let t163 = x[2] * t137;
-        let t164 = x[5] * t5;
-        let t165 = t97 * t164;
-        let t166 = x[5] * t142;
-        let t167 = x[3] * t120;
-        let t168 = x[6] * t6;
-        let t169 = t97 * t168;
-        let t170 = x[6] * t126;
-        let t171 = x[0] * t129;
-        let t172 = x[7] * t7;
-        let t173 = t97 * t172;
-        let t174 = x[7] * t134;
-        let t175 = t144 + t146;
-        let t176 = t175 - t145;
-        let t177 = t148 - t149;
-        let t178 = t150 * T::from_i64(2);
-        let t179 = t177 + t178;
-        let t180 = t152 + t154;
-        let t181 = t180 - t153;
-        let t182 = t156 - t157;
-        let t183 = t158 * T::from_i64(2);
-        let t184 = t182 + t183;
-        let t185 = t161 + t162;
-        let t186 = t159 * T::from_i64(2);
-        let t187 = t185 + t186;
-        let t188 = -t187;
-        let t189 = t163 + t165;
-        let t190 = t166 + t189;
-        let t191 = -t190;
-        let t192 = t169 + t170;
-        let t193 = t167 * T::from_i64(2);
-        let t194 = t192 + t193;
-        let t195 = -t194;
-        let t196 = t171 + t173;
-        let t197 = t174 + t196;
-        let t198 = -t197;
-        Even::from_coeffs([t176, t179, t181, t184, t188, t191, t195, t198])
+        let t130 = t115 + t121;
+        let t131 = t110 + t111;
+        let t132 = t122 + t131;
+        let t133 = t130 - t132;
+        let t134 = t100 + t102;
+        let t135 = t134 * T::from_i64(2);
+        let t136 = t101 + t135;
+        let t137 = t107 + t111;
+        let t138 = t122 + t137;
+        let t139 = t109 + t112;
+        let t140 = t121 + t139;
+        let t141 = t138 - t140;
+        let t142 = x[0] * t0;
+        let t143 = t97 * t142;
+        let t144 = x[0] * t133;
+        let t145 = x[7] * t129;
+        let t146 = x[1] * t1;
+        let t147 = t97 * t146;
+        let t148 = x[1] * t117;
+        let t149 = x[4] * t106;
+        let t150 = x[2] * t2;
+        let t151 = t97 * t150;
+        let t152 = x[2] * t141;
+        let t153 = x[5] * t136;
+        let t154 = x[3] * t3;
+        let t155 = t97 * t154;
+        let t156 = x[3] * t126;
+        let t157 = x[6] * t120;
+        let t158 = x[1] * t106;
+        let t159 = x[4] * t4;
+        let t160 = t97 * t159;
+        let t161 = x[4] * t117;
+        let t162 = x[2] * t136;
+        let t163 = x[5] * t5;
+        let t164 = t97 * t163;
+        let t165 = x[5] * t141;
+        let t166 = x[3] * t120;
+        let t167 = x[6] * t6;
+        let t168 = t97 * t167;
+        let t169 = x[6] * t126;
+        let t170 = x[0] * t129;
+        let t171 = x[7] * t7;
+        let t172 = t97 * t171;
+        let t173 = x[7] * t133;
+        let t174 = t143 + t145;
+        let t175 = t174 - t144;
+        let t176 = t147 - t148;
+        let t177 = t149 * T::from_i64(2);
+        let t178 = t176 + t177;
+        let t179 = t151 + t153;
+        let t180 = t179 - t152;
+        let t181 = t155 - t156;
+        let t182 = t157 * T::from_i64(2);
+        let t183 = t181 + t182;
+        let t184 = t160 + t161;
+        let t185 = t158 * T::from_i64(2);
+        let t186 = t184 + t185;
+        let t187 = -t186;
+        let t188 = t162 + t164;
+        let t189 = t165 + t188;
+        let t190 = -t189;
+        let t191 = t168 + t169;
+        let t192 = t166 * T::from_i64(2);
+        let t193 = t191 + t192;
+        let t194 = -t193;
+        let t195 = t170 + t172;
+        let t196 = t173 + t195;
+        let t197 = -t196;
+        Even::from_coeffs([t175, t178, t180, t183, t187, t190, t194, t197])
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
@@ -3875,15 +3934,15 @@ impl<T: gx::Real> Even<(), T> {
         let p10 = x[2] * x[5];
         let p11 = x[3] * x[6];
         let p12 = p0 + p4;
-        let p13 = p5 + p12;
-        let p14 = p6 + p13;
-        let p15 = p14 - p1;
-        let p16 = p15 - p2;
-        let p17 = p16 - p3;
-        let p18 = p17 - p7;
+        let p13 = p5 + p6;
+        let p14 = p12 + p13;
+        let p15 = p1 + p2;
+        let p16 = p3 + p7;
+        let p17 = p15 + p16;
+        let p18 = p14 - p17;
         let p19 = p8 + p9;
-        let p20 = p10 + p19;
-        let p21 = p11 + p20;
+        let p20 = p10 + p11;
+        let p21 = p19 + p20;
         let p22 = p21 * T::from_i64(2);
         let [s0, s1] = gx::study::rsqrt(-1, p18, p22);
         let t0 = x[0] * s0;
@@ -3940,9 +3999,9 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
         let p8 = x[3] * x[6];
         let p9 = p0 + p1;
         let p10 = p2 + p9;
-        let p11 = p10 - p3;
-        let p12 = p11 - p4;
-        let p13 = p12 - p5;
+        let p11 = p3 + p4;
+        let p12 = p5 + p11;
+        let p13 = p10 - p12;
         let p14 = p6 + p7;
         let p15 = p8 + p14;
         let p16 = p15 * T::from_i64(2);
@@ -4225,6 +4284,16 @@ impl<T: gx::Coef> Odd<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(e0: T, e1: T, e2: T, e3: T, e123: T, e032: T, e013: T, e021: T) -> Self {
         Odd { c: [e0, e1, e2, e3, e123, e032, e013, e021] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Odd`: a `Odd` with one open `Odd` slot.
@@ -4526,12 +4595,12 @@ impl<T: gx::Real> Odd<(), T> {
         let t6 = x[6] * x[6];
         let t7 = x[7] * x[7];
         let t8 = t0 + t5;
-        let t9 = t6 + t8;
-        let t10 = t7 + t9;
-        let t11 = t10 - t1;
-        let t12 = t11 - t2;
-        let t13 = t12 - t3;
-        let t14 = t13 - t4;
+        let t9 = t6 + t7;
+        let t10 = t8 + t9;
+        let t11 = t1 + t2;
+        let t12 = t3 + t4;
+        let t13 = t11 + t12;
+        let t14 = t10 - t13;
         t14
     }
 
@@ -4541,7 +4610,7 @@ impl<T: gx::Real> Odd<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (108 mul, 86 add, 1 div).
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (108 mul, 85 add, 1 div).
     #[inline]
     pub fn inverse(self) -> Odd<(), T> {
         let x = self.c;
@@ -4600,45 +4669,45 @@ impl<T: gx::Real> Odd<(), T> {
         let t52 = t6 * t7;
         let t53 = t7 * t7;
         let t54 = t12 + t23;
-        let t55 = t32 + t54;
-        let t56 = t39 + t55;
-        let t57 = t44 + t56;
-        let t58 = t48 + t57;
-        let t59 = t51 + t58;
-        let t60 = t53 + t59;
+        let t55 = t32 + t39;
+        let t56 = t54 + t55;
+        let t57 = t44 + t48;
+        let t58 = t51 + t53;
+        let t59 = t57 + t58;
+        let t60 = t56 + t59;
         let t61 = t16 + t17;
-        let t62 = t18 + t61;
-        let t63 = t19 + t62;
-        let t64 = t24 + t63;
-        let t65 = t25 + t64;
-        let t66 = t26 + t65;
-        let t67 = t27 + t66;
-        let t68 = t33 + t67;
-        let t69 = t34 + t68;
-        let t70 = t36 + t69;
-        let t71 = t40 + t70;
-        let t72 = t43 + t71;
-        let t73 = t49 + t72;
-        let t74 = t50 + t73;
-        let t75 = t52 + t74;
-        let t76 = t75 - t13;
-        let t77 = t76 - t14;
-        let t78 = t77 - t15;
-        let t79 = t78 - t28;
-        let t80 = t79 - t29;
-        let t81 = t80 - t35;
-        let t82 = t81 - t37;
-        let t83 = t82 - t41;
-        let t84 = t83 - t42;
-        let t85 = t84 - t45;
-        let t86 = t85 - t46;
-        let t87 = t86 - t47;
+        let t62 = t18 + t19;
+        let t63 = t61 + t62;
+        let t64 = t24 + t25;
+        let t65 = t26 + t64;
+        let t66 = t63 + t65;
+        let t67 = t27 + t33;
+        let t68 = t34 + t36;
+        let t69 = t67 + t68;
+        let t70 = t40 + t43;
+        let t71 = t49 + t70;
+        let t72 = t69 + t71;
+        let t73 = t66 + t72;
+        let t74 = t50 + t52;
+        let t75 = t13 + t14;
+        let t76 = t74 - t75;
+        let t77 = t15 + t28;
+        let t78 = t29 + t77;
+        let t79 = t76 - t78;
+        let t80 = t35 + t37;
+        let t81 = t41 + t42;
+        let t82 = t80 + t81;
+        let t83 = t45 + t46;
+        let t84 = t47 + t83;
+        let t85 = t82 + t84;
+        let t86 = t79 - t85;
+        let t87 = t73 + t86;
         let t88 = t87 * T::from_i64(2);
         let t89 = t20 + t21;
         let t90 = t22 + t89;
-        let t91 = t30 + t90;
-        let t92 = t31 + t91;
-        let t93 = t38 + t92;
+        let t91 = t30 + t31;
+        let t92 = t38 + t91;
+        let t93 = t90 + t92;
         let t94 = t93 * T::from_i64(8);
         let t95 = t60 + t88;
         let t96 = t94 + t95;
@@ -4660,90 +4729,89 @@ impl<T: gx::Real> Odd<(), T> {
         let t112 = t7 * t97;
         let t113 = t107 + t111;
         let t114 = t112 + t113;
-        let t115 = t114 - t108;
-        let t116 = t115 - t109;
-        let t117 = t116 - t110;
+        let t115 = t108 + t109;
+        let t116 = t110 + t115;
+        let t117 = t114 - t116;
         let t118 = t100 + t101;
         let t119 = t102 * T::from_f64(1.0 / 2.0);
         let t120 = t118 + t119;
         let t121 = t1 * t97;
         let t122 = t5 * t97;
         let t123 = t113 + t122;
-        let t124 = t123 - t108;
-        let t125 = t124 - t110;
-        let t126 = t125 - t121;
+        let t124 = t108 + t110;
+        let t125 = t121 + t124;
+        let t126 = t123 - t125;
         let t127 = t99 + t103;
         let t128 = t127 * T::from_i64(2);
         let t129 = t98 + t128;
-        let t130 = t108 + t109;
-        let t131 = t121 + t130;
-        let t132 = t131 - t111;
-        let t133 = t132 - t112;
-        let t134 = t133 - t122;
-        let t135 = t100 + t102;
-        let t136 = t135 * T::from_i64(2);
-        let t137 = t101 + t136;
-        let t138 = t107 + t112;
-        let t139 = t122 + t138;
-        let t140 = t139 - t109;
-        let t141 = t140 - t110;
-        let t142 = t141 - t121;
-        let t143 = x[0] * t0;
-        let t144 = t97 * t143;
-        let t145 = x[0] * t134;
-        let t146 = x[4] * t129;
-        let t147 = x[1] * t1;
-        let t148 = t97 * t147;
-        let t149 = x[1] * t117;
-        let t150 = x[5] * t106;
-        let t151 = x[2] * t2;
-        let t152 = t97 * t151;
-        let t153 = x[2] * t142;
-        let t154 = x[6] * t137;
-        let t155 = x[3] * t3;
-        let t156 = t97 * t155;
-        let t157 = x[3] * t126;
-        let t158 = x[7] * t120;
-        let t159 = x[0] * t129;
-        let t160 = x[4] * t4;
-        let t161 = t97 * t160;
-        let t162 = x[4] * t134;
-        let t163 = x[1] * t106;
-        let t164 = x[5] * t5;
-        let t165 = t97 * t164;
-        let t166 = x[5] * t117;
-        let t167 = x[2] * t137;
-        let t168 = x[6] * t6;
-        let t169 = t97 * t168;
-        let t170 = x[6] * t142;
-        let t171 = x[3] * t120;
-        let t172 = x[7] * t7;
-        let t173 = t97 * t172;
-        let t174 = x[7] * t126;
-        let t175 = t144 + t146;
-        let t176 = t175 - t145;
-        let t177 = t149 - t148;
-        let t178 = t150 * T::from_i64(2);
-        let t179 = t177 - t178;
-        let t180 = t153 - t152;
-        let t181 = t180 - t154;
-        let t182 = t157 - t156;
-        let t183 = t158 * T::from_i64(2);
-        let t184 = t182 - t183;
-        let t185 = t159 + t161;
-        let t186 = t162 + t185;
-        let t187 = t165 + t166;
-        let t188 = t163 * T::from_i64(2);
-        let t189 = t187 + t188;
-        let t190 = -t189;
-        let t191 = t167 + t169;
-        let t192 = t170 + t191;
-        let t193 = -t192;
-        let t194 = t173 + t174;
-        let t195 = t171 * T::from_i64(2);
-        let t196 = t194 + t195;
-        let t197 = -t196;
-        Odd::from_coeffs([t176, t179, t181, t184, t186, t190, t193, t197])
+        let t130 = t115 + t121;
+        let t131 = t111 + t112;
+        let t132 = t122 + t131;
+        let t133 = t130 - t132;
+        let t134 = t100 + t102;
+        let t135 = t134 * T::from_i64(2);
+        let t136 = t101 + t135;
+        let t137 = t107 + t112;
+        let t138 = t122 + t137;
+        let t139 = t109 + t110;
+        let t140 = t121 + t139;
+        let t141 = t138 - t140;
+        let t142 = x[0] * t0;
+        let t143 = t97 * t142;
+        let t144 = x[0] * t133;
+        let t145 = x[4] * t129;
+        let t146 = x[1] * t1;
+        let t147 = t97 * t146;
+        let t148 = x[1] * t117;
+        let t149 = x[5] * t106;
+        let t150 = x[2] * t2;
+        let t151 = t97 * t150;
+        let t152 = x[2] * t141;
+        let t153 = x[6] * t136;
+        let t154 = x[3] * t3;
+        let t155 = t97 * t154;
+        let t156 = x[3] * t126;
+        let t157 = x[7] * t120;
+        let t158 = x[0] * t129;
+        let t159 = x[4] * t4;
+        let t160 = t97 * t159;
+        let t161 = x[4] * t133;
+        let t162 = x[1] * t106;
+        let t163 = x[5] * t5;
+        let t164 = t97 * t163;
+        let t165 = x[5] * t117;
+        let t166 = x[2] * t136;
+        let t167 = x[6] * t6;
+        let t168 = t97 * t167;
+        let t169 = x[6] * t141;
+        let t170 = x[3] * t120;
+        let t171 = x[7] * t7;
+        let t172 = t97 * t171;
+        let t173 = x[7] * t126;
+        let t174 = t143 + t145;
+        let t175 = t174 - t144;
+        let t176 = t148 - t147;
+        let t177 = t149 * T::from_i64(2);
+        let t178 = t176 - t177;
+        let t179 = t152 - t151;
+        let t180 = t179 - t153;
+        let t181 = t156 - t155;
+        let t182 = t157 * T::from_i64(2);
+        let t183 = t181 - t182;
+        let t184 = t158 + t160;
+        let t185 = t161 + t184;
+        let t186 = t164 + t165;
+        let t187 = t162 * T::from_i64(2);
+        let t188 = t186 + t187;
+        let t189 = -t188;
+        let t190 = t166 + t168;
+        let t191 = t169 + t190;
+        let t192 = -t191;
+        let t193 = t172 + t173;
+        let t194 = t170 * T::from_i64(2);
+        let t195 = t193 + t194;
+        let t196 = -t195;
+        Odd::from_coeffs([t175, t178, t180, t183, t185, t189, t192, t196])
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
@@ -4763,15 +4831,15 @@ impl<T: gx::Real> Odd<(), T> {
         let p10 = x[2] * x[6];
         let p11 = x[3] * x[7];
         let p12 = p0 + p5;
-        let p13 = p6 + p12;
-        let p14 = p7 + p13;
-        let p15 = p14 - p1;
-        let p16 = p15 - p2;
-        let p17 = p16 - p3;
-        let p18 = p17 - p4;
+        let p13 = p6 + p7;
+        let p14 = p12 + p13;
+        let p15 = p1 + p2;
+        let p16 = p3 + p4;
+        let p17 = p15 + p16;
+        let p18 = p14 - p17;
         let p19 = p8 + p9;
-        let p20 = p10 + p19;
-        let p21 = p11 + p20;
+        let p20 = p10 + p11;
+        let p21 = p19 + p20;
         let p22 = p21 * T::from_i64(2);
         let p23 = -p22;
         let [s0, s1] = gx::study::rsqrt(-1, p18, p23);
@@ -5059,6 +5127,16 @@ impl<T: gx::Coef> Multivector<(), T> {
     #[allow(clippy::too_many_arguments)]
     pub const fn new(s: T, e0: T, e1: T, e2: T, e3: T, e10: T, e20: T, e30: T, e23: T, e31: T, e12: T, e123: T, e032: T, e013: T, e021: T, e0123: T) -> Self {
         Multivector { c: [s, e0, e1, e2, e3, e10, e20, e30, e23, e31, e12, e123, e032, e013, e021, e0123] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
     }
 
     /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot.
@@ -5416,20 +5494,20 @@ impl<T: gx::Real> Multivector<(), T> {
         let t14 = x[14] * x[14];
         let t15 = x[15] * x[15];
         let t16 = t0 + t1;
-        let t17 = t8 + t16;
-        let t18 = t9 + t17;
-        let t19 = t10 + t18;
-        let t20 = t12 + t19;
-        let t21 = t13 + t20;
-        let t22 = t14 + t21;
-        let t23 = t22 - t2;
-        let t24 = t23 - t3;
-        let t25 = t24 - t4;
-        let t26 = t25 - t5;
-        let t27 = t26 - t6;
-        let t28 = t27 - t7;
-        let t29 = t28 - t11;
-        let t30 = t29 - t15;
+        let t17 = t8 + t9;
+        let t18 = t16 + t17;
+        let t19 = t10 + t12;
+        let t20 = t13 + t14;
+        let t21 = t19 + t20;
+        let t22 = t18 + t21;
+        let t23 = t2 + t3;
+        let t24 = t4 + t5;
+        let t25 = t23 + t24;
+        let t26 = t6 + t7;
+        let t27 = t11 + t15;
+        let t28 = t26 + t27;
+        let t29 = t25 + t28;
+        let t30 = t22 - t29;
         t30
     }
 
@@ -5699,7 +5777,7 @@ impl gx::KindEq<Multivector> for Multivector {
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5713,7 +5791,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5730,7 +5808,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5749,7 +5827,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scal
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Scalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5766,7 +5844,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5780,7 +5858,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5801,7 +5879,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5822,7 +5900,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5851,7 +5929,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -5868,19 +5946,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -5889,20 +5967,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -5910,20 +5988,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -5931,16 +6009,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -5948,20 +6026,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[2] * b[6] - a[3] * b[5]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[2] * b[0] + a[3] * b[4]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[3] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) - a[1] * b[7] - a[2] * b[3] + a[3] * b[2]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[2] * b[7] - a[3] * b[1]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1] - a[3] * b[7]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[1] * b[0] + a[2] * b[6]) - (a[0] * b[1] + a[3] * b[5]))).0,
+                (((a[2] * b[0] + a[3] * b[4]) - (a[0] * b[2] + a[1] * b[6]))).0,
+                (((a[1] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[2] * b[4]))).0,
+                (((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6]))).0,
+                (((a[3] * b[2] - a[0] * b[4]) - (a[1] * b[7] + a[2] * b[3]))).0,
+                (((a[1] * b[3] - a[0] * b[5]) - (a[2] * b[7] + a[3] * b[1]))).0,
+                (((a[2] * b[1] - a[0] * b[6]) - (a[1] * b[2] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -5969,20 +6047,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[2] * b[7] + a[3] * b[6]).0,
-                (-(a[0] * b[2]) + a[1] * b[7] + a[2] * b[0] - a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[1] * b[6] + a[2] * b[5] + a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[4] + a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[0] * b[6]) - a[1] * b[3] - a[2] * b[4] + a[3] * b[1]).0,
-                (-(a[0] * b[7]) + a[1] * b[2] - a[2] * b[1] - a[3] * b[4]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[1] * b[0] + a[3] * b[6]) - (a[0] * b[1] + a[2] * b[7]))).0,
+                (((a[1] * b[7] + a[2] * b[0]) - (a[0] * b[2] + a[3] * b[5]))).0,
+                (((a[2] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[1] * b[6]))).0,
+                (((a[2] * b[3] - a[0] * b[5]) - (a[1] * b[4] + a[3] * b[2]))).0,
+                (((a[3] * b[1] - a[0] * b[6]) - (a[1] * b[3] + a[2] * b[4]))).0,
+                (((a[1] * b[2] - a[0] * b[7]) - (a[2] * b[1] + a[3] * b[4]))).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -5990,28 +6068,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
-                (a[0] * b[0] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (-(a[0] * b[5]) + a[1] * b[0] + a[2] * b[10] - a[3] * b[9]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[2] * b[0] + a[3] * b[8]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[3] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[2] * b[14] + a[3] * b[13]).0,
-                (-(a[0] * b[3]) + a[1] * b[14] + a[2] * b[1] - a[3] * b[12]).0,
-                (-(a[0] * b[4]) - a[1] * b[13] + a[2] * b[12] + a[3] * b[1]).0,
-                (-(a[0] * b[12]) - a[1] * b[11] + a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[0] * b[13]) - a[1] * b[4] - a[2] * b[11] + a[3] * b[2]).0,
-                (-(a[0] * b[14]) + a[1] * b[3] - a[2] * b[2] - a[3] * b[11]).0,
-                (a[0] * b[15] + a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) - a[1] * b[15] - a[2] * b[7] + a[3] * b[6]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[2] * b[15] - a[3] * b[5]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5] - a[3] * b[15]).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
+                (((a[0] * b[0] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                (((a[1] * b[0] + a[2] * b[10]) - (a[0] * b[5] + a[3] * b[9]))).0,
+                (((a[2] * b[0] + a[3] * b[8]) - (a[0] * b[6] + a[1] * b[10]))).0,
+                (((a[1] * b[9] + a[3] * b[0]) - (a[0] * b[7] + a[2] * b[8]))).0,
+                (((a[1] * b[1] + a[3] * b[13]) - (a[0] * b[2] + a[2] * b[14]))).0,
+                (((a[1] * b[14] + a[2] * b[1]) - (a[0] * b[3] + a[3] * b[12]))).0,
+                (((a[2] * b[12] + a[3] * b[1]) - (a[0] * b[4] + a[1] * b[13]))).0,
+                (((a[2] * b[4] - a[0] * b[12]) - (a[1] * b[11] + a[3] * b[3]))).0,
+                (((a[3] * b[2] - a[0] * b[13]) - (a[1] * b[4] + a[2] * b[11]))).0,
+                (((a[1] * b[3] - a[0] * b[14]) - (a[2] * b[2] + a[3] * b[11]))).0,
+                (((a[0] * b[15] + a[1] * b[8]) + (a[2] * b[9] + a[3] * b[10]))).0,
+                (((a[3] * b[6] - a[0] * b[8]) - (a[1] * b[15] + a[2] * b[7]))).0,
+                (((a[1] * b[7] - a[0] * b[9]) - (a[2] * b[15] + a[3] * b[5]))).0,
+                (((a[2] * b[5] - a[0] * b[10]) - (a[1] * b[6] + a[3] * b[15]))).0,
+                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
             ],
         }
     }
@@ -6019,7 +6097,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6038,20 +6116,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (a[1] * b[3] - a[2] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] - a[4] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[5] * b[0]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
+                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -6059,20 +6137,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
-                (a[1] * b[5] - a[2] * b[4] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[5]) + a[2] * b[3] - a[3] * b[2] + a[5] * b[0]).0,
-                (a[0] * b[4] - a[1] * b[3] + a[3] * b[1] - a[4] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[4] * b[5] - a[5] * b[4]).0,
-                (a[0] * b[2] - a[2] * b[0] - a[3] * b[5] + a[5] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[3] * b[4] - a[4] * b[3]).0,
-                (-(a[0] * b[3]) - a[1] * b[4] - a[2] * b[5] - a[3] * b[0] - a[4] * b[1] - a[5] * b[2]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
+                (((a[2] * b[3] + a[5] * b[0]) - (a[0] * b[5] + a[3] * b[2]))).0,
+                (((a[0] * b[4] + a[3] * b[1]) - (a[1] * b[3] + a[4] * b[0]))).0,
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
             ],
         }
     }
@@ -6080,20 +6158,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (-(a[1] * b[3]) + a[2] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[3] - a[2] * b[1] - a[4] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[5] * b[0]).0,
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
-                (-(a[0] * b[0]) + a[4] * b[3] - a[5] * b[2]).0,
-                (-(a[1] * b[0]) - a[3] * b[3] + a[5] * b[1]).0,
-                (-(a[2] * b[0]) + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
+                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
+                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -6101,7 +6179,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6110,9 +6188,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -6120,20 +6198,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
-                (a[0] * b[0] + a[1] * b[6] - a[2] * b[5] + a[3] * b[7] + a[4] * b[3] - a[5] * b[2]).0,
-                (-(a[0] * b[6]) + a[1] * b[0] + a[2] * b[4] - a[3] * b[3] + a[4] * b[7] + a[5] * b[1]).0,
-                (a[0] * b[5] - a[1] * b[4] + a[2] * b[0] + a[3] * b[2] - a[4] * b[1] + a[5] * b[7]).0,
-                (-(a[0] * b[7]) - a[1] * b[3] + a[2] * b[2] + a[3] * b[0] + a[4] * b[6] - a[5] * b[5]).0,
-                (a[0] * b[3] - a[1] * b[7] - a[2] * b[1] - a[3] * b[6] + a[4] * b[0] + a[5] * b[4]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[2] * b[7] + a[3] * b[5] - a[4] * b[4] + a[5] * b[0]).0,
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6] - a[3] * b[1] - a[4] * b[2] - a[5] * b[3]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
+                ((((a[0] * b[0] + a[1] * b[6]) + a[3] * b[7]) + ((a[4] * b[3] - a[2] * b[5]) - a[5] * b[2]))).0,
+                ((((a[1] * b[0] + a[2] * b[4]) + a[4] * b[7]) + ((a[5] * b[1] - a[0] * b[6]) - a[3] * b[3]))).0,
+                ((((a[0] * b[5] + a[2] * b[0]) + a[3] * b[2]) + ((a[5] * b[7] - a[1] * b[4]) - a[4] * b[1]))).0,
+                ((((a[2] * b[2] + a[3] * b[0]) + a[4] * b[6]) - ((a[0] * b[7] + a[1] * b[3]) + a[5] * b[5]))).0,
+                ((((a[0] * b[3] + a[4] * b[0]) + a[5] * b[4]) - ((a[1] * b[7] + a[2] * b[1]) + a[3] * b[6]))).0,
+                ((((a[1] * b[1] + a[3] * b[5]) + a[5] * b[0]) - ((a[0] * b[2] + a[2] * b[7]) + a[4] * b[4]))).0,
+                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
             ],
         }
     }
@@ -6141,20 +6219,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[5] + a[4] * b[6] + a[5] * b[7]).0,
-                (a[0] * b[0] - a[1] * b[7] + a[2] * b[6] - a[3] * b[4] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[0] * b[7] + a[1] * b[0] - a[2] * b[5] - a[3] * b[3] - a[4] * b[4] + a[5] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] + a[2] * b[0] + a[3] * b[2] - a[4] * b[1] - a[5] * b[4]).0,
-                (-(a[0] * b[5]) - a[1] * b[6] - a[2] * b[7] + a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (-(a[0] * b[4]) + a[1] * b[3] - a[2] * b[2] - a[3] * b[0] + a[4] * b[7] - a[5] * b[6]).0,
-                (-(a[0] * b[3]) - a[1] * b[4] + a[2] * b[1] - a[3] * b[7] - a[4] * b[0] + a[5] * b[5]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[2] * b[4] + a[3] * b[6] - a[4] * b[5] - a[5] * b[0]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                ((((a[0] * b[0] + a[2] * b[6]) + a[4] * b[3]) - ((a[1] * b[7] + a[3] * b[4]) + a[5] * b[2]))).0,
+                ((((a[0] * b[7] + a[1] * b[0]) + a[5] * b[1]) - ((a[2] * b[5] + a[3] * b[3]) + a[4] * b[4]))).0,
+                ((((a[1] * b[5] + a[2] * b[0]) + a[3] * b[2]) - ((a[0] * b[6] + a[4] * b[1]) + a[5] * b[4]))).0,
+                ((((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]) - ((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]))).0,
+                ((((a[1] * b[3] + a[4] * b[7]) - a[0] * b[4]) - ((a[2] * b[2] + a[3] * b[0]) + a[5] * b[6]))).0,
+                ((((a[2] * b[1] + a[5] * b[5]) - a[0] * b[3]) - ((a[1] * b[4] + a[3] * b[7]) + a[4] * b[0]))).0,
+                ((((a[0] * b[2] + a[3] * b[6]) - a[1] * b[1]) - ((a[2] * b[4] + a[4] * b[5]) + a[5] * b[0]))).0,
             ],
         }
     }
@@ -6162,28 +6240,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
-                (a[0] * b[2] + a[1] * b[3] + a[2] * b[4] + a[3] * b[12] + a[4] * b[13] + a[5] * b[14]).0,
-                (a[0] * b[1] - a[1] * b[14] + a[2] * b[13] - a[3] * b[11] + a[4] * b[4] - a[5] * b[3]).0,
-                (a[0] * b[14] + a[1] * b[1] - a[2] * b[12] - a[3] * b[4] - a[4] * b[11] + a[5] * b[2]).0,
-                (-(a[0] * b[13]) + a[1] * b[12] + a[2] * b[1] + a[3] * b[3] - a[4] * b[2] - a[5] * b[11]).0,
-                (a[0] * b[0] + a[1] * b[10] - a[2] * b[9] + a[3] * b[15] + a[4] * b[7] - a[5] * b[6]).0,
-                (-(a[0] * b[10]) + a[1] * b[0] + a[2] * b[8] - a[3] * b[7] + a[4] * b[15] + a[5] * b[5]).0,
-                (a[0] * b[9] - a[1] * b[8] + a[2] * b[0] + a[3] * b[6] - a[4] * b[5] + a[5] * b[15]).0,
-                (-(a[0] * b[15]) - a[1] * b[7] + a[2] * b[6] + a[3] * b[0] + a[4] * b[10] - a[5] * b[9]).0,
-                (a[0] * b[7] - a[1] * b[15] - a[2] * b[5] - a[3] * b[10] + a[4] * b[0] + a[5] * b[8]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] - a[2] * b[15] + a[3] * b[9] - a[4] * b[8] + a[5] * b[0]).0,
-                (-(a[0] * b[12]) - a[1] * b[13] - a[2] * b[14] + a[3] * b[2] + a[4] * b[3] + a[5] * b[4]).0,
-                (-(a[0] * b[11]) + a[1] * b[4] - a[2] * b[3] - a[3] * b[1] + a[4] * b[14] - a[5] * b[13]).0,
-                (-(a[0] * b[4]) - a[1] * b[11] + a[2] * b[2] - a[3] * b[14] - a[4] * b[1] + a[5] * b[12]).0,
-                (a[0] * b[3] - a[1] * b[2] - a[2] * b[11] + a[3] * b[13] - a[4] * b[12] - a[5] * b[1]).0,
-                (-(a[0] * b[8]) - a[1] * b[9] - a[2] * b[10] - a[3] * b[5] - a[4] * b[6] - a[5] * b[7]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                ((((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4]) + ((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14]))).0,
+                ((((a[0] * b[1] + a[2] * b[13]) + a[4] * b[4]) - ((a[1] * b[14] + a[3] * b[11]) + a[5] * b[3]))).0,
+                ((((a[0] * b[14] + a[1] * b[1]) + a[5] * b[2]) - ((a[2] * b[12] + a[3] * b[4]) + a[4] * b[11]))).0,
+                ((((a[1] * b[12] + a[2] * b[1]) + a[3] * b[3]) - ((a[0] * b[13] + a[4] * b[2]) + a[5] * b[11]))).0,
+                ((((a[0] * b[0] + a[1] * b[10]) + a[3] * b[15]) + ((a[4] * b[7] - a[2] * b[9]) - a[5] * b[6]))).0,
+                ((((a[1] * b[0] + a[2] * b[8]) + a[4] * b[15]) + ((a[5] * b[5] - a[0] * b[10]) - a[3] * b[7]))).0,
+                ((((a[0] * b[9] + a[2] * b[0]) + a[3] * b[6]) + ((a[5] * b[15] - a[1] * b[8]) - a[4] * b[5]))).0,
+                ((((a[2] * b[6] + a[3] * b[0]) + a[4] * b[10]) - ((a[0] * b[15] + a[1] * b[7]) + a[5] * b[9]))).0,
+                ((((a[0] * b[7] + a[4] * b[0]) + a[5] * b[8]) - ((a[1] * b[15] + a[2] * b[5]) + a[3] * b[10]))).0,
+                ((((a[1] * b[5] + a[3] * b[9]) + a[5] * b[0]) - ((a[0] * b[6] + a[2] * b[15]) + a[4] * b[8]))).0,
+                ((((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4]) - ((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14]))).0,
+                ((((a[1] * b[4] + a[4] * b[14]) - a[0] * b[11]) - ((a[2] * b[3] + a[3] * b[1]) + a[5] * b[13]))).0,
+                ((((a[2] * b[2] + a[5] * b[12]) - a[0] * b[4]) - ((a[1] * b[11] + a[3] * b[14]) + a[4] * b[1]))).0,
+                ((((a[0] * b[3] + a[3] * b[13]) - a[1] * b[2]) - ((a[2] * b[11] + a[4] * b[12]) + a[5] * b[1]))).0,
+                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
             ],
         }
     }
@@ -6191,7 +6269,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6208,20 +6286,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Trivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -6229,20 +6307,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Trivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) + a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) - a[1] * b[2] + a[3] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[1] - a[2] * b[0]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[0] * b[0] + a[2] * b[5] - a[3] * b[4]).0,
-                (a[0] * b[1] - a[1] * b[5] + a[3] * b[3]).0,
-                (a[0] * b[2] + a[1] * b[4] - a[2] * b[3]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
+                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
+                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[2] * b[5]) - a[3] * b[4])).0,
+                (((a[0] * b[1] + a[3] * b[3]) - a[1] * b[5])).0,
+                (((a[0] * b[2] + a[1] * b[4]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -6250,19 +6328,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Triv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (a[0] * b[3] - a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[0] * b[3] - a[3] * b[0])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -6271,13 +6349,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -6288,20 +6366,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[7]) + a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) + a[1] * b[7] + a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[0] * b[5]) - a[1] * b[3] + a[2] * b[7] + a[3] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[2] - a[2] * b[1] + a[3] * b[7]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[2] * b[6] - a[3] * b[5]).0,
-                (a[0] * b[2] - a[1] * b[6] + a[2] * b[0] + a[3] * b[4]).0,
-                (a[0] * b[3] + a[1] * b[5] - a[2] * b[4] + a[3] * b[0]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] - a[0] * b[7]))).0,
+                (((a[1] * b[7] + a[2] * b[3]) - (a[0] * b[4] + a[3] * b[2]))).0,
+                (((a[2] * b[7] + a[3] * b[1]) - (a[0] * b[5] + a[1] * b[3]))).0,
+                (((a[1] * b[2] + a[3] * b[7]) - (a[0] * b[6] + a[2] * b[1]))).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[2] * b[6] - a[3] * b[5]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[4] - a[1] * b[6]))).0,
+                (((a[0] * b[3] + a[1] * b[5]) + (a[3] * b[0] - a[2] * b[4]))).0,
             ],
         }
     }
@@ -6309,20 +6387,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Trivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (a[0] * b[5] - a[1] * b[4] + a[2] * b[3] - a[3] * b[2]).0,
-                (a[0] * b[6] - a[1] * b[3] - a[2] * b[4] + a[3] * b[1]).0,
-                (a[0] * b[7] + a[1] * b[2] - a[2] * b[1] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[0] + a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[0] * b[2]) - a[1] * b[7] - a[2] * b[0] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) + a[1] * b[6] - a[2] * b[5] - a[3] * b[0]).0,
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                (((a[0] * b[5] + a[2] * b[3]) - (a[1] * b[4] + a[3] * b[2]))).0,
+                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[2] * b[4]))).0,
+                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[3] * b[4]))).0,
+                (((a[2] * b[7] - a[0] * b[1]) - (a[1] * b[0] + a[3] * b[6]))).0,
+                (((a[3] * b[5] - a[0] * b[2]) - (a[1] * b[7] + a[2] * b[0]))).0,
+                (((a[1] * b[6] - a[0] * b[3]) - (a[2] * b[5] + a[3] * b[0]))).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -6330,28 +6408,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Trivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
-                (-(a[0] * b[15]) + a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) + a[1] * b[15] + a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[0] * b[9]) - a[1] * b[7] + a[2] * b[15] + a[3] * b[5]).0,
-                (-(a[0] * b[10]) + a[1] * b[6] - a[2] * b[5] + a[3] * b[15]).0,
-                (a[0] * b[12] - a[1] * b[11] + a[2] * b[4] - a[3] * b[3]).0,
-                (a[0] * b[13] - a[1] * b[4] - a[2] * b[11] + a[3] * b[2]).0,
-                (a[0] * b[14] + a[1] * b[3] - a[2] * b[2] - a[3] * b[11]).0,
-                (-(a[0] * b[2]) - a[1] * b[1] + a[2] * b[14] - a[3] * b[13]).0,
-                (-(a[0] * b[3]) - a[1] * b[14] - a[2] * b[1] + a[3] * b[12]).0,
-                (-(a[0] * b[4]) + a[1] * b[13] - a[2] * b[12] - a[3] * b[1]).0,
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
-                (a[0] * b[5] + a[1] * b[0] + a[2] * b[10] - a[3] * b[9]).0,
-                (a[0] * b[6] - a[1] * b[10] + a[2] * b[0] + a[3] * b[8]).0,
-                (a[0] * b[7] + a[1] * b[9] - a[2] * b[8] + a[3] * b[0]).0,
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] - a[0] * b[15]))).0,
+                (((a[1] * b[15] + a[2] * b[7]) - (a[0] * b[8] + a[3] * b[6]))).0,
+                (((a[2] * b[15] + a[3] * b[5]) - (a[0] * b[9] + a[1] * b[7]))).0,
+                (((a[1] * b[6] + a[3] * b[15]) - (a[0] * b[10] + a[2] * b[5]))).0,
+                (((a[0] * b[12] + a[2] * b[4]) - (a[1] * b[11] + a[3] * b[3]))).0,
+                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[2] * b[11]))).0,
+                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[3] * b[11]))).0,
+                (((a[2] * b[14] - a[0] * b[2]) - (a[1] * b[1] + a[3] * b[13]))).0,
+                (((a[3] * b[12] - a[0] * b[3]) - (a[1] * b[14] + a[2] * b[1]))).0,
+                (((a[1] * b[13] - a[0] * b[4]) - (a[2] * b[12] + a[3] * b[1]))).0,
+                (((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
+                (((a[0] * b[5] + a[1] * b[0]) + (a[2] * b[10] - a[3] * b[9]))).0,
+                (((a[0] * b[6] + a[2] * b[0]) + (a[3] * b[8] - a[1] * b[10]))).0,
+                (((a[0] * b[7] + a[1] * b[9]) + (a[3] * b[0] - a[2] * b[8]))).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
             ],
         }
     }
@@ -6359,7 +6437,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6373,13 +6451,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -6390,7 +6468,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6399,9 +6477,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseu
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -6409,16 +6487,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -6426,13 +6504,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -6440,19 +6518,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -6461,17 +6539,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[0] * b[4]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -6482,24 +6560,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudosca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
                 (a[0] * b[11]).0,
-                (-(a[0] * b[12])).0,
-                (-(a[0] * b[13])).0,
-                (-(a[0] * b[14])).0,
+                (-a[0] * b[12]).0,
+                (-a[0] * b[13]).0,
+                (-a[0] * b[14]).0,
                 (a[0] * b[8]).0,
                 (a[0] * b[9]).0,
                 (a[0] * b[10]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[1])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
@@ -6511,7 +6589,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6532,20 +6610,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[5] * b[3] - a[6] * b[2]).0,
-                (a[0] * b[2] + a[2] * b[0] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[0] * b[3] + a[3] * b[0] + a[4] * b[2] - a[5] * b[1]).0,
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3] - a[7] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[4] * b[0] + a[7] * b[1]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[5] * b[0] + a[7] * b[2]).0,
-                (a[1] * b[2] - a[2] * b[1] - a[6] * b[0] + a[7] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[3] - a[6] * b[2]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) + (a[6] * b[1] - a[4] * b[3]))).0,
+                (((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[2] - a[5] * b[1]))).0,
+                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] - a[7] * b[0]))).0,
+                (((a[2] * b[3] + a[7] * b[1]) - (a[3] * b[2] + a[4] * b[0]))).0,
+                (((a[3] * b[1] + a[7] * b[2]) - (a[1] * b[3] + a[5] * b[0]))).0,
+                (((a[1] * b[2] + a[7] * b[3]) - (a[2] * b[1] + a[6] * b[0]))).0,
             ],
         }
     }
@@ -6553,20 +6631,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
-                (a[0] * b[0] + a[2] * b[5] - a[3] * b[4] + a[5] * b[2] - a[6] * b[1] + a[7] * b[3]).0,
-                (a[0] * b[1] - a[1] * b[5] + a[3] * b[3] - a[4] * b[2] + a[6] * b[0] + a[7] * b[4]).0,
-                (a[0] * b[2] + a[1] * b[4] - a[2] * b[3] + a[4] * b[1] - a[5] * b[0] + a[7] * b[5]).0,
-                (a[0] * b[3] - a[2] * b[2] + a[3] * b[1] + a[5] * b[5] - a[6] * b[4] - a[7] * b[0]).0,
-                (a[0] * b[4] + a[1] * b[2] - a[3] * b[0] - a[4] * b[5] + a[6] * b[3] - a[7] * b[1]).0,
-                (a[0] * b[5] - a[1] * b[1] + a[2] * b[0] + a[4] * b[4] - a[5] * b[3] - a[7] * b[2]).0,
-                (-(a[1] * b[3]) - a[2] * b[4] - a[3] * b[5] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
+                ((((a[0] * b[0] + a[2] * b[5]) + a[5] * b[2]) + ((a[7] * b[3] - a[3] * b[4]) - a[6] * b[1]))).0,
+                ((((a[0] * b[1] + a[3] * b[3]) + a[6] * b[0]) + ((a[7] * b[4] - a[1] * b[5]) - a[4] * b[2]))).0,
+                ((((a[0] * b[2] + a[1] * b[4]) + a[4] * b[1]) + ((a[7] * b[5] - a[2] * b[3]) - a[5] * b[0]))).0,
+                ((((a[0] * b[3] + a[3] * b[1]) + a[5] * b[5]) - ((a[2] * b[2] + a[6] * b[4]) + a[7] * b[0]))).0,
+                ((((a[0] * b[4] + a[1] * b[2]) + a[6] * b[3]) - ((a[3] * b[0] + a[4] * b[5]) + a[7] * b[1]))).0,
+                ((((a[0] * b[5] + a[2] * b[0]) + a[4] * b[4]) - ((a[1] * b[1] + a[5] * b[3]) + a[7] * b[2]))).0,
+                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
             ],
         }
     }
@@ -6574,20 +6652,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Even
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] - a[4] * b[0] - a[7] * b[1]).0,
-                (a[1] * b[3] - a[3] * b[1] - a[5] * b[0] - a[7] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] - a[6] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[0] * b[1] - a[1] * b[0] + a[5] * b[3] - a[6] * b[2]).0,
-                (a[0] * b[2] - a[2] * b[0] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[0] * b[3] - a[3] * b[0] + a[4] * b[2] - a[5] * b[1]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0]))).0,
+                (((a[3] * b[2] - a[2] * b[3]) - (a[4] * b[0] + a[7] * b[1]))).0,
+                (((a[1] * b[3] - a[3] * b[1]) - (a[5] * b[0] + a[7] * b[2]))).0,
+                (((a[2] * b[1] - a[1] * b[2]) - (a[6] * b[0] + a[7] * b[3]))).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[5] * b[3]) - (a[1] * b[0] + a[6] * b[2]))).0,
+                (((a[0] * b[2] + a[6] * b[1]) - (a[2] * b[0] + a[4] * b[3]))).0,
+                (((a[0] * b[3] + a[4] * b[2]) - (a[3] * b[0] + a[5] * b[1]))).0,
             ],
         }
     }
@@ -6595,19 +6673,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -6616,20 +6694,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[2] * b[6] - a[3] * b[5] + a[4] * b[7] + a[5] * b[3] - a[6] * b[2] + a[7] * b[4]).0,
-                (a[0] * b[2] - a[1] * b[6] + a[2] * b[0] + a[3] * b[4] - a[4] * b[3] + a[5] * b[7] + a[6] * b[1] + a[7] * b[5]).0,
-                (a[0] * b[3] + a[1] * b[5] - a[2] * b[4] + a[3] * b[0] + a[4] * b[2] - a[5] * b[1] + a[6] * b[7] + a[7] * b[6]).0,
-                (a[0] * b[4] - a[1] * b[7] - a[2] * b[3] + a[3] * b[2] + a[4] * b[0] + a[5] * b[6] - a[6] * b[5] - a[7] * b[1]).0,
-                (a[0] * b[5] + a[1] * b[3] - a[2] * b[7] - a[3] * b[1] - a[4] * b[6] + a[5] * b[0] + a[6] * b[4] - a[7] * b[2]).0,
-                (a[0] * b[6] - a[1] * b[2] + a[2] * b[1] - a[3] * b[7] + a[4] * b[5] - a[5] * b[4] + a[6] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[7] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[2] * b[6] + a[4] * b[7])) + ((a[5] * b[3] + a[7] * b[4]) - (a[3] * b[5] + a[6] * b[2])))).0,
+                ((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[4] + a[5] * b[7])) + ((a[6] * b[1] + a[7] * b[5]) - (a[1] * b[6] + a[4] * b[3])))).0,
+                ((((a[0] * b[3] + a[1] * b[5]) + (a[3] * b[0] + a[4] * b[2])) + ((a[6] * b[7] + a[7] * b[6]) - (a[2] * b[4] + a[5] * b[1])))).0,
+                ((((a[0] * b[4] + a[3] * b[2]) + (a[4] * b[0] + a[5] * b[6])) - ((a[1] * b[7] + a[2] * b[3]) + (a[6] * b[5] + a[7] * b[1])))).0,
+                ((((a[0] * b[5] + a[1] * b[3]) + (a[5] * b[0] + a[6] * b[4])) - ((a[2] * b[7] + a[3] * b[1]) + (a[4] * b[6] + a[7] * b[2])))).0,
+                ((((a[0] * b[6] + a[2] * b[1]) + (a[4] * b[5] + a[6] * b[0])) - ((a[1] * b[2] + a[3] * b[7]) + (a[5] * b[4] + a[7] * b[3])))).0,
+                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
             ],
         }
     }
@@ -6637,20 +6715,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Even<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[4] * b[5] + a[5] * b[6] + a[6] * b[7] + a[7] * b[4]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[7] + a[3] * b[6] - a[4] * b[4] + a[5] * b[3] - a[6] * b[2] - a[7] * b[5]).0,
-                (a[0] * b[2] + a[1] * b[7] + a[2] * b[0] - a[3] * b[5] - a[4] * b[3] - a[5] * b[4] + a[6] * b[1] - a[7] * b[6]).0,
-                (a[0] * b[3] - a[1] * b[6] + a[2] * b[5] + a[3] * b[0] + a[4] * b[2] - a[5] * b[1] - a[6] * b[4] - a[7] * b[7]).0,
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3] - a[7] * b[0]).0,
-                (a[0] * b[5] - a[1] * b[4] + a[2] * b[3] - a[3] * b[2] - a[4] * b[0] + a[5] * b[7] - a[6] * b[6] + a[7] * b[1]).0,
-                (a[0] * b[6] - a[1] * b[3] - a[2] * b[4] + a[3] * b[1] - a[4] * b[7] - a[5] * b[0] + a[6] * b[5] + a[7] * b[2]).0,
-                (a[0] * b[7] + a[1] * b[2] - a[2] * b[1] - a[3] * b[4] + a[4] * b[6] - a[5] * b[5] - a[6] * b[0] + a[7] * b[3]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) + ((a[4] * b[5] + a[5] * b[6]) + (a[6] * b[7] + a[7] * b[4])))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[6] + a[5] * b[3])) - ((a[2] * b[7] + a[4] * b[4]) + (a[6] * b[2] + a[7] * b[5])))).0,
+                ((((a[0] * b[2] + a[1] * b[7]) + (a[2] * b[0] + a[6] * b[1])) - ((a[3] * b[5] + a[4] * b[3]) + (a[5] * b[4] + a[7] * b[6])))).0,
+                ((((a[0] * b[3] + a[2] * b[5]) + (a[3] * b[0] + a[4] * b[2])) - ((a[1] * b[6] + a[5] * b[1]) + (a[6] * b[4] + a[7] * b[7])))).0,
+                ((((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0])))).0,
+                ((((a[0] * b[5] + a[2] * b[3]) + (a[5] * b[7] + a[7] * b[1])) - ((a[1] * b[4] + a[3] * b[2]) + (a[4] * b[0] + a[6] * b[6])))).0,
+                ((((a[0] * b[6] + a[3] * b[1]) + (a[6] * b[5] + a[7] * b[2])) - ((a[1] * b[3] + a[2] * b[4]) + (a[4] * b[7] + a[5] * b[0])))).0,
+                ((((a[0] * b[7] + a[1] * b[2]) + (a[4] * b[6] + a[7] * b[3])) - ((a[2] * b[1] + a[3] * b[4]) + (a[5] * b[5] + a[6] * b[0])))).0,
             ],
         }
     }
@@ -6658,28 +6736,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Even<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[4] + a[4] * b[12] + a[5] * b[13] + a[6] * b[14] + a[7] * b[11]).0,
-                (a[0] * b[2] + a[1] * b[1] - a[2] * b[14] + a[3] * b[13] - a[4] * b[11] + a[5] * b[4] - a[6] * b[3] - a[7] * b[12]).0,
-                (a[0] * b[3] + a[1] * b[14] + a[2] * b[1] - a[3] * b[12] - a[4] * b[4] - a[5] * b[11] + a[6] * b[2] - a[7] * b[13]).0,
-                (a[0] * b[4] - a[1] * b[13] + a[2] * b[12] + a[3] * b[1] + a[4] * b[3] - a[5] * b[2] - a[6] * b[11] - a[7] * b[14]).0,
-                (a[0] * b[5] + a[1] * b[0] + a[2] * b[10] - a[3] * b[9] + a[4] * b[15] + a[5] * b[7] - a[6] * b[6] + a[7] * b[8]).0,
-                (a[0] * b[6] - a[1] * b[10] + a[2] * b[0] + a[3] * b[8] - a[4] * b[7] + a[5] * b[15] + a[6] * b[5] + a[7] * b[9]).0,
-                (a[0] * b[7] + a[1] * b[9] - a[2] * b[8] + a[3] * b[0] + a[4] * b[6] - a[5] * b[5] + a[6] * b[15] + a[7] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[15] - a[2] * b[7] + a[3] * b[6] + a[4] * b[0] + a[5] * b[10] - a[6] * b[9] - a[7] * b[5]).0,
-                (a[0] * b[9] + a[1] * b[7] - a[2] * b[15] - a[3] * b[5] - a[4] * b[10] + a[5] * b[0] + a[6] * b[8] - a[7] * b[6]).0,
-                (a[0] * b[10] - a[1] * b[6] + a[2] * b[5] - a[3] * b[15] + a[4] * b[9] - a[5] * b[8] + a[6] * b[0] - a[7] * b[7]).0,
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14] + a[4] * b[2] + a[5] * b[3] + a[6] * b[4] - a[7] * b[1]).0,
-                (a[0] * b[12] - a[1] * b[11] + a[2] * b[4] - a[3] * b[3] - a[4] * b[1] + a[5] * b[14] - a[6] * b[13] + a[7] * b[2]).0,
-                (a[0] * b[13] - a[1] * b[4] - a[2] * b[11] + a[3] * b[2] - a[4] * b[14] - a[5] * b[1] + a[6] * b[12] + a[7] * b[3]).0,
-                (a[0] * b[14] + a[1] * b[3] - a[2] * b[2] - a[3] * b[11] + a[4] * b[13] - a[5] * b[12] - a[6] * b[1] + a[7] * b[4]).0,
-                (a[0] * b[15] - a[1] * b[8] - a[2] * b[9] - a[3] * b[10] - a[4] * b[5] - a[5] * b[6] - a[6] * b[7] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4])) + ((a[4] * b[12] + a[5] * b[13]) + (a[6] * b[14] + a[7] * b[11])))).0,
+                ((((a[0] * b[2] + a[1] * b[1]) + (a[3] * b[13] + a[5] * b[4])) - ((a[2] * b[14] + a[4] * b[11]) + (a[6] * b[3] + a[7] * b[12])))).0,
+                ((((a[0] * b[3] + a[1] * b[14]) + (a[2] * b[1] + a[6] * b[2])) - ((a[3] * b[12] + a[4] * b[4]) + (a[5] * b[11] + a[7] * b[13])))).0,
+                ((((a[0] * b[4] + a[2] * b[12]) + (a[3] * b[1] + a[4] * b[3])) - ((a[1] * b[13] + a[5] * b[2]) + (a[6] * b[11] + a[7] * b[14])))).0,
+                ((((a[0] * b[5] + a[1] * b[0]) + (a[2] * b[10] + a[4] * b[15])) + ((a[5] * b[7] + a[7] * b[8]) - (a[3] * b[9] + a[6] * b[6])))).0,
+                ((((a[0] * b[6] + a[2] * b[0]) + (a[3] * b[8] + a[5] * b[15])) + ((a[6] * b[5] + a[7] * b[9]) - (a[1] * b[10] + a[4] * b[7])))).0,
+                ((((a[0] * b[7] + a[1] * b[9]) + (a[3] * b[0] + a[4] * b[6])) + ((a[6] * b[15] + a[7] * b[10]) - (a[2] * b[8] + a[5] * b[5])))).0,
+                ((((a[0] * b[8] + a[3] * b[6]) + (a[4] * b[0] + a[5] * b[10])) - ((a[1] * b[15] + a[2] * b[7]) + (a[6] * b[9] + a[7] * b[5])))).0,
+                ((((a[0] * b[9] + a[1] * b[7]) + (a[5] * b[0] + a[6] * b[8])) - ((a[2] * b[15] + a[3] * b[5]) + (a[4] * b[10] + a[7] * b[6])))).0,
+                ((((a[0] * b[10] + a[2] * b[5]) + (a[4] * b[9] + a[6] * b[0])) - ((a[1] * b[6] + a[3] * b[15]) + (a[5] * b[8] + a[7] * b[7])))).0,
+                ((((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4])) - ((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1])))).0,
+                ((((a[0] * b[12] + a[2] * b[4]) + (a[5] * b[14] + a[7] * b[2])) - ((a[1] * b[11] + a[3] * b[3]) + (a[4] * b[1] + a[6] * b[13])))).0,
+                ((((a[0] * b[13] + a[3] * b[2]) + (a[6] * b[12] + a[7] * b[3])) - ((a[1] * b[4] + a[2] * b[11]) + (a[4] * b[14] + a[5] * b[1])))).0,
+                ((((a[0] * b[14] + a[1] * b[3]) + (a[4] * b[13] + a[7] * b[4])) - ((a[2] * b[2] + a[3] * b[11]) + (a[5] * b[12] + a[6] * b[1])))).0,
+                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
             ],
         }
     }
@@ -6687,7 +6765,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for E
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6708,20 +6786,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[0] * b[2]) + a[2] * b[0] - a[5] * b[3] + a[7] * b[1]).0,
-                (-(a[0] * b[3]) + a[3] * b[0] + a[5] * b[2] - a[6] * b[1]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[4] * b[1] - a[5] * b[0]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[4] * b[2] - a[6] * b[0]).0,
-                (a[1] * b[2] - a[2] * b[1] - a[4] * b[3] - a[7] * b[0]).0,
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[1] * b[0] + a[6] * b[3]) - (a[0] * b[1] + a[7] * b[2]))).0,
+                (((a[2] * b[0] + a[7] * b[1]) - (a[0] * b[2] + a[5] * b[3]))).0,
+                (((a[3] * b[0] + a[5] * b[2]) - (a[0] * b[3] + a[6] * b[1]))).0,
+                (((a[2] * b[3] - a[3] * b[2]) - (a[4] * b[1] + a[5] * b[0]))).0,
+                (((a[3] * b[1] - a[1] * b[3]) - (a[4] * b[2] + a[6] * b[0]))).0,
+                (((a[1] * b[2] - a[2] * b[1]) - (a[4] * b[3] + a[7] * b[0]))).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -6729,20 +6807,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2] + a[5] * b[3] + a[6] * b[4] + a[7] * b[5]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4] - a[4] * b[3] + a[6] * b[2] - a[7] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3] - a[4] * b[4] - a[5] * b[2] + a[7] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3] - a[4] * b[5] + a[5] * b[1] - a[6] * b[0]).0,
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5] + a[5] * b[0] + a[6] * b[1] + a[7] * b[2]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1] + a[4] * b[0] + a[6] * b[5] - a[7] * b[4]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0] + a[4] * b[1] - a[5] * b[5] + a[7] * b[3]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0] + a[4] * b[2] + a[5] * b[4] - a[6] * b[3]).0,
+                ((((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                ((((a[2] * b[5] + a[6] * b[2]) - a[0] * b[0]) - ((a[3] * b[4] + a[4] * b[3]) + a[7] * b[1]))).0,
+                ((((a[3] * b[3] + a[7] * b[0]) - a[0] * b[1]) - ((a[1] * b[5] + a[4] * b[4]) + a[5] * b[2]))).0,
+                ((((a[1] * b[4] + a[5] * b[1]) - a[0] * b[2]) - ((a[2] * b[3] + a[4] * b[5]) + a[6] * b[0]))).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]))).0,
+                ((((a[3] * b[1] + a[4] * b[0]) + a[6] * b[5]) - ((a[0] * b[3] + a[2] * b[2]) + a[7] * b[4]))).0,
+                ((((a[1] * b[2] + a[4] * b[1]) + a[7] * b[3]) - ((a[0] * b[4] + a[3] * b[0]) + a[5] * b[5]))).0,
+                ((((a[2] * b[0] + a[4] * b[2]) + a[5] * b[4]) - ((a[0] * b[5] + a[1] * b[1]) + a[6] * b[3]))).0,
             ],
         }
     }
@@ -6750,20 +6828,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] + a[4] * b[1] - a[5] * b[0]).0,
-                (a[1] * b[3] - a[3] * b[1] + a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[4] * b[3] - a[7] * b[0]).0,
-                (-(a[0] * b[1]) - a[1] * b[0] + a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[0] * b[2]) - a[2] * b[0] - a[5] * b[3] + a[7] * b[1]).0,
-                (-(a[0] * b[3]) - a[3] * b[0] + a[5] * b[2] - a[6] * b[1]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[3] * b[2] + a[4] * b[1]) - (a[2] * b[3] + a[5] * b[0]))).0,
+                (((a[1] * b[3] + a[4] * b[2]) - (a[3] * b[1] + a[6] * b[0]))).0,
+                (((a[2] * b[1] + a[4] * b[3]) - (a[1] * b[2] + a[7] * b[0]))).0,
+                (((a[6] * b[3] - a[0] * b[1]) - (a[1] * b[0] + a[7] * b[2]))).0,
+                (((a[7] * b[1] - a[0] * b[2]) - (a[2] * b[0] + a[5] * b[3]))).0,
+                (((a[5] * b[2] - a[0] * b[3]) - (a[3] * b[0] + a[6] * b[1]))).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -6771,20 +6849,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[4] * b[0])).0,
+                (-a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
                 (a[7] * b[0]).0,
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -6792,20 +6870,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[7] + a[5] * b[4] + a[6] * b[5] + a[7] * b[6]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[2] * b[6] - a[3] * b[5] - a[4] * b[4] + a[5] * b[7] + a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[2] * b[0] + a[3] * b[4] - a[4] * b[5] - a[5] * b[3] + a[6] * b[7] + a[7] * b[1]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[3] * b[0] - a[4] * b[6] + a[5] * b[2] - a[6] * b[1] + a[7] * b[7]).0,
-                (a[0] * b[7] + a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (-(a[0] * b[4]) - a[1] * b[7] - a[2] * b[3] + a[3] * b[2] + a[4] * b[1] + a[5] * b[0] + a[6] * b[6] - a[7] * b[5]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[2] * b[7] - a[3] * b[1] + a[4] * b[2] - a[5] * b[6] + a[6] * b[0] + a[7] * b[4]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1] - a[3] * b[7] + a[4] * b[3] + a[5] * b[5] - a[6] * b[4] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6])) - ((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7])))).0,
+                ((((a[1] * b[0] + a[2] * b[6]) + (a[5] * b[7] + a[6] * b[3])) - ((a[0] * b[1] + a[3] * b[5]) + (a[4] * b[4] + a[7] * b[2])))).0,
+                ((((a[2] * b[0] + a[3] * b[4]) + (a[6] * b[7] + a[7] * b[1])) - ((a[0] * b[2] + a[1] * b[6]) + (a[4] * b[5] + a[5] * b[3])))).0,
+                ((((a[1] * b[5] + a[3] * b[0]) + (a[5] * b[2] + a[7] * b[7])) - ((a[0] * b[3] + a[2] * b[4]) + (a[4] * b[6] + a[6] * b[1])))).0,
+                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
+                ((((a[3] * b[2] + a[4] * b[1]) + (a[5] * b[0] + a[6] * b[6])) - ((a[0] * b[4] + a[1] * b[7]) + (a[2] * b[3] + a[7] * b[5])))).0,
+                ((((a[1] * b[3] + a[4] * b[2]) + (a[6] * b[0] + a[7] * b[4])) - ((a[0] * b[5] + a[2] * b[7]) + (a[3] * b[1] + a[5] * b[6])))).0,
+                ((((a[2] * b[1] + a[4] * b[3]) + (a[5] * b[5] + a[7] * b[0])) - ((a[0] * b[6] + a[1] * b[2]) + (a[3] * b[7] + a[6] * b[4])))).0,
             ],
         }
     }
@@ -6813,20 +6891,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] - a[2] * b[7] + a[3] * b[6] + a[4] * b[5] - a[5] * b[4] + a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[0] * b[2]) + a[1] * b[7] + a[2] * b[0] - a[3] * b[5] + a[4] * b[6] - a[5] * b[3] - a[6] * b[4] + a[7] * b[1]).0,
-                (-(a[0] * b[3]) - a[1] * b[6] + a[2] * b[5] + a[3] * b[0] + a[4] * b[7] + a[5] * b[2] - a[6] * b[1] - a[7] * b[4]).0,
-                (-(a[0] * b[5]) - a[1] * b[4] + a[2] * b[3] - a[3] * b[2] - a[4] * b[1] - a[5] * b[0] + a[6] * b[7] - a[7] * b[6]).0,
-                (-(a[0] * b[6]) - a[1] * b[3] - a[2] * b[4] + a[3] * b[1] - a[4] * b[2] - a[5] * b[7] - a[6] * b[0] + a[7] * b[5]).0,
-                (-(a[0] * b[7]) + a[1] * b[2] - a[2] * b[1] - a[3] * b[4] - a[4] * b[3] + a[5] * b[6] - a[6] * b[5] - a[7] * b[0]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((a[1] * b[0] + a[3] * b[6]) + (a[4] * b[5] + a[6] * b[3])) - ((a[0] * b[1] + a[2] * b[7]) + (a[5] * b[4] + a[7] * b[2])))).0,
+                ((((a[1] * b[7] + a[2] * b[0]) + (a[4] * b[6] + a[7] * b[1])) - ((a[0] * b[2] + a[3] * b[5]) + (a[5] * b[3] + a[6] * b[4])))).0,
+                ((((a[2] * b[5] + a[3] * b[0]) + (a[4] * b[7] + a[5] * b[2])) - ((a[0] * b[3] + a[1] * b[6]) + (a[6] * b[1] + a[7] * b[4])))).0,
+                ((((a[2] * b[3] + a[6] * b[7]) - (a[0] * b[5] + a[1] * b[4])) - ((a[3] * b[2] + a[4] * b[1]) + (a[5] * b[0] + a[7] * b[6])))).0,
+                ((((a[3] * b[1] + a[7] * b[5]) - (a[0] * b[6] + a[1] * b[3])) - ((a[2] * b[4] + a[4] * b[2]) + (a[5] * b[7] + a[6] * b[0])))).0,
+                ((((a[1] * b[2] + a[5] * b[6]) - (a[0] * b[7] + a[2] * b[1])) - ((a[3] * b[4] + a[4] * b[3]) + (a[6] * b[5] + a[7] * b[0])))).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
             ],
         }
     }
@@ -6834,28 +6912,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
-                (a[0] * b[0] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7] - a[4] * b[15] + a[5] * b[8] + a[6] * b[9] + a[7] * b[10]).0,
-                (-(a[0] * b[5]) + a[1] * b[0] + a[2] * b[10] - a[3] * b[9] - a[4] * b[8] + a[5] * b[15] + a[6] * b[7] - a[7] * b[6]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[2] * b[0] + a[3] * b[8] - a[4] * b[9] - a[5] * b[7] + a[6] * b[15] + a[7] * b[5]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[3] * b[0] - a[4] * b[10] + a[5] * b[6] - a[6] * b[5] + a[7] * b[15]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[2] * b[14] + a[3] * b[13] + a[4] * b[12] - a[5] * b[11] + a[6] * b[4] - a[7] * b[3]).0,
-                (-(a[0] * b[3]) + a[1] * b[14] + a[2] * b[1] - a[3] * b[12] + a[4] * b[13] - a[5] * b[4] - a[6] * b[11] + a[7] * b[2]).0,
-                (-(a[0] * b[4]) - a[1] * b[13] + a[2] * b[12] + a[3] * b[1] + a[4] * b[14] + a[5] * b[3] - a[6] * b[2] - a[7] * b[11]).0,
-                (-(a[0] * b[12]) - a[1] * b[11] + a[2] * b[4] - a[3] * b[3] - a[4] * b[2] - a[5] * b[1] + a[6] * b[14] - a[7] * b[13]).0,
-                (-(a[0] * b[13]) - a[1] * b[4] - a[2] * b[11] + a[3] * b[2] - a[4] * b[3] - a[5] * b[14] - a[6] * b[1] + a[7] * b[12]).0,
-                (-(a[0] * b[14]) + a[1] * b[3] - a[2] * b[2] - a[3] * b[11] - a[4] * b[4] + a[5] * b[13] - a[6] * b[12] - a[7] * b[1]).0,
-                (a[0] * b[15] + a[1] * b[8] + a[2] * b[9] + a[3] * b[10] + a[4] * b[0] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7]).0,
-                (-(a[0] * b[8]) - a[1] * b[15] - a[2] * b[7] + a[3] * b[6] + a[4] * b[5] + a[5] * b[0] + a[6] * b[10] - a[7] * b[9]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[2] * b[15] - a[3] * b[5] + a[4] * b[6] - a[5] * b[10] + a[6] * b[0] + a[7] * b[8]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5] - a[3] * b[15] + a[4] * b[7] + a[5] * b[9] - a[6] * b[8] + a[7] * b[0]).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] - a[7] * b[4]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                ((((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15])))).0,
+                ((((a[1] * b[0] + a[2] * b[10]) + (a[5] * b[15] + a[6] * b[7])) - ((a[0] * b[5] + a[3] * b[9]) + (a[4] * b[8] + a[7] * b[6])))).0,
+                ((((a[2] * b[0] + a[3] * b[8]) + (a[6] * b[15] + a[7] * b[5])) - ((a[0] * b[6] + a[1] * b[10]) + (a[4] * b[9] + a[5] * b[7])))).0,
+                ((((a[1] * b[9] + a[3] * b[0]) + (a[5] * b[6] + a[7] * b[15])) - ((a[0] * b[7] + a[2] * b[8]) + (a[4] * b[10] + a[6] * b[5])))).0,
+                ((((a[1] * b[1] + a[3] * b[13]) + (a[4] * b[12] + a[6] * b[4])) - ((a[0] * b[2] + a[2] * b[14]) + (a[5] * b[11] + a[7] * b[3])))).0,
+                ((((a[1] * b[14] + a[2] * b[1]) + (a[4] * b[13] + a[7] * b[2])) - ((a[0] * b[3] + a[3] * b[12]) + (a[5] * b[4] + a[6] * b[11])))).0,
+                ((((a[2] * b[12] + a[3] * b[1]) + (a[4] * b[14] + a[5] * b[3])) - ((a[0] * b[4] + a[1] * b[13]) + (a[6] * b[2] + a[7] * b[11])))).0,
+                ((((a[2] * b[4] + a[6] * b[14]) - (a[0] * b[12] + a[1] * b[11])) - ((a[3] * b[3] + a[4] * b[2]) + (a[5] * b[1] + a[7] * b[13])))).0,
+                ((((a[3] * b[2] + a[7] * b[12]) - (a[0] * b[13] + a[1] * b[4])) - ((a[2] * b[11] + a[4] * b[3]) + (a[5] * b[14] + a[6] * b[1])))).0,
+                ((((a[1] * b[3] + a[5] * b[13]) - (a[0] * b[14] + a[2] * b[2])) - ((a[3] * b[11] + a[4] * b[4]) + (a[6] * b[12] + a[7] * b[1])))).0,
+                ((((a[0] * b[15] + a[1] * b[8]) + (a[2] * b[9] + a[3] * b[10])) + ((a[4] * b[0] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((a[3] * b[6] + a[4] * b[5]) + (a[5] * b[0] + a[6] * b[10])) - ((a[0] * b[8] + a[1] * b[15]) + (a[2] * b[7] + a[7] * b[9])))).0,
+                ((((a[1] * b[7] + a[4] * b[6]) + (a[6] * b[0] + a[7] * b[8])) - ((a[0] * b[9] + a[2] * b[15]) + (a[3] * b[5] + a[5] * b[10])))).0,
+                ((((a[2] * b[5] + a[4] * b[7]) + (a[5] * b[9] + a[7] * b[0])) - ((a[0] * b[10] + a[1] * b[6]) + (a[3] * b[15] + a[6] * b[8])))).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
             ],
         }
     }
@@ -6863,7 +6941,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -6892,28 +6970,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (a[0] * b[1] + a[5] * b[0] + a[9] * b[3] - a[10] * b[2]).0,
-                (a[0] * b[2] + a[6] * b[0] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[0] * b[3] + a[7] * b[0] + a[8] * b[2] - a[9] * b[1]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] + a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[1] * b[2]) + a[3] * b[0] - a[12] * b[3] + a[14] * b[1]).0,
-                (-(a[1] * b[3]) + a[4] * b[0] + a[12] * b[2] - a[13] * b[1]).0,
-                (a[3] * b[3] - a[4] * b[2] - a[11] * b[1] - a[12] * b[0]).0,
-                (-(a[2] * b[3]) + a[4] * b[1] - a[11] * b[2] - a[13] * b[0]).0,
-                (a[2] * b[2] - a[3] * b[1] - a[11] * b[3] - a[14] * b[0]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3] - a[15] * b[0]).0,
-                (a[6] * b[3] - a[7] * b[2] - a[8] * b[0] + a[15] * b[1]).0,
-                (-(a[5] * b[3]) + a[7] * b[1] - a[9] * b[0] + a[15] * b[2]).0,
-                (a[5] * b[2] - a[6] * b[1] - a[10] * b[0] + a[15] * b[3]).0,
-                (-(a[11] * b[0]) - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
+                (((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[0] * b[1] + a[5] * b[0]) + (a[9] * b[3] - a[10] * b[2]))).0,
+                (((a[0] * b[2] + a[6] * b[0]) + (a[10] * b[1] - a[8] * b[3]))).0,
+                (((a[0] * b[3] + a[7] * b[0]) + (a[8] * b[2] - a[9] * b[1]))).0,
+                (((a[2] * b[0] + a[13] * b[3]) - (a[1] * b[1] + a[14] * b[2]))).0,
+                (((a[3] * b[0] + a[14] * b[1]) - (a[1] * b[2] + a[12] * b[3]))).0,
+                (((a[4] * b[0] + a[12] * b[2]) - (a[1] * b[3] + a[13] * b[1]))).0,
+                (((a[3] * b[3] - a[4] * b[2]) - (a[11] * b[1] + a[12] * b[0]))).0,
+                (((a[4] * b[1] - a[2] * b[3]) - (a[11] * b[2] + a[13] * b[0]))).0,
+                (((a[2] * b[2] - a[3] * b[1]) - (a[11] * b[3] + a[14] * b[0]))).0,
+                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] - a[15] * b[0]))).0,
+                (((a[6] * b[3] + a[15] * b[1]) - (a[7] * b[2] + a[8] * b[0]))).0,
+                (((a[7] * b[1] + a[15] * b[2]) - (a[5] * b[3] + a[9] * b[0]))).0,
+                (((a[5] * b[2] + a[15] * b[3]) - (a[6] * b[1] + a[10] * b[0]))).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
             ],
         }
     }
@@ -6921,28 +6999,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
-                (-(a[2] * b[0]) - a[3] * b[1] - a[4] * b[2] + a[12] * b[3] + a[13] * b[4] + a[14] * b[5]).0,
-                (-(a[1] * b[0]) + a[3] * b[5] - a[4] * b[4] - a[11] * b[3] + a[13] * b[2] - a[14] * b[1]).0,
-                (-(a[1] * b[1]) - a[2] * b[5] + a[4] * b[3] - a[11] * b[4] - a[12] * b[2] + a[14] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[4] - a[3] * b[3] - a[11] * b[5] + a[12] * b[1] - a[13] * b[0]).0,
-                (a[0] * b[0] + a[6] * b[5] - a[7] * b[4] + a[9] * b[2] - a[10] * b[1] + a[15] * b[3]).0,
-                (a[0] * b[1] - a[5] * b[5] + a[7] * b[3] - a[8] * b[2] + a[10] * b[0] + a[15] * b[4]).0,
-                (a[0] * b[2] + a[5] * b[4] - a[6] * b[3] + a[8] * b[1] - a[9] * b[0] + a[15] * b[5]).0,
-                (a[0] * b[3] - a[6] * b[2] + a[7] * b[1] + a[9] * b[5] - a[10] * b[4] - a[15] * b[0]).0,
-                (a[0] * b[4] + a[5] * b[2] - a[7] * b[0] - a[8] * b[5] + a[10] * b[3] - a[15] * b[1]).0,
-                (a[0] * b[5] - a[5] * b[1] + a[6] * b[0] + a[8] * b[4] - a[9] * b[3] - a[15] * b[2]).0,
-                (a[2] * b[3] + a[3] * b[4] + a[4] * b[5] + a[12] * b[0] + a[13] * b[1] + a[14] * b[2]).0,
-                (-(a[1] * b[3]) - a[3] * b[2] + a[4] * b[1] + a[11] * b[0] + a[13] * b[5] - a[14] * b[4]).0,
-                (-(a[1] * b[4]) + a[2] * b[2] - a[4] * b[0] + a[11] * b[1] - a[12] * b[5] + a[14] * b[3]).0,
-                (-(a[1] * b[5]) - a[2] * b[1] + a[3] * b[0] + a[11] * b[2] + a[12] * b[4] - a[13] * b[3]).0,
-                (-(a[5] * b[3]) - a[6] * b[4] - a[7] * b[5] - a[8] * b[0] - a[9] * b[1] - a[10] * b[2]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                ((((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5]) - ((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2]))).0,
+                ((((a[3] * b[5] + a[13] * b[2]) - a[1] * b[0]) - ((a[4] * b[4] + a[11] * b[3]) + a[14] * b[1]))).0,
+                ((((a[4] * b[3] + a[14] * b[0]) - a[1] * b[1]) - ((a[2] * b[5] + a[11] * b[4]) + a[12] * b[2]))).0,
+                ((((a[2] * b[4] + a[12] * b[1]) - a[1] * b[2]) - ((a[3] * b[3] + a[11] * b[5]) + a[13] * b[0]))).0,
+                ((((a[0] * b[0] + a[6] * b[5]) + a[9] * b[2]) + ((a[15] * b[3] - a[7] * b[4]) - a[10] * b[1]))).0,
+                ((((a[0] * b[1] + a[7] * b[3]) + a[10] * b[0]) + ((a[15] * b[4] - a[5] * b[5]) - a[8] * b[2]))).0,
+                ((((a[0] * b[2] + a[5] * b[4]) + a[8] * b[1]) + ((a[15] * b[5] - a[6] * b[3]) - a[9] * b[0]))).0,
+                ((((a[0] * b[3] + a[7] * b[1]) + a[9] * b[5]) - ((a[6] * b[2] + a[10] * b[4]) + a[15] * b[0]))).0,
+                ((((a[0] * b[4] + a[5] * b[2]) + a[10] * b[3]) - ((a[7] * b[0] + a[8] * b[5]) + a[15] * b[1]))).0,
+                ((((a[0] * b[5] + a[6] * b[0]) + a[8] * b[4]) - ((a[5] * b[1] + a[9] * b[3]) + a[15] * b[2]))).0,
+                ((((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5]) + ((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2]))).0,
+                ((((a[4] * b[1] + a[11] * b[0]) + a[13] * b[5]) - ((a[1] * b[3] + a[3] * b[2]) + a[14] * b[4]))).0,
+                ((((a[2] * b[2] + a[11] * b[1]) + a[14] * b[3]) - ((a[1] * b[4] + a[4] * b[0]) + a[12] * b[5]))).0,
+                ((((a[3] * b[0] + a[11] * b[2]) + a[12] * b[4]) - ((a[1] * b[5] + a[2] * b[1]) + a[13] * b[3]))).0,
+                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
             ],
         }
     }
@@ -6950,28 +7028,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3] + a[15] * b[0]).0,
-                (-(a[6] * b[3]) + a[7] * b[2] - a[8] * b[0] - a[15] * b[1]).0,
-                (a[5] * b[3] - a[7] * b[1] - a[9] * b[0] - a[15] * b[2]).0,
-                (-(a[5] * b[2]) + a[6] * b[1] - a[10] * b[0] - a[15] * b[3]).0,
-                (-(a[3] * b[3]) + a[4] * b[2] + a[11] * b[1] - a[12] * b[0]).0,
-                (a[2] * b[3] - a[4] * b[1] + a[11] * b[2] - a[13] * b[0]).0,
-                (-(a[2] * b[2]) + a[3] * b[1] + a[11] * b[3] - a[14] * b[0]).0,
-                (-(a[1] * b[1]) - a[2] * b[0] + a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[1] * b[2]) - a[3] * b[0] - a[12] * b[3] + a[14] * b[1]).0,
-                (-(a[1] * b[3]) - a[4] * b[0] + a[12] * b[2] - a[13] * b[1]).0,
-                (a[0] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (a[0] * b[1] - a[5] * b[0] + a[9] * b[3] - a[10] * b[2]).0,
-                (a[0] * b[2] - a[6] * b[0] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[0] * b[3] - a[7] * b[0] + a[8] * b[2] - a[9] * b[1]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] + a[4] * b[3]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] + a[15] * b[0]))).0,
+                (((a[7] * b[2] - a[6] * b[3]) - (a[8] * b[0] + a[15] * b[1]))).0,
+                (((a[5] * b[3] - a[7] * b[1]) - (a[9] * b[0] + a[15] * b[2]))).0,
+                (((a[6] * b[1] - a[5] * b[2]) - (a[10] * b[0] + a[15] * b[3]))).0,
+                (((a[4] * b[2] + a[11] * b[1]) - (a[3] * b[3] + a[12] * b[0]))).0,
+                (((a[2] * b[3] + a[11] * b[2]) - (a[4] * b[1] + a[13] * b[0]))).0,
+                (((a[3] * b[1] + a[11] * b[3]) - (a[2] * b[2] + a[14] * b[0]))).0,
+                (((a[13] * b[3] - a[1] * b[1]) - (a[2] * b[0] + a[14] * b[2]))).0,
+                (((a[14] * b[1] - a[1] * b[2]) - (a[3] * b[0] + a[12] * b[3]))).0,
+                (((a[12] * b[2] - a[1] * b[3]) - (a[4] * b[0] + a[13] * b[1]))).0,
+                (((a[0] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[0] * b[1] + a[9] * b[3]) - (a[5] * b[0] + a[10] * b[2]))).0,
+                (((a[0] * b[2] + a[10] * b[1]) - (a[6] * b[0] + a[8] * b[3]))).0,
+                (((a[0] * b[3] + a[8] * b[2]) - (a[7] * b[0] + a[9] * b[1]))).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
             ],
         }
     }
@@ -6979,27 +7057,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[15] * b[0])).0,
-                (-(a[11] * b[0])).0,
+                (-a[15] * b[0]).0,
+                (-a[11] * b[0]).0,
                 (a[12] * b[0]).0,
                 (a[13] * b[0]).0,
                 (a[14] * b[0]).0,
                 (a[8] * b[0]).0,
                 (a[9] * b[0]).0,
                 (a[10] * b[0]).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
-                (-(a[7] * b[0])).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
+                (-a[7] * b[0]).0,
                 (a[1] * b[0]).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
-                (-(a[4] * b[0])).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
+                (-a[4] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -7008,28 +7086,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] - a[11] * b[7] + a[12] * b[4] + a[13] * b[5] + a[14] * b[6]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] + a[3] * b[6] - a[4] * b[5] - a[11] * b[4] + a[12] * b[7] + a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[1] * b[2]) - a[2] * b[6] + a[3] * b[0] + a[4] * b[4] - a[11] * b[5] - a[12] * b[3] + a[13] * b[7] + a[14] * b[1]).0,
-                (-(a[1] * b[3]) + a[2] * b[5] - a[3] * b[4] + a[4] * b[0] - a[11] * b[6] + a[12] * b[2] - a[13] * b[1] + a[14] * b[7]).0,
-                (a[0] * b[1] + a[5] * b[0] + a[6] * b[6] - a[7] * b[5] + a[8] * b[7] + a[9] * b[3] - a[10] * b[2] + a[15] * b[4]).0,
-                (a[0] * b[2] - a[5] * b[6] + a[6] * b[0] + a[7] * b[4] - a[8] * b[3] + a[9] * b[7] + a[10] * b[1] + a[15] * b[5]).0,
-                (a[0] * b[3] + a[5] * b[5] - a[6] * b[4] + a[7] * b[0] + a[8] * b[2] - a[9] * b[1] + a[10] * b[7] + a[15] * b[6]).0,
-                (a[0] * b[4] - a[5] * b[7] - a[6] * b[3] + a[7] * b[2] + a[8] * b[0] + a[9] * b[6] - a[10] * b[5] - a[15] * b[1]).0,
-                (a[0] * b[5] + a[5] * b[3] - a[6] * b[7] - a[7] * b[1] - a[8] * b[6] + a[9] * b[0] + a[10] * b[4] - a[15] * b[2]).0,
-                (a[0] * b[6] - a[5] * b[2] + a[6] * b[1] - a[7] * b[7] + a[8] * b[5] - a[9] * b[4] + a[10] * b[0] - a[15] * b[3]).0,
-                (a[1] * b[7] + a[2] * b[4] + a[3] * b[5] + a[4] * b[6] + a[11] * b[0] + a[12] * b[1] + a[13] * b[2] + a[14] * b[3]).0,
-                (-(a[1] * b[4]) - a[2] * b[7] - a[3] * b[3] + a[4] * b[2] + a[11] * b[1] + a[12] * b[0] + a[13] * b[6] - a[14] * b[5]).0,
-                (-(a[1] * b[5]) + a[2] * b[3] - a[3] * b[7] - a[4] * b[1] + a[11] * b[2] - a[12] * b[6] + a[13] * b[0] + a[14] * b[4]).0,
-                (-(a[1] * b[6]) - a[2] * b[2] + a[3] * b[1] - a[4] * b[7] + a[11] * b[3] + a[12] * b[5] - a[13] * b[4] + a[14] * b[0]).0,
-                (a[0] * b[7] - a[5] * b[4] - a[6] * b[5] - a[7] * b[6] - a[8] * b[1] - a[9] * b[2] - a[10] * b[3] + a[15] * b[0]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                ((((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6])) - ((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7])))).0,
+                ((((a[2] * b[0] + a[3] * b[6]) + (a[12] * b[7] + a[13] * b[3])) - ((a[1] * b[1] + a[4] * b[5]) + (a[11] * b[4] + a[14] * b[2])))).0,
+                ((((a[3] * b[0] + a[4] * b[4]) + (a[13] * b[7] + a[14] * b[1])) - ((a[1] * b[2] + a[2] * b[6]) + (a[11] * b[5] + a[12] * b[3])))).0,
+                ((((a[2] * b[5] + a[4] * b[0]) + (a[12] * b[2] + a[14] * b[7])) - ((a[1] * b[3] + a[3] * b[4]) + (a[11] * b[6] + a[13] * b[1])))).0,
+                ((((a[0] * b[1] + a[5] * b[0]) + (a[6] * b[6] + a[8] * b[7])) + ((a[9] * b[3] + a[15] * b[4]) - (a[7] * b[5] + a[10] * b[2])))).0,
+                ((((a[0] * b[2] + a[6] * b[0]) + (a[7] * b[4] + a[9] * b[7])) + ((a[10] * b[1] + a[15] * b[5]) - (a[5] * b[6] + a[8] * b[3])))).0,
+                ((((a[0] * b[3] + a[5] * b[5]) + (a[7] * b[0] + a[8] * b[2])) + ((a[10] * b[7] + a[15] * b[6]) - (a[6] * b[4] + a[9] * b[1])))).0,
+                ((((a[0] * b[4] + a[7] * b[2]) + (a[8] * b[0] + a[9] * b[6])) - ((a[5] * b[7] + a[6] * b[3]) + (a[10] * b[5] + a[15] * b[1])))).0,
+                ((((a[0] * b[5] + a[5] * b[3]) + (a[9] * b[0] + a[10] * b[4])) - ((a[6] * b[7] + a[7] * b[1]) + (a[8] * b[6] + a[15] * b[2])))).0,
+                ((((a[0] * b[6] + a[6] * b[1]) + (a[8] * b[5] + a[10] * b[0])) - ((a[5] * b[2] + a[7] * b[7]) + (a[9] * b[4] + a[15] * b[3])))).0,
+                ((((a[1] * b[7] + a[2] * b[4]) + (a[3] * b[5] + a[4] * b[6])) + ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
+                ((((a[4] * b[2] + a[11] * b[1]) + (a[12] * b[0] + a[13] * b[6])) - ((a[1] * b[4] + a[2] * b[7]) + (a[3] * b[3] + a[14] * b[5])))).0,
+                ((((a[2] * b[3] + a[11] * b[2]) + (a[13] * b[0] + a[14] * b[4])) - ((a[1] * b[5] + a[3] * b[7]) + (a[4] * b[1] + a[12] * b[6])))).0,
+                ((((a[3] * b[1] + a[11] * b[3]) + (a[12] * b[5] + a[14] * b[0])) - ((a[1] * b[6] + a[2] * b[2]) + (a[4] * b[7] + a[13] * b[4])))).0,
+                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
             ],
         }
     }
@@ -7037,28 +7115,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] + a[8] * b[5] + a[9] * b[6] + a[10] * b[7] + a[15] * b[4]).0,
-                (a[0] * b[1] + a[5] * b[0] - a[6] * b[7] + a[7] * b[6] - a[8] * b[4] + a[9] * b[3] - a[10] * b[2] - a[15] * b[5]).0,
-                (a[0] * b[2] + a[5] * b[7] + a[6] * b[0] - a[7] * b[5] - a[8] * b[3] - a[9] * b[4] + a[10] * b[1] - a[15] * b[6]).0,
-                (a[0] * b[3] - a[5] * b[6] + a[6] * b[5] + a[7] * b[0] + a[8] * b[2] - a[9] * b[1] - a[10] * b[4] - a[15] * b[7]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] - a[3] * b[7] + a[4] * b[6] + a[11] * b[5] - a[12] * b[4] + a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[7] + a[3] * b[0] - a[4] * b[5] + a[11] * b[6] - a[12] * b[3] - a[13] * b[4] + a[14] * b[1]).0,
-                (-(a[1] * b[3]) - a[2] * b[6] + a[3] * b[5] + a[4] * b[0] + a[11] * b[7] + a[12] * b[2] - a[13] * b[1] - a[14] * b[4]).0,
-                (-(a[1] * b[5]) - a[2] * b[4] + a[3] * b[3] - a[4] * b[2] - a[11] * b[1] - a[12] * b[0] + a[13] * b[7] - a[14] * b[6]).0,
-                (-(a[1] * b[6]) - a[2] * b[3] - a[3] * b[4] + a[4] * b[1] - a[11] * b[2] - a[12] * b[7] - a[13] * b[0] + a[14] * b[5]).0,
-                (-(a[1] * b[7]) + a[2] * b[2] - a[3] * b[1] - a[4] * b[4] - a[11] * b[3] + a[12] * b[6] - a[13] * b[5] - a[14] * b[0]).0,
-                (a[0] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7] + a[8] * b[1] + a[9] * b[2] + a[10] * b[3] - a[15] * b[0]).0,
-                (a[0] * b[5] - a[5] * b[4] + a[6] * b[3] - a[7] * b[2] - a[8] * b[0] + a[9] * b[7] - a[10] * b[6] + a[15] * b[1]).0,
-                (a[0] * b[6] - a[5] * b[3] - a[6] * b[4] + a[7] * b[1] - a[8] * b[7] - a[9] * b[0] + a[10] * b[5] + a[15] * b[2]).0,
-                (a[0] * b[7] + a[5] * b[2] - a[6] * b[1] - a[7] * b[4] + a[8] * b[6] - a[9] * b[5] - a[10] * b[0] + a[15] * b[3]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[7] - a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) + ((a[8] * b[5] + a[9] * b[6]) + (a[10] * b[7] + a[15] * b[4])))).0,
+                ((((a[0] * b[1] + a[5] * b[0]) + (a[7] * b[6] + a[9] * b[3])) - ((a[6] * b[7] + a[8] * b[4]) + (a[10] * b[2] + a[15] * b[5])))).0,
+                ((((a[0] * b[2] + a[5] * b[7]) + (a[6] * b[0] + a[10] * b[1])) - ((a[7] * b[5] + a[8] * b[3]) + (a[9] * b[4] + a[15] * b[6])))).0,
+                ((((a[0] * b[3] + a[6] * b[5]) + (a[7] * b[0] + a[8] * b[2])) - ((a[5] * b[6] + a[9] * b[1]) + (a[10] * b[4] + a[15] * b[7])))).0,
+                ((((a[2] * b[0] + a[4] * b[6]) + (a[11] * b[5] + a[13] * b[3])) - ((a[1] * b[1] + a[3] * b[7]) + (a[12] * b[4] + a[14] * b[2])))).0,
+                ((((a[2] * b[7] + a[3] * b[0]) + (a[11] * b[6] + a[14] * b[1])) - ((a[1] * b[2] + a[4] * b[5]) + (a[12] * b[3] + a[13] * b[4])))).0,
+                ((((a[3] * b[5] + a[4] * b[0]) + (a[11] * b[7] + a[12] * b[2])) - ((a[1] * b[3] + a[2] * b[6]) + (a[13] * b[1] + a[14] * b[4])))).0,
+                ((((a[3] * b[3] + a[13] * b[7]) - (a[1] * b[5] + a[2] * b[4])) - ((a[4] * b[2] + a[11] * b[1]) + (a[12] * b[0] + a[14] * b[6])))).0,
+                ((((a[4] * b[1] + a[14] * b[5]) - (a[1] * b[6] + a[2] * b[3])) - ((a[3] * b[4] + a[11] * b[2]) + (a[12] * b[7] + a[13] * b[0])))).0,
+                ((((a[2] * b[2] + a[12] * b[6]) - (a[1] * b[7] + a[3] * b[1])) - ((a[4] * b[4] + a[11] * b[3]) + (a[13] * b[5] + a[14] * b[0])))).0,
+                ((((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])) - ((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0])))).0,
+                ((((a[0] * b[5] + a[6] * b[3]) + (a[9] * b[7] + a[15] * b[1])) - ((a[5] * b[4] + a[7] * b[2]) + (a[8] * b[0] + a[10] * b[6])))).0,
+                ((((a[0] * b[6] + a[7] * b[1]) + (a[10] * b[5] + a[15] * b[2])) - ((a[5] * b[3] + a[6] * b[4]) + (a[8] * b[7] + a[9] * b[0])))).0,
+                ((((a[0] * b[7] + a[5] * b[2]) + (a[8] * b[6] + a[15] * b[3])) - ((a[6] * b[1] + a[7] * b[4]) + (a[9] * b[5] + a[10] * b[0])))).0,
+                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
             ],
         }
     }
@@ -7066,28 +7144,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[5] - a[3] * b[6] - a[4] * b[7] + a[5] * b[2] + a[6] * b[3] + a[7] * b[4] + a[8] * b[12] + a[9] * b[13] + a[10] * b[14] - a[11] * b[15] + a[12] * b[8] + a[13] * b[9] + a[14] * b[10] + a[15] * b[11]).0,
-                (a[0] * b[2] - a[1] * b[5] + a[2] * b[0] + a[3] * b[10] - a[4] * b[9] + a[5] * b[1] - a[6] * b[14] + a[7] * b[13] - a[8] * b[11] + a[9] * b[4] - a[10] * b[3] - a[11] * b[8] + a[12] * b[15] + a[13] * b[7] - a[14] * b[6] - a[15] * b[12]).0,
-                (a[0] * b[3] - a[1] * b[6] - a[2] * b[10] + a[3] * b[0] + a[4] * b[8] + a[5] * b[14] + a[6] * b[1] - a[7] * b[12] - a[8] * b[4] - a[9] * b[11] + a[10] * b[2] - a[11] * b[9] - a[12] * b[7] + a[13] * b[15] + a[14] * b[5] - a[15] * b[13]).0,
-                (a[0] * b[4] - a[1] * b[7] + a[2] * b[9] - a[3] * b[8] + a[4] * b[0] - a[5] * b[13] + a[6] * b[12] + a[7] * b[1] + a[8] * b[3] - a[9] * b[2] - a[10] * b[11] - a[11] * b[10] + a[12] * b[6] - a[13] * b[5] + a[14] * b[15] - a[15] * b[14]).0,
-                (a[0] * b[5] - a[1] * b[2] + a[2] * b[1] - a[3] * b[14] + a[4] * b[13] + a[5] * b[0] + a[6] * b[10] - a[7] * b[9] + a[8] * b[15] + a[9] * b[7] - a[10] * b[6] + a[11] * b[12] - a[12] * b[11] + a[13] * b[4] - a[14] * b[3] + a[15] * b[8]).0,
-                (a[0] * b[6] - a[1] * b[3] + a[2] * b[14] + a[3] * b[1] - a[4] * b[12] - a[5] * b[10] + a[6] * b[0] + a[7] * b[8] - a[8] * b[7] + a[9] * b[15] + a[10] * b[5] + a[11] * b[13] - a[12] * b[4] - a[13] * b[11] + a[14] * b[2] + a[15] * b[9]).0,
-                (a[0] * b[7] - a[1] * b[4] - a[2] * b[13] + a[3] * b[12] + a[4] * b[1] + a[5] * b[9] - a[6] * b[8] + a[7] * b[0] + a[8] * b[6] - a[9] * b[5] + a[10] * b[15] + a[11] * b[14] + a[12] * b[3] - a[13] * b[2] - a[14] * b[11] + a[15] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[12] - a[2] * b[11] + a[3] * b[4] - a[4] * b[3] - a[5] * b[15] - a[6] * b[7] + a[7] * b[6] + a[8] * b[0] + a[9] * b[10] - a[10] * b[9] - a[11] * b[2] - a[12] * b[1] + a[13] * b[14] - a[14] * b[13] - a[15] * b[5]).0,
-                (a[0] * b[9] - a[1] * b[13] - a[2] * b[4] - a[3] * b[11] + a[4] * b[2] + a[5] * b[7] - a[6] * b[15] - a[7] * b[5] - a[8] * b[10] + a[9] * b[0] + a[10] * b[8] - a[11] * b[3] - a[12] * b[14] - a[13] * b[1] + a[14] * b[12] - a[15] * b[6]).0,
-                (a[0] * b[10] - a[1] * b[14] + a[2] * b[3] - a[3] * b[2] - a[4] * b[11] - a[5] * b[6] + a[6] * b[5] - a[7] * b[15] + a[8] * b[9] - a[9] * b[8] + a[10] * b[0] - a[11] * b[4] + a[12] * b[13] - a[13] * b[12] - a[14] * b[1] - a[15] * b[7]).0,
-                (a[0] * b[11] + a[1] * b[15] + a[2] * b[8] + a[3] * b[9] + a[4] * b[10] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14] + a[8] * b[2] + a[9] * b[3] + a[10] * b[4] + a[11] * b[0] + a[12] * b[5] + a[13] * b[6] + a[14] * b[7] - a[15] * b[1]).0,
-                (a[0] * b[12] - a[1] * b[8] - a[2] * b[15] - a[3] * b[7] + a[4] * b[6] - a[5] * b[11] + a[6] * b[4] - a[7] * b[3] - a[8] * b[1] + a[9] * b[14] - a[10] * b[13] + a[11] * b[5] + a[12] * b[0] + a[13] * b[10] - a[14] * b[9] + a[15] * b[2]).0,
-                (a[0] * b[13] - a[1] * b[9] + a[2] * b[7] - a[3] * b[15] - a[4] * b[5] - a[5] * b[4] - a[6] * b[11] + a[7] * b[2] - a[8] * b[14] - a[9] * b[1] + a[10] * b[12] + a[11] * b[6] - a[12] * b[10] + a[13] * b[0] + a[14] * b[8] + a[15] * b[3]).0,
-                (a[0] * b[14] - a[1] * b[10] - a[2] * b[6] + a[3] * b[5] - a[4] * b[15] + a[5] * b[3] - a[6] * b[2] - a[7] * b[11] + a[8] * b[13] - a[9] * b[12] - a[10] * b[1] + a[11] * b[7] + a[12] * b[9] - a[13] * b[8] + a[14] * b[0] + a[15] * b[4]).0,
-                (a[0] * b[15] + a[1] * b[11] + a[2] * b[12] + a[3] * b[13] + a[4] * b[14] - a[5] * b[8] - a[6] * b[9] - a[7] * b[10] - a[8] * b[5] - a[9] * b[6] - a[10] * b[7] - a[11] * b[1] - a[12] * b[2] - a[13] * b[3] - a[14] * b[4] + a[15] * b[0]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                (((((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[2] + a[6] * b[3])) + ((a[7] * b[4] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14]))) + (((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15]))))).0,
+                (((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[10] + a[5] * b[1])) + ((a[7] * b[13] + a[9] * b[4]) + (a[12] * b[15] + a[13] * b[7]))) - (((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])) + ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12]))))).0,
+                (((((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[8] + a[5] * b[14])) + ((a[6] * b[1] + a[10] * b[2]) + (a[13] * b[15] + a[14] * b[5]))) - (((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[8] * b[4])) + ((a[9] * b[11] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13]))))).0,
+                (((((a[0] * b[4] + a[2] * b[9]) + (a[4] * b[0] + a[6] * b[12])) + ((a[7] * b[1] + a[8] * b[3]) + (a[12] * b[6] + a[14] * b[15]))) - (((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[9] * b[2])) + ((a[10] * b[11] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14]))))).0,
+                (((((a[0] * b[5] + a[2] * b[1]) + (a[4] * b[13] + a[5] * b[0])) + ((a[6] * b[10] + a[8] * b[15]) + (a[9] * b[7] + a[11] * b[12]))) + (((a[13] * b[4] + a[15] * b[8]) - (a[1] * b[2] + a[3] * b[14])) - ((a[7] * b[9] + a[10] * b[6]) + (a[12] * b[11] + a[14] * b[3]))))).0,
+                (((((a[0] * b[6] + a[2] * b[14]) + (a[3] * b[1] + a[6] * b[0])) + ((a[7] * b[8] + a[9] * b[15]) + (a[10] * b[5] + a[11] * b[13]))) + (((a[14] * b[2] + a[15] * b[9]) - (a[1] * b[3] + a[4] * b[12])) - ((a[5] * b[10] + a[8] * b[7]) + (a[12] * b[4] + a[13] * b[11]))))).0,
+                (((((a[0] * b[7] + a[3] * b[12]) + (a[4] * b[1] + a[5] * b[9])) + ((a[7] * b[0] + a[8] * b[6]) + (a[10] * b[15] + a[11] * b[14]))) + (((a[12] * b[3] + a[15] * b[10]) - (a[1] * b[4] + a[2] * b[13])) - ((a[6] * b[8] + a[9] * b[5]) + (a[13] * b[2] + a[14] * b[11]))))).0,
+                (((((a[0] * b[8] + a[3] * b[4]) + (a[7] * b[6] + a[8] * b[0])) + ((a[9] * b[10] + a[13] * b[14]) - (a[1] * b[12] + a[2] * b[11]))) - (((a[4] * b[3] + a[5] * b[15]) + (a[6] * b[7] + a[10] * b[9])) + ((a[11] * b[2] + a[12] * b[1]) + (a[14] * b[13] + a[15] * b[5]))))).0,
+                (((((a[0] * b[9] + a[4] * b[2]) + (a[5] * b[7] + a[9] * b[0])) + ((a[10] * b[8] + a[14] * b[12]) - (a[1] * b[13] + a[2] * b[4]))) - (((a[3] * b[11] + a[6] * b[15]) + (a[7] * b[5] + a[8] * b[10])) + ((a[11] * b[3] + a[12] * b[14]) + (a[13] * b[1] + a[15] * b[6]))))).0,
+                (((((a[0] * b[10] + a[2] * b[3]) + (a[6] * b[5] + a[8] * b[9])) + ((a[10] * b[0] + a[12] * b[13]) - (a[1] * b[14] + a[3] * b[2]))) - (((a[4] * b[11] + a[5] * b[6]) + (a[7] * b[15] + a[9] * b[8])) + ((a[11] * b[4] + a[13] * b[12]) + (a[14] * b[1] + a[15] * b[7]))))).0,
+                (((((a[0] * b[11] + a[1] * b[15]) + (a[2] * b[8] + a[3] * b[9])) + ((a[4] * b[10] + a[8] * b[2]) + (a[9] * b[3] + a[10] * b[4]))) + (((a[11] * b[0] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])) - ((a[5] * b[12] + a[6] * b[13]) + (a[7] * b[14] + a[15] * b[1]))))).0,
+                (((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[9] * b[14])) + ((a[11] * b[5] + a[12] * b[0]) + (a[13] * b[10] + a[15] * b[2]))) - (((a[1] * b[8] + a[2] * b[15]) + (a[3] * b[7] + a[5] * b[11])) + ((a[7] * b[3] + a[8] * b[1]) + (a[10] * b[13] + a[14] * b[9]))))).0,
+                (((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[10] * b[12])) + ((a[11] * b[6] + a[13] * b[0]) + (a[14] * b[8] + a[15] * b[3]))) - (((a[1] * b[9] + a[3] * b[15]) + (a[4] * b[5] + a[5] * b[4])) + ((a[6] * b[11] + a[8] * b[14]) + (a[9] * b[1] + a[12] * b[10]))))).0,
+                (((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[8] * b[13])) + ((a[11] * b[7] + a[12] * b[9]) + (a[14] * b[0] + a[15] * b[4]))) - (((a[1] * b[10] + a[2] * b[6]) + (a[4] * b[15] + a[6] * b[2])) + ((a[7] * b[11] + a[9] * b[12]) + (a[10] * b[1] + a[13] * b[8]))))).0,
+                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
             ],
         }
     }
@@ -7095,7 +7173,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7109,7 +7187,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7126,7 +7204,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7145,7 +7223,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Scalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7162,7 +7240,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7176,7 +7254,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7197,7 +7275,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Scala
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7218,7 +7296,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7247,7 +7325,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7264,18 +7342,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
             ],
         }
     }
@@ -7283,16 +7361,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -7300,13 +7378,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -7314,7 +7392,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7324,10 +7402,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Vecto
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) - a[2] * b[3] + a[3] * b[2]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
+                (((a[3] * b[2] - a[0] * b[4]) - a[2] * b[3])).0,
+                (((a[1] * b[3] - a[0] * b[5]) - a[3] * b[1])).0,
+                (((a[2] * b[1] - a[0] * b[6]) - a[1] * b[2])).0,
             ],
         }
     }
@@ -7335,20 +7413,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Vecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -7356,7 +7434,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7367,17 +7445,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (-(a[0] * b[4]) + a[3] * b[1]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) - a[2] * b[7] + a[3] * b[6]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5]).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14]).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[3] * b[1] - a[0] * b[4])).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
+                (((a[3] * b[6] - a[0] * b[8]) - a[2] * b[7])).0,
+                (((a[1] * b[7] - a[0] * b[9]) - a[3] * b[5])).0,
+                (((a[2] * b[5] - a[0] * b[10]) - a[1] * b[6])).0,
+                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
             ],
         }
     }
@@ -7385,7 +7463,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7404,16 +7482,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (a[1] * b[3] - a[2] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] - a[4] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
+                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -7421,13 +7499,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (-(a[0] * b[3]) - a[1] * b[4] - a[2] * b[5] - a[3] * b[0] - a[4] * b[1] - a[5] * b[2]).0,
+                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
             ],
         }
     }
@@ -7435,7 +7513,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7448,7 +7526,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Bivec
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6] - a[3] * b[1] - a[4] * b[2] - a[5] * b[3]).0,
+                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
             ],
         }
     }
@@ -7456,16 +7534,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (a[1] * b[3] - a[2] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] - a[4] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
+                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -7473,7 +7551,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7490,11 +7568,11 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (a[3] * b[2] + a[4] * b[3] + a[5] * b[4]).0,
-                (a[1] * b[4] - a[2] * b[3] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[2] * b[2] - a[4] * b[1]).0,
-                (a[0] * b[3] - a[1] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[8]) - a[1] * b[9] - a[2] * b[10] - a[3] * b[5] - a[4] * b[6] - a[5] * b[7]).0,
+                (((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4])).0,
+                (((a[1] * b[4] - a[2] * b[3]) - a[3] * b[1])).0,
+                (((a[2] * b[2] - a[0] * b[4]) - a[4] * b[1])).0,
+                (((a[0] * b[3] - a[1] * b[2]) - a[5] * b[1])).0,
+                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
             ],
         }
     }
@@ -7502,7 +7580,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7519,13 +7597,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -7533,7 +7611,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7550,13 +7628,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Trive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -7564,7 +7642,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Trivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7585,7 +7663,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
             ],
         }
     }
@@ -7593,7 +7671,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7607,7 +7685,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7621,7 +7699,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7635,7 +7713,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7656,7 +7734,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7666,10 +7744,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Eve
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[4] * b[0]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[5] * b[0]).0,
-                (a[1] * b[2] - a[2] * b[1] - a[6] * b[0]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
+                (((a[2] * b[3] - a[3] * b[2]) - a[4] * b[0])).0,
+                (((a[3] * b[1] - a[1] * b[3]) - a[5] * b[0])).0,
+                (((a[1] * b[2] - a[2] * b[1]) - a[6] * b[0])).0,
             ],
         }
     }
@@ -7677,7 +7755,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7690,7 +7768,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for E
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (-(a[1] * b[3]) - a[2] * b[4] - a[3] * b[5] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2]).0,
+                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
             ],
         }
     }
@@ -7698,7 +7776,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for E
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Even<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7715,7 +7793,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7729,20 +7807,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 (a[0] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[0] * b[4] + a[4] * b[0]).0,
-                (a[0] * b[5] + a[5] * b[0]).0,
-                (a[0] * b[6] + a[6] * b[0]).0,
-                (a[0] * b[7] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] + a[7] * b[0]).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                ((a[0] * b[4] + a[4] * b[0])).0,
+                ((a[0] * b[5] + a[5] * b[0])).0,
+                ((a[0] * b[6] + a[6] * b[0])).0,
+                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
             ],
         }
     }
@@ -7750,7 +7828,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Even<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7760,10 +7838,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Even<S
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[0] * b[4] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (a[0] * b[5] + a[2] * b[3] - a[3] * b[2] - a[4] * b[0]).0,
-                (a[0] * b[6] - a[1] * b[3] + a[3] * b[1] - a[5] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[2] - a[2] * b[1] - a[6] * b[0]).0,
+                (((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3]))).0,
+                (((a[0] * b[5] + a[2] * b[3]) - (a[3] * b[2] + a[4] * b[0]))).0,
+                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[5] * b[0]))).0,
+                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[6] * b[0]))).0,
             ],
         }
     }
@@ -7771,7 +7849,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7782,17 +7860,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
-                (a[0] * b[5] + a[1] * b[0]).0,
-                (a[0] * b[6] + a[2] * b[0]).0,
-                (a[0] * b[7] + a[3] * b[0]).0,
-                (a[0] * b[8] + a[4] * b[0]).0,
-                (a[0] * b[9] + a[5] * b[0]).0,
-                (a[0] * b[10] + a[6] * b[0]).0,
-                (a[0] * b[11] + a[4] * b[2] + a[5] * b[3] + a[6] * b[4]).0,
-                (a[0] * b[12] + a[2] * b[4] - a[3] * b[3] - a[4] * b[1]).0,
-                (a[0] * b[13] - a[1] * b[4] + a[3] * b[2] - a[5] * b[1]).0,
-                (a[0] * b[14] + a[1] * b[3] - a[2] * b[2] - a[6] * b[1]).0,
-                (a[0] * b[15] - a[1] * b[8] - a[2] * b[9] - a[3] * b[10] - a[4] * b[5] - a[5] * b[6] - a[6] * b[7] + a[7] * b[0]).0,
+                ((a[0] * b[5] + a[1] * b[0])).0,
+                ((a[0] * b[6] + a[2] * b[0])).0,
+                ((a[0] * b[7] + a[3] * b[0])).0,
+                ((a[0] * b[8] + a[4] * b[0])).0,
+                ((a[0] * b[9] + a[5] * b[0])).0,
+                ((a[0] * b[10] + a[6] * b[0])).0,
+                (((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4]))).0,
+                (((a[0] * b[12] + a[2] * b[4]) - (a[3] * b[3] + a[4] * b[1]))).0,
+                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[5] * b[1]))).0,
+                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[6] * b[1]))).0,
+                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
             ],
         }
     }
@@ -7800,7 +7878,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7821,20 +7899,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -7842,16 +7920,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -7859,13 +7937,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -7873,7 +7951,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7883,10 +7961,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Odd<S
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[0]).0,
-                (-(a[0] * b[4]) - a[2] * b[3] + a[3] * b[2] + a[5] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[3] * b[1] + a[6] * b[0]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1] + a[7] * b[0]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[0]))).0,
+                (((a[3] * b[2] + a[5] * b[0]) - (a[0] * b[4] + a[2] * b[3]))).0,
+                (((a[1] * b[3] + a[6] * b[0]) - (a[0] * b[5] + a[3] * b[1]))).0,
+                (((a[2] * b[1] + a[7] * b[0]) - (a[0] * b[6] + a[1] * b[2]))).0,
             ],
         }
     }
@@ -7894,20 +7972,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
             ],
         }
     }
@@ -7915,7 +7993,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7926,17 +8004,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (-(a[0] * b[4]) + a[3] * b[1]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10] + a[4] * b[0]).0,
-                (-(a[0] * b[8]) - a[2] * b[7] + a[3] * b[6] + a[5] * b[0]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[3] * b[5] + a[6] * b[0]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5] + a[7] * b[0]).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] - a[7] * b[4]).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[3] * b[1] - a[0] * b[4])).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] + a[4] * b[0]))).0,
+                (((a[3] * b[6] + a[5] * b[0]) - (a[0] * b[8] + a[2] * b[7]))).0,
+                (((a[1] * b[7] + a[6] * b[0]) - (a[0] * b[9] + a[3] * b[5]))).0,
+                (((a[2] * b[5] + a[7] * b[0]) - (a[0] * b[10] + a[1] * b[6]))).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
             ],
         }
     }
@@ -7944,7 +8022,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7973,7 +8051,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -7984,17 +8062,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (-(a[1] * b[3]) + a[4] * b[0]).0,
-                (a[3] * b[3] - a[4] * b[2]).0,
-                (-(a[2] * b[3]) + a[4] * b[1]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (a[6] * b[3] - a[7] * b[2] - a[8] * b[0]).0,
-                (-(a[5] * b[3]) + a[7] * b[1] - a[9] * b[0]).0,
-                (a[5] * b[2] - a[6] * b[1] - a[10] * b[0]).0,
-                (-(a[11] * b[0]) - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[4] * b[0] - a[1] * b[3])).0,
+                ((a[3] * b[3] - a[4] * b[2])).0,
+                ((a[4] * b[1] - a[2] * b[3])).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
+                (((a[6] * b[3] - a[7] * b[2]) - a[8] * b[0])).0,
+                (((a[7] * b[1] - a[5] * b[3]) - a[9] * b[0])).0,
+                (((a[5] * b[2] - a[6] * b[1]) - a[10] * b[0])).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
             ],
         }
     }
@@ -8002,7 +8080,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8019,11 +8097,11 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (a[2] * b[3] + a[3] * b[4] + a[4] * b[5]).0,
-                (-(a[1] * b[3]) - a[3] * b[2] + a[4] * b[1]).0,
-                (-(a[1] * b[4]) + a[2] * b[2] - a[4] * b[0]).0,
-                (-(a[1] * b[5]) - a[2] * b[1] + a[3] * b[0]).0,
-                (-(a[5] * b[3]) - a[6] * b[4] - a[7] * b[5] - a[8] * b[0] - a[9] * b[1] - a[10] * b[2]).0,
+                (((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5])).0,
+                (((a[4] * b[1] - a[1] * b[3]) - a[3] * b[2])).0,
+                (((a[2] * b[2] - a[1] * b[4]) - a[4] * b[0])).0,
+                (((a[3] * b[0] - a[1] * b[5]) - a[2] * b[1])).0,
+                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
             ],
         }
     }
@@ -8031,7 +8109,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8052,7 +8130,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] + a[4] * b[3]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
             ],
         }
     }
@@ -8060,7 +8138,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8074,7 +8152,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8085,17 +8163,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Multi
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
-                (a[0] * b[1] + a[5] * b[0]).0,
-                (a[0] * b[2] + a[6] * b[0]).0,
-                (a[0] * b[3] + a[7] * b[0]).0,
-                (a[0] * b[4] + a[8] * b[0]).0,
-                (a[0] * b[5] + a[9] * b[0]).0,
-                (a[0] * b[6] + a[10] * b[0]).0,
-                (a[2] * b[4] + a[3] * b[5] + a[4] * b[6] + a[11] * b[0]).0,
-                (-(a[1] * b[4]) - a[3] * b[3] + a[4] * b[2] + a[12] * b[0]).0,
-                (-(a[1] * b[5]) + a[2] * b[3] - a[4] * b[1] + a[13] * b[0]).0,
-                (-(a[1] * b[6]) - a[2] * b[2] + a[3] * b[1] + a[14] * b[0]).0,
-                (a[0] * b[7] - a[5] * b[4] - a[6] * b[5] - a[7] * b[6] - a[8] * b[1] - a[9] * b[2] - a[10] * b[3] + a[15] * b[0]).0,
+                ((a[0] * b[1] + a[5] * b[0])).0,
+                ((a[0] * b[2] + a[6] * b[0])).0,
+                ((a[0] * b[3] + a[7] * b[0])).0,
+                ((a[0] * b[4] + a[8] * b[0])).0,
+                ((a[0] * b[5] + a[9] * b[0])).0,
+                ((a[0] * b[6] + a[10] * b[0])).0,
+                (((a[2] * b[4] + a[3] * b[5]) + (a[4] * b[6] + a[11] * b[0]))).0,
+                (((a[4] * b[2] + a[12] * b[0]) - (a[1] * b[4] + a[3] * b[3]))).0,
+                (((a[2] * b[3] + a[13] * b[0]) - (a[1] * b[5] + a[4] * b[1]))).0,
+                (((a[3] * b[1] + a[14] * b[0]) - (a[1] * b[6] + a[2] * b[2]))).0,
+                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
             ],
         }
     }
@@ -8103,7 +8181,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8114,17 +8192,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multiv
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (-(a[1] * b[3]) + a[4] * b[0]).0,
-                (a[3] * b[3] - a[4] * b[2]).0,
-                (-(a[2] * b[3]) + a[4] * b[1]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (a[0] * b[4] + a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (a[0] * b[5] + a[6] * b[3] - a[7] * b[2] - a[8] * b[0]).0,
-                (a[0] * b[6] - a[5] * b[3] + a[7] * b[1] - a[9] * b[0]).0,
-                (a[0] * b[7] + a[5] * b[2] - a[6] * b[1] - a[10] * b[0]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[7] - a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[4] * b[0] - a[1] * b[3])).0,
+                ((a[3] * b[3] - a[4] * b[2])).0,
+                ((a[4] * b[1] - a[2] * b[3])).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                (((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3]))).0,
+                (((a[0] * b[5] + a[6] * b[3]) - (a[7] * b[2] + a[8] * b[0]))).0,
+                (((a[0] * b[6] + a[7] * b[1]) - (a[5] * b[3] + a[9] * b[0]))).0,
+                (((a[0] * b[7] + a[5] * b[2]) - (a[6] * b[1] + a[10] * b[0]))).0,
+                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
             ],
         }
     }
@@ -8132,28 +8210,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 (a[0] * b[0]).0,
-                (a[0] * b[1] + a[1] * b[0]).0,
-                (a[0] * b[2] + a[2] * b[0]).0,
-                (a[0] * b[3] + a[3] * b[0]).0,
-                (a[0] * b[4] + a[4] * b[0]).0,
-                (a[0] * b[5] - a[1] * b[2] + a[2] * b[1] + a[5] * b[0]).0,
-                (a[0] * b[6] - a[1] * b[3] + a[3] * b[1] + a[6] * b[0]).0,
-                (a[0] * b[7] - a[1] * b[4] + a[4] * b[1] + a[7] * b[0]).0,
-                (a[0] * b[8] + a[3] * b[4] - a[4] * b[3] + a[8] * b[0]).0,
-                (a[0] * b[9] - a[2] * b[4] + a[4] * b[2] + a[9] * b[0]).0,
-                (a[0] * b[10] + a[2] * b[3] - a[3] * b[2] + a[10] * b[0]).0,
-                (a[0] * b[11] + a[2] * b[8] + a[3] * b[9] + a[4] * b[10] + a[8] * b[2] + a[9] * b[3] + a[10] * b[4] + a[11] * b[0]).0,
-                (a[0] * b[12] - a[1] * b[8] - a[3] * b[7] + a[4] * b[6] + a[6] * b[4] - a[7] * b[3] - a[8] * b[1] + a[12] * b[0]).0,
-                (a[0] * b[13] - a[1] * b[9] + a[2] * b[7] - a[4] * b[5] - a[5] * b[4] + a[7] * b[2] - a[9] * b[1] + a[13] * b[0]).0,
-                (a[0] * b[14] - a[1] * b[10] - a[2] * b[6] + a[3] * b[5] + a[5] * b[3] - a[6] * b[2] - a[10] * b[1] + a[14] * b[0]).0,
-                (a[0] * b[15] + a[1] * b[11] + a[2] * b[12] + a[3] * b[13] + a[4] * b[14] - a[5] * b[8] - a[6] * b[9] - a[7] * b[10] - a[8] * b[5] - a[9] * b[6] - a[10] * b[7] - a[11] * b[1] - a[12] * b[2] - a[13] * b[3] - a[14] * b[4] + a[15] * b[0]).0,
+                ((a[0] * b[1] + a[1] * b[0])).0,
+                ((a[0] * b[2] + a[2] * b[0])).0,
+                ((a[0] * b[3] + a[3] * b[0])).0,
+                ((a[0] * b[4] + a[4] * b[0])).0,
+                (((a[0] * b[5] + a[2] * b[1]) + (a[5] * b[0] - a[1] * b[2]))).0,
+                (((a[0] * b[6] + a[3] * b[1]) + (a[6] * b[0] - a[1] * b[3]))).0,
+                (((a[0] * b[7] + a[4] * b[1]) + (a[7] * b[0] - a[1] * b[4]))).0,
+                (((a[0] * b[8] + a[3] * b[4]) + (a[8] * b[0] - a[4] * b[3]))).0,
+                (((a[0] * b[9] + a[4] * b[2]) + (a[9] * b[0] - a[2] * b[4]))).0,
+                (((a[0] * b[10] + a[2] * b[3]) + (a[10] * b[0] - a[3] * b[2]))).0,
+                ((((a[0] * b[11] + a[2] * b[8]) + (a[3] * b[9] + a[4] * b[10])) + ((a[8] * b[2] + a[9] * b[3]) + (a[10] * b[4] + a[11] * b[0])))).0,
+                ((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[12] * b[0])) - ((a[1] * b[8] + a[3] * b[7]) + (a[7] * b[3] + a[8] * b[1])))).0,
+                ((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[13] * b[0])) - ((a[1] * b[9] + a[4] * b[5]) + (a[5] * b[4] + a[9] * b[1])))).0,
+                ((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[14] * b[0])) - ((a[1] * b[10] + a[2] * b[6]) + (a[6] * b[2] + a[10] * b[1])))).0,
+                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
             ],
         }
     }
@@ -8161,7 +8239,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8175,7 +8253,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8189,7 +8267,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Scalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8203,13 +8281,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -8217,7 +8295,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8234,7 +8312,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8251,13 +8329,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Vector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -8265,13 +8343,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14]).0,
+                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
                 (a[0] * b[15]).0,
                 (a[1] * b[15]).0,
                 (a[2] * b[15]).0,
@@ -8294,13 +8372,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[3]) - a[1] * b[4] - a[2] * b[5] - a[3] * b[0] - a[4] * b[1] - a[5] * b[2]).0,
+                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
             ],
         }
     }
@@ -8308,16 +8386,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (-(a[0] * b[0]) + a[4] * b[3] - a[5] * b[2]).0,
-                (-(a[1] * b[0]) - a[3] * b[3] + a[5] * b[1]).0,
-                (-(a[2] * b[0]) + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
+                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
+                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -8325,7 +8403,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Bi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8344,13 +8422,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6] - a[3] * b[1] - a[4] * b[2] - a[5] * b[3]).0,
+                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -8365,16 +8443,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Bivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7]).0,
-                (-(a[0] * b[4]) + a[4] * b[7] - a[5] * b[6]).0,
-                (-(a[1] * b[4]) - a[3] * b[7] + a[5] * b[5]).0,
-                (-(a[2] * b[4]) + a[3] * b[6] - a[4] * b[5]).0,
+                (((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                (((a[4] * b[7] - a[0] * b[4]) - a[5] * b[6])).0,
+                (((a[5] * b[5] - a[1] * b[4]) - a[3] * b[7])).0,
+                (((a[3] * b[6] - a[2] * b[4]) - a[4] * b[5])).0,
             ],
         }
     }
@@ -8382,17 +8460,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[8]) - a[1] * b[9] - a[2] * b[10] - a[3] * b[5] - a[4] * b[6] - a[5] * b[7]).0,
-                (a[0] * b[12] + a[1] * b[13] + a[2] * b[14]).0,
-                (-(a[0] * b[11]) + a[4] * b[14] - a[5] * b[13]).0,
-                (-(a[1] * b[11]) - a[3] * b[14] + a[5] * b[12]).0,
-                (-(a[2] * b[11]) + a[3] * b[13] - a[4] * b[12]).0,
+                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                (((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14])).0,
+                (((a[4] * b[14] - a[0] * b[11]) - a[5] * b[13])).0,
+                (((a[5] * b[12] - a[1] * b[11]) - a[3] * b[14])).0,
+                (((a[3] * b[13] - a[2] * b[11]) - a[4] * b[12])).0,
                 (a[0] * b[15]).0,
                 (a[1] * b[15]).0,
                 (a[2] * b[15]).0,
@@ -8411,13 +8489,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -8425,16 +8503,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Trive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (-(a[0] * b[0]) - a[2] * b[5] + a[3] * b[4]).0,
-                (-(a[0] * b[1]) + a[1] * b[5] - a[3] * b[3]).0,
-                (-(a[0] * b[2]) - a[1] * b[4] + a[2] * b[3]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[3] * b[4] - a[0] * b[0]) - a[2] * b[5])).0,
+                (((a[1] * b[5] - a[0] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[3] - a[0] * b[2]) - a[1] * b[4])).0,
             ],
         }
     }
@@ -8442,18 +8520,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (a[0] * b[1] - a[1] * b[0]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (a[0] * b[3] - a[3] * b[0]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[0] * b[3] - a[3] * b[0])).0,
             ],
         }
     }
@@ -8461,7 +8539,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Tr
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8478,16 +8556,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (-(a[0] * b[1]) - a[2] * b[6] + a[3] * b[5]).0,
-                (-(a[0] * b[2]) + a[1] * b[6] - a[3] * b[4]).0,
-                (-(a[0] * b[3]) - a[1] * b[5] + a[2] * b[4]).0,
+                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[3] * b[5] - a[0] * b[1]) - a[2] * b[6])).0,
+                (((a[1] * b[6] - a[0] * b[2]) - a[3] * b[4])).0,
+                (((a[2] * b[4] - a[0] * b[3]) - a[1] * b[5])).0,
                 (a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
@@ -8499,19 +8577,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Trivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[2] * b[7]) + a[3] * b[6]).0,
-                (a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (a[0] * b[5] - a[1] * b[4]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (a[0] * b[7] - a[3] * b[4]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[3] * b[6] - a[2] * b[7])).0,
+                ((a[1] * b[7] - a[3] * b[5])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[5] - a[1] * b[4])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[0] * b[7] - a[3] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8520,23 +8598,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Trivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
-                (a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
-                (-(a[0] * b[5]) - a[2] * b[10] + a[3] * b[9]).0,
-                (-(a[0] * b[6]) + a[1] * b[10] - a[3] * b[8]).0,
-                (-(a[0] * b[7]) - a[1] * b[9] + a[2] * b[8]).0,
-                (-(a[2] * b[14]) + a[3] * b[13]).0,
-                (a[1] * b[14] - a[3] * b[12]).0,
-                (-(a[1] * b[13]) + a[2] * b[12]).0,
-                (a[0] * b[12] - a[1] * b[11]).0,
-                (a[0] * b[13] - a[2] * b[11]).0,
-                (a[0] * b[14] - a[3] * b[11]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
+                (((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
+                (((a[3] * b[9] - a[0] * b[5]) - a[2] * b[10])).0,
+                (((a[1] * b[10] - a[0] * b[6]) - a[3] * b[8])).0,
+                (((a[2] * b[8] - a[0] * b[7]) - a[1] * b[9])).0,
+                ((a[3] * b[13] - a[2] * b[14])).0,
+                ((a[1] * b[14] - a[3] * b[12])).0,
+                ((a[2] * b[12] - a[1] * b[13])).0,
+                ((a[0] * b[12] - a[1] * b[11])).0,
+                ((a[0] * b[13] - a[2] * b[11])).0,
+                ((a[0] * b[14] - a[3] * b[11])).0,
                 (a[0] * b[15]).0,
                 (a[1] * b[15]).0,
                 (a[2] * b[15]).0,
@@ -8549,7 +8627,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8563,7 +8641,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8580,7 +8658,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8599,7 +8677,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8616,7 +8694,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ps
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8630,7 +8708,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8651,7 +8729,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Pseudos
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8672,7 +8750,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8701,7 +8779,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8715,7 +8793,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Even<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Even<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8732,13 +8810,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Even<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[1] * b[3]) - a[2] * b[4] - a[3] * b[5] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2]).0,
+                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -8753,16 +8831,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (-(a[1] * b[0]) + a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[2] * b[0]) - a[4] * b[3] + a[6] * b[1]).0,
-                (-(a[3] * b[0]) + a[4] * b[2] - a[5] * b[1]).0,
+                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[5] * b[3] - a[1] * b[0]) - a[6] * b[2])).0,
+                (((a[6] * b[1] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[4] * b[2] - a[3] * b[0]) - a[5] * b[1])).0,
                 (a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
@@ -8774,7 +8852,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ev
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8795,19 +8873,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[7] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] + a[7] * b[0]).0,
-                (a[1] * b[7] + a[7] * b[1]).0,
-                (a[2] * b[7] + a[7] * b[2]).0,
-                (a[3] * b[7] + a[7] * b[3]).0,
-                (a[4] * b[7] + a[7] * b[4]).0,
-                (a[5] * b[7] + a[7] * b[5]).0,
-                (a[6] * b[7] + a[7] * b[6]).0,
+                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
+                ((a[1] * b[7] + a[7] * b[1])).0,
+                ((a[2] * b[7] + a[7] * b[2])).0,
+                ((a[3] * b[7] + a[7] * b[3])).0,
+                ((a[4] * b[7] + a[7] * b[4])).0,
+                ((a[5] * b[7] + a[7] * b[5])).0,
+                ((a[6] * b[7] + a[7] * b[6])).0,
                 (a[7] * b[7]).0,
             ],
         }
@@ -8816,16 +8894,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Even<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[5] + a[2] * b[6] + a[3] * b[7] + a[7] * b[0]).0,
-                (-(a[1] * b[4]) + a[5] * b[7] - a[6] * b[6] + a[7] * b[1]).0,
-                (-(a[2] * b[4]) - a[4] * b[7] + a[6] * b[5] + a[7] * b[2]).0,
-                (-(a[3] * b[4]) + a[4] * b[6] - a[5] * b[5] + a[7] * b[3]).0,
+                (((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0]))).0,
+                (((a[5] * b[7] + a[7] * b[1]) - (a[1] * b[4] + a[6] * b[6]))).0,
+                (((a[6] * b[5] + a[7] * b[2]) - (a[2] * b[4] + a[4] * b[7]))).0,
+                (((a[4] * b[6] + a[7] * b[3]) - (a[3] * b[4] + a[5] * b[5]))).0,
                 (a[7] * b[4]).0,
                 (a[7] * b[5]).0,
                 (a[7] * b[6]).0,
@@ -8837,23 +8915,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Even<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[15] - a[1] * b[8] - a[2] * b[9] - a[3] * b[10] - a[4] * b[5] - a[5] * b[6] - a[6] * b[7] + a[7] * b[0]).0,
-                (a[1] * b[12] + a[2] * b[13] + a[3] * b[14] + a[7] * b[1]).0,
-                (-(a[1] * b[11]) + a[5] * b[14] - a[6] * b[13] + a[7] * b[2]).0,
-                (-(a[2] * b[11]) - a[4] * b[14] + a[6] * b[12] + a[7] * b[3]).0,
-                (-(a[3] * b[11]) + a[4] * b[13] - a[5] * b[12] + a[7] * b[4]).0,
-                (a[1] * b[15] + a[7] * b[5]).0,
-                (a[2] * b[15] + a[7] * b[6]).0,
-                (a[3] * b[15] + a[7] * b[7]).0,
-                (a[4] * b[15] + a[7] * b[8]).0,
-                (a[5] * b[15] + a[7] * b[9]).0,
-                (a[6] * b[15] + a[7] * b[10]).0,
+                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
+                (((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1]))).0,
+                (((a[5] * b[14] + a[7] * b[2]) - (a[1] * b[11] + a[6] * b[13]))).0,
+                (((a[6] * b[12] + a[7] * b[3]) - (a[2] * b[11] + a[4] * b[14]))).0,
+                (((a[4] * b[13] + a[7] * b[4]) - (a[3] * b[11] + a[5] * b[12]))).0,
+                ((a[1] * b[15] + a[7] * b[5])).0,
+                ((a[2] * b[15] + a[7] * b[6])).0,
+                ((a[3] * b[15] + a[7] * b[7])).0,
+                ((a[4] * b[15] + a[7] * b[8])).0,
+                ((a[5] * b[15] + a[7] * b[9])).0,
+                ((a[6] * b[15] + a[7] * b[10])).0,
                 (a[7] * b[11]).0,
                 (a[7] * b[12]).0,
                 (a[7] * b[13]).0,
@@ -8866,13 +8944,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -8880,16 +8958,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2]).0,
-                (-(a[4] * b[0]) - a[6] * b[5] + a[7] * b[4]).0,
-                (-(a[4] * b[1]) + a[5] * b[5] - a[7] * b[3]).0,
-                (-(a[4] * b[2]) - a[5] * b[4] + a[6] * b[3]).0,
+                (((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                (((a[7] * b[4] - a[4] * b[0]) - a[6] * b[5])).0,
+                (((a[5] * b[5] - a[4] * b[1]) - a[7] * b[3])).0,
+                (((a[6] * b[3] - a[4] * b[2]) - a[5] * b[4])).0,
             ],
         }
     }
@@ -8897,19 +8975,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (-(a[6] * b[3]) + a[7] * b[2]).0,
-                (a[5] * b[3] - a[7] * b[1]).0,
-                (-(a[5] * b[2]) + a[6] * b[1]).0,
-                (a[4] * b[1] - a[5] * b[0]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (a[4] * b[3] - a[7] * b[0]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[7] * b[2] - a[6] * b[3])).0,
+                ((a[5] * b[3] - a[7] * b[1])).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[1] - a[5] * b[0])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[4] * b[3] - a[7] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8918,7 +8996,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Od
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -8939,16 +9017,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[7] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (a[1] * b[7] - a[4] * b[1] - a[6] * b[6] + a[7] * b[5]).0,
-                (a[2] * b[7] - a[4] * b[2] + a[5] * b[6] - a[7] * b[4]).0,
-                (a[3] * b[7] - a[4] * b[3] - a[5] * b[5] + a[6] * b[4]).0,
+                (((a[0] * b[7] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[1] * b[7] + a[7] * b[5]) - (a[4] * b[1] + a[6] * b[6]))).0,
+                (((a[2] * b[7] + a[5] * b[6]) - (a[4] * b[2] + a[7] * b[4]))).0,
+                (((a[3] * b[7] + a[6] * b[4]) - (a[4] * b[3] + a[5] * b[5]))).0,
                 (a[4] * b[7]).0,
                 (a[5] * b[7]).0,
                 (a[6] * b[7]).0,
@@ -8960,19 +9038,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Odd<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[6] * b[7]) + a[7] * b[6]).0,
-                (a[5] * b[7] - a[7] * b[5]).0,
-                (-(a[5] * b[6]) + a[6] * b[5]).0,
-                (a[4] * b[5] - a[5] * b[4]).0,
-                (a[4] * b[6] - a[6] * b[4]).0,
-                (a[4] * b[7] - a[7] * b[4]).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
+                ((a[7] * b[6] - a[6] * b[7])).0,
+                ((a[5] * b[7] - a[7] * b[5])).0,
+                ((a[6] * b[5] - a[5] * b[6])).0,
+                ((a[4] * b[5] - a[5] * b[4])).0,
+                ((a[4] * b[6] - a[6] * b[4])).0,
+                ((a[4] * b[7] - a[7] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8981,23 +9059,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] - a[7] * b[4]).0,
-                (a[0] * b[15] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7]).0,
-                (a[1] * b[15] - a[4] * b[5] - a[6] * b[10] + a[7] * b[9]).0,
-                (a[2] * b[15] - a[4] * b[6] + a[5] * b[10] - a[7] * b[8]).0,
-                (a[3] * b[15] - a[4] * b[7] - a[5] * b[9] + a[6] * b[8]).0,
-                (-(a[6] * b[14]) + a[7] * b[13]).0,
-                (a[5] * b[14] - a[7] * b[12]).0,
-                (-(a[5] * b[13]) + a[6] * b[12]).0,
-                (a[4] * b[12] - a[5] * b[11]).0,
-                (a[4] * b[13] - a[6] * b[11]).0,
-                (a[4] * b[14] - a[7] * b[11]).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
+                (((a[0] * b[15] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7]))).0,
+                (((a[1] * b[15] + a[7] * b[9]) - (a[4] * b[5] + a[6] * b[10]))).0,
+                (((a[2] * b[15] + a[5] * b[10]) - (a[4] * b[6] + a[7] * b[8]))).0,
+                (((a[3] * b[15] + a[6] * b[8]) - (a[4] * b[7] + a[5] * b[9]))).0,
+                ((a[7] * b[13] - a[6] * b[14])).0,
+                ((a[5] * b[14] - a[7] * b[12])).0,
+                ((a[6] * b[12] - a[5] * b[13])).0,
+                ((a[4] * b[12] - a[5] * b[11])).0,
+                ((a[4] * b[13] - a[6] * b[11])).0,
+                ((a[4] * b[14] - a[7] * b[11])).0,
                 (a[4] * b[15]).0,
                 (a[5] * b[15]).0,
                 (a[6] * b[15]).0,
@@ -9010,7 +9088,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9024,13 +9102,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[11] * b[0]) - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
                 (a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
@@ -9053,17 +9131,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[5] * b[3]) - a[6] * b[4] - a[7] * b[5] - a[8] * b[0] - a[9] * b[1] - a[10] * b[2]).0,
-                (a[12] * b[0] + a[13] * b[1] + a[14] * b[2]).0,
-                (-(a[11] * b[0]) - a[13] * b[5] + a[14] * b[4]).0,
-                (-(a[11] * b[1]) + a[12] * b[5] - a[14] * b[3]).0,
-                (-(a[11] * b[2]) - a[12] * b[4] + a[13] * b[3]).0,
+                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                (((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2])).0,
+                (((a[14] * b[4] - a[11] * b[0]) - a[13] * b[5])).0,
+                (((a[12] * b[5] - a[11] * b[1]) - a[14] * b[3])).0,
+                (((a[13] * b[3] - a[11] * b[2]) - a[12] * b[4])).0,
                 (a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
@@ -9082,23 +9160,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] + a[4] * b[3]).0,
-                (a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (-(a[5] * b[0]) + a[9] * b[3] - a[10] * b[2]).0,
-                (-(a[6] * b[0]) - a[8] * b[3] + a[10] * b[1]).0,
-                (-(a[7] * b[0]) + a[8] * b[2] - a[9] * b[1]).0,
-                (-(a[13] * b[3]) + a[14] * b[2]).0,
-                (a[12] * b[3] - a[14] * b[1]).0,
-                (-(a[12] * b[2]) + a[13] * b[1]).0,
-                (a[11] * b[1] - a[12] * b[0]).0,
-                (a[11] * b[2] - a[13] * b[0]).0,
-                (a[11] * b[3] - a[14] * b[0]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
+                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
+                (((a[9] * b[3] - a[5] * b[0]) - a[10] * b[2])).0,
+                (((a[10] * b[1] - a[6] * b[0]) - a[8] * b[3])).0,
+                (((a[8] * b[2] - a[7] * b[0]) - a[9] * b[1])).0,
+                ((a[14] * b[2] - a[13] * b[3])).0,
+                ((a[12] * b[3] - a[14] * b[1])).0,
+                ((a[13] * b[1] - a[12] * b[2])).0,
+                ((a[11] * b[1] - a[12] * b[0])).0,
+                ((a[11] * b[2] - a[13] * b[0])).0,
+                ((a[11] * b[3] - a[14] * b[0])).0,
                 (a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
@@ -9111,7 +9189,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Mu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9140,23 +9218,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[7] - a[5] * b[4] - a[6] * b[5] - a[7] * b[6] - a[8] * b[1] - a[9] * b[2] - a[10] * b[3] + a[15] * b[0]).0,
-                (a[1] * b[7] + a[12] * b[1] + a[13] * b[2] + a[14] * b[3]).0,
-                (a[2] * b[7] - a[11] * b[1] - a[13] * b[6] + a[14] * b[5]).0,
-                (a[3] * b[7] - a[11] * b[2] + a[12] * b[6] - a[14] * b[4]).0,
-                (a[4] * b[7] - a[11] * b[3] - a[12] * b[5] + a[13] * b[4]).0,
-                (a[5] * b[7] + a[15] * b[1]).0,
-                (a[6] * b[7] + a[15] * b[2]).0,
-                (a[7] * b[7] + a[15] * b[3]).0,
-                (a[8] * b[7] + a[15] * b[4]).0,
-                (a[9] * b[7] + a[15] * b[5]).0,
-                (a[10] * b[7] + a[15] * b[6]).0,
+                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
+                (((a[1] * b[7] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[2] * b[7] + a[14] * b[5]) - (a[11] * b[1] + a[13] * b[6]))).0,
+                (((a[3] * b[7] + a[12] * b[6]) - (a[11] * b[2] + a[14] * b[4]))).0,
+                (((a[4] * b[7] + a[13] * b[4]) - (a[11] * b[3] + a[12] * b[5]))).0,
+                ((a[5] * b[7] + a[15] * b[1])).0,
+                ((a[6] * b[7] + a[15] * b[2])).0,
+                ((a[7] * b[7] + a[15] * b[3])).0,
+                ((a[8] * b[7] + a[15] * b[4])).0,
+                ((a[9] * b[7] + a[15] * b[5])).0,
+                ((a[10] * b[7] + a[15] * b[6])).0,
                 (a[11] * b[7]).0,
                 (a[12] * b[7]).0,
                 (a[13] * b[7]).0,
@@ -9169,23 +9247,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Multive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[7] - a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
-                (a[5] * b[5] + a[6] * b[6] + a[7] * b[7] + a[15] * b[0]).0,
-                (-(a[5] * b[4]) + a[9] * b[7] - a[10] * b[6] + a[15] * b[1]).0,
-                (-(a[6] * b[4]) - a[8] * b[7] + a[10] * b[5] + a[15] * b[2]).0,
-                (-(a[7] * b[4]) + a[8] * b[6] - a[9] * b[5] + a[15] * b[3]).0,
-                (-(a[13] * b[7]) + a[14] * b[6]).0,
-                (a[12] * b[7] - a[14] * b[5]).0,
-                (-(a[12] * b[6]) + a[13] * b[5]).0,
-                (a[11] * b[5] - a[12] * b[4]).0,
-                (a[11] * b[6] - a[13] * b[4]).0,
-                (a[11] * b[7] - a[14] * b[4]).0,
+                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
+                (((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0]))).0,
+                (((a[9] * b[7] + a[15] * b[1]) - (a[5] * b[4] + a[10] * b[6]))).0,
+                (((a[10] * b[5] + a[15] * b[2]) - (a[6] * b[4] + a[8] * b[7]))).0,
+                (((a[8] * b[6] + a[15] * b[3]) - (a[7] * b[4] + a[9] * b[5]))).0,
+                ((a[14] * b[6] - a[13] * b[7])).0,
+                ((a[12] * b[7] - a[14] * b[5])).0,
+                ((a[13] * b[5] - a[12] * b[6])).0,
+                ((a[11] * b[5] - a[12] * b[4])).0,
+                ((a[11] * b[6] - a[13] * b[4])).0,
+                ((a[11] * b[7] - a[14] * b[4])).0,
                 (a[15] * b[4]).0,
                 (a[15] * b[5]).0,
                 (a[15] * b[6]).0,
@@ -9198,27 +9276,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[15] + a[1] * b[11] + a[2] * b[12] + a[3] * b[13] + a[4] * b[14] - a[5] * b[8] - a[6] * b[9] - a[7] * b[10] - a[8] * b[5] - a[9] * b[6] - a[10] * b[7] - a[11] * b[1] - a[12] * b[2] - a[13] * b[3] - a[14] * b[4] + a[15] * b[0]).0,
-                (a[1] * b[15] + a[5] * b[12] + a[6] * b[13] + a[7] * b[14] + a[12] * b[5] + a[13] * b[6] + a[14] * b[7] + a[15] * b[1]).0,
-                (a[2] * b[15] - a[5] * b[11] + a[9] * b[14] - a[10] * b[13] - a[11] * b[5] - a[13] * b[10] + a[14] * b[9] + a[15] * b[2]).0,
-                (a[3] * b[15] - a[6] * b[11] - a[8] * b[14] + a[10] * b[12] - a[11] * b[6] + a[12] * b[10] - a[14] * b[8] + a[15] * b[3]).0,
-                (a[4] * b[15] - a[7] * b[11] + a[8] * b[13] - a[9] * b[12] - a[11] * b[7] - a[12] * b[9] + a[13] * b[8] + a[15] * b[4]).0,
-                (a[5] * b[15] - a[13] * b[14] + a[14] * b[13] + a[15] * b[5]).0,
-                (a[6] * b[15] + a[12] * b[14] - a[14] * b[12] + a[15] * b[6]).0,
-                (a[7] * b[15] - a[12] * b[13] + a[13] * b[12] + a[15] * b[7]).0,
-                (a[8] * b[15] + a[11] * b[12] - a[12] * b[11] + a[15] * b[8]).0,
-                (a[9] * b[15] + a[11] * b[13] - a[13] * b[11] + a[15] * b[9]).0,
-                (a[10] * b[15] + a[11] * b[14] - a[14] * b[11] + a[15] * b[10]).0,
-                (a[11] * b[15] + a[15] * b[11]).0,
-                (a[12] * b[15] + a[15] * b[12]).0,
-                (a[13] * b[15] + a[15] * b[13]).0,
-                (a[14] * b[15] + a[15] * b[14]).0,
+                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
+                ((((a[1] * b[15] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])) + ((a[12] * b[5] + a[13] * b[6]) + (a[14] * b[7] + a[15] * b[1])))).0,
+                ((((a[2] * b[15] + a[9] * b[14]) + (a[14] * b[9] + a[15] * b[2])) - ((a[5] * b[11] + a[10] * b[13]) + (a[11] * b[5] + a[13] * b[10])))).0,
+                ((((a[3] * b[15] + a[10] * b[12]) + (a[12] * b[10] + a[15] * b[3])) - ((a[6] * b[11] + a[8] * b[14]) + (a[11] * b[6] + a[14] * b[8])))).0,
+                ((((a[4] * b[15] + a[8] * b[13]) + (a[13] * b[8] + a[15] * b[4])) - ((a[7] * b[11] + a[9] * b[12]) + (a[11] * b[7] + a[12] * b[9])))).0,
+                (((a[5] * b[15] + a[14] * b[13]) + (a[15] * b[5] - a[13] * b[14]))).0,
+                (((a[6] * b[15] + a[12] * b[14]) + (a[15] * b[6] - a[14] * b[12]))).0,
+                (((a[7] * b[15] + a[13] * b[12]) + (a[15] * b[7] - a[12] * b[13]))).0,
+                (((a[8] * b[15] + a[11] * b[12]) + (a[15] * b[8] - a[12] * b[11]))).0,
+                (((a[9] * b[15] + a[11] * b[13]) + (a[15] * b[9] - a[13] * b[11]))).0,
+                (((a[10] * b[15] + a[11] * b[14]) + (a[15] * b[10] - a[14] * b[11]))).0,
+                ((a[11] * b[15] + a[15] * b[11])).0,
+                ((a[12] * b[15] + a[15] * b[12])).0,
+                ((a[13] * b[15] + a[15] * b[13])).0,
+                ((a[14] * b[15] + a[15] * b[14])).0,
                 (a[15] * b[15]).0,
             ],
         }
@@ -9227,7 +9305,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9241,7 +9319,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9258,7 +9336,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9277,7 +9355,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scal
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Scalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9294,7 +9372,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9308,7 +9386,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9329,7 +9407,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9350,7 +9428,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9379,13 +9457,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -9393,16 +9471,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -9410,18 +9488,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -9429,16 +9507,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -9446,20 +9524,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[1]) - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[2] * b[6] - a[3] * b[5]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[3] * b[4]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4]).0,
+                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[2] * b[6] - a[0] * b[1]) - a[3] * b[5])).0,
+                (((a[3] * b[4] - a[0] * b[2]) - a[1] * b[6])).0,
+                (((a[1] * b[5] - a[0] * b[3]) - a[2] * b[4])).0,
                 (a[0] * b[7]).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
-                (-(a[3] * b[7])).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
+                (-a[3] * b[7]).0,
             ],
         }
     }
@@ -9467,19 +9545,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[2] * b[7]) + a[3] * b[6]).0,
-                (a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (-(a[0] * b[5]) - a[1] * b[4]).0,
-                (-(a[0] * b[6]) - a[2] * b[4]).0,
-                (-(a[0] * b[7]) - a[3] * b[4]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[3] * b[6] - a[2] * b[7])).0,
+                ((a[1] * b[7] - a[3] * b[5])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                (-(a[0] * b[5] + a[1] * b[4])).0,
+                (-(a[0] * b[6] + a[2] * b[4])).0,
+                (-(a[0] * b[7] + a[3] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9488,27 +9566,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
-                (-(a[1] * b[5]) - a[2] * b[6] - a[3] * b[7]).0,
-                (-(a[0] * b[5]) + a[2] * b[10] - a[3] * b[9]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[3] * b[8]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8]).0,
-                (-(a[2] * b[14]) + a[3] * b[13]).0,
-                (a[1] * b[14] - a[3] * b[12]).0,
-                (-(a[1] * b[13]) + a[2] * b[12]).0,
-                (-(a[0] * b[12]) - a[1] * b[11]).0,
-                (-(a[0] * b[13]) - a[2] * b[11]).0,
-                (-(a[0] * b[14]) - a[3] * b[11]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
+                (-((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
+                (((a[2] * b[10] - a[0] * b[5]) - a[3] * b[9])).0,
+                (((a[3] * b[8] - a[0] * b[6]) - a[1] * b[10])).0,
+                (((a[1] * b[9] - a[0] * b[7]) - a[2] * b[8])).0,
+                ((a[3] * b[13] - a[2] * b[14])).0,
+                ((a[1] * b[14] - a[3] * b[12])).0,
+                ((a[2] * b[12] - a[1] * b[13])).0,
+                (-(a[0] * b[12] + a[1] * b[11])).0,
+                (-(a[0] * b[13] + a[2] * b[11])).0,
+                (-(a[0] * b[14] + a[3] * b[11])).0,
                 (a[0] * b[15]).0,
-                (-(a[1] * b[15])).0,
-                (-(a[2] * b[15])).0,
-                (-(a[3] * b[15])).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                (-a[3] * b[15]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9517,13 +9595,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
             ],
         }
     }
@@ -9531,16 +9609,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (-(a[1] * b[3]) + a[2] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[3] - a[2] * b[1] - a[4] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -9548,7 +9626,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9557,9 +9635,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -9567,19 +9645,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
                 (a[3] * b[7]).0,
                 (a[4] * b[7]).0,
                 (a[5] * b[7]).0,
-                (-(a[0] * b[7])).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
+                (-a[0] * b[7]).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9588,16 +9666,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[3] * b[5] + a[4] * b[6] + a[5] * b[7]).0,
-                (-(a[1] * b[7]) + a[2] * b[6] - a[3] * b[4]).0,
-                (a[0] * b[7] - a[2] * b[5] - a[4] * b[4]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] - a[5] * b[4]).0,
+                (((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7])).0,
+                (((a[2] * b[6] - a[1] * b[7]) - a[3] * b[4])).0,
+                (((a[0] * b[7] - a[2] * b[5]) - a[4] * b[4])).0,
+                (((a[1] * b[5] - a[0] * b[6]) - a[5] * b[4])).0,
             ],
         }
     }
@@ -9605,23 +9683,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
-                (a[3] * b[12] + a[4] * b[13] + a[5] * b[14]).0,
-                (-(a[1] * b[14]) + a[2] * b[13] - a[3] * b[11]).0,
-                (a[0] * b[14] - a[2] * b[12] - a[4] * b[11]).0,
-                (-(a[0] * b[13]) + a[1] * b[12] - a[5] * b[11]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                (((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14])).0,
+                (((a[2] * b[13] - a[1] * b[14]) - a[3] * b[11])).0,
+                (((a[0] * b[14] - a[2] * b[12]) - a[4] * b[11])).0,
+                (((a[1] * b[12] - a[0] * b[13]) - a[5] * b[11])).0,
                 (a[3] * b[15]).0,
                 (a[4] * b[15]).0,
                 (a[5] * b[15]).0,
-                (-(a[0] * b[15])).0,
-                (-(a[1] * b[15])).0,
-                (-(a[2] * b[15])).0,
+                (-a[0] * b[15]).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -9634,13 +9712,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -9648,13 +9726,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -9665,13 +9743,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
                 (a[3] * b[7]).0,
@@ -9682,13 +9760,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Trivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -9696,14 +9774,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Trivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
-                (-(a[0] * b[15])).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (-a[0] * b[15]).0,
                 (a[1] * b[15]).0,
                 (a[2] * b[15]).0,
                 (a[3] * b[15]).0,
@@ -9725,13 +9803,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -9739,13 +9817,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
             ],
         }
     }
@@ -9753,13 +9831,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
             ],
         }
     }
@@ -9767,7 +9845,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9781,7 +9859,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Even<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -9798,13 +9876,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -9819,16 +9897,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Even
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] - a[4] * b[0]).0,
-                (a[1] * b[3] - a[3] * b[1] - a[5] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] - a[6] * b[0]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
+                (((a[3] * b[2] - a[2] * b[3]) - a[4] * b[0])).0,
+                (((a[1] * b[3] - a[3] * b[1]) - a[5] * b[0])).0,
+                (((a[2] * b[1] - a[1] * b[2]) - a[6] * b[0])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -9840,19 +9918,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -9861,19 +9939,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[4] * b[7]).0,
-                (a[0] * b[2] + a[5] * b[7]).0,
-                (a[0] * b[3] + a[6] * b[7]).0,
-                (a[0] * b[4] - a[1] * b[7]).0,
-                (a[0] * b[5] - a[2] * b[7]).0,
-                (a[0] * b[6] - a[3] * b[7]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((a[0] * b[1] + a[4] * b[7])).0,
+                ((a[0] * b[2] + a[5] * b[7])).0,
+                ((a[0] * b[3] + a[6] * b[7])).0,
+                ((a[0] * b[4] - a[1] * b[7])).0,
+                ((a[0] * b[5] - a[2] * b[7])).0,
+                ((a[0] * b[6] - a[3] * b[7])).0,
                 (a[0] * b[7]).0,
             ],
         }
@@ -9882,16 +9960,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Even<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[4] * b[5] + a[5] * b[6] + a[6] * b[7]).0,
-                (a[0] * b[1] - a[2] * b[7] + a[3] * b[6] - a[4] * b[4]).0,
-                (a[0] * b[2] + a[1] * b[7] - a[3] * b[5] - a[5] * b[4]).0,
-                (a[0] * b[3] - a[1] * b[6] + a[2] * b[5] - a[6] * b[4]).0,
+                (((a[0] * b[0] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7]))).0,
+                (((a[0] * b[1] + a[3] * b[6]) - (a[2] * b[7] + a[4] * b[4]))).0,
+                (((a[0] * b[2] + a[1] * b[7]) - (a[3] * b[5] + a[5] * b[4]))).0,
+                (((a[0] * b[3] + a[2] * b[5]) - (a[1] * b[6] + a[6] * b[4]))).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
@@ -9903,23 +9981,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Even<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
-                (a[0] * b[1] + a[4] * b[12] + a[5] * b[13] + a[6] * b[14]).0,
-                (a[0] * b[2] - a[2] * b[14] + a[3] * b[13] - a[4] * b[11]).0,
-                (a[0] * b[3] + a[1] * b[14] - a[3] * b[12] - a[5] * b[11]).0,
-                (a[0] * b[4] - a[1] * b[13] + a[2] * b[12] - a[6] * b[11]).0,
-                (a[0] * b[5] + a[4] * b[15]).0,
-                (a[0] * b[6] + a[5] * b[15]).0,
-                (a[0] * b[7] + a[6] * b[15]).0,
-                (a[0] * b[8] - a[1] * b[15]).0,
-                (a[0] * b[9] - a[2] * b[15]).0,
-                (a[0] * b[10] - a[3] * b[15]).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                (((a[0] * b[1] + a[4] * b[12]) + (a[5] * b[13] + a[6] * b[14]))).0,
+                (((a[0] * b[2] + a[3] * b[13]) - (a[2] * b[14] + a[4] * b[11]))).0,
+                (((a[0] * b[3] + a[1] * b[14]) - (a[3] * b[12] + a[5] * b[11]))).0,
+                (((a[0] * b[4] + a[2] * b[12]) - (a[1] * b[13] + a[6] * b[11]))).0,
+                ((a[0] * b[5] + a[4] * b[15])).0,
+                ((a[0] * b[6] + a[5] * b[15])).0,
+                ((a[0] * b[7] + a[6] * b[15])).0,
+                ((a[0] * b[8] - a[1] * b[15])).0,
+                ((a[0] * b[9] - a[2] * b[15])).0,
+                ((a[0] * b[10] - a[3] * b[15])).0,
                 (a[0] * b[11]).0,
                 (a[0] * b[12]).0,
                 (a[0] * b[13]).0,
@@ -9932,13 +10010,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for E
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -9946,16 +10024,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -9963,19 +10041,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9984,20 +10062,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[4] * b[0])).0,
+                (-a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
                 (a[7] * b[0]).0,
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -10005,20 +10083,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[1]) - a[2] * b[2] - a[3] * b[3] - a[4] * b[7]).0,
-                (-(a[0] * b[1]) + a[2] * b[6] - a[3] * b[5] + a[5] * b[7]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[3] * b[4] + a[6] * b[7]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[7] * b[7]).0,
+                (-((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7]))).0,
+                (((a[2] * b[6] + a[5] * b[7]) - (a[0] * b[1] + a[3] * b[5]))).0,
+                (((a[3] * b[4] + a[6] * b[7]) - (a[0] * b[2] + a[1] * b[6]))).0,
+                (((a[1] * b[5] + a[7] * b[7]) - (a[0] * b[3] + a[2] * b[4]))).0,
                 (a[0] * b[7]).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
-                (-(a[3] * b[7])).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
+                (-a[3] * b[7]).0,
             ],
         }
     }
@@ -10026,19 +10104,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (-(a[2] * b[7]) + a[3] * b[6]).0,
-                (a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (-(a[0] * b[5]) - a[1] * b[4]).0,
-                (-(a[0] * b[6]) - a[2] * b[4]).0,
-                (-(a[0] * b[7]) - a[3] * b[4]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((a[3] * b[6] - a[2] * b[7])).0,
+                ((a[1] * b[7] - a[3] * b[5])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                (-(a[0] * b[5] + a[1] * b[4])).0,
+                (-(a[0] * b[6] + a[2] * b[4])).0,
+                (-(a[0] * b[7] + a[3] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10047,27 +10125,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
-                (-(a[1] * b[5]) - a[2] * b[6] - a[3] * b[7] - a[4] * b[15]).0,
-                (-(a[0] * b[5]) + a[2] * b[10] - a[3] * b[9] + a[5] * b[15]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[3] * b[8] + a[6] * b[15]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[7] * b[15]).0,
-                (-(a[2] * b[14]) + a[3] * b[13]).0,
-                (a[1] * b[14] - a[3] * b[12]).0,
-                (-(a[1] * b[13]) + a[2] * b[12]).0,
-                (-(a[0] * b[12]) - a[1] * b[11]).0,
-                (-(a[0] * b[13]) - a[2] * b[11]).0,
-                (-(a[0] * b[14]) - a[3] * b[11]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15]))).0,
+                (((a[2] * b[10] + a[5] * b[15]) - (a[0] * b[5] + a[3] * b[9]))).0,
+                (((a[3] * b[8] + a[6] * b[15]) - (a[0] * b[6] + a[1] * b[10]))).0,
+                (((a[1] * b[9] + a[7] * b[15]) - (a[0] * b[7] + a[2] * b[8]))).0,
+                ((a[3] * b[13] - a[2] * b[14])).0,
+                ((a[1] * b[14] - a[3] * b[12])).0,
+                ((a[2] * b[12] - a[1] * b[13])).0,
+                (-(a[0] * b[12] + a[1] * b[11])).0,
+                (-(a[0] * b[13] + a[2] * b[11])).0,
+                (-(a[0] * b[14] + a[3] * b[11])).0,
                 (a[0] * b[15]).0,
-                (-(a[1] * b[15])).0,
-                (-(a[2] * b[15])).0,
-                (-(a[3] * b[15])).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                (-a[3] * b[15]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10076,7 +10154,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10090,13 +10168,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -10119,17 +10197,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
-                (-(a[2] * b[0]) - a[3] * b[1] - a[4] * b[2]).0,
-                (-(a[1] * b[0]) + a[3] * b[5] - a[4] * b[4]).0,
-                (-(a[1] * b[1]) - a[2] * b[5] + a[4] * b[3]).0,
-                (-(a[1] * b[2]) + a[2] * b[4] - a[3] * b[3]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                (-((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2])).0,
+                (((a[3] * b[5] - a[1] * b[0]) - a[4] * b[4])).0,
+                (((a[4] * b[3] - a[1] * b[1]) - a[2] * b[5])).0,
+                (((a[2] * b[4] - a[1] * b[2]) - a[3] * b[3])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -10148,23 +10226,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (-(a[6] * b[3]) + a[7] * b[2] - a[8] * b[0]).0,
-                (a[5] * b[3] - a[7] * b[1] - a[9] * b[0]).0,
-                (-(a[5] * b[2]) + a[6] * b[1] - a[10] * b[0]).0,
-                (-(a[3] * b[3]) + a[4] * b[2]).0,
-                (a[2] * b[3] - a[4] * b[1]).0,
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (-(a[1] * b[1]) - a[2] * b[0]).0,
-                (-(a[1] * b[2]) - a[3] * b[0]).0,
-                (-(a[1] * b[3]) - a[4] * b[0]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
+                (((a[7] * b[2] - a[6] * b[3]) - a[8] * b[0])).0,
+                (((a[5] * b[3] - a[7] * b[1]) - a[9] * b[0])).0,
+                (((a[6] * b[1] - a[5] * b[2]) - a[10] * b[0])).0,
+                ((a[4] * b[2] - a[3] * b[3])).0,
+                ((a[2] * b[3] - a[4] * b[1])).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                (-(a[1] * b[1] + a[2] * b[0])).0,
+                (-(a[1] * b[2] + a[3] * b[0])).0,
+                (-(a[1] * b[3] + a[4] * b[0])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -10177,27 +10255,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[15] * b[0])).0,
-                (-(a[11] * b[0])).0,
+                (-a[15] * b[0]).0,
+                (-a[11] * b[0]).0,
                 (a[12] * b[0]).0,
                 (a[13] * b[0]).0,
                 (a[14] * b[0]).0,
                 (a[8] * b[0]).0,
                 (a[9] * b[0]).0,
                 (a[10] * b[0]).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
-                (-(a[7] * b[0])).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
+                (-a[7] * b[0]).0,
                 (a[1] * b[0]).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
-                (-(a[4] * b[0])).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
+                (-a[4] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -10206,27 +10284,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
-                (-(a[2] * b[1]) - a[3] * b[2] - a[4] * b[3] - a[11] * b[7]).0,
-                (-(a[1] * b[1]) + a[3] * b[6] - a[4] * b[5] + a[12] * b[7]).0,
-                (-(a[1] * b[2]) - a[2] * b[6] + a[4] * b[4] + a[13] * b[7]).0,
-                (-(a[1] * b[3]) + a[2] * b[5] - a[3] * b[4] + a[14] * b[7]).0,
-                (a[0] * b[1] + a[8] * b[7]).0,
-                (a[0] * b[2] + a[9] * b[7]).0,
-                (a[0] * b[3] + a[10] * b[7]).0,
-                (a[0] * b[4] - a[5] * b[7]).0,
-                (a[0] * b[5] - a[6] * b[7]).0,
-                (a[0] * b[6] - a[7] * b[7]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                (-((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7]))).0,
+                (((a[3] * b[6] + a[12] * b[7]) - (a[1] * b[1] + a[4] * b[5]))).0,
+                (((a[4] * b[4] + a[13] * b[7]) - (a[1] * b[2] + a[2] * b[6]))).0,
+                (((a[2] * b[5] + a[14] * b[7]) - (a[1] * b[3] + a[3] * b[4]))).0,
+                ((a[0] * b[1] + a[8] * b[7])).0,
+                ((a[0] * b[2] + a[9] * b[7])).0,
+                ((a[0] * b[3] + a[10] * b[7])).0,
+                ((a[0] * b[4] - a[5] * b[7])).0,
+                ((a[0] * b[5] - a[6] * b[7])).0,
+                ((a[0] * b[6] - a[7] * b[7])).0,
                 (a[1] * b[7]).0,
-                (-(a[2] * b[7])).0,
-                (-(a[3] * b[7])).0,
-                (-(a[4] * b[7])).0,
+                (-a[2] * b[7]).0,
+                (-a[3] * b[7]).0,
+                (-a[4] * b[7]).0,
                 (a[0] * b[7]).0,
             ],
         }
@@ -10235,23 +10313,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
-                (a[0] * b[0] + a[8] * b[5] + a[9] * b[6] + a[10] * b[7]).0,
-                (a[0] * b[1] - a[6] * b[7] + a[7] * b[6] - a[8] * b[4]).0,
-                (a[0] * b[2] + a[5] * b[7] - a[7] * b[5] - a[9] * b[4]).0,
-                (a[0] * b[3] - a[5] * b[6] + a[6] * b[5] - a[10] * b[4]).0,
-                (-(a[3] * b[7]) + a[4] * b[6]).0,
-                (a[2] * b[7] - a[4] * b[5]).0,
-                (-(a[2] * b[6]) + a[3] * b[5]).0,
-                (-(a[1] * b[5]) - a[2] * b[4]).0,
-                (-(a[1] * b[6]) - a[3] * b[4]).0,
-                (-(a[1] * b[7]) - a[4] * b[4]).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                (((a[0] * b[0] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7]))).0,
+                (((a[0] * b[1] + a[7] * b[6]) - (a[6] * b[7] + a[8] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[7]) - (a[7] * b[5] + a[9] * b[4]))).0,
+                (((a[0] * b[3] + a[6] * b[5]) - (a[5] * b[6] + a[10] * b[4]))).0,
+                ((a[4] * b[6] - a[3] * b[7])).0,
+                ((a[2] * b[7] - a[4] * b[5])).0,
+                ((a[3] * b[5] - a[2] * b[6])).0,
+                (-(a[1] * b[5] + a[2] * b[4])).0,
+                (-(a[1] * b[6] + a[3] * b[4])).0,
+                (-(a[1] * b[7] + a[4] * b[4])).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
@@ -10264,27 +10342,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
-                (a[0] * b[1] - a[2] * b[5] - a[3] * b[6] - a[4] * b[7] + a[8] * b[12] + a[9] * b[13] + a[10] * b[14] - a[11] * b[15]).0,
-                (a[0] * b[2] - a[1] * b[5] + a[3] * b[10] - a[4] * b[9] - a[6] * b[14] + a[7] * b[13] - a[8] * b[11] + a[12] * b[15]).0,
-                (a[0] * b[3] - a[1] * b[6] - a[2] * b[10] + a[4] * b[8] + a[5] * b[14] - a[7] * b[12] - a[9] * b[11] + a[13] * b[15]).0,
-                (a[0] * b[4] - a[1] * b[7] + a[2] * b[9] - a[3] * b[8] - a[5] * b[13] + a[6] * b[12] - a[10] * b[11] + a[14] * b[15]).0,
-                (a[0] * b[5] - a[3] * b[14] + a[4] * b[13] + a[8] * b[15]).0,
-                (a[0] * b[6] + a[2] * b[14] - a[4] * b[12] + a[9] * b[15]).0,
-                (a[0] * b[7] - a[2] * b[13] + a[3] * b[12] + a[10] * b[15]).0,
-                (a[0] * b[8] - a[1] * b[12] - a[2] * b[11] - a[5] * b[15]).0,
-                (a[0] * b[9] - a[1] * b[13] - a[3] * b[11] - a[6] * b[15]).0,
-                (a[0] * b[10] - a[1] * b[14] - a[4] * b[11] - a[7] * b[15]).0,
-                (a[0] * b[11] + a[1] * b[15]).0,
-                (a[0] * b[12] - a[2] * b[15]).0,
-                (a[0] * b[13] - a[3] * b[15]).0,
-                (a[0] * b[14] - a[4] * b[15]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                ((((a[0] * b[1] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15])))).0,
+                ((((a[0] * b[2] + a[3] * b[10]) + (a[7] * b[13] + a[12] * b[15])) - ((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])))).0,
+                ((((a[0] * b[3] + a[4] * b[8]) + (a[5] * b[14] + a[13] * b[15])) - ((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[9] * b[11])))).0,
+                ((((a[0] * b[4] + a[2] * b[9]) + (a[6] * b[12] + a[14] * b[15])) - ((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[10] * b[11])))).0,
+                (((a[0] * b[5] + a[4] * b[13]) + (a[8] * b[15] - a[3] * b[14]))).0,
+                (((a[0] * b[6] + a[2] * b[14]) + (a[9] * b[15] - a[4] * b[12]))).0,
+                (((a[0] * b[7] + a[3] * b[12]) + (a[10] * b[15] - a[2] * b[13]))).0,
+                (((a[0] * b[8] - a[1] * b[12]) - (a[2] * b[11] + a[5] * b[15]))).0,
+                (((a[0] * b[9] - a[1] * b[13]) - (a[3] * b[11] + a[6] * b[15]))).0,
+                (((a[0] * b[10] - a[1] * b[14]) - (a[4] * b[11] + a[7] * b[15]))).0,
+                ((a[0] * b[11] + a[1] * b[15])).0,
+                ((a[0] * b[12] - a[2] * b[15])).0,
+                ((a[0] * b[13] - a[3] * b[15])).0,
+                ((a[0] * b[14] - a[4] * b[15])).0,
                 (a[0] * b[15]).0,
             ],
         }
@@ -10293,7 +10371,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10307,7 +10385,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10321,7 +10399,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10335,7 +10413,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10352,13 +10430,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -10366,7 +10444,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10383,13 +10461,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -10397,13 +10475,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10426,7 +10504,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10445,16 +10523,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -10462,13 +10540,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
             ],
         }
     }
@@ -10476,13 +10554,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10497,16 +10575,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -10514,17 +10592,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
-                (a[0] * b[2] + a[1] * b[3] + a[2] * b[4]).0,
-                (a[0] * b[1] + a[4] * b[4] - a[5] * b[3]).0,
-                (a[1] * b[1] - a[3] * b[4] + a[5] * b[2]).0,
-                (a[2] * b[1] + a[3] * b[3] - a[4] * b[2]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                (((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4])).0,
+                (((a[0] * b[1] + a[4] * b[4]) - a[5] * b[3])).0,
+                (((a[1] * b[1] + a[5] * b[2]) - a[3] * b[4])).0,
+                (((a[2] * b[1] + a[3] * b[3]) - a[4] * b[2])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10543,7 +10621,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10560,18 +10638,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Trivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -10579,16 +10657,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Trivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) + a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) - a[1] * b[2] + a[3] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[1] - a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
+                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
+                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
             ],
         }
     }
@@ -10596,13 +10674,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Triv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -10610,16 +10688,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) + a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[0] * b[5]) - a[1] * b[3] + a[3] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[2] - a[2] * b[1]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
+                (((a[2] * b[3] - a[0] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[0] * b[5]) - a[1] * b[3])).0,
+                (((a[1] * b[2] - a[0] * b[6]) - a[2] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10631,19 +10709,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Trivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10652,23 +10730,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Trivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) + a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[0] * b[9]) - a[1] * b[7] + a[3] * b[5]).0,
-                (-(a[0] * b[10]) + a[1] * b[6] - a[2] * b[5]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[2]) - a[1] * b[1]).0,
-                (-(a[0] * b[3]) - a[2] * b[1]).0,
-                (-(a[0] * b[4]) - a[3] * b[1]).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
+                (((a[2] * b[7] - a[0] * b[8]) - a[3] * b[6])).0,
+                (((a[3] * b[5] - a[0] * b[9]) - a[1] * b[7])).0,
+                (((a[1] * b[6] - a[0] * b[10]) - a[2] * b[5])).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                (-(a[0] * b[2] + a[1] * b[1])).0,
+                (-(a[0] * b[3] + a[2] * b[1])).0,
+                (-(a[0] * b[4] + a[3] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -10681,7 +10759,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10695,13 +10773,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -10712,7 +10790,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10721,9 +10799,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseu
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -10731,16 +10809,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -10748,13 +10826,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -10762,19 +10840,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -10783,17 +10861,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[0] * b[4]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -10804,24 +10882,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudosca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
                 (a[0] * b[11]).0,
-                (-(a[0] * b[12])).0,
-                (-(a[0] * b[13])).0,
-                (-(a[0] * b[14])).0,
+                (-a[0] * b[12]).0,
+                (-a[0] * b[13]).0,
+                (-a[0] * b[14]).0,
                 (a[0] * b[8]).0,
                 (a[0] * b[9]).0,
                 (a[0] * b[10]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[1])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
@@ -10833,7 +10911,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -10854,17 +10932,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[1] * b[0] + a[5] * b[3] - a[6] * b[2]).0,
-                (a[2] * b[0] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[3] * b[0] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[7] * b[0])).0,
+                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[1] * b[0] + a[5] * b[3]) - a[6] * b[2])).0,
+                (((a[2] * b[0] + a[6] * b[1]) - a[4] * b[3])).0,
+                (((a[3] * b[0] + a[4] * b[2]) - a[5] * b[1])).0,
+                (-a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
@@ -10875,19 +10953,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Even<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
                 (a[7] * b[3]).0,
                 (a[7] * b[4]).0,
                 (a[7] * b[5]).0,
-                (-(a[7] * b[0])).0,
-                (-(a[7] * b[1])).0,
-                (-(a[7] * b[2])).0,
+                (-a[7] * b[0]).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10896,16 +10974,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Even
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Even<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
                 (a[7] * b[0]).0,
-                (-(a[7] * b[1])).0,
-                (-(a[7] * b[2])).0,
-                (-(a[7] * b[3])).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
+                (-a[7] * b[3]).0,
             ],
         }
     }
@@ -10913,13 +10991,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
             ],
         }
     }
@@ -10927,19 +11005,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[1] * b[0] + a[7] * b[4]).0,
-                (a[2] * b[0] + a[7] * b[5]).0,
-                (a[3] * b[0] + a[7] * b[6]).0,
-                (a[4] * b[0] - a[7] * b[1]).0,
-                (a[5] * b[0] - a[7] * b[2]).0,
-                (a[6] * b[0] - a[7] * b[3]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((a[1] * b[0] + a[7] * b[4])).0,
+                ((a[2] * b[0] + a[7] * b[5])).0,
+                ((a[3] * b[0] + a[7] * b[6])).0,
+                ((a[4] * b[0] - a[7] * b[1])).0,
+                ((a[5] * b[0] - a[7] * b[2])).0,
+                ((a[6] * b[0] - a[7] * b[3])).0,
                 (a[7] * b[0]).0,
             ],
         }
@@ -10948,17 +11026,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Even<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[4]).0,
-                (a[1] * b[0] + a[5] * b[3] - a[6] * b[2] - a[7] * b[5]).0,
-                (a[2] * b[0] - a[4] * b[3] + a[6] * b[1] - a[7] * b[6]).0,
-                (a[3] * b[0] + a[4] * b[2] - a[5] * b[1] - a[7] * b[7]).0,
-                (-(a[7] * b[0])).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[4]))).0,
+                (((a[1] * b[0] + a[5] * b[3]) - (a[6] * b[2] + a[7] * b[5]))).0,
+                (((a[2] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[7] * b[6]))).0,
+                (((a[3] * b[0] + a[4] * b[2]) - (a[5] * b[1] + a[7] * b[7]))).0,
+                (-a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
@@ -10969,24 +11047,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Even<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
-                (a[1] * b[2] + a[2] * b[3] + a[3] * b[4] + a[7] * b[11]).0,
-                (a[1] * b[1] + a[5] * b[4] - a[6] * b[3] - a[7] * b[12]).0,
-                (a[2] * b[1] - a[4] * b[4] + a[6] * b[2] - a[7] * b[13]).0,
-                (a[3] * b[1] + a[4] * b[3] - a[5] * b[2] - a[7] * b[14]).0,
-                (a[1] * b[0] + a[7] * b[8]).0,
-                (a[2] * b[0] + a[7] * b[9]).0,
-                (a[3] * b[0] + a[7] * b[10]).0,
-                (a[4] * b[0] - a[7] * b[5]).0,
-                (a[5] * b[0] - a[7] * b[6]).0,
-                (a[6] * b[0] - a[7] * b[7]).0,
-                (-(a[7] * b[1])).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                (((a[1] * b[2] + a[2] * b[3]) + (a[3] * b[4] + a[7] * b[11]))).0,
+                (((a[1] * b[1] + a[5] * b[4]) - (a[6] * b[3] + a[7] * b[12]))).0,
+                (((a[2] * b[1] + a[6] * b[2]) - (a[4] * b[4] + a[7] * b[13]))).0,
+                (((a[3] * b[1] + a[4] * b[3]) - (a[5] * b[2] + a[7] * b[14]))).0,
+                ((a[1] * b[0] + a[7] * b[8])).0,
+                ((a[2] * b[0] + a[7] * b[9])).0,
+                ((a[3] * b[0] + a[7] * b[10])).0,
+                ((a[4] * b[0] - a[7] * b[5])).0,
+                ((a[5] * b[0] - a[7] * b[6])).0,
+                ((a[6] * b[0] - a[7] * b[7])).0,
+                (-a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
                 (a[7] * b[4]).0,
@@ -10998,7 +11076,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for E
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11019,19 +11097,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[5] * b[3]) + a[7] * b[1]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[4] * b[1]) - a[5] * b[0]).0,
-                (-(a[4] * b[2]) - a[6] * b[0]).0,
-                (-(a[4] * b[3]) - a[7] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[6] * b[3] - a[7] * b[2])).0,
+                ((a[7] * b[1] - a[5] * b[3])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                (-(a[4] * b[1] + a[5] * b[0])).0,
+                (-(a[4] * b[2] + a[6] * b[0])).0,
+                (-(a[4] * b[3] + a[7] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11040,16 +11118,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[5] * b[3] + a[6] * b[4] + a[7] * b[5]).0,
-                (-(a[4] * b[3]) + a[6] * b[2] - a[7] * b[1]).0,
-                (-(a[4] * b[4]) - a[5] * b[2] + a[7] * b[0]).0,
-                (-(a[4] * b[5]) + a[5] * b[1] - a[6] * b[0]).0,
+                (((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5])).0,
+                (((a[6] * b[2] - a[4] * b[3]) - a[7] * b[1])).0,
+                (((a[7] * b[0] - a[4] * b[4]) - a[5] * b[2])).0,
+                (((a[5] * b[1] - a[4] * b[5]) - a[6] * b[0])).0,
             ],
         }
     }
@@ -11057,13 +11135,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -11071,16 +11149,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[5] * b[4] + a[6] * b[5] + a[7] * b[6]).0,
-                (a[1] * b[0] - a[4] * b[4] + a[6] * b[3] - a[7] * b[2]).0,
-                (a[2] * b[0] - a[4] * b[5] - a[5] * b[3] + a[7] * b[1]).0,
-                (a[3] * b[0] - a[4] * b[6] + a[5] * b[2] - a[6] * b[1]).0,
+                (((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6]))).0,
+                (((a[1] * b[0] + a[6] * b[3]) - (a[4] * b[4] + a[7] * b[2]))).0,
+                (((a[2] * b[0] + a[7] * b[1]) - (a[4] * b[5] + a[5] * b[3]))).0,
+                (((a[3] * b[0] + a[5] * b[2]) - (a[4] * b[6] + a[6] * b[1]))).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
@@ -11092,19 +11170,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[5] * b[3]) + a[7] * b[1]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[4] * b[1]) - a[5] * b[0]).0,
-                (-(a[4] * b[2]) - a[6] * b[0]).0,
-                (-(a[4] * b[3]) - a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((a[6] * b[3] - a[7] * b[2])).0,
+                ((a[7] * b[1] - a[5] * b[3])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                (-(a[4] * b[1] + a[5] * b[0])).0,
+                (-(a[4] * b[2] + a[6] * b[0])).0,
+                (-(a[4] * b[3] + a[7] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11113,23 +11191,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
-                (a[0] * b[0] + a[5] * b[8] + a[6] * b[9] + a[7] * b[10]).0,
-                (a[1] * b[0] - a[4] * b[8] + a[6] * b[7] - a[7] * b[6]).0,
-                (a[2] * b[0] - a[4] * b[9] - a[5] * b[7] + a[7] * b[5]).0,
-                (a[3] * b[0] - a[4] * b[10] + a[5] * b[6] - a[6] * b[5]).0,
-                (a[6] * b[4] - a[7] * b[3]).0,
-                (-(a[5] * b[4]) + a[7] * b[2]).0,
-                (a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[4] * b[2]) - a[5] * b[1]).0,
-                (-(a[4] * b[3]) - a[6] * b[1]).0,
-                (-(a[4] * b[4]) - a[7] * b[1]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                (((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10]))).0,
+                (((a[1] * b[0] + a[6] * b[7]) - (a[4] * b[8] + a[7] * b[6]))).0,
+                (((a[2] * b[0] + a[7] * b[5]) - (a[4] * b[9] + a[5] * b[7]))).0,
+                (((a[3] * b[0] + a[5] * b[6]) - (a[4] * b[10] + a[6] * b[5]))).0,
+                ((a[6] * b[4] - a[7] * b[3])).0,
+                ((a[7] * b[2] - a[5] * b[4])).0,
+                ((a[5] * b[3] - a[6] * b[2])).0,
+                (-(a[4] * b[2] + a[5] * b[1])).0,
+                (-(a[4] * b[3] + a[6] * b[1])).0,
+                (-(a[4] * b[4] + a[7] * b[1])).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
@@ -11142,7 +11220,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11171,24 +11249,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
-                (a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (a[5] * b[0] + a[9] * b[3] - a[10] * b[2]).0,
-                (a[6] * b[0] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[7] * b[0] + a[8] * b[2] - a[9] * b[1]).0,
-                (a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[12] * b[3]) + a[14] * b[1]).0,
-                (a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[11] * b[1]) - a[12] * b[0]).0,
-                (-(a[11] * b[2]) - a[13] * b[0]).0,
-                (-(a[11] * b[3]) - a[14] * b[0]).0,
-                (-(a[15] * b[0])).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
+                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
+                (((a[5] * b[0] + a[9] * b[3]) - a[10] * b[2])).0,
+                (((a[6] * b[0] + a[10] * b[1]) - a[8] * b[3])).0,
+                (((a[7] * b[0] + a[8] * b[2]) - a[9] * b[1])).0,
+                ((a[13] * b[3] - a[14] * b[2])).0,
+                ((a[14] * b[1] - a[12] * b[3])).0,
+                ((a[12] * b[2] - a[13] * b[1])).0,
+                (-(a[11] * b[1] + a[12] * b[0])).0,
+                (-(a[11] * b[2] + a[13] * b[0])).0,
+                (-(a[11] * b[3] + a[14] * b[0])).0,
+                (-a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
                 (a[15] * b[3]).0,
@@ -11200,23 +11278,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multiv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
-                (a[12] * b[3] + a[13] * b[4] + a[14] * b[5]).0,
-                (-(a[11] * b[3]) + a[13] * b[2] - a[14] * b[1]).0,
-                (-(a[11] * b[4]) - a[12] * b[2] + a[14] * b[0]).0,
-                (-(a[11] * b[5]) + a[12] * b[1] - a[13] * b[0]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                (((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5])).0,
+                (((a[13] * b[2] - a[11] * b[3]) - a[14] * b[1])).0,
+                (((a[14] * b[0] - a[11] * b[4]) - a[12] * b[2])).0,
+                (((a[12] * b[1] - a[11] * b[5]) - a[13] * b[0])).0,
                 (a[15] * b[3]).0,
                 (a[15] * b[4]).0,
                 (a[15] * b[5]).0,
-                (-(a[15] * b[0])).0,
-                (-(a[15] * b[1])).0,
-                (-(a[15] * b[2])).0,
+                (-a[15] * b[0]).0,
+                (-a[15] * b[1]).0,
+                (-a[15] * b[2]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -11229,17 +11307,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Mult
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
                 (a[15] * b[0]).0,
-                (-(a[15] * b[1])).0,
-                (-(a[15] * b[2])).0,
-                (-(a[15] * b[3])).0,
+                (-a[15] * b[1]).0,
+                (-a[15] * b[2]).0,
+                (-a[15] * b[3]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -11258,13 +11336,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[15] * b[0])).0,
+                (-a[15] * b[0]).0,
             ],
         }
     }
@@ -11272,23 +11350,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
-                (a[1] * b[0] + a[12] * b[4] + a[13] * b[5] + a[14] * b[6]).0,
-                (a[2] * b[0] - a[11] * b[4] + a[13] * b[3] - a[14] * b[2]).0,
-                (a[3] * b[0] - a[11] * b[5] - a[12] * b[3] + a[14] * b[1]).0,
-                (a[4] * b[0] - a[11] * b[6] + a[12] * b[2] - a[13] * b[1]).0,
-                (a[5] * b[0] + a[15] * b[4]).0,
-                (a[6] * b[0] + a[15] * b[5]).0,
-                (a[7] * b[0] + a[15] * b[6]).0,
-                (a[8] * b[0] - a[15] * b[1]).0,
-                (a[9] * b[0] - a[15] * b[2]).0,
-                (a[10] * b[0] - a[15] * b[3]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                (((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6]))).0,
+                (((a[2] * b[0] + a[13] * b[3]) - (a[11] * b[4] + a[14] * b[2]))).0,
+                (((a[3] * b[0] + a[14] * b[1]) - (a[11] * b[5] + a[12] * b[3]))).0,
+                (((a[4] * b[0] + a[12] * b[2]) - (a[11] * b[6] + a[13] * b[1]))).0,
+                ((a[5] * b[0] + a[15] * b[4])).0,
+                ((a[6] * b[0] + a[15] * b[5])).0,
+                ((a[7] * b[0] + a[15] * b[6])).0,
+                ((a[8] * b[0] - a[15] * b[1])).0,
+                ((a[9] * b[0] - a[15] * b[2])).0,
+                ((a[10] * b[0] - a[15] * b[3])).0,
                 (a[11] * b[0]).0,
                 (a[12] * b[0]).0,
                 (a[13] * b[0]).0,
@@ -11301,24 +11379,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
-                (a[5] * b[1] + a[6] * b[2] + a[7] * b[3] + a[15] * b[4]).0,
-                (a[5] * b[0] + a[9] * b[3] - a[10] * b[2] - a[15] * b[5]).0,
-                (a[6] * b[0] - a[8] * b[3] + a[10] * b[1] - a[15] * b[6]).0,
-                (a[7] * b[0] + a[8] * b[2] - a[9] * b[1] - a[15] * b[7]).0,
-                (a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[12] * b[3]) + a[14] * b[1]).0,
-                (a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[11] * b[1]) - a[12] * b[0]).0,
-                (-(a[11] * b[2]) - a[13] * b[0]).0,
-                (-(a[11] * b[3]) - a[14] * b[0]).0,
-                (-(a[15] * b[0])).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                (((a[5] * b[1] + a[6] * b[2]) + (a[7] * b[3] + a[15] * b[4]))).0,
+                (((a[5] * b[0] + a[9] * b[3]) - (a[10] * b[2] + a[15] * b[5]))).0,
+                (((a[6] * b[0] + a[10] * b[1]) - (a[8] * b[3] + a[15] * b[6]))).0,
+                (((a[7] * b[0] + a[8] * b[2]) - (a[9] * b[1] + a[15] * b[7]))).0,
+                ((a[13] * b[3] - a[14] * b[2])).0,
+                ((a[14] * b[1] - a[12] * b[3])).0,
+                ((a[12] * b[2] - a[13] * b[1])).0,
+                (-(a[11] * b[1] + a[12] * b[0])).0,
+                (-(a[11] * b[2] + a[13] * b[0])).0,
+                (-(a[11] * b[3] + a[14] * b[0])).0,
+                (-a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
                 (a[15] * b[3]).0,
@@ -11330,27 +11408,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
-                (a[1] * b[0] + a[5] * b[2] + a[6] * b[3] + a[7] * b[4] + a[12] * b[8] + a[13] * b[9] + a[14] * b[10] + a[15] * b[11]).0,
-                (a[2] * b[0] + a[5] * b[1] + a[9] * b[4] - a[10] * b[3] - a[11] * b[8] + a[13] * b[7] - a[14] * b[6] - a[15] * b[12]).0,
-                (a[3] * b[0] + a[6] * b[1] - a[8] * b[4] + a[10] * b[2] - a[11] * b[9] - a[12] * b[7] + a[14] * b[5] - a[15] * b[13]).0,
-                (a[4] * b[0] + a[7] * b[1] + a[8] * b[3] - a[9] * b[2] - a[11] * b[10] + a[12] * b[6] - a[13] * b[5] - a[15] * b[14]).0,
-                (a[5] * b[0] + a[13] * b[4] - a[14] * b[3] + a[15] * b[8]).0,
-                (a[6] * b[0] - a[12] * b[4] + a[14] * b[2] + a[15] * b[9]).0,
-                (a[7] * b[0] + a[12] * b[3] - a[13] * b[2] + a[15] * b[10]).0,
-                (a[8] * b[0] - a[11] * b[2] - a[12] * b[1] - a[15] * b[5]).0,
-                (a[9] * b[0] - a[11] * b[3] - a[13] * b[1] - a[15] * b[6]).0,
-                (a[10] * b[0] - a[11] * b[4] - a[14] * b[1] - a[15] * b[7]).0,
-                (a[11] * b[0] - a[15] * b[1]).0,
-                (a[12] * b[0] + a[15] * b[2]).0,
-                (a[13] * b[0] + a[15] * b[3]).0,
-                (a[14] * b[0] + a[15] * b[4]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                ((((a[1] * b[0] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])) + ((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])))).0,
+                ((((a[2] * b[0] + a[5] * b[1]) + (a[9] * b[4] + a[13] * b[7])) - ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12])))).0,
+                ((((a[3] * b[0] + a[6] * b[1]) + (a[10] * b[2] + a[14] * b[5])) - ((a[8] * b[4] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13])))).0,
+                ((((a[4] * b[0] + a[7] * b[1]) + (a[8] * b[3] + a[12] * b[6])) - ((a[9] * b[2] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14])))).0,
+                (((a[5] * b[0] + a[13] * b[4]) + (a[15] * b[8] - a[14] * b[3]))).0,
+                (((a[6] * b[0] + a[14] * b[2]) + (a[15] * b[9] - a[12] * b[4]))).0,
+                (((a[7] * b[0] + a[12] * b[3]) + (a[15] * b[10] - a[13] * b[2]))).0,
+                (((a[8] * b[0] - a[11] * b[2]) - (a[12] * b[1] + a[15] * b[5]))).0,
+                (((a[9] * b[0] - a[11] * b[3]) - (a[13] * b[1] + a[15] * b[6]))).0,
+                (((a[10] * b[0] - a[11] * b[4]) - (a[14] * b[1] + a[15] * b[7]))).0,
+                ((a[11] * b[0] - a[15] * b[1])).0,
+                ((a[12] * b[0] + a[15] * b[2])).0,
+                ((a[13] * b[0] + a[15] * b[3])).0,
+                ((a[14] * b[0] + a[15] * b[4])).0,
                 (a[15] * b[0]).0,
             ],
         }
@@ -11359,7 +11437,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11373,7 +11451,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Scala
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11390,7 +11468,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scala
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11409,7 +11487,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Sca
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Scalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11426,7 +11504,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Sc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11440,7 +11518,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11461,7 +11539,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Scalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11482,7 +11560,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Scalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11511,7 +11589,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11528,13 +11606,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Vecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -11542,16 +11620,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -11559,18 +11637,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -11578,16 +11656,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -11595,20 +11673,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[2] * b[6] - a[3] * b[5]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[2] * b[0] + a[3] * b[4]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[3] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[1] * b[0] + a[2] * b[6]) - (a[0] * b[1] + a[3] * b[5]))).0,
+                (((a[2] * b[0] + a[3] * b[4]) - (a[0] * b[2] + a[1] * b[6]))).0,
+                (((a[1] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[2] * b[4]))).0,
                 (a[0] * b[7]).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
-                (-(a[3] * b[7])).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
+                (-a[3] * b[7]).0,
             ],
         }
     }
@@ -11616,19 +11694,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Vector<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[2] * b[7]) + a[3] * b[6]).0,
-                (a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (-(a[0] * b[5]) - a[1] * b[4]).0,
-                (-(a[0] * b[6]) - a[2] * b[4]).0,
-                (-(a[0] * b[7]) - a[3] * b[4]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[3] * b[6] - a[2] * b[7])).0,
+                ((a[1] * b[7] - a[3] * b[5])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                (-(a[0] * b[5] + a[1] * b[4])).0,
+                (-(a[0] * b[6] + a[2] * b[4])).0,
+                (-(a[0] * b[7] + a[3] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11637,27 +11715,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Vector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
-                (a[0] * b[0] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (-(a[0] * b[5]) + a[1] * b[0] + a[2] * b[10] - a[3] * b[9]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[2] * b[0] + a[3] * b[8]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[3] * b[0]).0,
-                (-(a[2] * b[14]) + a[3] * b[13]).0,
-                (a[1] * b[14] - a[3] * b[12]).0,
-                (-(a[1] * b[13]) + a[2] * b[12]).0,
-                (-(a[0] * b[12]) - a[1] * b[11]).0,
-                (-(a[0] * b[13]) - a[2] * b[11]).0,
-                (-(a[0] * b[14]) - a[3] * b[11]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
+                (((a[0] * b[0] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                (((a[1] * b[0] + a[2] * b[10]) - (a[0] * b[5] + a[3] * b[9]))).0,
+                (((a[2] * b[0] + a[3] * b[8]) - (a[0] * b[6] + a[1] * b[10]))).0,
+                (((a[1] * b[9] + a[3] * b[0]) - (a[0] * b[7] + a[2] * b[8]))).0,
+                ((a[3] * b[13] - a[2] * b[14])).0,
+                ((a[1] * b[14] - a[3] * b[12])).0,
+                ((a[2] * b[12] - a[1] * b[13])).0,
+                (-(a[0] * b[12] + a[1] * b[11])).0,
+                (-(a[0] * b[13] + a[2] * b[11])).0,
+                (-(a[0] * b[14] + a[3] * b[11])).0,
                 (a[0] * b[15]).0,
-                (-(a[1] * b[15])).0,
-                (-(a[2] * b[15])).0,
-                (-(a[3] * b[15])).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                (-a[3] * b[15]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11666,7 +11744,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11685,16 +11763,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -11702,13 +11780,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
             ],
         }
     }
@@ -11716,16 +11794,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Biv
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (-(a[1] * b[3]) + a[2] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[3] - a[2] * b[1] - a[4] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -11733,7 +11811,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Bi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11742,9 +11820,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -11752,19 +11830,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
-                (a[0] * b[0] + a[3] * b[7]).0,
-                (a[1] * b[0] + a[4] * b[7]).0,
-                (a[2] * b[0] + a[5] * b[7]).0,
-                (-(a[0] * b[7]) + a[3] * b[0]).0,
-                (-(a[1] * b[7]) + a[4] * b[0]).0,
-                (-(a[2] * b[7]) + a[5] * b[0]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
+                ((a[0] * b[0] + a[3] * b[7])).0,
+                ((a[1] * b[0] + a[4] * b[7])).0,
+                ((a[2] * b[0] + a[5] * b[7])).0,
+                ((a[3] * b[0] - a[0] * b[7])).0,
+                ((a[4] * b[0] - a[1] * b[7])).0,
+                ((a[5] * b[0] - a[2] * b[7])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11773,16 +11851,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Bivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[5] + a[4] * b[6] + a[5] * b[7]).0,
-                (a[0] * b[0] - a[1] * b[7] + a[2] * b[6] - a[3] * b[4] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[0] * b[7] + a[1] * b[0] - a[2] * b[5] - a[3] * b[3] - a[4] * b[4] + a[5] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] + a[2] * b[0] + a[3] * b[2] - a[4] * b[1] - a[5] * b[4]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                ((((a[0] * b[0] + a[2] * b[6]) + a[4] * b[3]) - ((a[1] * b[7] + a[3] * b[4]) + a[5] * b[2]))).0,
+                ((((a[0] * b[7] + a[1] * b[0]) + a[5] * b[1]) - ((a[2] * b[5] + a[3] * b[3]) + a[4] * b[4]))).0,
+                ((((a[1] * b[5] + a[2] * b[0]) + a[3] * b[2]) - ((a[0] * b[6] + a[4] * b[1]) + a[5] * b[4]))).0,
             ],
         }
     }
@@ -11790,23 +11868,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Bivector
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
-                (a[0] * b[2] + a[1] * b[3] + a[2] * b[4] + a[3] * b[12] + a[4] * b[13] + a[5] * b[14]).0,
-                (a[0] * b[1] - a[1] * b[14] + a[2] * b[13] - a[3] * b[11] + a[4] * b[4] - a[5] * b[3]).0,
-                (a[0] * b[14] + a[1] * b[1] - a[2] * b[12] - a[3] * b[4] - a[4] * b[11] + a[5] * b[2]).0,
-                (-(a[0] * b[13]) + a[1] * b[12] + a[2] * b[1] + a[3] * b[3] - a[4] * b[2] - a[5] * b[11]).0,
-                (a[0] * b[0] + a[3] * b[15]).0,
-                (a[1] * b[0] + a[4] * b[15]).0,
-                (a[2] * b[0] + a[5] * b[15]).0,
-                (-(a[0] * b[15]) + a[3] * b[0]).0,
-                (-(a[1] * b[15]) + a[4] * b[0]).0,
-                (-(a[2] * b[15]) + a[5] * b[0]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                ((((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4]) + ((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14]))).0,
+                ((((a[0] * b[1] + a[2] * b[13]) + a[4] * b[4]) - ((a[1] * b[14] + a[3] * b[11]) + a[5] * b[3]))).0,
+                ((((a[0] * b[14] + a[1] * b[1]) + a[5] * b[2]) - ((a[2] * b[12] + a[3] * b[4]) + a[4] * b[11]))).0,
+                ((((a[1] * b[12] + a[2] * b[1]) + a[3] * b[3]) - ((a[0] * b[13] + a[4] * b[2]) + a[5] * b[11]))).0,
+                ((a[0] * b[0] + a[3] * b[15])).0,
+                ((a[1] * b[0] + a[4] * b[15])).0,
+                ((a[2] * b[0] + a[5] * b[15])).0,
+                ((a[3] * b[0] - a[0] * b[15])).0,
+                ((a[4] * b[0] - a[1] * b[15])).0,
+                ((a[5] * b[0] - a[2] * b[15])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -11819,7 +11897,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11836,18 +11914,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Trive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -11855,16 +11933,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Trive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) + a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) - a[1] * b[2] + a[3] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[1] - a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
+                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
+                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
             ],
         }
     }
@@ -11872,13 +11950,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Tri
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -11886,13 +11964,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Tr
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -11903,16 +11981,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[7]) + a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) + a[1] * b[7] + a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[0] * b[5]) - a[1] * b[3] + a[2] * b[7] + a[3] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[2] - a[2] * b[1] + a[3] * b[7]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] - a[0] * b[7]))).0,
+                (((a[1] * b[7] + a[2] * b[3]) - (a[0] * b[4] + a[3] * b[2]))).0,
+                (((a[2] * b[7] + a[3] * b[1]) - (a[0] * b[5] + a[1] * b[3]))).0,
+                (((a[1] * b[2] + a[3] * b[7]) - (a[0] * b[6] + a[2] * b[1]))).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -11924,19 +12002,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Trivect
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11945,23 +12023,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Trivecto
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
-                (-(a[0] * b[15]) + a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) + a[1] * b[15] + a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[0] * b[9]) - a[1] * b[7] + a[2] * b[15] + a[3] * b[5]).0,
-                (-(a[0] * b[10]) + a[1] * b[6] - a[2] * b[5] + a[3] * b[15]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[2]) - a[1] * b[1]).0,
-                (-(a[0] * b[3]) - a[2] * b[1]).0,
-                (-(a[0] * b[4]) - a[3] * b[1]).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] - a[0] * b[15]))).0,
+                (((a[1] * b[15] + a[2] * b[7]) - (a[0] * b[8] + a[3] * b[6]))).0,
+                (((a[2] * b[15] + a[3] * b[5]) - (a[0] * b[9] + a[1] * b[7]))).0,
+                (((a[1] * b[6] + a[3] * b[15]) - (a[0] * b[10] + a[2] * b[5]))).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                (-(a[0] * b[2] + a[1] * b[1])).0,
+                (-(a[0] * b[3] + a[2] * b[1])).0,
+                (-(a[0] * b[4] + a[3] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -11974,7 +12052,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -11988,13 +12066,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -12005,7 +12083,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseud
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12014,9 +12092,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pse
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -12024,16 +12102,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pse
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -12041,13 +12119,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ps
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -12055,19 +12133,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -12076,17 +12154,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Pseudos
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[0] * b[4]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -12097,24 +12175,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Pseudosc
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
                 (a[0] * b[11]).0,
-                (-(a[0] * b[12])).0,
-                (-(a[0] * b[13])).0,
-                (-(a[0] * b[14])).0,
+                (-a[0] * b[12]).0,
+                (-a[0] * b[13]).0,
+                (-a[0] * b[14]).0,
                 (a[0] * b[8]).0,
                 (a[0] * b[9]).0,
                 (a[0] * b[10]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[1])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
@@ -12126,7 +12204,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12147,17 +12225,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Even<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[5] * b[3] - a[6] * b[2]).0,
-                (a[0] * b[2] + a[2] * b[0] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[0] * b[3] + a[3] * b[0] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[7] * b[0])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[3] - a[6] * b[2]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) + (a[6] * b[1] - a[4] * b[3]))).0,
+                (((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[2] - a[5] * b[1]))).0,
+                (-a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
@@ -12168,19 +12246,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Even<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
-                (a[0] * b[0] + a[7] * b[3]).0,
-                (a[0] * b[1] + a[7] * b[4]).0,
-                (a[0] * b[2] + a[7] * b[5]).0,
-                (a[0] * b[3] - a[7] * b[0]).0,
-                (a[0] * b[4] - a[7] * b[1]).0,
-                (a[0] * b[5] - a[7] * b[2]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
+                ((a[0] * b[0] + a[7] * b[3])).0,
+                ((a[0] * b[1] + a[7] * b[4])).0,
+                ((a[0] * b[2] + a[7] * b[5])).0,
+                ((a[0] * b[3] - a[7] * b[0])).0,
+                ((a[0] * b[4] - a[7] * b[1])).0,
+                ((a[0] * b[5] - a[7] * b[2])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12189,16 +12267,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Eve
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3] + a[7] * b[0]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] - a[4] * b[0] - a[7] * b[1]).0,
-                (a[1] * b[3] - a[3] * b[1] - a[5] * b[0] - a[7] * b[2]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] - a[6] * b[0] - a[7] * b[3]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0]))).0,
+                (((a[3] * b[2] - a[2] * b[3]) - (a[4] * b[0] + a[7] * b[1]))).0,
+                (((a[1] * b[3] - a[3] * b[1]) - (a[5] * b[0] + a[7] * b[2]))).0,
+                (((a[2] * b[1] - a[1] * b[2]) - (a[6] * b[0] + a[7] * b[3]))).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -12210,19 +12288,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ev
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -12231,20 +12309,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[4] * b[7] + a[7] * b[4]).0,
-                (a[0] * b[2] + a[2] * b[0] + a[5] * b[7] + a[7] * b[5]).0,
-                (a[0] * b[3] + a[3] * b[0] + a[6] * b[7] + a[7] * b[6]).0,
-                (a[0] * b[4] - a[1] * b[7] + a[4] * b[0] - a[7] * b[1]).0,
-                (a[0] * b[5] - a[2] * b[7] + a[5] * b[0] - a[7] * b[2]).0,
-                (a[0] * b[6] - a[3] * b[7] + a[6] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[7] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[4] * b[7] + a[7] * b[4]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) + (a[5] * b[7] + a[7] * b[5]))).0,
+                (((a[0] * b[3] + a[3] * b[0]) + (a[6] * b[7] + a[7] * b[6]))).0,
+                (((a[0] * b[4] + a[4] * b[0]) - (a[1] * b[7] + a[7] * b[1]))).0,
+                (((a[0] * b[5] + a[5] * b[0]) - (a[2] * b[7] + a[7] * b[2]))).0,
+                (((a[0] * b[6] + a[6] * b[0]) - (a[3] * b[7] + a[7] * b[3]))).0,
+                ((a[0] * b[7] + a[7] * b[0])).0,
             ],
         }
     }
@@ -12252,20 +12330,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Even<S1
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[4] * b[5] + a[5] * b[6] + a[6] * b[7] + a[7] * b[4]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[7] + a[3] * b[6] - a[4] * b[4] + a[5] * b[3] - a[6] * b[2] - a[7] * b[5]).0,
-                (a[0] * b[2] + a[1] * b[7] + a[2] * b[0] - a[3] * b[5] - a[4] * b[3] - a[5] * b[4] + a[6] * b[1] - a[7] * b[6]).0,
-                (a[0] * b[3] - a[1] * b[6] + a[2] * b[5] + a[3] * b[0] + a[4] * b[2] - a[5] * b[1] - a[6] * b[4] - a[7] * b[7]).0,
-                (a[0] * b[4] - a[7] * b[0]).0,
-                (a[0] * b[5] + a[7] * b[1]).0,
-                (a[0] * b[6] + a[7] * b[2]).0,
-                (a[0] * b[7] + a[7] * b[3]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) + ((a[4] * b[5] + a[5] * b[6]) + (a[6] * b[7] + a[7] * b[4])))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[6] + a[5] * b[3])) - ((a[2] * b[7] + a[4] * b[4]) + (a[6] * b[2] + a[7] * b[5])))).0,
+                ((((a[0] * b[2] + a[1] * b[7]) + (a[2] * b[0] + a[6] * b[1])) - ((a[3] * b[5] + a[4] * b[3]) + (a[5] * b[4] + a[7] * b[6])))).0,
+                ((((a[0] * b[3] + a[2] * b[5]) + (a[3] * b[0] + a[4] * b[2])) - ((a[1] * b[6] + a[5] * b[1]) + (a[6] * b[4] + a[7] * b[7])))).0,
+                ((a[0] * b[4] - a[7] * b[0])).0,
+                ((a[0] * b[5] + a[7] * b[1])).0,
+                ((a[0] * b[6] + a[7] * b[2])).0,
+                ((a[0] * b[7] + a[7] * b[3])).0,
             ],
         }
     }
@@ -12273,28 +12351,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Even<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] + a[3] * b[4] + a[4] * b[12] + a[5] * b[13] + a[6] * b[14] + a[7] * b[11]).0,
-                (a[0] * b[2] + a[1] * b[1] - a[2] * b[14] + a[3] * b[13] - a[4] * b[11] + a[5] * b[4] - a[6] * b[3] - a[7] * b[12]).0,
-                (a[0] * b[3] + a[1] * b[14] + a[2] * b[1] - a[3] * b[12] - a[4] * b[4] - a[5] * b[11] + a[6] * b[2] - a[7] * b[13]).0,
-                (a[0] * b[4] - a[1] * b[13] + a[2] * b[12] + a[3] * b[1] + a[4] * b[3] - a[5] * b[2] - a[6] * b[11] - a[7] * b[14]).0,
-                (a[0] * b[5] + a[1] * b[0] + a[4] * b[15] + a[7] * b[8]).0,
-                (a[0] * b[6] + a[2] * b[0] + a[5] * b[15] + a[7] * b[9]).0,
-                (a[0] * b[7] + a[3] * b[0] + a[6] * b[15] + a[7] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[15] + a[4] * b[0] - a[7] * b[5]).0,
-                (a[0] * b[9] - a[2] * b[15] + a[5] * b[0] - a[7] * b[6]).0,
-                (a[0] * b[10] - a[3] * b[15] + a[6] * b[0] - a[7] * b[7]).0,
-                (a[0] * b[11] - a[7] * b[1]).0,
-                (a[0] * b[12] + a[7] * b[2]).0,
-                (a[0] * b[13] + a[7] * b[3]).0,
-                (a[0] * b[14] + a[7] * b[4]).0,
-                (a[0] * b[15] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4])) + ((a[4] * b[12] + a[5] * b[13]) + (a[6] * b[14] + a[7] * b[11])))).0,
+                ((((a[0] * b[2] + a[1] * b[1]) + (a[3] * b[13] + a[5] * b[4])) - ((a[2] * b[14] + a[4] * b[11]) + (a[6] * b[3] + a[7] * b[12])))).0,
+                ((((a[0] * b[3] + a[1] * b[14]) + (a[2] * b[1] + a[6] * b[2])) - ((a[3] * b[12] + a[4] * b[4]) + (a[5] * b[11] + a[7] * b[13])))).0,
+                ((((a[0] * b[4] + a[2] * b[12]) + (a[3] * b[1] + a[4] * b[3])) - ((a[1] * b[13] + a[5] * b[2]) + (a[6] * b[11] + a[7] * b[14])))).0,
+                (((a[0] * b[5] + a[1] * b[0]) + (a[4] * b[15] + a[7] * b[8]))).0,
+                (((a[0] * b[6] + a[2] * b[0]) + (a[5] * b[15] + a[7] * b[9]))).0,
+                (((a[0] * b[7] + a[3] * b[0]) + (a[6] * b[15] + a[7] * b[10]))).0,
+                (((a[0] * b[8] + a[4] * b[0]) - (a[1] * b[15] + a[7] * b[5]))).0,
+                (((a[0] * b[9] + a[5] * b[0]) - (a[2] * b[15] + a[7] * b[6]))).0,
+                (((a[0] * b[10] + a[6] * b[0]) - (a[3] * b[15] + a[7] * b[7]))).0,
+                ((a[0] * b[11] - a[7] * b[1])).0,
+                ((a[0] * b[12] + a[7] * b[2])).0,
+                ((a[0] * b[13] + a[7] * b[3])).0,
+                ((a[0] * b[14] + a[7] * b[4])).0,
+                ((a[0] * b[15] + a[7] * b[0])).0,
             ],
         }
     }
@@ -12302,7 +12380,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12323,19 +12401,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[5] * b[3]) + a[7] * b[1]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[4] * b[1]) - a[5] * b[0]).0,
-                (-(a[4] * b[2]) - a[6] * b[0]).0,
-                (-(a[4] * b[3]) - a[7] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[6] * b[3] - a[7] * b[2])).0,
+                ((a[7] * b[1] - a[5] * b[3])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                (-(a[4] * b[1] + a[5] * b[0])).0,
+                (-(a[4] * b[2] + a[6] * b[0])).0,
+                (-(a[4] * b[3] + a[7] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12344,16 +12422,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2] + a[5] * b[3] + a[6] * b[4] + a[7] * b[5]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4] - a[4] * b[3] + a[6] * b[2] - a[7] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3] - a[4] * b[4] - a[5] * b[2] + a[7] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3] - a[4] * b[5] + a[5] * b[1] - a[6] * b[0]).0,
+                ((((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                ((((a[2] * b[5] + a[6] * b[2]) - a[0] * b[0]) - ((a[3] * b[4] + a[4] * b[3]) + a[7] * b[1]))).0,
+                ((((a[3] * b[3] + a[7] * b[0]) - a[0] * b[1]) - ((a[1] * b[5] + a[4] * b[4]) + a[5] * b[2]))).0,
+                ((((a[1] * b[4] + a[5] * b[1]) - a[0] * b[2]) - ((a[2] * b[3] + a[4] * b[5]) + a[6] * b[0]))).0,
             ],
         }
     }
@@ -12361,19 +12439,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Odd
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12382,20 +12460,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Od
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[4] * b[0])).0,
+                (-a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
                 (a[7] * b[0]).0,
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -12403,20 +12481,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[7] + a[5] * b[4] + a[6] * b[5] + a[7] * b[6]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[2] * b[6] - a[3] * b[5] - a[4] * b[4] + a[5] * b[7] + a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[2] * b[0] + a[3] * b[4] - a[4] * b[5] - a[5] * b[3] + a[6] * b[7] + a[7] * b[1]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[3] * b[0] - a[4] * b[6] + a[5] * b[2] - a[6] * b[1] + a[7] * b[7]).0,
-                (a[0] * b[7] + a[4] * b[0]).0,
-                (-(a[1] * b[7]) + a[5] * b[0]).0,
-                (-(a[2] * b[7]) + a[6] * b[0]).0,
-                (-(a[3] * b[7]) + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6])) - ((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7])))).0,
+                ((((a[1] * b[0] + a[2] * b[6]) + (a[5] * b[7] + a[6] * b[3])) - ((a[0] * b[1] + a[3] * b[5]) + (a[4] * b[4] + a[7] * b[2])))).0,
+                ((((a[2] * b[0] + a[3] * b[4]) + (a[6] * b[7] + a[7] * b[1])) - ((a[0] * b[2] + a[1] * b[6]) + (a[4] * b[5] + a[5] * b[3])))).0,
+                ((((a[1] * b[5] + a[3] * b[0]) + (a[5] * b[2] + a[7] * b[7])) - ((a[0] * b[3] + a[2] * b[4]) + (a[4] * b[6] + a[6] * b[1])))).0,
+                ((a[0] * b[7] + a[4] * b[0])).0,
+                ((a[5] * b[0] - a[1] * b[7])).0,
+                ((a[6] * b[0] - a[2] * b[7])).0,
+                ((a[7] * b[0] - a[3] * b[7])).0,
             ],
         }
     }
@@ -12424,19 +12502,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Odd<S1,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (-(a[2] * b[7]) + a[3] * b[6] + a[6] * b[3] - a[7] * b[2]).0,
-                (a[1] * b[7] - a[3] * b[5] - a[5] * b[3] + a[7] * b[1]).0,
-                (-(a[1] * b[6]) + a[2] * b[5] + a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[0] * b[5]) - a[1] * b[4] - a[4] * b[1] - a[5] * b[0]).0,
-                (-(a[0] * b[6]) - a[2] * b[4] - a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[0] * b[7]) - a[3] * b[4] - a[4] * b[3] - a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[3] * b[6] + a[6] * b[3]) - (a[2] * b[7] + a[7] * b[2]))).0,
+                (((a[1] * b[7] + a[7] * b[1]) - (a[3] * b[5] + a[5] * b[3]))).0,
+                (((a[2] * b[5] + a[5] * b[2]) - (a[1] * b[6] + a[6] * b[1]))).0,
+                (-((a[0] * b[5] + a[1] * b[4]) + (a[4] * b[1] + a[5] * b[0]))).0,
+                (-((a[0] * b[6] + a[2] * b[4]) + (a[4] * b[2] + a[6] * b[0]))).0,
+                (-((a[0] * b[7] + a[3] * b[4]) + (a[4] * b[3] + a[7] * b[0]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12445,27 +12523,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Odd<S1, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
-                (a[0] * b[0] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7] - a[4] * b[15] + a[5] * b[8] + a[6] * b[9] + a[7] * b[10]).0,
-                (-(a[0] * b[5]) + a[1] * b[0] + a[2] * b[10] - a[3] * b[9] - a[4] * b[8] + a[5] * b[15] + a[6] * b[7] - a[7] * b[6]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[2] * b[0] + a[3] * b[8] - a[4] * b[9] - a[5] * b[7] + a[6] * b[15] + a[7] * b[5]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[3] * b[0] - a[4] * b[10] + a[5] * b[6] - a[6] * b[5] + a[7] * b[15]).0,
-                (-(a[2] * b[14]) + a[3] * b[13] + a[6] * b[4] - a[7] * b[3]).0,
-                (a[1] * b[14] - a[3] * b[12] - a[5] * b[4] + a[7] * b[2]).0,
-                (-(a[1] * b[13]) + a[2] * b[12] + a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[0] * b[12]) - a[1] * b[11] - a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[13]) - a[2] * b[11] - a[4] * b[3] - a[6] * b[1]).0,
-                (-(a[0] * b[14]) - a[3] * b[11] - a[4] * b[4] - a[7] * b[1]).0,
-                (a[0] * b[15] + a[4] * b[0]).0,
-                (-(a[1] * b[15]) + a[5] * b[0]).0,
-                (-(a[2] * b[15]) + a[6] * b[0]).0,
-                (-(a[3] * b[15]) + a[7] * b[0]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                ((((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15])))).0,
+                ((((a[1] * b[0] + a[2] * b[10]) + (a[5] * b[15] + a[6] * b[7])) - ((a[0] * b[5] + a[3] * b[9]) + (a[4] * b[8] + a[7] * b[6])))).0,
+                ((((a[2] * b[0] + a[3] * b[8]) + (a[6] * b[15] + a[7] * b[5])) - ((a[0] * b[6] + a[1] * b[10]) + (a[4] * b[9] + a[5] * b[7])))).0,
+                ((((a[1] * b[9] + a[3] * b[0]) + (a[5] * b[6] + a[7] * b[15])) - ((a[0] * b[7] + a[2] * b[8]) + (a[4] * b[10] + a[6] * b[5])))).0,
+                (((a[3] * b[13] + a[6] * b[4]) - (a[2] * b[14] + a[7] * b[3]))).0,
+                (((a[1] * b[14] + a[7] * b[2]) - (a[3] * b[12] + a[5] * b[4]))).0,
+                (((a[2] * b[12] + a[5] * b[3]) - (a[1] * b[13] + a[6] * b[2]))).0,
+                (-((a[0] * b[12] + a[1] * b[11]) + (a[4] * b[2] + a[5] * b[1]))).0,
+                (-((a[0] * b[13] + a[2] * b[11]) + (a[4] * b[3] + a[6] * b[1]))).0,
+                (-((a[0] * b[14] + a[3] * b[11]) + (a[4] * b[4] + a[7] * b[1]))).0,
+                ((a[0] * b[15] + a[4] * b[0])).0,
+                ((a[5] * b[0] - a[1] * b[15])).0,
+                ((a[6] * b[0] - a[2] * b[15])).0,
+                ((a[7] * b[0] - a[3] * b[15])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12474,7 +12552,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12503,24 +12581,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (a[0] * b[1] + a[5] * b[0] + a[9] * b[3] - a[10] * b[2]).0,
-                (a[0] * b[2] + a[6] * b[0] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[0] * b[3] + a[7] * b[0] + a[8] * b[2] - a[9] * b[1]).0,
-                (a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[12] * b[3]) + a[14] * b[1]).0,
-                (a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[11] * b[1]) - a[12] * b[0]).0,
-                (-(a[11] * b[2]) - a[13] * b[0]).0,
-                (-(a[11] * b[3]) - a[14] * b[0]).0,
-                (-(a[15] * b[0])).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
+                (((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[0] * b[1] + a[5] * b[0]) + (a[9] * b[3] - a[10] * b[2]))).0,
+                (((a[0] * b[2] + a[6] * b[0]) + (a[10] * b[1] - a[8] * b[3]))).0,
+                (((a[0] * b[3] + a[7] * b[0]) + (a[8] * b[2] - a[9] * b[1]))).0,
+                ((a[13] * b[3] - a[14] * b[2])).0,
+                ((a[14] * b[1] - a[12] * b[3])).0,
+                ((a[12] * b[2] - a[13] * b[1])).0,
+                (-(a[11] * b[1] + a[12] * b[0])).0,
+                (-(a[11] * b[2] + a[13] * b[0])).0,
+                (-(a[11] * b[3] + a[14] * b[0])).0,
+                (-a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
                 (a[15] * b[3]).0,
@@ -12532,23 +12610,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multi
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
-                (-(a[2] * b[0]) - a[3] * b[1] - a[4] * b[2] + a[12] * b[3] + a[13] * b[4] + a[14] * b[5]).0,
-                (-(a[1] * b[0]) + a[3] * b[5] - a[4] * b[4] - a[11] * b[3] + a[13] * b[2] - a[14] * b[1]).0,
-                (-(a[1] * b[1]) - a[2] * b[5] + a[4] * b[3] - a[11] * b[4] - a[12] * b[2] + a[14] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[4] - a[3] * b[3] - a[11] * b[5] + a[12] * b[1] - a[13] * b[0]).0,
-                (a[0] * b[0] + a[15] * b[3]).0,
-                (a[0] * b[1] + a[15] * b[4]).0,
-                (a[0] * b[2] + a[15] * b[5]).0,
-                (a[0] * b[3] - a[15] * b[0]).0,
-                (a[0] * b[4] - a[15] * b[1]).0,
-                (a[0] * b[5] - a[15] * b[2]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                ((((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5]) - ((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2]))).0,
+                ((((a[3] * b[5] + a[13] * b[2]) - a[1] * b[0]) - ((a[4] * b[4] + a[11] * b[3]) + a[14] * b[1]))).0,
+                ((((a[4] * b[3] + a[14] * b[0]) - a[1] * b[1]) - ((a[2] * b[5] + a[11] * b[4]) + a[12] * b[2]))).0,
+                ((((a[2] * b[4] + a[12] * b[1]) - a[1] * b[2]) - ((a[3] * b[3] + a[11] * b[5]) + a[13] * b[0]))).0,
+                ((a[0] * b[0] + a[15] * b[3])).0,
+                ((a[0] * b[1] + a[15] * b[4])).0,
+                ((a[0] * b[2] + a[15] * b[5])).0,
+                ((a[0] * b[3] - a[15] * b[0])).0,
+                ((a[0] * b[4] - a[15] * b[1])).0,
+                ((a[0] * b[5] - a[15] * b[2])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -12561,23 +12639,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Mul
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3] + a[15] * b[0]).0,
-                (-(a[6] * b[3]) + a[7] * b[2] - a[8] * b[0] - a[15] * b[1]).0,
-                (a[5] * b[3] - a[7] * b[1] - a[9] * b[0] - a[15] * b[2]).0,
-                (-(a[5] * b[2]) + a[6] * b[1] - a[10] * b[0] - a[15] * b[3]).0,
-                (-(a[3] * b[3]) + a[4] * b[2]).0,
-                (a[2] * b[3] - a[4] * b[1]).0,
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (-(a[1] * b[1]) - a[2] * b[0]).0,
-                (-(a[1] * b[2]) - a[3] * b[0]).0,
-                (-(a[1] * b[3]) - a[4] * b[0]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] + a[15] * b[0]))).0,
+                (((a[7] * b[2] - a[6] * b[3]) - (a[8] * b[0] + a[15] * b[1]))).0,
+                (((a[5] * b[3] - a[7] * b[1]) - (a[9] * b[0] + a[15] * b[2]))).0,
+                (((a[6] * b[1] - a[5] * b[2]) - (a[10] * b[0] + a[15] * b[3]))).0,
+                ((a[4] * b[2] - a[3] * b[3])).0,
+                ((a[2] * b[3] - a[4] * b[1])).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                (-(a[1] * b[1] + a[2] * b[0])).0,
+                (-(a[1] * b[2] + a[3] * b[0])).0,
+                (-(a[1] * b[3] + a[4] * b[0])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -12590,27 +12668,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Mu
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (-(a[15] * b[0])).0,
-                (-(a[11] * b[0])).0,
+                (-a[15] * b[0]).0,
+                (-a[11] * b[0]).0,
                 (a[12] * b[0]).0,
                 (a[13] * b[0]).0,
                 (a[14] * b[0]).0,
                 (a[8] * b[0]).0,
                 (a[9] * b[0]).0,
                 (a[10] * b[0]).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
-                (-(a[7] * b[0])).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
+                (-a[7] * b[0]).0,
                 (a[1] * b[0]).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
-                (-(a[4] * b[0])).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
+                (-a[4] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -12619,28 +12697,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] - a[11] * b[7] + a[12] * b[4] + a[13] * b[5] + a[14] * b[6]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] + a[3] * b[6] - a[4] * b[5] - a[11] * b[4] + a[12] * b[7] + a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[1] * b[2]) - a[2] * b[6] + a[3] * b[0] + a[4] * b[4] - a[11] * b[5] - a[12] * b[3] + a[13] * b[7] + a[14] * b[1]).0,
-                (-(a[1] * b[3]) + a[2] * b[5] - a[3] * b[4] + a[4] * b[0] - a[11] * b[6] + a[12] * b[2] - a[13] * b[1] + a[14] * b[7]).0,
-                (a[0] * b[1] + a[5] * b[0] + a[8] * b[7] + a[15] * b[4]).0,
-                (a[0] * b[2] + a[6] * b[0] + a[9] * b[7] + a[15] * b[5]).0,
-                (a[0] * b[3] + a[7] * b[0] + a[10] * b[7] + a[15] * b[6]).0,
-                (a[0] * b[4] - a[5] * b[7] + a[8] * b[0] - a[15] * b[1]).0,
-                (a[0] * b[5] - a[6] * b[7] + a[9] * b[0] - a[15] * b[2]).0,
-                (a[0] * b[6] - a[7] * b[7] + a[10] * b[0] - a[15] * b[3]).0,
-                (a[1] * b[7] + a[11] * b[0]).0,
-                (-(a[2] * b[7]) + a[12] * b[0]).0,
-                (-(a[3] * b[7]) + a[13] * b[0]).0,
-                (-(a[4] * b[7]) + a[14] * b[0]).0,
-                (a[0] * b[7] + a[15] * b[0]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                ((((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6])) - ((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7])))).0,
+                ((((a[2] * b[0] + a[3] * b[6]) + (a[12] * b[7] + a[13] * b[3])) - ((a[1] * b[1] + a[4] * b[5]) + (a[11] * b[4] + a[14] * b[2])))).0,
+                ((((a[3] * b[0] + a[4] * b[4]) + (a[13] * b[7] + a[14] * b[1])) - ((a[1] * b[2] + a[2] * b[6]) + (a[11] * b[5] + a[12] * b[3])))).0,
+                ((((a[2] * b[5] + a[4] * b[0]) + (a[12] * b[2] + a[14] * b[7])) - ((a[1] * b[3] + a[3] * b[4]) + (a[11] * b[6] + a[13] * b[1])))).0,
+                (((a[0] * b[1] + a[5] * b[0]) + (a[8] * b[7] + a[15] * b[4]))).0,
+                (((a[0] * b[2] + a[6] * b[0]) + (a[9] * b[7] + a[15] * b[5]))).0,
+                (((a[0] * b[3] + a[7] * b[0]) + (a[10] * b[7] + a[15] * b[6]))).0,
+                (((a[0] * b[4] + a[8] * b[0]) - (a[5] * b[7] + a[15] * b[1]))).0,
+                (((a[0] * b[5] + a[9] * b[0]) - (a[6] * b[7] + a[15] * b[2]))).0,
+                (((a[0] * b[6] + a[10] * b[0]) - (a[7] * b[7] + a[15] * b[3]))).0,
+                ((a[1] * b[7] + a[11] * b[0])).0,
+                ((a[12] * b[0] - a[2] * b[7])).0,
+                ((a[13] * b[0] - a[3] * b[7])).0,
+                ((a[14] * b[0] - a[4] * b[7])).0,
+                ((a[0] * b[7] + a[15] * b[0])).0,
             ],
         }
     }
@@ -12648,27 +12726,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Multive
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] + a[8] * b[5] + a[9] * b[6] + a[10] * b[7] + a[15] * b[4]).0,
-                (a[0] * b[1] + a[5] * b[0] - a[6] * b[7] + a[7] * b[6] - a[8] * b[4] + a[9] * b[3] - a[10] * b[2] - a[15] * b[5]).0,
-                (a[0] * b[2] + a[5] * b[7] + a[6] * b[0] - a[7] * b[5] - a[8] * b[3] - a[9] * b[4] + a[10] * b[1] - a[15] * b[6]).0,
-                (a[0] * b[3] - a[5] * b[6] + a[6] * b[5] + a[7] * b[0] + a[8] * b[2] - a[9] * b[1] - a[10] * b[4] - a[15] * b[7]).0,
-                (-(a[3] * b[7]) + a[4] * b[6] + a[13] * b[3] - a[14] * b[2]).0,
-                (a[2] * b[7] - a[4] * b[5] - a[12] * b[3] + a[14] * b[1]).0,
-                (-(a[2] * b[6]) + a[3] * b[5] + a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[1] * b[5]) - a[2] * b[4] - a[11] * b[1] - a[12] * b[0]).0,
-                (-(a[1] * b[6]) - a[3] * b[4] - a[11] * b[2] - a[13] * b[0]).0,
-                (-(a[1] * b[7]) - a[4] * b[4] - a[11] * b[3] - a[14] * b[0]).0,
-                (a[0] * b[4] - a[15] * b[0]).0,
-                (a[0] * b[5] + a[15] * b[1]).0,
-                (a[0] * b[6] + a[15] * b[2]).0,
-                (a[0] * b[7] + a[15] * b[3]).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) + ((a[8] * b[5] + a[9] * b[6]) + (a[10] * b[7] + a[15] * b[4])))).0,
+                ((((a[0] * b[1] + a[5] * b[0]) + (a[7] * b[6] + a[9] * b[3])) - ((a[6] * b[7] + a[8] * b[4]) + (a[10] * b[2] + a[15] * b[5])))).0,
+                ((((a[0] * b[2] + a[5] * b[7]) + (a[6] * b[0] + a[10] * b[1])) - ((a[7] * b[5] + a[8] * b[3]) + (a[9] * b[4] + a[15] * b[6])))).0,
+                ((((a[0] * b[3] + a[6] * b[5]) + (a[7] * b[0] + a[8] * b[2])) - ((a[5] * b[6] + a[9] * b[1]) + (a[10] * b[4] + a[15] * b[7])))).0,
+                (((a[4] * b[6] + a[13] * b[3]) - (a[3] * b[7] + a[14] * b[2]))).0,
+                (((a[2] * b[7] + a[14] * b[1]) - (a[4] * b[5] + a[12] * b[3]))).0,
+                (((a[3] * b[5] + a[12] * b[2]) - (a[2] * b[6] + a[13] * b[1]))).0,
+                (-((a[1] * b[5] + a[2] * b[4]) + (a[11] * b[1] + a[12] * b[0]))).0,
+                (-((a[1] * b[6] + a[3] * b[4]) + (a[11] * b[2] + a[13] * b[0]))).0,
+                (-((a[1] * b[7] + a[4] * b[4]) + (a[11] * b[3] + a[14] * b[0]))).0,
+                ((a[0] * b[4] - a[15] * b[0])).0,
+                ((a[0] * b[5] + a[15] * b[1])).0,
+                ((a[0] * b[6] + a[15] * b[2])).0,
+                ((a[0] * b[7] + a[15] * b[3])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12677,28 +12755,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Multivec
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
-                (a[0] * b[1] + a[1] * b[0] - a[2] * b[5] - a[3] * b[6] - a[4] * b[7] + a[5] * b[2] + a[6] * b[3] + a[7] * b[4] + a[8] * b[12] + a[9] * b[13] + a[10] * b[14] - a[11] * b[15] + a[12] * b[8] + a[13] * b[9] + a[14] * b[10] + a[15] * b[11]).0,
-                (a[0] * b[2] - a[1] * b[5] + a[2] * b[0] + a[3] * b[10] - a[4] * b[9] + a[5] * b[1] - a[6] * b[14] + a[7] * b[13] - a[8] * b[11] + a[9] * b[4] - a[10] * b[3] - a[11] * b[8] + a[12] * b[15] + a[13] * b[7] - a[14] * b[6] - a[15] * b[12]).0,
-                (a[0] * b[3] - a[1] * b[6] - a[2] * b[10] + a[3] * b[0] + a[4] * b[8] + a[5] * b[14] + a[6] * b[1] - a[7] * b[12] - a[8] * b[4] - a[9] * b[11] + a[10] * b[2] - a[11] * b[9] - a[12] * b[7] + a[13] * b[15] + a[14] * b[5] - a[15] * b[13]).0,
-                (a[0] * b[4] - a[1] * b[7] + a[2] * b[9] - a[3] * b[8] + a[4] * b[0] - a[5] * b[13] + a[6] * b[12] + a[7] * b[1] + a[8] * b[3] - a[9] * b[2] - a[10] * b[11] - a[11] * b[10] + a[12] * b[6] - a[13] * b[5] + a[14] * b[15] - a[15] * b[14]).0,
-                (a[0] * b[5] - a[3] * b[14] + a[4] * b[13] + a[5] * b[0] + a[8] * b[15] + a[13] * b[4] - a[14] * b[3] + a[15] * b[8]).0,
-                (a[0] * b[6] + a[2] * b[14] - a[4] * b[12] + a[6] * b[0] + a[9] * b[15] - a[12] * b[4] + a[14] * b[2] + a[15] * b[9]).0,
-                (a[0] * b[7] - a[2] * b[13] + a[3] * b[12] + a[7] * b[0] + a[10] * b[15] + a[12] * b[3] - a[13] * b[2] + a[15] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[12] - a[2] * b[11] - a[5] * b[15] + a[8] * b[0] - a[11] * b[2] - a[12] * b[1] - a[15] * b[5]).0,
-                (a[0] * b[9] - a[1] * b[13] - a[3] * b[11] - a[6] * b[15] + a[9] * b[0] - a[11] * b[3] - a[13] * b[1] - a[15] * b[6]).0,
-                (a[0] * b[10] - a[1] * b[14] - a[4] * b[11] - a[7] * b[15] + a[10] * b[0] - a[11] * b[4] - a[14] * b[1] - a[15] * b[7]).0,
-                (a[0] * b[11] + a[1] * b[15] + a[11] * b[0] - a[15] * b[1]).0,
-                (a[0] * b[12] - a[2] * b[15] + a[12] * b[0] + a[15] * b[2]).0,
-                (a[0] * b[13] - a[3] * b[15] + a[13] * b[0] + a[15] * b[3]).0,
-                (a[0] * b[14] - a[4] * b[15] + a[14] * b[0] + a[15] * b[4]).0,
-                (a[0] * b[15] + a[15] * b[0]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                (((((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[2] + a[6] * b[3])) + ((a[7] * b[4] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14]))) + (((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15]))))).0,
+                (((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[10] + a[5] * b[1])) + ((a[7] * b[13] + a[9] * b[4]) + (a[12] * b[15] + a[13] * b[7]))) - (((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])) + ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12]))))).0,
+                (((((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[8] + a[5] * b[14])) + ((a[6] * b[1] + a[10] * b[2]) + (a[13] * b[15] + a[14] * b[5]))) - (((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[8] * b[4])) + ((a[9] * b[11] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13]))))).0,
+                (((((a[0] * b[4] + a[2] * b[9]) + (a[4] * b[0] + a[6] * b[12])) + ((a[7] * b[1] + a[8] * b[3]) + (a[12] * b[6] + a[14] * b[15]))) - (((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[9] * b[2])) + ((a[10] * b[11] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14]))))).0,
+                ((((a[0] * b[5] + a[4] * b[13]) + (a[5] * b[0] + a[8] * b[15])) + ((a[13] * b[4] + a[15] * b[8]) - (a[3] * b[14] + a[14] * b[3])))).0,
+                ((((a[0] * b[6] + a[2] * b[14]) + (a[6] * b[0] + a[9] * b[15])) + ((a[14] * b[2] + a[15] * b[9]) - (a[4] * b[12] + a[12] * b[4])))).0,
+                ((((a[0] * b[7] + a[3] * b[12]) + (a[7] * b[0] + a[10] * b[15])) + ((a[12] * b[3] + a[15] * b[10]) - (a[2] * b[13] + a[13] * b[2])))).0,
+                ((((a[0] * b[8] + a[8] * b[0]) - (a[1] * b[12] + a[2] * b[11])) - ((a[5] * b[15] + a[11] * b[2]) + (a[12] * b[1] + a[15] * b[5])))).0,
+                ((((a[0] * b[9] + a[9] * b[0]) - (a[1] * b[13] + a[3] * b[11])) - ((a[6] * b[15] + a[11] * b[3]) + (a[13] * b[1] + a[15] * b[6])))).0,
+                ((((a[0] * b[10] + a[10] * b[0]) - (a[1] * b[14] + a[4] * b[11])) - ((a[7] * b[15] + a[11] * b[4]) + (a[14] * b[1] + a[15] * b[7])))).0,
+                (((a[0] * b[11] + a[1] * b[15]) + (a[11] * b[0] - a[15] * b[1]))).0,
+                (((a[0] * b[12] + a[12] * b[0]) + (a[15] * b[2] - a[2] * b[15]))).0,
+                (((a[0] * b[13] + a[13] * b[0]) + (a[15] * b[3] - a[3] * b[15]))).0,
+                (((a[0] * b[14] + a[14] * b[0]) + (a[15] * b[4] - a[4] * b[15]))).0,
+                ((a[0] * b[15] + a[15] * b[0])).0,
             ],
         }
     }
@@ -12706,7 +12784,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12720,7 +12798,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12734,7 +12812,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12748,13 +12826,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -12762,13 +12840,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -12776,13 +12854,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
             ],
         }
     }
@@ -12790,13 +12868,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
             ],
         }
     }
@@ -12804,13 +12882,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
             ],
         }
     }
@@ -12818,13 +12896,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
             ],
         }
     }
@@ -12832,13 +12910,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -12846,13 +12924,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -12860,13 +12938,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
             ],
         }
     }
@@ -12874,13 +12952,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -12888,13 +12966,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
             ],
         }
     }
@@ -12902,13 +12980,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
             ],
         }
     }
@@ -12916,7 +12994,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -12930,13 +13008,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
             ],
         }
     }
@@ -12944,13 +13022,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
             ],
         }
     }
@@ -12958,13 +13036,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
             ],
         }
     }
@@ -12972,13 +13050,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Even<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
             ],
         }
     }
@@ -12986,13 +13064,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -13000,13 +13078,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -13014,13 +13092,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
             ],
         }
     }
@@ -13028,13 +13106,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
             ],
         }
     }
@@ -13042,7 +13120,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -13056,13 +13134,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
             ],
         }
     }
@@ -13070,13 +13148,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
             ],
         }
     }
@@ -13084,13 +13162,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
             ],
         }
     }
@@ -13098,13 +13176,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[15] * b[0])).0,
+                (-a[15] * b[0]).0,
             ],
         }
     }
@@ -13112,13 +13190,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
             ],
         }
     }
@@ -13126,13 +13204,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
             ],
         }
     }
@@ -13140,13 +13218,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
             ],
         }
     }
@@ -13154,18 +13232,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
             ],
         }
     }
@@ -13173,16 +13251,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -13190,13 +13268,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -13204,16 +13282,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -13221,20 +13299,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[1]) - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[0] * b[1]) + a[2] * b[6] - a[3] * b[5]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[3] * b[4]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4]).0,
+                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[2] * b[6] - a[0] * b[1]) - a[3] * b[5])).0,
+                (((a[3] * b[4] - a[0] * b[2]) - a[1] * b[6])).0,
+                (((a[1] * b[5] - a[0] * b[3]) - a[2] * b[4])).0,
                 (a[0] * b[7]).0,
-                (-(a[1] * b[7])).0,
-                (-(a[2] * b[7])).0,
-                (-(a[3] * b[7])).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
+                (-a[3] * b[7]).0,
             ],
         }
     }
@@ -13242,20 +13320,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
             ],
         }
     }
@@ -13263,28 +13341,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for V
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[1] * b[5]) - a[2] * b[6] - a[3] * b[7]).0,
-                (-(a[0] * b[5]) + a[2] * b[10] - a[3] * b[9]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[3] * b[8]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8]).0,
-                (-(a[0] * b[2]) + a[1] * b[1]).0,
-                (-(a[0] * b[3]) + a[2] * b[1]).0,
-                (-(a[0] * b[4]) + a[3] * b[1]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
+                (-((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
+                (((a[2] * b[10] - a[0] * b[5]) - a[3] * b[9])).0,
+                (((a[3] * b[8] - a[0] * b[6]) - a[1] * b[10])).0,
+                (((a[1] * b[9] - a[0] * b[7]) - a[2] * b[8])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
+                ((a[2] * b[1] - a[0] * b[3])).0,
+                ((a[3] * b[1] - a[0] * b[4])).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
                 (a[0] * b[15]).0,
-                (-(a[1] * b[15])).0,
-                (-(a[2] * b[15])).0,
-                (-(a[3] * b[15])).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14]).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                (-a[3] * b[15]).0,
+                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
             ],
         }
     }
@@ -13292,16 +13370,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -13309,18 +13387,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[5] - a[2] * b[4] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[5]) + a[2] * b[3] - a[3] * b[2] + a[5] * b[0]).0,
-                (a[0] * b[4] - a[1] * b[3] + a[3] * b[1] - a[4] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[4] * b[5] - a[5] * b[4]).0,
-                (a[0] * b[2] - a[2] * b[0] - a[3] * b[5] + a[5] * b[3]).0,
-                (-(a[0] * b[1]) + a[1] * b[0] + a[3] * b[4] - a[4] * b[3]).0,
+                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
+                (((a[2] * b[3] + a[5] * b[0]) - (a[0] * b[5] + a[3] * b[2]))).0,
+                (((a[0] * b[4] + a[3] * b[1]) - (a[1] * b[3] + a[4] * b[0]))).0,
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
             ],
         }
     }
@@ -13328,16 +13406,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3]).0,
-                (-(a[0] * b[0]) + a[4] * b[3] - a[5] * b[2]).0,
-                (-(a[1] * b[0]) - a[3] * b[3] + a[5] * b[1]).0,
-                (-(a[2] * b[0]) + a[3] * b[2] - a[4] * b[1]).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
+                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
+                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
             ],
         }
     }
@@ -13345,18 +13423,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[1] * b[6] - a[2] * b[5] + a[4] * b[3] - a[5] * b[2]).0,
-                (-(a[0] * b[6]) + a[2] * b[4] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[0] * b[5] - a[1] * b[4] + a[3] * b[2] - a[4] * b[1]).0,
-                (-(a[1] * b[3]) + a[2] * b[2] + a[4] * b[6] - a[5] * b[5]).0,
-                (a[0] * b[3] - a[2] * b[1] - a[3] * b[6] + a[5] * b[4]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[3] * b[5] - a[4] * b[4]).0,
+                (((a[1] * b[6] + a[4] * b[3]) - (a[2] * b[5] + a[5] * b[2]))).0,
+                (((a[2] * b[4] + a[5] * b[1]) - (a[0] * b[6] + a[3] * b[3]))).0,
+                (((a[0] * b[5] + a[3] * b[2]) - (a[1] * b[4] + a[4] * b[1]))).0,
+                (((a[2] * b[2] + a[4] * b[6]) - (a[1] * b[3] + a[5] * b[5]))).0,
+                (((a[0] * b[3] + a[5] * b[4]) - (a[2] * b[1] + a[3] * b[6]))).0,
+                (((a[1] * b[1] + a[3] * b[5]) - (a[0] * b[2] + a[4] * b[4]))).0,
             ],
         }
     }
@@ -13364,20 +13442,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3]).0,
-                (a[0] * b[0] + a[4] * b[3] - a[5] * b[2]).0,
-                (a[1] * b[0] - a[3] * b[3] + a[5] * b[1]).0,
-                (a[2] * b[0] + a[3] * b[2] - a[4] * b[1]).0,
-                (-(a[0] * b[5]) - a[1] * b[6] - a[2] * b[7]).0,
-                (-(a[0] * b[4]) + a[4] * b[7] - a[5] * b[6]).0,
-                (-(a[1] * b[4]) - a[3] * b[7] + a[5] * b[5]).0,
-                (-(a[2] * b[4]) + a[3] * b[6] - a[4] * b[5]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
+                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                (((a[4] * b[7] - a[0] * b[4]) - a[5] * b[6])).0,
+                (((a[5] * b[5] - a[1] * b[4]) - a[3] * b[7])).0,
+                (((a[3] * b[6] - a[2] * b[4]) - a[4] * b[5])).0,
             ],
         }
     }
@@ -13385,27 +13463,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for B
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[2] + a[1] * b[3] + a[2] * b[4]).0,
-                (a[0] * b[1] + a[4] * b[4] - a[5] * b[3]).0,
-                (a[1] * b[1] - a[3] * b[4] + a[5] * b[2]).0,
-                (a[2] * b[1] + a[3] * b[3] - a[4] * b[2]).0,
-                (a[1] * b[10] - a[2] * b[9] + a[4] * b[7] - a[5] * b[6]).0,
-                (-(a[0] * b[10]) + a[2] * b[8] - a[3] * b[7] + a[5] * b[5]).0,
-                (a[0] * b[9] - a[1] * b[8] + a[3] * b[6] - a[4] * b[5]).0,
-                (-(a[1] * b[7]) + a[2] * b[6] + a[4] * b[10] - a[5] * b[9]).0,
-                (a[0] * b[7] - a[2] * b[5] - a[3] * b[10] + a[5] * b[8]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] + a[3] * b[9] - a[4] * b[8]).0,
-                (-(a[0] * b[12]) - a[1] * b[13] - a[2] * b[14]).0,
-                (-(a[0] * b[11]) + a[4] * b[14] - a[5] * b[13]).0,
-                (-(a[1] * b[11]) - a[3] * b[14] + a[5] * b[12]).0,
-                (-(a[2] * b[11]) + a[3] * b[13] - a[4] * b[12]).0,
+                (((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4])).0,
+                (((a[0] * b[1] + a[4] * b[4]) - a[5] * b[3])).0,
+                (((a[1] * b[1] + a[5] * b[2]) - a[3] * b[4])).0,
+                (((a[2] * b[1] + a[3] * b[3]) - a[4] * b[2])).0,
+                (((a[1] * b[10] + a[4] * b[7]) - (a[2] * b[9] + a[5] * b[6]))).0,
+                (((a[2] * b[8] + a[5] * b[5]) - (a[0] * b[10] + a[3] * b[7]))).0,
+                (((a[0] * b[9] + a[3] * b[6]) - (a[1] * b[8] + a[4] * b[5]))).0,
+                (((a[2] * b[6] + a[4] * b[10]) - (a[1] * b[7] + a[5] * b[9]))).0,
+                (((a[0] * b[7] + a[5] * b[8]) - (a[2] * b[5] + a[3] * b[10]))).0,
+                (((a[1] * b[5] + a[3] * b[9]) - (a[0] * b[6] + a[4] * b[8]))).0,
+                (-((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14])).0,
+                (((a[4] * b[14] - a[0] * b[11]) - a[5] * b[13])).0,
+                (((a[5] * b[12] - a[1] * b[11]) - a[3] * b[14])).0,
+                (((a[3] * b[13] - a[2] * b[11]) - a[4] * b[12])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13414,13 +13492,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Pseudoscalar {
             c: [
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -13428,16 +13506,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2]).0,
-                (a[0] * b[0] + a[2] * b[5] - a[3] * b[4]).0,
-                (a[0] * b[1] - a[1] * b[5] + a[3] * b[3]).0,
-                (a[0] * b[2] + a[1] * b[4] - a[2] * b[3]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[2] * b[5]) - a[3] * b[4])).0,
+                (((a[0] * b[1] + a[3] * b[3]) - a[1] * b[5])).0,
+                (((a[0] * b[2] + a[1] * b[4]) - a[2] * b[3])).0,
             ],
         }
     }
@@ -13445,18 +13523,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[0] * b[1] - a[1] * b[0]).0,
-                (a[0] * b[2] - a[2] * b[0]).0,
-                (a[0] * b[3] - a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
+                ((a[0] * b[1] - a[1] * b[0])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[0] * b[3] - a[3] * b[0])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
             ],
         }
     }
@@ -13464,13 +13542,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
@@ -13481,20 +13559,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[1] * b[7]).0,
                 (a[2] * b[7]).0,
                 (a[3] * b[7]).0,
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[0] * b[1] + a[2] * b[6] - a[3] * b[5]).0,
-                (a[0] * b[2] - a[1] * b[6] + a[3] * b[4]).0,
-                (a[0] * b[3] + a[1] * b[5] - a[2] * b[4]).0,
+                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[0] * b[1] + a[2] * b[6]) - a[3] * b[5])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[1] * b[6])).0,
+                (((a[0] * b[3] + a[1] * b[5]) - a[2] * b[4])).0,
             ],
         }
     }
@@ -13502,20 +13580,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[5] - a[1] * b[4]).0,
-                (a[0] * b[6] - a[2] * b[4]).0,
-                (a[0] * b[7] - a[3] * b[4]).0,
-                (a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[1] * b[7]) + a[3] * b[5]).0,
-                (a[1] * b[6] - a[2] * b[5]).0,
-                (-(a[0] * b[0]) - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                ((a[0] * b[5] - a[1] * b[4])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[0] * b[7] - a[3] * b[4])).0,
+                ((a[2] * b[7] - a[3] * b[6])).0,
+                ((a[3] * b[5] - a[1] * b[7])).0,
+                ((a[1] * b[6] - a[2] * b[5])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -13523,28 +13601,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
                 (a[1] * b[15]).0,
                 (a[2] * b[15]).0,
                 (a[3] * b[15]).0,
-                (a[0] * b[12] - a[1] * b[11]).0,
-                (a[0] * b[13] - a[2] * b[11]).0,
-                (a[0] * b[14] - a[3] * b[11]).0,
-                (a[2] * b[14] - a[3] * b[13]).0,
-                (-(a[1] * b[14]) + a[3] * b[12]).0,
-                (a[1] * b[13] - a[2] * b[12]).0,
-                (a[1] * b[5] + a[2] * b[6] + a[3] * b[7]).0,
-                (a[0] * b[5] + a[2] * b[10] - a[3] * b[9]).0,
-                (a[0] * b[6] - a[1] * b[10] + a[3] * b[8]).0,
-                (a[0] * b[7] + a[1] * b[9] - a[2] * b[8]).0,
-                (-(a[0] * b[1]) - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                ((a[0] * b[12] - a[1] * b[11])).0,
+                ((a[0] * b[13] - a[2] * b[11])).0,
+                ((a[0] * b[14] - a[3] * b[11])).0,
+                ((a[2] * b[14] - a[3] * b[13])).0,
+                ((a[3] * b[12] - a[1] * b[14])).0,
+                ((a[1] * b[13] - a[2] * b[12])).0,
+                (((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
+                (((a[0] * b[5] + a[2] * b[10]) - a[3] * b[9])).0,
+                (((a[0] * b[6] + a[3] * b[8]) - a[1] * b[10])).0,
+                (((a[0] * b[7] + a[1] * b[9]) - a[2] * b[8])).0,
+                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
             ],
         }
     }
@@ -13552,13 +13630,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -13569,16 +13647,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
                 (a[0] * b[0]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
             ],
         }
     }
@@ -13586,17 +13664,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[0] * b[4]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
+                (-a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
@@ -13607,17 +13685,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for P
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[0] * b[11]).0,
-                (-(a[0] * b[12])).0,
-                (-(a[0] * b[13])).0,
-                (-(a[0] * b[14])).0,
-                (-(a[0] * b[1])).0,
+                (-a[0] * b[12]).0,
+                (-a[0] * b[13]).0,
+                (-a[0] * b[14]).0,
+                (-a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
@@ -13628,17 +13706,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
-                (a[1] * b[0] + a[5] * b[3] - a[6] * b[2]).0,
-                (a[2] * b[0] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[3] * b[0] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[7] * b[0])).0,
+                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[1] * b[0] + a[5] * b[3]) - a[6] * b[2])).0,
+                (((a[2] * b[0] + a[6] * b[1]) - a[4] * b[3])).0,
+                (((a[3] * b[0] + a[4] * b[2]) - a[5] * b[1])).0,
+                (-a[7] * b[0]).0,
                 (a[7] * b[1]).0,
                 (a[7] * b[2]).0,
                 (a[7] * b[3]).0,
@@ -13649,18 +13727,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Even<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[2] * b[5] - a[3] * b[4] + a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[1] * b[5]) + a[3] * b[3] - a[4] * b[2] + a[6] * b[0]).0,
-                (a[1] * b[4] - a[2] * b[3] + a[4] * b[1] - a[5] * b[0]).0,
-                (-(a[2] * b[2]) + a[3] * b[1] + a[5] * b[5] - a[6] * b[4]).0,
-                (a[1] * b[2] - a[3] * b[0] - a[4] * b[5] + a[6] * b[3]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] + a[4] * b[4] - a[5] * b[3]).0,
+                (((a[2] * b[5] + a[5] * b[2]) - (a[3] * b[4] + a[6] * b[1]))).0,
+                (((a[3] * b[3] + a[6] * b[0]) - (a[1] * b[5] + a[4] * b[2]))).0,
+                (((a[1] * b[4] + a[4] * b[1]) - (a[2] * b[3] + a[5] * b[0]))).0,
+                (((a[3] * b[1] + a[5] * b[5]) - (a[2] * b[2] + a[6] * b[4]))).0,
+                (((a[1] * b[2] + a[6] * b[3]) - (a[3] * b[0] + a[4] * b[5]))).0,
+                (((a[2] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[5] * b[3]))).0,
             ],
         }
     }
@@ -13668,20 +13746,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
                 (a[7] * b[0]).0,
-                (-(a[7] * b[1])).0,
-                (-(a[7] * b[2])).0,
-                (-(a[7] * b[3])).0,
-                (-(a[1] * b[1]) - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[1] * b[0]) + a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[2] * b[0]) - a[4] * b[3] + a[6] * b[1]).0,
-                (-(a[3] * b[0]) + a[4] * b[2] - a[5] * b[1]).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
+                (-a[7] * b[3]).0,
+                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
+                (((a[5] * b[3] - a[1] * b[0]) - a[6] * b[2])).0,
+                (((a[6] * b[1] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[4] * b[2] - a[3] * b[0]) - a[5] * b[1])).0,
             ],
         }
     }
@@ -13689,18 +13767,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Even<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[2] * b[6] - a[3] * b[5] + a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[1] * b[6]) + a[3] * b[4] - a[4] * b[3] + a[6] * b[1]).0,
-                (a[1] * b[5] - a[2] * b[4] + a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] + a[5] * b[6] - a[6] * b[5]).0,
-                (a[1] * b[3] - a[3] * b[1] - a[4] * b[6] + a[6] * b[4]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[4] * b[5] - a[5] * b[4]).0,
+                (((a[2] * b[6] + a[5] * b[3]) - (a[3] * b[5] + a[6] * b[2]))).0,
+                (((a[3] * b[4] + a[6] * b[1]) - (a[1] * b[6] + a[4] * b[3]))).0,
+                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
+                (((a[3] * b[2] + a[5] * b[6]) - (a[2] * b[3] + a[6] * b[5]))).0,
+                (((a[1] * b[3] + a[6] * b[4]) - (a[3] * b[1] + a[4] * b[6]))).0,
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
             ],
         }
     }
@@ -13708,20 +13786,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[1] + a[2] * b[2] + a[3] * b[3] + a[7] * b[4]).0,
-                (a[1] * b[0] + a[5] * b[3] - a[6] * b[2] - a[7] * b[5]).0,
-                (a[2] * b[0] - a[4] * b[3] + a[6] * b[1] - a[7] * b[6]).0,
-                (a[3] * b[0] + a[4] * b[2] - a[5] * b[1] - a[7] * b[7]).0,
-                (-(a[1] * b[5]) - a[2] * b[6] - a[3] * b[7] - a[7] * b[0]).0,
-                (-(a[1] * b[4]) + a[5] * b[7] - a[6] * b[6] + a[7] * b[1]).0,
-                (-(a[2] * b[4]) - a[4] * b[7] + a[6] * b[5] + a[7] * b[2]).0,
-                (-(a[3] * b[4]) + a[4] * b[6] - a[5] * b[5] + a[7] * b[3]).0,
+                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[4]))).0,
+                (((a[1] * b[0] + a[5] * b[3]) - (a[6] * b[2] + a[7] * b[5]))).0,
+                (((a[2] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[7] * b[6]))).0,
+                (((a[3] * b[0] + a[4] * b[2]) - (a[5] * b[1] + a[7] * b[7]))).0,
+                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0]))).0,
+                (((a[5] * b[7] + a[7] * b[1]) - (a[1] * b[4] + a[6] * b[6]))).0,
+                (((a[6] * b[5] + a[7] * b[2]) - (a[2] * b[4] + a[4] * b[7]))).0,
+                (((a[4] * b[6] + a[7] * b[3]) - (a[3] * b[4] + a[5] * b[5]))).0,
             ],
         }
     }
@@ -13729,27 +13807,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for E
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[1] * b[2] + a[2] * b[3] + a[3] * b[4] + a[7] * b[11]).0,
-                (a[1] * b[1] + a[5] * b[4] - a[6] * b[3] - a[7] * b[12]).0,
-                (a[2] * b[1] - a[4] * b[4] + a[6] * b[2] - a[7] * b[13]).0,
-                (a[3] * b[1] + a[4] * b[3] - a[5] * b[2] - a[7] * b[14]).0,
-                (a[2] * b[10] - a[3] * b[9] + a[5] * b[7] - a[6] * b[6]).0,
-                (-(a[1] * b[10]) + a[3] * b[8] - a[4] * b[7] + a[6] * b[5]).0,
-                (a[1] * b[9] - a[2] * b[8] + a[4] * b[6] - a[5] * b[5]).0,
-                (-(a[2] * b[7]) + a[3] * b[6] + a[5] * b[10] - a[6] * b[9]).0,
-                (a[1] * b[7] - a[3] * b[5] - a[4] * b[10] + a[6] * b[8]).0,
-                (-(a[1] * b[6]) + a[2] * b[5] + a[4] * b[9] - a[5] * b[8]).0,
-                (-(a[1] * b[12]) - a[2] * b[13] - a[3] * b[14] - a[7] * b[1]).0,
-                (-(a[1] * b[11]) + a[5] * b[14] - a[6] * b[13] + a[7] * b[2]).0,
-                (-(a[2] * b[11]) - a[4] * b[14] + a[6] * b[12] + a[7] * b[3]).0,
-                (-(a[3] * b[11]) + a[4] * b[13] - a[5] * b[12] + a[7] * b[4]).0,
+                (((a[1] * b[2] + a[2] * b[3]) + (a[3] * b[4] + a[7] * b[11]))).0,
+                (((a[1] * b[1] + a[5] * b[4]) - (a[6] * b[3] + a[7] * b[12]))).0,
+                (((a[2] * b[1] + a[6] * b[2]) - (a[4] * b[4] + a[7] * b[13]))).0,
+                (((a[3] * b[1] + a[4] * b[3]) - (a[5] * b[2] + a[7] * b[14]))).0,
+                (((a[2] * b[10] + a[5] * b[7]) - (a[3] * b[9] + a[6] * b[6]))).0,
+                (((a[3] * b[8] + a[6] * b[5]) - (a[1] * b[10] + a[4] * b[7]))).0,
+                (((a[1] * b[9] + a[4] * b[6]) - (a[2] * b[8] + a[5] * b[5]))).0,
+                (((a[3] * b[6] + a[5] * b[10]) - (a[2] * b[7] + a[6] * b[9]))).0,
+                (((a[1] * b[7] + a[6] * b[8]) - (a[3] * b[5] + a[4] * b[10]))).0,
+                (((a[2] * b[5] + a[4] * b[9]) - (a[1] * b[6] + a[5] * b[8]))).0,
+                (-((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1]))).0,
+                (((a[5] * b[14] + a[7] * b[2]) - (a[1] * b[11] + a[6] * b[13]))).0,
+                (((a[6] * b[12] + a[7] * b[3]) - (a[2] * b[11] + a[4] * b[14]))).0,
+                (((a[4] * b[13] + a[7] * b[4]) - (a[3] * b[11] + a[5] * b[12]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13758,20 +13836,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0]).0,
-                (-(a[0] * b[2]) + a[2] * b[0]).0,
-                (-(a[0] * b[3]) + a[3] * b[0]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[4] * b[0]) - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((a[2] * b[0] - a[0] * b[2])).0,
+                ((a[3] * b[0] - a[0] * b[3])).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
             ],
         }
     }
@@ -13779,20 +13857,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[0]) - a[2] * b[1] - a[3] * b[2]).0,
-                (-(a[0] * b[0]) + a[2] * b[5] - a[3] * b[4]).0,
-                (-(a[0] * b[1]) - a[1] * b[5] + a[3] * b[3]).0,
-                (-(a[0] * b[2]) + a[1] * b[4] - a[2] * b[3]).0,
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2]).0,
-                (a[4] * b[0] + a[6] * b[5] - a[7] * b[4]).0,
-                (a[4] * b[1] - a[5] * b[5] + a[7] * b[3]).0,
-                (a[4] * b[2] + a[5] * b[4] - a[6] * b[3]).0,
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                (((a[4] * b[0] + a[6] * b[5]) - a[7] * b[4])).0,
+                (((a[4] * b[1] + a[7] * b[3]) - a[5] * b[5])).0,
+                (((a[4] * b[2] + a[5] * b[4]) - a[6] * b[3])).0,
             ],
         }
     }
@@ -13800,20 +13878,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[4] * b[1] - a[5] * b[0]).0,
-                (a[4] * b[2] - a[6] * b[0]).0,
-                (a[4] * b[3] - a[7] * b[0]).0,
-                (a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[5] * b[3]) + a[7] * b[1]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]).0,
+                ((a[4] * b[1] - a[5] * b[0])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[4] * b[3] - a[7] * b[0])).0,
+                ((a[6] * b[3] - a[7] * b[2])).0,
+                ((a[7] * b[1] - a[5] * b[3])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -13821,20 +13899,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[4] * b[0])).0,
+                (-a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
                 (a[7] * b[0]).0,
                 (a[0] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
             ],
         }
     }
@@ -13842,20 +13920,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[1] * b[1]) - a[2] * b[2] - a[3] * b[3] - a[4] * b[7]).0,
-                (-(a[0] * b[1]) + a[2] * b[6] - a[3] * b[5] + a[5] * b[7]).0,
-                (-(a[0] * b[2]) - a[1] * b[6] + a[3] * b[4] + a[6] * b[7]).0,
-                (-(a[0] * b[3]) + a[1] * b[5] - a[2] * b[4] + a[7] * b[7]).0,
-                (a[0] * b[7] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (-(a[1] * b[7]) + a[4] * b[1] + a[6] * b[6] - a[7] * b[5]).0,
-                (-(a[2] * b[7]) + a[4] * b[2] - a[5] * b[6] + a[7] * b[4]).0,
-                (-(a[3] * b[7]) + a[4] * b[3] + a[5] * b[5] - a[6] * b[4]).0,
+                (-((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7]))).0,
+                (((a[2] * b[6] + a[5] * b[7]) - (a[0] * b[1] + a[3] * b[5]))).0,
+                (((a[3] * b[4] + a[6] * b[7]) - (a[0] * b[2] + a[1] * b[6]))).0,
+                (((a[1] * b[5] + a[7] * b[7]) - (a[0] * b[3] + a[2] * b[4]))).0,
+                (((a[0] * b[7] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (((a[4] * b[1] + a[6] * b[6]) - (a[1] * b[7] + a[7] * b[5]))).0,
+                (((a[4] * b[2] + a[7] * b[4]) - (a[2] * b[7] + a[5] * b[6]))).0,
+                (((a[4] * b[3] + a[5] * b[5]) - (a[3] * b[7] + a[6] * b[4]))).0,
             ],
         }
     }
@@ -13863,20 +13941,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[1]) + a[1] * b[0] + a[4] * b[5] - a[5] * b[4]).0,
-                (-(a[0] * b[2]) + a[2] * b[0] + a[4] * b[6] - a[6] * b[4]).0,
-                (-(a[0] * b[3]) + a[3] * b[0] + a[4] * b[7] - a[7] * b[4]).0,
-                (a[2] * b[3] - a[3] * b[2] + a[6] * b[7] - a[7] * b[6]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[5] * b[7] + a[7] * b[5]).0,
-                (a[1] * b[2] - a[2] * b[1] + a[5] * b[6] - a[6] * b[5]).0,
-                (a[0] * b[4] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
+                (((a[1] * b[0] + a[4] * b[5]) - (a[0] * b[1] + a[5] * b[4]))).0,
+                (((a[2] * b[0] + a[4] * b[6]) - (a[0] * b[2] + a[6] * b[4]))).0,
+                (((a[3] * b[0] + a[4] * b[7]) - (a[0] * b[3] + a[7] * b[4]))).0,
+                (((a[2] * b[3] + a[6] * b[7]) - (a[3] * b[2] + a[7] * b[6]))).0,
+                (((a[3] * b[1] + a[7] * b[5]) - (a[1] * b[3] + a[5] * b[7]))).0,
+                (((a[1] * b[2] + a[5] * b[6]) - (a[2] * b[1] + a[6] * b[5]))).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
             ],
         }
     }
@@ -13884,28 +13962,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for O
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[1] * b[5]) - a[2] * b[6] - a[3] * b[7] - a[4] * b[15]).0,
-                (-(a[0] * b[5]) + a[2] * b[10] - a[3] * b[9] + a[5] * b[15]).0,
-                (-(a[0] * b[6]) - a[1] * b[10] + a[3] * b[8] + a[6] * b[15]).0,
-                (-(a[0] * b[7]) + a[1] * b[9] - a[2] * b[8] + a[7] * b[15]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] + a[4] * b[12] - a[5] * b[11]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] + a[4] * b[13] - a[6] * b[11]).0,
-                (-(a[0] * b[4]) + a[3] * b[1] + a[4] * b[14] - a[7] * b[11]).0,
-                (a[2] * b[4] - a[3] * b[3] + a[6] * b[14] - a[7] * b[13]).0,
-                (-(a[1] * b[4]) + a[3] * b[2] - a[5] * b[14] + a[7] * b[12]).0,
-                (a[1] * b[3] - a[2] * b[2] + a[5] * b[13] - a[6] * b[12]).0,
-                (a[0] * b[15] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7]).0,
-                (-(a[1] * b[15]) + a[4] * b[5] + a[6] * b[10] - a[7] * b[9]).0,
-                (-(a[2] * b[15]) + a[4] * b[6] - a[5] * b[10] + a[7] * b[8]).0,
-                (-(a[3] * b[15]) + a[4] * b[7] + a[5] * b[9] - a[6] * b[8]).0,
-                (a[0] * b[11] + a[1] * b[12] + a[2] * b[13] + a[3] * b[14] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] - a[7] * b[4]).0,
+                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15]))).0,
+                (((a[2] * b[10] + a[5] * b[15]) - (a[0] * b[5] + a[3] * b[9]))).0,
+                (((a[3] * b[8] + a[6] * b[15]) - (a[0] * b[6] + a[1] * b[10]))).0,
+                (((a[1] * b[9] + a[7] * b[15]) - (a[0] * b[7] + a[2] * b[8]))).0,
+                (((a[1] * b[1] + a[4] * b[12]) - (a[0] * b[2] + a[5] * b[11]))).0,
+                (((a[2] * b[1] + a[4] * b[13]) - (a[0] * b[3] + a[6] * b[11]))).0,
+                (((a[3] * b[1] + a[4] * b[14]) - (a[0] * b[4] + a[7] * b[11]))).0,
+                (((a[2] * b[4] + a[6] * b[14]) - (a[3] * b[3] + a[7] * b[13]))).0,
+                (((a[3] * b[2] + a[7] * b[12]) - (a[1] * b[4] + a[5] * b[14]))).0,
+                (((a[1] * b[3] + a[5] * b[13]) - (a[2] * b[2] + a[6] * b[12]))).0,
+                (((a[0] * b[15] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7]))).0,
+                (((a[4] * b[5] + a[6] * b[10]) - (a[1] * b[15] + a[7] * b[9]))).0,
+                (((a[4] * b[6] + a[7] * b[8]) - (a[2] * b[15] + a[5] * b[10]))).0,
+                (((a[4] * b[7] + a[5] * b[9]) - (a[3] * b[15] + a[6] * b[8]))).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
             ],
         }
     }
@@ -13913,28 +13991,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[5] * b[1] + a[6] * b[2] + a[7] * b[3]).0,
-                (a[5] * b[0] + a[9] * b[3] - a[10] * b[2]).0,
-                (a[6] * b[0] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[7] * b[0] + a[8] * b[2] - a[9] * b[1]).0,
-                (-(a[1] * b[1]) + a[2] * b[0]).0,
-                (-(a[1] * b[2]) + a[3] * b[0]).0,
-                (-(a[1] * b[3]) + a[4] * b[0]).0,
-                (a[3] * b[3] - a[4] * b[2]).0,
-                (-(a[2] * b[3]) + a[4] * b[1]).0,
-                (a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[15] * b[0])).0,
+                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
+                (((a[5] * b[0] + a[9] * b[3]) - a[10] * b[2])).0,
+                (((a[6] * b[0] + a[10] * b[1]) - a[8] * b[3])).0,
+                (((a[7] * b[0] + a[8] * b[2]) - a[9] * b[1])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
+                ((a[3] * b[0] - a[1] * b[2])).0,
+                ((a[4] * b[0] - a[1] * b[3])).0,
+                ((a[3] * b[3] - a[4] * b[2])).0,
+                ((a[4] * b[1] - a[2] * b[3])).0,
+                ((a[2] * b[2] - a[3] * b[1])).0,
+                (-a[15] * b[0]).0,
                 (a[15] * b[1]).0,
                 (a[15] * b[2]).0,
                 (a[15] * b[3]).0,
-                (-(a[11] * b[0]) - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
             ],
         }
     }
@@ -13942,27 +14020,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[0]) - a[3] * b[1] - a[4] * b[2]).0,
-                (-(a[1] * b[0]) + a[3] * b[5] - a[4] * b[4]).0,
-                (-(a[1] * b[1]) - a[2] * b[5] + a[4] * b[3]).0,
-                (-(a[1] * b[2]) + a[2] * b[4] - a[3] * b[3]).0,
-                (a[6] * b[5] - a[7] * b[4] + a[9] * b[2] - a[10] * b[1]).0,
-                (-(a[5] * b[5]) + a[7] * b[3] - a[8] * b[2] + a[10] * b[0]).0,
-                (a[5] * b[4] - a[6] * b[3] + a[8] * b[1] - a[9] * b[0]).0,
-                (-(a[6] * b[2]) + a[7] * b[1] + a[9] * b[5] - a[10] * b[4]).0,
-                (a[5] * b[2] - a[7] * b[0] - a[8] * b[5] + a[10] * b[3]).0,
-                (-(a[5] * b[1]) + a[6] * b[0] + a[8] * b[4] - a[9] * b[3]).0,
-                (a[12] * b[0] + a[13] * b[1] + a[14] * b[2]).0,
-                (a[11] * b[0] + a[13] * b[5] - a[14] * b[4]).0,
-                (a[11] * b[1] - a[12] * b[5] + a[14] * b[3]).0,
-                (a[11] * b[2] + a[12] * b[4] - a[13] * b[3]).0,
+                (-((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2])).0,
+                (((a[3] * b[5] - a[1] * b[0]) - a[4] * b[4])).0,
+                (((a[4] * b[3] - a[1] * b[1]) - a[2] * b[5])).0,
+                (((a[2] * b[4] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[6] * b[5] + a[9] * b[2]) - (a[7] * b[4] + a[10] * b[1]))).0,
+                (((a[7] * b[3] + a[10] * b[0]) - (a[5] * b[5] + a[8] * b[2]))).0,
+                (((a[5] * b[4] + a[8] * b[1]) - (a[6] * b[3] + a[9] * b[0]))).0,
+                (((a[7] * b[1] + a[9] * b[5]) - (a[6] * b[2] + a[10] * b[4]))).0,
+                (((a[5] * b[2] + a[10] * b[3]) - (a[7] * b[0] + a[8] * b[5]))).0,
+                (((a[6] * b[0] + a[8] * b[4]) - (a[5] * b[1] + a[9] * b[3]))).0,
+                (((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2])).0,
+                (((a[11] * b[0] + a[13] * b[5]) - a[14] * b[4])).0,
+                (((a[11] * b[1] + a[14] * b[3]) - a[12] * b[5])).0,
+                (((a[11] * b[2] + a[12] * b[4]) - a[13] * b[3])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13971,7 +14049,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -13979,20 +14057,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (a[15] * b[0]).0,
-                (-(a[15] * b[1])).0,
-                (-(a[15] * b[2])).0,
-                (-(a[15] * b[3])).0,
-                (a[11] * b[1] - a[12] * b[0]).0,
-                (a[11] * b[2] - a[13] * b[0]).0,
-                (a[11] * b[3] - a[14] * b[0]).0,
-                (a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[12] * b[3]) + a[14] * b[1]).0,
-                (a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[5] * b[1]) - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[5] * b[0]) + a[9] * b[3] - a[10] * b[2]).0,
-                (-(a[6] * b[0]) - a[8] * b[3] + a[10] * b[1]).0,
-                (-(a[7] * b[0]) + a[8] * b[2] - a[9] * b[1]).0,
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] + a[4] * b[3]).0,
+                (-a[15] * b[1]).0,
+                (-a[15] * b[2]).0,
+                (-a[15] * b[3]).0,
+                ((a[11] * b[1] - a[12] * b[0])).0,
+                ((a[11] * b[2] - a[13] * b[0])).0,
+                ((a[11] * b[3] - a[14] * b[0])).0,
+                ((a[13] * b[3] - a[14] * b[2])).0,
+                ((a[14] * b[1] - a[12] * b[3])).0,
+                ((a[12] * b[2] - a[13] * b[1])).0,
+                (-((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
+                (((a[9] * b[3] - a[5] * b[0]) - a[10] * b[2])).0,
+                (((a[10] * b[1] - a[6] * b[0]) - a[8] * b[3])).0,
+                (((a[8] * b[2] - a[7] * b[0]) - a[9] * b[1])).0,
+                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
             ],
         }
     }
@@ -14000,20 +14078,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (-(a[11] * b[0])).0,
+                (-a[11] * b[0]).0,
                 (a[12] * b[0]).0,
                 (a[13] * b[0]).0,
                 (a[14] * b[0]).0,
                 (a[1] * b[0]).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
-                (-(a[4] * b[0])).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
+                (-a[4] * b[0]).0,
             ],
         }
     }
@@ -14021,27 +14099,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[1]) - a[3] * b[2] - a[4] * b[3] - a[11] * b[7]).0,
-                (-(a[1] * b[1]) + a[3] * b[6] - a[4] * b[5] + a[12] * b[7]).0,
-                (-(a[1] * b[2]) - a[2] * b[6] + a[4] * b[4] + a[13] * b[7]).0,
-                (-(a[1] * b[3]) + a[2] * b[5] - a[3] * b[4] + a[14] * b[7]).0,
-                (a[6] * b[6] - a[7] * b[5] + a[9] * b[3] - a[10] * b[2]).0,
-                (-(a[5] * b[6]) + a[7] * b[4] - a[8] * b[3] + a[10] * b[1]).0,
-                (a[5] * b[5] - a[6] * b[4] + a[8] * b[2] - a[9] * b[1]).0,
-                (-(a[6] * b[3]) + a[7] * b[2] + a[9] * b[6] - a[10] * b[5]).0,
-                (a[5] * b[3] - a[7] * b[1] - a[8] * b[6] + a[10] * b[4]).0,
-                (-(a[5] * b[2]) + a[6] * b[1] + a[8] * b[5] - a[9] * b[4]).0,
-                (a[1] * b[7] + a[12] * b[1] + a[13] * b[2] + a[14] * b[3]).0,
-                (-(a[2] * b[7]) + a[11] * b[1] + a[13] * b[6] - a[14] * b[5]).0,
-                (-(a[3] * b[7]) + a[11] * b[2] - a[12] * b[6] + a[14] * b[4]).0,
-                (-(a[4] * b[7]) + a[11] * b[3] + a[12] * b[5] - a[13] * b[4]).0,
+                (-((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7]))).0,
+                (((a[3] * b[6] + a[12] * b[7]) - (a[1] * b[1] + a[4] * b[5]))).0,
+                (((a[4] * b[4] + a[13] * b[7]) - (a[1] * b[2] + a[2] * b[6]))).0,
+                (((a[2] * b[5] + a[14] * b[7]) - (a[1] * b[3] + a[3] * b[4]))).0,
+                (((a[6] * b[6] + a[9] * b[3]) - (a[7] * b[5] + a[10] * b[2]))).0,
+                (((a[7] * b[4] + a[10] * b[1]) - (a[5] * b[6] + a[8] * b[3]))).0,
+                (((a[5] * b[5] + a[8] * b[2]) - (a[6] * b[4] + a[9] * b[1]))).0,
+                (((a[7] * b[2] + a[9] * b[6]) - (a[6] * b[3] + a[10] * b[5]))).0,
+                (((a[5] * b[3] + a[10] * b[4]) - (a[7] * b[1] + a[8] * b[6]))).0,
+                (((a[6] * b[1] + a[8] * b[5]) - (a[5] * b[2] + a[9] * b[4]))).0,
+                (((a[1] * b[7] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[11] * b[1] + a[13] * b[6]) - (a[2] * b[7] + a[14] * b[5]))).0,
+                (((a[11] * b[2] + a[14] * b[4]) - (a[3] * b[7] + a[12] * b[6]))).0,
+                (((a[11] * b[3] + a[12] * b[5]) - (a[4] * b[7] + a[13] * b[4]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14050,28 +14128,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[5] * b[1] + a[6] * b[2] + a[7] * b[3] + a[15] * b[4]).0,
-                (a[5] * b[0] + a[9] * b[3] - a[10] * b[2] - a[15] * b[5]).0,
-                (a[6] * b[0] - a[8] * b[3] + a[10] * b[1] - a[15] * b[6]).0,
-                (a[7] * b[0] + a[8] * b[2] - a[9] * b[1] - a[15] * b[7]).0,
-                (-(a[1] * b[1]) + a[2] * b[0] + a[11] * b[5] - a[12] * b[4]).0,
-                (-(a[1] * b[2]) + a[3] * b[0] + a[11] * b[6] - a[13] * b[4]).0,
-                (-(a[1] * b[3]) + a[4] * b[0] + a[11] * b[7] - a[14] * b[4]).0,
-                (a[3] * b[3] - a[4] * b[2] + a[13] * b[7] - a[14] * b[6]).0,
-                (-(a[2] * b[3]) + a[4] * b[1] - a[12] * b[7] + a[14] * b[5]).0,
-                (a[2] * b[2] - a[3] * b[1] + a[12] * b[6] - a[13] * b[5]).0,
-                (-(a[5] * b[5]) - a[6] * b[6] - a[7] * b[7] - a[15] * b[0]).0,
-                (-(a[5] * b[4]) + a[9] * b[7] - a[10] * b[6] + a[15] * b[1]).0,
-                (-(a[6] * b[4]) - a[8] * b[7] + a[10] * b[5] + a[15] * b[2]).0,
-                (-(a[7] * b[4]) + a[8] * b[6] - a[9] * b[5] + a[15] * b[3]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[7] - a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
+                (((a[5] * b[1] + a[6] * b[2]) + (a[7] * b[3] + a[15] * b[4]))).0,
+                (((a[5] * b[0] + a[9] * b[3]) - (a[10] * b[2] + a[15] * b[5]))).0,
+                (((a[6] * b[0] + a[10] * b[1]) - (a[8] * b[3] + a[15] * b[6]))).0,
+                (((a[7] * b[0] + a[8] * b[2]) - (a[9] * b[1] + a[15] * b[7]))).0,
+                (((a[2] * b[0] + a[11] * b[5]) - (a[1] * b[1] + a[12] * b[4]))).0,
+                (((a[3] * b[0] + a[11] * b[6]) - (a[1] * b[2] + a[13] * b[4]))).0,
+                (((a[4] * b[0] + a[11] * b[7]) - (a[1] * b[3] + a[14] * b[4]))).0,
+                (((a[3] * b[3] + a[13] * b[7]) - (a[4] * b[2] + a[14] * b[6]))).0,
+                (((a[4] * b[1] + a[14] * b[5]) - (a[2] * b[3] + a[12] * b[7]))).0,
+                (((a[2] * b[2] + a[12] * b[6]) - (a[3] * b[1] + a[13] * b[5]))).0,
+                (-((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0]))).0,
+                (((a[9] * b[7] + a[15] * b[1]) - (a[5] * b[4] + a[10] * b[6]))).0,
+                (((a[10] * b[5] + a[15] * b[2]) - (a[6] * b[4] + a[8] * b[7]))).0,
+                (((a[8] * b[6] + a[15] * b[3]) - (a[7] * b[4] + a[9] * b[5]))).0,
+                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
             ],
         }
     }
@@ -14079,28 +14157,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[2] * b[5]) - a[3] * b[6] - a[4] * b[7] + a[5] * b[2] + a[6] * b[3] + a[7] * b[4] - a[11] * b[15] + a[15] * b[11]).0,
-                (-(a[1] * b[5]) + a[3] * b[10] - a[4] * b[9] + a[5] * b[1] + a[9] * b[4] - a[10] * b[3] + a[12] * b[15] - a[15] * b[12]).0,
-                (-(a[1] * b[6]) - a[2] * b[10] + a[4] * b[8] + a[6] * b[1] - a[8] * b[4] + a[10] * b[2] + a[13] * b[15] - a[15] * b[13]).0,
-                (-(a[1] * b[7]) + a[2] * b[9] - a[3] * b[8] + a[7] * b[1] + a[8] * b[3] - a[9] * b[2] + a[14] * b[15] - a[15] * b[14]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] + a[6] * b[10] - a[7] * b[9] + a[9] * b[7] - a[10] * b[6] + a[11] * b[12] - a[12] * b[11]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[5] * b[10] + a[7] * b[8] - a[8] * b[7] + a[10] * b[5] + a[11] * b[13] - a[13] * b[11]).0,
-                (-(a[1] * b[4]) + a[4] * b[1] + a[5] * b[9] - a[6] * b[8] + a[8] * b[6] - a[9] * b[5] + a[11] * b[14] - a[14] * b[11]).0,
-                (a[3] * b[4] - a[4] * b[3] - a[6] * b[7] + a[7] * b[6] + a[9] * b[10] - a[10] * b[9] + a[13] * b[14] - a[14] * b[13]).0,
-                (-(a[2] * b[4]) + a[4] * b[2] + a[5] * b[7] - a[7] * b[5] - a[8] * b[10] + a[10] * b[8] - a[12] * b[14] + a[14] * b[12]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[5] * b[6] + a[6] * b[5] + a[8] * b[9] - a[9] * b[8] + a[12] * b[13] - a[13] * b[12]).0,
-                (a[1] * b[15] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14] + a[12] * b[5] + a[13] * b[6] + a[14] * b[7] - a[15] * b[1]).0,
-                (-(a[2] * b[15]) - a[5] * b[11] + a[9] * b[14] - a[10] * b[13] + a[11] * b[5] + a[13] * b[10] - a[14] * b[9] + a[15] * b[2]).0,
-                (-(a[3] * b[15]) - a[6] * b[11] - a[8] * b[14] + a[10] * b[12] + a[11] * b[6] - a[12] * b[10] + a[14] * b[8] + a[15] * b[3]).0,
-                (-(a[4] * b[15]) - a[7] * b[11] + a[8] * b[13] - a[9] * b[12] + a[11] * b[7] + a[12] * b[9] - a[13] * b[8] + a[15] * b[4]).0,
-                (a[1] * b[11] + a[2] * b[12] + a[3] * b[13] + a[4] * b[14] - a[11] * b[1] - a[12] * b[2] - a[13] * b[3] - a[14] * b[4]).0,
+                ((((a[5] * b[2] + a[6] * b[3]) + (a[7] * b[4] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15])))).0,
+                ((((a[3] * b[10] + a[5] * b[1]) + (a[9] * b[4] + a[12] * b[15])) - ((a[1] * b[5] + a[4] * b[9]) + (a[10] * b[3] + a[15] * b[12])))).0,
+                ((((a[4] * b[8] + a[6] * b[1]) + (a[10] * b[2] + a[13] * b[15])) - ((a[1] * b[6] + a[2] * b[10]) + (a[8] * b[4] + a[15] * b[13])))).0,
+                ((((a[2] * b[9] + a[7] * b[1]) + (a[8] * b[3] + a[14] * b[15])) - ((a[1] * b[7] + a[3] * b[8]) + (a[9] * b[2] + a[15] * b[14])))).0,
+                ((((a[2] * b[1] + a[6] * b[10]) + (a[9] * b[7] + a[11] * b[12])) - ((a[1] * b[2] + a[7] * b[9]) + (a[10] * b[6] + a[12] * b[11])))).0,
+                ((((a[3] * b[1] + a[7] * b[8]) + (a[10] * b[5] + a[11] * b[13])) - ((a[1] * b[3] + a[5] * b[10]) + (a[8] * b[7] + a[13] * b[11])))).0,
+                ((((a[4] * b[1] + a[5] * b[9]) + (a[8] * b[6] + a[11] * b[14])) - ((a[1] * b[4] + a[6] * b[8]) + (a[9] * b[5] + a[14] * b[11])))).0,
+                ((((a[3] * b[4] + a[7] * b[6]) + (a[9] * b[10] + a[13] * b[14])) - ((a[4] * b[3] + a[6] * b[7]) + (a[10] * b[9] + a[14] * b[13])))).0,
+                ((((a[4] * b[2] + a[5] * b[7]) + (a[10] * b[8] + a[14] * b[12])) - ((a[2] * b[4] + a[7] * b[5]) + (a[8] * b[10] + a[12] * b[14])))).0,
+                ((((a[2] * b[3] + a[6] * b[5]) + (a[8] * b[9] + a[12] * b[13])) - ((a[3] * b[2] + a[5] * b[6]) + (a[9] * b[8] + a[13] * b[12])))).0,
+                ((((a[1] * b[15] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])) - ((a[5] * b[12] + a[6] * b[13]) + (a[7] * b[14] + a[15] * b[1])))).0,
+                ((((a[9] * b[14] + a[11] * b[5]) + (a[13] * b[10] + a[15] * b[2])) - ((a[2] * b[15] + a[5] * b[11]) + (a[10] * b[13] + a[14] * b[9])))).0,
+                ((((a[10] * b[12] + a[11] * b[6]) + (a[14] * b[8] + a[15] * b[3])) - ((a[3] * b[15] + a[6] * b[11]) + (a[8] * b[14] + a[12] * b[10])))).0,
+                ((((a[8] * b[13] + a[11] * b[7]) + (a[12] * b[9] + a[15] * b[4])) - ((a[4] * b[15] + a[7] * b[11]) + (a[9] * b[12] + a[13] * b[8])))).0,
+                ((((a[1] * b[11] + a[2] * b[12]) + (a[3] * b[13] + a[4] * b[14])) - ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4])))).0,
             ],
         }
     }
@@ -14108,7 +14186,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14122,7 +14200,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Scalar<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14139,7 +14217,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14158,7 +14236,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Scalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14175,7 +14253,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14189,7 +14267,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14210,7 +14288,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Scalar<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14231,7 +14309,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Scalar<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14260,7 +14338,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14277,13 +14355,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Vector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -14291,16 +14369,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -14308,18 +14386,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Vector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -14327,7 +14405,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14337,10 +14415,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) - a[2] * b[3] + a[3] * b[2]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
+                (((a[3] * b[2] - a[0] * b[4]) - a[2] * b[3])).0,
+                (((a[1] * b[3] - a[0] * b[5]) - a[3] * b[1])).0,
+                (((a[2] * b[1] - a[0] * b[6]) - a[1] * b[2])).0,
             ],
         }
     }
@@ -14348,19 +14426,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Vector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (-(a[2] * b[7]) + a[3] * b[6]).0,
-                (a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[1] * b[6]) + a[2] * b[5]).0,
-                (-(a[0] * b[5]) - a[1] * b[4]).0,
-                (-(a[0] * b[6]) - a[2] * b[4]).0,
-                (-(a[0] * b[7]) - a[3] * b[4]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[3] * b[6] - a[2] * b[7])).0,
+                ((a[1] * b[7] - a[3] * b[5])).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                (-(a[0] * b[5] + a[1] * b[4])).0,
+                (-(a[0] * b[6] + a[2] * b[4])).0,
+                (-(a[0] * b[7] + a[3] * b[4])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14369,27 +14447,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Vector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4]).0,
+                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
                 (a[3] * b[0]).0,
-                (-(a[2] * b[14]) + a[3] * b[13]).0,
-                (a[1] * b[14] - a[3] * b[12]).0,
-                (-(a[1] * b[13]) + a[2] * b[12]).0,
-                (-(a[0] * b[12]) - a[1] * b[11]).0,
-                (-(a[0] * b[13]) - a[2] * b[11]).0,
-                (-(a[0] * b[14]) - a[3] * b[11]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) - a[2] * b[7] + a[3] * b[6]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[3] * b[5]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5]).0,
+                ((a[3] * b[13] - a[2] * b[14])).0,
+                ((a[1] * b[14] - a[3] * b[12])).0,
+                ((a[2] * b[12] - a[1] * b[13])).0,
+                (-(a[0] * b[12] + a[1] * b[11])).0,
+                (-(a[0] * b[13] + a[2] * b[11])).0,
+                (-(a[0] * b[14] + a[3] * b[11])).0,
+                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
+                (((a[3] * b[6] - a[0] * b[8]) - a[2] * b[7])).0,
+                (((a[1] * b[7] - a[0] * b[9]) - a[3] * b[5])).0,
+                (((a[2] * b[5] - a[0] * b[10]) - a[1] * b[6])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14398,7 +14476,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14417,16 +14495,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Trivector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (a[1] * b[3] - a[2] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] - a[4] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
+                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -14434,20 +14512,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] - a[3] * b[3] - a[4] * b[4] - a[5] * b[5]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(a[0] * b[3]) - a[1] * b[4] - a[2] * b[5] - a[3] * b[0] - a[4] * b[1] - a[5] * b[2]).0,
+                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
             ],
         }
     }
@@ -14455,16 +14533,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (-(a[1] * b[3]) + a[2] * b[2] - a[3] * b[0]).0,
-                (a[0] * b[3] - a[2] * b[1] - a[4] * b[0]).0,
-                (-(a[0] * b[2]) + a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -14472,7 +14550,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14481,9 +14559,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
                 (a[3] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
             ],
         }
     }
@@ -14491,20 +14569,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[1] + a[1] * b[2] + a[2] * b[3] - a[3] * b[4] - a[4] * b[5] - a[5] * b[6]).0,
-                (a[0] * b[0] + a[3] * b[7]).0,
-                (a[1] * b[0] + a[4] * b[7]).0,
-                (a[2] * b[0] + a[5] * b[7]).0,
-                (-(a[0] * b[7]) + a[3] * b[0]).0,
-                (-(a[1] * b[7]) + a[4] * b[0]).0,
-                (-(a[2] * b[7]) + a[5] * b[0]).0,
-                (-(a[0] * b[4]) - a[1] * b[5] - a[2] * b[6] - a[3] * b[1] - a[4] * b[2] - a[5] * b[3]).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
+                ((a[0] * b[0] + a[3] * b[7])).0,
+                ((a[1] * b[0] + a[4] * b[7])).0,
+                ((a[2] * b[0] + a[5] * b[7])).0,
+                ((a[3] * b[0] - a[0] * b[7])).0,
+                ((a[4] * b[0] - a[1] * b[7])).0,
+                ((a[5] * b[0] - a[2] * b[7])).0,
+                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
             ],
         }
     }
@@ -14512,20 +14590,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Bivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[3] * b[5] + a[4] * b[6] + a[5] * b[7]).0,
-                (-(a[1] * b[7]) + a[2] * b[6] - a[3] * b[4]).0,
-                (a[0] * b[7] - a[2] * b[5] - a[4] * b[4]).0,
-                (-(a[0] * b[6]) + a[1] * b[5] - a[5] * b[4]).0,
-                (a[3] * b[1] + a[4] * b[2] + a[5] * b[3]).0,
-                (a[1] * b[3] - a[2] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[3]) + a[2] * b[1] - a[4] * b[0]).0,
-                (a[0] * b[2] - a[1] * b[1] - a[5] * b[0]).0,
+                (((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7])).0,
+                (((a[2] * b[6] - a[1] * b[7]) - a[3] * b[4])).0,
+                (((a[0] * b[7] - a[2] * b[5]) - a[4] * b[4])).0,
+                (((a[1] * b[5] - a[0] * b[6]) - a[5] * b[4])).0,
+                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
+                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
+                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
             ],
         }
     }
@@ -14533,28 +14611,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Bivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[5] + a[1] * b[6] + a[2] * b[7] - a[3] * b[8] - a[4] * b[9] - a[5] * b[10]).0,
-                (a[3] * b[12] + a[4] * b[13] + a[5] * b[14]).0,
-                (-(a[1] * b[14]) + a[2] * b[13] - a[3] * b[11]).0,
-                (a[0] * b[14] - a[2] * b[12] - a[4] * b[11]).0,
-                (-(a[0] * b[13]) + a[1] * b[12] - a[5] * b[11]).0,
-                (a[0] * b[0] + a[3] * b[15]).0,
-                (a[1] * b[0] + a[4] * b[15]).0,
-                (a[2] * b[0] + a[5] * b[15]).0,
-                (-(a[0] * b[15]) + a[3] * b[0]).0,
-                (-(a[1] * b[15]) + a[4] * b[0]).0,
-                (-(a[2] * b[15]) + a[5] * b[0]).0,
-                (a[3] * b[2] + a[4] * b[3] + a[5] * b[4]).0,
-                (a[1] * b[4] - a[2] * b[3] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[2] * b[2] - a[4] * b[1]).0,
-                (a[0] * b[3] - a[1] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[8]) - a[1] * b[9] - a[2] * b[10] - a[3] * b[5] - a[4] * b[6] - a[5] * b[7]).0,
+                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                (((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14])).0,
+                (((a[2] * b[13] - a[1] * b[14]) - a[3] * b[11])).0,
+                (((a[0] * b[14] - a[2] * b[12]) - a[4] * b[11])).0,
+                (((a[1] * b[12] - a[0] * b[13]) - a[5] * b[11])).0,
+                ((a[0] * b[0] + a[3] * b[15])).0,
+                ((a[1] * b[0] + a[4] * b[15])).0,
+                ((a[2] * b[0] + a[5] * b[15])).0,
+                ((a[3] * b[0] - a[0] * b[15])).0,
+                ((a[4] * b[0] - a[1] * b[15])).0,
+                ((a[5] * b[0] - a[2] * b[15])).0,
+                (((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4])).0,
+                (((a[1] * b[4] - a[2] * b[3]) - a[3] * b[1])).0,
+                (((a[2] * b[2] - a[0] * b[4]) - a[4] * b[1])).0,
+                (((a[0] * b[3] - a[1] * b[2]) - a[5] * b[1])).0,
+                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
             ],
         }
     }
@@ -14562,7 +14640,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14579,18 +14657,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Trivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Bivector {
             c: [
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
             ],
         }
     }
@@ -14598,16 +14676,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Vector {
             c: [
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) + a[2] * b[2] - a[3] * b[1]).0,
-                (-(a[0] * b[4]) - a[1] * b[2] + a[3] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[1] - a[2] * b[0]).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
+                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
+                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
             ],
         }
     }
@@ -14615,13 +14693,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Trivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
             ],
         }
     }
@@ -14629,16 +14707,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6]).0,
-                (-(a[0] * b[4]) + a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[0] * b[5]) - a[1] * b[3] + a[3] * b[1]).0,
-                (-(a[0] * b[6]) + a[1] * b[2] - a[2] * b[1]).0,
+                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
+                (((a[2] * b[3] - a[0] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[0] * b[5]) - a[1] * b[3])).0,
+                (((a[1] * b[2] - a[0] * b[6]) - a[2] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -14650,19 +14728,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Trivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[4] - a[1] * b[5] - a[2] * b[6] - a[3] * b[7]).0,
-                (a[2] * b[3] - a[3] * b[2]).0,
-                (-(a[1] * b[3]) + a[3] * b[1]).0,
-                (a[1] * b[2] - a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                ((a[2] * b[3] - a[3] * b[2])).0,
+                ((a[3] * b[1] - a[1] * b[3])).0,
+                ((a[1] * b[2] - a[2] * b[1])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14671,23 +14749,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Trivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[11] - a[1] * b[12] - a[2] * b[13] - a[3] * b[14]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10]).0,
-                (-(a[0] * b[8]) + a[2] * b[7] - a[3] * b[6]).0,
-                (-(a[0] * b[9]) - a[1] * b[7] + a[3] * b[5]).0,
-                (-(a[0] * b[10]) + a[1] * b[6] - a[2] * b[5]).0,
-                (a[2] * b[4] - a[3] * b[3]).0,
-                (-(a[1] * b[4]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[2] * b[2]).0,
-                (-(a[0] * b[2]) - a[1] * b[1]).0,
-                (-(a[0] * b[3]) - a[2] * b[1]).0,
-                (-(a[0] * b[4]) - a[3] * b[1]).0,
+                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
+                (((a[2] * b[7] - a[0] * b[8]) - a[3] * b[6])).0,
+                (((a[3] * b[5] - a[0] * b[9]) - a[1] * b[7])).0,
+                (((a[1] * b[6] - a[0] * b[10]) - a[2] * b[5])).0,
+                ((a[2] * b[4] - a[3] * b[3])).0,
+                ((a[3] * b[2] - a[1] * b[4])).0,
+                ((a[1] * b[3] - a[2] * b[2])).0,
+                (-(a[0] * b[2] + a[1] * b[1])).0,
+                (-(a[0] * b[3] + a[2] * b[1])).0,
+                (-(a[0] * b[4] + a[3] * b[1])).0,
                 (a[0] * b[0]).0,
                 (a[1] * b[0]).0,
                 (a[2] * b[0]).0,
@@ -14700,7 +14778,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14714,7 +14792,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14723,9 +14801,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
-                (-(a[0] * b[0])).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
             ],
         }
     }
@@ -14733,13 +14811,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Scalar {
             c: [
-                (-(a[0] * b[0])).0,
+                (-a[0] * b[0]).0,
             ],
         }
     }
@@ -14747,19 +14825,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[7]).0,
                 (a[0] * b[4]).0,
                 (a[0] * b[5]).0,
                 (a[0] * b[6]).0,
-                (-(a[0] * b[1])).0,
-                (-(a[0] * b[2])).0,
-                (-(a[0] * b[3])).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                (-a[0] * b[3]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -14768,19 +14846,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[0] * b[15])).0,
+                (-a[0] * b[15]).0,
                 (a[0] * b[8]).0,
                 (a[0] * b[9]).0,
                 (a[0] * b[10]).0,
-                (-(a[0] * b[5])).0,
-                (-(a[0] * b[6])).0,
-                (-(a[0] * b[7])).0,
+                (-a[0] * b[5]).0,
+                (-a[0] * b[6]).0,
+                (-a[0] * b[7]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -14789,7 +14867,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14810,7 +14888,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14820,10 +14898,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (a[2] * b[3] - a[3] * b[2] - a[4] * b[0]).0,
-                (-(a[1] * b[3]) + a[3] * b[1] - a[5] * b[0]).0,
-                (a[1] * b[2] - a[2] * b[1] - a[6] * b[0]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
+                (((a[2] * b[3] - a[3] * b[2]) - a[4] * b[0])).0,
+                (((a[3] * b[1] - a[1] * b[3]) - a[5] * b[0])).0,
+                (((a[1] * b[2] - a[2] * b[1]) - a[6] * b[0])).0,
             ],
         }
     }
@@ -14831,20 +14909,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[1] * b[0] + a[2] * b[1] + a[3] * b[2] - a[4] * b[3] - a[5] * b[4] - a[6] * b[5]).0,
-                (a[0] * b[0] + a[7] * b[3]).0,
-                (a[0] * b[1] + a[7] * b[4]).0,
-                (a[0] * b[2] + a[7] * b[5]).0,
-                (a[0] * b[3] - a[7] * b[0]).0,
-                (a[0] * b[4] - a[7] * b[1]).0,
-                (a[0] * b[5] - a[7] * b[2]).0,
-                (-(a[1] * b[3]) - a[2] * b[4] - a[3] * b[5] - a[4] * b[0] - a[5] * b[1] - a[6] * b[2]).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
+                ((a[0] * b[0] + a[7] * b[3])).0,
+                ((a[0] * b[1] + a[7] * b[4])).0,
+                ((a[0] * b[2] + a[7] * b[5])).0,
+                ((a[0] * b[3] - a[7] * b[0])).0,
+                ((a[0] * b[4] - a[7] * b[1])).0,
+                ((a[0] * b[5] - a[7] * b[2])).0,
+                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
             ],
         }
     }
@@ -14852,16 +14930,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2] - a[4] * b[0]).0,
-                (a[1] * b[3] - a[3] * b[1] - a[5] * b[0]).0,
-                (-(a[1] * b[2]) + a[2] * b[1] - a[6] * b[0]).0,
+                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
+                (((a[3] * b[2] - a[2] * b[3]) - a[4] * b[0])).0,
+                (((a[1] * b[3] - a[3] * b[1]) - a[5] * b[0])).0,
+                (((a[2] * b[1] - a[1] * b[2]) - a[6] * b[0])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -14873,19 +14951,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[7] * b[0])).0,
+                (-a[7] * b[0]).0,
                 (a[4] * b[0]).0,
                 (a[5] * b[0]).0,
                 (a[6] * b[0]).0,
-                (-(a[1] * b[0])).0,
-                (-(a[2] * b[0])).0,
-                (-(a[3] * b[0])).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                (-a[3] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -14894,20 +14972,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] - a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[4] * b[7] + a[7] * b[4]).0,
-                (a[0] * b[2] + a[2] * b[0] + a[5] * b[7] + a[7] * b[5]).0,
-                (a[0] * b[3] + a[3] * b[0] + a[6] * b[7] + a[7] * b[6]).0,
-                (a[0] * b[4] - a[1] * b[7] + a[4] * b[0] - a[7] * b[1]).0,
-                (a[0] * b[5] - a[2] * b[7] + a[5] * b[0] - a[7] * b[2]).0,
-                (a[0] * b[6] - a[3] * b[7] + a[6] * b[0] - a[7] * b[3]).0,
-                (a[0] * b[7] - a[1] * b[4] - a[2] * b[5] - a[3] * b[6] - a[4] * b[1] - a[5] * b[2] - a[6] * b[3] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[0] * b[1] + a[1] * b[0]) + (a[4] * b[7] + a[7] * b[4]))).0,
+                (((a[0] * b[2] + a[2] * b[0]) + (a[5] * b[7] + a[7] * b[5]))).0,
+                (((a[0] * b[3] + a[3] * b[0]) + (a[6] * b[7] + a[7] * b[6]))).0,
+                (((a[0] * b[4] + a[4] * b[0]) - (a[1] * b[7] + a[7] * b[1]))).0,
+                (((a[0] * b[5] + a[5] * b[0]) - (a[2] * b[7] + a[7] * b[2]))).0,
+                (((a[0] * b[6] + a[6] * b[0]) - (a[3] * b[7] + a[7] * b[3]))).0,
+                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
             ],
         }
     }
@@ -14915,20 +14993,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Even<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[4] * b[5] + a[5] * b[6] + a[6] * b[7]).0,
-                (a[0] * b[1] - a[2] * b[7] + a[3] * b[6] - a[4] * b[4]).0,
-                (a[0] * b[2] + a[1] * b[7] - a[3] * b[5] - a[5] * b[4]).0,
-                (a[0] * b[3] - a[1] * b[6] + a[2] * b[5] - a[6] * b[4]).0,
-                (a[0] * b[4] + a[4] * b[1] + a[5] * b[2] + a[6] * b[3]).0,
-                (a[0] * b[5] + a[2] * b[3] - a[3] * b[2] - a[4] * b[0]).0,
-                (a[0] * b[6] - a[1] * b[3] + a[3] * b[1] - a[5] * b[0]).0,
-                (a[0] * b[7] + a[1] * b[2] - a[2] * b[1] - a[6] * b[0]).0,
+                (((a[0] * b[0] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7]))).0,
+                (((a[0] * b[1] + a[3] * b[6]) - (a[2] * b[7] + a[4] * b[4]))).0,
+                (((a[0] * b[2] + a[1] * b[7]) - (a[3] * b[5] + a[5] * b[4]))).0,
+                (((a[0] * b[3] + a[2] * b[5]) - (a[1] * b[6] + a[6] * b[4]))).0,
+                (((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3]))).0,
+                (((a[0] * b[5] + a[2] * b[3]) - (a[3] * b[2] + a[4] * b[0]))).0,
+                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[5] * b[0]))).0,
+                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[6] * b[0]))).0,
             ],
         }
     }
@@ -14936,28 +15014,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Even<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[5] + a[2] * b[6] + a[3] * b[7] - a[4] * b[8] - a[5] * b[9] - a[6] * b[10] - a[7] * b[15]).0,
-                (a[0] * b[1] + a[4] * b[12] + a[5] * b[13] + a[6] * b[14]).0,
-                (a[0] * b[2] - a[2] * b[14] + a[3] * b[13] - a[4] * b[11]).0,
-                (a[0] * b[3] + a[1] * b[14] - a[3] * b[12] - a[5] * b[11]).0,
-                (a[0] * b[4] - a[1] * b[13] + a[2] * b[12] - a[6] * b[11]).0,
-                (a[0] * b[5] + a[1] * b[0] + a[4] * b[15] + a[7] * b[8]).0,
-                (a[0] * b[6] + a[2] * b[0] + a[5] * b[15] + a[7] * b[9]).0,
-                (a[0] * b[7] + a[3] * b[0] + a[6] * b[15] + a[7] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[15] + a[4] * b[0] - a[7] * b[5]).0,
-                (a[0] * b[9] - a[2] * b[15] + a[5] * b[0] - a[7] * b[6]).0,
-                (a[0] * b[10] - a[3] * b[15] + a[6] * b[0] - a[7] * b[7]).0,
-                (a[0] * b[11] + a[4] * b[2] + a[5] * b[3] + a[6] * b[4]).0,
-                (a[0] * b[12] + a[2] * b[4] - a[3] * b[3] - a[4] * b[1]).0,
-                (a[0] * b[13] - a[1] * b[4] + a[3] * b[2] - a[5] * b[1]).0,
-                (a[0] * b[14] + a[1] * b[3] - a[2] * b[2] - a[6] * b[1]).0,
-                (a[0] * b[15] - a[1] * b[8] - a[2] * b[9] - a[3] * b[10] - a[4] * b[5] - a[5] * b[6] - a[6] * b[7] + a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                (((a[0] * b[1] + a[4] * b[12]) + (a[5] * b[13] + a[6] * b[14]))).0,
+                (((a[0] * b[2] + a[3] * b[13]) - (a[2] * b[14] + a[4] * b[11]))).0,
+                (((a[0] * b[3] + a[1] * b[14]) - (a[3] * b[12] + a[5] * b[11]))).0,
+                (((a[0] * b[4] + a[2] * b[12]) - (a[1] * b[13] + a[6] * b[11]))).0,
+                (((a[0] * b[5] + a[1] * b[0]) + (a[4] * b[15] + a[7] * b[8]))).0,
+                (((a[0] * b[6] + a[2] * b[0]) + (a[5] * b[15] + a[7] * b[9]))).0,
+                (((a[0] * b[7] + a[3] * b[0]) + (a[6] * b[15] + a[7] * b[10]))).0,
+                (((a[0] * b[8] + a[4] * b[0]) - (a[1] * b[15] + a[7] * b[5]))).0,
+                (((a[0] * b[9] + a[5] * b[0]) - (a[2] * b[15] + a[7] * b[6]))).0,
+                (((a[0] * b[10] + a[6] * b[0]) - (a[3] * b[15] + a[7] * b[7]))).0,
+                (((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4]))).0,
+                (((a[0] * b[12] + a[2] * b[4]) - (a[3] * b[3] + a[4] * b[1]))).0,
+                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[5] * b[1]))).0,
+                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[6] * b[1]))).0,
+                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
             ],
         }
     }
@@ -14965,7 +15043,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -14986,19 +15064,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3]).0,
-                (a[6] * b[3] - a[7] * b[2]).0,
-                (-(a[5] * b[3]) + a[7] * b[1]).0,
-                (a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[4] * b[1]) - a[5] * b[0]).0,
-                (-(a[4] * b[2]) - a[6] * b[0]).0,
-                (-(a[4] * b[3]) - a[7] * b[0]).0,
+                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                ((a[6] * b[3] - a[7] * b[2])).0,
+                ((a[7] * b[1] - a[5] * b[3])).0,
+                ((a[5] * b[2] - a[6] * b[1])).0,
+                (-(a[4] * b[1] + a[5] * b[0])).0,
+                (-(a[4] * b[2] + a[6] * b[0])).0,
+                (-(a[4] * b[3] + a[7] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15007,20 +15085,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[5] * b[3] + a[6] * b[4] + a[7] * b[5]).0,
-                (-(a[4] * b[3]) + a[6] * b[2] - a[7] * b[1]).0,
-                (-(a[4] * b[4]) - a[5] * b[2] + a[7] * b[0]).0,
-                (-(a[4] * b[5]) + a[5] * b[1] - a[6] * b[0]).0,
-                (a[1] * b[3] + a[2] * b[4] + a[3] * b[5]).0,
-                (-(a[0] * b[3]) - a[2] * b[2] + a[3] * b[1]).0,
-                (-(a[0] * b[4]) + a[1] * b[2] - a[3] * b[0]).0,
-                (-(a[0] * b[5]) - a[1] * b[1] + a[2] * b[0]).0,
+                (((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5])).0,
+                (((a[6] * b[2] - a[4] * b[3]) - a[7] * b[1])).0,
+                (((a[7] * b[0] - a[4] * b[4]) - a[5] * b[2])).0,
+                (((a[5] * b[1] - a[4] * b[5]) - a[6] * b[0])).0,
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
             ],
         }
     }
@@ -15028,19 +15106,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[4] * b[0] - a[5] * b[1] - a[6] * b[2] - a[7] * b[3]).0,
-                (-(a[2] * b[3]) + a[3] * b[2]).0,
-                (a[1] * b[3] - a[3] * b[1]).0,
-                (-(a[1] * b[2]) + a[2] * b[1]).0,
-                (-(a[0] * b[1]) - a[1] * b[0]).0,
-                (-(a[0] * b[2]) - a[2] * b[0]).0,
-                (-(a[0] * b[3]) - a[3] * b[0]).0,
+                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                ((a[3] * b[2] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[3] * b[1])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                (-(a[0] * b[1] + a[1] * b[0])).0,
+                (-(a[0] * b[2] + a[2] * b[0])).0,
+                (-(a[0] * b[3] + a[3] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15049,20 +15127,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Odd {
             c: [
-                (a[0] * b[0] + a[5] * b[4] + a[6] * b[5] + a[7] * b[6]).0,
-                (a[1] * b[0] - a[4] * b[4] + a[6] * b[3] - a[7] * b[2]).0,
-                (a[2] * b[0] - a[4] * b[5] - a[5] * b[3] + a[7] * b[1]).0,
-                (a[3] * b[0] - a[4] * b[6] + a[5] * b[2] - a[6] * b[1]).0,
-                (a[1] * b[4] + a[2] * b[5] + a[3] * b[6] + a[4] * b[0]).0,
-                (-(a[0] * b[4]) - a[2] * b[3] + a[3] * b[2] + a[5] * b[0]).0,
-                (-(a[0] * b[5]) + a[1] * b[3] - a[3] * b[1] + a[6] * b[0]).0,
-                (-(a[0] * b[6]) - a[1] * b[2] + a[2] * b[1] + a[7] * b[0]).0,
+                (((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6]))).0,
+                (((a[1] * b[0] + a[6] * b[3]) - (a[4] * b[4] + a[7] * b[2]))).0,
+                (((a[2] * b[0] + a[7] * b[1]) - (a[4] * b[5] + a[5] * b[3]))).0,
+                (((a[3] * b[0] + a[5] * b[2]) - (a[4] * b[6] + a[6] * b[1]))).0,
+                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[0]))).0,
+                (((a[3] * b[2] + a[5] * b[0]) - (a[0] * b[4] + a[2] * b[3]))).0,
+                (((a[1] * b[3] + a[6] * b[0]) - (a[0] * b[5] + a[3] * b[1]))).0,
+                (((a[2] * b[1] + a[7] * b[0]) - (a[0] * b[6] + a[1] * b[2]))).0,
             ],
         }
     }
@@ -15070,19 +15148,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Odd<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3] + a[4] * b[4] - a[5] * b[5] - a[6] * b[6] - a[7] * b[7]).0,
-                (-(a[2] * b[7]) + a[3] * b[6] + a[6] * b[3] - a[7] * b[2]).0,
-                (a[1] * b[7] - a[3] * b[5] - a[5] * b[3] + a[7] * b[1]).0,
-                (-(a[1] * b[6]) + a[2] * b[5] + a[5] * b[2] - a[6] * b[1]).0,
-                (-(a[0] * b[5]) - a[1] * b[4] - a[4] * b[1] - a[5] * b[0]).0,
-                (-(a[0] * b[6]) - a[2] * b[4] - a[4] * b[2] - a[6] * b[0]).0,
-                (-(a[0] * b[7]) - a[3] * b[4] - a[4] * b[3] - a[7] * b[0]).0,
+                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                (((a[3] * b[6] + a[6] * b[3]) - (a[2] * b[7] + a[7] * b[2]))).0,
+                (((a[1] * b[7] + a[7] * b[1]) - (a[3] * b[5] + a[5] * b[3]))).0,
+                (((a[2] * b[5] + a[5] * b[2]) - (a[1] * b[6] + a[6] * b[1]))).0,
+                (-((a[0] * b[5] + a[1] * b[4]) + (a[4] * b[1] + a[5] * b[0]))).0,
+                (-((a[0] * b[6] + a[2] * b[4]) + (a[4] * b[2] + a[6] * b[0]))).0,
+                (-((a[0] * b[7] + a[3] * b[4]) + (a[4] * b[3] + a[7] * b[0]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15091,27 +15169,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Odd<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[1] - a[1] * b[2] - a[2] * b[3] - a[3] * b[4] + a[4] * b[11] - a[5] * b[12] - a[6] * b[13] - a[7] * b[14]).0,
-                (a[0] * b[0] + a[5] * b[8] + a[6] * b[9] + a[7] * b[10]).0,
-                (a[1] * b[0] - a[4] * b[8] + a[6] * b[7] - a[7] * b[6]).0,
-                (a[2] * b[0] - a[4] * b[9] - a[5] * b[7] + a[7] * b[5]).0,
-                (a[3] * b[0] - a[4] * b[10] + a[5] * b[6] - a[6] * b[5]).0,
-                (-(a[2] * b[14]) + a[3] * b[13] + a[6] * b[4] - a[7] * b[3]).0,
-                (a[1] * b[14] - a[3] * b[12] - a[5] * b[4] + a[7] * b[2]).0,
-                (-(a[1] * b[13]) + a[2] * b[12] + a[5] * b[3] - a[6] * b[2]).0,
-                (-(a[0] * b[12]) - a[1] * b[11] - a[4] * b[2] - a[5] * b[1]).0,
-                (-(a[0] * b[13]) - a[2] * b[11] - a[4] * b[3] - a[6] * b[1]).0,
-                (-(a[0] * b[14]) - a[3] * b[11] - a[4] * b[4] - a[7] * b[1]).0,
-                (a[1] * b[8] + a[2] * b[9] + a[3] * b[10] + a[4] * b[0]).0,
-                (-(a[0] * b[8]) - a[2] * b[7] + a[3] * b[6] + a[5] * b[0]).0,
-                (-(a[0] * b[9]) + a[1] * b[7] - a[3] * b[5] + a[6] * b[0]).0,
-                (-(a[0] * b[10]) - a[1] * b[6] + a[2] * b[5] + a[7] * b[0]).0,
+                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                (((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10]))).0,
+                (((a[1] * b[0] + a[6] * b[7]) - (a[4] * b[8] + a[7] * b[6]))).0,
+                (((a[2] * b[0] + a[7] * b[5]) - (a[4] * b[9] + a[5] * b[7]))).0,
+                (((a[3] * b[0] + a[5] * b[6]) - (a[4] * b[10] + a[6] * b[5]))).0,
+                (((a[3] * b[13] + a[6] * b[4]) - (a[2] * b[14] + a[7] * b[3]))).0,
+                (((a[1] * b[14] + a[7] * b[2]) - (a[3] * b[12] + a[5] * b[4]))).0,
+                (((a[2] * b[12] + a[5] * b[3]) - (a[1] * b[13] + a[6] * b[2]))).0,
+                (-((a[0] * b[12] + a[1] * b[11]) + (a[4] * b[2] + a[5] * b[1]))).0,
+                (-((a[0] * b[13] + a[2] * b[11]) + (a[4] * b[3] + a[6] * b[1]))).0,
+                (-((a[0] * b[14] + a[3] * b[11]) + (a[4] * b[4] + a[7] * b[1]))).0,
+                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] + a[4] * b[0]))).0,
+                (((a[3] * b[6] + a[5] * b[0]) - (a[0] * b[8] + a[2] * b[7]))).0,
+                (((a[1] * b[7] + a[6] * b[0]) - (a[0] * b[9] + a[3] * b[5]))).0,
+                (((a[2] * b[5] + a[7] * b[0]) - (a[0] * b[10] + a[1] * b[6]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15120,7 +15198,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
@@ -15149,27 +15227,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3]).0,
+                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
-                (a[13] * b[3] - a[14] * b[2]).0,
-                (-(a[12] * b[3]) + a[14] * b[1]).0,
-                (a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[11] * b[1]) - a[12] * b[0]).0,
-                (-(a[11] * b[2]) - a[13] * b[0]).0,
-                (-(a[11] * b[3]) - a[14] * b[0]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (a[6] * b[3] - a[7] * b[2] - a[8] * b[0]).0,
-                (-(a[5] * b[3]) + a[7] * b[1] - a[9] * b[0]).0,
-                (a[5] * b[2] - a[6] * b[1] - a[10] * b[0]).0,
+                ((a[13] * b[3] - a[14] * b[2])).0,
+                ((a[14] * b[1] - a[12] * b[3])).0,
+                ((a[12] * b[2] - a[13] * b[1])).0,
+                (-(a[11] * b[1] + a[12] * b[0])).0,
+                (-(a[11] * b[2] + a[13] * b[0])).0,
+                (-(a[11] * b[3] + a[14] * b[0])).0,
+                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
+                (((a[6] * b[3] - a[7] * b[2]) - a[8] * b[0])).0,
+                (((a[7] * b[1] - a[5] * b[3]) - a[9] * b[0])).0,
+                (((a[5] * b[2] - a[6] * b[1]) - a[10] * b[0])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15178,28 +15256,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[5] * b[0] + a[6] * b[1] + a[7] * b[2] - a[8] * b[3] - a[9] * b[4] - a[10] * b[5]).0,
-                (a[12] * b[3] + a[13] * b[4] + a[14] * b[5]).0,
-                (-(a[11] * b[3]) + a[13] * b[2] - a[14] * b[1]).0,
-                (-(a[11] * b[4]) - a[12] * b[2] + a[14] * b[0]).0,
-                (-(a[11] * b[5]) + a[12] * b[1] - a[13] * b[0]).0,
-                (a[0] * b[0] + a[15] * b[3]).0,
-                (a[0] * b[1] + a[15] * b[4]).0,
-                (a[0] * b[2] + a[15] * b[5]).0,
-                (a[0] * b[3] - a[15] * b[0]).0,
-                (a[0] * b[4] - a[15] * b[1]).0,
-                (a[0] * b[5] - a[15] * b[2]).0,
-                (a[2] * b[3] + a[3] * b[4] + a[4] * b[5]).0,
-                (-(a[1] * b[3]) - a[3] * b[2] + a[4] * b[1]).0,
-                (-(a[1] * b[4]) + a[2] * b[2] - a[4] * b[0]).0,
-                (-(a[1] * b[5]) - a[2] * b[1] + a[3] * b[0]).0,
-                (-(a[5] * b[3]) - a[6] * b[4] - a[7] * b[5] - a[8] * b[0] - a[9] * b[1] - a[10] * b[2]).0,
+                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                (((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5])).0,
+                (((a[13] * b[2] - a[11] * b[3]) - a[14] * b[1])).0,
+                (((a[14] * b[0] - a[11] * b[4]) - a[12] * b[2])).0,
+                (((a[12] * b[1] - a[11] * b[5]) - a[13] * b[0])).0,
+                ((a[0] * b[0] + a[15] * b[3])).0,
+                ((a[0] * b[1] + a[15] * b[4])).0,
+                ((a[0] * b[2] + a[15] * b[5])).0,
+                ((a[0] * b[3] - a[15] * b[0])).0,
+                ((a[0] * b[4] - a[15] * b[1])).0,
+                ((a[0] * b[5] - a[15] * b[2])).0,
+                (((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5])).0,
+                (((a[4] * b[1] - a[1] * b[3]) - a[3] * b[2])).0,
+                (((a[2] * b[2] - a[1] * b[4]) - a[4] * b[0])).0,
+                (((a[3] * b[0] - a[1] * b[5]) - a[2] * b[1])).0,
+                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
             ],
         }
     }
@@ -15207,23 +15285,23 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[11] * b[0] - a[12] * b[1] - a[13] * b[2] - a[14] * b[3]).0,
-                (a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (-(a[6] * b[3]) + a[7] * b[2] - a[8] * b[0]).0,
-                (a[5] * b[3] - a[7] * b[1] - a[9] * b[0]).0,
-                (-(a[5] * b[2]) + a[6] * b[1] - a[10] * b[0]).0,
-                (-(a[3] * b[3]) + a[4] * b[2]).0,
-                (a[2] * b[3] - a[4] * b[1]).0,
-                (-(a[2] * b[2]) + a[3] * b[1]).0,
-                (-(a[1] * b[1]) - a[2] * b[0]).0,
-                (-(a[1] * b[2]) - a[3] * b[0]).0,
-                (-(a[1] * b[3]) - a[4] * b[0]).0,
+                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
+                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
+                (((a[7] * b[2] - a[6] * b[3]) - a[8] * b[0])).0,
+                (((a[5] * b[3] - a[7] * b[1]) - a[9] * b[0])).0,
+                (((a[6] * b[1] - a[5] * b[2]) - a[10] * b[0])).0,
+                ((a[4] * b[2] - a[3] * b[3])).0,
+                ((a[2] * b[3] - a[4] * b[1])).0,
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                (-(a[1] * b[1] + a[2] * b[0])).0,
+                (-(a[1] * b[2] + a[3] * b[0])).0,
+                (-(a[1] * b[3] + a[4] * b[0])).0,
                 (a[0] * b[0]).0,
                 (a[0] * b[1]).0,
                 (a[0] * b[2]).0,
@@ -15236,19 +15314,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Multivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Even {
             c: [
-                (-(a[15] * b[0])).0,
+                (-a[15] * b[0]).0,
                 (a[8] * b[0]).0,
                 (a[9] * b[0]).0,
                 (a[10] * b[0]).0,
-                (-(a[5] * b[0])).0,
-                (-(a[6] * b[0])).0,
-                (-(a[7] * b[0])).0,
+                (-a[5] * b[0]).0,
+                (-a[6] * b[0]).0,
+                (-a[7] * b[0]).0,
                 (a[0] * b[0]).0,
             ],
         }
@@ -15257,28 +15335,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[5] * b[1] + a[6] * b[2] + a[7] * b[3] - a[8] * b[4] - a[9] * b[5] - a[10] * b[6] - a[15] * b[7]).0,
-                (a[1] * b[0] + a[12] * b[4] + a[13] * b[5] + a[14] * b[6]).0,
-                (a[2] * b[0] - a[11] * b[4] + a[13] * b[3] - a[14] * b[2]).0,
-                (a[3] * b[0] - a[11] * b[5] - a[12] * b[3] + a[14] * b[1]).0,
-                (a[4] * b[0] - a[11] * b[6] + a[12] * b[2] - a[13] * b[1]).0,
-                (a[0] * b[1] + a[5] * b[0] + a[8] * b[7] + a[15] * b[4]).0,
-                (a[0] * b[2] + a[6] * b[0] + a[9] * b[7] + a[15] * b[5]).0,
-                (a[0] * b[3] + a[7] * b[0] + a[10] * b[7] + a[15] * b[6]).0,
-                (a[0] * b[4] - a[5] * b[7] + a[8] * b[0] - a[15] * b[1]).0,
-                (a[0] * b[5] - a[6] * b[7] + a[9] * b[0] - a[15] * b[2]).0,
-                (a[0] * b[6] - a[7] * b[7] + a[10] * b[0] - a[15] * b[3]).0,
-                (a[2] * b[4] + a[3] * b[5] + a[4] * b[6] + a[11] * b[0]).0,
-                (-(a[1] * b[4]) - a[3] * b[3] + a[4] * b[2] + a[12] * b[0]).0,
-                (-(a[1] * b[5]) + a[2] * b[3] - a[4] * b[1] + a[13] * b[0]).0,
-                (-(a[1] * b[6]) - a[2] * b[2] + a[3] * b[1] + a[14] * b[0]).0,
-                (a[0] * b[7] - a[5] * b[4] - a[6] * b[5] - a[7] * b[6] - a[8] * b[1] - a[9] * b[2] - a[10] * b[3] + a[15] * b[0]).0,
+                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                (((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6]))).0,
+                (((a[2] * b[0] + a[13] * b[3]) - (a[11] * b[4] + a[14] * b[2]))).0,
+                (((a[3] * b[0] + a[14] * b[1]) - (a[11] * b[5] + a[12] * b[3]))).0,
+                (((a[4] * b[0] + a[12] * b[2]) - (a[11] * b[6] + a[13] * b[1]))).0,
+                (((a[0] * b[1] + a[5] * b[0]) + (a[8] * b[7] + a[15] * b[4]))).0,
+                (((a[0] * b[2] + a[6] * b[0]) + (a[9] * b[7] + a[15] * b[5]))).0,
+                (((a[0] * b[3] + a[7] * b[0]) + (a[10] * b[7] + a[15] * b[6]))).0,
+                (((a[0] * b[4] + a[8] * b[0]) - (a[5] * b[7] + a[15] * b[1]))).0,
+                (((a[0] * b[5] + a[9] * b[0]) - (a[6] * b[7] + a[15] * b[2]))).0,
+                (((a[0] * b[6] + a[10] * b[0]) - (a[7] * b[7] + a[15] * b[3]))).0,
+                (((a[2] * b[4] + a[3] * b[5]) + (a[4] * b[6] + a[11] * b[0]))).0,
+                (((a[4] * b[2] + a[12] * b[0]) - (a[1] * b[4] + a[3] * b[3]))).0,
+                (((a[2] * b[3] + a[13] * b[0]) - (a[1] * b[5] + a[4] * b[1]))).0,
+                (((a[3] * b[1] + a[14] * b[0]) - (a[1] * b[6] + a[2] * b[2]))).0,
+                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
             ],
         }
     }
@@ -15286,27 +15364,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[1] * b[0] - a[2] * b[1] - a[3] * b[2] - a[4] * b[3] + a[11] * b[4] - a[12] * b[5] - a[13] * b[6] - a[14] * b[7]).0,
-                (a[0] * b[0] + a[8] * b[5] + a[9] * b[6] + a[10] * b[7]).0,
-                (a[0] * b[1] - a[6] * b[7] + a[7] * b[6] - a[8] * b[4]).0,
-                (a[0] * b[2] + a[5] * b[7] - a[7] * b[5] - a[9] * b[4]).0,
-                (a[0] * b[3] - a[5] * b[6] + a[6] * b[5] - a[10] * b[4]).0,
-                (-(a[3] * b[7]) + a[4] * b[6] + a[13] * b[3] - a[14] * b[2]).0,
-                (a[2] * b[7] - a[4] * b[5] - a[12] * b[3] + a[14] * b[1]).0,
-                (-(a[2] * b[6]) + a[3] * b[5] + a[12] * b[2] - a[13] * b[1]).0,
-                (-(a[1] * b[5]) - a[2] * b[4] - a[11] * b[1] - a[12] * b[0]).0,
-                (-(a[1] * b[6]) - a[3] * b[4] - a[11] * b[2] - a[13] * b[0]).0,
-                (-(a[1] * b[7]) - a[4] * b[4] - a[11] * b[3] - a[14] * b[0]).0,
-                (a[0] * b[4] + a[8] * b[1] + a[9] * b[2] + a[10] * b[3]).0,
-                (a[0] * b[5] + a[6] * b[3] - a[7] * b[2] - a[8] * b[0]).0,
-                (a[0] * b[6] - a[5] * b[3] + a[7] * b[1] - a[9] * b[0]).0,
-                (a[0] * b[7] + a[5] * b[2] - a[6] * b[1] - a[10] * b[0]).0,
+                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                (((a[0] * b[0] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7]))).0,
+                (((a[0] * b[1] + a[7] * b[6]) - (a[6] * b[7] + a[8] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[7]) - (a[7] * b[5] + a[9] * b[4]))).0,
+                (((a[0] * b[3] + a[6] * b[5]) - (a[5] * b[6] + a[10] * b[4]))).0,
+                (((a[4] * b[6] + a[13] * b[3]) - (a[3] * b[7] + a[14] * b[2]))).0,
+                (((a[2] * b[7] + a[14] * b[1]) - (a[4] * b[5] + a[12] * b[3]))).0,
+                (((a[3] * b[5] + a[12] * b[2]) - (a[2] * b[6] + a[13] * b[1]))).0,
+                (-((a[1] * b[5] + a[2] * b[4]) + (a[11] * b[1] + a[12] * b[0]))).0,
+                (-((a[1] * b[6] + a[3] * b[4]) + (a[11] * b[2] + a[13] * b[0]))).0,
+                (-((a[1] * b[7] + a[4] * b[4]) + (a[11] * b[3] + a[14] * b[0]))).0,
+                (((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3]))).0,
+                (((a[0] * b[5] + a[6] * b[3]) - (a[7] * b[2] + a[8] * b[0]))).0,
+                (((a[0] * b[6] + a[7] * b[1]) - (a[5] * b[3] + a[9] * b[0]))).0,
+                (((a[0] * b[7] + a[5] * b[2]) - (a[6] * b[1] + a[10] * b[0]))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15315,28 +15393,28 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Multivector<S1, T> {
     type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline]
+    #[inline(always)]
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         Multivector {
             c: [
-                (a[0] * b[0] + a[1] * b[1] - a[2] * b[2] - a[3] * b[3] - a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7] - a[8] * b[8] - a[9] * b[9] - a[10] * b[10] + a[11] * b[11] - a[12] * b[12] - a[13] * b[13] - a[14] * b[14] - a[15] * b[15]).0,
-                (a[0] * b[1] + a[1] * b[0] + a[8] * b[12] + a[9] * b[13] + a[10] * b[14] + a[12] * b[8] + a[13] * b[9] + a[14] * b[10]).0,
-                (a[0] * b[2] + a[2] * b[0] - a[6] * b[14] + a[7] * b[13] - a[8] * b[11] - a[11] * b[8] + a[13] * b[7] - a[14] * b[6]).0,
-                (a[0] * b[3] + a[3] * b[0] + a[5] * b[14] - a[7] * b[12] - a[9] * b[11] - a[11] * b[9] - a[12] * b[7] + a[14] * b[5]).0,
-                (a[0] * b[4] + a[4] * b[0] - a[5] * b[13] + a[6] * b[12] - a[10] * b[11] - a[11] * b[10] + a[12] * b[6] - a[13] * b[5]).0,
-                (a[0] * b[5] - a[3] * b[14] + a[4] * b[13] + a[5] * b[0] + a[8] * b[15] + a[13] * b[4] - a[14] * b[3] + a[15] * b[8]).0,
-                (a[0] * b[6] + a[2] * b[14] - a[4] * b[12] + a[6] * b[0] + a[9] * b[15] - a[12] * b[4] + a[14] * b[2] + a[15] * b[9]).0,
-                (a[0] * b[7] - a[2] * b[13] + a[3] * b[12] + a[7] * b[0] + a[10] * b[15] + a[12] * b[3] - a[13] * b[2] + a[15] * b[10]).0,
-                (a[0] * b[8] - a[1] * b[12] - a[2] * b[11] - a[5] * b[15] + a[8] * b[0] - a[11] * b[2] - a[12] * b[1] - a[15] * b[5]).0,
-                (a[0] * b[9] - a[1] * b[13] - a[3] * b[11] - a[6] * b[15] + a[9] * b[0] - a[11] * b[3] - a[13] * b[1] - a[15] * b[6]).0,
-                (a[0] * b[10] - a[1] * b[14] - a[4] * b[11] - a[7] * b[15] + a[10] * b[0] - a[11] * b[4] - a[14] * b[1] - a[15] * b[7]).0,
-                (a[0] * b[11] + a[2] * b[8] + a[3] * b[9] + a[4] * b[10] + a[8] * b[2] + a[9] * b[3] + a[10] * b[4] + a[11] * b[0]).0,
-                (a[0] * b[12] - a[1] * b[8] - a[3] * b[7] + a[4] * b[6] + a[6] * b[4] - a[7] * b[3] - a[8] * b[1] + a[12] * b[0]).0,
-                (a[0] * b[13] - a[1] * b[9] + a[2] * b[7] - a[4] * b[5] - a[5] * b[4] + a[7] * b[2] - a[9] * b[1] + a[13] * b[0]).0,
-                (a[0] * b[14] - a[1] * b[10] - a[2] * b[6] + a[3] * b[5] + a[5] * b[3] - a[6] * b[2] - a[10] * b[1] + a[14] * b[0]).0,
-                (a[0] * b[15] - a[5] * b[8] - a[6] * b[9] - a[7] * b[10] - a[8] * b[5] - a[9] * b[6] - a[10] * b[7] + a[15] * b[0]).0,
+                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                ((((a[0] * b[1] + a[1] * b[0]) + (a[8] * b[12] + a[9] * b[13])) + ((a[10] * b[14] + a[12] * b[8]) + (a[13] * b[9] + a[14] * b[10])))).0,
+                ((((a[0] * b[2] + a[2] * b[0]) + (a[7] * b[13] + a[13] * b[7])) - ((a[6] * b[14] + a[8] * b[11]) + (a[11] * b[8] + a[14] * b[6])))).0,
+                ((((a[0] * b[3] + a[3] * b[0]) + (a[5] * b[14] + a[14] * b[5])) - ((a[7] * b[12] + a[9] * b[11]) + (a[11] * b[9] + a[12] * b[7])))).0,
+                ((((a[0] * b[4] + a[4] * b[0]) + (a[6] * b[12] + a[12] * b[6])) - ((a[5] * b[13] + a[10] * b[11]) + (a[11] * b[10] + a[13] * b[5])))).0,
+                ((((a[0] * b[5] + a[4] * b[13]) + (a[5] * b[0] + a[8] * b[15])) + ((a[13] * b[4] + a[15] * b[8]) - (a[3] * b[14] + a[14] * b[3])))).0,
+                ((((a[0] * b[6] + a[2] * b[14]) + (a[6] * b[0] + a[9] * b[15])) + ((a[14] * b[2] + a[15] * b[9]) - (a[4] * b[12] + a[12] * b[4])))).0,
+                ((((a[0] * b[7] + a[3] * b[12]) + (a[7] * b[0] + a[10] * b[15])) + ((a[12] * b[3] + a[15] * b[10]) - (a[2] * b[13] + a[13] * b[2])))).0,
+                ((((a[0] * b[8] + a[8] * b[0]) - (a[1] * b[12] + a[2] * b[11])) - ((a[5] * b[15] + a[11] * b[2]) + (a[12] * b[1] + a[15] * b[5])))).0,
+                ((((a[0] * b[9] + a[9] * b[0]) - (a[1] * b[13] + a[3] * b[11])) - ((a[6] * b[15] + a[11] * b[3]) + (a[13] * b[1] + a[15] * b[6])))).0,
+                ((((a[0] * b[10] + a[10] * b[0]) - (a[1] * b[14] + a[4] * b[11])) - ((a[7] * b[15] + a[11] * b[4]) + (a[14] * b[1] + a[15] * b[7])))).0,
+                ((((a[0] * b[11] + a[2] * b[8]) + (a[3] * b[9] + a[4] * b[10])) + ((a[8] * b[2] + a[9] * b[3]) + (a[10] * b[4] + a[11] * b[0])))).0,
+                ((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[12] * b[0])) - ((a[1] * b[8] + a[3] * b[7]) + (a[7] * b[3] + a[8] * b[1])))).0,
+                ((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[13] * b[0])) - ((a[1] * b[9] + a[4] * b[5]) + (a[5] * b[4] + a[9] * b[1])))).0,
+                ((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[14] * b[0])) - ((a[1] * b[10] + a[2] * b[6]) + (a[6] * b[2] + a[10] * b[1])))).0,
+                ((((a[0] * b[15] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9])) - ((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])))).0,
             ],
         }
     }
@@ -15704,7 +15782,7 @@ impl<S: gx::Slots, T: gx::Coef> gx::Undual for Multivector<S, T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -15713,8 +15791,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = xv[0] * t6;
             return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
         }
@@ -15723,8 +15801,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m0 - m1;
-        let m5 = m4 - m2;
-        let m6 = m5 - m3;
+        let m5 = m2 + m3;
+        let m6 = m4 - m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Scalar { c: [(x[0].scale(m6)).0] }
     }
@@ -15732,15 +15810,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Vector<(), T> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Scalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Scalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m0 - m1;
+        let m5 = m2 + m3;
+        let m6 = m4 - m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Vector, Scalar, T, 1> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Scalar, T, 1>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Scalar, T, 1>) -> Self {
+        let m = p.m;
+        Scalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -15753,15 +15866,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Vector<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Vector>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Vector<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -15853,15 +15994,74 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Vector<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Vector, T, 13>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Vector, T, 13> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 + m13;
+        let m15 = m4 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m5 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m6 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m13 - m11;
+        let m22 = m7 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = -m26;
+        let m28 = m9 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m12 - m10;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m27, m29, m19, m30])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Vector, Vector, T, 13> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Vector, T, 13>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Vector, T, 13>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -15870,8 +16070,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = v[0] * t6;
         let t8 = v[1] * t6;
         let t9 = v[2] * t6;
@@ -15924,15 +16124,74 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Vector, T, 13>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Vector, T, 13> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 + m13;
+        let m15 = m4 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m5 * T::from_i64(2);
+        let m18 = -m17;
+        let m19 = m6 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m13 - m11;
+        let m22 = m7 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m8 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m10 + m12;
+        let m27 = -m26;
+        let m28 = m9 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m12 - m10;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m15, m21, m23, m25, m17, m27, m29, m19, m30])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Vector>, Vector, T, 13> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Vector, T, 13>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 13>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -15949,8 +16208,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> 
         let t10 = t0 + t1;
         let t11 = t2 - t3;
         let t12 = t0 + t2;
-        let t13 = t3 + t12;
-        let t14 = t13 - t1;
+        let t13 = t3 - t1;
+        let t14 = t12 + t13;
         let t15 = t10 - t11;
         let t16 = t10 + t11;
         let t17 = xv[0] * t14;
@@ -15984,33 +16243,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> 
         let t45 = xv[4] * t8;
         let t46 = xv[5] * t16;
         let t47 = t18 + t19;
-        let t48 = t21 + t47;
-        let t49 = t48 - t20;
+        let t48 = t21 - t20;
+        let t49 = t47 + t48;
         let t50 = t49 * T::from_i64(2);
         let t51 = t50 - t17;
         let t52 = t22 + t24;
-        let t53 = t25 + t52;
-        let t54 = t53 - t26;
+        let t53 = t25 - t26;
+        let t54 = t52 + t53;
         let t55 = t54 * T::from_i64(2);
         let t56 = t55 - t23;
         let t57 = t27 + t28;
-        let t58 = t31 + t57;
-        let t59 = t58 - t30;
+        let t58 = t31 - t30;
+        let t59 = t57 + t58;
         let t60 = t59 * T::from_i64(2);
         let t61 = t60 - t29;
         let t62 = t33 - t32;
-        let t63 = t62 - t35;
-        let t64 = t63 - t36;
+        let t63 = t35 + t36;
+        let t64 = t62 - t63;
         let t65 = t64 * T::from_i64(2);
         let t66 = t34 + t65;
         let t67 = t37 - t38;
-        let t68 = t67 - t39;
-        let t69 = t68 - t41;
+        let t68 = t39 + t41;
+        let t69 = t67 - t68;
         let t70 = t69 * T::from_i64(2);
         let t71 = t40 + t70;
         let t72 = t43 - t42;
-        let t73 = t72 - t44;
-        let t74 = t73 - t45;
+        let t73 = t44 + t45;
+        let t74 = t72 - t73;
         let t75 = t74 * T::from_i64(2);
         let t76 = t46 + t75;
             return Bivector { c: gx::slots::from_values::<S, T, 6>([t51, t56, t61, t66, t71, t76]) };
@@ -16054,15 +16313,75 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Vector<(), T> 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Vector<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Bivector, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Bivector, T, 18> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
+        let m13 = m2 + m3;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
+        let m16 = m12 + m13;
+        let m17 = -m16;
+        let m18 = m7 * T::from_i64(2);
+        let m19 = m8 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m14;
+        let m24 = m9 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m15;
+        let m28 = -m22;
+        let m29 = -m18;
+        let m30 = -m19;
+        let m31 = -m24;
+        gx::Prepared::from_entries([m17, m18, m19, m21, m22, m23, m24, m20, m26, m27, m28, m25, m16, m29, m30, m14, m31, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Vector, Bivector, T, 18> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4])).0, (x[0].scale(m[1]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[2]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[12]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[13]) + x[4].scale(m[15]) + x[5].scale(m[16])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[3].scale(m[14]) + x[4].scale(m[16]) + x[5].scale(m[17])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Bivector, T, 18>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Bivector, T, 18>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], T::zero(), m[3], m[4]], [m[1], m[5], m[6], m[7], T::zero(), m[8]], [m[2], m[6], m[9], m[10], m[11], T::zero()], [T::zero(), m[3], m[4], m[12], m[13], m[14]], [m[7], T::zero(), m[8], m[13], m[15], m[16]], [m[10], m[11], T::zero(), m[14], m[16], m[17]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -16167,15 +16486,75 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vecto
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Bivector, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Bivector, T, 18> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
+        let m13 = m2 + m3;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
+        let m16 = m12 + m13;
+        let m17 = -m16;
+        let m18 = m7 * T::from_i64(2);
+        let m19 = m8 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m14;
+        let m24 = m9 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m15;
+        let m28 = -m22;
+        let m29 = -m18;
+        let m30 = -m19;
+        let m31 = -m24;
+        gx::Prepared::from_entries([m17, m18, m19, m21, m22, m23, m24, m20, m26, m27, m28, m25, m16, m29, m30, m14, m31, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Vector>, Bivector, T, 18> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4])).0, (x[0].scale(m[1]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[2]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[12]) + x[4].scale(m[13]) + x[5].scale(m[14])).0, (x[0].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[13]) + x[4].scale(m[15]) + x[5].scale(m[16])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[3].scale(m[14]) + x[4].scale(m[16]) + x[5].scale(m[17])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Bivector, T, 18>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Bivector, T, 18>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], T::zero(), m[3], m[4]], [m[1], m[5], m[6], m[7], T::zero(), m[8]], [m[2], m[6], m[9], m[10], m[11], T::zero()], [T::zero(), m[3], m[4], m[12], m[13], m[14]], [m[7], T::zero(), m[8], m[13], m[15], m[16]], [m[10], m[11], T::zero(), m[14], m[16], m[17]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Vector<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -16265,15 +16644,71 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Vector<(), T>
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for Vector<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Trivector, T, 13>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Trivector, T, 13> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m11 + m13;
+        let m15 = -m14;
+        let m16 = m4 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m5 * T::from_i64(2);
+        let m19 = -m18;
+        let m20 = m6 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m11 - m13;
+        let m23 = m7 * T::from_i64(2);
+        let m24 = m8 * T::from_i64(2);
+        let m25 = m10 + m12;
+        let m26 = m9 * T::from_i64(2);
+        let m27 = m10 - m12;
+        gx::Prepared::from_entries([m15, m17, m19, m21, m16, m22, m23, m24, m18, m25, m26, m20, m27])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<Vector, Trivector, T, 13> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Trivector, T, 13>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Trivector, T, 13>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -16282,8 +16717,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Vect
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = v[0] * t6;
         let t8 = v[1] * t6;
         let t9 = v[2] * t6;
@@ -16332,15 +16767,70 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Vect
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Trivector, T, 13>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Trivector, T, 13> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[1] * v[2];
+        let m4 = v[1] * v[3];
+        let m5 = v[2] * v[3];
+        let m6 = v[0] * v[0];
+        let m7 = v[1] * v[1];
+        let m8 = v[2] * v[2];
+        let m9 = v[3] * v[3];
+        let m10 = m6 * T::from_i64(2);
+        let m11 = T::from_i64(1) - m10;
+        let m12 = m0 * T::from_i64(2);
+        let m13 = -m12;
+        let m14 = m1 * T::from_i64(2);
+        let m15 = -m14;
+        let m16 = m2 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m7 * T::from_i64(2);
+        let m19 = m18 + T::from_i64(1);
+        let m20 = m3 * T::from_i64(2);
+        let m21 = m4 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
+        let m23 = m22 + T::from_i64(1);
+        let m24 = m5 * T::from_i64(2);
+        let m25 = m9 * T::from_i64(2);
+        let m26 = m25 + T::from_i64(1);
+        gx::Prepared::from_entries([m11, m13, m15, m17, m12, m19, m20, m21, m14, m23, m24, m16, m26])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<gx::Unit<Vector>, Trivector, T, 13> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Trivector, T, 13>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Trivector, T, 13>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[6], m[9], m[10]], [m[11], m[7], m[10], m[12]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -16349,8 +16839,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(),
         let t2 = v[2] * v[2];
         let t3 = v[3] * v[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = xv[0] * t6;
         let t8 = -t7;
             return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t8]) };
@@ -16360,8 +16850,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(),
         let m2 = v[2] * v[2];
         let m3 = v[3] * v[3];
         let m4 = m1 + m2;
-        let m5 = m3 + m4;
-        let m6 = m5 - m0;
+        let m5 = m3 - m0;
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Pseudoscalar { c: [(x[0].scale(m6)).0] }
     }
@@ -16369,15 +16859,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Vector<(), T> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Pseudoscalar, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = m1 + m2;
+        let m5 = m3 - m0;
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Vector, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -16392,15 +16917,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<V
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 1> {
+        let v = self.into_inner().c;
+        let m0 = -T::from_i64(1);
+        gx::Prepared::from_entries([m0])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Vector<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -16455,33 +17009,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Vector<(), T> {
         let t48 = xv[6] * t17;
         let t49 = xv[7] * t14;
         let t50 = t20 + t21;
-        let t51 = t23 + t50;
-        let t52 = t51 - t22;
+        let t51 = t23 - t22;
+        let t52 = t50 + t51;
         let t53 = t52 * T::from_i64(2);
         let t54 = t53 - t19;
         let t55 = t24 + t26;
-        let t56 = t27 + t55;
-        let t57 = t56 - t28;
+        let t56 = t27 - t28;
+        let t57 = t55 + t56;
         let t58 = t57 * T::from_i64(2);
         let t59 = t58 - t25;
         let t60 = t29 + t30;
-        let t61 = t33 + t60;
-        let t62 = t61 - t32;
+        let t61 = t33 - t32;
+        let t62 = t60 + t61;
         let t63 = t62 * T::from_i64(2);
         let t64 = t63 - t31;
         let t65 = t35 - t34;
-        let t66 = t65 - t37;
-        let t67 = t66 - t38;
+        let t66 = t37 + t38;
+        let t67 = t65 - t66;
         let t68 = t67 * T::from_i64(2);
         let t69 = t36 + t68;
         let t70 = t39 - t40;
-        let t71 = t70 - t41;
-        let t72 = t71 - t43;
+        let t71 = t41 + t43;
+        let t72 = t70 - t71;
         let t73 = t72 * T::from_i64(2);
         let t74 = t42 + t73;
         let t75 = t45 - t44;
-        let t76 = t75 - t46;
-        let t77 = t76 - t47;
+        let t76 = t46 + t47;
+        let t77 = t75 - t76;
         let t78 = t77 * T::from_i64(2);
         let t79 = t48 + t78;
         let t80 = -t49;
@@ -16528,15 +17082,77 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for Vector<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Even, T, 20>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Even, T, 20> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m10 - m13;
+        let m15 = m10 + m13;
+        let m16 = m11 - m12;
+        let m17 = m11 + m12;
+        let m18 = -m15;
+        let m19 = m7 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
+        let m21 = m6 * T::from_i64(2);
+        let m22 = -m21;
+        let m23 = m5 * T::from_i64(2);
+        let m24 = -m16;
+        let m25 = m9 * T::from_i64(2);
+        let m26 = m4 * T::from_i64(2);
+        let m27 = -m26;
+        let m28 = -m17;
+        let m29 = -m23;
+        let m30 = -m19;
+        let m31 = -m20;
+        let m32 = -m25;
+        let m33 = -m14;
+        gx::Prepared::from_entries([m14, m18, m19, m20, m22, m23, m24, m25, m21, m27, m28, m29, m26, m15, m30, m31, m16, m32, m17, m33])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<Vector, Even, T, 20> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[1].scale(m[2]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8]) + x[6].scale(m[9])).0, (x[1].scale(m[3]) + x[2].scale(m[7]) + x[3].scale(m[10]) + x[4].scale(m[11]) + x[5].scale(m[12])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[13]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[14]) + x[5].scale(m[16]) + x[6].scale(m[17])).0, (x[1].scale(m[11]) + x[2].scale(m[12]) + x[4].scale(m[15]) + x[5].scale(m[17]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Even, T, 20>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Even, T, 20>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), m[4], m[5], T::zero()], [T::zero(), m[2], m[6], m[7], m[8], T::zero(), m[9], T::zero()], [T::zero(), m[3], m[7], m[10], m[11], m[12], T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[13], m[14], m[15], T::zero()], [T::zero(), m[8], T::zero(), m[9], m[14], m[16], m[17], T::zero()], [T::zero(), m[11], m[12], T::zero(), m[15], m[17], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -16613,46 +17229,106 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Vector<()
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 - m1;
-        let m11 = m0 + m1;
-        let m12 = m2 - m3;
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
         let m13 = m2 + m3;
-        let m14 = m10 - m13;
-        let m15 = m10 + m13;
-        let m16 = m11 - m12;
-        let m17 = m11 + m12;
-        let m18 = -m15;
-        let m19 = m7 * T::from_i64(2);
-        let m20 = m8 * T::from_i64(2);
-        let m21 = m6 * T::from_i64(2);
-        let m22 = -m21;
-        let m23 = m5 * T::from_i64(2);
-        let m24 = -m16;
-        let m25 = m9 * T::from_i64(2);
-        let m26 = m4 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m17;
-        let m29 = -m23;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
+        let m16 = m12 + m13;
+        let m17 = -m16;
+        let m18 = m7 * T::from_i64(2);
+        let m19 = m8 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m14;
+        let m24 = m9 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m15;
+        let m28 = -m22;
+        let m29 = -m18;
         let m30 = -m19;
-        let m31 = -m20;
-        let m32 = -m25;
-        let m33 = -m14;
+        let m31 = -m24;
+        let m32 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Even { c: [(x[0].scale(m14)).0, (x[1].scale(m18) + x[2].scale(m19) + x[3].scale(m20) + x[5].scale(m22) + x[6].scale(m23)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m25) + x[4].scale(m21) + x[6].scale(m27)).0, (x[1].scale(m20) + x[2].scale(m25) + x[3].scale(m28) + x[4].scale(m29) + x[5].scale(m26)).0, (x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m15) + x[5].scale(m30) + x[6].scale(m31)).0, (x[1].scale(m21) + x[3].scale(m27) + x[4].scale(m30) + x[5].scale(m16) + x[6].scale(m32)).0, (x[1].scale(m29) + x[2].scale(m26) + x[4].scale(m31) + x[5].scale(m32) + x[6].scale(m17)).0, (x[7].scale(m33)).0] }
+        Even { c: [(x[0]).0, (x[1].scale(m17) + x[2].scale(m18) + x[3].scale(m19) + x[5].scale(m21) + x[6].scale(m22)).0, (x[1].scale(m18) + x[2].scale(m23) + x[3].scale(m24) + x[4].scale(m20) + x[6].scale(m26)).0, (x[1].scale(m19) + x[2].scale(m24) + x[3].scale(m27) + x[4].scale(m28) + x[5].scale(m25)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m16) + x[5].scale(m29) + x[6].scale(m30)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m29) + x[5].scale(m14) + x[6].scale(m31)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m30) + x[5].scale(m31) + x[6].scale(m15)).0, (x[7].scale(m32)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Even, T, 19>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Even, T, 19> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
+        let m13 = m2 + m3;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
+        let m16 = m12 + m13;
+        let m17 = -m16;
+        let m18 = m7 * T::from_i64(2);
+        let m19 = m8 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m14;
+        let m24 = m9 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m15;
+        let m28 = -m22;
+        let m29 = -m18;
+        let m30 = -m19;
+        let m31 = -m24;
+        let m32 = -T::from_i64(1);
+        gx::Prepared::from_entries([m17, m18, m19, m21, m22, m23, m24, m20, m26, m27, m28, m25, m16, m29, m30, m14, m31, m15, m32])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<gx::Unit<Vector>, Even, T, 19> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[5].scale(m[3]) + x[6].scale(m[4])).0, (x[1].scale(m[1]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7]) + x[6].scale(m[8])).0, (x[1].scale(m[2]) + x[2].scale(m[6]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[12]) + x[5].scale(m[13]) + x[6].scale(m[14])).0, (x[1].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[13]) + x[5].scale(m[15]) + x[6].scale(m[16])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[4].scale(m[14]) + x[5].scale(m[16]) + x[6].scale(m[17])).0, (x[7].scale(m[18])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Even, T, 19>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Even, T, 19>) -> Self {
+        let m = p.m;
+        Even { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), m[3], m[4], T::zero()], [T::zero(), m[1], m[5], m[6], m[7], T::zero(), m[8], T::zero()], [T::zero(), m[2], m[6], m[9], m[10], m[11], T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], m[12], m[13], m[14], T::zero()], [T::zero(), m[7], T::zero(), m[8], m[13], m[15], m[16], T::zero()], [T::zero(), m[10], m[11], T::zero(), m[14], m[16], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Vector<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -16774,15 +17450,77 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Vector<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Vector<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Odd, T, 20>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Odd, T, 20> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m10 - m12;
+        let m15 = m10 + m12;
+        let m16 = m11 - m13;
+        let m17 = m11 + m13;
+        let m18 = m4 * T::from_i64(2);
+        let m19 = -m18;
+        let m20 = m5 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m6 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = -m16;
+        let m25 = m7 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = -m15;
+        let m30 = m9 * T::from_i64(2);
+        let m31 = -m30;
+        let m32 = -m14;
+        let m33 = -m17;
+        gx::Prepared::from_entries([m17, m19, m21, m23, m18, m24, m26, m28, m20, m29, m31, m22, m32, m33, m16, m25, m27, m15, m30, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Vector, Odd, T, 20> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[8]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Odd, T, 20>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Odd, T, 20>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[6], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero()], [m[11], m[7], m[10], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -16791,15 +17529,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(),
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = v[0] * xv[4];
         let t8 = v[1] * xv[5];
         let t9 = v[2] * xv[6];
         let t10 = v[3] * xv[7];
         let t11 = t7 + t8;
-        let t12 = t9 + t11;
-        let t13 = t10 + t12;
+        let t12 = t9 + t10;
+        let t13 = t11 + t12;
         let t14 = v[0] * t6;
         let t15 = v[1] * t6;
         let t16 = v[2] * t6;
@@ -16867,15 +17605,77 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Odd, T, 20>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Odd, T, 20> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m10 - m12;
+        let m15 = m10 + m12;
+        let m16 = m11 - m13;
+        let m17 = m11 + m13;
+        let m18 = m4 * T::from_i64(2);
+        let m19 = -m18;
+        let m20 = m5 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m6 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = -m16;
+        let m25 = m7 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = -m15;
+        let m30 = m9 * T::from_i64(2);
+        let m31 = -m30;
+        let m32 = -m14;
+        let m33 = -m17;
+        gx::Prepared::from_entries([m17, m19, m21, m23, m18, m24, m26, m28, m20, m29, m31, m22, m32, m33, m16, m25, m27, m15, m30, m14])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Vector>, Odd, T, 20> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[0].scale(m[11]) + x[1].scale(m[7]) + x[2].scale(m[10]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[8]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[11]) + x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Odd, T, 20>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Odd, T, 20>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[6], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero()], [m[11], m[7], m[10], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[16], m[18], m[19]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -16982,33 +17782,33 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), 
         let t100 = t99 * T::from_i64(2);
         let t101 = t100 - t46;
         let t102 = t47 + t49;
-        let t103 = t50 + t102;
-        let t104 = t103 - t48;
+        let t103 = t50 - t48;
+        let t104 = t102 + t103;
         let t105 = t104 * T::from_i64(2);
         let t106 = t105 - t51;
         let t107 = t53 + t54;
-        let t108 = t55 + t107;
-        let t109 = t108 - t52;
+        let t108 = t55 - t52;
+        let t109 = t107 + t108;
         let t110 = t109 * T::from_i64(2);
         let t111 = t110 - t56;
         let t112 = t57 + t59;
-        let t113 = t60 + t112;
-        let t114 = t113 - t58;
+        let t113 = t60 - t58;
+        let t114 = t112 + t113;
         let t115 = t114 * T::from_i64(2);
         let t116 = t115 - t61;
         let t117 = t62 - t63;
-        let t118 = t117 - t64;
-        let t119 = t118 - t65;
+        let t118 = t64 + t65;
+        let t119 = t117 - t118;
         let t120 = t119 * T::from_i64(2);
         let t121 = t66 + t120;
         let t122 = t68 - t67;
-        let t123 = t122 - t69;
-        let t124 = t123 - t70;
+        let t123 = t69 + t70;
+        let t124 = t122 - t123;
         let t125 = t124 * T::from_i64(2);
         let t126 = t71 + t125;
         let t127 = t72 - t73;
-        let t128 = t127 - t74;
-        let t129 = t128 - t75;
+        let t128 = t74 + t75;
+        let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
         let t131 = t76 + t130;
         let t132 = t77 + t78;
@@ -17076,15 +17876,85 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Vector<(), 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Vector<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Multivector, T, 28>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Multivector, T, 28> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 - m1;
+        let m11 = m0 + m1;
+        let m12 = m2 - m3;
+        let m13 = m2 + m3;
+        let m14 = m10 - m12;
+        let m15 = m10 + m12;
+        let m16 = m10 - m13;
+        let m17 = m10 + m13;
+        let m18 = m11 - m12;
+        let m19 = m11 + m12;
+        let m20 = m11 - m13;
+        let m21 = m11 + m13;
+        let m22 = m4 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = m5 * T::from_i64(2);
+        let m25 = -m24;
+        let m26 = m6 * T::from_i64(2);
+        let m27 = -m26;
+        let m28 = -m20;
+        let m29 = m7 * T::from_i64(2);
+        let m30 = -m29;
+        let m31 = m8 * T::from_i64(2);
+        let m32 = -m31;
+        let m33 = -m15;
+        let m34 = m9 * T::from_i64(2);
+        let m35 = -m34;
+        let m36 = -m14;
+        let m37 = -m17;
+        let m38 = -m18;
+        let m39 = -m19;
+        let m40 = -m21;
+        let m41 = -m16;
+        gx::Prepared::from_entries([m16, m21, m23, m25, m27, m22, m28, m30, m32, m24, m33, m35, m26, m36, m37, m29, m31, m38, m34, m39, m17, m18, m19, m40, m20, m15, m14, m41])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Vector, Multivector, T, 28> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[7]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[8]) + x[3].scale(m[11]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[9].scale(m[4]) + x[10].scale(m[9])).0, (x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[12]) + x[10].scale(m[2])).0, (x[5].scale(m[16]) + x[6].scale(m[18]) + x[7].scale(m[19]) + x[8].scale(m[3]) + x[9].scale(m[5])).0, (x[6].scale(m[4]) + x[7].scale(m[9]) + x[8].scale(m[20]) + x[9].scale(m[7]) + x[10].scale(m[8])).0, (x[5].scale(m[12]) + x[7].scale(m[2]) + x[8].scale(m[7]) + x[9].scale(m[21]) + x[10].scale(m[11])).0, (x[5].scale(m[3]) + x[6].scale(m[5]) + x[8].scale(m[8]) + x[9].scale(m[11]) + x[10].scale(m[22])).0, (x[11].scale(m[23]) + x[12].scale(m[2]) + x[13].scale(m[3]) + x[14].scale(m[4])).0, (x[11].scale(m[5]) + x[12].scale(m[24]) + x[13].scale(m[15]) + x[14].scale(m[16])).0, (x[11].scale(m[9]) + x[12].scale(m[15]) + x[13].scale(m[25]) + x[14].scale(m[18])).0, (x[11].scale(m[12]) + x[12].scale(m[16]) + x[13].scale(m[18]) + x[14].scale(m[26])).0, (x[15].scale(m[27])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Multivector, T, 28>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Multivector, T, 28>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[5], m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[9], m[7], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[8], m[11], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[15], m[16], T::zero(), m[4], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[17], m[18], m[12], T::zero(), m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[18], m[19], m[3], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[9], m[20], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], T::zero(), m[2], m[7], m[21], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[5], T::zero(), m[8], m[11], m[22], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[23], m[2], m[3], m[4], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[24], m[15], m[16], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[15], m[25], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[16], m[18], m[26], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -17093,15 +17963,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ve
         let t2 = v[2] * xv[3];
         let t3 = v[3] * xv[4];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = v[0] * xv[11];
         let t8 = v[1] * xv[12];
         let t9 = v[2] * xv[13];
         let t10 = v[3] * xv[14];
         let t11 = t7 + t8;
-        let t12 = t9 + t11;
-        let t13 = t10 + t12;
+        let t12 = t9 + t10;
+        let t13 = t11 + t12;
         let t14 = v[0] * xv[5];
         let t15 = v[2] * xv[10];
         let t16 = v[3] * xv[9];
@@ -17199,54 +18069,122 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ve
         let m7 = v[1] * v[2];
         let m8 = v[1] * v[3];
         let m9 = v[2] * v[3];
-        let m10 = m0 - m1;
-        let m11 = m0 + m1;
-        let m12 = m2 - m3;
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
         let m13 = m2 + m3;
-        let m14 = m10 - m12;
-        let m15 = m10 + m12;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
         let m16 = m10 - m13;
         let m17 = m10 + m13;
         let m18 = m11 - m12;
         let m19 = m11 + m12;
-        let m20 = m11 - m13;
-        let m21 = m11 + m13;
-        let m22 = m4 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m5 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = m6 * T::from_i64(2);
-        let m27 = -m26;
-        let m28 = -m20;
-        let m29 = m7 * T::from_i64(2);
-        let m30 = -m29;
-        let m31 = m8 * T::from_i64(2);
-        let m32 = -m31;
-        let m33 = -m15;
-        let m34 = m9 * T::from_i64(2);
-        let m35 = -m34;
+        let m20 = m12 + m13;
+        let m21 = m4 * T::from_i64(2);
+        let m22 = -m21;
+        let m23 = m5 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m16;
+        let m28 = m7 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m8 * T::from_i64(2);
+        let m31 = -m30;
+        let m32 = -m19;
+        let m33 = m9 * T::from_i64(2);
+        let m34 = -m33;
+        let m35 = -m20;
         let m36 = -m14;
-        let m37 = -m17;
-        let m38 = -m18;
-        let m39 = -m19;
-        let m40 = -m21;
-        let m41 = -m16;
+        let m37 = -m15;
+        let m38 = -m17;
+        let m39 = -m18;
+        let m40 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0].scale(m16)).0, (x[1].scale(m21) + x[2].scale(m23) + x[3].scale(m25) + x[4].scale(m27)).0, (x[1].scale(m22) + x[2].scale(m28) + x[3].scale(m30) + x[4].scale(m32)).0, (x[1].scale(m24) + x[2].scale(m30) + x[3].scale(m33) + x[4].scale(m35)).0, (x[1].scale(m26) + x[2].scale(m32) + x[3].scale(m35) + x[4].scale(m36)).0, (x[5].scale(m37) + x[6].scale(m29) + x[7].scale(m31) + x[9].scale(m27) + x[10].scale(m24)).0, (x[5].scale(m29) + x[6].scale(m38) + x[7].scale(m34) + x[8].scale(m26) + x[10].scale(m23)).0, (x[5].scale(m31) + x[6].scale(m34) + x[7].scale(m39) + x[8].scale(m25) + x[9].scale(m22)).0, (x[6].scale(m27) + x[7].scale(m24) + x[8].scale(m17) + x[9].scale(m30) + x[10].scale(m32)).0, (x[5].scale(m26) + x[7].scale(m23) + x[8].scale(m30) + x[9].scale(m18) + x[10].scale(m35)).0, (x[5].scale(m25) + x[6].scale(m22) + x[8].scale(m32) + x[9].scale(m35) + x[10].scale(m19)).0, (x[11].scale(m40) + x[12].scale(m23) + x[13].scale(m25) + x[14].scale(m27)).0, (x[11].scale(m22) + x[12].scale(m20) + x[13].scale(m29) + x[14].scale(m31)).0, (x[11].scale(m24) + x[12].scale(m29) + x[13].scale(m15) + x[14].scale(m34)).0, (x[11].scale(m26) + x[12].scale(m31) + x[13].scale(m34) + x[14].scale(m14)).0, (x[15].scale(m41)).0] }
+        Multivector { c: [(x[0]).0, (x[1].scale(m17) + x[2].scale(m22) + x[3].scale(m24) + x[4].scale(m26)).0, (x[1].scale(m21) + x[2].scale(m27) + x[3].scale(m29) + x[4].scale(m31)).0, (x[1].scale(m23) + x[2].scale(m29) + x[3].scale(m32) + x[4].scale(m34)).0, (x[1].scale(m25) + x[2].scale(m31) + x[3].scale(m34) + x[4].scale(m18)).0, (x[5].scale(m35) + x[6].scale(m28) + x[7].scale(m30) + x[9].scale(m26) + x[10].scale(m23)).0, (x[5].scale(m28) + x[6].scale(m36) + x[7].scale(m33) + x[8].scale(m25) + x[10].scale(m22)).0, (x[5].scale(m30) + x[6].scale(m33) + x[7].scale(m37) + x[8].scale(m24) + x[9].scale(m21)).0, (x[6].scale(m26) + x[7].scale(m23) + x[8].scale(m20) + x[9].scale(m29) + x[10].scale(m31)).0, (x[5].scale(m25) + x[7].scale(m22) + x[8].scale(m29) + x[9].scale(m14) + x[10].scale(m34)).0, (x[5].scale(m24) + x[6].scale(m21) + x[8].scale(m31) + x[9].scale(m34) + x[10].scale(m15)).0, (x[11].scale(m38) + x[12].scale(m22) + x[13].scale(m24) + x[14].scale(m26)).0, (x[11].scale(m21) + x[12].scale(m16) + x[13].scale(m28) + x[14].scale(m30)).0, (x[11].scale(m23) + x[12].scale(m28) + x[13].scale(m19) + x[14].scale(m33)).0, (x[11].scale(m25) + x[12].scale(m30) + x[13].scale(m33) + x[14].scale(m39)).0, (x[15].scale(m40)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Multivector, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Multivector, T, 27> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = m0 + m1;
+        let m11 = m2 - m3;
+        let m12 = m0 - m1;
+        let m13 = m2 + m3;
+        let m14 = m10 - m11;
+        let m15 = m10 + m11;
+        let m16 = m10 - m13;
+        let m17 = m10 + m13;
+        let m18 = m11 - m12;
+        let m19 = m11 + m12;
+        let m20 = m12 + m13;
+        let m21 = m4 * T::from_i64(2);
+        let m22 = -m21;
+        let m23 = m5 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m16;
+        let m28 = m7 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m8 * T::from_i64(2);
+        let m31 = -m30;
+        let m32 = -m19;
+        let m33 = m9 * T::from_i64(2);
+        let m34 = -m33;
+        let m35 = -m20;
+        let m36 = -m14;
+        let m37 = -m15;
+        let m38 = -m17;
+        let m39 = -m18;
+        let m40 = -T::from_i64(1);
+        gx::Prepared::from_entries([m17, m22, m24, m26, m21, m27, m29, m31, m23, m32, m34, m25, m18, m35, m28, m30, m36, m33, m37, m20, m14, m15, m38, m16, m19, m39, m40])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Vector>, Multivector, T, 27> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[1].scale(m[8]) + x[2].scale(m[6]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[7]) + x[3].scale(m[10]) + x[4].scale(m[12])).0, (x[5].scale(m[13]) + x[6].scale(m[14]) + x[7].scale(m[15]) + x[9].scale(m[3]) + x[10].scale(m[8])).0, (x[5].scale(m[14]) + x[6].scale(m[16]) + x[7].scale(m[17]) + x[8].scale(m[11]) + x[10].scale(m[1])).0, (x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[2]) + x[9].scale(m[4])).0, (x[6].scale(m[3]) + x[7].scale(m[8]) + x[8].scale(m[19]) + x[9].scale(m[6]) + x[10].scale(m[7])).0, (x[5].scale(m[11]) + x[7].scale(m[1]) + x[8].scale(m[6]) + x[9].scale(m[20]) + x[10].scale(m[10])).0, (x[5].scale(m[2]) + x[6].scale(m[4]) + x[8].scale(m[7]) + x[9].scale(m[10]) + x[10].scale(m[21])).0, (x[11].scale(m[22]) + x[12].scale(m[1]) + x[13].scale(m[2]) + x[14].scale(m[3])).0, (x[11].scale(m[4]) + x[12].scale(m[23]) + x[13].scale(m[14]) + x[14].scale(m[15])).0, (x[11].scale(m[8]) + x[12].scale(m[14]) + x[13].scale(m[24]) + x[14].scale(m[17])).0, (x[11].scale(m[11]) + x[12].scale(m[15]) + x[13].scale(m[17]) + x[14].scale(m[25])).0, (x[15].scale(m[26])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Multivector, T, 27>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Multivector, T, 27>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[8], m[6], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[11], m[7], m[10], m[12], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[14], m[15], T::zero(), m[3], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[16], m[17], m[11], T::zero(), m[1], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[17], m[18], m[2], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[8], m[19], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], T::zero(), m[1], m[6], m[20], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], T::zero(), m[7], m[10], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[22], m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[23], m[14], m[15], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[14], m[24], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[15], m[17], m[25], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[26]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -17263,15 +18201,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Even<(), T> {
         let t10 = v[2] * v[5];
         let t11 = v[3] * v[6];
         let t12 = t0 + t4;
-        let t13 = t5 + t12;
-        let t14 = t6 + t13;
-        let t15 = t14 - t1;
-        let t16 = t15 - t2;
-        let t17 = t16 - t3;
-        let t18 = t17 - t7;
+        let t13 = t5 + t6;
+        let t14 = t12 + t13;
+        let t15 = t1 + t2;
+        let t16 = t3 + t7;
+        let t17 = t15 + t16;
+        let t18 = t14 - t17;
         let t19 = t8 + t9;
-        let t20 = t10 + t19;
-        let t21 = t11 + t20;
+        let t20 = t10 + t11;
+        let t21 = t19 + t20;
         let t22 = xv[0] * t18;
         let t23 = xv[0] * t21;
         let t24 = t23 * T::from_i64(2);
@@ -17290,15 +18228,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Even<(), T> {
         let m10 = v[2] * v[5];
         let m11 = v[3] * v[6];
         let m12 = m0 + m4;
-        let m13 = m5 + m12;
-        let m14 = m6 + m13;
-        let m15 = m14 - m1;
-        let m16 = m15 - m2;
-        let m17 = m16 - m3;
-        let m18 = m17 - m7;
+        let m13 = m5 + m6;
+        let m14 = m12 + m13;
+        let m15 = m1 + m2;
+        let m16 = m3 + m7;
+        let m17 = m15 + m16;
+        let m18 = m14 - m17;
         let m19 = m8 + m9;
-        let m20 = m10 + m19;
-        let m21 = m11 + m20;
+        let m20 = m10 + m11;
+        let m21 = m19 + m20;
         let m22 = m21 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
         Even { c: [(x[0].scale(m18)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m22)).0] }
@@ -17307,15 +18245,66 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Even<(), T> {
+    type Output = gx::Prepared<Even, Scalar, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Scalar, T, 2> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[7];
+        let m9 = v[1] * v[4];
+        let m10 = v[2] * v[5];
+        let m11 = v[3] * v[6];
+        let m12 = m0 + m4;
+        let m13 = m5 + m6;
+        let m14 = m12 + m13;
+        let m15 = m1 + m2;
+        let m16 = m3 + m7;
+        let m17 = m15 + m16;
+        let m18 = m14 - m17;
+        let m19 = m8 + m9;
+        let m20 = m10 + m11;
+        let m21 = m19 + m20;
+        let m22 = m21 * T::from_i64(2);
+        gx::Prepared::from_entries([m18, m22])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Even, Scalar, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Scalar, T, 2>> for Even<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Scalar, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -17328,15 +18317,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Even<()
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Even>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Even<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -17529,15 +18546,123 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Even<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Even<(), T> {
+    type Output = gx::Prepared<Even, Vector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Vector, T, 16> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m36 + m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 - m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m44;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 - m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m49 - m51;
+        let m62 = m42 - m41;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m40 + m43;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m37 + m45;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m41 + m42;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m48 + m50;
+        let m71 = m46 - m39;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m38 - m44;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m43 - m40;
+        let m76 = m75 * T::from_i64(2);
+        let m77 = m39 + m46;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m48 - m50;
+        gx::Prepared::from_entries([m52, m54, m56, m58, m60, m61, m63, m65, m67, m69, m70, m72, m74, m76, m78, m79])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Even, Vector, T, 16> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Vector, T, 16>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Vector, T, 16>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -17546,29 +18671,29 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Even<()
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = v[0] * xv[1];
         let t8 = v[1] * xv[0];
         let t9 = v[5] * xv[3];
         let t10 = v[6] * xv[2];
         let t11 = t7 + t8;
-        let t12 = t9 + t11;
-        let t13 = t12 - t10;
+        let t12 = t9 - t10;
+        let t13 = t11 + t12;
         let t14 = v[0] * xv[2];
         let t15 = v[2] * xv[0];
         let t16 = v[4] * xv[3];
         let t17 = v[6] * xv[1];
         let t18 = t14 + t15;
-        let t19 = t17 + t18;
-        let t20 = t19 - t16;
+        let t19 = t17 - t16;
+        let t20 = t18 + t19;
         let t21 = v[0] * xv[3];
         let t22 = v[3] * xv[0];
         let t23 = v[4] * xv[2];
         let t24 = v[5] * xv[1];
         let t25 = t21 + t22;
-        let t26 = t23 + t25;
-        let t27 = t26 - t24;
+        let t26 = t23 - t24;
+        let t27 = t25 + t26;
         let t28 = v[7] * v[7];
         let t29 = t28 + T::from_f64(1.0 / 2.0);
         let t30 = v[7] * xv[0];
@@ -17604,32 +18729,32 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Even<()
         let t60 = v[6] * t30;
         let t61 = xv[3] * t29;
         let t62 = t34 + t35;
-        let t63 = t36 + t62;
-        let t64 = t40 + t63;
-        let t65 = t64 - t37;
-        let t66 = t65 - t38;
-        let t67 = t66 - t39;
+        let t63 = t36 + t40;
+        let t64 = t62 + t63;
+        let t65 = t37 + t38;
+        let t66 = t39 + t65;
+        let t67 = t64 - t66;
         let t68 = t67 * T::from_i64(2);
         let t69 = t41 + t42;
-        let t70 = t45 + t69;
-        let t71 = t47 + t70;
-        let t72 = t71 - t43;
-        let t73 = t72 - t44;
-        let t74 = t73 - t46;
+        let t70 = t45 + t47;
+        let t71 = t69 + t70;
+        let t72 = t43 + t44;
+        let t73 = t46 + t72;
+        let t74 = t71 - t73;
         let t75 = t74 * T::from_i64(2);
         let t76 = t49 + t50;
-        let t77 = t53 + t76;
-        let t78 = t54 + t77;
-        let t79 = t78 - t48;
-        let t80 = t79 - t51;
-        let t81 = t80 - t52;
+        let t77 = t53 + t54;
+        let t78 = t76 + t77;
+        let t79 = t48 + t51;
+        let t80 = t52 + t79;
+        let t81 = t78 - t80;
         let t82 = t81 * T::from_i64(2);
         let t83 = t55 + t57;
-        let t84 = t58 + t83;
-        let t85 = t61 + t84;
-        let t86 = t85 - t56;
-        let t87 = t86 - t59;
-        let t88 = t87 - t60;
+        let t84 = t58 + t61;
+        let t85 = t83 + t84;
+        let t86 = t56 + t59;
+        let t87 = t60 + t86;
+        let t88 = t85 - t87;
         let t89 = t88 * T::from_i64(2);
             return Vector { c: gx::slots::from_values::<S, T, 4>([t68, t75, t82, t89]) };
         }
@@ -17720,15 +18845,123 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Even<()
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Vector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Vector, T, 16> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m36 + m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 - m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m38 + m44;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m36 - m47;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m49 - m51;
+        let m62 = m42 - m41;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m40 + m43;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m37 + m45;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m41 + m42;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m48 + m50;
+        let m71 = m46 - m39;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m38 - m44;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m43 - m40;
+        let m76 = m75 * T::from_i64(2);
+        let m77 = m39 + m46;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m48 - m50;
+        gx::Prepared::from_entries([m52, m54, m56, m58, m60, m61, m63, m65, m67, m69, m70, m72, m74, m76, m78, m79])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Even>, Vector, T, 16> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Vector, T, 16>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Vector, T, 16>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Even<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -17789,13 +19022,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Even<(), T> {
         let t54 = t36 + t37;
         let t55 = t38 - t39;
         let t56 = t36 + t38;
-        let t57 = t39 + t56;
-        let t58 = t57 - t37;
+        let t57 = t39 - t37;
+        let t58 = t56 + t57;
         let t59 = t47 + t48;
         let t60 = t46 - t49;
         let t61 = t1 + t3;
-        let t62 = t61 - t5;
-        let t63 = t62 - t7;
+        let t62 = t5 + t7;
+        let t63 = t61 - t62;
         let t64 = t44 - t50;
         let t65 = t43 + t51;
         let t66 = t47 - t48;
@@ -17848,38 +19081,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Even<(), T> {
         let t113 = xv[5] * t74;
         let t114 = t80 + t81;
         let t115 = t83 + t114;
-        let t116 = t115 - t79;
-        let t117 = t116 - t82;
+        let t116 = t79 + t82;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t78 + t118;
         let t120 = t84 + t87;
         let t121 = t88 + t120;
-        let t122 = t121 - t86;
-        let t123 = t122 - t89;
+        let t122 = t86 + t89;
+        let t123 = t121 - t122;
         let t124 = t123 * T::from_i64(2);
         let t125 = t85 + t124;
         let t126 = t91 + t94;
         let t127 = t95 + t126;
-        let t128 = t127 - t90;
-        let t129 = t128 - t93;
+        let t128 = t90 + t93;
+        let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
         let t131 = t92 + t130;
         let t132 = t97 + t101;
         let t133 = t132 - t96;
-        let t134 = t133 - t98;
-        let t135 = t134 - t100;
+        let t134 = t98 + t100;
+        let t135 = t133 - t134;
         let t136 = t135 * T::from_i64(2);
         let t137 = t99 + t136;
         let t138 = t104 + t105;
         let t139 = t138 - t102;
-        let t140 = t139 - t103;
-        let t141 = t140 - t107;
+        let t140 = t103 + t107;
+        let t141 = t139 - t140;
         let t142 = t141 * T::from_i64(2);
         let t143 = t106 + t142;
         let t144 = t108 + t112;
         let t145 = t144 - t109;
-        let t146 = t145 - t110;
-        let t147 = t146 - t111;
+        let t146 = t110 + t111;
+        let t147 = t145 - t146;
         let t148 = t147 * T::from_i64(2);
         let t149 = t113 + t148;
             return Bivector { c: gx::slots::from_values::<S, T, 6>([t119, t125, t131, t137, t143, t149]) };
@@ -17996,15 +19229,148 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Even<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Even<(), T> {
+    type Output = gx::Prepared<Even, Bivector, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Bivector, T, 27> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[7];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[4];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[5];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[6];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = v[0] * v[1];
+        let m13 = v[0] * v[2];
+        let m14 = v[0] * v[3];
+        let m15 = v[0] * v[4];
+        let m16 = v[0] * v[5];
+        let m17 = v[0] * v[6];
+        let m18 = v[1] * v[2];
+        let m19 = v[1] * v[3];
+        let m20 = v[1] * v[5];
+        let m21 = v[1] * v[6];
+        let m22 = v[1] * v[7];
+        let m23 = v[2] * v[3];
+        let m24 = v[2] * v[4];
+        let m25 = v[2] * v[6];
+        let m26 = v[2] * v[7];
+        let m27 = v[3] * v[4];
+        let m28 = v[3] * v[5];
+        let m29 = v[3] * v[7];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m11;
+        let m37 = m2 - m8;
+        let m38 = m4 - m9;
+        let m39 = m6 - m10;
+        let m40 = m1 - m3;
+        let m41 = m5 - m7;
+        let m42 = m12 + m32;
+        let m43 = m13 + m34;
+        let m44 = m14 + m35;
+        let m45 = m15 - m22;
+        let m46 = m16 - m26;
+        let m47 = m17 - m29;
+        let m48 = m18 - m30;
+        let m49 = m19 - m31;
+        let m50 = m20 + m24;
+        let m51 = m21 + m27;
+        let m52 = m23 - m33;
+        let m53 = m25 + m28;
+        let m54 = m36 + m37;
+        let m55 = m38 - m39;
+        let m56 = m1 + m3;
+        let m57 = m5 + m7;
+        let m58 = m36 - m37;
+        let m59 = m38 + m39;
+        let m60 = m40 - m41;
+        let m61 = m40 + m41;
+        let m62 = m42 - m53;
+        let m63 = m42 + m53;
+        let m64 = m43 - m51;
+        let m65 = m43 + m51;
+        let m66 = m44 - m50;
+        let m67 = m44 + m50;
+        let m68 = m45 - m52;
+        let m69 = m45 + m52;
+        let m70 = m46 - m49;
+        let m71 = m46 + m49;
+        let m72 = m47 - m48;
+        let m73 = m47 + m48;
+        let m74 = m54 - m55;
+        let m75 = m54 + m55;
+        let m76 = m56 - m57;
+        let m77 = m58 + m59;
+        let m78 = m73 * T::from_i64(2);
+        let m79 = -m78;
+        let m80 = m70 * T::from_i64(2);
+        let m81 = m76 * T::from_i64(2);
+        let m82 = m66 * T::from_i64(2);
+        let m83 = -m82;
+        let m84 = m65 * T::from_i64(2);
+        let m85 = m72 * T::from_i64(2);
+        let m86 = m69 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m67 * T::from_i64(2);
+        let m89 = m61 * T::from_i64(2);
+        let m90 = m62 * T::from_i64(2);
+        let m91 = -m90;
+        let m92 = m71 * T::from_i64(2);
+        let m93 = -m92;
+        let m94 = m68 * T::from_i64(2);
+        let m95 = m64 * T::from_i64(2);
+        let m96 = -m95;
+        let m97 = m63 * T::from_i64(2);
+        let m98 = m60 * T::from_i64(2);
+        let m99 = -m81;
+        let m100 = -m84;
+        let m101 = -m88;
+        let m102 = -m89;
+        let m103 = -m97;
+        let m104 = -m98;
+        gx::Prepared::from_entries([m77, m79, m80, m81, m83, m84, m85, m74, m87, m88, m89, m91, m93, m94, m75, m96, m97, m98, m99, m82, m100, m101, m102, m90, m95, m103, m104])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Even, Bivector, T, 27> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[0]) + x[4].scale(m[1]) + x[5].scale(m[2])).0, (x[0].scale(m[21]) + x[1].scale(m[22]) + x[2].scale(m[23]) + x[3].scale(m[6]) + x[4].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[12]) + x[4].scale(m[13]) + x[5].scale(m[14])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Bivector, T, 27>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Bivector, T, 27>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[0], m[1], m[2]], [m[21], m[22], m[23], m[6], m[7], m[8]], [m[24], m[25], m[26], m[12], m[13], m[14]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -18065,13 +19431,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Even<
         let t54 = t36 + t37;
         let t55 = t38 - t39;
         let t56 = t36 + t38;
-        let t57 = t39 + t56;
-        let t58 = t57 - t37;
+        let t57 = t39 - t37;
+        let t58 = t56 + t57;
         let t59 = t47 + t48;
         let t60 = t46 - t49;
         let t61 = t1 + t3;
-        let t62 = t61 - t5;
-        let t63 = t62 - t7;
+        let t62 = t5 + t7;
+        let t63 = t61 - t62;
         let t64 = t44 - t50;
         let t65 = t43 + t51;
         let t66 = t47 - t48;
@@ -18124,38 +19490,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Even<
         let t113 = xv[5] * t74;
         let t114 = t80 + t81;
         let t115 = t83 + t114;
-        let t116 = t115 - t79;
-        let t117 = t116 - t82;
+        let t116 = t79 + t82;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t78 + t118;
         let t120 = t84 + t87;
         let t121 = t88 + t120;
-        let t122 = t121 - t86;
-        let t123 = t122 - t89;
+        let t122 = t86 + t89;
+        let t123 = t121 - t122;
         let t124 = t123 * T::from_i64(2);
         let t125 = t85 + t124;
         let t126 = t91 + t94;
         let t127 = t95 + t126;
-        let t128 = t127 - t90;
-        let t129 = t128 - t93;
+        let t128 = t90 + t93;
+        let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
         let t131 = t92 + t130;
         let t132 = t97 + t101;
         let t133 = t132 - t96;
-        let t134 = t133 - t98;
-        let t135 = t134 - t100;
+        let t134 = t98 + t100;
+        let t135 = t133 - t134;
         let t136 = t135 * T::from_i64(2);
         let t137 = t99 + t136;
         let t138 = t104 + t105;
         let t139 = t138 - t102;
-        let t140 = t139 - t103;
-        let t141 = t140 - t107;
+        let t140 = t103 + t107;
+        let t141 = t139 - t140;
         let t142 = t141 * T::from_i64(2);
         let t143 = t106 + t142;
         let t144 = t108 + t112;
         let t145 = t144 - t109;
-        let t146 = t145 - t110;
-        let t147 = t146 - t111;
+        let t146 = t110 + t111;
+        let t147 = t145 - t146;
         let t148 = t147 * T::from_i64(2);
         let t149 = t113 + t148;
             return Bivector { c: gx::slots::from_values::<S, T, 6>([t119, t125, t131, t137, t143, t149]) };
@@ -18266,15 +19632,142 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Even<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Bivector, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Bivector, T, 27> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[0] * v[4];
+        let m4 = v[0] * v[5];
+        let m5 = v[0] * v[6];
+        let m6 = v[1] * v[1];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[4];
+        let m10 = v[1] * v[5];
+        let m11 = v[1] * v[6];
+        let m12 = v[1] * v[7];
+        let m13 = v[2] * v[2];
+        let m14 = v[2] * v[3];
+        let m15 = v[2] * v[4];
+        let m16 = v[2] * v[5];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[3];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = v[4] * v[4];
+        let m25 = v[4] * v[5];
+        let m26 = v[4] * v[6];
+        let m27 = v[4] * v[7];
+        let m28 = v[5] * v[5];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[6];
+        let m32 = v[6] * v[7];
+        let m33 = m0 + m27;
+        let m34 = m1 + m30;
+        let m35 = m2 + m32;
+        let m36 = m3 - m12;
+        let m37 = m4 - m18;
+        let m38 = m5 - m23;
+        let m39 = m6 - m24;
+        let m40 = m7 - m25;
+        let m41 = m8 - m26;
+        let m42 = m10 + m15;
+        let m43 = m11 + m20;
+        let m44 = m13 - m28;
+        let m45 = m14 - m29;
+        let m46 = m17 + m21;
+        let m47 = m19 - m31;
+        let m48 = m9 + m16;
+        let m49 = m9 + m22;
+        let m50 = m16 + m22;
+        let m51 = m33 - m46;
+        let m52 = m33 + m46;
+        let m53 = m34 - m43;
+        let m54 = m34 + m43;
+        let m55 = m35 - m42;
+        let m56 = m35 + m42;
+        let m57 = m36 - m45;
+        let m58 = m36 + m45;
+        let m59 = m37 - m41;
+        let m60 = m37 + m41;
+        let m61 = m38 - m40;
+        let m62 = m38 + m40;
+        let m63 = m39 + m44;
+        let m64 = m39 + m47;
+        let m65 = m44 + m47;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m66 + T::from_i64(1);
+        let m68 = m62 * T::from_i64(2);
+        let m69 = -m68;
+        let m70 = m59 * T::from_i64(2);
+        let m71 = m50 * T::from_i64(4);
+        let m72 = -m71;
+        let m73 = m55 * T::from_i64(2);
+        let m74 = -m73;
+        let m75 = m54 * T::from_i64(2);
+        let m76 = m61 * T::from_i64(2);
+        let m77 = m64 * T::from_i64(2);
+        let m78 = m77 + T::from_i64(1);
+        let m79 = m58 * T::from_i64(2);
+        let m80 = -m79;
+        let m81 = m56 * T::from_i64(2);
+        let m82 = m49 * T::from_i64(4);
+        let m83 = -m82;
+        let m84 = m51 * T::from_i64(2);
+        let m85 = -m84;
+        let m86 = m60 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m57 * T::from_i64(2);
+        let m89 = m63 * T::from_i64(2);
+        let m90 = m89 + T::from_i64(1);
+        let m91 = m53 * T::from_i64(2);
+        let m92 = -m91;
+        let m93 = m52 * T::from_i64(2);
+        let m94 = m48 * T::from_i64(4);
+        let m95 = -m94;
+        let m96 = -m75;
+        let m97 = -m81;
+        let m98 = -m93;
+        gx::Prepared::from_entries([m67, m69, m70, m72, m74, m75, m76, m78, m80, m81, m83, m85, m87, m88, m90, m92, m93, m95, m71, m73, m96, m97, m82, m84, m91, m98, m94])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Even>, Bivector, T, 27> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[0]) + x[4].scale(m[1]) + x[5].scale(m[2])).0, (x[0].scale(m[21]) + x[1].scale(m[22]) + x[2].scale(m[23]) + x[3].scale(m[6]) + x[4].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[12]) + x[4].scale(m[13]) + x[5].scale(m[14])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Bivector, T, 27>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Bivector, T, 27>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[0], m[1], m[2]], [m[21], m[22], m[23], m[6], m[7], m[8]], [m[24], m[25], m[26], m[12], m[13], m[14]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Even<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -18470,15 +19963,126 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for Even<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for Even<(), T> {
+    type Output = gx::Prepared<Even, Trivector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Trivector, T, 16> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m36 + m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = -m54;
+        let m56 = m45 - m37;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m38 + m44;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = -m59;
+        let m61 = m47 - m36;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m49 - m51;
+        let m64 = m42 - m41;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m40 + m43;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 + m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = -m69;
+        let m71 = m41 + m42;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m48 + m50;
+        let m74 = m46 - m39;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m44 - m38;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = m43 - m40;
+        let m79 = m78 * T::from_i64(2);
+        let m80 = m39 + m46;
+        let m81 = m80 * T::from_i64(2);
+        let m82 = m48 - m50;
+        gx::Prepared::from_entries([m52, m55, m57, m60, m62, m63, m65, m67, m70, m72, m73, m75, m77, m79, m81, m82])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<Even, Trivector, T, 16> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Trivector, T, 16>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Trivector, T, 16>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -18487,29 +20091,29 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Even
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = v[0] * xv[1];
         let t8 = v[1] * xv[0];
         let t9 = v[5] * xv[3];
         let t10 = v[6] * xv[2];
         let t11 = t7 + t9;
-        let t12 = t11 - t8;
-        let t13 = t12 - t10;
+        let t12 = t8 + t10;
+        let t13 = t11 - t12;
         let t14 = v[0] * xv[2];
         let t15 = v[2] * xv[0];
         let t16 = v[4] * xv[3];
         let t17 = v[6] * xv[1];
         let t18 = t14 + t17;
-        let t19 = t18 - t15;
-        let t20 = t19 - t16;
+        let t19 = t15 + t16;
+        let t20 = t18 - t19;
         let t21 = v[0] * xv[3];
         let t22 = v[3] * xv[0];
         let t23 = v[4] * xv[2];
         let t24 = v[5] * xv[1];
         let t25 = t21 + t23;
-        let t26 = t25 - t22;
-        let t27 = t26 - t24;
+        let t26 = t22 + t24;
+        let t27 = t25 - t26;
         let t28 = v[7] * v[7];
         let t29 = t28 + T::from_f64(1.0 / 2.0);
         let t30 = v[7] * xv[0];
@@ -18545,32 +20149,32 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Even
         let t60 = v[6] * t30;
         let t61 = xv[3] * t29;
         let t62 = t37 + t38;
-        let t63 = t39 + t62;
-        let t64 = t40 + t63;
-        let t65 = t64 - t34;
-        let t66 = t65 - t35;
-        let t67 = t66 - t36;
+        let t63 = t39 + t40;
+        let t64 = t62 + t63;
+        let t65 = t34 + t35;
+        let t66 = t36 + t65;
+        let t67 = t64 - t66;
         let t68 = t67 * T::from_i64(2);
         let t69 = t42 + t44;
-        let t70 = t45 + t69;
-        let t71 = t47 + t70;
-        let t72 = t71 - t41;
-        let t73 = t72 - t43;
-        let t74 = t73 - t46;
+        let t70 = t45 + t47;
+        let t71 = t69 + t70;
+        let t72 = t41 + t43;
+        let t73 = t46 + t72;
+        let t74 = t71 - t73;
         let t75 = t74 * T::from_i64(2);
         let t76 = t50 + t52;
-        let t77 = t53 + t76;
-        let t78 = t54 + t77;
-        let t79 = t78 - t48;
-        let t80 = t79 - t49;
-        let t81 = t80 - t51;
+        let t77 = t53 + t54;
+        let t78 = t76 + t77;
+        let t79 = t48 + t49;
+        let t80 = t51 + t79;
+        let t81 = t78 - t80;
         let t82 = t81 * T::from_i64(2);
         let t83 = t55 + t58;
-        let t84 = t60 + t83;
-        let t85 = t61 + t84;
-        let t86 = t85 - t56;
-        let t87 = t86 - t57;
-        let t88 = t87 - t59;
+        let t84 = t60 + t61;
+        let t85 = t83 + t84;
+        let t86 = t56 + t57;
+        let t87 = t59 + t86;
+        let t88 = t85 - t87;
         let t89 = t88 * T::from_i64(2);
             return Trivector { c: gx::slots::from_values::<S, T, 4>([t68, t75, t82, t89]) };
         }
@@ -18664,15 +20268,126 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Even
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Trivector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Trivector, T, 16> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m36 + m47;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = -m54;
+        let m56 = m45 - m37;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m38 + m44;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = -m59;
+        let m61 = m47 - m36;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m49 - m51;
+        let m64 = m42 - m41;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m40 + m43;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 + m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = -m69;
+        let m71 = m41 + m42;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m48 + m50;
+        let m74 = m46 - m39;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = m44 - m38;
+        let m77 = m76 * T::from_i64(2);
+        let m78 = m43 - m40;
+        let m79 = m78 * T::from_i64(2);
+        let m80 = m39 + m46;
+        let m81 = m80 * T::from_i64(2);
+        let m82 = m48 - m50;
+        gx::Prepared::from_entries([m52, m55, m57, m60, m62, m63, m65, m67, m70, m72, m73, m75, m77, m79, m81, m82])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<gx::Unit<Even>, Trivector, T, 16> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Trivector, T, 16>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Trivector, T, 16>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -18689,15 +20404,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Even<(), T
         let t10 = v[6] * v[6];
         let t11 = v[7] * v[7];
         let t12 = t0 + t1;
-        let t13 = t2 + t12;
-        let t14 = t3 + t13;
+        let t13 = t2 + t3;
+        let t14 = t12 + t13;
         let t15 = t4 + t8;
-        let t16 = t9 + t15;
-        let t17 = t10 + t16;
-        let t18 = t17 - t5;
-        let t19 = t18 - t6;
-        let t20 = t19 - t7;
-        let t21 = t20 - t11;
+        let t16 = t9 + t10;
+        let t17 = t15 + t16;
+        let t18 = t5 + t6;
+        let t19 = t7 + t11;
+        let t20 = t18 + t19;
+        let t21 = t17 - t20;
         let t22 = xv[0] * t14;
         let t23 = xv[0] * t21;
         let t24 = t22 * T::from_i64(2);
@@ -18717,17 +20432,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Even<(), T
         let m10 = v[6] * v[6];
         let m11 = v[7] * v[7];
         let m12 = m0 + m1;
-        let m13 = m2 + m12;
-        let m14 = m3 + m13;
+        let m13 = m2 + m3;
+        let m14 = m12 + m13;
         let m15 = m14 * T::from_i64(2);
         let m16 = -m15;
         let m17 = m4 + m8;
-        let m18 = m9 + m17;
-        let m19 = m10 + m18;
-        let m20 = m19 - m5;
-        let m21 = m20 - m6;
-        let m22 = m21 - m7;
-        let m23 = m22 - m11;
+        let m18 = m9 + m10;
+        let m19 = m17 + m18;
+        let m20 = m5 + m6;
+        let m21 = m7 + m11;
+        let m22 = m20 + m21;
+        let m23 = m19 - m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Even { c: [(x[0].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m23)).0] }
     }
@@ -18735,15 +20450,67 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Even<(), T
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Even<(), T> {
+    type Output = gx::Prepared<Even, Pseudoscalar, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Pseudoscalar, T, 2> {
+        let v = self.c;
+        let m0 = v[0] * v[7];
+        let m1 = v[1] * v[4];
+        let m2 = v[2] * v[5];
+        let m3 = v[3] * v[6];
+        let m4 = v[0] * v[0];
+        let m5 = v[1] * v[1];
+        let m6 = v[2] * v[2];
+        let m7 = v[3] * v[3];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 + m13;
+        let m15 = m14 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m4 + m8;
+        let m18 = m9 + m10;
+        let m19 = m17 + m18;
+        let m20 = m5 + m6;
+        let m21 = m7 + m11;
+        let m22 = m20 + m21;
+        let m23 = m19 - m22;
+        gx::Prepared::from_entries([m16, m23])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Even, Pseudoscalar, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Pseudoscalar, T, 2>> for Even<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Pseudoscalar, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -18756,15 +20523,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<E
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Pseudoscalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Pseudoscalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Even>, Pseudoscalar, T, 0> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Pseudoscalar, T, 0>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -18892,38 +20687,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Even<(), T> {
         let t121 = t80 - t120;
         let t122 = t84 + t85;
         let t123 = t87 + t122;
-        let t124 = t123 - t83;
-        let t125 = t124 - t86;
+        let t124 = t83 + t86;
+        let t125 = t123 - t124;
         let t126 = t125 * T::from_i64(2);
         let t127 = t82 + t126;
         let t128 = t88 + t91;
         let t129 = t92 + t128;
-        let t130 = t129 - t90;
-        let t131 = t130 - t93;
+        let t130 = t90 + t93;
+        let t131 = t129 - t130;
         let t132 = t131 * T::from_i64(2);
         let t133 = t89 + t132;
         let t134 = t95 + t98;
         let t135 = t99 + t134;
-        let t136 = t135 - t94;
-        let t137 = t136 - t97;
+        let t136 = t94 + t97;
+        let t137 = t135 - t136;
         let t138 = t137 * T::from_i64(2);
         let t139 = t96 + t138;
         let t140 = t101 + t105;
         let t141 = t140 - t100;
-        let t142 = t141 - t102;
-        let t143 = t142 - t104;
+        let t142 = t102 + t104;
+        let t143 = t141 - t142;
         let t144 = t143 * T::from_i64(2);
         let t145 = t103 + t144;
         let t146 = t108 + t109;
         let t147 = t146 - t106;
-        let t148 = t147 - t107;
-        let t149 = t148 - t111;
+        let t148 = t107 + t111;
+        let t149 = t147 - t148;
         let t150 = t149 * T::from_i64(2);
         let t151 = t110 + t150;
         let t152 = t112 + t116;
         let t153 = t152 - t113;
-        let t154 = t153 - t114;
-        let t155 = t154 - t115;
+        let t154 = t114 + t115;
+        let t155 = t153 - t154;
         let t156 = t155 * T::from_i64(2);
         let t157 = t117 + t156;
         let t158 = t118 * T::from_i64(2);
@@ -19046,15 +20841,152 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for Even<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for Even<(), T> {
+    type Output = gx::Prepared<Even, Even, T, 30>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Even, T, 30> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[7];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[4];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[5];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[6];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = v[0] * v[1];
+        let m13 = v[0] * v[2];
+        let m14 = v[0] * v[3];
+        let m15 = v[0] * v[4];
+        let m16 = v[0] * v[5];
+        let m17 = v[0] * v[6];
+        let m18 = v[1] * v[2];
+        let m19 = v[1] * v[3];
+        let m20 = v[1] * v[5];
+        let m21 = v[1] * v[6];
+        let m22 = v[1] * v[7];
+        let m23 = v[2] * v[3];
+        let m24 = v[2] * v[4];
+        let m25 = v[2] * v[6];
+        let m26 = v[2] * v[7];
+        let m27 = v[3] * v[4];
+        let m28 = v[3] * v[5];
+        let m29 = v[3] * v[7];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m11;
+        let m37 = m2 - m8;
+        let m38 = m4 - m9;
+        let m39 = m6 - m10;
+        let m40 = m1 - m3;
+        let m41 = m1 + m3;
+        let m42 = m5 - m7;
+        let m43 = m5 + m7;
+        let m44 = m12 + m32;
+        let m45 = m13 + m34;
+        let m46 = m14 + m35;
+        let m47 = m15 - m22;
+        let m48 = m16 - m26;
+        let m49 = m17 - m29;
+        let m50 = m18 - m30;
+        let m51 = m19 - m31;
+        let m52 = m20 + m24;
+        let m53 = m21 + m27;
+        let m54 = m23 - m33;
+        let m55 = m25 + m28;
+        let m56 = m36 - m37;
+        let m57 = m36 + m37;
+        let m58 = m38 - m39;
+        let m59 = m38 + m39;
+        let m60 = m40 - m42;
+        let m61 = m40 + m42;
+        let m62 = m41 - m43;
+        let m63 = m41 + m43;
+        let m64 = m44 - m55;
+        let m65 = m44 + m55;
+        let m66 = m45 - m53;
+        let m67 = m45 + m53;
+        let m68 = m46 - m52;
+        let m69 = m46 + m52;
+        let m70 = m47 - m54;
+        let m71 = m47 + m54;
+        let m72 = m48 - m51;
+        let m73 = m48 + m51;
+        let m74 = m49 - m50;
+        let m75 = m49 + m50;
+        let m76 = m56 - m59;
+        let m77 = m56 + m59;
+        let m78 = m57 - m58;
+        let m79 = m57 + m58;
+        let m80 = m63 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m75 * T::from_i64(2);
+        let m83 = -m82;
+        let m84 = m72 * T::from_i64(2);
+        let m85 = m62 * T::from_i64(2);
+        let m86 = m68 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m67 * T::from_i64(2);
+        let m89 = m74 * T::from_i64(2);
+        let m90 = m71 * T::from_i64(2);
+        let m91 = -m90;
+        let m92 = m69 * T::from_i64(2);
+        let m93 = m61 * T::from_i64(2);
+        let m94 = m64 * T::from_i64(2);
+        let m95 = -m94;
+        let m96 = m73 * T::from_i64(2);
+        let m97 = -m96;
+        let m98 = m70 * T::from_i64(2);
+        let m99 = m66 * T::from_i64(2);
+        let m100 = -m99;
+        let m101 = m65 * T::from_i64(2);
+        let m102 = m60 * T::from_i64(2);
+        let m103 = -m85;
+        let m104 = -m88;
+        let m105 = -m92;
+        let m106 = -m93;
+        let m107 = -m101;
+        let m108 = -m102;
+        gx::Prepared::from_entries([m76, m81, m77, m83, m84, m85, m87, m88, m89, m78, m91, m92, m93, m95, m97, m98, m79, m100, m101, m102, m103, m86, m104, m105, m106, m94, m99, m107, m108, m80])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<Even, Even, T, 30> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0]) + x[7].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5]) + x[5].scale(m[6]) + x[6].scale(m[7])).0, (x[1].scale(m[8]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11]) + x[5].scale(m[12]) + x[6].scale(m[13])).0, (x[1].scale(m[14]) + x[2].scale(m[15]) + x[3].scale(m[16]) + x[4].scale(m[17]) + x[5].scale(m[18]) + x[6].scale(m[19])).0, (x[1].scale(m[20]) + x[2].scale(m[21]) + x[3].scale(m[22]) + x[4].scale(m[2]) + x[5].scale(m[3]) + x[6].scale(m[4])).0, (x[1].scale(m[23]) + x[2].scale(m[24]) + x[3].scale(m[25]) + x[4].scale(m[8]) + x[5].scale(m[9]) + x[6].scale(m[10])).0, (x[1].scale(m[26]) + x[2].scale(m[27]) + x[3].scale(m[28]) + x[4].scale(m[14]) + x[5].scale(m[15]) + x[6].scale(m[16])).0, (x[0].scale(m[29]) + x[7].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Even, T, 30>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Even, T, 30>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]], [T::zero(), m[2], m[3], m[4], m[5], m[6], m[7], T::zero()], [T::zero(), m[8], m[9], m[10], m[11], m[12], m[13], T::zero()], [T::zero(), m[14], m[15], m[16], m[17], m[18], m[19], T::zero()], [T::zero(), m[20], m[21], m[22], m[2], m[3], m[4], T::zero()], [T::zero(), m[23], m[24], m[25], m[8], m[9], m[10], T::zero()], [T::zero(), m[26], m[27], m[28], m[14], m[15], m[16], T::zero()], [m[29], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -19167,43 +21099,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Even<(), 
         let t106 = xv[5] * t65;
         let t107 = xv[6] * t68;
         let t108 = t74 + t77;
-        let t109 = t108 - t73;
-        let t110 = t109 - t76;
+        let t109 = t73 + t76;
+        let t110 = t108 - t109;
         let t111 = t110 * T::from_i64(2);
         let t112 = t75 * T::from_i64(4);
         let t113 = t72 + t111;
         let t114 = t113 - t112;
         let t115 = t78 + t81;
-        let t116 = t115 - t80;
-        let t117 = t116 - t83;
+        let t116 = t80 + t83;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t82 * T::from_i64(4);
         let t120 = t79 + t118;
         let t121 = t120 - t119;
         let t122 = t85 + t88;
-        let t123 = t122 - t84;
-        let t124 = t123 - t87;
+        let t123 = t84 + t87;
+        let t124 = t122 - t123;
         let t125 = t124 * T::from_i64(2);
         let t126 = t89 * T::from_i64(4);
         let t127 = t86 + t125;
         let t128 = t127 - t126;
         let t129 = t91 + t95;
-        let t130 = t129 - t92;
-        let t131 = t130 - t94;
+        let t130 = t92 + t94;
+        let t131 = t129 - t130;
         let t132 = t131 * T::from_i64(2);
         let t133 = t90 * T::from_i64(4);
         let t134 = t93 + t132;
         let t135 = t133 + t134;
         let t136 = t98 + t99;
-        let t137 = t136 - t96;
-        let t138 = t137 - t101;
+        let t137 = t96 + t101;
+        let t138 = t136 - t137;
         let t139 = t138 * T::from_i64(2);
         let t140 = t97 * T::from_i64(4);
         let t141 = t100 + t139;
         let t142 = t140 + t141;
         let t143 = t102 + t106;
-        let t144 = t143 - t103;
-        let t145 = t144 - t105;
+        let t144 = t103 + t105;
+        let t145 = t143 - t144;
         let t146 = t145 * T::from_i64(2);
         let t147 = t104 * T::from_i64(4);
         let t148 = t107 + t146;
@@ -19316,15 +21248,142 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Even<(), 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Even, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Even, T, 27> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[0] * v[4];
+        let m4 = v[0] * v[5];
+        let m5 = v[0] * v[6];
+        let m6 = v[1] * v[1];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[4];
+        let m10 = v[1] * v[5];
+        let m11 = v[1] * v[6];
+        let m12 = v[1] * v[7];
+        let m13 = v[2] * v[2];
+        let m14 = v[2] * v[3];
+        let m15 = v[2] * v[4];
+        let m16 = v[2] * v[5];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[3];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = v[4] * v[4];
+        let m25 = v[4] * v[5];
+        let m26 = v[4] * v[6];
+        let m27 = v[4] * v[7];
+        let m28 = v[5] * v[5];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[6];
+        let m32 = v[6] * v[7];
+        let m33 = m0 + m27;
+        let m34 = m1 + m30;
+        let m35 = m2 + m32;
+        let m36 = m3 - m12;
+        let m37 = m4 - m18;
+        let m38 = m5 - m23;
+        let m39 = m6 - m24;
+        let m40 = m7 - m25;
+        let m41 = m8 - m26;
+        let m42 = m10 + m15;
+        let m43 = m11 + m20;
+        let m44 = m13 - m28;
+        let m45 = m14 - m29;
+        let m46 = m17 + m21;
+        let m47 = m19 - m31;
+        let m48 = m9 + m16;
+        let m49 = m9 + m22;
+        let m50 = m16 + m22;
+        let m51 = m33 - m46;
+        let m52 = m33 + m46;
+        let m53 = m34 - m43;
+        let m54 = m34 + m43;
+        let m55 = m35 - m42;
+        let m56 = m35 + m42;
+        let m57 = m36 - m45;
+        let m58 = m36 + m45;
+        let m59 = m37 - m41;
+        let m60 = m37 + m41;
+        let m61 = m38 - m40;
+        let m62 = m38 + m40;
+        let m63 = m39 + m44;
+        let m64 = m39 + m47;
+        let m65 = m44 + m47;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m66 + T::from_i64(1);
+        let m68 = m62 * T::from_i64(2);
+        let m69 = -m68;
+        let m70 = m59 * T::from_i64(2);
+        let m71 = m50 * T::from_i64(4);
+        let m72 = -m71;
+        let m73 = m55 * T::from_i64(2);
+        let m74 = -m73;
+        let m75 = m54 * T::from_i64(2);
+        let m76 = m61 * T::from_i64(2);
+        let m77 = m64 * T::from_i64(2);
+        let m78 = m77 + T::from_i64(1);
+        let m79 = m58 * T::from_i64(2);
+        let m80 = -m79;
+        let m81 = m56 * T::from_i64(2);
+        let m82 = m49 * T::from_i64(4);
+        let m83 = -m82;
+        let m84 = m51 * T::from_i64(2);
+        let m85 = -m84;
+        let m86 = m60 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m57 * T::from_i64(2);
+        let m89 = m63 * T::from_i64(2);
+        let m90 = m89 + T::from_i64(1);
+        let m91 = m53 * T::from_i64(2);
+        let m92 = -m91;
+        let m93 = m52 * T::from_i64(2);
+        let m94 = m48 * T::from_i64(4);
+        let m95 = -m94;
+        let m96 = -m75;
+        let m97 = -m81;
+        let m98 = -m93;
+        gx::Prepared::from_entries([m67, m69, m70, m72, m74, m75, m76, m78, m80, m81, m83, m85, m87, m88, m90, m92, m93, m95, m71, m73, m96, m97, m82, m84, m91, m98, m94])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<gx::Unit<Even>, Even, T, 27> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0] + x[7].scale(T::from_i64(0))).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14]) + x[4].scale(m[15]) + x[5].scale(m[16]) + x[6].scale(m[17])).0, (x[1].scale(m[18]) + x[2].scale(m[19]) + x[3].scale(m[20]) + x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[1].scale(m[24]) + x[2].scale(m[25]) + x[3].scale(m[26]) + x[4].scale(m[12]) + x[5].scale(m[13]) + x[6].scale(m[14])).0, (x[0].scale(T::from_i64(0)) + x[7]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Even, T, 27>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Even, T, 27>) -> Self {
+        let m = p.m;
+        Even { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(0)], [T::zero(), m[0], m[1], m[2], m[3], m[4], m[5], T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], m[13], m[14], m[15], m[16], m[17], T::zero()], [T::zero(), m[18], m[19], m[20], m[0], m[1], m[2], T::zero()], [T::zero(), m[21], m[22], m[23], m[6], m[7], m[8], T::zero()], [T::zero(), m[24], m[25], m[26], m[12], m[13], m[14], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Even<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -19558,15 +21617,132 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Even<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Even<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Even<(), T> {
+    type Output = gx::Prepared<Even, Odd, T, 22>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Odd, T, 22> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m36 - m47;
+        let m53 = m36 + m47;
+        let m54 = m37 - m45;
+        let m55 = m37 + m45;
+        let m56 = m38 - m44;
+        let m57 = m38 + m44;
+        let m58 = m39 - m46;
+        let m59 = m39 + m46;
+        let m60 = m40 - m43;
+        let m61 = m40 + m43;
+        let m62 = m41 - m42;
+        let m63 = m41 + m42;
+        let m64 = m48 - m50;
+        let m65 = m48 + m50;
+        let m66 = m49 - m51;
+        let m67 = m49 + m51;
+        let m68 = m53 * T::from_i64(2);
+        let m69 = m54 * T::from_i64(2);
+        let m70 = m57 * T::from_i64(2);
+        let m71 = m52 * T::from_i64(2);
+        let m72 = m62 * T::from_i64(2);
+        let m73 = -m72;
+        let m74 = m61 * T::from_i64(2);
+        let m75 = m55 * T::from_i64(2);
+        let m76 = m63 * T::from_i64(2);
+        let m77 = m58 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m56 * T::from_i64(2);
+        let m80 = m60 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m59 * T::from_i64(2);
+        let m83 = -m68;
+        let m84 = -m69;
+        let m85 = -m70;
+        let m86 = -m71;
+        let m87 = -m75;
+        let m88 = -m79;
+        gx::Prepared::from_entries([m67, m68, m69, m70, m71, m66, m73, m74, m75, m76, m65, m78, m79, m81, m82, m64, m83, m84, m85, m86, m87, m88])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Even, Odd, T, 22> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[4].scale(m[0]) + x[5].scale(m[16]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[19]) + x[5].scale(m[5]) + x[6].scale(m[6]) + x[7].scale(m[7])).0, (x[4].scale(m[20]) + x[5].scale(m[9]) + x[6].scale(m[10]) + x[7].scale(m[11])).0, (x[4].scale(m[21]) + x[5].scale(m[13]) + x[6].scale(m[14]) + x[7].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Odd, T, 22>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Odd, T, 22>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[16], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[19], m[5], m[6], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), m[20], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -19800,15 +21976,132 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Even<(), T
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Odd, T, 22>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Odd, T, 22> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[5];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m7;
+        let m33 = m1 + m4;
+        let m34 = m2 + m5;
+        let m35 = m3 + m6;
+        let m36 = m8 - m28;
+        let m37 = m9 - m30;
+        let m38 = m10 - m31;
+        let m39 = m11 + m18;
+        let m40 = m12 + m22;
+        let m41 = m13 + m25;
+        let m42 = m14 + m26;
+        let m43 = m15 + m27;
+        let m44 = m16 - m20;
+        let m45 = m17 - m23;
+        let m46 = m19 + m29;
+        let m47 = m21 - m24;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m36 - m47;
+        let m53 = m36 + m47;
+        let m54 = m37 - m45;
+        let m55 = m37 + m45;
+        let m56 = m38 - m44;
+        let m57 = m38 + m44;
+        let m58 = m39 - m46;
+        let m59 = m39 + m46;
+        let m60 = m40 - m43;
+        let m61 = m40 + m43;
+        let m62 = m41 - m42;
+        let m63 = m41 + m42;
+        let m64 = m48 - m50;
+        let m65 = m48 + m50;
+        let m66 = m49 - m51;
+        let m67 = m49 + m51;
+        let m68 = m53 * T::from_i64(2);
+        let m69 = m54 * T::from_i64(2);
+        let m70 = m57 * T::from_i64(2);
+        let m71 = m52 * T::from_i64(2);
+        let m72 = m62 * T::from_i64(2);
+        let m73 = -m72;
+        let m74 = m61 * T::from_i64(2);
+        let m75 = m55 * T::from_i64(2);
+        let m76 = m63 * T::from_i64(2);
+        let m77 = m58 * T::from_i64(2);
+        let m78 = -m77;
+        let m79 = m56 * T::from_i64(2);
+        let m80 = m60 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m59 * T::from_i64(2);
+        let m83 = -m68;
+        let m84 = -m69;
+        let m85 = -m70;
+        let m86 = -m71;
+        let m87 = -m75;
+        let m88 = -m79;
+        gx::Prepared::from_entries([m67, m68, m69, m70, m71, m66, m73, m74, m75, m76, m65, m78, m79, m81, m82, m64, m83, m84, m85, m86, m87, m88])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Even>, Odd, T, 22> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[4].scale(m[0]) + x[5].scale(m[16]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[4].scale(m[19]) + x[5].scale(m[5]) + x[6].scale(m[6]) + x[7].scale(m[7])).0, (x[4].scale(m[20]) + x[5].scale(m[9]) + x[6].scale(m[10]) + x[7].scale(m[11])).0, (x[4].scale(m[21]) + x[5].scale(m[13]) + x[6].scale(m[14]) + x[7].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Odd, T, 22>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Odd, T, 22>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[16], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), m[19], m[5], m[6], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), m[20], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -19885,36 +22178,36 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T>
         let t70 = t29 - t30;
         let t71 = t29 + t30;
         let t72 = t36 + t41;
-        let t73 = t42 + t72;
-        let t74 = t73 - t39;
+        let t73 = t42 - t39;
+        let t74 = t72 + t73;
         let t75 = t57 + t63;
         let t76 = t37 + t39;
-        let t77 = t41 + t76;
-        let t78 = t43 + t77;
+        let t77 = t41 + t43;
+        let t78 = t76 + t77;
         let t79 = t45 - t69;
         let t80 = t46 + t66;
         let t81 = t49 - t61;
         let t82 = t44 + t68;
         let t83 = t37 + t40;
-        let t84 = t83 - t39;
-        let t85 = t84 - t42;
+        let t84 = t39 + t42;
+        let t85 = t83 - t84;
         let t86 = t54 + t70;
         let t87 = t53 + t65;
         let t88 = t47 - t67;
         let t89 = t55 + t71;
         let t90 = t36 + t38;
-        let t91 = t90 - t40;
-        let t92 = t91 - t42;
+        let t91 = t40 + t42;
+        let t92 = t90 - t91;
         let t93 = t51 - t59;
         let t94 = t48 + t60;
         let t95 = t52 + t64;
         let t96 = t51 + t59;
         let t97 = t36 + t43;
-        let t98 = t97 - t38;
-        let t99 = t98 - t41;
+        let t98 = t38 + t41;
+        let t99 = t97 - t98;
         let t100 = t36 + t39;
-        let t101 = t40 + t100;
-        let t102 = t101 - t43;
+        let t101 = t40 - t43;
+        let t102 = t100 + t101;
         let t103 = t55 - t71;
         let t104 = t52 - t64;
         let t105 = t57 - t63;
@@ -19922,8 +22215,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T>
         let t107 = t47 + t67;
         let t108 = t54 - t70;
         let t109 = t37 - t38;
-        let t110 = t109 - t40;
-        let t111 = t110 - t43;
+        let t110 = t40 + t43;
+        let t111 = t109 - t110;
         let t112 = t50 + t58;
         let t113 = t49 + t61;
         let t114 = t56 + t62;
@@ -19931,8 +22224,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T>
         let t116 = t53 - t65;
         let t117 = t50 - t58;
         let t118 = t37 + t38;
-        let t119 = t42 + t118;
-        let t120 = t119 - t41;
+        let t119 = t42 - t41;
+        let t120 = t118 + t119;
         let t121 = t46 - t66;
         let t122 = t45 + t69;
         let t123 = t56 - t62;
@@ -20028,38 +22321,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T>
         let t213 = t141 + t212;
         let t214 = t144 + t145;
         let t215 = t147 + t214;
-        let t216 = t215 - t143;
-        let t217 = t216 - t146;
+        let t216 = t143 + t146;
+        let t217 = t215 - t216;
         let t218 = t217 * T::from_i64(2);
         let t219 = t142 + t218;
         let t220 = t148 + t151;
         let t221 = t152 + t220;
-        let t222 = t221 - t150;
-        let t223 = t222 - t153;
+        let t222 = t150 + t153;
+        let t223 = t221 - t222;
         let t224 = t223 * T::from_i64(2);
         let t225 = t149 + t224;
         let t226 = t155 + t158;
         let t227 = t159 + t226;
-        let t228 = t227 - t154;
-        let t229 = t228 - t157;
+        let t228 = t154 + t157;
+        let t229 = t227 - t228;
         let t230 = t229 * T::from_i64(2);
         let t231 = t156 + t230;
         let t232 = t161 + t165;
         let t233 = t232 - t160;
-        let t234 = t233 - t162;
-        let t235 = t234 - t164;
+        let t234 = t162 + t164;
+        let t235 = t233 - t234;
         let t236 = t235 * T::from_i64(2);
         let t237 = t163 + t236;
         let t238 = t168 + t169;
         let t239 = t238 - t166;
-        let t240 = t239 - t167;
-        let t241 = t240 - t171;
+        let t240 = t167 + t171;
+        let t241 = t239 - t240;
         let t242 = t241 * T::from_i64(2);
         let t243 = t170 + t242;
         let t244 = t172 + t176;
         let t245 = t244 - t173;
-        let t246 = t245 - t174;
-        let t247 = t246 - t175;
+        let t246 = t174 + t175;
+        let t247 = t245 - t246;
         let t248 = t247 * T::from_i64(2);
         let t249 = t177 + t248;
         let t250 = t179 + t180;
@@ -20263,15 +22556,217 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Even<(), T>
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Even<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Even<(), T> {
+    type Output = gx::Prepared<Even, Multivector, T, 52>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Multivector, T, 52> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[0] * v[7];
+        let m15 = v[1] * v[2];
+        let m16 = v[1] * v[3];
+        let m17 = v[1] * v[4];
+        let m18 = v[1] * v[5];
+        let m19 = v[1] * v[6];
+        let m20 = v[1] * v[7];
+        let m21 = v[2] * v[3];
+        let m22 = v[2] * v[4];
+        let m23 = v[2] * v[5];
+        let m24 = v[2] * v[6];
+        let m25 = v[2] * v[7];
+        let m26 = v[3] * v[4];
+        let m27 = v[3] * v[5];
+        let m28 = v[3] * v[6];
+        let m29 = v[3] * v[7];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m1;
+        let m37 = m0 + m1;
+        let m38 = m2 - m3;
+        let m39 = m2 + m3;
+        let m40 = m4 - m5;
+        let m41 = m4 + m5;
+        let m42 = m6 - m7;
+        let m43 = m6 + m7;
+        let m44 = m8 - m24;
+        let m45 = m8 + m24;
+        let m46 = m9 - m19;
+        let m47 = m9 + m19;
+        let m48 = m10 - m18;
+        let m49 = m10 + m18;
+        let m50 = m11 - m20;
+        let m51 = m11 + m20;
+        let m52 = m12 - m16;
+        let m53 = m12 + m16;
+        let m54 = m13 - m15;
+        let m55 = m13 + m15;
+        let m56 = m14 - m17;
+        let m57 = m14 + m17;
+        let m58 = m21 - m33;
+        let m59 = m21 + m33;
+        let m60 = m22 - m35;
+        let m61 = m22 + m35;
+        let m62 = m23 - m28;
+        let m63 = m23 + m28;
+        let m64 = m25 - m31;
+        let m65 = m25 + m31;
+        let m66 = m26 - m34;
+        let m67 = m26 + m34;
+        let m68 = m27 - m32;
+        let m69 = m27 + m32;
+        let m70 = m29 - m30;
+        let m71 = m29 + m30;
+        let m72 = m36 - m38;
+        let m73 = m36 + m38;
+        let m74 = m36 - m39;
+        let m75 = m36 + m39;
+        let m76 = m37 - m38;
+        let m77 = m37 + m38;
+        let m78 = m37 - m39;
+        let m79 = m37 + m39;
+        let m80 = m40 - m42;
+        let m81 = m40 + m42;
+        let m82 = m40 - m43;
+        let m83 = m40 + m43;
+        let m84 = m41 - m42;
+        let m85 = m41 + m42;
+        let m86 = m41 - m43;
+        let m87 = m41 + m43;
+        let m88 = m44 - m68;
+        let m89 = m44 + m68;
+        let m90 = m45 - m69;
+        let m91 = m45 + m69;
+        let m92 = m46 - m66;
+        let m93 = m46 + m66;
+        let m94 = m47 - m67;
+        let m95 = m47 + m67;
+        let m96 = m48 - m60;
+        let m97 = m48 + m60;
+        let m98 = m49 - m61;
+        let m99 = m49 + m61;
+        let m100 = m50 - m58;
+        let m101 = m50 + m58;
+        let m102 = m51 - m59;
+        let m103 = m51 + m59;
+        let m104 = m52 - m64;
+        let m105 = m52 + m64;
+        let m106 = m53 - m65;
+        let m107 = m53 + m65;
+        let m108 = m54 - m70;
+        let m109 = m54 + m70;
+        let m110 = m55 - m71;
+        let m111 = m55 + m71;
+        let m112 = m56 - m62;
+        let m113 = m56 + m62;
+        let m114 = m57 - m63;
+        let m115 = m57 + m63;
+        let m116 = m72 - m86;
+        let m117 = m73 - m81;
+        let m118 = m74 + m85;
+        let m119 = m75 + m82;
+        let m120 = m76 - m83;
+        let m121 = m77 - m84;
+        let m122 = m78 + m80;
+        let m123 = m79 + m87;
+        let m124 = m115 * T::from_i64(2);
+        let m125 = -m124;
+        let m126 = m90 * T::from_i64(2);
+        let m127 = m93 * T::from_i64(2);
+        let m128 = m98 * T::from_i64(2);
+        let m129 = m89 * T::from_i64(2);
+        let m130 = m109 * T::from_i64(2);
+        let m131 = -m130;
+        let m132 = m107 * T::from_i64(2);
+        let m133 = m94 * T::from_i64(2);
+        let m134 = m111 * T::from_i64(2);
+        let m135 = m102 * T::from_i64(2);
+        let m136 = -m135;
+        let m137 = m97 * T::from_i64(2);
+        let m138 = m105 * T::from_i64(2);
+        let m139 = -m138;
+        let m140 = m103 * T::from_i64(2);
+        let m141 = m110 * T::from_i64(2);
+        let m142 = -m141;
+        let m143 = m104 * T::from_i64(2);
+        let m144 = m114 * T::from_i64(2);
+        let m145 = m96 * T::from_i64(2);
+        let m146 = -m145;
+        let m147 = m95 * T::from_i64(2);
+        let m148 = m108 * T::from_i64(2);
+        let m149 = m101 * T::from_i64(2);
+        let m150 = -m149;
+        let m151 = m99 * T::from_i64(2);
+        let m152 = m113 * T::from_i64(2);
+        let m153 = m88 * T::from_i64(2);
+        let m154 = -m153;
+        let m155 = m106 * T::from_i64(2);
+        let m156 = -m155;
+        let m157 = m100 * T::from_i64(2);
+        let m158 = m92 * T::from_i64(2);
+        let m159 = -m158;
+        let m160 = m91 * T::from_i64(2);
+        let m161 = m112 * T::from_i64(2);
+        let m162 = -m144;
+        let m163 = -m147;
+        let m164 = -m151;
+        let m165 = -m152;
+        let m166 = -m160;
+        let m167 = -m161;
+        let m168 = -m126;
+        let m169 = -m127;
+        let m170 = -m128;
+        let m171 = -m129;
+        let m172 = -m133;
+        let m173 = -m137;
+        gx::Prepared::from_entries([m118, m125, m123, m126, m127, m128, m129, m122, m131, m132, m133, m134, m117, m136, m137, m139, m140, m116, m119, m142, m143, m144, m146, m147, m148, m120, m150, m151, m152, m154, m156, m157, m121, m159, m160, m161, m162, m145, m163, m164, m165, m153, m158, m166, m167, m168, m169, m170, m171, m172, m173, m124])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Even, Multivector, T, 52> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0]) + x[15].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13])).0, (x[1].scale(m[14]) + x[2].scale(m[15]) + x[3].scale(m[16]) + x[4].scale(m[17])).0, (x[5].scale(m[18]) + x[6].scale(m[19]) + x[7].scale(m[20]) + x[8].scale(m[21]) + x[9].scale(m[22]) + x[10].scale(m[23])).0, (x[5].scale(m[24]) + x[6].scale(m[25]) + x[7].scale(m[26]) + x[8].scale(m[27]) + x[9].scale(m[28]) + x[10].scale(m[29])).0, (x[5].scale(m[30]) + x[6].scale(m[31]) + x[7].scale(m[32]) + x[8].scale(m[33]) + x[9].scale(m[34]) + x[10].scale(m[35])).0, (x[5].scale(m[36]) + x[6].scale(m[37]) + x[7].scale(m[38]) + x[8].scale(m[18]) + x[9].scale(m[19]) + x[10].scale(m[20])).0, (x[5].scale(m[39]) + x[6].scale(m[40]) + x[7].scale(m[41]) + x[8].scale(m[24]) + x[9].scale(m[25]) + x[10].scale(m[26])).0, (x[5].scale(m[42]) + x[6].scale(m[43]) + x[7].scale(m[44]) + x[8].scale(m[30]) + x[9].scale(m[31]) + x[10].scale(m[32])).0, (x[11].scale(m[2]) + x[12].scale(m[45]) + x[13].scale(m[46]) + x[14].scale(m[47])).0, (x[11].scale(m[48]) + x[12].scale(m[7]) + x[13].scale(m[8]) + x[14].scale(m[9])).0, (x[11].scale(m[49]) + x[12].scale(m[11]) + x[13].scale(m[12]) + x[14].scale(m[13])).0, (x[11].scale(m[50]) + x[12].scale(m[15]) + x[13].scale(m[16]) + x[14].scale(m[17])).0, (x[0].scale(m[51]) + x[15].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Multivector, T, 52>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Multivector, T, 52>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]], [T::zero(), m[2], m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[14], m[15], m[16], m[17], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[19], m[20], m[21], m[22], m[23], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[24], m[25], m[26], m[27], m[28], m[29], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[30], m[31], m[32], m[33], m[34], m[35], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[36], m[37], m[38], m[18], m[19], m[20], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[39], m[40], m[41], m[24], m[25], m[26], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[42], m[43], m[44], m[30], m[31], m[32], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[45], m[46], m[47], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[48], m[7], m[8], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[49], m[11], m[12], m[13], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[50], m[15], m[16], m[17], T::zero()], [m[51], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -20475,43 +22970,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ev
         let t197 = t196 * T::from_i64(2);
         let t198 = t130 + t197;
         let t199 = t133 + t136;
-        let t200 = t199 - t132;
-        let t201 = t200 - t135;
+        let t200 = t132 + t135;
+        let t201 = t199 - t200;
         let t202 = t201 * T::from_i64(2);
         let t203 = t134 * T::from_i64(4);
         let t204 = t131 + t202;
         let t205 = t204 - t203;
         let t206 = t137 + t140;
-        let t207 = t206 - t139;
-        let t208 = t207 - t142;
+        let t207 = t139 + t142;
+        let t208 = t206 - t207;
         let t209 = t208 * T::from_i64(2);
         let t210 = t141 * T::from_i64(4);
         let t211 = t138 + t209;
         let t212 = t211 - t210;
         let t213 = t144 + t147;
-        let t214 = t213 - t143;
-        let t215 = t214 - t146;
+        let t214 = t143 + t146;
+        let t215 = t213 - t214;
         let t216 = t215 * T::from_i64(2);
         let t217 = t148 * T::from_i64(4);
         let t218 = t145 + t216;
         let t219 = t218 - t217;
         let t220 = t150 + t154;
-        let t221 = t220 - t151;
-        let t222 = t221 - t153;
+        let t221 = t151 + t153;
+        let t222 = t220 - t221;
         let t223 = t222 * T::from_i64(2);
         let t224 = t149 * T::from_i64(4);
         let t225 = t152 + t223;
         let t226 = t224 + t225;
         let t227 = t157 + t158;
-        let t228 = t227 - t155;
-        let t229 = t228 - t160;
+        let t228 = t155 + t160;
+        let t229 = t227 - t228;
         let t230 = t229 * T::from_i64(2);
         let t231 = t156 * T::from_i64(4);
         let t232 = t159 + t230;
         let t233 = t231 + t232;
         let t234 = t161 + t165;
-        let t235 = t234 - t162;
-        let t236 = t235 - t164;
+        let t235 = t162 + t164;
+        let t236 = t234 - t235;
         let t237 = t236 * T::from_i64(2);
         let t238 = t163 * T::from_i64(4);
         let t239 = t166 + t237;
@@ -20704,15 +23199,206 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ev
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Even<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Multivector, T, 49>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Multivector, T, 49> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[0] * v[4];
+        let m4 = v[0] * v[5];
+        let m5 = v[0] * v[6];
+        let m6 = v[1] * v[1];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[5];
+        let m10 = v[1] * v[6];
+        let m11 = v[1] * v[7];
+        let m12 = v[2] * v[2];
+        let m13 = v[2] * v[3];
+        let m14 = v[2] * v[4];
+        let m15 = v[2] * v[6];
+        let m16 = v[2] * v[7];
+        let m17 = v[3] * v[3];
+        let m18 = v[3] * v[4];
+        let m19 = v[3] * v[5];
+        let m20 = v[3] * v[7];
+        let m21 = v[4] * v[4];
+        let m22 = v[4] * v[5];
+        let m23 = v[4] * v[6];
+        let m24 = v[4] * v[7];
+        let m25 = v[5] * v[5];
+        let m26 = v[5] * v[6];
+        let m27 = v[5] * v[7];
+        let m28 = v[6] * v[6];
+        let m29 = v[6] * v[7];
+        let m30 = v[7] * v[7];
+        let m31 = v[1] * v[4];
+        let m32 = v[2] * v[5];
+        let m33 = v[3] * v[6];
+        let m34 = m0 - m15;
+        let m35 = m0 + m15;
+        let m36 = m1 - m10;
+        let m37 = m1 + m10;
+        let m38 = m2 - m9;
+        let m39 = m2 + m9;
+        let m40 = m3 - m11;
+        let m41 = m3 + m11;
+        let m42 = m4 - m8;
+        let m43 = m4 + m8;
+        let m44 = m5 - m7;
+        let m45 = m5 + m7;
+        let m46 = m6 + m12;
+        let m47 = m6 - m28;
+        let m48 = m12 - m28;
+        let m49 = m13 - m26;
+        let m50 = m13 + m26;
+        let m51 = m14 - m29;
+        let m52 = m14 + m29;
+        let m53 = m16 - m23;
+        let m54 = m16 + m23;
+        let m55 = m17 - m21;
+        let m56 = m18 - m27;
+        let m57 = m18 + m27;
+        let m58 = m19 - m24;
+        let m59 = m19 + m24;
+        let m60 = m20 - m22;
+        let m61 = m20 + m22;
+        let m62 = m25 - m30;
+        let m63 = m17 - m25;
+        let m64 = m17 + m30;
+        let m65 = m21 + m25;
+        let m66 = m21 - m30;
+        let m67 = m31 + m32;
+        let m68 = m31 + m33;
+        let m69 = m32 + m33;
+        let m70 = m34 - m58;
+        let m71 = m34 + m58;
+        let m72 = m35 - m59;
+        let m73 = m35 + m59;
+        let m74 = m36 - m56;
+        let m75 = m36 + m56;
+        let m76 = m37 - m57;
+        let m77 = m37 + m57;
+        let m78 = m38 - m51;
+        let m79 = m38 + m51;
+        let m80 = m39 - m52;
+        let m81 = m39 + m52;
+        let m82 = m40 - m49;
+        let m83 = m40 + m49;
+        let m84 = m41 - m50;
+        let m85 = m41 + m50;
+        let m86 = m42 - m53;
+        let m87 = m42 + m53;
+        let m88 = m43 - m54;
+        let m89 = m43 + m54;
+        let m90 = m44 - m60;
+        let m91 = m44 + m60;
+        let m92 = m45 - m61;
+        let m93 = m45 + m61;
+        let m94 = m46 + m64;
+        let m95 = m46 - m65;
+        let m96 = m47 + m55;
+        let m97 = m47 - m62;
+        let m98 = m48 + m63;
+        let m99 = m48 - m66;
+        let m100 = m55 - m62;
+        let m101 = m94 * T::from_i64(2);
+        let m102 = m101 + T::from_i64(1);
+        let m103 = m72 * T::from_i64(2);
+        let m104 = m75 * T::from_i64(2);
+        let m105 = m80 * T::from_i64(2);
+        let m106 = m71 * T::from_i64(2);
+        let m107 = m97 * T::from_i64(2);
+        let m108 = m107 + T::from_i64(1);
+        let m109 = m91 * T::from_i64(2);
+        let m110 = -m109;
+        let m111 = m89 * T::from_i64(2);
+        let m112 = m76 * T::from_i64(2);
+        let m113 = m93 * T::from_i64(2);
+        let m114 = m99 * T::from_i64(2);
+        let m115 = m114 + T::from_i64(1);
+        let m116 = m84 * T::from_i64(2);
+        let m117 = -m116;
+        let m118 = m79 * T::from_i64(2);
+        let m119 = m87 * T::from_i64(2);
+        let m120 = -m119;
+        let m121 = m85 * T::from_i64(2);
+        let m122 = m100 * T::from_i64(2);
+        let m123 = m122 + T::from_i64(1);
+        let m124 = m98 * T::from_i64(2);
+        let m125 = m124 + T::from_i64(1);
+        let m126 = m92 * T::from_i64(2);
+        let m127 = -m126;
+        let m128 = m86 * T::from_i64(2);
+        let m129 = m69 * T::from_i64(4);
+        let m130 = -m129;
+        let m131 = m78 * T::from_i64(2);
+        let m132 = -m131;
+        let m133 = m77 * T::from_i64(2);
+        let m134 = m90 * T::from_i64(2);
+        let m135 = m96 * T::from_i64(2);
+        let m136 = m135 + T::from_i64(1);
+        let m137 = m83 * T::from_i64(2);
+        let m138 = -m137;
+        let m139 = m81 * T::from_i64(2);
+        let m140 = m68 * T::from_i64(4);
+        let m141 = -m140;
+        let m142 = m70 * T::from_i64(2);
+        let m143 = -m142;
+        let m144 = m88 * T::from_i64(2);
+        let m145 = -m144;
+        let m146 = m82 * T::from_i64(2);
+        let m147 = m95 * T::from_i64(2);
+        let m148 = m147 + T::from_i64(1);
+        let m149 = m74 * T::from_i64(2);
+        let m150 = -m149;
+        let m151 = m73 * T::from_i64(2);
+        let m152 = m67 * T::from_i64(4);
+        let m153 = -m152;
+        let m154 = -m133;
+        let m155 = -m139;
+        let m156 = -m151;
+        let m157 = -m103;
+        let m158 = -m104;
+        let m159 = -m105;
+        let m160 = -m106;
+        let m161 = -m112;
+        let m162 = -m118;
+        gx::Prepared::from_entries([m102, m103, m104, m105, m106, m108, m110, m111, m112, m113, m115, m117, m118, m120, m121, m123, m125, m127, m128, m130, m132, m133, m134, m136, m138, m139, m141, m143, m145, m146, m148, m150, m151, m153, m129, m131, m154, m155, m140, m142, m149, m156, m152, m157, m158, m159, m160, m161, m162])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Even>, Multivector, T, 49> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0] + x[15].scale(T::from_i64(0))).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[1].scale(m[8]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14]) + x[4].scale(m[15])).0, (x[5].scale(m[16]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[19]) + x[9].scale(m[20]) + x[10].scale(m[21])).0, (x[5].scale(m[22]) + x[6].scale(m[23]) + x[7].scale(m[24]) + x[8].scale(m[25]) + x[9].scale(m[26]) + x[10].scale(m[27])).0, (x[5].scale(m[28]) + x[6].scale(m[29]) + x[7].scale(m[30]) + x[8].scale(m[31]) + x[9].scale(m[32]) + x[10].scale(m[33])).0, (x[5].scale(m[34]) + x[6].scale(m[35]) + x[7].scale(m[36]) + x[8].scale(m[16]) + x[9].scale(m[17]) + x[10].scale(m[18])).0, (x[5].scale(m[37]) + x[6].scale(m[38]) + x[7].scale(m[39]) + x[8].scale(m[22]) + x[9].scale(m[23]) + x[10].scale(m[24])).0, (x[5].scale(m[40]) + x[6].scale(m[41]) + x[7].scale(m[42]) + x[8].scale(m[28]) + x[9].scale(m[29]) + x[10].scale(m[30])).0, (x[11].scale(m[0]) + x[12].scale(m[43]) + x[13].scale(m[44]) + x[14].scale(m[45])).0, (x[11].scale(m[46]) + x[12].scale(m[5]) + x[13].scale(m[6]) + x[14].scale(m[7])).0, (x[11].scale(m[47]) + x[12].scale(m[9]) + x[13].scale(m[10]) + x[14].scale(m[11])).0, (x[11].scale(m[48]) + x[12].scale(m[13]) + x[13].scale(m[14]) + x[14].scale(m[15])).0, (x[0].scale(T::from_i64(0)) + x[15]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Multivector, T, 49>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Multivector, T, 49>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(0)], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[17], m[18], m[19], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[22], m[23], m[24], m[25], m[26], m[27], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[28], m[29], m[30], m[31], m[32], m[33], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[34], m[35], m[36], m[16], m[17], m[18], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[37], m[38], m[39], m[22], m[23], m[24], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[40], m[41], m[42], m[28], m[29], m[30], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[43], m[44], m[45], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[46], m[5], m[6], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[47], m[9], m[10], m[11], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[48], m[13], m[14], m[15], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -20729,15 +23415,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
         let t10 = v[2] * v[6];
         let t11 = v[3] * v[7];
         let t12 = t0 + t5;
-        let t13 = t6 + t12;
-        let t14 = t7 + t13;
-        let t15 = t14 - t1;
-        let t16 = t15 - t2;
-        let t17 = t16 - t3;
-        let t18 = t17 - t4;
+        let t13 = t6 + t7;
+        let t14 = t12 + t13;
+        let t15 = t1 + t2;
+        let t16 = t3 + t4;
+        let t17 = t15 + t16;
+        let t18 = t14 - t17;
         let t19 = t8 + t9;
-        let t20 = t10 + t19;
-        let t21 = t11 + t20;
+        let t20 = t10 + t11;
+        let t21 = t19 + t20;
         let t22 = xv[0] * t18;
         let t23 = xv[0] * t21;
         let t24 = t23 * T::from_i64(2);
@@ -20757,15 +23443,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
         let m10 = v[2] * v[6];
         let m11 = v[3] * v[7];
         let m12 = m0 + m5;
-        let m13 = m6 + m12;
-        let m14 = m7 + m13;
-        let m15 = m14 - m1;
-        let m16 = m15 - m2;
-        let m17 = m16 - m3;
-        let m18 = m17 - m4;
+        let m13 = m6 + m7;
+        let m14 = m12 + m13;
+        let m15 = m1 + m2;
+        let m16 = m3 + m4;
+        let m17 = m15 + m16;
+        let m18 = m14 - m17;
         let m19 = m8 + m9;
-        let m20 = m10 + m19;
-        let m21 = m11 + m20;
+        let m20 = m10 + m11;
+        let m21 = m19 + m20;
         let m22 = m21 * T::from_i64(2);
         let m23 = -m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
@@ -20775,15 +23461,67 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Scalar, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Scalar, T, 2> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[4];
+        let m9 = v[1] * v[5];
+        let m10 = v[2] * v[6];
+        let m11 = v[3] * v[7];
+        let m12 = m0 + m5;
+        let m13 = m6 + m7;
+        let m14 = m12 + m13;
+        let m15 = m1 + m2;
+        let m16 = m3 + m4;
+        let m17 = m15 + m16;
+        let m18 = m14 - m17;
+        let m19 = m8 + m9;
+        let m20 = m10 + m11;
+        let m21 = m19 + m20;
+        let m22 = m21 * T::from_i64(2);
+        let m23 = -m22;
+        gx::Prepared::from_entries([m18, m23])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<Odd, Scalar, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Scalar, T, 2>> for Even<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Scalar, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -20796,15 +23534,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Odd<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Scalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Scalar<S, T>) -> Scalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Scalar, T, 0> {
+        let v = self.into_inner().c;
+        gx::Prepared::from_entries([])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Odd>, Scalar, T, 0> {
+    type Output = Scalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Scalar { c: [(x[0]).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>) -> Self {
+        let m = p.m;
+        Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -21002,15 +23768,128 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for Odd<(), T> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Vector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Vector, T, 16> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m47 - m36;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = -m56;
+        let m58 = m44 - m38;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m36 + m47;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m51 - m49;
+        let m63 = m41 + m42;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = -m64;
+        let m66 = m40 - m43;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 - m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m41 - m42;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m48 + m50;
+        let m73 = -m72;
+        let m74 = m39 + m46;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = -m75;
+        let m77 = m38 + m44;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m40 + m43;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m39 - m46;
+        let m83 = m82 * T::from_i64(2);
+        let m84 = m50 - m48;
+        gx::Prepared::from_entries([m52, m54, m57, m59, m61, m62, m65, m67, m69, m71, m73, m76, m78, m81, m83, m84])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<Odd, Vector, T, 16> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Vector, T, 16>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Vector, T, 16>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -21019,29 +23898,29 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 - t1;
-        let t5 = t4 - t2;
-        let t6 = t5 - t3;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
         let t7 = v[0] * xv[1];
         let t8 = v[1] * xv[0];
         let t9 = v[6] * xv[3];
         let t10 = v[7] * xv[2];
         let t11 = t7 + t10;
-        let t12 = t11 - t8;
-        let t13 = t12 - t9;
+        let t12 = t8 + t9;
+        let t13 = t11 - t12;
         let t14 = v[0] * xv[2];
         let t15 = v[2] * xv[0];
         let t16 = v[5] * xv[3];
         let t17 = v[7] * xv[1];
         let t18 = t14 + t16;
-        let t19 = t18 - t15;
-        let t20 = t19 - t17;
+        let t19 = t15 + t17;
+        let t20 = t18 - t19;
         let t21 = v[0] * xv[3];
         let t22 = v[3] * xv[0];
         let t23 = v[5] * xv[2];
         let t24 = v[6] * xv[1];
         let t25 = t21 + t24;
-        let t26 = t25 - t22;
-        let t27 = t26 - t23;
+        let t26 = t22 + t23;
+        let t27 = t25 - t26;
         let t28 = v[4] * v[4];
         let t29 = t28 + T::from_f64(1.0 / 2.0);
         let t30 = v[4] * xv[0];
@@ -21077,32 +23956,32 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
         let t60 = v[6] * t13;
         let t61 = xv[3] * t29;
         let t62 = t37 + t38;
-        let t63 = t39 + t62;
-        let t64 = t40 + t63;
-        let t65 = t64 - t34;
-        let t66 = t65 - t35;
-        let t67 = t66 - t36;
+        let t63 = t39 + t40;
+        let t64 = t62 + t63;
+        let t65 = t34 + t35;
+        let t66 = t36 + t65;
+        let t67 = t64 - t66;
         let t68 = t67 * T::from_i64(2);
         let t69 = t41 + t42;
-        let t70 = t45 + t69;
-        let t71 = t70 - t43;
-        let t72 = t71 - t44;
-        let t73 = t72 - t46;
-        let t74 = t73 - t47;
+        let t70 = t45 - t43;
+        let t71 = t69 + t70;
+        let t72 = t44 + t46;
+        let t73 = t47 + t72;
+        let t74 = t71 - t73;
         let t75 = t74 * T::from_i64(2);
         let t76 = t49 + t50;
-        let t77 = t53 + t76;
-        let t78 = t77 - t48;
-        let t79 = t78 - t51;
-        let t80 = t79 - t52;
-        let t81 = t80 - t54;
+        let t77 = t53 - t48;
+        let t78 = t76 + t77;
+        let t79 = t51 + t52;
+        let t80 = t54 + t79;
+        let t81 = t78 - t80;
         let t82 = t81 * T::from_i64(2);
         let t83 = t55 + t57;
-        let t84 = t59 + t83;
-        let t85 = t84 - t56;
-        let t86 = t85 - t58;
-        let t87 = t86 - t60;
-        let t88 = t87 - t61;
+        let t84 = t59 - t56;
+        let t85 = t83 + t84;
+        let t86 = t58 + t60;
+        let t87 = t61 + t86;
+        let t88 = t85 - t87;
         let t89 = t88 * T::from_i64(2);
             return Vector { c: gx::slots::from_values::<S, T, 4>([t68, t75, t82, t89]) };
         }
@@ -21198,15 +24077,128 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(),
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Vector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Vector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Vector<S, T>) -> Vector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Vector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Vector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Vector, T, 16> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = m47 - m36;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m37 + m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = -m56;
+        let m58 = m44 - m38;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m36 + m47;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m51 - m49;
+        let m63 = m41 + m42;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = -m64;
+        let m66 = m40 - m43;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 - m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m41 - m42;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m48 + m50;
+        let m73 = -m72;
+        let m74 = m39 + m46;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = -m75;
+        let m77 = m38 + m44;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m40 + m43;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m39 - m46;
+        let m83 = m82 * T::from_i64(2);
+        let m84 = m50 - m48;
+        gx::Prepared::from_entries([m52, m54, m57, m59, m61, m62, m65, m67, m69, m71, m73, m76, m78, m81, m83, m84])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Prepared<gx::Unit<Odd>, Vector, T, 16> {
+    type Output = Vector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Vector<S, T>) -> Vector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Vector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Vector, T, 16>> for Vector<(Vector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 16>) -> Self {
+        let m = p.m;
+        Vector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -21267,13 +24259,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
         let t54 = t36 + t37;
         let t55 = t38 - t39;
         let t56 = t36 + t38;
-        let t57 = t39 + t56;
-        let t58 = t57 - t37;
+        let t57 = t39 - t37;
+        let t58 = t56 + t57;
         let t59 = t47 - t48;
         let t60 = t46 + t49;
         let t61 = t1 + t3;
-        let t62 = t61 - t5;
-        let t63 = t62 - t7;
+        let t62 = t5 + t7;
+        let t63 = t61 - t62;
         let t64 = t44 + t50;
         let t65 = t43 - t51;
         let t66 = t47 + t48;
@@ -21326,38 +24318,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
         let t113 = xv[5] * t74;
         let t114 = t80 + t83;
         let t115 = t114 - t79;
-        let t116 = t115 - t81;
-        let t117 = t116 - t82;
+        let t116 = t81 + t82;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t118 - t78;
         let t120 = t84 + t87;
         let t121 = t120 - t86;
-        let t122 = t121 - t88;
-        let t123 = t122 - t89;
+        let t122 = t88 + t89;
+        let t123 = t121 - t122;
         let t124 = t123 * T::from_i64(2);
         let t125 = t124 - t85;
         let t126 = t91 + t94;
         let t127 = t126 - t90;
-        let t128 = t127 - t93;
-        let t129 = t128 - t95;
+        let t128 = t93 + t95;
+        let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
         let t131 = t130 - t92;
         let t132 = t98 + t100;
         let t133 = t132 - t96;
-        let t134 = t133 - t97;
-        let t135 = t134 - t101;
+        let t134 = t97 + t101;
+        let t135 = t133 - t134;
         let t136 = t135 * T::from_i64(2);
         let t137 = t99 + t136;
         let t138 = t102 + t107;
         let t139 = t138 - t103;
-        let t140 = t139 - t104;
-        let t141 = t140 - t105;
+        let t140 = t104 + t105;
+        let t141 = t139 - t140;
         let t142 = t141 * T::from_i64(2);
         let t143 = t106 + t142;
         let t144 = t109 + t111;
         let t145 = t144 - t108;
-        let t146 = t145 - t110;
-        let t147 = t146 - t112;
+        let t146 = t110 + t112;
+        let t147 = t145 - t146;
         let t148 = t147 * T::from_i64(2);
         let t149 = t113 + t148;
             return Bivector { c: gx::slots::from_values::<S, T, 6>([t119, t125, t131, t137, t143, t149]) };
@@ -21477,15 +24469,151 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for Odd<(), T> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Bivector, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Bivector, T, 27> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[4];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[5];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[6];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[7];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = v[0] * v[1];
+        let m13 = v[0] * v[2];
+        let m14 = v[0] * v[3];
+        let m15 = v[0] * v[5];
+        let m16 = v[0] * v[6];
+        let m17 = v[0] * v[7];
+        let m18 = v[1] * v[2];
+        let m19 = v[1] * v[3];
+        let m20 = v[1] * v[4];
+        let m21 = v[1] * v[6];
+        let m22 = v[1] * v[7];
+        let m23 = v[2] * v[3];
+        let m24 = v[2] * v[4];
+        let m25 = v[2] * v[5];
+        let m26 = v[2] * v[7];
+        let m27 = v[3] * v[4];
+        let m28 = v[3] * v[5];
+        let m29 = v[3] * v[6];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m8;
+        let m37 = m2 - m9;
+        let m38 = m4 - m10;
+        let m39 = m6 - m11;
+        let m40 = m1 - m3;
+        let m41 = m5 - m7;
+        let m42 = m12 + m30;
+        let m43 = m13 + m31;
+        let m44 = m14 + m32;
+        let m45 = m15 - m20;
+        let m46 = m16 - m24;
+        let m47 = m17 - m27;
+        let m48 = m18 - m33;
+        let m49 = m19 - m34;
+        let m50 = m21 + m25;
+        let m51 = m22 + m28;
+        let m52 = m23 - m35;
+        let m53 = m26 + m29;
+        let m54 = m36 + m37;
+        let m55 = m38 - m39;
+        let m56 = m1 + m3;
+        let m57 = m5 + m7;
+        let m58 = m36 - m37;
+        let m59 = m38 + m39;
+        let m60 = m40 - m41;
+        let m61 = m40 + m41;
+        let m62 = m42 - m53;
+        let m63 = m42 + m53;
+        let m64 = m43 - m51;
+        let m65 = m43 + m51;
+        let m66 = m44 - m50;
+        let m67 = m44 + m50;
+        let m68 = m45 - m52;
+        let m69 = m45 + m52;
+        let m70 = m46 - m49;
+        let m71 = m46 + m49;
+        let m72 = m47 - m48;
+        let m73 = m47 + m48;
+        let m74 = m54 - m55;
+        let m75 = m54 + m55;
+        let m76 = m56 - m57;
+        let m77 = m58 + m59;
+        let m78 = -m77;
+        let m79 = m72 * T::from_i64(2);
+        let m80 = -m79;
+        let m81 = m71 * T::from_i64(2);
+        let m82 = m76 * T::from_i64(2);
+        let m83 = -m82;
+        let m84 = m67 * T::from_i64(2);
+        let m85 = -m84;
+        let m86 = m64 * T::from_i64(2);
+        let m87 = m73 * T::from_i64(2);
+        let m88 = -m74;
+        let m89 = m68 * T::from_i64(2);
+        let m90 = -m89;
+        let m91 = m66 * T::from_i64(2);
+        let m92 = m61 * T::from_i64(2);
+        let m93 = -m92;
+        let m94 = m63 * T::from_i64(2);
+        let m95 = -m94;
+        let m96 = m70 * T::from_i64(2);
+        let m97 = -m96;
+        let m98 = m69 * T::from_i64(2);
+        let m99 = -m75;
+        let m100 = m65 * T::from_i64(2);
+        let m101 = -m100;
+        let m102 = m62 * T::from_i64(2);
+        let m103 = m60 * T::from_i64(2);
+        let m104 = -m103;
+        let m105 = -m81;
+        let m106 = -m87;
+        let m107 = -m98;
+        gx::Prepared::from_entries([m78, m80, m81, m83, m85, m86, m87, m88, m90, m91, m93, m95, m97, m98, m99, m101, m102, m104, m77, m79, m105, m106, m74, m89, m96, m107, m75])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<Odd, Bivector, T, 27> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[18]) + x[4].scale(m[19]) + x[5].scale(m[20])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[24]) + x[4].scale(m[25]) + x[5].scale(m[26])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Bivector, T, 27>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Bivector, T, 27>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[3], m[4], m[5], m[18], m[19], m[20]], [m[9], m[10], m[11], m[21], m[22], m[23]], [m[15], m[16], m[17], m[24], m[25], m[26]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
@@ -21546,13 +24674,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
         let t54 = t36 + t37;
         let t55 = t38 - t39;
         let t56 = t36 + t38;
-        let t57 = t39 + t56;
-        let t58 = t57 - t37;
+        let t57 = t39 - t37;
+        let t58 = t56 + t57;
         let t59 = t47 - t48;
         let t60 = t46 + t49;
         let t61 = t1 + t3;
-        let t62 = t61 - t5;
-        let t63 = t62 - t7;
+        let t62 = t5 + t7;
+        let t63 = t61 - t62;
         let t64 = t44 + t50;
         let t65 = t43 - t51;
         let t66 = t47 + t48;
@@ -21605,38 +24733,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
         let t113 = xv[5] * t74;
         let t114 = t80 + t83;
         let t115 = t114 - t79;
-        let t116 = t115 - t81;
-        let t117 = t116 - t82;
+        let t116 = t81 + t82;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t118 - t78;
         let t120 = t84 + t87;
         let t121 = t120 - t86;
-        let t122 = t121 - t88;
-        let t123 = t122 - t89;
+        let t122 = t88 + t89;
+        let t123 = t121 - t122;
         let t124 = t123 * T::from_i64(2);
         let t125 = t124 - t85;
         let t126 = t91 + t94;
         let t127 = t126 - t90;
-        let t128 = t127 - t93;
-        let t129 = t128 - t95;
+        let t128 = t93 + t95;
+        let t129 = t127 - t128;
         let t130 = t129 * T::from_i64(2);
         let t131 = t130 - t92;
         let t132 = t98 + t100;
         let t133 = t132 - t96;
-        let t134 = t133 - t97;
-        let t135 = t134 - t101;
+        let t134 = t97 + t101;
+        let t135 = t133 - t134;
         let t136 = t135 * T::from_i64(2);
         let t137 = t99 + t136;
         let t138 = t102 + t107;
         let t139 = t138 - t103;
-        let t140 = t139 - t104;
-        let t141 = t140 - t105;
+        let t140 = t104 + t105;
+        let t141 = t139 - t140;
         let t142 = t141 * T::from_i64(2);
         let t143 = t106 + t142;
         let t144 = t109 + t111;
         let t145 = t144 - t108;
-        let t146 = t145 - t110;
-        let t147 = t146 - t112;
+        let t146 = t110 + t112;
+        let t147 = t145 - t146;
         let t148 = t147 * T::from_i64(2);
         let t149 = t113 + t148;
             return Bivector { c: gx::slots::from_values::<S, T, 6>([t119, t125, t131, t137, t143, t149]) };
@@ -21747,15 +24875,142 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Bivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Bivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Bivector<S, T>) -> Bivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Bivector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Bivector, T, 27>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Bivector, T, 27> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[0] * v[5];
+        let m4 = v[0] * v[6];
+        let m5 = v[0] * v[7];
+        let m6 = v[1] * v[1];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[4];
+        let m10 = v[1] * v[5];
+        let m11 = v[1] * v[6];
+        let m12 = v[1] * v[7];
+        let m13 = v[2] * v[2];
+        let m14 = v[2] * v[3];
+        let m15 = v[2] * v[4];
+        let m16 = v[2] * v[5];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[3];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = v[4] * v[5];
+        let m25 = v[4] * v[6];
+        let m26 = v[4] * v[7];
+        let m27 = v[5] * v[5];
+        let m28 = v[5] * v[6];
+        let m29 = v[5] * v[7];
+        let m30 = v[6] * v[6];
+        let m31 = v[6] * v[7];
+        let m32 = v[7] * v[7];
+        let m33 = m0 + m24;
+        let m34 = m1 + m25;
+        let m35 = m2 + m26;
+        let m36 = m3 - m9;
+        let m37 = m4 - m15;
+        let m38 = m5 - m20;
+        let m39 = m6 - m27;
+        let m40 = m7 - m28;
+        let m41 = m8 - m29;
+        let m42 = m11 + m16;
+        let m43 = m12 + m21;
+        let m44 = m13 - m30;
+        let m45 = m14 - m31;
+        let m46 = m18 + m22;
+        let m47 = m19 - m32;
+        let m48 = m10 + m17;
+        let m49 = m10 + m23;
+        let m50 = m17 + m23;
+        let m51 = m33 - m46;
+        let m52 = m33 + m46;
+        let m53 = m34 - m43;
+        let m54 = m34 + m43;
+        let m55 = m35 - m42;
+        let m56 = m35 + m42;
+        let m57 = m36 - m45;
+        let m58 = m36 + m45;
+        let m59 = m37 - m41;
+        let m60 = m37 + m41;
+        let m61 = m38 - m40;
+        let m62 = m38 + m40;
+        let m63 = m39 + m44;
+        let m64 = m39 + m47;
+        let m65 = m44 + m47;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m66 + T::from_i64(1);
+        let m68 = -m67;
+        let m69 = m61 * T::from_i64(2);
+        let m70 = -m69;
+        let m71 = m60 * T::from_i64(2);
+        let m72 = m50 * T::from_i64(4);
+        let m73 = m56 * T::from_i64(2);
+        let m74 = -m73;
+        let m75 = m53 * T::from_i64(2);
+        let m76 = m62 * T::from_i64(2);
+        let m77 = m64 * T::from_i64(2);
+        let m78 = m77 + T::from_i64(1);
+        let m79 = -m78;
+        let m80 = m57 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m55 * T::from_i64(2);
+        let m83 = m49 * T::from_i64(4);
+        let m84 = m52 * T::from_i64(2);
+        let m85 = -m84;
+        let m86 = m59 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m58 * T::from_i64(2);
+        let m89 = m63 * T::from_i64(2);
+        let m90 = m89 + T::from_i64(1);
+        let m91 = -m90;
+        let m92 = m54 * T::from_i64(2);
+        let m93 = -m92;
+        let m94 = m51 * T::from_i64(2);
+        let m95 = m48 * T::from_i64(4);
+        let m96 = -m71;
+        let m97 = -m76;
+        let m98 = -m88;
+        gx::Prepared::from_entries([m68, m70, m71, m72, m74, m75, m76, m79, m81, m82, m83, m85, m87, m88, m91, m93, m94, m95, m67, m69, m96, m97, m78, m80, m86, m98, m90])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Prepared<gx::Unit<Odd>, Bivector, T, 27> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Bivector<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[18]) + x[4].scale(m[19]) + x[5].scale(m[20])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[24]) + x[4].scale(m[25]) + x[5].scale(m[26])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Bivector, T, 27>> for Bivector<(Bivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Bivector, T, 27>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[3], m[4], m[5], m[18], m[19], m[20]], [m[9], m[10], m[11], m[21], m[22], m[23]], [m[15], m[16], m[17], m[24], m[25], m[26]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Odd<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -21951,15 +25206,125 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for Odd<(), T> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Trivector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Trivector, T, 16> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = -m52;
+        let m54 = m47 - m36;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m37 + m45;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = -m57;
+        let m59 = m44 - m38;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m36 + m47;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m49 - m51;
+        let m64 = m41 + m42;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m43 - m40;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 - m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m42 - m41;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m48 + m50;
+        let m73 = m39 + m46;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m38 + m44;
+        let m76 = m75 * T::from_i64(2);
+        let m77 = m40 + m43;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m46 - m39;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m48 - m50;
+        gx::Prepared::from_entries([m53, m55, m58, m60, m62, m63, m65, m67, m69, m71, m72, m74, m76, m78, m80, m81])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<Odd, Trivector, T, 16> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Trivector, T, 16>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Trivector, T, 16>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
@@ -21968,29 +25333,29 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Odd<
         let t2 = v[2] * xv[2];
         let t3 = v[3] * xv[3];
         let t4 = t0 + t1;
-        let t5 = t2 + t4;
-        let t6 = t3 + t5;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
         let t7 = v[0] * xv[1];
         let t8 = v[1] * xv[0];
         let t9 = v[6] * xv[3];
         let t10 = v[7] * xv[2];
         let t11 = t7 + t8;
-        let t12 = t10 + t11;
-        let t13 = t12 - t9;
+        let t12 = t10 - t9;
+        let t13 = t11 + t12;
         let t14 = v[0] * xv[2];
         let t15 = v[2] * xv[0];
         let t16 = v[5] * xv[3];
         let t17 = v[7] * xv[1];
         let t18 = t14 + t15;
-        let t19 = t16 + t18;
-        let t20 = t19 - t17;
+        let t19 = t16 - t17;
+        let t20 = t18 + t19;
         let t21 = v[0] * xv[3];
         let t22 = v[3] * xv[0];
         let t23 = v[5] * xv[2];
         let t24 = v[6] * xv[1];
         let t25 = t21 + t22;
-        let t26 = t24 + t25;
-        let t27 = t26 - t23;
+        let t26 = t24 - t23;
+        let t27 = t25 + t26;
         let t28 = v[4] * v[4];
         let t29 = t28 + T::from_f64(1.0 / 2.0);
         let t30 = v[4] * xv[0];
@@ -22026,32 +25391,32 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Odd<
         let t60 = v[6] * t13;
         let t61 = xv[3] * t29;
         let t62 = t37 + t38;
-        let t63 = t39 + t62;
-        let t64 = t63 - t34;
-        let t65 = t64 - t35;
-        let t66 = t65 - t36;
-        let t67 = t66 - t40;
+        let t63 = t39 - t34;
+        let t64 = t62 + t63;
+        let t65 = t35 + t36;
+        let t66 = t40 + t65;
+        let t67 = t64 - t66;
         let t68 = t67 * T::from_i64(2);
         let t69 = t41 + t43;
-        let t70 = t46 + t69;
-        let t71 = t47 + t70;
-        let t72 = t71 - t42;
-        let t73 = t72 - t44;
-        let t74 = t73 - t45;
+        let t70 = t46 + t47;
+        let t71 = t69 + t70;
+        let t72 = t42 + t44;
+        let t73 = t45 + t72;
+        let t74 = t71 - t73;
         let t75 = t74 * T::from_i64(2);
         let t76 = t48 + t49;
-        let t77 = t52 + t76;
-        let t78 = t54 + t77;
-        let t79 = t78 - t50;
-        let t80 = t79 - t51;
-        let t81 = t80 - t53;
+        let t77 = t52 + t54;
+        let t78 = t76 + t77;
+        let t79 = t50 + t51;
+        let t80 = t53 + t79;
+        let t81 = t78 - t80;
         let t82 = t81 * T::from_i64(2);
         let t83 = t56 + t57;
-        let t84 = t60 + t83;
-        let t85 = t61 + t84;
-        let t86 = t85 - t55;
-        let t87 = t86 - t58;
-        let t88 = t87 - t59;
+        let t84 = t60 + t61;
+        let t85 = t83 + t84;
+        let t86 = t55 + t58;
+        let t87 = t59 + t86;
+        let t88 = t85 - t87;
         let t89 = t88 * T::from_i64(2);
             return Trivector { c: gx::slots::from_values::<S, T, 4>([t68, t75, t82, t89]) };
         }
@@ -22144,15 +25509,125 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Unit<Odd<
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Trivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Trivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Trivector<S, T>) -> Trivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Trivector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Trivector, T, 16>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Trivector, T, 16> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m49 + m51;
+        let m53 = -m52;
+        let m54 = m47 - m36;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m37 + m45;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = -m57;
+        let m59 = m44 - m38;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m36 + m47;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m49 - m51;
+        let m64 = m41 + m42;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m43 - m40;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m37 - m45;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m42 - m41;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m48 + m50;
+        let m73 = m39 + m46;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m38 + m44;
+        let m76 = m75 * T::from_i64(2);
+        let m77 = m40 + m43;
+        let m78 = m77 * T::from_i64(2);
+        let m79 = m46 - m39;
+        let m80 = m79 * T::from_i64(2);
+        let m81 = m48 - m50;
+        gx::Prepared::from_entries([m53, m55, m58, m60, m62, m63, m65, m67, m69, m71, m72, m74, m76, m78, m80, m81])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Trivector<S, T>> for gx::Prepared<gx::Unit<Odd>, Trivector, T, 16> {
+    type Output = Trivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Trivector<S, T>) -> Trivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Trivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Trivector, T, 16>> for Trivector<(Trivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Trivector, T, 16>) -> Self {
+        let m = p.m;
+        Trivector { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -22169,15 +25644,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
         let t10 = v[6] * v[6];
         let t11 = v[7] * v[7];
         let t12 = t0 + t1;
-        let t13 = t2 + t12;
-        let t14 = t3 + t13;
+        let t13 = t2 + t3;
+        let t14 = t12 + t13;
         let t15 = t4 + t9;
-        let t16 = t10 + t15;
-        let t17 = t11 + t16;
-        let t18 = t17 - t5;
-        let t19 = t18 - t6;
-        let t20 = t19 - t7;
-        let t21 = t20 - t8;
+        let t16 = t10 + t11;
+        let t17 = t15 + t16;
+        let t18 = t5 + t6;
+        let t19 = t7 + t8;
+        let t20 = t18 + t19;
+        let t21 = t17 - t20;
         let t22 = xv[0] * t14;
         let t23 = xv[0] * t21;
         let t24 = t22 * T::from_i64(2);
@@ -22198,17 +25673,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
         let m10 = v[6] * v[6];
         let m11 = v[7] * v[7];
         let m12 = m0 + m1;
-        let m13 = m2 + m12;
-        let m14 = m3 + m13;
+        let m13 = m2 + m3;
+        let m14 = m12 + m13;
         let m15 = m14 * T::from_i64(2);
         let m16 = -m15;
         let m17 = m5 + m6;
-        let m18 = m7 + m17;
-        let m19 = m8 + m18;
-        let m20 = m19 - m4;
-        let m21 = m20 - m9;
-        let m22 = m21 - m10;
-        let m23 = m22 - m11;
+        let m18 = m7 + m8;
+        let m19 = m17 + m18;
+        let m20 = m4 + m9;
+        let m21 = m10 + m11;
+        let m22 = m20 + m21;
+        let m23 = m19 - m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
         Even { c: [(x[0].scale(m16)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m23)).0] }
     }
@@ -22216,15 +25691,67 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T>
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Pseudoscalar, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Pseudoscalar, T, 2> {
+        let v = self.c;
+        let m0 = v[0] * v[4];
+        let m1 = v[1] * v[5];
+        let m2 = v[2] * v[6];
+        let m3 = v[3] * v[7];
+        let m4 = v[0] * v[0];
+        let m5 = v[1] * v[1];
+        let m6 = v[2] * v[2];
+        let m7 = v[3] * v[3];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = m0 + m1;
+        let m13 = m2 + m3;
+        let m14 = m12 + m13;
+        let m15 = m14 * T::from_i64(2);
+        let m16 = -m15;
+        let m17 = m5 + m6;
+        let m18 = m7 + m8;
+        let m19 = m17 + m18;
+        let m20 = m4 + m9;
+        let m21 = m10 + m11;
+        let m22 = m20 + m21;
+        let m23 = m19 - m22;
+        gx::Prepared::from_entries([m16, m23])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<Odd, Pseudoscalar, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[0].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Pseudoscalar, T, 2>> for Even<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Pseudoscalar, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0]], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [T::zero()], [m[1]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
@@ -22239,15 +25766,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<O
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Pseudoscalar<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 1> {
+        let v = self.into_inner().c;
+        let m0 = -T::from_i64(1);
+        gx::Prepared::from_entries([m0])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 1> {
+    type Output = Pseudoscalar<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 1>) -> Self {
+        let m = p.m;
+        Pseudoscalar { c: [[m[0]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -22375,38 +25931,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Odd<(), T> {
         let t121 = t80 - t120;
         let t122 = t84 + t87;
         let t123 = t122 - t83;
-        let t124 = t123 - t85;
-        let t125 = t124 - t86;
+        let t124 = t85 + t86;
+        let t125 = t123 - t124;
         let t126 = t125 * T::from_i64(2);
         let t127 = t126 - t82;
         let t128 = t88 + t91;
         let t129 = t128 - t90;
-        let t130 = t129 - t92;
-        let t131 = t130 - t93;
+        let t130 = t92 + t93;
+        let t131 = t129 - t130;
         let t132 = t131 * T::from_i64(2);
         let t133 = t132 - t89;
         let t134 = t95 + t98;
         let t135 = t134 - t94;
-        let t136 = t135 - t97;
-        let t137 = t136 - t99;
+        let t136 = t97 + t99;
+        let t137 = t135 - t136;
         let t138 = t137 * T::from_i64(2);
         let t139 = t138 - t96;
         let t140 = t102 + t104;
         let t141 = t140 - t100;
-        let t142 = t141 - t101;
-        let t143 = t142 - t105;
+        let t142 = t101 + t105;
+        let t143 = t141 - t142;
         let t144 = t143 * T::from_i64(2);
         let t145 = t103 + t144;
         let t146 = t106 + t111;
         let t147 = t146 - t107;
-        let t148 = t147 - t108;
-        let t149 = t148 - t109;
+        let t148 = t108 + t109;
+        let t149 = t147 - t148;
         let t150 = t149 * T::from_i64(2);
         let t151 = t110 + t150;
         let t152 = t113 + t115;
         let t153 = t152 - t112;
-        let t154 = t153 - t114;
-        let t155 = t154 - t116;
+        let t154 = t114 + t116;
+        let t155 = t153 - t154;
         let t156 = t155 * T::from_i64(2);
         let t157 = t117 + t156;
         let t158 = t118 * T::from_i64(2);
@@ -22534,15 +26090,156 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for Odd<(), T> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Even, T, 30>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Even, T, 30> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[0] * v[4];
+        let m2 = v[1] * v[1];
+        let m3 = v[1] * v[5];
+        let m4 = v[2] * v[2];
+        let m5 = v[2] * v[6];
+        let m6 = v[3] * v[3];
+        let m7 = v[3] * v[7];
+        let m8 = v[4] * v[4];
+        let m9 = v[5] * v[5];
+        let m10 = v[6] * v[6];
+        let m11 = v[7] * v[7];
+        let m12 = v[0] * v[1];
+        let m13 = v[0] * v[2];
+        let m14 = v[0] * v[3];
+        let m15 = v[0] * v[5];
+        let m16 = v[0] * v[6];
+        let m17 = v[0] * v[7];
+        let m18 = v[1] * v[2];
+        let m19 = v[1] * v[3];
+        let m20 = v[1] * v[4];
+        let m21 = v[1] * v[6];
+        let m22 = v[1] * v[7];
+        let m23 = v[2] * v[3];
+        let m24 = v[2] * v[4];
+        let m25 = v[2] * v[5];
+        let m26 = v[2] * v[7];
+        let m27 = v[3] * v[4];
+        let m28 = v[3] * v[5];
+        let m29 = v[3] * v[6];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m8;
+        let m37 = m2 - m9;
+        let m38 = m4 - m10;
+        let m39 = m6 - m11;
+        let m40 = m1 - m3;
+        let m41 = m1 + m3;
+        let m42 = m5 - m7;
+        let m43 = m5 + m7;
+        let m44 = m12 + m30;
+        let m45 = m13 + m31;
+        let m46 = m14 + m32;
+        let m47 = m15 - m20;
+        let m48 = m16 - m24;
+        let m49 = m17 - m27;
+        let m50 = m18 - m33;
+        let m51 = m19 - m34;
+        let m52 = m21 + m25;
+        let m53 = m22 + m28;
+        let m54 = m23 - m35;
+        let m55 = m26 + m29;
+        let m56 = m36 - m37;
+        let m57 = m36 + m37;
+        let m58 = m38 - m39;
+        let m59 = m38 + m39;
+        let m60 = m40 - m42;
+        let m61 = m40 + m42;
+        let m62 = m41 - m43;
+        let m63 = m41 + m43;
+        let m64 = m44 - m55;
+        let m65 = m44 + m55;
+        let m66 = m45 - m53;
+        let m67 = m45 + m53;
+        let m68 = m46 - m52;
+        let m69 = m46 + m52;
+        let m70 = m47 - m54;
+        let m71 = m47 + m54;
+        let m72 = m48 - m51;
+        let m73 = m48 + m51;
+        let m74 = m49 - m50;
+        let m75 = m49 + m50;
+        let m76 = m56 - m59;
+        let m77 = m56 + m59;
+        let m78 = m57 - m58;
+        let m79 = m57 + m58;
+        let m80 = m63 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = -m77;
+        let m83 = m74 * T::from_i64(2);
+        let m84 = -m83;
+        let m85 = m73 * T::from_i64(2);
+        let m86 = m62 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m69 * T::from_i64(2);
+        let m89 = -m88;
+        let m90 = m66 * T::from_i64(2);
+        let m91 = m75 * T::from_i64(2);
+        let m92 = -m78;
+        let m93 = m70 * T::from_i64(2);
+        let m94 = -m93;
+        let m95 = m68 * T::from_i64(2);
+        let m96 = m61 * T::from_i64(2);
+        let m97 = -m96;
+        let m98 = m65 * T::from_i64(2);
+        let m99 = -m98;
+        let m100 = m72 * T::from_i64(2);
+        let m101 = -m100;
+        let m102 = m71 * T::from_i64(2);
+        let m103 = -m79;
+        let m104 = m67 * T::from_i64(2);
+        let m105 = -m104;
+        let m106 = m64 * T::from_i64(2);
+        let m107 = m60 * T::from_i64(2);
+        let m108 = -m107;
+        let m109 = -m85;
+        let m110 = -m91;
+        let m111 = -m102;
+        let m112 = -m76;
+        gx::Prepared::from_entries([m76, m81, m82, m84, m85, m87, m89, m90, m91, m92, m94, m95, m97, m99, m101, m102, m103, m105, m106, m108, m77, m83, m109, m110, m78, m93, m100, m111, m79, m112])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<Odd, Even, T, 30> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0]) + x[7].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5]) + x[5].scale(m[6]) + x[6].scale(m[7])).0, (x[1].scale(m[8]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11]) + x[5].scale(m[12]) + x[6].scale(m[13])).0, (x[1].scale(m[14]) + x[2].scale(m[15]) + x[3].scale(m[16]) + x[4].scale(m[17]) + x[5].scale(m[18]) + x[6].scale(m[19])).0, (x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[20]) + x[5].scale(m[21]) + x[6].scale(m[22])).0, (x[1].scale(m[11]) + x[2].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[23]) + x[5].scale(m[24]) + x[6].scale(m[25])).0, (x[1].scale(m[17]) + x[2].scale(m[18]) + x[3].scale(m[19]) + x[4].scale(m[26]) + x[5].scale(m[27]) + x[6].scale(m[28])).0, (x[0].scale(m[1]) + x[7].scale(m[29])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Even, T, 30>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Even, T, 30>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]], [T::zero(), m[2], m[3], m[4], m[5], m[6], m[7], T::zero()], [T::zero(), m[8], m[9], m[10], m[11], m[12], m[13], T::zero()], [T::zero(), m[14], m[15], m[16], m[17], m[18], m[19], T::zero()], [T::zero(), m[5], m[6], m[7], m[20], m[21], m[22], T::zero()], [T::zero(), m[11], m[12], m[13], m[23], m[24], m[25], T::zero()], [T::zero(), m[17], m[18], m[19], m[26], m[27], m[28], T::zero()], [m[1], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[29]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Even<S, T>) -> Even<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -22655,43 +26352,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Odd<(), T
         let t106 = xv[5] * t65;
         let t107 = xv[6] * t68;
         let t108 = t74 + t77;
-        let t109 = t108 - t73;
-        let t110 = t109 - t76;
+        let t109 = t73 + t76;
+        let t110 = t108 - t109;
         let t111 = t110 * T::from_i64(2);
         let t112 = t75 * T::from_i64(4);
         let t113 = t111 + t112;
         let t114 = t113 - t72;
         let t115 = t78 + t81;
-        let t116 = t115 - t80;
-        let t117 = t116 - t83;
+        let t116 = t80 + t83;
+        let t117 = t115 - t116;
         let t118 = t117 * T::from_i64(2);
         let t119 = t82 * T::from_i64(4);
         let t120 = t118 + t119;
         let t121 = t120 - t79;
         let t122 = t85 + t88;
-        let t123 = t122 - t84;
-        let t124 = t123 - t87;
+        let t123 = t84 + t87;
+        let t124 = t122 - t123;
         let t125 = t124 * T::from_i64(2);
         let t126 = t89 * T::from_i64(4);
         let t127 = t125 + t126;
         let t128 = t127 - t86;
         let t129 = t92 + t94;
-        let t130 = t129 - t91;
-        let t131 = t130 - t95;
+        let t130 = t91 + t95;
+        let t131 = t129 - t130;
         let t132 = t131 * T::from_i64(2);
         let t133 = t90 * T::from_i64(4);
         let t134 = t93 + t132;
         let t135 = t133 + t134;
         let t136 = t96 + t101;
-        let t137 = t136 - t98;
-        let t138 = t137 - t99;
+        let t137 = t98 + t99;
+        let t138 = t136 - t137;
         let t139 = t138 * T::from_i64(2);
         let t140 = t97 * T::from_i64(4);
         let t141 = t100 + t139;
         let t142 = t140 + t141;
         let t143 = t103 + t105;
-        let t144 = t143 - t102;
-        let t145 = t144 - t106;
+        let t144 = t102 + t106;
+        let t145 = t143 - t144;
         let t146 = t145 * T::from_i64(2);
         let t147 = t104 * T::from_i64(4);
         let t148 = t107 + t146;
@@ -22806,15 +26503,143 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Unit<Odd<(), T
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Even<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Even<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Even<S, T>) -> Even<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Even> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Even, T, 28>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Even, T, 28> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[0] * v[5];
+        let m4 = v[0] * v[6];
+        let m5 = v[0] * v[7];
+        let m6 = v[1] * v[1];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[4];
+        let m10 = v[1] * v[5];
+        let m11 = v[1] * v[6];
+        let m12 = v[1] * v[7];
+        let m13 = v[2] * v[2];
+        let m14 = v[2] * v[3];
+        let m15 = v[2] * v[4];
+        let m16 = v[2] * v[5];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[3];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = v[4] * v[5];
+        let m25 = v[4] * v[6];
+        let m26 = v[4] * v[7];
+        let m27 = v[5] * v[5];
+        let m28 = v[5] * v[6];
+        let m29 = v[5] * v[7];
+        let m30 = v[6] * v[6];
+        let m31 = v[6] * v[7];
+        let m32 = v[7] * v[7];
+        let m33 = m0 + m24;
+        let m34 = m1 + m25;
+        let m35 = m2 + m26;
+        let m36 = m3 - m9;
+        let m37 = m4 - m15;
+        let m38 = m5 - m20;
+        let m39 = m6 - m27;
+        let m40 = m7 - m28;
+        let m41 = m8 - m29;
+        let m42 = m11 + m16;
+        let m43 = m12 + m21;
+        let m44 = m13 - m30;
+        let m45 = m14 - m31;
+        let m46 = m18 + m22;
+        let m47 = m19 - m32;
+        let m48 = m10 + m17;
+        let m49 = m10 + m23;
+        let m50 = m17 + m23;
+        let m51 = m33 - m46;
+        let m52 = m33 + m46;
+        let m53 = m34 - m43;
+        let m54 = m34 + m43;
+        let m55 = m35 - m42;
+        let m56 = m35 + m42;
+        let m57 = m36 - m45;
+        let m58 = m36 + m45;
+        let m59 = m37 - m41;
+        let m60 = m37 + m41;
+        let m61 = m38 - m40;
+        let m62 = m38 + m40;
+        let m63 = m39 + m44;
+        let m64 = m39 + m47;
+        let m65 = m44 + m47;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m66 + T::from_i64(1);
+        let m68 = -m67;
+        let m69 = m61 * T::from_i64(2);
+        let m70 = -m69;
+        let m71 = m60 * T::from_i64(2);
+        let m72 = m50 * T::from_i64(4);
+        let m73 = m56 * T::from_i64(2);
+        let m74 = -m73;
+        let m75 = m53 * T::from_i64(2);
+        let m76 = m62 * T::from_i64(2);
+        let m77 = m64 * T::from_i64(2);
+        let m78 = m77 + T::from_i64(1);
+        let m79 = -m78;
+        let m80 = m57 * T::from_i64(2);
+        let m81 = -m80;
+        let m82 = m55 * T::from_i64(2);
+        let m83 = m49 * T::from_i64(4);
+        let m84 = m52 * T::from_i64(2);
+        let m85 = -m84;
+        let m86 = m59 * T::from_i64(2);
+        let m87 = -m86;
+        let m88 = m58 * T::from_i64(2);
+        let m89 = m63 * T::from_i64(2);
+        let m90 = m89 + T::from_i64(1);
+        let m91 = -m90;
+        let m92 = m54 * T::from_i64(2);
+        let m93 = -m92;
+        let m94 = m51 * T::from_i64(2);
+        let m95 = m48 * T::from_i64(4);
+        let m96 = -m71;
+        let m97 = -m76;
+        let m98 = -m88;
+        let m99 = -T::from_i64(1);
+        gx::Prepared::from_entries([m68, m70, m71, m72, m74, m75, m76, m79, m81, m82, m83, m85, m87, m88, m91, m93, m94, m95, m67, m69, m96, m97, m78, m80, m86, m98, m90, m99])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for gx::Prepared<gx::Unit<Odd>, Even, T, 28> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Even<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0] + x[7].scale(T::from_i64(0))).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14]) + x[4].scale(m[15]) + x[5].scale(m[16]) + x[6].scale(m[17])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[18]) + x[5].scale(m[19]) + x[6].scale(m[20])).0, (x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[21]) + x[5].scale(m[22]) + x[6].scale(m[23])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[3].scale(m[17]) + x[4].scale(m[24]) + x[5].scale(m[25]) + x[6].scale(m[26])).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m[27])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Even, T, 28>> for Even<(Even,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Even, T, 28>) -> Self {
+        let m = p.m;
+        Even { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(0)], [T::zero(), m[0], m[1], m[2], m[3], m[4], m[5], T::zero()], [T::zero(), m[6], m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], m[13], m[14], m[15], m[16], m[17], T::zero()], [T::zero(), m[3], m[4], m[5], m[18], m[19], m[20], T::zero()], [T::zero(), m[9], m[10], m[11], m[21], m[22], m[23], T::zero()], [T::zero(), m[15], m[16], m[17], m[24], m[25], m[26], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Odd<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -23053,15 +26878,136 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for Odd<(), T> {
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for Odd<(), T> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Odd, T, 26>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Odd, T, 26> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m36 - m47;
+        let m53 = m36 + m47;
+        let m54 = m37 - m45;
+        let m55 = m37 + m45;
+        let m56 = m38 - m44;
+        let m57 = m38 + m44;
+        let m58 = m39 - m46;
+        let m59 = m39 + m46;
+        let m60 = m40 - m43;
+        let m61 = m40 + m43;
+        let m62 = m41 - m42;
+        let m63 = m41 + m42;
+        let m64 = m48 - m50;
+        let m65 = m48 + m50;
+        let m66 = m49 - m51;
+        let m67 = m49 + m51;
+        let m68 = m52 * T::from_i64(2);
+        let m69 = -m68;
+        let m70 = m55 * T::from_i64(2);
+        let m71 = -m70;
+        let m72 = m56 * T::from_i64(2);
+        let m73 = -m72;
+        let m74 = m53 * T::from_i64(2);
+        let m75 = -m66;
+        let m76 = m63 * T::from_i64(2);
+        let m77 = -m76;
+        let m78 = m60 * T::from_i64(2);
+        let m79 = m54 * T::from_i64(2);
+        let m80 = m62 * T::from_i64(2);
+        let m81 = -m65;
+        let m82 = m59 * T::from_i64(2);
+        let m83 = -m82;
+        let m84 = m57 * T::from_i64(2);
+        let m85 = m61 * T::from_i64(2);
+        let m86 = -m85;
+        let m87 = m58 * T::from_i64(2);
+        let m88 = -m64;
+        let m89 = -m67;
+        let m90 = -m78;
+        let m91 = -m80;
+        let m92 = -m87;
+        gx::Prepared::from_entries([m67, m69, m71, m73, m74, m75, m77, m78, m79, m80, m81, m83, m84, m86, m87, m88, m89, m66, m76, m90, m91, m65, m82, m85, m92, m64])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<Odd, Odd, T, 26> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[4].scale(m[16]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[17]) + x[6].scale(m[18]) + x[7].scale(m[19])).0, (x[4].scale(m[8]) + x[5].scale(m[20]) + x[6].scale(m[21]) + x[7].scale(m[22])).0, (x[4].scale(m[12]) + x[5].scale(m[23]) + x[6].scale(m[24]) + x[7].scale(m[25])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Odd, T, 26>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Odd, T, 26>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[17], m[18], m[19]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[20], m[21], m[22]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[23], m[24], m[25]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
@@ -23300,15 +27246,136 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Odd<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Odd<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Odd<S, T>) -> Odd<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Odd> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Odd, T, 26>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Odd, T, 26> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = m0 + m4;
+        let m33 = m1 + m5;
+        let m34 = m2 + m6;
+        let m35 = m3 + m7;
+        let m36 = m8 - m26;
+        let m37 = m9 - m27;
+        let m38 = m10 - m28;
+        let m39 = m11 + m16;
+        let m40 = m12 + m20;
+        let m41 = m13 + m23;
+        let m42 = m14 + m29;
+        let m43 = m15 + m30;
+        let m44 = m17 - m21;
+        let m45 = m18 - m24;
+        let m46 = m19 + m31;
+        let m47 = m22 - m25;
+        let m48 = m32 - m33;
+        let m49 = m32 + m33;
+        let m50 = m34 - m35;
+        let m51 = m34 + m35;
+        let m52 = m36 - m47;
+        let m53 = m36 + m47;
+        let m54 = m37 - m45;
+        let m55 = m37 + m45;
+        let m56 = m38 - m44;
+        let m57 = m38 + m44;
+        let m58 = m39 - m46;
+        let m59 = m39 + m46;
+        let m60 = m40 - m43;
+        let m61 = m40 + m43;
+        let m62 = m41 - m42;
+        let m63 = m41 + m42;
+        let m64 = m48 - m50;
+        let m65 = m48 + m50;
+        let m66 = m49 - m51;
+        let m67 = m49 + m51;
+        let m68 = m52 * T::from_i64(2);
+        let m69 = -m68;
+        let m70 = m55 * T::from_i64(2);
+        let m71 = -m70;
+        let m72 = m56 * T::from_i64(2);
+        let m73 = -m72;
+        let m74 = m53 * T::from_i64(2);
+        let m75 = -m66;
+        let m76 = m63 * T::from_i64(2);
+        let m77 = -m76;
+        let m78 = m60 * T::from_i64(2);
+        let m79 = m54 * T::from_i64(2);
+        let m80 = m62 * T::from_i64(2);
+        let m81 = -m65;
+        let m82 = m59 * T::from_i64(2);
+        let m83 = -m82;
+        let m84 = m57 * T::from_i64(2);
+        let m85 = m61 * T::from_i64(2);
+        let m86 = -m85;
+        let m87 = m58 * T::from_i64(2);
+        let m88 = -m64;
+        let m89 = -m67;
+        let m90 = -m78;
+        let m91 = -m80;
+        let m92 = -m87;
+        gx::Prepared::from_entries([m67, m69, m71, m73, m74, m75, m77, m78, m79, m80, m81, m83, m84, m86, m87, m88, m89, m66, m76, m90, m91, m65, m82, m85, m92, m64])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Prepared<gx::Unit<Odd>, Odd, T, 26> {
+    type Output = Odd<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Odd<S, T>) -> Odd<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Odd { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[4].scale(m[16]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[17]) + x[6].scale(m[18]) + x[7].scale(m[19])).0, (x[4].scale(m[8]) + x[5].scale(m[20]) + x[6].scale(m[21]) + x[7].scale(m[22])).0, (x[4].scale(m[12]) + x[5].scale(m[23]) + x[6].scale(m[24]) + x[7].scale(m[25])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Odd, T, 26>> for Odd<(Odd,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Odd, T, 26>) -> Self {
+        let m = p.m;
+        Odd { c: [[m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero()], [m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero()], [m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[1], m[2], m[3]], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[17], m[18], m[19]], [T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[20], m[21], m[22]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[23], m[24], m[25]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -23520,38 +27587,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> 
         let t205 = t204 - t133;
         let t206 = t136 + t139;
         let t207 = t206 - t135;
-        let t208 = t207 - t137;
-        let t209 = t208 - t138;
+        let t208 = t137 + t138;
+        let t209 = t207 - t208;
         let t210 = t209 * T::from_i64(2);
         let t211 = t210 - t134;
         let t212 = t140 + t143;
         let t213 = t212 - t142;
-        let t214 = t213 - t144;
-        let t215 = t214 - t145;
+        let t214 = t144 + t145;
+        let t215 = t213 - t214;
         let t216 = t215 * T::from_i64(2);
         let t217 = t216 - t141;
         let t218 = t147 + t150;
         let t219 = t218 - t146;
-        let t220 = t219 - t149;
-        let t221 = t220 - t151;
+        let t220 = t149 + t151;
+        let t221 = t219 - t220;
         let t222 = t221 * T::from_i64(2);
         let t223 = t222 - t148;
         let t224 = t154 + t156;
         let t225 = t224 - t152;
-        let t226 = t225 - t153;
-        let t227 = t226 - t157;
+        let t226 = t153 + t157;
+        let t227 = t225 - t226;
         let t228 = t227 * T::from_i64(2);
         let t229 = t155 + t228;
         let t230 = t158 + t163;
         let t231 = t230 - t159;
-        let t232 = t231 - t160;
-        let t233 = t232 - t161;
+        let t232 = t160 + t161;
+        let t233 = t231 - t232;
         let t234 = t233 * T::from_i64(2);
         let t235 = t162 + t234;
         let t236 = t165 + t167;
         let t237 = t236 - t164;
-        let t238 = t237 - t166;
-        let t239 = t238 - t168;
+        let t238 = t166 + t168;
+        let t239 = t237 - t238;
         let t240 = t239 * T::from_i64(2);
         let t241 = t169 + t240;
         let t242 = t171 + t172;
@@ -23757,15 +27824,217 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for Odd<(), T> 
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for Odd<(), T> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(self.reverse(), x)
     }
 }
 
+impl<T: gx::Coef> gx::Prepare<Multivector> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Multivector, T, 56>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Multivector, T, 56> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[4];
+        let m12 = v[0] * v[5];
+        let m13 = v[0] * v[6];
+        let m14 = v[0] * v[7];
+        let m15 = v[1] * v[2];
+        let m16 = v[1] * v[3];
+        let m17 = v[1] * v[4];
+        let m18 = v[1] * v[5];
+        let m19 = v[1] * v[6];
+        let m20 = v[1] * v[7];
+        let m21 = v[2] * v[3];
+        let m22 = v[2] * v[4];
+        let m23 = v[2] * v[5];
+        let m24 = v[2] * v[6];
+        let m25 = v[2] * v[7];
+        let m26 = v[3] * v[4];
+        let m27 = v[3] * v[5];
+        let m28 = v[3] * v[6];
+        let m29 = v[3] * v[7];
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[5] * v[6];
+        let m34 = v[5] * v[7];
+        let m35 = v[6] * v[7];
+        let m36 = m0 - m1;
+        let m37 = m0 + m1;
+        let m38 = m2 - m3;
+        let m39 = m2 + m3;
+        let m40 = m4 - m5;
+        let m41 = m4 + m5;
+        let m42 = m6 - m7;
+        let m43 = m6 + m7;
+        let m44 = m8 - m25;
+        let m45 = m8 + m25;
+        let m46 = m9 - m20;
+        let m47 = m9 + m20;
+        let m48 = m10 - m19;
+        let m49 = m10 + m19;
+        let m50 = m11 - m18;
+        let m51 = m11 + m18;
+        let m52 = m12 - m17;
+        let m53 = m12 + m17;
+        let m54 = m13 - m16;
+        let m55 = m13 + m16;
+        let m56 = m14 - m15;
+        let m57 = m14 + m15;
+        let m58 = m21 - m35;
+        let m59 = m21 + m35;
+        let m60 = m22 - m34;
+        let m61 = m22 + m34;
+        let m62 = m23 - m32;
+        let m63 = m23 + m32;
+        let m64 = m24 - m29;
+        let m65 = m24 + m29;
+        let m66 = m26 - m33;
+        let m67 = m26 + m33;
+        let m68 = m27 - m31;
+        let m69 = m27 + m31;
+        let m70 = m28 - m30;
+        let m71 = m28 + m30;
+        let m72 = m36 - m40;
+        let m73 = m36 + m40;
+        let m74 = m37 - m41;
+        let m75 = m37 + m41;
+        let m76 = m38 - m42;
+        let m77 = m38 + m42;
+        let m78 = m39 - m43;
+        let m79 = m39 + m43;
+        let m80 = m44 - m70;
+        let m81 = m44 + m70;
+        let m82 = m45 - m71;
+        let m83 = m45 + m71;
+        let m84 = m46 - m68;
+        let m85 = m46 + m68;
+        let m86 = m47 - m69;
+        let m87 = m47 + m69;
+        let m88 = m48 - m62;
+        let m89 = m48 + m62;
+        let m90 = m49 - m63;
+        let m91 = m49 + m63;
+        let m92 = m50 - m64;
+        let m93 = m50 + m64;
+        let m94 = m51 - m65;
+        let m95 = m51 + m65;
+        let m96 = m52 - m58;
+        let m97 = m52 + m58;
+        let m98 = m53 - m59;
+        let m99 = m53 + m59;
+        let m100 = m54 - m60;
+        let m101 = m54 + m60;
+        let m102 = m55 - m61;
+        let m103 = m55 + m61;
+        let m104 = m56 - m66;
+        let m105 = m56 + m66;
+        let m106 = m57 - m67;
+        let m107 = m57 + m67;
+        let m108 = m72 - m78;
+        let m109 = m72 + m78;
+        let m110 = m73 - m77;
+        let m111 = m73 + m77;
+        let m112 = m74 - m76;
+        let m113 = m74 + m76;
+        let m114 = m75 - m79;
+        let m115 = m75 + m79;
+        let m116 = m95 * T::from_i64(2);
+        let m117 = -m116;
+        let m118 = m81 * T::from_i64(2);
+        let m119 = -m118;
+        let m120 = m86 * T::from_i64(2);
+        let m121 = -m120;
+        let m122 = m89 * T::from_i64(2);
+        let m123 = -m122;
+        let m124 = m82 * T::from_i64(2);
+        let m125 = -m114;
+        let m126 = m107 * T::from_i64(2);
+        let m127 = -m126;
+        let m128 = m101 * T::from_i64(2);
+        let m129 = m85 * T::from_i64(2);
+        let m130 = m105 * T::from_i64(2);
+        let m131 = -m111;
+        let m132 = m99 * T::from_i64(2);
+        let m133 = -m132;
+        let m134 = m90 * T::from_i64(2);
+        let m135 = m103 * T::from_i64(2);
+        let m136 = -m135;
+        let m137 = m98 * T::from_i64(2);
+        let m138 = -m110;
+        let m139 = -m109;
+        let m140 = m104 * T::from_i64(2);
+        let m141 = -m140;
+        let m142 = m102 * T::from_i64(2);
+        let m143 = m94 * T::from_i64(2);
+        let m144 = -m143;
+        let m145 = m91 * T::from_i64(2);
+        let m146 = -m145;
+        let m147 = m84 * T::from_i64(2);
+        let m148 = m106 * T::from_i64(2);
+        let m149 = -m112;
+        let m150 = m96 * T::from_i64(2);
+        let m151 = -m150;
+        let m152 = m88 * T::from_i64(2);
+        let m153 = m93 * T::from_i64(2);
+        let m154 = -m153;
+        let m155 = m83 * T::from_i64(2);
+        let m156 = -m155;
+        let m157 = m100 * T::from_i64(2);
+        let m158 = -m157;
+        let m159 = m97 * T::from_i64(2);
+        let m160 = -m113;
+        let m161 = m87 * T::from_i64(2);
+        let m162 = -m161;
+        let m163 = m80 * T::from_i64(2);
+        let m164 = m92 * T::from_i64(2);
+        let m165 = -m164;
+        let m166 = -m142;
+        let m167 = -m148;
+        let m168 = -m159;
+        let m169 = -m115;
+        let m170 = -m128;
+        let m171 = -m130;
+        let m172 = -m137;
+        let m173 = -m108;
+        gx::Prepared::from_entries([m108, m117, m115, m119, m121, m123, m124, m125, m127, m128, m129, m130, m131, m133, m134, m136, m137, m138, m139, m141, m142, m144, m146, m147, m148, m149, m151, m152, m154, m156, m158, m159, m160, m162, m163, m165, m109, m140, m166, m167, m112, m150, m157, m168, m113, m169, m114, m126, m170, m171, m111, m132, m135, m172, m110, m173])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<Odd, Multivector, T, 56> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0]) + x[15].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13])).0, (x[1].scale(m[14]) + x[2].scale(m[15]) + x[3].scale(m[16]) + x[4].scale(m[17])).0, (x[5].scale(m[18]) + x[6].scale(m[19]) + x[7].scale(m[20]) + x[8].scale(m[21]) + x[9].scale(m[22]) + x[10].scale(m[23])).0, (x[5].scale(m[24]) + x[6].scale(m[25]) + x[7].scale(m[26]) + x[8].scale(m[27]) + x[9].scale(m[28]) + x[10].scale(m[29])).0, (x[5].scale(m[30]) + x[6].scale(m[31]) + x[7].scale(m[32]) + x[8].scale(m[33]) + x[9].scale(m[34]) + x[10].scale(m[35])).0, (x[5].scale(m[21]) + x[6].scale(m[22]) + x[7].scale(m[23]) + x[8].scale(m[36]) + x[9].scale(m[37]) + x[10].scale(m[38])).0, (x[5].scale(m[27]) + x[6].scale(m[28]) + x[7].scale(m[29]) + x[8].scale(m[39]) + x[9].scale(m[40]) + x[10].scale(m[41])).0, (x[5].scale(m[33]) + x[6].scale(m[34]) + x[7].scale(m[35]) + x[8].scale(m[42]) + x[9].scale(m[43]) + x[10].scale(m[44])).0, (x[11].scale(m[45]) + x[12].scale(m[3]) + x[13].scale(m[4]) + x[14].scale(m[5])).0, (x[11].scale(m[6]) + x[12].scale(m[46]) + x[13].scale(m[47]) + x[14].scale(m[48])).0, (x[11].scale(m[10]) + x[12].scale(m[49]) + x[13].scale(m[50]) + x[14].scale(m[51])).0, (x[11].scale(m[14]) + x[12].scale(m[52]) + x[13].scale(m[53]) + x[14].scale(m[54])).0, (x[0].scale(m[1]) + x[15].scale(m[55])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Multivector, T, 56>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Multivector, T, 56>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]], [T::zero(), m[2], m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[14], m[15], m[16], m[17], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[19], m[20], m[21], m[22], m[23], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[24], m[25], m[26], m[27], m[28], m[29], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[30], m[31], m[32], m[33], m[34], m[35], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[22], m[23], m[36], m[37], m[38], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27], m[28], m[29], m[39], m[40], m[41], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[33], m[34], m[35], m[42], m[43], m[44], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[45], m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[46], m[47], m[48], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[49], m[50], m[51], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[52], m[53], m[54], T::zero()], [m[1], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[55]]] }
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
@@ -23969,43 +28238,43 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Od
         let t197 = t196 * T::from_i64(2);
         let t198 = t197 - t130;
         let t199 = t133 + t136;
-        let t200 = t199 - t132;
-        let t201 = t200 - t135;
+        let t200 = t132 + t135;
+        let t201 = t199 - t200;
         let t202 = t201 * T::from_i64(2);
         let t203 = t134 * T::from_i64(4);
         let t204 = t202 + t203;
         let t205 = t204 - t131;
         let t206 = t137 + t140;
-        let t207 = t206 - t139;
-        let t208 = t207 - t142;
+        let t207 = t139 + t142;
+        let t208 = t206 - t207;
         let t209 = t208 * T::from_i64(2);
         let t210 = t141 * T::from_i64(4);
         let t211 = t209 + t210;
         let t212 = t211 - t138;
         let t213 = t144 + t147;
-        let t214 = t213 - t143;
-        let t215 = t214 - t146;
+        let t214 = t143 + t146;
+        let t215 = t213 - t214;
         let t216 = t215 * T::from_i64(2);
         let t217 = t148 * T::from_i64(4);
         let t218 = t216 + t217;
         let t219 = t218 - t145;
         let t220 = t151 + t153;
-        let t221 = t220 - t150;
-        let t222 = t221 - t154;
+        let t221 = t150 + t154;
+        let t222 = t220 - t221;
         let t223 = t222 * T::from_i64(2);
         let t224 = t149 * T::from_i64(4);
         let t225 = t152 + t223;
         let t226 = t224 + t225;
         let t227 = t155 + t160;
-        let t228 = t227 - t157;
-        let t229 = t228 - t158;
+        let t228 = t157 + t158;
+        let t229 = t227 - t228;
         let t230 = t229 * T::from_i64(2);
         let t231 = t156 * T::from_i64(4);
         let t232 = t159 + t230;
         let t233 = t231 + t232;
         let t234 = t162 + t164;
-        let t235 = t234 - t161;
-        let t236 = t235 - t165;
+        let t235 = t161 + t165;
+        let t236 = t234 - t235;
         let t237 = t236 * T::from_i64(2);
         let t238 = t163 * T::from_i64(4);
         let t239 = t166 + t237;
@@ -24030,184 +28299,384 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Od
         let t258 = -xv[15];
             return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], t186, t190, t194, t198, t205, t212, t219, t226, t233, t240, t245, t249, t253, t257, t258]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[0] * v[5];
-        let m4 = v[0] * v[6];
-        let m5 = v[0] * v[7];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[2];
-        let m8 = v[1] * v[3];
-        let m9 = v[1] * v[4];
-        let m10 = v[1] * v[6];
-        let m11 = v[1] * v[7];
-        let m12 = v[2] * v[2];
-        let m13 = v[2] * v[3];
-        let m14 = v[2] * v[4];
-        let m15 = v[2] * v[5];
-        let m16 = v[2] * v[7];
-        let m17 = v[3] * v[3];
-        let m18 = v[3] * v[4];
-        let m19 = v[3] * v[5];
-        let m20 = v[3] * v[6];
-        let m21 = v[4] * v[4];
-        let m22 = v[4] * v[5];
-        let m23 = v[4] * v[6];
-        let m24 = v[4] * v[7];
-        let m25 = v[5] * v[5];
-        let m26 = v[5] * v[6];
-        let m27 = v[5] * v[7];
-        let m28 = v[6] * v[6];
-        let m29 = v[6] * v[7];
-        let m30 = v[7] * v[7];
-        let m31 = v[1] * v[5];
-        let m32 = v[2] * v[6];
-        let m33 = v[3] * v[7];
-        let m34 = m0 - m16;
-        let m35 = m0 + m16;
-        let m36 = m1 - m11;
-        let m37 = m1 + m11;
-        let m38 = m2 - m10;
-        let m39 = m2 + m10;
-        let m40 = m3 - m9;
-        let m41 = m3 + m9;
-        let m42 = m4 - m8;
-        let m43 = m4 + m8;
-        let m44 = m5 - m7;
-        let m45 = m5 + m7;
-        let m46 = m6 + m12;
-        let m47 = m6 - m30;
-        let m48 = m12 - m30;
-        let m49 = m13 - m29;
-        let m50 = m13 + m29;
-        let m51 = m14 - m27;
-        let m52 = m14 + m27;
-        let m53 = m15 - m24;
-        let m54 = m15 + m24;
-        let m55 = m17 + m21;
-        let m56 = m18 - m26;
-        let m57 = m18 + m26;
-        let m58 = m19 - m23;
-        let m59 = m19 + m23;
-        let m60 = m20 - m22;
-        let m61 = m20 + m22;
-        let m62 = m25 + m28;
-        let m63 = m17 - m25;
-        let m64 = m17 - m28;
-        let m65 = m21 - m25;
-        let m66 = m21 - m28;
-        let m67 = m31 + m32;
-        let m68 = m31 + m33;
-        let m69 = m32 + m33;
-        let m70 = m34 - m60;
-        let m71 = m34 + m60;
-        let m72 = m35 - m61;
-        let m73 = m35 + m61;
-        let m74 = m36 - m58;
-        let m75 = m36 + m58;
-        let m76 = m37 - m59;
-        let m77 = m37 + m59;
-        let m78 = m38 - m53;
-        let m79 = m38 + m53;
-        let m80 = m39 - m54;
-        let m81 = m39 + m54;
-        let m82 = m40 - m49;
-        let m83 = m40 + m49;
-        let m84 = m41 - m50;
-        let m85 = m41 + m50;
-        let m86 = m42 - m51;
-        let m87 = m42 + m51;
-        let m88 = m43 - m52;
-        let m89 = m43 + m52;
-        let m90 = m44 - m56;
-        let m91 = m44 + m56;
-        let m92 = m45 - m57;
-        let m93 = m45 + m57;
-        let m94 = m46 + m55;
-        let m95 = m46 - m62;
-        let m96 = m47 + m63;
-        let m97 = m47 + m66;
-        let m98 = m48 + m64;
-        let m99 = m48 + m65;
-        let m100 = m55 - m62;
-        let m101 = m94 * T::from_i64(2);
-        let m102 = m101 + T::from_i64(1);
-        let m103 = m71 * T::from_i64(2);
-        let m104 = -m103;
-        let m105 = m76 * T::from_i64(2);
-        let m106 = -m105;
-        let m107 = m79 * T::from_i64(2);
-        let m108 = -m107;
-        let m109 = m72 * T::from_i64(2);
-        let m110 = m97 * T::from_i64(2);
-        let m111 = m110 + T::from_i64(1);
-        let m112 = -m111;
-        let m113 = m93 * T::from_i64(2);
-        let m114 = -m113;
-        let m115 = m87 * T::from_i64(2);
-        let m116 = m75 * T::from_i64(2);
-        let m117 = m91 * T::from_i64(2);
-        let m118 = m99 * T::from_i64(2);
-        let m119 = m118 + T::from_i64(1);
-        let m120 = -m119;
-        let m121 = m85 * T::from_i64(2);
-        let m122 = -m121;
-        let m123 = m80 * T::from_i64(2);
-        let m124 = m89 * T::from_i64(2);
-        let m125 = -m124;
-        let m126 = m84 * T::from_i64(2);
-        let m127 = m100 * T::from_i64(2);
-        let m128 = m127 + T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = v[0] * v[4];
+        let m33 = v[1] * v[5];
+        let m34 = v[2] * v[6];
+        let m35 = v[3] * v[7];
+        let m36 = m0 + m1;
+        let m37 = m2 - m3;
+        let m38 = m4 + m5;
+        let m39 = m6 - m7;
+        let m40 = m0 - m1;
+        let m41 = m2 + m3;
+        let m42 = m4 - m5;
+        let m43 = m6 + m7;
+        let m44 = m8 - m22;
+        let m45 = m8 + m22;
+        let m46 = m9 - m18;
+        let m47 = m9 + m18;
+        let m48 = m10 - m17;
+        let m49 = m10 + m17;
+        let m50 = m11 - m16;
+        let m51 = m11 + m16;
+        let m52 = m12 - m15;
+        let m53 = m12 + m15;
+        let m54 = m13 - m14;
+        let m55 = m13 + m14;
+        let m56 = m19 - m31;
+        let m57 = m19 + m31;
+        let m58 = m20 - m30;
+        let m59 = m20 + m30;
+        let m60 = m21 - m28;
+        let m61 = m21 + m28;
+        let m62 = m23 - m29;
+        let m63 = m23 + m29;
+        let m64 = m24 - m27;
+        let m65 = m24 + m27;
+        let m66 = m25 - m26;
+        let m67 = m25 + m26;
+        let m68 = m32 - m33;
+        let m69 = m34 - m35;
+        let m70 = m36 - m38;
+        let m71 = m36 + m38;
+        let m72 = m37 - m39;
+        let m73 = m37 + m39;
+        let m74 = m40 + m42;
+        let m75 = m41 + m43;
+        let m76 = m32 + m33;
+        let m77 = m34 + m35;
+        let m78 = m40 + m41;
+        let m79 = m42 + m43;
+        let m80 = m44 - m66;
+        let m81 = m44 + m66;
+        let m82 = m45 - m67;
+        let m83 = m45 + m67;
+        let m84 = m46 - m64;
+        let m85 = m46 + m64;
+        let m86 = m47 - m65;
+        let m87 = m47 + m65;
+        let m88 = m48 - m60;
+        let m89 = m48 + m60;
+        let m90 = m49 - m61;
+        let m91 = m49 + m61;
+        let m92 = m50 - m56;
+        let m93 = m50 + m56;
+        let m94 = m51 - m57;
+        let m95 = m51 + m57;
+        let m96 = m52 - m58;
+        let m97 = m52 + m58;
+        let m98 = m53 - m59;
+        let m99 = m53 + m59;
+        let m100 = m54 - m62;
+        let m101 = m54 + m62;
+        let m102 = m55 - m63;
+        let m103 = m55 + m63;
+        let m104 = m68 - m69;
+        let m105 = m68 + m69;
+        let m106 = m70 - m72;
+        let m107 = m70 + m72;
+        let m108 = m71 - m75;
+        let m109 = m71 + m75;
+        let m110 = m73 - m74;
+        let m111 = m73 + m74;
+        let m112 = m76 - m77;
+        let m113 = m78 - m79;
+        let m114 = m81 * T::from_i64(2);
+        let m115 = -m114;
+        let m116 = m86 * T::from_i64(2);
+        let m117 = -m116;
+        let m118 = m89 * T::from_i64(2);
+        let m119 = -m118;
+        let m120 = m82 * T::from_i64(2);
+        let m121 = -m108;
+        let m122 = m103 * T::from_i64(2);
+        let m123 = -m122;
+        let m124 = m97 * T::from_i64(2);
+        let m125 = m85 * T::from_i64(2);
+        let m126 = m101 * T::from_i64(2);
+        let m127 = -m111;
+        let m128 = m95 * T::from_i64(2);
         let m129 = -m128;
-        let m130 = m98 * T::from_i64(2);
-        let m131 = m130 + T::from_i64(1);
+        let m130 = m90 * T::from_i64(2);
+        let m131 = m99 * T::from_i64(2);
         let m132 = -m131;
-        let m133 = m90 * T::from_i64(2);
-        let m134 = -m133;
-        let m135 = m88 * T::from_i64(2);
-        let m136 = m69 * T::from_i64(4);
-        let m137 = m81 * T::from_i64(2);
-        let m138 = -m137;
-        let m139 = m74 * T::from_i64(2);
-        let m140 = m92 * T::from_i64(2);
-        let m141 = m96 * T::from_i64(2);
-        let m142 = m141 + T::from_i64(1);
-        let m143 = -m142;
-        let m144 = m82 * T::from_i64(2);
-        let m145 = -m144;
-        let m146 = m78 * T::from_i64(2);
-        let m147 = m68 * T::from_i64(4);
-        let m148 = m73 * T::from_i64(2);
+        let m133 = m94 * T::from_i64(2);
+        let m134 = -m113;
+        let m135 = m100 * T::from_i64(2);
+        let m136 = -m135;
+        let m137 = m98 * T::from_i64(2);
+        let m138 = m112 * T::from_i64(2);
+        let m139 = -m138;
+        let m140 = m91 * T::from_i64(2);
+        let m141 = -m140;
+        let m142 = m84 * T::from_i64(2);
+        let m143 = m102 * T::from_i64(2);
+        let m144 = -m106;
+        let m145 = m92 * T::from_i64(2);
+        let m146 = -m145;
+        let m147 = m88 * T::from_i64(2);
+        let m148 = m105 * T::from_i64(2);
         let m149 = -m148;
-        let m150 = m86 * T::from_i64(2);
+        let m150 = m83 * T::from_i64(2);
         let m151 = -m150;
-        let m152 = m83 * T::from_i64(2);
-        let m153 = m95 * T::from_i64(2);
-        let m154 = m153 + T::from_i64(1);
-        let m155 = -m154;
-        let m156 = m77 * T::from_i64(2);
+        let m152 = m96 * T::from_i64(2);
+        let m153 = -m152;
+        let m154 = m93 * T::from_i64(2);
+        let m155 = -m107;
+        let m156 = m87 * T::from_i64(2);
         let m157 = -m156;
-        let m158 = m70 * T::from_i64(2);
-        let m159 = m67 * T::from_i64(4);
-        let m160 = -m135;
-        let m161 = -m140;
-        let m162 = -m152;
-        let m163 = -m102;
-        let m164 = -m115;
-        let m165 = -m117;
+        let m158 = m80 * T::from_i64(2);
+        let m159 = m104 * T::from_i64(2);
+        let m160 = -m159;
+        let m161 = -m137;
+        let m162 = -m143;
+        let m163 = -m154;
+        let m164 = -m109;
+        let m165 = -m124;
         let m166 = -m126;
-        let m167 = -T::from_i64(1);
+        let m167 = -m133;
+        let m168 = -m110;
+        let m169 = -T::from_i64(1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0] + x[15].scale(T::from_i64(0))).0, (x[1].scale(m102) + x[2].scale(m104) + x[3].scale(m106) + x[4].scale(m108)).0, (x[1].scale(m109) + x[2].scale(m112) + x[3].scale(m114) + x[4].scale(m115)).0, (x[1].scale(m116) + x[2].scale(m117) + x[3].scale(m120) + x[4].scale(m122)).0, (x[1].scale(m123) + x[2].scale(m125) + x[3].scale(m126) + x[4].scale(m129)).0, (x[5].scale(m132) + x[6].scale(m134) + x[7].scale(m135) + x[8].scale(m136) + x[9].scale(m138) + x[10].scale(m139)).0, (x[5].scale(m140) + x[6].scale(m143) + x[7].scale(m145) + x[8].scale(m146) + x[9].scale(m147) + x[10].scale(m149)).0, (x[5].scale(m151) + x[6].scale(m152) + x[7].scale(m155) + x[8].scale(m157) + x[9].scale(m158) + x[10].scale(m159)).0, (x[5].scale(m136) + x[6].scale(m138) + x[7].scale(m139) + x[8].scale(m131) + x[9].scale(m133) + x[10].scale(m160)).0, (x[5].scale(m146) + x[6].scale(m147) + x[7].scale(m149) + x[8].scale(m161) + x[9].scale(m142) + x[10].scale(m144)).0, (x[5].scale(m157) + x[6].scale(m158) + x[7].scale(m159) + x[8].scale(m150) + x[9].scale(m162) + x[10].scale(m154)).0, (x[11].scale(m163) + x[12].scale(m104) + x[13].scale(m106) + x[14].scale(m108)).0, (x[11].scale(m109) + x[12].scale(m111) + x[13].scale(m113) + x[14].scale(m164)).0, (x[11].scale(m116) + x[12].scale(m165) + x[13].scale(m119) + x[14].scale(m121)).0, (x[11].scale(m123) + x[12].scale(m124) + x[13].scale(m166) + x[14].scale(m128)).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m167)).0] }
+        Multivector { c: [(x[0] + x[15].scale(T::from_i64(0))).0, (x[1].scale(m109) + x[2].scale(m115) + x[3].scale(m117) + x[4].scale(m119)).0, (x[1].scale(m120) + x[2].scale(m121) + x[3].scale(m123) + x[4].scale(m124)).0, (x[1].scale(m125) + x[2].scale(m126) + x[3].scale(m127) + x[4].scale(m129)).0, (x[1].scale(m130) + x[2].scale(m132) + x[3].scale(m133) + x[4].scale(m110)).0, (x[5].scale(m134) + x[6].scale(m136) + x[7].scale(m137) + x[8].scale(m139) + x[9].scale(m141) + x[10].scale(m142)).0, (x[5].scale(m143) + x[6].scale(m144) + x[7].scale(m146) + x[8].scale(m147) + x[9].scale(m149) + x[10].scale(m151)).0, (x[5].scale(m153) + x[6].scale(m154) + x[7].scale(m155) + x[8].scale(m157) + x[9].scale(m158) + x[10].scale(m160)).0, (x[5].scale(m139) + x[6].scale(m141) + x[7].scale(m142) + x[8].scale(m113) + x[9].scale(m135) + x[10].scale(m161)).0, (x[5].scale(m147) + x[6].scale(m149) + x[7].scale(m151) + x[8].scale(m162) + x[9].scale(m106) + x[10].scale(m145)).0, (x[5].scale(m157) + x[6].scale(m158) + x[7].scale(m160) + x[8].scale(m152) + x[9].scale(m163) + x[10].scale(m107)).0, (x[11].scale(m164) + x[12].scale(m115) + x[13].scale(m117) + x[14].scale(m119)).0, (x[11].scale(m120) + x[12].scale(m108) + x[13].scale(m122) + x[14].scale(m165)).0, (x[11].scale(m125) + x[12].scale(m166) + x[13].scale(m111) + x[14].scale(m128)).0, (x[11].scale(m130) + x[12].scale(m131) + x[13].scale(m167) + x[14].scale(m168)).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m169)).0] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Multivector<S, T>;
-    #[inline]
+    #[inline(always)]
     fn transform_inv(self, x: Multivector<S, T>) -> Multivector<S, T> {
         gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Multivector, T, 54>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Multivector, T, 54> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[4] * v[4];
+        let m5 = v[5] * v[5];
+        let m6 = v[6] * v[6];
+        let m7 = v[7] * v[7];
+        let m8 = v[0] * v[1];
+        let m9 = v[0] * v[2];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[0] * v[7];
+        let m14 = v[1] * v[2];
+        let m15 = v[1] * v[3];
+        let m16 = v[1] * v[4];
+        let m17 = v[1] * v[6];
+        let m18 = v[1] * v[7];
+        let m19 = v[2] * v[3];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[5];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[6];
+        let m26 = v[4] * v[5];
+        let m27 = v[4] * v[6];
+        let m28 = v[4] * v[7];
+        let m29 = v[5] * v[6];
+        let m30 = v[5] * v[7];
+        let m31 = v[6] * v[7];
+        let m32 = v[0] * v[4];
+        let m33 = v[1] * v[5];
+        let m34 = v[2] * v[6];
+        let m35 = v[3] * v[7];
+        let m36 = m0 + m1;
+        let m37 = m2 - m3;
+        let m38 = m4 + m5;
+        let m39 = m6 - m7;
+        let m40 = m0 - m1;
+        let m41 = m2 + m3;
+        let m42 = m4 - m5;
+        let m43 = m6 + m7;
+        let m44 = m8 - m22;
+        let m45 = m8 + m22;
+        let m46 = m9 - m18;
+        let m47 = m9 + m18;
+        let m48 = m10 - m17;
+        let m49 = m10 + m17;
+        let m50 = m11 - m16;
+        let m51 = m11 + m16;
+        let m52 = m12 - m15;
+        let m53 = m12 + m15;
+        let m54 = m13 - m14;
+        let m55 = m13 + m14;
+        let m56 = m19 - m31;
+        let m57 = m19 + m31;
+        let m58 = m20 - m30;
+        let m59 = m20 + m30;
+        let m60 = m21 - m28;
+        let m61 = m21 + m28;
+        let m62 = m23 - m29;
+        let m63 = m23 + m29;
+        let m64 = m24 - m27;
+        let m65 = m24 + m27;
+        let m66 = m25 - m26;
+        let m67 = m25 + m26;
+        let m68 = m32 - m33;
+        let m69 = m34 - m35;
+        let m70 = m36 - m38;
+        let m71 = m36 + m38;
+        let m72 = m37 - m39;
+        let m73 = m37 + m39;
+        let m74 = m40 + m42;
+        let m75 = m41 + m43;
+        let m76 = m32 + m33;
+        let m77 = m34 + m35;
+        let m78 = m40 + m41;
+        let m79 = m42 + m43;
+        let m80 = m44 - m66;
+        let m81 = m44 + m66;
+        let m82 = m45 - m67;
+        let m83 = m45 + m67;
+        let m84 = m46 - m64;
+        let m85 = m46 + m64;
+        let m86 = m47 - m65;
+        let m87 = m47 + m65;
+        let m88 = m48 - m60;
+        let m89 = m48 + m60;
+        let m90 = m49 - m61;
+        let m91 = m49 + m61;
+        let m92 = m50 - m56;
+        let m93 = m50 + m56;
+        let m94 = m51 - m57;
+        let m95 = m51 + m57;
+        let m96 = m52 - m58;
+        let m97 = m52 + m58;
+        let m98 = m53 - m59;
+        let m99 = m53 + m59;
+        let m100 = m54 - m62;
+        let m101 = m54 + m62;
+        let m102 = m55 - m63;
+        let m103 = m55 + m63;
+        let m104 = m68 - m69;
+        let m105 = m68 + m69;
+        let m106 = m70 - m72;
+        let m107 = m70 + m72;
+        let m108 = m71 - m75;
+        let m109 = m71 + m75;
+        let m110 = m73 - m74;
+        let m111 = m73 + m74;
+        let m112 = m76 - m77;
+        let m113 = m78 - m79;
+        let m114 = m81 * T::from_i64(2);
+        let m115 = -m114;
+        let m116 = m86 * T::from_i64(2);
+        let m117 = -m116;
+        let m118 = m89 * T::from_i64(2);
+        let m119 = -m118;
+        let m120 = m82 * T::from_i64(2);
+        let m121 = -m108;
+        let m122 = m103 * T::from_i64(2);
+        let m123 = -m122;
+        let m124 = m97 * T::from_i64(2);
+        let m125 = m85 * T::from_i64(2);
+        let m126 = m101 * T::from_i64(2);
+        let m127 = -m111;
+        let m128 = m95 * T::from_i64(2);
+        let m129 = -m128;
+        let m130 = m90 * T::from_i64(2);
+        let m131 = m99 * T::from_i64(2);
+        let m132 = -m131;
+        let m133 = m94 * T::from_i64(2);
+        let m134 = -m113;
+        let m135 = m100 * T::from_i64(2);
+        let m136 = -m135;
+        let m137 = m98 * T::from_i64(2);
+        let m138 = m112 * T::from_i64(2);
+        let m139 = -m138;
+        let m140 = m91 * T::from_i64(2);
+        let m141 = -m140;
+        let m142 = m84 * T::from_i64(2);
+        let m143 = m102 * T::from_i64(2);
+        let m144 = -m106;
+        let m145 = m92 * T::from_i64(2);
+        let m146 = -m145;
+        let m147 = m88 * T::from_i64(2);
+        let m148 = m105 * T::from_i64(2);
+        let m149 = -m148;
+        let m150 = m83 * T::from_i64(2);
+        let m151 = -m150;
+        let m152 = m96 * T::from_i64(2);
+        let m153 = -m152;
+        let m154 = m93 * T::from_i64(2);
+        let m155 = -m107;
+        let m156 = m87 * T::from_i64(2);
+        let m157 = -m156;
+        let m158 = m80 * T::from_i64(2);
+        let m159 = m104 * T::from_i64(2);
+        let m160 = -m159;
+        let m161 = -m137;
+        let m162 = -m143;
+        let m163 = -m154;
+        let m164 = -m109;
+        let m165 = -m124;
+        let m166 = -m126;
+        let m167 = -m133;
+        let m168 = -m110;
+        let m169 = -T::from_i64(1);
+        gx::Prepared::from_entries([m109, m115, m117, m119, m120, m121, m123, m124, m125, m126, m127, m129, m130, m132, m133, m110, m134, m136, m137, m139, m141, m142, m143, m144, m146, m147, m149, m151, m153, m154, m155, m157, m158, m160, m113, m135, m161, m162, m106, m145, m152, m163, m107, m164, m108, m122, m165, m166, m111, m128, m131, m167, m168, m169])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Odd>, Multivector, T, 54> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0] + x[15].scale(T::from_i64(0))).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[1].scale(m[8]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14]) + x[4].scale(m[15])).0, (x[5].scale(m[16]) + x[6].scale(m[17]) + x[7].scale(m[18]) + x[8].scale(m[19]) + x[9].scale(m[20]) + x[10].scale(m[21])).0, (x[5].scale(m[22]) + x[6].scale(m[23]) + x[7].scale(m[24]) + x[8].scale(m[25]) + x[9].scale(m[26]) + x[10].scale(m[27])).0, (x[5].scale(m[28]) + x[6].scale(m[29]) + x[7].scale(m[30]) + x[8].scale(m[31]) + x[9].scale(m[32]) + x[10].scale(m[33])).0, (x[5].scale(m[19]) + x[6].scale(m[20]) + x[7].scale(m[21]) + x[8].scale(m[34]) + x[9].scale(m[35]) + x[10].scale(m[36])).0, (x[5].scale(m[25]) + x[6].scale(m[26]) + x[7].scale(m[27]) + x[8].scale(m[37]) + x[9].scale(m[38]) + x[10].scale(m[39])).0, (x[5].scale(m[31]) + x[6].scale(m[32]) + x[7].scale(m[33]) + x[8].scale(m[40]) + x[9].scale(m[41]) + x[10].scale(m[42])).0, (x[11].scale(m[43]) + x[12].scale(m[1]) + x[13].scale(m[2]) + x[14].scale(m[3])).0, (x[11].scale(m[4]) + x[12].scale(m[44]) + x[13].scale(m[45]) + x[14].scale(m[46])).0, (x[11].scale(m[8]) + x[12].scale(m[47]) + x[13].scale(m[48]) + x[14].scale(m[49])).0, (x[11].scale(m[12]) + x[12].scale(m[50]) + x[13].scale(m[51]) + x[14].scale(m[52])).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m[53])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Multivector, T, 54>> for Multivector<(Multivector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Multivector, T, 54>) -> Self {
+        let m = p.m;
+        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(0)], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[17], m[18], m[19], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[22], m[23], m[24], m[25], m[26], m[27], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[28], m[29], m[30], m[31], m[32], m[33], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19], m[20], m[21], m[34], m[35], m[36], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[25], m[26], m[27], m[37], m[38], m[39], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[31], m[32], m[33], m[40], m[41], m[42], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[43], m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[44], m[45], m[46], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[47], m[48], m[49], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[50], m[51], m[52], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[53]]] }
     }
 }
 

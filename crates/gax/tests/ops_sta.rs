@@ -37,7 +37,7 @@ where
 }
 
 /// `v x ~v` against the oracle; with `unit`, `v` is first normalized to `v ~v = 1`.
-fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R)
+fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R, prepared: impl Fn(V, X) -> R)
 where
     V: Extensor<Slots = (), Coef = f64>,
     X: Extensor<Slots = (), Coef = f64>,
@@ -54,6 +54,7 @@ where
         let (dv, dx) = (o.dense(&v), o.dense(&x));
         let want = o.binop(BinOp::Gp, &o.binop(BinOp::Gp, &dv, &dx), &o.unop(UnOp::Reverse, &dv));
         assert_close(&o.dense(&f(v, x)), &want, &format!("sandwich {} {}", std::any::type_name::<V>(), std::any::type_name::<X>()));
+        assert_close(&o.dense(&prepared(v, x)), &want, &format!("prepared {} {}", std::any::type_name::<V>(), std::any::type_name::<X>()));
     }
     assert!(tested > 0, "no sample of {} could be normalized", std::any::type_name::<V>());
 }
@@ -678,52 +679,52 @@ fn value_methods() {
 fn sandwiches() {
     let o = Oracle::from_spec(SPEC);
     let mut rng = Rng::new(99);
-    sandwich::<Vector<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Vector<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Vector<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Even<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Even<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
-    sandwich::<Odd<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);
-    sandwich::<Odd<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);
+    sandwich::<Vector<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Scalar>() >> x);
+    sandwich::<Vector<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Scalar>() >> x);
+    sandwich::<Vector<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Vector>() >> x);
+    sandwich::<Vector<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Vector>() >> x);
+    sandwich::<Vector<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Bivector>() >> x);
+    sandwich::<Vector<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Bivector>() >> x);
+    sandwich::<Vector<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Trivector>() >> x);
+    sandwich::<Vector<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Trivector>() >> x);
+    sandwich::<Vector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
+    sandwich::<Vector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
+    sandwich::<Vector<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Even>() >> x);
+    sandwich::<Vector<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Even>() >> x);
+    sandwich::<Vector<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Odd>() >> x);
+    sandwich::<Vector<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Odd>() >> x);
+    sandwich::<Vector<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Multivector>() >> x);
+    sandwich::<Vector<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Multivector>() >> x);
+    sandwich::<Even<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Scalar>() >> x);
+    sandwich::<Even<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Scalar>() >> x);
+    sandwich::<Even<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Vector>() >> x);
+    sandwich::<Even<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Vector>() >> x);
+    sandwich::<Even<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Bivector>() >> x);
+    sandwich::<Even<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Bivector>() >> x);
+    sandwich::<Even<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Trivector>() >> x);
+    sandwich::<Even<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Trivector>() >> x);
+    sandwich::<Even<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
+    sandwich::<Even<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
+    sandwich::<Even<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Even>() >> x);
+    sandwich::<Even<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Even>() >> x);
+    sandwich::<Even<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Odd>() >> x);
+    sandwich::<Even<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Odd>() >> x);
+    sandwich::<Even<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Multivector>() >> x);
+    sandwich::<Even<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Multivector>() >> x);
+    sandwich::<Odd<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Scalar>() >> x);
+    sandwich::<Odd<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Scalar>() >> x);
+    sandwich::<Odd<(), f64>, Vector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Vector>() >> x);
+    sandwich::<Odd<(), f64>, Vector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Vector>() >> x);
+    sandwich::<Odd<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Bivector>() >> x);
+    sandwich::<Odd<(), f64>, Bivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Bivector>() >> x);
+    sandwich::<Odd<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Trivector>() >> x);
+    sandwich::<Odd<(), f64>, Trivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Trivector>() >> x);
+    sandwich::<Odd<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
+    sandwich::<Odd<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
+    sandwich::<Odd<(), f64>, Even<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Even>() >> x);
+    sandwich::<Odd<(), f64>, Even<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Even>() >> x);
+    sandwich::<Odd<(), f64>, Odd<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Odd>() >> x);
+    sandwich::<Odd<(), f64>, Odd<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Odd>() >> x);
+    sandwich::<Odd<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Multivector>() >> x);
+    sandwich::<Odd<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Multivector>() >> x);
 }

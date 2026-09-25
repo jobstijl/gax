@@ -103,6 +103,8 @@ pub const RESERVED: &[&str] = &[
     "Endomorphism",
     "Form",
     "Pairing",
+    "Prepare",
+    "Prepared",
     "SplitLast",
     "Gp",
     "Wedge",
@@ -373,7 +375,17 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         let args: Vec<String> = k.blades.iter().map(|b| blade_ident(b)).collect();
         let _ = write!(
             self.out,
-            "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order.\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {name} {{ c: [{}] }}\n    }}\n\n    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name},), T> {{\n        {name} {{ c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j {{ T::one() }} else {{ T::zero() }})) }}\n    }}\n",
+            "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order.\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {name} {{ c: [{}] }}\n    }}\n\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {{
+        gx::Prepare::prepare(self)
+    }}
+
+    /// The identity map on `{name}`: a `{name}` with one open `{name}` slot.\n    #[inline(always)]\n    pub fn slot() -> {name}<({name},), T> {{\n        {name} {{ c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j {{ T::one() }} else {{ T::zero() }})) }}\n    }}\n",
             params.join(", "),
             args.join(", ")
         );
@@ -606,32 +618,25 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 exprs.push("<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0)".to_string());
                 continue;
             }
-            let mut e = String::new();
-            for (k, t) in terms.iter().enumerate() {
-                let prod = format!("a[{}] * b[{}]", t.i, t.j);
-                let mag = t.coef.abs();
-                let term = if mag == 1 {
-                    prod
-                } else {
-                    format!("({prod}).scale(T::from_i64({mag}))")
-                };
-                if k == 0 {
-                    if t.coef < 0 {
-                        let _ = write!(e, "-({term})");
+            let items: Vec<(bool, String)> = terms
+                .iter()
+                .map(|t| {
+                    let prod = format!("a[{}] * b[{}]", t.i, t.j);
+                    let mag = t.coef.abs();
+                    let term = if mag == 1 {
+                        prod
                     } else {
-                        e.push_str(&term);
-                    }
-                } else if t.coef < 0 {
-                    let _ = write!(e, " - {term}");
-                } else {
-                    let _ = write!(e, " + {term}");
-                }
-            }
+                        format!("({prod}).scale(T::from_i64({mag}))")
+                    };
+                    (t.coef < 0, term)
+                })
+                .collect();
+            let e = balanced_sum(&items);
             exprs.push(format!("({e}).0"));
         }
         let _ = write!(
             body,
-            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        {on} {{\n            c: [\n"
+            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        {on} {{\n            c: [\n"
         );
         for e in exprs {
             let _ = writeln!(body, "                {e},");
@@ -736,7 +741,19 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 }
             }
         }
-        let matrix_polys: Vec<Poly> = entries.iter().map(|e| e.2.clone()).collect();
+        // Entries that are constant under the unit condition (a unit motor's weight row is
+        // exactly 1) are used as constants: they cost nothing and need no storage.
+        let matrix_polys: Vec<Poly> = entries
+            .iter()
+            .map(|e| {
+                let r = cse::reduce_by_relations(&e.2, &relations);
+                if r.as_constant().is_some() {
+                    r
+                } else {
+                    e.2.clone()
+                }
+            })
+            .collect();
         let matrix = cse::compile_best(&matrix_polys, &BTreeSet::new(), &relations);
 
         let (vn, xn, on) = (&vk.name, &xk.name, &out.name);
@@ -762,7 +779,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let mut s = String::new();
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n"
+            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n"
         );
         direct.emit_lets(&var_name, "t", &mut s);
         let outs: Vec<String> = direct
@@ -815,7 +832,90 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         };
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> TransformInv<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline]\n    fn transform_inv(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        Transform::transform({rev_self}, x)\n    }}\n}}\n\n"
+            "impl<S: Slots, T: Coef> TransformInv<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform_inv(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        Transform::transform({rev_self}, x)\n    }}\n}}\n\n"
+        );
+        // Prepared action: the non-constant matrix entries, applied sparsely.
+        let mut stored: Vec<Operand> = Vec::new();
+        for (k, _) in entries.iter().enumerate() {
+            let op = matrix.outputs[k];
+            if !matches!(op, Operand::Const(_)) && !stored.contains(&op) {
+                stored.push(op);
+            }
+        }
+        let nst = stored.len();
+        let vkind = if unit {
+            format!("gx::Unit<{vn}>")
+        } else {
+            vn.clone()
+        };
+        let prep_ty = format!("gx::Prepared<{vkind}, {xn}, T, {nst}>");
+        let mut lets = String::new();
+        matrix.emit_lets(&mat_name, "m", &mut lets);
+        let vals: Vec<String> = stored.iter().map(|o| render(o, &mat_name, "m")).collect();
+        let _ = write!(
+            s,
+            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
+            vals.join(", ")
+        );
+        let mut cols = Vec::new();
+        for o in 0..nout {
+            let mut e = String::new();
+            for (k, (_, i, _)) in entries.iter().enumerate().filter(|(_, e)| e.0 == o) {
+                let term = match matrix.outputs[k] {
+                    Operand::Const(c) if c == Rational::ONE => format!("x[{i}]"),
+                    Operand::Const(c) if c == -Rational::ONE => format!("-x[{i}]"),
+                    Operand::Const(c) => format!(
+                        "x[{i}].scale({})",
+                        render(&Operand::Const(c), &mat_name, "m")
+                    ),
+                    other => {
+                        let idx = stored.iter().position(|s| *s == other).expect("stored");
+                        format!("x[{i}].scale(m[{idx}])")
+                    }
+                };
+                if e.is_empty() {
+                    e = term;
+                } else if let Some(stripped) = term.strip_prefix('-') {
+                    e = format!("{e} - {stripped}");
+                } else {
+                    e = format!("{e} + {term}");
+                }
+            }
+            cols.push(if e.is_empty() {
+                "S::from_flat(&mut |_| T::zero(), 0)".to_string()
+            } else {
+                format!("({e}).0")
+            });
+        }
+        let _ = write!(
+            s,
+            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {prep_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let m = self.m;\n        let x = x.c.map(SlotArr::<S, T>);\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
+            cols.join(", ")
+        );
+        // The dense map, written entry by entry (no multiplication by an identity's zeros).
+        let nx = xk.layout.len();
+        let mut rows = Vec::new();
+        for o in 0..nout {
+            let row: Vec<String> = (0..nx)
+                .map(
+                    |i| match entries.iter().position(|e| e.0 == o && e.1 == i) {
+                        None => "T::zero()".to_string(),
+                        Some(k) => match matrix.outputs[k] {
+                            Operand::Const(c) => render(&Operand::Const(c), &mat_name, "m"),
+                            other => format!(
+                                "m[{}]",
+                                stored.iter().position(|s| *s == other).expect("stored")
+                            ),
+                        },
+                    },
+                )
+                .collect();
+            rows.push(format!("[{}]", row.join(", ")));
+        }
+        let _ = write!(
+            s,
+            "impl<T: Coef> From<{prep_ty}> for {on}<({xn},), T> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
+            rows.join(", ")
         );
         self.w(&s);
         self.stats.sandwich_impls += 1;
@@ -889,7 +989,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
          \x20       assert_close(&o.dense(&f(a)), &o.unop(op, &o.dense(&a)), &format!(\"{{op:?}} {{}}\", std::any::type_name::<A>()));\n\
          \x20   }}\n}}\n\n\
          /// `v x ~v` against the oracle; with `unit`, `v` is first normalized to `v ~v = 1`.\n\
-         fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R)\n\
+         fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R, prepared: impl Fn(V, X) -> R)\n\
          where\n    V: Extensor<Slots = (), Coef = f64>,\n    X: Extensor<Slots = (), Coef = f64>,\n    R: Extensor<Slots = (), Coef = f64>,\n{{\n\
          \x20   let mut tested = 0;\n\
          \x20   for _ in 0..16 {{\n\
@@ -902,6 +1002,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
          \x20       let (dv, dx) = (o.dense(&v), o.dense(&x));\n\
          \x20       let want = o.binop(BinOp::Gp, &o.binop(BinOp::Gp, &dv, &dx), &o.unop(UnOp::Reverse, &dv));\n\
          \x20       assert_close(&o.dense(&f(v, x)), &want, &format!(\"sandwich {{}} {{}}\", std::any::type_name::<V>(), std::any::type_name::<X>()));\n\
+         \x20       assert_close(&o.dense(&prepared(v, x)), &want, &format!(\"prepared {{}} {{}}\", std::any::type_name::<V>(), std::any::type_name::<X>()));\n\
          \x20   }}\n\
          \x20   assert!(tested > 0, \"no sample of {{}} could be normalized\", std::any::type_name::<V>());\n}}\n\n",
         name = spec.name
@@ -979,15 +1080,42 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
         if *unit {
             let _ = writeln!(
                 t,
-                "    sandwich::<{v}<(), f64>, {x}<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x);"
+                "    sandwich::<{v}<(), f64>, {x}<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<{x}>() >> x);"
             );
         } else {
             let _ = writeln!(
                 t,
-                "    sandwich::<{v}<(), f64>, {x}<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x);"
+                "    sandwich::<{v}<(), f64>, {x}<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<{x}>() >> x);"
             );
         }
     }
     t.push_str("}\n");
     t
+}
+
+/// A signed sum as a balanced expression tree: `log2(n)` dependent additions. Floating-point
+/// sums cannot be reassociated by the compiler, so the shape written here is the shape that
+/// runs, and a chain would make single calls latency bound.
+fn balanced_sum(items: &[(bool, String)]) -> String {
+    fn go(items: &[(bool, String)]) -> (bool, String) {
+        match items {
+            [] => (false, "T::zero()".into()),
+            [x] => x.clone(),
+            _ => {
+                let (l, r) = items.split_at(items.len().div_ceil(2));
+                let ((ln, lv), (rn, rv)) = (go(l), go(r));
+                match (ln, rn) {
+                    (false, false) => (false, format!("({lv} + {rv})")),
+                    (false, true) => (false, format!("({lv} - {rv})")),
+                    (true, false) => (false, format!("({rv} - {lv})")),
+                    (true, true) => (true, format!("({lv} + {rv})")),
+                }
+            }
+        }
+    }
+    // Put positive terms first so a leading negation is rarely needed.
+    let mut sorted = items.to_vec();
+    sorted.sort_by_key(|x| x.0);
+    let (neg, e) = go(&sorted);
+    if neg { format!("-{e}") } else { e }
 }

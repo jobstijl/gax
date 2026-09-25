@@ -436,6 +436,61 @@ pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     [r0, r1]
 }
 
+/// Fast path of [`exp_coeffs`] for rotations: `B² = lambda + mu I` with `lambda <= 0` and
+/// `I² = 0` (or `mu = 0`), as for every bivector of plane-based PGA. With `a = √(-λ)`:
+/// `C = cos a`, `S = sin a / a`, `C' = S / 2`, `S' = (S - C) / (2 a²)`, and the `I` parts are
+/// `μ C'` and `μ S'`. Series are used near `a = 0`.
+#[inline]
+pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
+    let a2 = (-lambda).max(T::zero());
+    let a = a2.sqrt();
+    let (sin, cos) = a.sin_cos();
+    let k = |v: f64| T::from_f64(v);
+    let small = k(1e-4);
+    let s = T::select_lt(
+        a2,
+        small,
+        T::one() - a2 * k(1.0 / 6.0) + a2 * a2 * k(1.0 / 120.0),
+        sin / a,
+    );
+    let ds = T::select_lt(
+        a2,
+        small,
+        k(1.0 / 6.0) - a2 * k(1.0 / 60.0),
+        (s - cos) / (a2 + a2),
+    );
+    [cos, mu * s * k(0.5), s, mu * ds]
+}
+
+/// Fast path of [`log_coeffs`] for rotations: `R = c + P` with `P² = u0 + u1 I`, `u0 <= 0`
+/// and `I² = 0` (or no `I` part). With `s = √(-u0)` and `θ = atan2(s, c0)`: `h0 = θ / s`, and
+/// the `I` part is `c1 ∂h/∂c + u1 ∂h/∂u` with `∂h/∂c = -1/(c0² + s²)` and
+/// `∂h/∂u = (θ - c0 s/(c0² + s²)) / (2 s³)`. Series are used near `s = 0`.
+#[inline]
+pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
+    let s2 = (-u.0).max(T::zero());
+    let s = s2.sqrt();
+    let theta = s.atan2(c.0);
+    let n = c.0 * c.0 + s2;
+    let k = |v: f64| T::from_f64(v);
+    let small = k(1e-6);
+    let h0 = T::select_lt(s2, small, (T::one() + s2 * k(1.0 / 6.0)) / c.0, theta / s);
+    let g = T::select_lt(
+        s2,
+        small,
+        k(1.0 / 3.0) + s2 * k(1.0 / 10.0),
+        (theta - c.0 * s / n) / (s2 * s * k(2.0)),
+    );
+    [h0, -c.1 / n + u.1 * g]
+}
+
+/// Fast path of [`rsqrt`] for `I² = 0`: `(a + b I)^(-1/2) = a^(-1/2) - (b/2) a^(-3/2) I`.
+#[inline]
+pub fn rsqrt_nil<T: Real>(a: T, b: T) -> [T; 2] {
+    let r = a.sqrt().recip();
+    [r, -(b * r * r * r) * T::from_f64(0.5)]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -456,6 +511,32 @@ mod tests {
         // Near the identity the series takes over.
         let [c0, _, s0, _] = exp_coeffs(0, -1e-9, 0.0);
         assert!((c0 - 1.0).abs() < 1e-9 && (s0 - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn fast_paths_match_channels() {
+        for &(lam, mu) in &[(-0.49f64, 0.3), (-1e-7, 0.2), (-2.5, -0.7), (0.0, 0.1)] {
+            let a = exp_coeffs(0, lam, mu);
+            let b = exp_coeffs_rotation(lam, mu);
+            for i in 0..4 {
+                assert!((a[i] - b[i]).abs() < 1e-9, "exp {i}: {a:?} vs {b:?}");
+            }
+        }
+        for &th in &[0.3f64, 1e-5, 2.5] {
+            // A unit rotor-like Study pair: c = cos θ (+ c1 I), u = -sin² θ (+ u1 I) with
+            // 2 c0 c1 - u1 = 0 (unit condition in the I part).
+            let (c0, c1) = (th.cos(), 0.2);
+            let (u0, u1) = (-(th.sin() * th.sin()), 2.0 * c0 * c1);
+            let a = log_coeffs(0, (c0, c1), (u0, u1));
+            let b = log_coeffs_rotation((c0, c1), (u0, u1));
+            assert!(
+                (a[0] - b[0]).abs() < 1e-9 && (a[1] - b[1]).abs() < 1e-8,
+                "log θ={th}: {a:?} vs {b:?}"
+            );
+        }
+        let a = rsqrt(0, 2.0f64, 0.6);
+        let b = rsqrt_nil(2.0f64, 0.6);
+        assert!((a[0] - b[0]).abs() < 1e-14 && (a[1] - b[1]).abs() < 1e-14);
     }
 
     #[test]
