@@ -35,7 +35,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] Optional `mul_add` emission when FMA is available
 - [ ] Multi-slot `trace::<I>`; outermorphism
 - [ ] Better line sandwich kernel (58 mul now)
-- [ ] Early exit in the Jacobi solvers and cheaper pivoting for scalar coefficients (6x6 eigh 2.7x nalgebra now)
+- [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)
+- [ ] A cheaper map inverse (1.4x nalgebra)
 - [ ] Emit fused code in a shape LLVM's SLP vectorizer handles well (fused single-value kernels can lose to generic code)
 
 ## Phase 3: quality and documentation

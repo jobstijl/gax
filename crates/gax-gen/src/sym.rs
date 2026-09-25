@@ -426,6 +426,11 @@ impl Real for Sym {
              Build-time tracing needs branch-free code; keep such code out of traced kernels."
         )
     }
+    fn all_lt(_: Sym, _: Sym) -> bool {
+        panic!(
+            "gax tracing: a traced kernel tested convergence (all_lt); iterative solvers cannot be traced"
+        )
+    }
     fn epsilon() -> Sym {
         Sym::constant_atom(ConstKind::Epsilon)
     }

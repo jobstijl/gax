@@ -60,6 +60,9 @@ pub trait Real: Coef + Div<Output = Self> {
     fn ln(self) -> Self;
     /// Lane-wise `if a < b { x } else { y }`.
     fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self;
+    /// Whether `a < b` holds in every lane (for a scalar, whether `a < b`). Iterative solvers
+    /// use it to stop once every lane has converged; it is the only branch they take.
+    fn all_lt(a: Self, b: Self) -> bool;
     /// Lane-wise maximum.
     fn max(self, o: Self) -> Self {
         Self::select_lt(self, o, o, self)
@@ -133,6 +136,10 @@ macro_rules! float_impl {
             #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {
                 if a < b { x } else { y }
+            }
+            #[inline(always)]
+            fn all_lt(a: Self, b: Self) -> bool {
+                a < b
             }
             #[inline(always)]
             fn max(self, o: Self) -> Self {

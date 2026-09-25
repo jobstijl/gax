@@ -139,11 +139,12 @@ pub fn lu<T: Real, M: SquareArr<T>>(a: &M) -> Lu<M, M::Vector> {
             best_row = T::select_lt(best, v, T::from_i64(r as i64), best_row);
             best = best.max(v);
         }
-        // Swap row k with the pivot row, lane-wise.
-        for r in k + 1..n {
+        // Swap row k with the pivot row, lane-wise; skipped when no lane needs a swap.
+        let half = T::from_f64(0.5);
+        let no_swap = T::all_lt((best_row - T::from_i64(k as i64)).abs(), half);
+        for r in (k + 1..n).filter(|_| !no_swap) {
             let rr = T::from_i64(r as i64);
             // is_pivot: best_row == r, as a select on (best_row < r+0.5) and (r-0.5 < best_row).
-            let half = T::from_f64(0.5);
             let lo = rr - half;
             let hi = rr + half;
             let sel = |x: T, y: T| T::select_lt(best_row, hi, T::select_lt(lo, best_row, x, y), y);
@@ -173,16 +174,23 @@ pub fn lu<T: Real, M: SquareArr<T>>(a: &M) -> Lu<M, M::Vector> {
 #[inline]
 pub fn lu_solve<T: Real, M: SquareArr<T>>(f: &Lu<M, M::Vector>, b: &M::Vector) -> M::Vector {
     let n = M::N;
-    // Apply the permutation lane-wise: pb[i] = b[perm[i]].
-    let mut pb = M::zero_vector();
+    // Apply the permutation lane-wise: pb[i] = b[perm[i]]; skipped when it is the identity in
+    // every lane.
     let half = T::from_f64(0.5);
+    let mut displaced = T::zero();
     for i in 0..n {
-        let mut v = b[0];
-        for r in 1..n {
-            let rr = T::from_i64(r as i64);
-            v = T::select_lt(rr - half, f.perm[i], b[r], v);
+        displaced = displaced + (f.perm[i] - T::from_i64(i as i64)).abs();
+    }
+    let mut pb = *b;
+    if !T::all_lt(displaced, half) {
+        for i in 0..n {
+            let mut v = b[0];
+            for r in 1..n {
+                let rr = T::from_i64(r as i64);
+                v = T::select_lt(rr - half, f.perm[i], b[r], v);
+            }
+            pb[i] = v;
         }
-        pb[i] = v;
     }
     // Forward substitution with unit L.
     let mut y = pb;
@@ -320,7 +328,20 @@ pub fn eigh<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M::Vector, M) {
     let n = M::N;
     let mut a = *a;
     let mut v: M = identity();
+    // Converged when the off-diagonal part is negligible against the diagonal, in every lane.
+    let tol = T::epsilon() * T::epsilon();
     for _ in 0..sweeps {
+        let mut off = T::zero();
+        let mut diag = T::zero();
+        for p in 0..n {
+            diag = diag + a[p][p] * a[p][p];
+            for q in p + 1..n {
+                off = off + a[p][q] * a[p][q];
+            }
+        }
+        if T::all_lt(off, tol * diag) {
+            break;
+        }
         for p in 0..n {
             for q in p + 1..n {
                 let (c, s) = jacobi_rotation(a[p][p], a[q][q], a[p][q]);
@@ -424,7 +445,28 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
     // Work on the columns of A: orthogonalize them pairwise with right rotations.
     let mut u = transpose(a); // rows of u = columns of A
     let mut v: M = identity(); // rows of v accumulate the right rotations
+    let tol = T::epsilon() * T::epsilon();
     for _ in 0..sweeps {
+        // Converged when every pair of columns is orthogonal to working precision, in every lane.
+        let mut worst = T::zero();
+        for p in 0..n {
+            for q in p + 1..n {
+                let mut alpha = u[p][0] * u[p][0];
+                let mut beta = u[q][0] * u[q][0];
+                let mut gamma = u[p][0] * u[q][0];
+                for k in 1..n {
+                    alpha = alpha + u[p][k] * u[p][k];
+                    beta = beta + u[q][k] * u[q][k];
+                    gamma = gamma + u[p][k] * u[q][k];
+                }
+                // gamma² / (alpha beta), guarded against zero columns
+                let r = gamma * gamma - tol * alpha * beta;
+                worst = worst.max(r);
+            }
+        }
+        if T::all_lt(worst, T::epsilon() * T::epsilon() * T::epsilon()) {
+            break;
+        }
         for p in 0..n {
             for q in p + 1..n {
                 let mut alpha = u[p][0] * u[p][0];

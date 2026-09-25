@@ -75,6 +75,10 @@ macro_rules! lanes {
                 a.simd_lt(b).select(x, y)
             }
             #[inline(always)]
+            fn all_lt(a: Self, b: Self) -> bool {
+                a.simd_lt(b).all()
+            }
+            #[inline(always)]
             fn max(self, o: Self) -> Self {
                 $t::max(self, o)
             }

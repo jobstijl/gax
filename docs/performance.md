@@ -74,19 +74,24 @@ values.
 | transform a point by a rigid motion (f32) | **6.3 ns** | `geometric_algebra` 0.3 `Motor::transformation`: 10.9 ns; nalgebra `Isometry3 * Point3`: 13.5 ns |
 | eight points at once (SoA `f32x8`) | 8.4 ns (rotation and translation) | ultraviolet `Rotor3x8 * Vec3x8` (rotation only): 8.0 ns |
 | compose a chain of 5 rigid motions | 43 ns | glam `Affine3A`: 13 ns; nalgebra `Isometry3`: 26 ns |
-| 6x6 map inverse (f64) | 465 ns | nalgebra `Matrix6::try_inverse`: 301 ns |
-| 6x6 solve | 217 ns | nalgebra LU solve: 190 ns |
-| 6x6 generalized eigenproblem (vibration modes) | 5.6 µs | nalgebra Cholesky + `SymmetricEigen`: 2.1 µs |
-| 4x4 SVD | **1.11 µs** | nalgebra `Matrix4::svd`: 1.35 µs |
+| 6x6 map inverse (f64) | 458 ns | nalgebra `Matrix6::try_inverse`: 301–334 ns |
+| 6x6 solve | 179 ns | nalgebra LU solve: 182–193 ns |
+| 6x6 generalized eigenproblem (vibration modes) | **1.5 µs** | nalgebra Cholesky + `SymmetricEigen`: 2.1 µs |
+| 4x4 SVD | **0.72 µs** | nalgebra `Matrix4::svd`: 1.35 µs |
 | CGA3D `Unit<Motor> >> point` (f32) | 6.96 ns | — |
 | CGA3D general even versor `>> point` | 38.7 ns | — |
 | CGA3D `Twist::exp` | 15.2 ns | — |
 | CSTA (6D) vector product | 13.2 ns | — |
 
-**The solvers are branch free** (ADR-017): fixed Jacobi sweeps and select-based pivoting, so they
-run unchanged on SIMD lanes. A scalar, branching implementation such as nalgebra's is faster for
-one matrix at a time: 1.5x for the inverse and 2.7x for the generalized eigenproblem. Early exit for
-scalar coefficients is planned (TODO). The SVD is already faster than nalgebra's.
+**The solvers are branch free per lane** (ADR-017), so they run unchanged on SIMD lanes. Two
+lane-wide exits, `Real::all_lt`, keep them competitive for single matrices:
+
+* **Jacobi sweeps** stop once every lane has converged. This took the 6x6 generalized eigenproblem
+  from 5.6 µs to 1.5 µs and the 4x4 SVD from 1.11 µs to 0.72 µs.
+* **LU skips work** it does not need: pivot swaps when no lane needs one, and the permutation gather
+  when it is the identity in every lane.
+
+The inverse still trails nalgebra by 1.4x: it runs one solve per column.
 
 **A motor chain costs more than an `Affine3A` chain.** A motor product is 48 scalar mul and 40 add,
 while glam's affine product is a SIMD 3x3 product plus a translation.
