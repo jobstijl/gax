@@ -6,6 +6,11 @@
 //! (sign from counting swaps, one metric factor per shared vector), and converts back with
 //! the outermorphism of `P⁻¹` (determinants of minors). The two agree on every blade pair
 //! of every algebra we ship.
+#![allow(
+    clippy::needless_range_loop,
+    clippy::doc_markdown,
+    clippy::collapsible_if
+)]
 
 use gax_gen::algebra::Algebra;
 use proptest::prelude::*;

@@ -424,6 +424,18 @@ pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
     [h0, h1]
 }
 
+/// `(a + b I)^(-1/2)` as a Study number `[r0, r1]`.
+#[inline]
+pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
+    let (r0, r1) = study1(isq, a, b, |z| {
+        Dual {
+            p: Cx::real(T::one()),
+            d: Cx::real(T::zero()),
+        } / z.sqrt()
+    });
+    [r0, r1]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,16 +467,4 @@ mod tests {
         assert!((c0 - a.cos()).abs() < 1e-15);
         assert!((c1 - mu * a.sin() / (2.0 * a)).abs() < 1e-14);
     }
-}
-
-/// `(a + b I)^(-1/2)` as a Study number `[r0, r1]`.
-#[inline]
-pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
-    let (r0, r1) = study1(isq, a, b, |z| {
-        Dual {
-            p: Cx::real(T::one()),
-            d: Cx::real(T::zero()),
-        } / z.sqrt()
-    });
-    [r0, r1]
 }

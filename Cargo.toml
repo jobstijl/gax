@@ -30,6 +30,10 @@ cast_precision_loss = "allow"
 must_use_candidate = "allow"
 missing_panics_doc = "allow"
 inline_always = "allow"
+# Math types: a discarded result is a visible bug anyway; #[must_use] everywhere is noise.
+return_self_not_must_use = "allow"
+# Internal helpers take the default hasher.
+implicit_hasher = "allow"
 
 # The generator runs inside the algebra! proc macro; optimize it even in dev builds.
 [profile.dev.build-override]

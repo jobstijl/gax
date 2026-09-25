@@ -16,6 +16,9 @@
 //! Jacobi methods are chosen over QR for their accuracy on small symmetric problems (Demmel &
 //! Veselić) and because a fixed number of sweeps makes them branch free.
 
+// Matrix code indexes rows and columns explicitly; iterators would obscure the algorithms.
+#![allow(clippy::needless_range_loop)]
+
 use crate::coef::Real;
 use core::ops::{Index, IndexMut};
 

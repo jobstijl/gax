@@ -33,7 +33,7 @@ fn line() -> impl Strategy<Value = Line<(), f64>> {
 }
 /// A unit motor: the exponential of a bivector.
 fn unit_motor() -> impl Strategy<Value = Unit<Motor<(), f64>>> {
-    line().prop_map(|b| b.exp())
+    line().prop_map(Line::exp)
 }
 
 proptest! {

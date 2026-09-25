@@ -16,6 +16,9 @@ pub struct Layout {
 
 impl Layout {
     /// A layout from blade names such as `["e032", "e013", "e021", "e123"]`.
+    ///
+    /// # Errors
+    /// For an invalid or repeated blade.
     pub fn parse(alg: &Algebra, names: &[&str]) -> Result<Layout, crate::algebra::AlgebraError> {
         let blades = names
             .iter()

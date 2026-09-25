@@ -188,6 +188,11 @@ fn is_type_name(s: &str) -> bool {
 
 impl AlgebraSpec {
     /// Parse a declaration.
+    ///
+    /// # Errors
+    /// For any syntax error, unknown or duplicate names, reserved kind names, an invalid metric,
+    /// or an invalid blade.
+    #[allow(clippy::too_many_lines)]
     pub fn parse(src: &str) -> Result<AlgebraSpec, AlgebraError> {
         let mut p = Parser {
             toks: tokenize(src)?,

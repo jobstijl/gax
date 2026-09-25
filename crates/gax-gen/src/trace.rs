@@ -74,6 +74,9 @@ pub trait TraceFn<Args> {
     fn run(&self) -> Traced;
 }
 
+/// Builds the Rust expression of a kernel's result from its output expressions.
+type Constructor = Box<dyn Fn(&[String]) -> String>;
+
 /// The outcome of running a closure on symbolic arguments.
 pub struct Traced {
     /// `(argument type, coefficient-array expression template)` per argument.
@@ -85,7 +88,7 @@ pub struct Traced {
     /// Result type.
     result_type: String,
     /// Constructor of the result from output expressions.
-    construct: Box<dyn Fn(&[String]) -> String>,
+    construct: Constructor,
 }
 
 fn arg_info<A: Traceable<Coef = Sym>>(k: usize) -> (A, (String, usize, String), Vec<Poly>) {
@@ -169,6 +172,7 @@ impl Tracer {
     /// # Panics
     /// If `f` branches on a coefficient, or if the simplifier fails its own exactness check
     /// (a bug).
+    #[allow(clippy::needless_pass_by_value)] // a closure literal is the natural argument
     pub fn kernel<Args, F: TraceFn<Args>>(&mut self, name: &str, f: F) -> &mut Tracer {
         // Trace under several expansion limits and keep the cheapest verified program. A
         // limit of 0 records the computation as written (each product and sum a node, with

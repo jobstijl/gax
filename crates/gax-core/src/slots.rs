@@ -127,18 +127,18 @@ impl Slots for TooManySlots {
         const { panic!("gax: an extensor can have at most 8 open slots") }
     }
     fn from_flat<X: Elem>(_: &mut impl FnMut(usize) -> X, _: usize) {}
-    fn get_flat<X: Elem>(_: &(), _: usize) -> X {
+    fn get_flat<X: Elem>((): &(), _: usize) -> X {
         unreachable!()
     }
-    fn map<X: Elem, Y: Elem>(_: &(), _: &mut impl FnMut(&X) -> Y) {}
-    fn zip<X: Elem, Y: Elem, Z: Elem>(_: &(), _: &(), _: &mut impl FnMut(&X, &Y) -> Z) {}
+    fn map<X: Elem, Y: Elem>((): &(), _: &mut impl FnMut(&X) -> Y) {}
+    fn zip<X: Elem, Y: Elem, Z: Elem>((): &(), (): &(), _: &mut impl FnMut(&X, &Y) -> Z) {}
     fn outer<R: Slots, A: Elem, B: Elem, C: Elem>(
-        _: &(),
+        (): &(),
         _: &R::Arr<B>,
         _: &mut impl FnMut(&A, &B) -> C,
     ) {
     }
-    fn as_value<X: Elem>(_: &()) -> Option<X> {
+    fn as_value<X: Elem>((): &()) -> Option<X> {
         None
     }
     fn from_value<X: Elem>(_: X) -> Option<()> {
@@ -250,12 +250,15 @@ tuple_slots!(8; A0, A1, A2, A3, A4, A5, A6, A7; overflow);
 
 /// One output coefficient's array over the slots `S`, with arithmetic.
 ///
+/// (`Clone` is written by hand because `derive` would require `S: Clone` and `T: Clone`.)
+///
 /// Generated kernels are written in terms of this wrapper: `+`, `-` and unary `-` act
 /// elementwise, and `*` between two wrappers is the outer product, whose slots are the
 /// concatenation. For values (`S = ()`) every operation is a single scalar operation.
 #[repr(transparent)]
 pub struct SlotArr<S: Slots, T: Coef>(pub S::Arr<T>);
 
+#[allow(clippy::expl_impl_clone_on_copy)]
 impl<S: Slots, T: Coef> Clone for SlotArr<S, T> {
     #[inline(always)]
     fn clone(&self) -> Self {

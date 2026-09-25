@@ -12,8 +12,12 @@ use std::fmt;
 /// A sparse multivector with exact integer coefficients, keyed by blade mask.
 pub type Sparse = BTreeMap<u32, i64>;
 
-/// Maximum supported dimension of the generating vector space.
-pub const MAX_DIM: usize = 10;
+/// Maximum supported dimension of the generating vector space (256 blades; CSTA is 6).
+pub const MAX_DIM: usize = 8;
+
+/// Largest magnitude of a metric entry. Products of blades multiply metric entries, so a
+/// bound keeps every table coefficient far from `i64` overflow.
+pub const MAX_METRIC: i64 = 1024;
 
 /// Errors produced while parsing or validating an algebra description.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +66,9 @@ impl Algebra {
     /// let pga2d = Algebra::diagonal("012", &[0, 1, 1]).unwrap();
     /// assert_eq!(pga2d.dim(), 3);
     /// ```
+    ///
+    /// # Errors
+    /// If the lengths differ, or for the conditions of [`Algebra::new`].
     pub fn diagonal(basis: &str, squares: &[i64]) -> Result<Self, AlgebraError> {
         let n = basis.chars().count();
         if n != squares.len() {
@@ -75,6 +82,12 @@ impl Algebra {
     }
 
     /// An algebra with a general symmetric integer metric (`metric[i][j]` is `e_i . e_j`).
+    ///
+    /// # Errors
+    /// If the dimension exceeds [`MAX_DIM`], the metric is not a symmetric `n × n` matrix with
+    /// entries of magnitude at most [`MAX_METRIC`], or the basis names are not distinct ASCII
+    /// alphanumerics.
+    #[allow(clippy::needless_range_loop)]
     pub fn new(basis: &str, metric: Vec<Vec<i64>>) -> Result<Self, AlgebraError> {
         let names: Vec<char> = basis.chars().collect();
         let n = names.len();
@@ -90,6 +103,11 @@ impl Algebra {
             for j in 0..n {
                 if metric[i][j] != metric[j][i] {
                     return err("metric must be symmetric");
+                }
+                if metric[i][j].abs() > MAX_METRIC {
+                    return err(format!(
+                        "metric entries must be at most {MAX_METRIC} in magnitude"
+                    ));
                 }
             }
         }
@@ -157,6 +175,9 @@ impl Algebra {
     }
 
     /// Parse a blade written as `1` or `e` followed by factor suffixes in any order.
+    ///
+    /// # Errors
+    /// For an unknown or repeated factor, or a name not of that form.
     /// Returns the canonical mask and the sign relating the written order to the canonical one:
     /// `e032 = -e023`, so `parse_blade("e032") == (mask(e023), -1)`.
     pub fn parse_blade(&self, s: &str) -> Result<(u32, i64), AlgebraError> {
@@ -324,12 +345,12 @@ impl Algebra {
 
     /// Sign of the reverse on a blade of the given grade: `(-1)^(k(k-1)/2)`.
     pub fn reverse_sign(grade: u32) -> i64 {
-        if (grade / 2) % 2 == 0 { 1 } else { -1 }
+        if (grade / 2).is_multiple_of(2) { 1 } else { -1 }
     }
 
     /// Sign of the grade involution on a blade of the given grade: `(-1)^k`.
     pub fn involute_sign(grade: u32) -> i64 {
-        if grade % 2 == 0 { 1 } else { -1 }
+        if grade.is_multiple_of(2) { 1 } else { -1 }
     }
 
     /// Sign of the Clifford conjugate on a blade of the given grade.

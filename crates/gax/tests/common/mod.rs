@@ -148,6 +148,7 @@ impl Oracle {
     }
 
     /// A value of kind `M` from dense coefficients; panics if the support does not fit.
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_dense<M: Extensor<Slots = (), Coef = f64>>(&self, d: &Dense) -> M {
         let mut used = vec![false; d.len()];
         let c = <M::Kind as Kind>::arr_from_fn(|i| {

@@ -11,6 +11,11 @@ use crate::unit::Unit;
 use core::fmt::{self, Write};
 
 /// A kernel argument or result that tracing can construct symbolically and name in code.
+///
+/// The `write_*` methods write Rust source to a formatter.
+///
+/// # Errors
+/// They propagate the formatter's errors.
 pub trait Traceable: Sized {
     /// The coefficient type.
     type Coef: Coef;
@@ -21,10 +26,19 @@ pub trait Traceable: Sized {
     /// Visit the coefficients in order.
     fn for_each(&self, f: &mut dyn FnMut(Self::Coef));
     /// Write the Rust type, with `coef` as the coefficient type.
+    ///
+    /// # Errors
+    /// Propagates the formatter's errors.
     fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result;
     /// Write an expression for the coefficient array `[T; LEN]` of the value named `name`.
+    ///
+    /// # Errors
+    /// Propagates the formatter's errors.
     fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result;
     /// Write an expression constructing the value from `LEN` coefficient expressions.
+    ///
+    /// # Errors
+    /// Propagates the formatter's errors.
     fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result;
     /// Visit the polynomial conditions (each must vanish) that the value is certified to
     /// satisfy, such as the coefficients of `x ~x - 1` for a unit versor.
@@ -33,6 +47,9 @@ pub trait Traceable: Sized {
 
 /// The path of a kind in code outside its own crate: `::gax::pga3d::Point` for the standard
 /// algebras, `crate::path::Point` for algebras declared in the user's crate.
+///
+/// # Errors
+/// Propagates the formatter's errors.
 pub fn write_kind_path<K: Kind>(w: &mut dyn Write) -> fmt::Result {
     let module = K::MODULE;
     let (first, rest) = module.split_once("::").unwrap_or((module, ""));
@@ -62,7 +79,7 @@ impl<M: Extensor<Slots = ()>> Traceable for M {
     type Coef = M::Coef;
     const LEN: usize = <M::Kind as Kind>::N;
     fn from_fn(f: &mut dyn FnMut(usize) -> M::Coef) -> M {
-        M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|i| f(i)))
+        M::from_coeffs(<M::Kind as Kind>::arr_from_fn(f))
     }
     fn for_each(&self, f: &mut dyn FnMut(M::Coef)) {
         for &c in self.coeffs().as_ref() {
@@ -92,7 +109,7 @@ where
     type Coef = M::Coef;
     const LEN: usize = <M::Kind as Kind>::N;
     fn from_fn(f: &mut dyn FnMut(usize) -> M::Coef) -> Self {
-        Unit::new_unchecked(M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|i| f(i))))
+        Unit::new_unchecked(M::from_coeffs(<M::Kind as Kind>::arr_from_fn(f)))
     }
     fn for_each(&self, f: &mut dyn FnMut(M::Coef)) {
         for &c in self.coeffs().as_ref() {

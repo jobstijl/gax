@@ -121,11 +121,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         );
     }
 
-    if let Some(study) = study_structure(alg, &norm) {
-        if !n0.is_zero() {
-            meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
-            meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body);
-        }
+    if let Some(study) = study_structure(alg, &norm)
+        && !n0.is_zero()
+    {
+        meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
+        meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body);
     }
 
     // exp: for kinds made of bivectors, when B² is a Study number.
@@ -186,7 +186,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     meta.log = emit_log(spec, k, &x, &mut traits);
 
     // sqrt of a unit versor: normalize(1 + R).
-    let scalar_idx = k.layout.position(0).map(|(i, s)| (i, s));
+    let scalar_idx = k.layout.position(0);
     if let (Some((si, ss)), true) = (scalar_idx, meta.normalized) {
         meta.sqrt = true;
         let _ = write!(
@@ -344,10 +344,10 @@ fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) ->
         .collect();
     let u = symbolic::binop(alg, BinOp::Gp, &p, &p);
     let study = study_structure(alg, &u)?;
-    if let (Some(b), Some(&f)) = (study.blade, four.first()) {
-        if b != f {
-            return None;
-        }
+    if let (Some(b), Some(&f)) = (study.blade, four.first())
+        && b != f
+    {
+        return None;
     }
     let blade = study.blade.or(four.first().copied());
     let isq = match blade {

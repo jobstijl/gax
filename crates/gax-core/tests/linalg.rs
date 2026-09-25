@@ -6,6 +6,7 @@
 //! have residuals `‖A v − λ v‖ ≤ c · n² · ε · ‖A‖` after convergence. With `n ≤ 8` and
 //! `ε = 2.2e-16` these are about 1e-14 relative; we assert 1e-11, which leaves a margin of about
 //! 1000 for growth and accumulated rounding while still catching any real error (which is O(1)).
+#![allow(clippy::needless_range_loop)]
 
 use gax_core::linalg::*;
 use proptest::prelude::*;

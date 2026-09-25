@@ -196,6 +196,7 @@ impl Emitter<'_> {
         );
     }
 
+    #[allow(clippy::too_many_lines)]
     fn kind(&mut self, k: &KindSpec) {
         let name = &k.name;
         let n = k.layout.len();
@@ -616,14 +617,14 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 };
                 if k == 0 {
                     if t.coef < 0 {
-                        e.push_str(&format!("-({term})"));
+                        let _ = write!(e, "-({term})");
                     } else {
                         e.push_str(&term);
                     }
                 } else if t.coef < 0 {
-                    e.push_str(&format!(" - {term}"));
+                    let _ = write!(e, " - {term}");
                 } else {
-                    e.push_str(&format!(" + {term}"));
+                    let _ = write!(e, " + {term}");
                 }
             }
             exprs.push(format!("({e}).0"));
@@ -672,6 +673,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
     }
 
     /// Fused `v x ~v` with `v` a value of versor kind `vk` and `x` of kind `xk` with any slots.
+    #[allow(clippy::too_many_lines)]
     fn sandwich(&mut self, vk: &KindSpec, xk: &KindSpec, unit: bool) {
         let alg = &self.spec.algebra;
         let nv = vk.layout.len() as Var;
@@ -723,7 +725,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 let xi = nv + i as Var;
                 let mut c = Poly::zero();
                 for (m, &k) in &p.0 {
-                    assert_eq!(m.power(xi) <= 1, true, "sandwich must be linear in x");
+                    assert!(m.power(xi) <= 1, "sandwich must be linear in x");
                     if m.contains(xi) {
                         let rest = m.div(&crate::poly::Monomial::var(xi)).expect("contains");
                         c.add_term(rest, k);
@@ -857,6 +859,7 @@ fn unop_trait(op: UnOp) -> (&'static str, &'static str) {
 
 /// Emit an integration test that checks every generated kernel against the dense oracle in
 /// `gax/tests/common`. `module` is the path of the generated module (e.g. `gax::pga2d`).
+#[allow(clippy::too_many_lines)]
 pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &str) -> String {
     let mut t = String::new();
     let _ = write!(
