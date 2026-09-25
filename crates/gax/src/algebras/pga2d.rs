@@ -114,6 +114,27 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         Scalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Scalar`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Scalar<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Scalar<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Scalar<<S as gx::FillList<X::Kind>>::Out, T>
@@ -669,6 +690,27 @@ impl<S: gx::Slots, T: gx::Coef> Line<S, T> {
         S: gx::MoveToFront<I>,
     {
         Line { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Line`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Line<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Line<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -1241,6 +1283,27 @@ impl<S: gx::Slots, T: gx::Coef> Point<S, T> {
         S: gx::MoveToFront<I>,
     {
         Point { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Point`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Point<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Point<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -1826,6 +1889,27 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         Pseudoscalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Pseudoscalar`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::FillList<X::Kind>>::Out, T>
@@ -2334,6 +2418,27 @@ impl<S: gx::Slots, T: gx::Coef> Rotor<S, T> {
         S: gx::MoveToFront<I>,
     {
         Rotor { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Rotor`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Rotor<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Rotor<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -2923,6 +3028,27 @@ impl<S: gx::Slots, T: gx::Coef> Translator<S, T> {
         Translator { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Translator`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Translator<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Translator<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Translator<<S as gx::FillList<X::Kind>>::Out, T>
@@ -3510,6 +3636,27 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
         S: gx::MoveToFront<I>,
     {
         Motor { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Motor`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Motor<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Motor<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -4119,6 +4266,27 @@ impl<S: gx::Slots, T: gx::Coef> Flector<S, T> {
         Flector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Flector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Flector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Flector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Flector<<S as gx::FillList<X::Kind>>::Out, T>
@@ -4698,6 +4866,27 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         S: gx::MoveToFront<I>,
     {
         Multivector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Multivector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Multivector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Multivector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -23933,6 +24122,108 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>> for M
     fn from(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>) -> Self {
         let m = p.m;
         Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[3], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Point> for Line<(Line,), T> {
+    type Output = Point<(Point,), T>;
+    /// The extension of a map on `Line` to `Point`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Point<(Point,), T> {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Point { c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Pseudoscalar> for Line<(Line,), T> {
+    type Output = Pseudoscalar<(Pseudoscalar,), T>;
+    /// The extension of a map on `Line` to `Pseudoscalar`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Pseudoscalar<(Pseudoscalar,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = t[0][0] * t[1][2];
+        let m4 = t[0][1] * t[1][0];
+        let m5 = t[2][2] * m4;
+        let m6 = t[0][1] * t[1][2];
+        let m7 = t[2][0] * m6;
+        let m8 = t[0][2] * t[1][0];
+        let m10 = t[0][2] * t[1][1];
+        let m12 = t[2][2].mul_add(m0, m7);
+        let m13 = t[2][1].mul_add(m8, m12);
+        let m14 = t[2][1].mul_add(m2, m5);
+        let m15 = t[2][0].mul_add(m10, m14);
+        let m16 = m13 - m15;
+        Pseudoscalar { c: [[m16]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Scalar> for Point<(Point,), T> {
+    type Output = Scalar<(Scalar,), T>;
+    /// The extension of a map on `Point` to `Scalar`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Scalar<(Scalar,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = t[0][0] * t[1][2];
+        let m4 = t[0][1] * t[1][0];
+        let m5 = t[2][2] * m4;
+        let m6 = t[0][1] * t[1][2];
+        let m7 = t[2][0] * m6;
+        let m8 = t[0][2] * t[1][0];
+        let m10 = t[0][2] * t[1][1];
+        let m12 = t[2][2].mul_add(m0, m7);
+        let m13 = t[2][1].mul_add(m8, m12);
+        let m14 = t[2][1].mul_add(m2, m5);
+        let m15 = t[2][0].mul_add(m10, m14);
+        let m16 = m13 - m15;
+        Scalar { c: [[m16]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Line> for Point<(Point,), T> {
+    type Output = Line<(Line,), T>;
+    /// The extension of a map on `Point` to `Line`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Line<(Line,), T> {
+        let t = self.c;
+        let m0 = t[1][1] * t[2][2];
+        let m3 = t[1][2] * t[2][0];
+        let m4 = t[1][0] * t[2][1];
+        let m7 = t[0][2] * t[2][1];
+        let m8 = t[0][0] * t[2][2];
+        let m11 = t[0][1] * t[2][0];
+        let m12 = t[0][1] * t[1][2];
+        let m15 = t[0][2] * t[1][0];
+        let m16 = t[0][0] * t[1][1];
+        let m18 = (-t[1][2]).mul_add(t[2][1], m0);
+        let m19 = (-t[1][0]).mul_add(t[2][2], m3);
+        let m20 = (-t[1][1]).mul_add(t[2][0], m4);
+        let m21 = (-t[0][1]).mul_add(t[2][2], m7);
+        let m22 = (-t[0][2]).mul_add(t[2][0], m8);
+        let m23 = (-t[0][0]).mul_add(t[2][1], m11);
+        let m24 = (-t[0][2]).mul_add(t[1][1], m12);
+        let m25 = (-t[0][0]).mul_add(t[1][2], m15);
+        let m26 = (-t[0][1]).mul_add(t[1][0], m16);
+        Line { c: [[m18, m19, m20], [m21, m22, m23], [m24, m25, m26]] }
     }
 }
 

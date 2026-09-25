@@ -34,7 +34,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees
 - [x] `mul_add` fusion in emitted programs (hardware FMA when available)
-- [ ] Multi-slot `trace::<I>`; outermorphism
+- [x] Multi-slot `trace_at::<I>`; outermorphism (wedge and vee, symbolic minors)
 - [ ] Better line sandwich kernel (58 mul now)
 - [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)
 - [ ] A cheaper map inverse (1.4x nalgebra)

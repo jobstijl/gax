@@ -125,3 +125,14 @@ pub trait Log<Out> {
     /// The logarithm: `exp(self.log()) == self`.
     fn log(self) -> Out;
 }
+
+/// The outermorphism of a linear map on vectors (or antivectors): its extension to the kind
+/// `B` of higher (or lower) grade, `M(a ∧ b) = T(a) ∧ T(b)` (for antivectors, with `∨`).
+/// On the top grade it is the determinant. Implemented by the generated algebras for maps
+/// `V <- V` on grade-1 and grade-(n-1) kinds.
+pub trait Outermorphism<B> {
+    /// The extended map `B <- B`.
+    type Output;
+    /// Extend the map to `B`.
+    fn outermorphism(self) -> Self::Output;
+}

@@ -78,6 +78,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             e.sandwich(v, x, true);
         }
     }
+    e.out.push_str(&crate::emit_outer::outermorphisms(spec));
     for (alias, kind) in &spec.aliases {
         let _ = writeln!(
             e.out,
@@ -105,6 +106,8 @@ pub const RESERVED: &[&str] = &[
     "Pairing",
     "Prepare",
     "Prepared",
+    "TraceFirst",
+    "Outermorphism",
     "SplitLast",
     "Gp",
     "Wedge",
@@ -317,6 +320,27 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         S: gx::MoveToFront<I>,
     {{
         {name} {{ c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }}
+    }}
+
+    /// Contract the output with open slot `I` (which must be of kind `{name}`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <{name}<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        {name}<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {{
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }}
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {{
+        gx::Outermorphism::outermorphism(self)
     }}
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.

@@ -73,6 +73,8 @@ the slots of `p`, and `(…) ^ ground` keeps them. The compiler checks all of th
 | `m.at::<I>()` | move slot `I` to the front, so `m.at::<1>().of(x)` fills the second slot |
 | `form.swap()` | exchange the two slots of a two-slot extensor |
 | `m.fill(x)` | fill *every* slot of `x`'s kind with `x` |
+| `m.trace_at::<I>()` | contract the output with slot `I` (of the output's kind): a scalar with the other slots |
+| `t.outermorphism::<B>()` | extend a map on vectors (by `^`) or on antivectors such as PGA points (by `&`) to the kind `B` |
 
 Composition is filling a slot with a map:
 

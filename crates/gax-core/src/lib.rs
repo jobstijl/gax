@@ -44,12 +44,12 @@ pub mod unit;
 
 pub use bind::Of;
 pub use coef::{Coef, Elem, Real};
-pub use extensor::{Endomorphism, Form, Pairing, SquareMap};
+pub use extensor::{Endomorphism, Form, Pairing, SquareMap, TraceFirst};
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
-    Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Rc, Reverse,
-    ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
+    Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Outermorphism, Rc,
+    Reverse, ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
 };
 pub use permute::MoveToFront;
 pub use prepared::{Prepare, Prepared};

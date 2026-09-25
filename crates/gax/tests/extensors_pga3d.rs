@@ -87,3 +87,61 @@ fn induced_map_on_planes_from_a_pairing() {
     let l: Plane<(), f64> = random(&mut rng);
     let _ = on_planes.of(l);
 }
+
+#[test]
+fn trace_at_contracts_a_slot_with_the_output() {
+    let mut rng = Rng::new(35);
+    // For a map on points, tracing its only slot is the matrix trace.
+    let t: Point<(Point,), f64> = random_map(&mut rng);
+    let s: Scalar<(), f64> = t.trace_at::<0>();
+    assert!((s.s() - t.trace()).abs() < 1e-12);
+    // A bilinear map Point <- (Line, Point): tracing the point slot leaves a linear form on lines,
+    // which on any line l equals the trace of the map q -> m(l, q).
+    let m: Point<(Line, Point), f64> = random_map(&mut rng);
+    let form: Scalar<(Line,), f64> = m.trace_at::<1>();
+    let l: Line<(), f64> = random(&mut rng);
+    let direct = m.of(l).trace();
+    assert!((form.of(l).s() - direct).abs() < 1e-12);
+}
+
+#[test]
+fn outermorphisms_extend_maps_factor_by_factor() {
+    let mut rng = Rng::new(36);
+    // A map on planes extends by the wedge: M(a ^ b) = T(a) ^ T(b), and the top grade is det.
+    let t: Plane<(Plane,), f64> = random_map(&mut rng);
+    let (a, b, c): (Plane<(), f64>, Plane<(), f64>, Plane<(), f64>) =
+        (random(&mut rng), random(&mut rng), random(&mut rng));
+    let m2: Line<(Line,), f64> = t.outermorphism::<Line>();
+    assert_close(&flat(&m2.of(a ^ b)), &flat(&(t.of(a) ^ t.of(b))), "M(a^b)");
+    let m3: Point<(Point,), f64> = t.outermorphism::<Point>();
+    assert_close(
+        &flat(&m3.of(a ^ b ^ c)),
+        &flat(&(t.of(a) ^ t.of(b) ^ t.of(c))),
+        "M(a^b^c)",
+    );
+    let top: Pseudoscalar<(Pseudoscalar,), f64> = t.outermorphism::<Pseudoscalar>();
+    assert!(
+        (top.c[0][0] - t.det()).abs() < 1e-12,
+        "top grade is the determinant"
+    );
+    // A map on points (a singular camera projection too) extends by the vee: M(p & q) = T(p) & T(q).
+    let eye: Point<(), f64> = Point::xyz(0.0, 0.0, 5.0);
+    let screen: Plane<(), f64> = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+    let projection: Point<(Point,), f64> = (eye & Point::slot()) ^ screen;
+    for tp in [projection, random_map(&mut rng)] {
+        let (p, q, r): (Point<(), f64>, Point<(), f64>, Point<(), f64>) =
+            (random(&mut rng), random(&mut rng), random(&mut rng));
+        let lines: Line<(Line,), f64> = tp.outermorphism::<Line>();
+        assert_close(
+            &flat(&lines.of(p & q)),
+            &flat(&(tp.of(p) & tp.of(q))),
+            "M(p & q)",
+        );
+        let planes: Plane<(Plane,), f64> = tp.outermorphism::<Plane>();
+        assert_close(
+            &flat(&planes.of((p & q) & r)),
+            &flat(&((tp.of(p) & tp.of(q)) & tp.of(r))),
+            "M(p & q & r)",
+        );
+    }
+}

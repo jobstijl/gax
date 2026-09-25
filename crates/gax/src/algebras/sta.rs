@@ -115,6 +115,27 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         Scalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Scalar`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Scalar<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Scalar<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Scalar<<S as gx::FillList<X::Kind>>::Out, T>
@@ -670,6 +691,27 @@ impl<S: gx::Slots, T: gx::Coef> Vector<S, T> {
         S: gx::MoveToFront<I>,
     {
         Vector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Vector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Vector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Vector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -1270,6 +1312,27 @@ impl<S: gx::Slots, T: gx::Coef> Bivector<S, T> {
         S: gx::MoveToFront<I>,
     {
         Bivector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Bivector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Bivector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Bivector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -1997,6 +2060,27 @@ impl<S: gx::Slots, T: gx::Coef> Trivector<S, T> {
         Trivector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Trivector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Trivector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Trivector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Trivector<<S as gx::FillList<X::Kind>>::Out, T>
@@ -2597,6 +2681,27 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         Pseudoscalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Pseudoscalar`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::FillList<X::Kind>>::Out, T>
@@ -3147,6 +3252,27 @@ impl<S: gx::Slots, T: gx::Coef> Even<S, T> {
         S: gx::MoveToFront<I>,
     {
         Even { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Even`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Even<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Even<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -3971,6 +4097,27 @@ impl<S: gx::Slots, T: gx::Coef> Odd<S, T> {
         Odd { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
     }
 
+    /// Contract the output with open slot `I` (which must be of kind `Odd`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Odd<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Odd<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
     #[inline(always)]
     pub fn fill<X>(self, x: X) -> Odd<<S as gx::FillList<X::Kind>>::Out, T>
@@ -4748,6 +4895,27 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         S: gx::MoveToFront<I>,
     {
         Multivector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Multivector`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Multivector<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Multivector<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
     }
 
     /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
@@ -26537,6 +26705,464 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Multivector, T, 54>> for Mult
     fn from(p: gx::Prepared<gx::Unit<Odd>, Multivector, T, 54>) -> Self {
         let m = p.m;
         Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(0)], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[8], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[12], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[17], m[18], m[19], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[22], m[23], m[24], m[25], m[26], m[27], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[28], m[29], m[30], m[31], m[32], m[33], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19], m[20], m[21], m[34], m[35], m[36], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[25], m[26], m[27], m[37], m[38], m[39], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[31], m[32], m[33], m[40], m[41], m[42], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[43], m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[44], m[45], m[46], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[47], m[48], m[49], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[50], m[51], m[52], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[53]]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Bivector> for Vector<(Vector,), T> {
+    type Output = Bivector<(Bivector,), T>;
+    /// The extension of a map on `Vector` to `Bivector`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Bivector<(Bivector,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = t[0][0] * t[1][2];
+        let m4 = t[0][0] * t[1][3];
+        let m7 = t[0][3] * t[1][2];
+        let m8 = t[0][1] * t[1][3];
+        let m11 = t[0][2] * t[1][1];
+        let m12 = t[0][0] * t[2][1];
+        let m14 = t[0][0] * t[2][2];
+        let m16 = t[0][0] * t[2][3];
+        let m19 = t[0][3] * t[2][2];
+        let m20 = t[0][1] * t[2][3];
+        let m23 = t[0][2] * t[2][1];
+        let m24 = t[0][0] * t[3][1];
+        let m26 = t[0][0] * t[3][2];
+        let m28 = t[0][0] * t[3][3];
+        let m31 = t[0][3] * t[3][2];
+        let m32 = t[0][1] * t[3][3];
+        let m35 = t[0][2] * t[3][1];
+        let m37 = t[2][1] * t[3][0];
+        let m39 = t[2][2] * t[3][0];
+        let m41 = t[2][3] * t[3][0];
+        let m42 = t[2][2] * t[3][3];
+        let m45 = t[2][3] * t[3][1];
+        let m46 = t[2][1] * t[3][2];
+        let m48 = t[1][0] * t[3][1];
+        let m50 = t[1][0] * t[3][2];
+        let m52 = t[1][0] * t[3][3];
+        let m55 = t[1][3] * t[3][2];
+        let m56 = t[1][1] * t[3][3];
+        let m59 = t[1][2] * t[3][1];
+        let m61 = t[1][1] * t[2][0];
+        let m63 = t[1][2] * t[2][0];
+        let m65 = t[1][3] * t[2][0];
+        let m66 = t[1][2] * t[2][3];
+        let m69 = t[1][3] * t[2][1];
+        let m70 = t[1][1] * t[2][2];
+        let m72 = (-t[0][1]).mul_add(t[1][0], m0);
+        let m73 = (-t[0][2]).mul_add(t[1][0], m2);
+        let m74 = (-t[0][3]).mul_add(t[1][0], m4);
+        let m75 = (-t[0][2]).mul_add(t[1][3], m7);
+        let m76 = (-t[0][3]).mul_add(t[1][1], m8);
+        let m77 = (-t[0][1]).mul_add(t[1][2], m11);
+        let m78 = (-t[0][1]).mul_add(t[2][0], m12);
+        let m79 = (-t[0][2]).mul_add(t[2][0], m14);
+        let m80 = (-t[0][3]).mul_add(t[2][0], m16);
+        let m81 = (-t[0][2]).mul_add(t[2][3], m19);
+        let m82 = (-t[0][3]).mul_add(t[2][1], m20);
+        let m83 = (-t[0][1]).mul_add(t[2][2], m23);
+        let m84 = (-t[0][1]).mul_add(t[3][0], m24);
+        let m85 = (-t[0][2]).mul_add(t[3][0], m26);
+        let m86 = (-t[0][3]).mul_add(t[3][0], m28);
+        let m87 = (-t[0][2]).mul_add(t[3][3], m31);
+        let m88 = (-t[0][3]).mul_add(t[3][1], m32);
+        let m89 = (-t[0][1]).mul_add(t[3][2], m35);
+        let m90 = (-t[2][0]).mul_add(t[3][1], m37);
+        let m91 = (-t[2][0]).mul_add(t[3][2], m39);
+        let m92 = (-t[2][0]).mul_add(t[3][3], m41);
+        let m93 = (-t[2][3]).mul_add(t[3][2], m42);
+        let m94 = (-t[2][1]).mul_add(t[3][3], m45);
+        let m95 = (-t[2][2]).mul_add(t[3][1], m46);
+        let m96 = (-t[1][1]).mul_add(t[3][0], m48);
+        let m97 = (-t[1][2]).mul_add(t[3][0], m50);
+        let m98 = (-t[1][3]).mul_add(t[3][0], m52);
+        let m99 = (-t[1][2]).mul_add(t[3][3], m55);
+        let m100 = (-t[1][3]).mul_add(t[3][1], m56);
+        let m101 = (-t[1][1]).mul_add(t[3][2], m59);
+        let m102 = (-t[1][0]).mul_add(t[2][1], m61);
+        let m103 = (-t[1][0]).mul_add(t[2][2], m63);
+        let m104 = (-t[1][0]).mul_add(t[2][3], m65);
+        let m105 = (-t[1][3]).mul_add(t[2][2], m66);
+        let m106 = (-t[1][1]).mul_add(t[2][3], m69);
+        let m107 = (-t[1][2]).mul_add(t[2][1], m70);
+        Bivector { c: [[m72, m73, m74, m75, m76, m77], [m78, m79, m80, m81, m82, m83], [m84, m85, m86, m87, m88, m89], [m90, m91, m92, m93, m94, m95], [m96, m97, m98, m99, m100, m101], [m102, m103, m104, m105, m106, m107]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Trivector> for Vector<(Vector,), T> {
+    type Output = Trivector<(Trivector,), T>;
+    /// The extension of a map on `Vector` to `Trivector`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Trivector<(Trivector,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = (-t[0][1]).mul_add(t[1][0], m0);
+        let m3 = t[0][0] * t[1][2];
+        let m5 = (-t[0][2]).mul_add(t[1][0], m3);
+        let m6 = t[0][0] * t[1][3];
+        let m8 = (-t[0][3]).mul_add(t[1][0], m6);
+        let m9 = t[0][1] * t[1][2];
+        let m11 = (-t[0][2]).mul_add(t[1][1], m9);
+        let m12 = t[0][1] * t[1][3];
+        let m14 = (-t[0][3]).mul_add(t[1][1], m12);
+        let m15 = t[0][2] * t[1][3];
+        let m17 = (-t[0][3]).mul_add(t[1][2], m15);
+        let m18 = t[2][0] * t[3][1];
+        let m20 = (-t[2][1]).mul_add(t[3][0], m18);
+        let m21 = t[2][0] * t[3][2];
+        let m23 = (-t[2][2]).mul_add(t[3][0], m21);
+        let m24 = t[2][0] * t[3][3];
+        let m26 = (-t[2][3]).mul_add(t[3][0], m24);
+        let m27 = t[2][1] * t[3][2];
+        let m29 = (-t[2][2]).mul_add(t[3][1], m27);
+        let m30 = t[2][1] * t[3][3];
+        let m32 = (-t[2][3]).mul_add(t[3][1], m30);
+        let m33 = t[2][2] * t[3][3];
+        let m35 = (-t[2][3]).mul_add(t[3][2], m33);
+        let m38 = t[1][3] * m29;
+        let m40 = t[1][2] * m26;
+        let m44 = t[1][3] * m20;
+        let m46 = t[1][1] * m23;
+        let m49 = t[0][2] * m32;
+        let m53 = t[0][3] * m23;
+        let m55 = t[0][1] * m26;
+        let m59 = t[0][2] * m20;
+        let m62 = t[3][3] * m11;
+        let m64 = t[3][2] * m8;
+        let m68 = t[3][3] * m2;
+        let m70 = t[3][1] * m5;
+        let m73 = t[2][2] * m14;
+        let m77 = t[2][3] * m5;
+        let m79 = t[2][1] * m8;
+        let m83 = t[2][2] * m2;
+        let m84 = t[1][1].mul_add(m35, m38);
+        let m85 = (-t[1][2]).mul_add(m32, m84);
+        let m86 = (-t[1][0]).mul_add(m35, m40);
+        let m87 = (-t[1][3]).mul_add(m23, m86);
+        let m88 = t[1][0].mul_add(m32, m44);
+        let m89 = (-t[1][1]).mul_add(m26, m88);
+        let m90 = (-t[1][0]).mul_add(m29, m46);
+        let m91 = (-t[1][2]).mul_add(m20, m90);
+        let m92 = (-t[0][1]).mul_add(m35, m49);
+        let m93 = (-t[0][3]).mul_add(m29, m92);
+        let m94 = t[0][0].mul_add(m35, m53);
+        let m95 = (-t[0][2]).mul_add(m26, m94);
+        let m96 = (-t[0][0]).mul_add(m32, m55);
+        let m97 = (-t[0][3]).mul_add(m20, m96);
+        let m98 = t[0][0].mul_add(m29, m59);
+        let m99 = (-t[0][1]).mul_add(m23, m98);
+        let m100 = t[3][1].mul_add(m17, m62);
+        let m101 = (-t[3][2]).mul_add(m14, m100);
+        let m102 = (-t[3][0]).mul_add(m17, m64);
+        let m103 = (-t[3][3]).mul_add(m5, m102);
+        let m104 = t[3][0].mul_add(m14, m68);
+        let m105 = (-t[3][1]).mul_add(m8, m104);
+        let m106 = (-t[3][0]).mul_add(m11, m70);
+        let m107 = (-t[3][2]).mul_add(m2, m106);
+        let m108 = (-t[2][1]).mul_add(m17, m73);
+        let m109 = (-t[2][3]).mul_add(m11, m108);
+        let m110 = t[2][0].mul_add(m17, m77);
+        let m111 = (-t[2][2]).mul_add(m8, m110);
+        let m112 = (-t[2][0]).mul_add(m14, m79);
+        let m113 = (-t[2][3]).mul_add(m2, m112);
+        let m114 = t[2][0].mul_add(m11, m83);
+        let m115 = (-t[2][1]).mul_add(m5, m114);
+        Trivector { c: [[m85, m87, m89, m91], [m93, m95, m97, m99], [m101, m103, m105, m107], [m109, m111, m113, m115]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Pseudoscalar> for Vector<(Vector,), T> {
+    type Output = Pseudoscalar<(Pseudoscalar,), T>;
+    /// The extension of a map on `Vector` to `Pseudoscalar`, factor by factor with `â§`.
+    #[inline]
+    fn outermorphism(self) -> Pseudoscalar<(Pseudoscalar,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m1 = t[0][0] * t[1][2];
+        let m2 = t[0][0] * t[1][3];
+        let m3 = t[0][1] * t[1][0];
+        let m4 = t[0][1] * t[1][2];
+        let m5 = t[0][1] * t[1][3];
+        let m6 = t[0][2] * t[1][0];
+        let m7 = t[0][2] * t[1][1];
+        let m8 = t[0][2] * t[1][3];
+        let m9 = t[0][3] * t[1][0];
+        let m10 = t[0][3] * t[1][1];
+        let m11 = t[0][3] * t[1][2];
+        let m12 = t[2][0] * t[3][1];
+        let m13 = t[2][0] * t[3][2];
+        let m14 = t[2][0] * t[3][3];
+        let m15 = t[2][1] * t[3][0];
+        let m16 = t[2][1] * t[3][2];
+        let m17 = t[2][1] * t[3][3];
+        let m18 = t[2][2] * t[3][0];
+        let m19 = t[2][2] * t[3][1];
+        let m20 = t[2][2] * t[3][3];
+        let m21 = t[2][3] * t[3][0];
+        let m22 = t[2][3] * t[3][1];
+        let m23 = t[2][3] * t[3][2];
+        let m26 = m1 * m17;
+        let m27 = m1 * m22;
+        let m32 = m4 * m14;
+        let m33 = m4 * m21;
+        let m38 = m7 * m14;
+        let m39 = m7 * m21;
+        let m44 = m10 * m13;
+        let m45 = m10 * m18;
+        let m48 = m0.mul_add(m20, m27);
+        let m49 = m2.mul_add(m16, m48);
+        let m50 = m3.mul_add(m23, m32);
+        let m51 = m5.mul_add(m18, m50);
+        let m52 = m49 + m51;
+        let m53 = m6.mul_add(m17, m39);
+        let m54 = m8.mul_add(m12, m53);
+        let m55 = m9.mul_add(m19, m44);
+        let m56 = m11.mul_add(m15, m55);
+        let m57 = m54 + m56;
+        let m58 = m52 + m57;
+        let m59 = m0.mul_add(m23, m26);
+        let m60 = m2.mul_add(m19, m59);
+        let m61 = m3.mul_add(m20, m33);
+        let m62 = m5.mul_add(m13, m61);
+        let m63 = m60 + m62;
+        let m64 = m6.mul_add(m22, m38);
+        let m65 = m8.mul_add(m15, m64);
+        let m66 = m9.mul_add(m16, m45);
+        let m67 = m11.mul_add(m12, m66);
+        let m68 = m65 + m67;
+        let m69 = m63 + m68;
+        let m70 = m58 - m69;
+        Pseudoscalar { c: [[m70]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Scalar> for Trivector<(Trivector,), T> {
+    type Output = Scalar<(Scalar,), T>;
+    /// The extension of a map on `Trivector` to `Scalar`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Scalar<(Scalar,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m1 = t[0][0] * t[1][2];
+        let m2 = t[0][0] * t[1][3];
+        let m3 = t[0][1] * t[1][0];
+        let m4 = t[0][1] * t[1][2];
+        let m5 = t[0][1] * t[1][3];
+        let m6 = t[0][2] * t[1][0];
+        let m7 = t[0][2] * t[1][1];
+        let m8 = t[0][2] * t[1][3];
+        let m9 = t[0][3] * t[1][0];
+        let m10 = t[0][3] * t[1][1];
+        let m11 = t[0][3] * t[1][2];
+        let m12 = t[2][0] * t[3][1];
+        let m13 = t[2][0] * t[3][2];
+        let m14 = t[2][0] * t[3][3];
+        let m15 = t[2][1] * t[3][0];
+        let m16 = t[2][1] * t[3][2];
+        let m17 = t[2][1] * t[3][3];
+        let m18 = t[2][2] * t[3][0];
+        let m19 = t[2][2] * t[3][1];
+        let m20 = t[2][2] * t[3][3];
+        let m21 = t[2][3] * t[3][0];
+        let m22 = t[2][3] * t[3][1];
+        let m23 = t[2][3] * t[3][2];
+        let m26 = m1 * m17;
+        let m27 = m1 * m22;
+        let m32 = m4 * m14;
+        let m33 = m4 * m21;
+        let m38 = m7 * m14;
+        let m39 = m7 * m21;
+        let m44 = m10 * m13;
+        let m45 = m10 * m18;
+        let m48 = m0.mul_add(m20, m27);
+        let m49 = m2.mul_add(m16, m48);
+        let m50 = m3.mul_add(m23, m32);
+        let m51 = m5.mul_add(m18, m50);
+        let m52 = m49 + m51;
+        let m53 = m6.mul_add(m17, m39);
+        let m54 = m8.mul_add(m12, m53);
+        let m55 = m9.mul_add(m19, m44);
+        let m56 = m11.mul_add(m15, m55);
+        let m57 = m54 + m56;
+        let m58 = m52 + m57;
+        let m59 = m0.mul_add(m23, m26);
+        let m60 = m2.mul_add(m19, m59);
+        let m61 = m3.mul_add(m20, m33);
+        let m62 = m5.mul_add(m13, m61);
+        let m63 = m60 + m62;
+        let m64 = m6.mul_add(m22, m38);
+        let m65 = m8.mul_add(m15, m64);
+        let m66 = m9.mul_add(m16, m45);
+        let m67 = m11.mul_add(m12, m66);
+        let m68 = m65 + m67;
+        let m69 = m63 + m68;
+        let m70 = m58 - m69;
+        Scalar { c: [[m70]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Vector> for Trivector<(Trivector,), T> {
+    type Output = Vector<(Vector,), T>;
+    /// The extension of a map on `Trivector` to `Vector`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Vector<(Vector,), T> {
+        let t = self.c;
+        let m0 = t[0][0] * t[1][1];
+        let m2 = (-t[0][1]).mul_add(t[1][0], m0);
+        let m3 = t[0][0] * t[1][2];
+        let m5 = (-t[0][2]).mul_add(t[1][0], m3);
+        let m6 = t[0][0] * t[1][3];
+        let m8 = (-t[0][3]).mul_add(t[1][0], m6);
+        let m9 = t[0][1] * t[1][2];
+        let m11 = (-t[0][2]).mul_add(t[1][1], m9);
+        let m12 = t[0][1] * t[1][3];
+        let m14 = (-t[0][3]).mul_add(t[1][1], m12);
+        let m15 = t[0][2] * t[1][3];
+        let m17 = (-t[0][3]).mul_add(t[1][2], m15);
+        let m18 = t[2][0] * t[3][1];
+        let m20 = (-t[2][1]).mul_add(t[3][0], m18);
+        let m21 = t[2][0] * t[3][2];
+        let m23 = (-t[2][2]).mul_add(t[3][0], m21);
+        let m24 = t[2][0] * t[3][3];
+        let m26 = (-t[2][3]).mul_add(t[3][0], m24);
+        let m27 = t[2][1] * t[3][2];
+        let m29 = (-t[2][2]).mul_add(t[3][1], m27);
+        let m30 = t[2][1] * t[3][3];
+        let m32 = (-t[2][3]).mul_add(t[3][1], m30);
+        let m33 = t[2][2] * t[3][3];
+        let m35 = (-t[2][3]).mul_add(t[3][2], m33);
+        let m38 = t[1][3] * m29;
+        let m40 = t[1][2] * m26;
+        let m44 = t[1][3] * m20;
+        let m46 = t[1][1] * m23;
+        let m49 = t[0][2] * m32;
+        let m53 = t[0][3] * m23;
+        let m55 = t[0][1] * m26;
+        let m59 = t[0][2] * m20;
+        let m62 = t[3][3] * m11;
+        let m64 = t[3][2] * m8;
+        let m68 = t[3][3] * m2;
+        let m70 = t[3][1] * m5;
+        let m73 = t[2][2] * m14;
+        let m77 = t[2][3] * m5;
+        let m79 = t[2][1] * m8;
+        let m83 = t[2][2] * m2;
+        let m84 = t[1][1].mul_add(m35, m38);
+        let m85 = (-t[1][2]).mul_add(m32, m84);
+        let m86 = (-t[1][0]).mul_add(m35, m40);
+        let m87 = (-t[1][3]).mul_add(m23, m86);
+        let m88 = t[1][0].mul_add(m32, m44);
+        let m89 = (-t[1][1]).mul_add(m26, m88);
+        let m90 = (-t[1][0]).mul_add(m29, m46);
+        let m91 = (-t[1][2]).mul_add(m20, m90);
+        let m92 = (-t[0][1]).mul_add(m35, m49);
+        let m93 = (-t[0][3]).mul_add(m29, m92);
+        let m94 = t[0][0].mul_add(m35, m53);
+        let m95 = (-t[0][2]).mul_add(m26, m94);
+        let m96 = (-t[0][0]).mul_add(m32, m55);
+        let m97 = (-t[0][3]).mul_add(m20, m96);
+        let m98 = t[0][0].mul_add(m29, m59);
+        let m99 = (-t[0][1]).mul_add(m23, m98);
+        let m100 = t[3][1].mul_add(m17, m62);
+        let m101 = (-t[3][2]).mul_add(m14, m100);
+        let m102 = (-t[3][0]).mul_add(m17, m64);
+        let m103 = (-t[3][3]).mul_add(m5, m102);
+        let m104 = t[3][0].mul_add(m14, m68);
+        let m105 = (-t[3][1]).mul_add(m8, m104);
+        let m106 = (-t[3][0]).mul_add(m11, m70);
+        let m107 = (-t[3][2]).mul_add(m2, m106);
+        let m108 = (-t[2][1]).mul_add(m17, m73);
+        let m109 = (-t[2][3]).mul_add(m11, m108);
+        let m110 = t[2][0].mul_add(m17, m77);
+        let m111 = (-t[2][2]).mul_add(m8, m110);
+        let m112 = (-t[2][0]).mul_add(m14, m79);
+        let m113 = (-t[2][3]).mul_add(m2, m112);
+        let m114 = t[2][0].mul_add(m11, m83);
+        let m115 = (-t[2][1]).mul_add(m5, m114);
+        Vector { c: [[m85, m87, m89, m91], [m93, m95, m97, m99], [m101, m103, m105, m107], [m109, m111, m113, m115]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Outermorphism<Bivector> for Trivector<(Trivector,), T> {
+    type Output = Bivector<(Bivector,), T>;
+    /// The extension of a map on `Trivector` to `Bivector`, factor by factor with `â¨`.
+    #[inline]
+    fn outermorphism(self) -> Bivector<(Bivector,), T> {
+        let t = self.c;
+        let m0 = t[2][2] * t[3][3];
+        let m3 = t[2][3] * t[3][1];
+        let m4 = t[2][1] * t[3][2];
+        let m7 = t[2][1] * t[3][0];
+        let m9 = t[2][2] * t[3][0];
+        let m11 = t[2][3] * t[3][0];
+        let m13 = t[1][3] * t[3][2];
+        let m14 = t[1][1] * t[3][3];
+        let m17 = t[1][2] * t[3][1];
+        let m18 = t[1][0] * t[3][1];
+        let m20 = t[1][0] * t[3][2];
+        let m22 = t[1][0] * t[3][3];
+        let m24 = t[1][2] * t[2][3];
+        let m27 = t[1][3] * t[2][1];
+        let m28 = t[1][1] * t[2][2];
+        let m31 = t[1][1] * t[2][0];
+        let m33 = t[1][2] * t[2][0];
+        let m35 = t[1][3] * t[2][0];
+        let m37 = t[0][3] * t[1][2];
+        let m38 = t[0][1] * t[1][3];
+        let m41 = t[0][2] * t[1][1];
+        let m42 = t[0][0] * t[1][1];
+        let m44 = t[0][0] * t[1][2];
+        let m46 = t[0][0] * t[1][3];
+        let m49 = t[0][3] * t[2][2];
+        let m50 = t[0][1] * t[2][3];
+        let m53 = t[0][2] * t[2][1];
+        let m54 = t[0][0] * t[2][1];
+        let m56 = t[0][0] * t[2][2];
+        let m58 = t[0][0] * t[2][3];
+        let m61 = t[0][3] * t[3][2];
+        let m62 = t[0][1] * t[3][3];
+        let m65 = t[0][2] * t[3][1];
+        let m66 = t[0][0] * t[3][1];
+        let m68 = t[0][0] * t[3][2];
+        let m70 = t[0][0] * t[3][3];
+        let m72 = (-t[2][3]).mul_add(t[3][2], m0);
+        let m73 = (-t[2][1]).mul_add(t[3][3], m3);
+        let m74 = (-t[2][2]).mul_add(t[3][1], m4);
+        let m75 = (-t[2][0]).mul_add(t[3][1], m7);
+        let m76 = (-t[2][0]).mul_add(t[3][2], m9);
+        let m77 = (-t[2][0]).mul_add(t[3][3], m11);
+        let m78 = (-t[1][2]).mul_add(t[3][3], m13);
+        let m79 = (-t[1][3]).mul_add(t[3][1], m14);
+        let m80 = (-t[1][1]).mul_add(t[3][2], m17);
+        let m81 = (-t[1][1]).mul_add(t[3][0], m18);
+        let m82 = (-t[1][2]).mul_add(t[3][0], m20);
+        let m83 = (-t[1][3]).mul_add(t[3][0], m22);
+        let m84 = (-t[1][3]).mul_add(t[2][2], m24);
+        let m85 = (-t[1][1]).mul_add(t[2][3], m27);
+        let m86 = (-t[1][2]).mul_add(t[2][1], m28);
+        let m87 = (-t[1][0]).mul_add(t[2][1], m31);
+        let m88 = (-t[1][0]).mul_add(t[2][2], m33);
+        let m89 = (-t[1][0]).mul_add(t[2][3], m35);
+        let m90 = (-t[0][2]).mul_add(t[1][3], m37);
+        let m91 = (-t[0][3]).mul_add(t[1][1], m38);
+        let m92 = (-t[0][1]).mul_add(t[1][2], m41);
+        let m93 = (-t[0][1]).mul_add(t[1][0], m42);
+        let m94 = (-t[0][2]).mul_add(t[1][0], m44);
+        let m95 = (-t[0][3]).mul_add(t[1][0], m46);
+        let m96 = (-t[0][2]).mul_add(t[2][3], m49);
+        let m97 = (-t[0][3]).mul_add(t[2][1], m50);
+        let m98 = (-t[0][1]).mul_add(t[2][2], m53);
+        let m99 = (-t[0][1]).mul_add(t[2][0], m54);
+        let m100 = (-t[0][2]).mul_add(t[2][0], m56);
+        let m101 = (-t[0][3]).mul_add(t[2][0], m58);
+        let m102 = (-t[0][2]).mul_add(t[3][3], m61);
+        let m103 = (-t[0][3]).mul_add(t[3][1], m62);
+        let m104 = (-t[0][1]).mul_add(t[3][2], m65);
+        let m105 = (-t[0][1]).mul_add(t[3][0], m66);
+        let m106 = (-t[0][2]).mul_add(t[3][0], m68);
+        let m107 = (-t[0][3]).mul_add(t[3][0], m70);
+        Bivector { c: [[m72, m73, m74, m75, m76, m77], [m78, m79, m80, m81, m82, m83], [m84, m85, m86, m87, m88, m89], [m90, m91, m92, m93, m94, m95], [m96, m97, m98, m99, m100, m101], [m102, m103, m104, m105, m106, m107]] }
     }
 }
 

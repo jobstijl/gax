@@ -273,7 +273,8 @@ files in `gax/src/algebras/`, behind cargo features.
   it: the slot is replaced by `x`'s own slots, spliced in place.
 * **`m.at::<I>()`:** moves slot `I` to the front. `m.at::<1>().of(x)` binds slot 1.
 * **`.swap()`:** exchanges the two slots of a form.
-* **`m.trace::<I>()`:** contracts the output against input slot `I`, which must be the output's own kind.
+* **`m.trace_at::<I>()`:** contracts the output against input slot `I`, which must be the output's own kind.
+  For a map from a kind to itself, `trace()` is the matrix trace.
   This is a blade-matching contraction with no metric (numga's `trace(slot)`). A contraction between two
   *inputs* needs a pairing and is written with `&` or `|`. That is why the brief's
   `.trace::<I, J>()` is not provided.
@@ -287,6 +288,10 @@ files in `gax/src/algebras/`, behind cargo features.
   singular vectors) and `trace`.
 * **Forms (`Scalar<(A, A)>`):** `eigh_with(metric)`, which returns the modes as values of the slot kind,
   and `eigh`.
+* **Outermorphisms:** `t.outermorphism::<B>()` extends a map on vectors by `∧`, or a map on antivectors
+  (PGA points) by `∨`, to every homogeneous kind `B`. The generator derives the extended matrices
+  symbolically, as minors; on the top grade the result is the determinant. This is numga's extension
+  operator, after Fernández, Moya & Rodrigues.
 * **Values:** `inverse`, `normalized` (returns `Unit<K>`), `norm`, `exp`, `Unit<K>::log` and `sqrt`.
   Each is emitted only where the kind has the structure its closed form needs (ADR-019).
 

@@ -324,3 +324,40 @@ fn symmetrize<T: Real, S: SquareArr<T>>(f: &S) -> S {
     let half = T::from_f64(0.5);
     matrix_from(|i, j| (f[i][j] + f[j][i]) * half)
 }
+
+/// Contract an extensor's output with its first slot, which must be the output's own kind
+/// (numga's `trace(slot)`): a blade-matching contraction with no metric. The result is a
+/// scalar with the remaining slots. Use `m.trace_at::<I>()` to trace slot `I`.
+pub trait TraceFirst: Extensor {
+    /// The result: a scalar extensor with the remaining slots.
+    type Output;
+    /// `Σ_k m[k][k][rest]`.
+    fn trace_first(self) -> Self::Output;
+}
+
+impl<M> TraceFirst for M
+where
+    M: Extensor,
+    M::Slots: crate::slots::SplitFirst<Head = M::Kind>,
+{
+    type Output = <<M::Kind as Kind>::Scalar as Kind>::Mv<
+        <M::Slots as crate::slots::SplitFirst>::Tail,
+        M::Coef,
+    >;
+    fn trace_first(self) -> Self::Output {
+        use crate::slots::{SlotArr, SplitFirst};
+        type Tail<M> = <<M as Extensor>::Slots as SplitFirst>::Tail;
+        let c = self.coeffs().as_ref();
+        let term = |k: usize| {
+            SlotArr::<Tail<M>, M::Coef>(<M::Slots as SplitFirst>::split(&c[k]).as_ref()[k])
+        };
+        let mut acc = term(0);
+        for k in 1..c.len() {
+            acc = acc + term(k);
+        }
+        let v = acc.0;
+        <Self::Output as Extensor>::from_coeffs(<<M::Kind as Kind>::Scalar as Kind>::arr_from_fn(
+            |_| v,
+        ))
+    }
+}
