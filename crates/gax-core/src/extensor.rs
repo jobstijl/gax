@@ -12,6 +12,17 @@ use crate::linalg::{self, SquareArr};
 use crate::slots::Slots;
 
 /// A map `B <- A` between kinds with the same number of coefficients.
+///
+/// ```
+/// use gax::pga3d::{Motor, Point};
+/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.4);
+/// let t: Point<(Point,), f64> = m >> Point::slot();
+/// let p = Point::xyz(1.0, 2.0, 3.0);
+/// let back = t.solve(t.of(p));
+/// assert!((back.e032() - 1.0).abs() < 1e-12);
+/// assert!((t.det() - 1.0).abs() < 1e-12);
+/// let _undo: Point<(Point,), f64> = t.inverse();
+/// ```
 pub trait SquareMap: Extensor<Coef: Real> {
     /// The input kind `A`.
     type Input: Kind;
@@ -139,6 +150,11 @@ where
 }
 
 /// A map from a kind to itself.
+///
+/// ```
+/// use gax::pga3d::Point;
+/// assert_eq!(Point::<(), f64>::slot().trace(), 4.0); // the identity on a 4-dimensional kind
+/// ```
 pub trait Endomorphism: SquareMap {
     /// The trace: the sum of the diagonal, a basis-independent invariant.
     fn trace(self) -> Self::Coef;
@@ -160,6 +176,21 @@ where
 }
 
 /// A bilinear form `Scalar <- (A, A)`.
+///
+/// ```
+/// use gax::pga2d::{Line, Point, Scalar};
+/// // Two positive definite forms on twists (points in PGA2D), from dyads of lines.
+/// let mut k: Scalar<(Point, Point), f64> = Scalar::zero();
+/// let mut m: Scalar<(Point, Point), f64> = Scalar::zero();
+/// for (a, b, c) in [(1.0, 0.0, 0.5), (0.0, 1.0, -0.3), (0.7, 0.7, 0.2)] {
+///     let l: Scalar<(Point,), f64> = Line::new(a, b, c) & Point::slot();
+///     k += l * l;
+///     m += (l * l).gp(2.0);
+/// }
+/// let (values, modes) = k.eigh_with(m); // modes are values of the slot kind
+/// assert!(values.iter().all(|v| (v - 0.5).abs() < 1e-10));
+/// let _: Point<(), f64> = modes[0];
+/// ```
 pub trait Form: Extensor<Coef: Real> {
     /// The slot kind.
     type Slot: Kind;
@@ -223,6 +254,16 @@ where
 
 /// A pairing `Scalar <- (A, B)` between two kinds with the same number of coefficients: a
 /// bilinear form, or the regressive product of a plane and a point.
+///
+/// ```
+/// use gax::pga3d::{Motor, Plane, Point, Scalar};
+/// let m = Motor::<(), f64>::translation(1.0, 0.0, 0.0);
+/// let t: Point<(Point,), f64> = m >> Point::slot();
+/// let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
+/// let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & t);
+/// let (l, p) = (Plane::new(1.0, 0.0, 0.0, -2.0), Point::xyz(3.0, 1.0, 0.0));
+/// assert!(((on_planes.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-12);
+/// ```
 pub trait Pairing: Extensor<Coef: Real> {
     /// The first slot's kind.
     type First: Kind;

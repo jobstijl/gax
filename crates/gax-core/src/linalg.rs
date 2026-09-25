@@ -15,6 +15,15 @@
 //!
 //! Jacobi methods are chosen over QR for their accuracy on small symmetric problems (Demmel &
 //! Veselić) and because a fixed number of sweeps makes them branch free.
+//!
+//! ```
+//! use gax_core::linalg::{eigh, inverse, matmul};
+//! let a: [[f64; 2]; 2] = [[2.0, 1.0], [1.0, 2.0]];
+//! let (values, _vectors) = eigh(&a, 8);
+//! assert!((values[0] * values[1] - 3.0).abs() < 1e-12); // the determinant
+//! let i = matmul(&a, &inverse(&a));
+//! assert!((i[0][0] - 1.0).abs() < 1e-12 && i[0][1].abs() < 1e-12);
+//! ```
 
 // Matrix code indexes rows and columns explicitly; iterators would obscure the algorithms.
 #![allow(clippy::needless_range_loop)]

@@ -19,6 +19,8 @@ wide = { version = "1.7", optional = true, default-features = false }
 
 [dev-dependencies]
 proptest = "1"
+# Doc examples use the generated standard algebras.
+gax = { path = "../gax", default-features = false, features = ["std", "pga3d", "pga2d"] }
 
 [lints]
 workspace = true

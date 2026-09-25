@@ -23,6 +23,19 @@ pub trait HasCat {
 pub type Cat<A, B> = <A as HasCat>::Cat<B>;
 
 /// A list of open slots. Implemented for `()` and tuples of up to 8 kinds.
+///
+/// A function generic over `S: Slots` works on values (`S = ()`) and on maps and forms alike:
+///
+/// ```
+/// use gax::pga3d::{Plane, Point};
+/// use gax::Slots;
+///
+/// fn shadow<S: Slots>(light: Point<(), f64>, ground: Plane<(), f64>, p: Point<S, f64>) -> Point<S, f64> {
+///     (light & p) ^ ground // `Cat<(), S> = S` and `Cat<S, ()> = S` for any S
+/// }
+/// # let (l, g) = (Point::xyz(0.0, 0.0, 9.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
+/// # let _ = shadow(l, g, Point::slot());
+/// ```
 pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
     /// Number of slots.
     const LEN: usize;

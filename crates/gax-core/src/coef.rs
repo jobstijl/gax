@@ -33,6 +33,18 @@ pub trait Coef:
 ///
 /// For SIMD lane types every function acts lane-wise, and [`Real::select_lt`] replaces
 /// branches, so the solvers built on this trait run unchanged across a batch.
+///
+/// Code written over `T: Real` runs on scalars, on SIMD lanes (feature `wide`) and, at build
+/// time, on symbolic coefficients (`gax::trace`):
+///
+/// ```
+/// use gax::pga3d::Point;
+/// use gax::Real;
+/// fn midpoint<T: Real>(a: Point<(), T>, b: Point<(), T>) -> Point<(), T> {
+///     (a + b).gp(T::from_f64(0.5))
+/// }
+/// assert_eq!(midpoint(Point::xyz(0.0f32, 0.0, 0.0), Point::xyz(2.0, 0.0, 0.0)).to_euclidean(), [1.0, 0.0, 0.0]);
+/// ```
 pub trait Real: Coef + Div<Output = Self> {
     /// Square root.
     fn sqrt(self) -> Self;

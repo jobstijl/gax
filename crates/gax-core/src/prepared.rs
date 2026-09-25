@@ -10,6 +10,17 @@ use core::marker::PhantomData;
 
 /// The action of versor `V` on kind `X`, stored as the `N` non-constant entries of its matrix.
 ///
+/// ```
+/// use gax::pga3d::{Motor, Point};
+/// let m = Motor::<(), f64>::rotation_about(1.0, 0.0, 0.0, 0.5);
+/// let t = m.prepare::<Point>();            // 12 entries: the zeros are in the type
+/// let p = Point::xyz(1.0, 2.0, 3.0);
+/// let (a, b) = ((t >> p).to_euclidean(), (m >> p).to_euclidean());
+/// assert!(a.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-12)); // same result
+/// let dense: Point<(Point,), f64> = t.to_map();
+/// # let _ = dense;
+/// ```
+///
 /// `V` is the versor's kind, wrapped in `Unit` when the versor is certified (the entries then
 /// come from the simplified formulas).
 pub struct Prepared<V, X, T, const N: usize> {

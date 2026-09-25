@@ -1,5 +1,14 @@
 //! Product and involution traits implemented by the generated algebras.
 //!
+//! ```
+//! use gax::pga3d::{Line, Plane, Point};
+//! let (p, q) = (Point::<(), f64>::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 1.0, 0.0));
+//! let l: Line<(), f64> = p & q;           // join (regressive product)
+//! let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+//! let _meet: Point<(), f64> = l ^ floor;  // meet (outer product)
+//! assert!((floor & p).s().abs() < 1e-12); // incidence: the origin lies on the floor
+//! ```
+//!
 //! Each binary product is a trait with one generated impl per pair of kinds whose product is
 //! nonzero. The impls are generic over both slot lists and the coefficient type, and the output
 //! slots are the concatenation. The operators `*`, `^`, `&` and `|` forward to [`Gp`],

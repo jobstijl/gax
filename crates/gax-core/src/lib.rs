@@ -1,7 +1,29 @@
 //! Core traits of `gax`: slot lists, kinds, coefficients, binding, and the math core.
 //!
 //! Most users use these through the `gax` crate, which re-exports them together with the
-//! generated algebras.
+//! generated algebras. The pieces:
+//!
+//! * [`Slots`] (tuples of kinds) and [`Kind`]: the type-level structure of values, maps and forms.
+//! * [`Extensor`]: the interface every generated type implements; [`Of`], [`MoveToFront`],
+//!   [`FillList`] for binding and composition.
+//! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`).
+//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`]: solving, eigenproblems and pairings on
+//!   maps and forms, built on [`linalg`].
+//! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
+//! * [`study`]: functions of Study numbers, behind exp, log, normalization and inverses.
+//!
+//! ```
+//! use gax::pga3d::{Motor, Point};
+//! use gax::Slots;
+//!
+//! // Written once, generic over the open slots.
+//! fn lift<S: Slots>(p: Point<S, f64>) -> Point<S, f64> {
+//!     Motor::translation(0.0, 0.0, 1.0) >> p
+//! }
+//! let value = lift(Point::xyz(1.0, 2.0, 3.0));
+//! let map: Point<(Point,), f64> = lift(Point::slot());
+//! assert_eq!(map.of(Point::xyz(1.0, 2.0, 3.0)).to_euclidean(), value.to_euclidean());
+//! ```
 #![no_std]
 
 pub mod bind;

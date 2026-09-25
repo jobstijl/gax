@@ -227,6 +227,7 @@ dependencies = [
 name = "gax-core"
 version = "0.1.0"
 dependencies = [
+ "gax",
  "libm",
  "proptest",
  "wide 1.7.1",

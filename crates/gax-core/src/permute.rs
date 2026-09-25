@@ -5,6 +5,13 @@ use crate::kind::Kind;
 use crate::slots::Slots;
 
 /// Slot lists whose slot `I` can be moved to the front.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+/// let (a, b) = (Point::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 0.0, 0.0));
+/// assert_eq!(join.at::<1>().of(b).of(a), a & b); // fill the second slot first
+/// ```
 pub trait MoveToFront<const I: usize>: Slots {
     /// The list with slot `I` first and the others in their original order.
     type Moved: Slots;

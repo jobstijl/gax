@@ -9,6 +9,13 @@ use core::fmt::Debug;
 ///
 /// A kind is written as its multivector type with default parameters, so `Point` is both
 /// the type of a point value and the marker for an open point slot in `Line<(Point,)>`.
+///
+/// ```
+/// use gax::pga3d::Point;
+/// use gax::Kind;
+/// assert_eq!(<Point as Kind>::N, 4);
+/// assert_eq!(<Point as Kind>::BLADES, &["e032", "e013", "e021", "e123"]);
+/// ```
 #[diagnostic::on_unimplemented(
     message = "`{Self}` is not a kind",
     label = "not a kind",
@@ -48,6 +55,15 @@ pub type Coeffs<M> = <<M as Extensor>::Kind as Kind>::Arr<
 >;
 
 /// A multivector, map or form of some kind: the common interface of all generated types.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// use gax::Extensor;
+/// let m: Line<(Point,), f64> = Point::xyz(0.0, 0.0, 0.0) & Point::slot();
+/// // Output first: one array over the slot per output coefficient.
+/// let c: &[[f64; 4]; 6] = m.coeffs();
+/// assert_eq!(Line::<(Point,), f64>::from_coeffs(*c), m);
+/// ```
 pub trait Extensor: Copy + Debug + PartialEq + 'static {
     /// The output kind.
     type Kind: Kind;

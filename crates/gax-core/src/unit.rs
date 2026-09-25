@@ -4,6 +4,15 @@ use core::ops::Deref;
 
 /// A versor certified to satisfy `x ~x = 1`.
 ///
+/// ```
+/// use gax::pga3d::{Line, Motor, Point};
+/// let m: gax::Unit<Motor<(), f64>> = Line::new(0.0, 0.0, 0.3, 1.0, 0.0, 0.0).exp();
+/// let p = Point::xyz(1.0, 0.0, 0.0);
+/// let q = m >> p;                           // simplified sandwich
+/// let back = m.inverse() >> q;              // the inverse is the reverse: no arithmetic
+/// assert!((back.e032() - 1.0).abs() < 1e-12);
+/// ```
+///
 /// The certificate is a promise made at construction, as with `nalgebra::Unit`: operations
 /// on a `Unit` use it to take cheaper paths (the inverse is the reverse, sandwiches use the
 /// simplified formulas). Obtain one from `normalized()`, from products of unit versors, or

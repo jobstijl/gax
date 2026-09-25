@@ -409,6 +409,13 @@ pub fn study2<T: Real>(
 
 /// `(C, S)` of `exp(B) = C(B²) + S(B²) B` for `B² = lambda + mu I`, as Study numbers
 /// `(c0, c1, s0, s1)`: `exp(B) = c0 + c1 I + (s0 + s1 I) B`.
+///
+/// ```
+/// // A rotation (B² = -θ², no I part): exp(B) = cos θ + (sin θ / θ) B.
+/// let th = 0.6f64;
+/// let [c0, _, s0, _] = gax_core::study::exp_coeffs(-1, -th * th, 0.0);
+/// assert!((c0 - th.cos()).abs() < 1e-15 && (s0 - th.sin() / th).abs() < 1e-15);
+/// ```
 #[inline]
 pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
     let (c0, c1) = study1(isq, lambda, mu, |x| exp_parts(x).0);

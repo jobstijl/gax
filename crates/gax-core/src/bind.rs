@@ -8,6 +8,16 @@ use crate::slots::{Cat, SlotArr, SplitFirst};
 /// With `m` a map `C <- (B, Rest...)` and `x` of kind `B` with slots `Sx`, `m.of(x)` has
 /// slots `Sx` followed by `Rest`: a value `x` fills the slot, and a map `x` is composed into
 /// it, its own slots taking the slot's place.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// let q: Point<(), f64> = Point::xyz(0.0, 0.0, 1.0);
+/// let lines_through_q: Line<(Point,), f64> = q & Point::slot();   // a map
+/// let p = Point::xyz(1.0, 2.0, 3.0);
+/// assert_eq!(lines_through_q.of(p), q & p);                       // fill the slot
+/// let moved: Line<(Point,), f64> = lines_through_q.of(Point::slot().gp(2.0)); // compose
+/// assert_eq!(moved.of(p), q & p.gp(2.0));
+/// ```
 #[diagnostic::on_unimplemented(
     message = "cannot fill the first slot of `{Self}` with `{X}`",
     note = "the argument's kind must be the slot's kind (move another slot to the front with `.at::<I>()`)"
