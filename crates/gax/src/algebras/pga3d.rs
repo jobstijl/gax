@@ -48,6 +48,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Scalar<S, T> {
 impl gx::Kind for Scalar {
     const N: usize = 1;
     const NAME: &'static str = "Scalar";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["1"];
     type Arr<X: gx::Elem> = [X; 1];
     type Mv<S: gx::Slots, T: gx::Coef> = Scalar<S, T>;
@@ -434,6 +435,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Plane<S, T> {
 impl gx::Kind for Plane {
     const N: usize = 4;
     const NAME: &'static str = "Plane";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["e1", "e2", "e3", "e0"];
     type Arr<X: gx::Elem> = [X; 4];
     type Mv<S: gx::Slots, T: gx::Coef> = Plane<S, T>;
@@ -838,6 +840,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Line<S, T> {
 impl gx::Kind for Line {
     const N: usize = 6;
     const NAME: &'static str = "Line";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["e23", "e31", "e12", "e01", "e02", "e03"];
     type Arr<X: gx::Elem> = [X; 6];
     type Mv<S: gx::Slots, T: gx::Coef> = Line<S, T>;
@@ -1254,6 +1257,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Point<S, T> {
 impl gx::Kind for Point {
     const N: usize = 4;
     const NAME: &'static str = "Point";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["e032", "e013", "e021", "e123"];
     type Arr<X: gx::Elem> = [X; 4];
     type Mv<S: gx::Slots, T: gx::Coef> = Point<S, T>;
@@ -1658,6 +1662,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Pseudoscalar<S, T> {
 impl gx::Kind for Pseudoscalar {
     const N: usize = 1;
     const NAME: &'static str = "Pseudoscalar";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["e0123"];
     type Arr<X: gx::Elem> = [X; 1];
     type Mv<S: gx::Slots, T: gx::Coef> = Pseudoscalar<S, T>;
@@ -2044,6 +2049,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Rotor<S, T> {
 impl gx::Kind for Rotor {
     const N: usize = 4;
     const NAME: &'static str = "Rotor";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["1", "e23", "e31", "e12"];
     type Arr<X: gx::Elem> = [X; 4];
     type Mv<S: gx::Slots, T: gx::Coef> = Rotor<S, T>;
@@ -2448,6 +2454,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Translator<S, T> {
 impl gx::Kind for Translator {
     const N: usize = 4;
     const NAME: &'static str = "Translator";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["1", "e01", "e02", "e03"];
     type Arr<X: gx::Elem> = [X; 4];
     type Mv<S: gx::Slots, T: gx::Coef> = Translator<S, T>;
@@ -2852,6 +2859,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Motor<S, T> {
 impl gx::Kind for Motor {
     const N: usize = 8;
     const NAME: &'static str = "Motor";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["1", "e23", "e31", "e12", "e01", "e02", "e03", "e0123"];
     type Arr<X: gx::Elem> = [X; 8];
     type Mv<S: gx::Slots, T: gx::Coef> = Motor<S, T>;
@@ -3280,6 +3288,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Flector<S, T> {
 impl gx::Kind for Flector {
     const N: usize = 8;
     const NAME: &'static str = "Flector";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["e1", "e2", "e3", "e0", "e032", "e013", "e021", "e123"];
     type Arr<X: gx::Elem> = [X; 8];
     type Mv<S: gx::Slots, T: gx::Coef> = Flector<S, T>;
@@ -3708,6 +3717,7 @@ impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Multivector<S, T> {
 impl gx::Kind for Multivector {
     const N: usize = 16;
     const NAME: &'static str = "Multivector";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &["1", "e0", "e1", "e2", "e3", "e01", "e02", "e03", "e12", "e31", "e23", "e021", "e013", "e032", "e123", "e0123"];
     type Arr<X: gx::Elem> = [X; 16];
     type Mv<S: gx::Slots, T: gx::Coef> = Multivector<S, T>;

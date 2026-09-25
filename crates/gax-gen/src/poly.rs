@@ -33,6 +33,7 @@ impl Rational {
     /// `num / den` in lowest terms. Panics when `den == 0`.
     pub fn new(num: i128, den: i128) -> Rational {
         assert!(den != 0, "rational with zero denominator");
+        assert!(num != i128::MIN && den != i128::MIN, "rational overflow");
         let g = gcd(num, den).max(1);
         let s = if den < 0 { -1 } else { 1 };
         Rational {
@@ -106,10 +107,18 @@ impl Rational {
     }
 }
 
+fn ck(x: Option<i128>) -> i128 {
+    x.expect("rational overflow: coefficients exceed i128")
+}
+
 impl Add for Rational {
     type Output = Rational;
     fn add(self, o: Rational) -> Rational {
-        Rational::new(self.num * o.den + o.num * self.den, self.den * o.den)
+        if self.den == o.den {
+            return Rational::new(ck(self.num.checked_add(o.num)), self.den);
+        }
+        let n = ck(ck(self.num.checked_mul(o.den)).checked_add(ck(o.num.checked_mul(self.den))));
+        Rational::new(n, ck(self.den.checked_mul(o.den)))
     }
 }
 impl Sub for Rational {
@@ -121,7 +130,13 @@ impl Sub for Rational {
 impl Mul for Rational {
     type Output = Rational;
     fn mul(self, o: Rational) -> Rational {
-        Rational::new(self.num * o.num, self.den * o.den)
+        // Cross-cancel first to keep intermediates small.
+        let g1 = gcd(self.num, o.den).max(1);
+        let g2 = gcd(o.num, self.den).max(1);
+        Rational::new(
+            ck((self.num / g1).checked_mul(o.num / g2)),
+            ck((self.den / g2).checked_mul(o.den / g1)),
+        )
     }
 }
 impl Neg for Rational {

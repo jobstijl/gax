@@ -186,6 +186,12 @@ impl Program {
 
     /// Remove dead instructions and renumber.
     pub fn compact(&mut self) {
+        self.compact_keep_live_of(self.outputs.len());
+    }
+
+    /// Remove instructions not needed by any output, renumbering all outputs. (The
+    /// argument is accepted for call-site clarity; every listed output is kept alive.)
+    pub fn compact_keep_live_of(&mut self, _primary: usize) {
         let live = self.live();
         let mut map = vec![usize::MAX; self.instrs.len()];
         let mut out = Vec::new();
@@ -205,13 +211,23 @@ impl Program {
 
     /// Expand the outputs into polynomials. Panics on non-polynomial instructions.
     pub fn to_polys(&self) -> Vec<Poly> {
+        self.to_polys_with(&|_| None)
+    }
+
+    /// Expand the outputs into polynomials; `leaf(k)` may name the value of instruction `k`
+    /// (a non-polynomial instruction must be named).
+    pub fn to_polys_with(&self, leaf: &impl Fn(usize) -> Option<Poly>) -> Vec<Poly> {
         let mut vals: Vec<Poly> = Vec::with_capacity(self.instrs.len());
         let get = |o: &Operand, vals: &Vec<Poly>| match o {
             Operand::Var(v) => Poly::var(*v),
             Operand::Temp(k) => vals[*k].clone(),
             Operand::Const(c) => Poly::constant(*c),
         };
-        for i in &self.instrs {
+        for (k, i) in self.instrs.iter().enumerate() {
+            if let Some(p) = leaf(k) {
+                vals.push(p);
+                continue;
+            }
             let p = match i {
                 Instr::Add(a, b) => &get(a, &vals) + &get(b, &vals),
                 Instr::Sub(a, b) => &get(a, &vals) - &get(b, &vals),

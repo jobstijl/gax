@@ -223,9 +223,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gax-example-traced"
+version = "0.0.0"
+dependencies = [
+ "gax",
+]
+
+[[package]]
 name = "gax-gen"
 version = "0.1.0"
 dependencies = [
+ "gax-core",
  "proptest",
 ]
 

@@ -8,6 +8,10 @@
 
 pub use gax_core::*;
 
+/// Build-time tracing: run generic kernels on symbolic coefficients and emit fused code.
+#[cfg(feature = "trace")]
+pub use gax_gen::trace;
+
 /// Plane-based projective geometric algebra of the Euclidean plane.
 #[cfg(feature = "pga2d")]
 #[allow(

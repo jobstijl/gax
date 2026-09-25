@@ -7,8 +7,11 @@
 pub mod algebra;
 pub mod cse;
 pub mod emit;
+pub mod groebner;
 pub mod poly;
 pub mod slp;
 pub mod spec;
+pub mod sym;
 pub mod symbolic;
 pub mod table;
+pub mod trace;

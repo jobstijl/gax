@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/gax-core", "crates/gax-gen", "crates/gax", "crates/gax-bench"]
+members = ["crates/gax-core", "crates/gax-gen", "crates/gax", "crates/gax-bench", "examples/traced"]
 
 [workspace.package]
 version = "0.1.0"

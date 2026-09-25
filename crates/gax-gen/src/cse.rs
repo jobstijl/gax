@@ -152,10 +152,25 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
 
 /// Compile polynomials, optionally extracting shared kernels first.
 fn compile_polys(b: &mut Builder, polys: &[Poly], kernels: bool) -> Vec<Operand> {
+    compile_polys_env(b, polys, kernels, &HashMap::new())
+}
+
+/// Compile polynomials whose variables may be bound to earlier results by `env`.
+pub fn compile_polys_env(
+    b: &mut Builder,
+    polys: &[Poly],
+    kernels: bool,
+    env: &HashMap<Var, Operand>,
+) -> Vec<Operand> {
     let mut polys = polys.to_vec();
-    let mut env: HashMap<Var, Operand> = HashMap::new();
+    let mut env = env.clone();
     if kernels {
-        let first_free = polys.iter().flat_map(Poly::vars).max().map_or(0, |v| v + 1);
+        let first_free = polys
+            .iter()
+            .flat_map(Poly::vars)
+            .chain(env.keys().copied())
+            .max()
+            .map_or(0, |v| v + 1);
         let defs = extract_kernels(&mut polys, first_free);
         for (t, def) in defs {
             let op = compile_terms(b, vec![to_terms_env(&def, &env)])[0];
@@ -164,6 +179,147 @@ fn compile_polys(b: &mut Builder, polys: &[Poly], kernels: bool) -> Vec<Operand>
     }
     let terms = polys.iter().map(|p| to_terms_env(p, &env)).collect();
     compile_terms(b, terms)
+}
+
+/// How to use the relations when compiling.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Reduction {
+    /// Compile the polynomials as given.
+    None,
+    /// Add multiples of the relations while that removes terms (square-sum completion).
+    Greedy,
+    /// Replace every polynomial by its normal form modulo a Gröbner basis of the relations.
+    NormalForm,
+}
+
+/// A non-polynomial step of a staged computation: `var = op(args)`.
+#[derive(Clone, Debug)]
+pub struct Stage {
+    /// The variable the result is bound to.
+    pub var: Var,
+    /// The operation.
+    pub op: StageOp,
+    /// Arguments, as polynomials in inputs and earlier stage variables.
+    pub args: Vec<Poly>,
+}
+
+/// Operation of a [`Stage`].
+#[derive(Clone, Copy, Debug)]
+pub enum StageOp {
+    /// A function of one argument.
+    Call(crate::slp::Func),
+    /// `atan2(args[0], args[1])`.
+    Atan2,
+    /// `args[0] + args[1]`
+    Add,
+    /// `args[0] - args[1]`
+    Sub,
+    /// `args[0] * args[1]`
+    Mul,
+}
+
+/// Compile outputs that depend on staged non-polynomial values.
+///
+/// Returns the program and, for each stage variable, the temporary holding its value.
+pub fn compile_staged(
+    outputs: &[Poly],
+    stages: &[Stage],
+    relations: &[Poly],
+    reduction: Reduction,
+    kernels: bool,
+) -> (Program, HashMap<Var, Operand>) {
+    let basis = match reduction {
+        Reduction::NormalForm => crate::groebner::groebner(relations, 2000),
+        _ => None,
+    };
+    let reduce = |p: &Poly| match reduction {
+        Reduction::None => p.clone(),
+        Reduction::Greedy => reduce_by_relations(p, relations),
+        Reduction::NormalForm => basis
+            .as_ref()
+            .map_or_else(|| p.clone(), |g| crate::groebner::normal_form(p, g)),
+    };
+    let mut b = Builder::default();
+    let mut env: HashMap<Var, Operand> = HashMap::new();
+    for st in stages {
+        let args: Vec<Poly> = st.args.iter().map(reduce).collect();
+        let ops = compile_polys_env(&mut b, &args, kernels, &env);
+        let r = match st.op {
+            StageOp::Call(f) => b.emit(Instr::Call(f, ops[0])),
+            StageOp::Atan2 => b.emit(Instr::Atan2(ops[0], ops[1])),
+            StageOp::Add => b.emit(Instr::Add(ops[0], ops[1])),
+            StageOp::Sub => b.emit(Instr::Sub(ops[0], ops[1])),
+            StageOp::Mul => b.mul(ops[0], ops[1]),
+        };
+        env.insert(st.var, r);
+    }
+    let outs: Vec<Poly> = outputs.iter().map(reduce).collect();
+    b.prog.outputs = compile_polys_env(&mut b, &outs, kernels, &env);
+    // Keep the stage temporaries addressable through compaction by listing them as extra
+    // outputs, then strip them again.
+    let n = b.prog.outputs.len();
+    let mut stage_vars: Vec<Var> = env.keys().copied().collect();
+    stage_vars.sort_unstable();
+    for v in &stage_vars {
+        b.prog.outputs.push(env[v]);
+    }
+    let mut prog = b.prog;
+    prog.compact_keep_live_of(n);
+    let extra = prog.outputs.split_off(n);
+    let env = stage_vars.into_iter().zip(extra).collect();
+    (prog, env)
+}
+
+/// Compile staged outputs with every strategy and keep the cheapest program that is verified
+/// exact: its outputs equal the given polynomials modulo the relations.
+pub fn compile_staged_best(
+    outputs: &[Poly],
+    stages: &[Stage],
+    relations: &[Poly],
+) -> (Program, HashMap<Var, Operand>) {
+    let basis = crate::groebner::groebner(relations, 2000);
+    let mut best: Option<(Program, HashMap<Var, Operand>)> = None;
+    let reductions: &[Reduction] = if relations.is_empty() {
+        &[Reduction::None]
+    } else {
+        &[Reduction::None, Reduction::Greedy, Reduction::NormalForm]
+    };
+    for &reduction in reductions {
+        for kernels in [false, true] {
+            let (prog, env) = compile_staged(outputs, stages, relations, reduction, kernels);
+            if let Some(g) = &basis {
+                assert!(
+                    verify_staged(&prog, &env, outputs, g),
+                    "simplifier produced a program that differs from its input ({reduction:?}, kernels {kernels})"
+                );
+            }
+            let better = best
+                .as_ref()
+                .is_none_or(|(b, _)| prog.cost().weight() < b.cost().weight());
+            if better {
+                best = Some((prog, env));
+            }
+        }
+    }
+    best.expect("at least one strategy")
+}
+
+/// Check `prog`'s outputs against `want` modulo the ideal with Gröbner basis `basis`, reading
+/// stage temporaries as their variables.
+pub fn verify_staged(
+    prog: &Program,
+    env: &HashMap<Var, Operand>,
+    want: &[Poly],
+    basis: &[Poly],
+) -> bool {
+    let got = prog.to_polys_with(&|k| {
+        env.iter()
+            .find(|(_, o)| **o == Operand::Temp(k))
+            .map(|(v, _)| Poly::var(*v))
+    });
+    got.iter()
+        .zip(want)
+        .all(|(g, w)| crate::groebner::normal_form(&(g - w), basis).is_zero())
 }
 
 fn to_terms_env(p: &Poly, env: &HashMap<Var, Operand>) -> Vec<Term> {

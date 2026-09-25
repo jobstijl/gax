@@ -14,6 +14,8 @@ pub trait Kind: Copy + Debug + PartialEq + 'static {
     const N: usize;
     /// Name of the kind.
     const NAME: &'static str;
+    /// `module_path!()` of the module that defines the kind.
+    const MODULE: &'static str;
     /// Blade names in layout order, e.g. `["e032", "e013", "e021", "e123"]`.
     const BLADES: &'static [&'static str];
     /// Coefficient array of this kind: `[X; N]`.

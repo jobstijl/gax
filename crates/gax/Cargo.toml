@@ -16,9 +16,12 @@ pga2d = []
 pga3d = []
 ## SIMD lane coefficients for batches in struct-of-arrays form.
 wide = ["gax-core/wide"]
+## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
+trace = ["dep:gax-gen"]
 
 [dependencies]
 gax-core = { workspace = true }
+gax-gen = { workspace = true, optional = true }
 
 [dev-dependencies]
 gax-gen = { workspace = true }

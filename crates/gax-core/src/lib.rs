@@ -11,6 +11,7 @@ pub mod ops;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod slots;
+pub mod trace;
 pub mod unit;
 
 pub use bind::Of;
@@ -21,4 +22,5 @@ pub use ops::{
     Transform, TransformInv, Undual, Vee, Wedge,
 };
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
+pub use trace::Traceable;
 pub use unit::Unit;

@@ -223,6 +223,7 @@ impl<S: Slots, T: Coef> core::fmt::Debug for {name}<S, T> {{
 impl Kind for {name} {{
     const N: usize = {n};
     const NAME: &'static str = "{name}";
+    const MODULE: &'static str = module_path!();
     const BLADES: &'static [&'static str] = &[{blades}];
     type Arr<X: gx::Elem> = [X; {n}];
     type Mv<S: Slots, T: Coef> = {name}<S, T>;
