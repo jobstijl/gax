@@ -87,14 +87,14 @@ fn cse_preserves_random_polynomial_systems() {
         let polys: Vec<Poly> = (0..4)
             .map(|_| {
                 let mut p = Poly::zero();
-                for _ in 0..(rnd() % 8 + 1) {
+                for _ in 0..=(rnd() % 8) {
                     let deg = rnd() % 4;
                     let m: Vec<Var> = {
                         let mut v: Vec<Var> = (0..deg).map(|_| (rnd() % 6) as Var).collect();
                         v.sort_unstable();
                         v
                     };
-                    let c = (rnd() % 7) as i128 - 3;
+                    let c = i128::from(rnd() % 7) - 3;
                     p.add_term(gax_gen::poly::Monomial(m), gax_gen::poly::Rational::int(c));
                 }
                 p

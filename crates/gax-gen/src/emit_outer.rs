@@ -115,12 +115,11 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> String {
                     .into_iter()
                     .map(|(bb, c)| (bb, c.scale(Rational::int(i128::from(sa * r)))))
                     .collect();
-                match symbolic::to_coeffs(&b.layout, &scaled) {
-                    Some(c) => columns.push(c),
-                    None => {
-                        ok = false;
-                        break;
-                    }
+                if let Some(c) = symbolic::to_coeffs(&b.layout, &scaled) {
+                    columns.push(c);
+                } else {
+                    ok = false;
+                    break;
                 }
             }
             if !ok {
