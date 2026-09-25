@@ -1,0 +1,17 @@
+[package]
+name = "gax-macros"
+description = "The algebra! macro of gax: declare a geometric algebra of any signature"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+gax-gen = { workspace = true }
+
+[lints]
+workspace = true

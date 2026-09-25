@@ -326,16 +326,45 @@ impl AlgebraSpec {
                 doc: kdoc,
             });
         }
+        // Every algebra has a scalar kind and a kind holding every blade; add them (in the
+        // canonical blade order: by grade, then by index) when the declaration does not.
         if !kinds.iter().any(|k| k.layout.blades == [(0, 1)]) {
-            return Err(AlgebraError(
-                "the algebra must declare a scalar kind `[1]`".into(),
-            ));
+            if kinds.iter().any(|k| k.name == "Scalar") {
+                return Err(AlgebraError(
+                    "a kind named `Scalar` must be the scalar kind `[1]`".into(),
+                ));
+            }
+            kinds.insert(
+                0,
+                KindSpec {
+                    name: "Scalar".into(),
+                    blades: vec!["1".into()],
+                    layout: Layout {
+                        blades: vec![(0, 1)],
+                    },
+                    versor: false,
+                    doc: "A scalar.".into(),
+                },
+            );
         }
         let full = algebra.blade_count();
         if !kinds.iter().any(|k| k.layout.len() == full) {
-            return Err(AlgebraError(
-                "the algebra must declare a kind containing every blade".into(),
-            ));
+            if kinds.iter().any(|k| k.name == "Multivector") {
+                return Err(AlgebraError(
+                    "a kind named `Multivector` must contain every blade".into(),
+                ));
+            }
+            let mut masks: Vec<u32> = (0..full as u32).collect();
+            masks.sort_by_key(|m| (m.count_ones(), *m));
+            kinds.push(KindSpec {
+                name: "Multivector".into(),
+                blades: masks.iter().map(|&m| algebra.blade_name(m)).collect(),
+                layout: Layout {
+                    blades: masks.iter().map(|&m| (m, 1)).collect(),
+                },
+                versor: false,
+                doc: "A general multivector, blades by grade then index.".into(),
+            });
         }
         for (a, k) in &aliases {
             if !kinds.iter().any(|x| &x.name == k) {
@@ -425,7 +454,11 @@ mod tests {
     #[test]
     fn rejects_bad_input() {
         assert!(AlgebraSpec::parse("algebra x; basis e1 = 1; kind scalar = [1];").is_err());
-        assert!(AlgebraSpec::parse("algebra x; basis e1 = 1; kind Scalar = [1];").is_err()); // no full kind
+        // A missing full kind is added.
+        let auto =
+            AlgebraSpec::parse("algebra x; basis e1 = 1, e2 = 1; kind Vector = [e1, e2];").unwrap();
+        assert_eq!(auto.kinds.first().unwrap().name, "Scalar");
+        assert_eq!(auto.kinds.last().unwrap().layout.len(), 4);
         assert!(AlgebraSpec::parse("algebra x; basis ex1 = 1;").is_err());
         assert!(
             AlgebraSpec::parse(

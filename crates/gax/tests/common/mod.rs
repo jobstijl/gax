@@ -140,7 +140,10 @@ impl Oracle {
         }
         let out = self.binop(BinOp::Gp, &s, v);
         let check = self.binop(BinOp::Gp, &out, &self.unop(UnOp::Reverse, &out));
-        let ok = check.iter().enumerate().all(|(i, c)| (c - if i == 0 { 1.0 } else { 0.0 }).abs() < 1e-9);
+        let ok = check
+            .iter()
+            .enumerate()
+            .all(|(i, c)| (c - if i == 0 { 1.0 } else { 0.0 }).abs() < 1e-9);
         ok.then_some(out)
     }
 

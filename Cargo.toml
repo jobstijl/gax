@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/gax-core", "crates/gax-gen", "crates/gax", "crates/gax-bench", "examples/traced"]
+members = ["crates/gax-core", "crates/gax-gen", "crates/gax-macros", "crates/gax", "crates/gax-bench", "examples/traced"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ repository = "https://github.com/TBD/gax"
 [workspace.dependencies]
 gax-core = { path = "crates/gax-core", version = "0.1.0" }
 gax-gen = { path = "crates/gax-gen", version = "0.1.0" }
+gax-macros = { path = "crates/gax-macros", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
@@ -29,6 +30,10 @@ cast_precision_loss = "allow"
 must_use_candidate = "allow"
 missing_panics_doc = "allow"
 inline_always = "allow"
+
+# The generator runs inside the algebra! proc macro; optimize it even in dev builds.
+[profile.dev.build-override]
+opt-level = 3
 
 [profile.bench]
 debug = true

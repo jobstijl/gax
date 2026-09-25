@@ -10,7 +10,7 @@ keywords = ["geometric-algebra", "clifford", "pga", "extensor", "math"]
 categories = ["mathematics", "graphics", "no-std"]
 
 [features]
-default = ["std", "pga2d", "pga3d"]
+default = ["std", "macros", "pga2d", "pga3d"]
 ## Every standard algebra.
 all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga3d"]
 std = ["gax-core/std"]
@@ -24,10 +24,13 @@ cga3d = []
 wide = ["gax-core/wide"]
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
 trace = ["dep:gax-gen"]
+## The `algebra!` macro for declaring algebras of any signature.
+macros = ["dep:gax-macros"]
 
 [dependencies]
 gax-core = { workspace = true }
 gax-gen = { workspace = true, optional = true }
+gax-macros = { workspace = true, optional = true }
 
 [dev-dependencies]
 gax-gen = { workspace = true }

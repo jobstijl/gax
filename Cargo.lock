@@ -200,6 +200,7 @@ version = "0.1.0"
 dependencies = [
  "gax-core",
  "gax-gen",
+ "gax-macros",
  "proptest",
 ]
 
@@ -236,6 +237,13 @@ version = "0.1.0"
 dependencies = [
  "gax-core",
  "proptest",
+]
+
+[[package]]
+name = "gax-macros"
+version = "0.1.0"
+dependencies = [
+ "gax-gen",
 ]
 
 [[package]]
