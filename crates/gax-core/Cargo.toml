@@ -10,9 +10,12 @@ repository.workspace = true
 [features]
 default = ["std"]
 std = []
+## SIMD lane coefficients (`f32x8`, `f64x4`, ...) from the `wide` crate.
+wide = ["dep:wide"]
 
 [dependencies]
-libm = { version = "0.2", optional = false }
+libm = "0.2"
+wide = { version = "1.7", optional = true, default-features = false }
 
 [lints]
 workspace = true

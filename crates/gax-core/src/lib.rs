@@ -8,6 +8,8 @@ pub mod bind;
 pub mod coef;
 pub mod kind;
 pub mod ops;
+#[cfg(feature = "wide")]
+pub mod simd;
 pub mod slots;
 pub mod unit;
 
