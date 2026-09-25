@@ -21,6 +21,7 @@ fn single_grade(k: &KindSpec) -> Option<u32> {
 }
 
 /// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds.
+#[allow(clippy::too_many_lines)]
 pub fn outermorphisms(spec: &AlgebraSpec) -> String {
     let alg = &spec.algebra;
     let n = alg.dim() as u32;
@@ -60,7 +61,8 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> String {
             }
             // The number of vector factors of a blade of B.
             let k = if wedge { gb } else { n - gb };
-            if k < 2 && !(k == 0) {
+            // One factor: B is another kind of V's grade, not an extension.
+            if k == 1 {
                 continue;
             }
             let mut columns: Vec<Vec<Poly>> = Vec::new();
