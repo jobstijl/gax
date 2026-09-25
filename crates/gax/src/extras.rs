@@ -4,6 +4,9 @@
 //! `Motor::translation(dx, dy, dz)` are thin wrappers that fix the sign conventions in one place.
 
 #[cfg(feature = "pga3d")]
+pub use pga3d_extras::PrincipalInertia;
+
+#[cfg(feature = "pga3d")]
 mod pga3d_extras {
     use crate::pga3d::{Line, Motor, Plane, Point};
     use crate::{Real, Unit};
@@ -40,6 +43,89 @@ mod pga3d_extras {
         #[inline]
         pub fn from_normal(n: [T; 3], d: T) -> Self {
             Plane::new(n[0], n[1], n[2], -d)
+        }
+    }
+
+    /// The inertia of a rigid body in its principal frame (centre of mass at the origin, principal
+    /// axes along x, y, z): a map from twists to forques (momenta) stored as four numbers
+    /// instead of the 36 of a dense `Line<(Line,)>`.
+    ///
+    /// It is the compact representation of `Σ m X ∨ (X × B)` over the body's mass points: the
+    /// translation part of a twist maps to linear momentum through the mass, and the rotation
+    /// part to angular momentum through the principal moments. Anything a dense map offers is
+    /// available through [`PrincipalInertia::to_map`], for example moving the body with
+    /// `m >> inertia.to_map().of(m << Line::slot())`.
+    ///
+    /// ```
+    /// use gax::pga3d::{Line, PrincipalInertia};
+    /// let inertia = PrincipalInertia::new(2.0, [0.5, 0.75, 1.0]);
+    /// let twist = Line::new(0.1, 0.2, 0.3, 1.0, 0.0, 0.0);
+    /// let momentum = inertia.of(twist);
+    /// assert_eq!(inertia.inverse_of(momentum), twist);
+    /// ```
+    #[derive(Clone, Copy, Debug, PartialEq)]
+    pub struct PrincipalInertia<T> {
+        /// The total mass.
+        pub mass: T,
+        /// The principal moments about x, y and z.
+        pub moments: [T; 3],
+    }
+
+    impl<T: Real> PrincipalInertia<T> {
+        /// A body of the given mass and principal moments.
+        #[inline]
+        pub fn new(mass: T, moments: [T; 3]) -> Self {
+            PrincipalInertia { mass, moments }
+        }
+
+        /// The momentum of a twist: six products.
+        #[inline]
+        pub fn of(self, b: Line<(), T>) -> Line<(), T> {
+            let (m, i) = (self.mass, self.moments);
+            Line::new(
+                m * b.e01(),
+                m * b.e02(),
+                m * b.e03(),
+                i[0] * b.e23(),
+                i[1] * b.e31(),
+                i[2] * b.e12(),
+            )
+        }
+
+        /// The twist of a momentum, the inverse map: four reciprocals and six products.
+        #[inline]
+        pub fn inverse_of(self, f: Line<(), T>) -> Line<(), T> {
+            let r = self.mass.recip();
+            let i = self.moments.map(Real::recip);
+            Line::new(
+                i[0] * f.e01(),
+                i[1] * f.e02(),
+                i[2] * f.e03(),
+                r * f.e23(),
+                r * f.e31(),
+                r * f.e12(),
+            )
+        }
+
+        /// The dense map `Line <- Line`.
+        #[inline]
+        pub fn to_map(self) -> Line<(Line,), T> {
+            let z = T::zero();
+            let (m, i) = (self.mass, self.moments);
+            Line::from_coeffs([
+                [z, z, z, m, z, z],
+                [z, z, z, z, m, z],
+                [z, z, z, z, z, m],
+                [i[0], z, z, z, z, z],
+                [z, i[1], z, z, z, z],
+                [z, z, i[2], z, z, z],
+            ])
+        }
+
+        /// The kinetic energy form `B & I[B]` on twists (twice the kinetic energy).
+        #[inline]
+        pub fn energy_form(self) -> crate::pga3d::Scalar<(Line, Line), T> {
+            Line::slot() & self.to_map()
         }
     }
 
@@ -138,6 +224,41 @@ mod pga2d_extras {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "pga3d")]
+    #[test]
+    #[allow(clippy::float_cmp)] // the same operations in the same order: exact equality
+    fn principal_inertia_is_the_compact_point_mass_inertia() {
+        use crate::pga3d::{Line, Point, PrincipalInertia};
+        // Six unit masses on the axes: mass 6, moments (2·2² + 2·3², 2·1² + 2·3², 2·1² + 2·2²).
+        let pts = [
+            (1.0, 0.0, 0.0),
+            (-1.0, 0.0, 0.0),
+            (0.0, 2.0, 0.0),
+            (0.0, -2.0, 0.0),
+            (0.0, 0.0, 3.0),
+            (0.0, 0.0, -3.0),
+        ];
+        let mut dense: Line<(Line,), f64> = Line::zero();
+        for (x, y, z) in pts {
+            let p = Point::xyz(x, y, z);
+            dense += p & p.commutator(Line::slot()); // Σ m X ∨ (X × B), in extensor form
+        }
+        let compact = PrincipalInertia::new(6.0, [26.0, 20.0, 10.0]);
+        assert_eq!(compact.to_map(), dense);
+        let b = Line::new(0.3, -0.2, 0.1, 1.0, 2.0, -0.5);
+        assert_eq!(compact.of(b), dense.of(b));
+        let back = compact.inverse_of(compact.of(b));
+        assert!(back.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-15));
+        assert_eq!(
+            dense
+                .inverse()
+                .of(compact.of(b))
+                .c
+                .map(|x: f64| (x * 1e12).round()),
+            b.c.map(|x| (x * 1e12).round())
+        );
+    }
+
     #[cfg(feature = "pga3d")]
     #[test]
     fn pga3d_conventions() {

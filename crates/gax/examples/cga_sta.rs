@@ -19,7 +19,7 @@ fn cga() {
     let i: Pseudoscalar<(), f64> = Pseudoscalar::new(1.0);
     let dual: Vector<(), f64> = sphere * i.inverse();
     let s = dual.gp(1.0 / dual.eo()); // scale so that the eo coefficient is 1
-    let radius2 = (s | s).s(); // for a dual sphere c + ½(c² - r²) ei + eo, s · s = r²
+    let radius2 = s.dot(s).s(); // for a dual sphere c + ½(c² - r²) ei + eo, s · s = r²
     println!(
         "sphere: centre ({:.3}, {:.3}, {:.3}), radius {:.3}",
         s.e1(),

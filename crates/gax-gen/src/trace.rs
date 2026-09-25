@@ -145,6 +145,9 @@ trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5);
 trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5, A6 a6 6);
 trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5, A6 a6 6, A7 a7 7);
 
+/// Strategies whose polynomials exceed this many terms are skipped.
+const MAX_TERMS: usize = 20_000;
+
 /// Report on one traced kernel.
 #[derive(Clone, Debug)]
 pub struct KernelReport {
@@ -185,7 +188,6 @@ impl Tracer {
         // A strategy whose polynomials grow too large is skipped, and one that overflows the
         // exact rational arithmetic (which panics rather than wrap) is dropped: the limit-0
         // trace, the computation as written, always succeeds.
-        const MAX_TERMS: usize = 20_000;
         let quiet = std::panic::take_hook();
         std::panic::set_hook(Box::new(|_| {}));
         for limit in [Some(0), Some(1), Some(8), Some(32), Some(128), None] {

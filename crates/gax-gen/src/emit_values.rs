@@ -99,6 +99,7 @@ pub struct ValueMethods {
 
 /// Emit the value methods of kind `k`, returning the code of an inherent impl block (and
 /// trait impls) for `K<(), T>`, and what was emitted.
+#[allow(clippy::too_many_lines)]
 pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods) {
     let mut meta = ValueMethods {
         kind: k.name.clone(),
