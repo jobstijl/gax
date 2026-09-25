@@ -43,7 +43,7 @@ pub type Coeffs<M> = <<M as Extensor>::Kind as Kind>::Arr<
 >;
 
 /// A multivector, map or form of some kind: the common interface of all generated types.
-pub trait Extensor: Copy {
+pub trait Extensor: Copy + Debug + PartialEq + 'static {
     /// The output kind.
     type Kind: Kind;
     /// The open slots.

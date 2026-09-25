@@ -84,6 +84,9 @@ pub const RESERVED: &[&str] = &[
     "Of",
     "Unit",
     "Elem",
+    "SquareMap",
+    "Endomorphism",
+    "Form",
     "Gp",
     "Wedge",
     "Vee",
@@ -121,8 +124,14 @@ fn qualify(src: &str) -> String {
                 i += 1;
             }
             let word = &src[start..i];
-            // Associated items named like core items (`type Kind = ...`) stay bare.
-            if RESERVED.contains(&word) && !out.ends_with("type ") {
+            // Associated items named like core items (`type Kind = ...`, `Coef = T` in a
+            // binding) stay bare.
+            let rest = src[i..].trim_start();
+            let before = out.trim_end();
+            let binding = rest.starts_with('=')
+                && !rest.starts_with("==")
+                && (before.ends_with('<') || before.ends_with(','));
+            if RESERVED.contains(&word) && !out.ends_with("type ") && !binding {
                 out.push_str("gx::");
             }
             out.push_str(word);
@@ -338,6 +347,94 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
             );
         }
         self.w("}\n\n");
+
+        // Methods of maps and forms (see `gax_core::extensor`).
+        let _ = write!(
+            self.out,
+            r"impl<A: Kind, T: Real> {name}<(A,), T> {{
+    /// The inverse map, `A <- {name}`.
+    #[inline]
+    pub fn inverse(self) -> <Self as SquareMap>::Inverse
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::inverse(self)
+    }}
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::det(self)
+    }}
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as Kind>::Mv<X::Slots, T>
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+        X: Extensor<Kind = {name}, Coef = T>,
+    {{
+        SquareMap::solve(self, rhs)
+    }}
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<{name} as Kind>::Arr<{name}<(), T>>, <{name} as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::svd(self)
+    }}
+
+    /// The trace of a map from `{name}` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: Endomorphism<Coef = T, Kind = {name}, Input = {name}>,
+    {{
+        Endomorphism::trace(self)
+    }}
+}}
+
+impl<A: Kind, T: Real> {name}<(A, A), T> {{
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+    {{
+        Form::eigh_with(self, metric)
+    }}
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+    {{
+        Form::eigh(self)
+    }}
+
+    /// Solve `self(x, ·) == linear(·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as Kind>::Mv<(), T>
+    where
+        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+        L: Extensor<Kind = {name}, Slots = (A,), Coef = T>,
+    {{
+        Form::solve(self, linear)
+    }}
+}}
+
+"
+        );
 
         // Arithmetic.
         let arr = |op: &str| {

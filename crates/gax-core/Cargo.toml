@@ -17,5 +17,8 @@ wide = ["dep:wide"]
 libm = "0.2"
 wide = { version = "1.7", optional = true, default-features = false }
 
+[dev-dependencies]
+proptest = "1"
+
 [lints]
 workspace = true

@@ -6,7 +6,9 @@
 
 pub mod bind;
 pub mod coef;
+pub mod extensor;
 pub mod kind;
+pub mod linalg;
 pub mod ops;
 #[cfg(feature = "wide")]
 pub mod simd;
@@ -16,6 +18,7 @@ pub mod unit;
 
 pub use bind::Of;
 pub use coef::{Coef, Elem, Real};
+pub use extensor::{Endomorphism, Form, SquareMap};
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Rc, Reverse, ScalarProduct,

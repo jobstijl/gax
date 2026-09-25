@@ -257,6 +257,88 @@ impl<T: gx::Coef> Scalar<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
+    /// The inverse map, `A <- Scalar`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+        X: gx::Extensor<Kind = Scalar, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Scalar as gx::Kind>::Arr<Scalar<(), T>>, <Scalar as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Scalar` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Scalar, Input = Scalar>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Scalar<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
+        L: gx::Extensor<Kind = Scalar, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Scalar<S, T> {
     type Output = Self;
     #[inline(always)]
@@ -653,6 +735,88 @@ impl<T: gx::Coef> Line<(), T> {
     #[inline(always)]
     pub fn e0(&self) -> T {
         self.c[2]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Line<(A,), T> {
+    /// The inverse map, `A <- Line`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A>,
+        X: gx::Extensor<Kind = Line, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Line as gx::Kind>::Arr<Line<(), T>>, <Line as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Line, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Line` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Line, Input = Line>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Line<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Line, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Line, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Line, Slot = A>,
+        L: gx::Extensor<Kind = Line, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
@@ -1055,6 +1219,88 @@ impl<T: gx::Coef> Point<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Real> Point<(A,), T> {
+    /// The inverse map, `A <- Point`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A>,
+        X: gx::Extensor<Kind = Point, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Point as gx::Kind>::Arr<Point<(), T>>, <Point as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Point, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Point` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Point, Input = Point>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Point<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Point, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Point, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Point, Slot = A>,
+        L: gx::Extensor<Kind = Point, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Point<S, T> {
     type Output = Self;
     #[inline(always)]
@@ -1439,6 +1685,88 @@ impl<T: gx::Coef> Pseudoscalar<(), T> {
     #[inline(always)]
     pub fn e012(&self) -> T {
         self.c[0]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
+    /// The inverse map, `A <- Pseudoscalar`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+        X: gx::Extensor<Kind = Pseudoscalar, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Pseudoscalar as gx::Kind>::Arr<Pseudoscalar<(), T>>, <Pseudoscalar as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Pseudoscalar` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Pseudoscalar, Input = Pseudoscalar>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
+        L: gx::Extensor<Kind = Pseudoscalar, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
@@ -1832,6 +2160,88 @@ impl<T: gx::Coef> Rotor<(), T> {
     #[inline(always)]
     pub fn e12(&self) -> T {
         self.c[1]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Rotor<(A,), T> {
+    /// The inverse map, `A <- Rotor`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A>,
+        X: gx::Extensor<Kind = Rotor, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Rotor as gx::Kind>::Arr<Rotor<(), T>>, <Rotor as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Rotor, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Rotor` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Rotor, Input = Rotor>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Rotor<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Rotor, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Rotor, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Rotor, Slot = A>,
+        L: gx::Extensor<Kind = Rotor, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
@@ -2231,6 +2641,88 @@ impl<T: gx::Coef> Translator<(), T> {
     #[inline(always)]
     pub fn e01(&self) -> T {
         self.c[2]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Translator<(A,), T> {
+    /// The inverse map, `A <- Translator`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A>,
+        X: gx::Extensor<Kind = Translator, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Translator as gx::Kind>::Arr<Translator<(), T>>, <Translator as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Translator, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Translator` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Translator, Input = Translator>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Translator<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Translator, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Translator, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Translator, Slot = A>,
+        L: gx::Extensor<Kind = Translator, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
@@ -2639,6 +3131,88 @@ impl<T: gx::Coef> Motor<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
+    /// The inverse map, `A <- Motor`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+        X: gx::Extensor<Kind = Motor, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Motor as gx::Kind>::Arr<Motor<(), T>>, <Motor as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Motor` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Motor, Input = Motor>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Motor<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
+        L: gx::Extensor<Kind = Motor, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Motor<S, T> {
     type Output = Self;
     #[inline(always)]
@@ -3041,6 +3615,88 @@ impl<T: gx::Coef> Flector<(), T> {
     #[inline(always)]
     pub fn e012(&self) -> T {
         self.c[3]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Flector<(A,), T> {
+    /// The inverse map, `A <- Flector`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A>,
+        X: gx::Extensor<Kind = Flector, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Flector as gx::Kind>::Arr<Flector<(), T>>, <Flector as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Flector, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Flector` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Flector, Input = Flector>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Flector<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Flector, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Flector, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Flector, Slot = A>,
+        L: gx::Extensor<Kind = Flector, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
@@ -3470,6 +4126,88 @@ impl<T: gx::Coef> Multivector<(), T> {
     #[inline(always)]
     pub fn e012(&self) -> T {
         self.c[7]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
+    /// The inverse map, `A <- Multivector`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+        X: gx::Extensor<Kind = Multivector, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Multivector as gx::Kind>::Arr<Multivector<(), T>>, <Multivector as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Multivector` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Multivector, Input = Multivector>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+
+    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
+    #[inline]
+    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
+    where
+        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
+        L: gx::Extensor<Kind = Multivector, Slots = (A,), Coef = T>,
+    {
+        gx::Form::solve(self, linear)
     }
 }
 
