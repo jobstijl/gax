@@ -1,0 +1,20 @@
+// Conformal geometric algebra of Euclidean space, R(4,1,0), in the null basis eo (origin)
+// and ei (infinity) with eo . ei = -1. The metric is not diagonal: the generator handles it
+// directly, without a basis change.
+algebra cga3d "Conformal geometric algebra of Euclidean space, `R(4,1,0)`, in the null basis `eo` (origin), `ei` (infinity) with `eo . ei = -1`.";
+basis e1 = 1, e2 = 1, e3 = 1, eo = 0, ei = 0;
+metric eo ei = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2, e3, eo, ei] "A vector: a point `x + ½x² ei + eo`, a sphere or a plane (dual representation). As a versor it is a reflection or an inversion.";
+kind Bivector = [e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi] "A bivector: a point pair (dual), or the generator of a conformal transformation.";
+kind Trivector = [e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123] "A trivector: a circle or a line (direct representation).";
+kind Quadvector = [e23oi, e31oi, e12oi, e123o, e123i] "A quadvector: a sphere or a plane (direct representation).";
+kind Pseudoscalar = [e123oi] "The pseudoscalar `e123oi`.";
+versor Motor = [1, e23, e31, e12, e1i, e2i, e3i, e123i] "A rigid motion: rotation and translation.";
+versor Even = [1, e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi, e23oi, e31oi, e12oi, e123o, e123i] "The even subalgebra: all conformal versors of even grade (rotors, translators, dilators, transversions).";
+versor Odd = [e1, e2, e3, eo, ei, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e123oi] "The odd subalgebra.";
+kind Multivector = [1, e1, e2, e3, eo, ei, e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi, e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123, e23oi, e31oi, e12oi, e123o, e123i, e123oi] "A general multivector.";
+
+alias Point = Vector;
+alias Sphere = Vector;

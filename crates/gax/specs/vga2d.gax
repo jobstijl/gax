@@ -1,0 +1,12 @@
+// The Euclidean plane, R(2,0,0): vectors and rotors.
+algebra vga2d "Vector geometric algebra of the Euclidean plane, `R(2,0,0)`.";
+basis e1 = 1, e2 = 1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2] "A vector. As a versor it is a reflection in the line perpendicular to it.";
+kind Pseudoscalar = [e12] "The unit area element `e12`.";
+versor Rotor = [1, e12] "A rotor: the even subalgebra, isomorphic to the complex numbers.";
+kind Multivector = [1, e1, e2, e12] "A general multivector.";
+
+alias Bivector = Pseudoscalar;
+alias Even = Rotor;

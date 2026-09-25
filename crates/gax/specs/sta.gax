@@ -1,0 +1,15 @@
+// Spacetime algebra, R(1,3,0): signature (+ - - -) with e0 the time direction.
+algebra sta "Spacetime algebra `R(1,3,0)`, signature `(+,-,-,-)`, with `e0` the time direction.";
+basis e0 = 1, e1 = -1, e2 = -1, e3 = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e0, e1, e2, e3] "A spacetime vector (an event or a four-momentum).";
+kind Bivector = [e10, e20, e30, e23, e31, e12] "A bivector: an electromagnetic field, or the generator of a Lorentz transformation. `e10, e20, e30` are the boosts (electric part), `e23, e31, e12` the rotations (magnetic part).";
+kind Trivector = [e123, e032, e013, e021] "A trivector (a pseudovector).";
+kind Pseudoscalar = [e0123] "The unit four-volume `e0123`.";
+versor Even = [1, e10, e20, e30, e23, e31, e12, e0123] "The even subalgebra: spinors and Lorentz rotors.";
+versor Odd = [e0, e1, e2, e3, e123, e032, e013, e021] "The odd subalgebra.";
+kind Multivector = [1, e0, e1, e2, e3, e10, e20, e30, e23, e31, e12, e123, e032, e013, e021, e0123] "A general multivector.";
+
+alias Field = Bivector;
+alias Rotor = Even;

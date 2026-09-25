@@ -112,33 +112,35 @@ pub fn assert_close(a: &[f64], b: &[f64], what: &str) {
 }
 
 impl Oracle {
-    /// Scale a versor so that `v ~v = 1`, when its norm `v ~v` is a Study number `a + b I`
-    /// with `I² = 0` (plane-based PGA) or a plain scalar. `None` otherwise or when `a <= 0`.
+    /// Scale a versor so that `v ~v = 1`, when its norm `v ~v` is a Study number `a + b B`
+    /// (a scalar plus one blade `B` whose square is a scalar). `None` otherwise or when
+    /// `a <= 0`.
     pub fn normalize(&self, v: &Dense) -> Option<Dense> {
         let n = self.binop(BinOp::Gp, v, &self.unop(UnOp::Reverse, v));
-        let ps = self.alg.pseudoscalar() as usize;
-        let degenerate_ps = self.alg.blade_product(ps as u32, ps as u32).is_empty();
         let a = n[0];
         if a <= 1e-3 {
             return None;
         }
-        let b = if degenerate_ps { n[ps] } else { 0.0 };
-        if n.iter()
-            .enumerate()
-            .any(|(i, c)| i != 0 && !(degenerate_ps && i == ps) && c.abs() > 1e-12)
-        {
-            return None;
-        }
-        // (a + b I)^(-1/2) = a^(-1/2) - b/2 a^(-3/2) I, since I² = 0.
+        let others: Vec<usize> = (1..n.len()).filter(|&i| n[i].abs() > 1e-12).collect();
         let mut s = vec![0.0; n.len()];
-        s[0] = a.powf(-0.5);
-        s[ps] += -0.5 * b * a.powf(-1.5);
-        let out = self.binop(BinOp::Gp, v, &s);
+        match others.as_slice() {
+            [] => s[0] = a.powf(-0.5),
+            [b] => {
+                let sq = self.alg.blade_product(*b as u32, *b as u32);
+                let isq = match sq {
+                    [] => 0,
+                    [(0, c)] if c.abs() == 1 => *c as i8,
+                    _ => return None,
+                };
+                let [r0, r1] = gax::study::rsqrt(isq, a, n[*b]);
+                s[0] = r0;
+                s[*b] = r1;
+            }
+            _ => return None,
+        }
+        let out = self.binop(BinOp::Gp, &s, v);
         let check = self.binop(BinOp::Gp, &out, &self.unop(UnOp::Reverse, &out));
-        let ok = check
-            .iter()
-            .enumerate()
-            .all(|(i, c)| (c - if i == 0 { 1.0 } else { 0.0 }).abs() < 1e-9);
+        let ok = check.iter().enumerate().all(|(i, c)| (c - if i == 0 { 1.0 } else { 0.0 }).abs() < 1e-9);
         ok.then_some(out)
     }
 

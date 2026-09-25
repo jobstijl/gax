@@ -35,3 +35,27 @@ pub mod pga2d;
 )]
 #[path = "algebras/pga3d.rs"]
 pub mod pga3d;
+
+/// Vector geometric algebra of the Euclidean plane.
+#[cfg(feature = "vga2d")]
+#[allow(missing_docs, unused_variables, clippy::all, clippy::pedantic, unused_parens)]
+#[path = "algebras/vga2d.rs"]
+pub mod vga2d;
+
+/// Vector geometric algebra of Euclidean space.
+#[cfg(feature = "vga3d")]
+#[allow(missing_docs, unused_variables, clippy::all, clippy::pedantic, unused_parens)]
+#[path = "algebras/vga3d.rs"]
+pub mod vga3d;
+
+/// Spacetime algebra.
+#[cfg(feature = "sta")]
+#[allow(missing_docs, unused_variables, clippy::all, clippy::pedantic, unused_parens)]
+#[path = "algebras/sta.rs"]
+pub mod sta;
+
+/// Conformal geometric algebra of Euclidean space (null basis).
+#[cfg(feature = "cga3d")]
+#[allow(missing_docs, unused_variables, clippy::all, clippy::pedantic, unused_parens)]
+#[path = "algebras/cga3d.rs"]
+pub mod cga3d;

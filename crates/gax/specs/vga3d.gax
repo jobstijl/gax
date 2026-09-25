@@ -1,0 +1,13 @@
+// Euclidean space, R(3,0,0): vectors, bivectors and rotors (quaternions).
+algebra vga3d "Vector geometric algebra of Euclidean space, `R(3,0,0)`.";
+basis e1 = 1, e2 = 1, e3 = 1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2, e3] "A vector. As a versor it is a reflection in the plane perpendicular to it.";
+kind Bivector = [e23, e31, e12] "A bivector: an oriented plane, or the generator of a rotation.";
+kind Pseudoscalar = [e123] "The unit volume element `e123`.";
+versor Rotor = [1, e23, e31, e12] "A rotor: the even subalgebra, isomorphic to the quaternions.";
+versor Odd = [e1, e2, e3, e123] "The odd subalgebra: rotoreflections.";
+kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123] "A general multivector.";
+
+alias Even = Rotor;

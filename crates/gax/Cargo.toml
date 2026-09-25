@@ -11,9 +11,15 @@ categories = ["mathematics", "graphics", "no-std"]
 
 [features]
 default = ["std", "pga2d", "pga3d"]
+## Every standard algebra.
+all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga3d"]
 std = ["gax-core/std"]
 pga2d = []
 pga3d = []
+vga2d = []
+vga3d = []
+sta = []
+cga3d = []
 ## SIMD lane coefficients for batches in struct-of-arrays form.
 wide = ["gax-core/wide"]
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
