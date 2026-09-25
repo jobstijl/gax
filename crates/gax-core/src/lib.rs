@@ -7,9 +7,11 @@
 pub mod bind;
 pub mod coef;
 pub mod extensor;
+pub mod fill;
 pub mod kind;
 pub mod linalg;
 pub mod ops;
+pub mod permute;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod slots;
@@ -19,12 +21,14 @@ pub mod unit;
 
 pub use bind::Of;
 pub use coef::{Coef, Elem, Real};
-pub use extensor::{Endomorphism, Form, SquareMap};
+pub use extensor::{Endomorphism, Form, Pairing, SquareMap};
+pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Rc, Reverse,
     ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
 };
+pub use permute::MoveToFront;
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
 pub use trace::Traceable;
 pub use unit::Unit;

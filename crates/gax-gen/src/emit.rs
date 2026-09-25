@@ -50,6 +50,16 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         e.out.push_str(&methods);
         e.stats.values.push(meta);
     }
+    for a in &spec.kinds {
+        for b in &spec.kinds {
+            let eq = if a.name == b.name { "True" } else { "False" };
+            let _ = writeln!(
+                e.out,
+                "impl gx::KindEq<{}> for {} {{\n    type Out = gx::{eq};\n}}\n",
+                b.name, a.name
+            );
+        }
+    }
     for op in BinOp::ALL {
         for a in &spec.kinds {
             for b in &spec.kinds {
@@ -92,6 +102,8 @@ pub const RESERVED: &[&str] = &[
     "SquareMap",
     "Endomorphism",
     "Form",
+    "Pairing",
+    "SplitLast",
     "Gp",
     "Wedge",
     "Vee",
@@ -295,6 +307,26 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     {{
         Of::of(self, x)
     }}
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> {name}<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {{
+        {name} {{ c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }}
+    }}
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> {name}<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {{
+        let xc = x.coeffs();
+        {name} {{ c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }}
+    }}
 "#,
             blades = blades_list.join(", "),
         );
@@ -405,6 +437,27 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
     }}
 }}
 
+impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> {name}<(B, A), T> {{
+        self.at::<1>()
+    }}
+}}
+
+impl<A: Kind, B: Kind, T: Real> {name}<(A, B), T> {{
+    /// Solve `self(x, ·) == rhs(l, ·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as Kind>::Mv<<R::Slots as SplitLast>::Init, T>
+    where
+        Self: Pairing<Coef = T, Kind = {name}, First = A, Second = B>,
+        R: Extensor<Kind = {name}, Coef = T>,
+        R::Slots: SplitLast<Last = B>,
+    {{
+        Pairing::solve(self, rhs)
+    }}
+}}
+
 impl<A: Kind, T: Real> {name}<(A, A), T> {{
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -425,16 +478,6 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
         Self: Form<Coef = T, Kind = {name}, Slot = A>,
     {{
         Form::eigh(self)
-    }}
-
-    /// Solve `self(x, ·) == linear(·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as Kind>::Mv<(), T>
-    where
-        Self: Form<Coef = T, Kind = {name}, Slot = A>,
-        L: Extensor<Kind = {name}, Slots = (A,), Coef = T>,
-    {{
-        Form::solve(self, linear)
     }}
 }}
 

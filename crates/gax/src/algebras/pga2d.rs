@@ -106,6 +106,26 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Scalar<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Scalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Scalar<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Scalar { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -306,6 +326,27 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Scalar<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Scalar<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Scalar, First = A, Second = B>,
+        R: gx::Extensor<Kind = Scalar, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Scalar<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -326,16 +367,6 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
-        L: gx::Extensor<Kind = Scalar, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -622,6 +653,26 @@ impl<S: gx::Slots, T: gx::Coef> Line<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Line<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Line { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Line<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Line { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -834,6 +885,27 @@ impl<A: gx::Kind, T: gx::Real> Line<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Line<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Line<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Line<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Line, First = A, Second = B>,
+        R: gx::Extensor<Kind = Line, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Line<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -854,16 +926,6 @@ impl<A: gx::Kind, T: gx::Real> Line<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Line, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Line, Slot = A>,
-        L: gx::Extensor<Kind = Line, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -1158,6 +1220,26 @@ impl<S: gx::Slots, T: gx::Coef> Point<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Point<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Point { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Point<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Point { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -1370,6 +1452,27 @@ impl<A: gx::Kind, T: gx::Real> Point<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Point<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Point<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Point<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Point, First = A, Second = B>,
+        R: gx::Extensor<Kind = Point, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Point<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -1390,16 +1493,6 @@ impl<A: gx::Kind, T: gx::Real> Point<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Point, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Point, Slot = A>,
-        L: gx::Extensor<Kind = Point, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -1700,6 +1793,26 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Pseudoscalar { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Pseudoscalar<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Pseudoscalar { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -1900,6 +2013,27 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Pseudoscalar<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Pseudoscalar<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Pseudoscalar<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Pseudoscalar, First = A, Second = B>,
+        R: gx::Extensor<Kind = Pseudoscalar, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -1920,16 +2054,6 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
-        L: gx::Extensor<Kind = Pseudoscalar, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -2169,6 +2293,26 @@ impl<S: gx::Slots, T: gx::Coef> Rotor<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Rotor<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Rotor { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Rotor<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Rotor { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -2375,6 +2519,27 @@ impl<A: gx::Kind, T: gx::Real> Rotor<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Rotor<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Rotor<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Rotor<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Rotor, First = A, Second = B>,
+        R: gx::Extensor<Kind = Rotor, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Rotor<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -2395,16 +2560,6 @@ impl<A: gx::Kind, T: gx::Real> Rotor<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Rotor, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Rotor, Slot = A>,
-        L: gx::Extensor<Kind = Rotor, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -2720,6 +2875,26 @@ impl<S: gx::Slots, T: gx::Coef> Translator<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Translator<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Translator { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Translator<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Translator { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -2932,6 +3107,27 @@ impl<A: gx::Kind, T: gx::Real> Translator<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Translator<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Translator<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Translator<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Translator, First = A, Second = B>,
+        R: gx::Extensor<Kind = Translator, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Translator<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -2952,16 +3148,6 @@ impl<A: gx::Kind, T: gx::Real> Translator<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Translator, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Translator, Slot = A>,
-        L: gx::Extensor<Kind = Translator, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -3268,6 +3454,26 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Motor<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Motor { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Motor<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Motor { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -3486,6 +3692,27 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Motor<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Motor<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Motor<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Motor, First = A, Second = B>,
+        R: gx::Extensor<Kind = Motor, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Motor<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -3506,16 +3733,6 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
-        L: gx::Extensor<Kind = Motor, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -3839,6 +4056,26 @@ impl<S: gx::Slots, T: gx::Coef> Flector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Flector<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Flector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Flector<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Flector { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -4057,6 +4294,27 @@ impl<A: gx::Kind, T: gx::Real> Flector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Flector<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Flector<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Flector<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Flector, First = A, Second = B>,
+        R: gx::Extensor<Kind = Flector, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Flector<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -4077,16 +4335,6 @@ impl<A: gx::Kind, T: gx::Real> Flector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Flector, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Flector, Slot = A>,
-        L: gx::Extensor<Kind = Flector, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -4384,6 +4632,26 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Multivector<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Multivector { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Multivector<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Multivector { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
     /// See [`gx::Gp`].
     #[inline(always)]
     pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
@@ -4626,6 +4894,27 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Multivector<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Multivector<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Multivector, First = A, Second = B>,
+        R: gx::Extensor<Kind = Multivector, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
     /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
     /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
@@ -4646,16 +4935,6 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
     {
         gx::Form::eigh(self)
-    }
-
-    /// Solve `self(x, Â·) == linear(Â·)` for `x`.
-    #[inline]
-    pub fn solve<L>(self, linear: L) -> <A as gx::Kind>::Mv<(), T>
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
-        L: gx::Extensor<Kind = Multivector, Slots = (A,), Coef = T>,
-    {
-        gx::Form::solve(self, linear)
     }
 }
 
@@ -4817,6 +5096,330 @@ impl<T: gx::Real> Multivector<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
+}
+
+impl gx::KindEq<Scalar> for Scalar {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Line> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Scalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Line {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Point> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Point {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Pseudoscalar> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Point {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Pseudoscalar {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Rotor> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Rotor {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Translator> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Rotor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Translator {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Motor> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Motor {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Flector> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Flector {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Multivector> for Flector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Scalar> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Multivector {
+    type Out = gx::True;
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {

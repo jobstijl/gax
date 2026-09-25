@@ -6,6 +6,7 @@
 //! singular vectors and eigenvectors are values of the slot kinds.
 
 use crate::coef::{Coef, Real};
+use crate::fill::SplitLast;
 use crate::kind::{Extensor, Kind};
 use crate::linalg::{self, SquareArr};
 use crate::slots::Slots;
@@ -187,11 +188,6 @@ pub trait Form: Extensor<Coef: Real> {
         <Self::Slot as Kind>::Arr<Self::Coef>,
         <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
     );
-
-    /// Solve `self(x, ·) = linear(·)` for `x`, where `linear` is a linear form on the slot.
-    fn solve<L>(self, linear: L) -> <Self::Slot as Kind>::Mv<(), Self::Coef>
-    where
-        L: Extensor<Kind = Self::Kind, Slots = (Self::Slot,), Coef = Self::Coef>;
 }
 
 impl<M, A> Form for M
@@ -223,21 +219,62 @@ where
             A::arr_from_fn(|k| value_from::<A, M::Coef>(|i| vecs[k][i])),
         )
     }
+}
 
-    fn solve<L>(self, linear: L) -> A::Mv<(), M::Coef>
+/// A pairing `Scalar <- (A, B)` between two kinds with the same number of coefficients: a
+/// bilinear form, or the regressive product of a plane and a point.
+pub trait Pairing: Extensor<Coef: Real> {
+    /// The first slot's kind.
+    type First: Kind;
+    /// The second slot's kind.
+    type Second: Kind;
+
+    /// Solve `self(x, ·) == rhs(l, ·)` for `x`, for every value of `rhs`'s leading slots `l`.
+    ///
+    /// With `rhs` a linear form (one slot) the solution is a value; with leading slots it is
+    /// a map on them. The induced map of a point map `t` on planes, which exists even when `t`
+    /// is singular, is `(Plane::slot() & Point::slot()).solve(Plane::slot() & t)`.
+    fn solve<R>(
+        self,
+        rhs: R,
+    ) -> <Self::First as Kind>::Mv<<R::Slots as SplitLast>::Init, Self::Coef>
     where
-        L: Extensor<Kind = M::Kind, Slots = (A,), Coef = M::Coef>,
+        R: Extensor<Kind = Self::Kind, Coef = Self::Coef>,
+        R::Slots: SplitLast<Last = Self::Second>;
+}
+
+impl<M, A, B> Pairing for M
+where
+    M: Extensor<Slots = (A, B), Coef: Real>,
+    A: Kind,
+    B: Kind,
+    A::Arr<B::Arr<M::Coef>>: SquareArr<M::Coef>,
+    B::Arr<A::Arr<M::Coef>>: SquareArr<M::Coef>,
+{
+    type First = A;
+    type Second = B;
+
+    fn solve<R>(self, rhs: R) -> A::Mv<<R::Slots as SplitLast>::Init, M::Coef>
+    where
+        R: Extensor<Kind = M::Kind, Coef = M::Coef>,
+        R::Slots: SplitLast<Last = B>,
     {
-        // form(x, y) = Σ_ij F[i][j] x_i y_j, so form(x, ·) = linear(·) is Fᵀ x = l.
+        type Init<R> = <<R as Extensor>::Slots as SplitLast>::Init;
+        // form(x, y) = Σ_ij F[i][j] x_i y_j, so form(x, ·) = r(·) is Fᵀ x = r.
         let f = &self.coeffs().as_ref()[0];
-        let ft: A::Arr<A::Arr<M::Coef>> = linalg::transpose(f);
-        let l = &linear.coeffs().as_ref()[0];
-        let mut b = <A::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
-        for i in 0..A::N {
-            b[i] = <(A,) as Slots>::get_flat(l, i);
-        }
-        let x = linalg::lu_solve(&linalg::lu(&ft), &b);
-        value_from::<A, M::Coef>(|i| x[i])
+        let ft: B::Arr<A::Arr<M::Coef>> = matrix_from(|i, j| f[j][i]);
+        let lu = linalg::lu(&ft);
+        let r = &rhs.coeffs().as_ref()[0];
+        let nb = B::N;
+        let solve_at = |l: usize| {
+            let mut b = <B::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::zero_vector();
+            for j in 0..nb {
+                b[j] = <R::Slots as Slots>::get_flat(r, l * nb + j);
+            }
+            linalg::lu_solve(&lu, &b)
+        };
+        let coeffs = A::arr_from_fn(|i| <Init<R> as Slots>::from_flat(&mut |l| solve_at(l)[i], 0));
+        <A::Mv<Init<R>, M::Coef> as Extensor>::from_coeffs(coeffs)
     }
 }
 
