@@ -52,9 +52,11 @@ cargo run --release -p gax-gen --bin gax-regen -- --check      # CI: are they up
 RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench      # benchmarks
 ```
 
-The minimum supported Rust version is 1.89. `gax` is a working name, and the crates are not
-published.
+The minimum supported Rust version is 1.89. The crates are not yet published on crates.io.
 
 ## License
 
-MIT OR Apache-2.0 (proposed; to be confirmed by the project owner).
+Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT)
+at your option. Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall be dual licensed as
+above, without any additional terms or conditions.

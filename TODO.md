@@ -53,5 +53,4 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `docs/performance.md` (first version)
 
 ## Decisions for the project owner
-- Final crate name (working name `gax`).
-- Publishing to crates.io.
+- Publishing to crates.io (later).

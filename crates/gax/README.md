@@ -60,20 +60,20 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
   * operations are generated as straight-line code with exact integer tables, and the sandwich kernels
     are simplified symbolically;
   * SIMD lanes (`f32x8`, feature `wide`) batch any kernel in struct-of-arrays form;
-  * [build-time tracing](https://github.com/TBD/gax/blob/main/docs/guide.md#build-time-tracing) fuses your
+  * [build-time tracing](https://github.com/jobstijl/gax/blob/main/docs/guide.md#build-time-tracing) fuses your
     own generic functions.
 * **No macros in user code** except `algebra!`. Stable Rust (MSRV 1.89), `no_std`.
 
 ## Learn more
 
-* [The guide](https://github.com/TBD/gax/blob/main/docs/guide.md): extensors as a composition
+* [The guide](https://github.com/jobstijl/gax/blob/main/docs/guide.md): extensors as a composition
   language, in plain terms.
 * Examples:
   * `scene_graph`: a robot arm and a camera, composed into one map per part;
   * `rigid_body_modes`: vibration modes that come out as twists;
   * `cga_sta`: conformal and spacetime algebra.
-* The [design record](https://github.com/TBD/gax/blob/main/docs/design.md) and
-  [performance notes](https://github.com/TBD/gax/blob/main/docs/performance.md).
+* The [design record](https://github.com/jobstijl/gax/blob/main/docs/design.md) and
+  [performance notes](https://github.com/jobstijl/gax/blob/main/docs/performance.md).
 
-`gax` is a working name. The library is inspired by [numga](https://github.com/EelcoHoogendoorn/numga),
+The library is inspired by [numga](https://github.com/EelcoHoogendoorn/numga),
 whose extensor model it brings to Rust's type system.

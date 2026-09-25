@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/TBD/gax"
+repository = "https://github.com/jobstijl/gax"
 
 [workspace.dependencies]
 gax-core = { path = "crates/gax-core", version = "0.1.0" }

@@ -5,8 +5,7 @@ This document records the architecture of `gax` as a series of decisions. Each h
 design hypotheses from the project brief are tracked in [§ Hypotheses](#hypotheses) with their
 verdict and evidence. The prior art behind each decision is in [research.md](research.md).
 
-> **Name.** `gax` ("geometric algebra, extensors") is a working name. The final crate name is to be
-> chosen by the project owner before anything is published.
+> **Name.** `gax`: "geometric algebra, extensors". Licensed MIT OR Apache-2.0.
 
 ## Overview
 
