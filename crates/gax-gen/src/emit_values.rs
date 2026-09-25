@@ -203,6 +203,10 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if all_grade2 && meta.exp.is_none() {
         meta.exp = emit_exp_general(spec, k, &x, &mut body);
     }
+    // exp in any dimension: scaling and squaring in the product closure (6D and up).
+    if all_grade2 && meta.exp.is_none() {
+        meta.exp = emit_exp_fallback(spec, k, &mut body);
+    }
 
     // log: for unit versors whose parts are a Study number and a bivector.
     meta.log = emit_log(spec, k, &x, &mut traits);
@@ -592,4 +596,47 @@ fn emit_log_general(
         outs.join(", ")
     );
     Some(on.clone())
+}
+
+/// The exponential by scaling and squaring, for bivector kinds without a closed form (the
+/// invariant decomposition of a 6D bivector has three parts): a Taylor series of `B / 2^8` in
+/// the smallest kind closed under the product, then eight squarings. Works in any algebra.
+fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
+    let alg = &spec.algebra;
+    // The support closure of {1} and B's blades under the geometric product.
+    let mut closure: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
+    closure.insert(0);
+    loop {
+        let mut next = closure.clone();
+        for &a in &closure {
+            for &b in &closure {
+                for &(m, _) in alg.blade_product(a, b) {
+                    next.insert(m);
+                }
+            }
+        }
+        if next == closure {
+            break;
+        }
+        closure = next;
+    }
+    let e = spec.kind_for_support(&closure)?.clone();
+    let (en, name) = (&e.name, &k.name);
+    let mut embed = String::new();
+    for (i, &(m, sb)) in k.layout.blades.iter().enumerate() {
+        let (pos, se) = e.layout.position(m)?;
+        let sign = if sb * se > 0 { "" } else { "-" };
+        let _ = writeln!(embed, "        x.c[{pos}] = {sign}self.c[{i}] * h;");
+    }
+    let (one_pos, one_sign) = e.layout.position(0)?;
+    let one = if one_sign > 0 {
+        "T::one()"
+    } else {
+        "-T::one()"
+    };
+    let _ = write!(
+        body,
+        "    /// The exponential, a unit versor, by scaling and squaring: a Taylor series of `B / 256` in\n    /// `{en}`, then eight squarings. (No closed form is generated for `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        let h = T::from_f64(1.0 / 256.0);\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/8))))\n        let mut r = one;\n        for k in (1..=8).rev() {{\n            r = one + (x * r).gp(T::from_f64(1.0 / f64::from(k)));\n        }}\n        for _ in 0..8 {{\n            r = r * r;\n        }}\n        gx::Unit::new_unchecked(r)\n    }}\n\n"
+    );
+    Some(en.clone())
 }

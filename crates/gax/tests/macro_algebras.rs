@@ -19,6 +19,8 @@ gax::algebra! {
     kind Scalar = [1];
     versor Vector = [e0, e1, e2, e3, ep, em];
     kind Bivector = [e01, e02, e03, e12, e31, e23, e0p, e1p, e2p, e3p, e0m, e1m, e2m, e3m, epm];
+    versor Even = [1, e01, e02, e03, e12, e31, e23, e0p, e1p, e2p, e3p, e0m, e1m, e2m, e3m, epm,
+        e0123, e012p, e031p, e023p, e123p, e012m, e031m, e023m, e123m, e01pm, e02pm, e03pm, e12pm, e31pm, e23pm, e0123pm];
 }
 
 #[test]
@@ -60,4 +62,31 @@ fn stap_bivector_exp_log_round_trip() {
     // exp(B) is a unit versor: R ~R = 1.
     let n: Even<(), f64> = r.into_inner() * r.into_inner().reverse();
     assert!((n.s() - 1.0).abs() < 1e-12);
+}
+
+#[test]
+fn csta_exp_by_scaling_and_squaring() {
+    use csta::*;
+    // A rotation in the e12 plane (e1² = e2² = -1, so e12² = -1): exp(θ e12) = cos θ + sin θ e12.
+    let th = 0.9f64;
+    let b = Bivector::<(), f64>::new(
+        0.0, 0.0, 0.0, th, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    );
+    let r = b.exp().into_inner();
+    assert!(
+        (r.s() - th.cos()).abs() < 1e-12 && (r.e12() - th.sin()).abs() < 1e-12,
+        "{r:?}"
+    );
+    // A general bivector: exp(B) exp(-B) = 1 and exp(B) is a unit versor.
+    let g = Bivector::<(), f64>::new(
+        0.1, -0.2, 0.3, 0.2, 0.1, -0.3, 0.05, 0.1, 0.2, -0.1, 0.3, 0.2, -0.15, 0.1, 0.25,
+    );
+    let (p, m) = (g.exp().into_inner(), (-g).exp().into_inner());
+    let id: Even<(), f64> = p * m;
+    assert!(
+        (id.s() - 1.0).abs() < 1e-11 && id.c[1..].iter().all(|c| c.abs() < 1e-11),
+        "{id:?}"
+    );
+    let n: Even<(), f64> = p * p.reverse();
+    assert!((n.s() - 1.0).abs() < 1e-11 && n.c[1..].iter().all(|c| c.abs() < 1e-11));
 }

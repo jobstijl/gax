@@ -386,8 +386,12 @@ files in `gax/src/algebras/`, behind cargo features.
   `Twist ↔ Motor`, and STAP through `algebra!`.
 * **Rotation fast paths.** When the generator proves the scalar part of `B²` is non-positive (minus a
   sum of squares), it emits real-trigonometric closed forms instead. See performance.md.
-* **Still open: 6D (CSTA).** A bivector there splits into three commuting parts, which needs the cubic
-  case of the invariant decomposition.
+* **6D and up (CSTA).** A bivector there splits into three commuting parts, so no closed form is
+  generated. `exp` falls back to scaling and squaring in the smallest kind closed under the product:
+  a Taylor series of degree 8 on `B / 256`, then eight squarings. It is correct in any algebra, and
+  the CSTA test checks it against the exact rotation and for `exp(B)·exp(−B) = 1`.
+* **Still open: 6D log.** It needs either the cubic invariant decomposition or square roots of
+  versors, and the normalization those need is not closed form in 6D.
 
 ## ADR-020: Certification by a wrapper type, `Unit<M>`
 *Status: accepted.*

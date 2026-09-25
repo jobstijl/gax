@@ -28,9 +28,10 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `at::<I>`, `swap`, `fill` (type-level kind equality)
 - [x] `algebra!` proc macro (STAP, CSTA tested)
 - [x] exp/log for 5D algebras (CGA3D, STAP): Study functions with a general 4-vector direction
-- [ ] exp/log for 6D (CSTA): the cubic invariant decomposition
+- [x] exp for 6D and up (CSTA): scaling and squaring in the product closure
+- [ ] log for 6D and up: the cubic invariant decomposition
 - [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
-- [ ] Compact principal-inertia representation
+- [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees
 - [ ] Optional `mul_add` emission when FMA is available
 - [ ] Multi-slot `trace::<I>`; outermorphism
