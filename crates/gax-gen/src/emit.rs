@@ -533,22 +533,24 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let x = symbolic::variables(&xk.layout, nv);
         let vx = symbolic::binop(alg, BinOp::Gp, &v, &x);
         let rev = symbolic::unop(alg, UnOp::Reverse, &v);
-        let mut res: SymMv = symbolic::binop(alg, BinOp::Gp, &vx, &rev);
+        let res: SymMv = symbolic::binop(alg, BinOp::Gp, &vx, &rev);
         let relations = if unit {
             symbolic::unit_relations(alg, &v)
         } else {
             Vec::new()
         };
-        if unit {
-            if relations.is_empty() {
-                return;
-            }
-            for p in res.values_mut() {
-                *p = cse::reduce_by_relations(p, &relations);
-            }
-            res.retain(|_, p| !p.is_zero());
+        if unit && relations.is_empty() {
+            return;
         }
-        let support = symbolic::support(&res);
+        // The output kind comes from the support modulo the relations (a unit versor's
+        // sandwich keeps the passenger's grades); the kernels are compiled from the unreduced
+        // polynomials, and the portfolio decides whether reducing them pays.
+        let mut reduced = res.clone();
+        for p in reduced.values_mut() {
+            *p = cse::reduce_by_relations(p, &relations);
+        }
+        reduced.retain(|_, p| !p.is_zero());
+        let support = symbolic::support(&reduced);
         if support.is_empty() {
             return;
         }
@@ -557,7 +559,11 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .kind_for_support(&support)
             .expect("a full kind exists")
             .clone();
-        let coeffs = symbolic::to_coeffs(&out.layout, &res).expect("support fits");
+        let projected: SymMv = res
+            .into_iter()
+            .filter(|(m, _)| out.layout.position(*m).is_some())
+            .collect();
+        let coeffs = symbolic::to_coeffs(&out.layout, &projected).expect("support fits");
         let passengers: BTreeSet<Var> = (nv..nv + xk.layout.len() as Var).collect();
 
         // Value path: the whole formula, simplified jointly.
@@ -732,22 +738,22 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
          \x20       let a: A = random(rng);\n\
          \x20       assert_close(&o.dense(&f(a)), &o.unop(op, &o.dense(&a)), &format!(\"{{op:?}} {{}}\", std::any::type_name::<A>()));\n\
          \x20   }}\n}}\n\n\
-         /// `v x ~v` against the oracle; with `unit`, `v` is first scaled so that `<v ~v>_0 = 1`\n\
-         /// (sufficient for the algebras whose versors have scalar norms).\n\
+         /// `v x ~v` against the oracle; with `unit`, `v` is first normalized to `v ~v = 1`.\n\
          fn sandwich<V, X, R>(o: &Oracle, rng: &mut Rng, unit: bool, f: impl Fn(V, X) -> R)\n\
-         where\n    V: Extensor<Slots = (), Coef = f64> + gax::Gp<f64, Output = V>,\n    X: Extensor<Slots = (), Coef = f64>,\n    R: Extensor<Slots = (), Coef = f64>,\n{{\n\
-         \x20   for _ in 0..8 {{\n\
+         where\n    V: Extensor<Slots = (), Coef = f64>,\n    X: Extensor<Slots = (), Coef = f64>,\n    R: Extensor<Slots = (), Coef = f64>,\n{{\n\
+         \x20   let mut tested = 0;\n\
+         \x20   for _ in 0..16 {{\n\
          \x20       let (mut v, x): (V, X) = (random(rng), random(rng));\n\
-         \x20       let norm = |v: &V| {{ let d = o.dense(v); o.binop(BinOp::Gp, &d, &o.unop(UnOp::Reverse, &d)) }};\n\
          \x20       if unit {{\n\
-         \x20           let n = norm(&v);\n\
-         \x20           if n[0] <= 1e-3 || n[1..].iter().any(|c| c.abs() > 1e-12) {{ continue; }}\n\
-         \x20           v = v.gp(1.0 / n[0].sqrt());\n\
+         \x20           let Some(u) = o.random_unit(rng) else {{ continue }};\n\
+         \x20           v = u;\n\
          \x20       }}\n\
+         \x20       tested += 1;\n\
          \x20       let (dv, dx) = (o.dense(&v), o.dense(&x));\n\
          \x20       let want = o.binop(BinOp::Gp, &o.binop(BinOp::Gp, &dv, &dx), &o.unop(UnOp::Reverse, &dv));\n\
          \x20       assert_close(&o.dense(&f(v, x)), &want, &format!(\"sandwich {{}} {{}}\", std::any::type_name::<V>(), std::any::type_name::<X>()));\n\
-         \x20   }}\n}}\n\n",
+         \x20   }}\n\
+         \x20   assert!(tested > 0, \"no sample of {{}} could be normalized\", std::any::type_name::<V>());\n}}\n\n",
         name = spec.name
     );
     for op in BinOp::ALL {

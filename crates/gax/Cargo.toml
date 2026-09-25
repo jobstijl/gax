@@ -10,9 +10,10 @@ keywords = ["geometric-algebra", "clifford", "pga", "extensor", "math"]
 categories = ["mathematics", "graphics", "no-std"]
 
 [features]
-default = ["std", "pga2d"]
+default = ["std", "pga2d", "pga3d"]
 std = ["gax-core/std"]
 pga2d = []
+pga3d = []
 
 [dependencies]
 gax-core = { workspace = true }

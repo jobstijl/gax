@@ -110,3 +110,87 @@ pub fn assert_close(a: &[f64], b: &[f64], what: &str) {
         );
     }
 }
+
+impl Oracle {
+    /// Scale a versor so that `v ~v = 1`, when its norm `v ~v` is a Study number `a + b I`
+    /// with `I² = 0` (plane-based PGA) or a plain scalar. `None` otherwise or when `a <= 0`.
+    pub fn normalize(&self, v: &Dense) -> Option<Dense> {
+        let n = self.binop(BinOp::Gp, v, &self.unop(UnOp::Reverse, v));
+        let ps = self.alg.pseudoscalar() as usize;
+        let degenerate_ps = self.alg.blade_product(ps as u32, ps as u32).is_empty();
+        let a = n[0];
+        if a <= 1e-3 {
+            return None;
+        }
+        let b = if degenerate_ps { n[ps] } else { 0.0 };
+        if n.iter()
+            .enumerate()
+            .any(|(i, c)| i != 0 && !(degenerate_ps && i == ps) && c.abs() > 1e-12)
+        {
+            return None;
+        }
+        // (a + b I)^(-1/2) = a^(-1/2) - b/2 a^(-3/2) I, since I² = 0.
+        let mut s = vec![0.0; n.len()];
+        s[0] = a.powf(-0.5);
+        s[ps] += -0.5 * b * a.powf(-1.5);
+        let out = self.binop(BinOp::Gp, v, &s);
+        let check = self.binop(BinOp::Gp, &out, &self.unop(UnOp::Reverse, &out));
+        let ok = check
+            .iter()
+            .enumerate()
+            .all(|(i, c)| (c - if i == 0 { 1.0 } else { 0.0 }).abs() < 1e-9);
+        ok.then_some(out)
+    }
+
+    /// A value of kind `M` from dense coefficients; panics if the support does not fit.
+    pub fn from_dense<M: Extensor<Slots = (), Coef = f64>>(&self, d: &Dense) -> M {
+        let mut used = vec![false; d.len()];
+        let c = <M::Kind as Kind>::arr_from_fn(|i| {
+            let (mask, sign) = self.alg.parse_blade(<M::Kind as Kind>::BLADES[i]).unwrap();
+            used[mask as usize] = true;
+            sign as f64 * d[mask as usize]
+        });
+        for (i, x) in d.iter().enumerate() {
+            assert!(
+                used[i] || x.abs() < 1e-12,
+                "from_dense: blade {i} outside the kind"
+            );
+        }
+        M::from_coeffs(c)
+    }
+}
+
+impl Oracle {
+    /// A random unit versor of kind `V`: a normalized random element of `V` if that works,
+    /// else a normalized product of random vectors that lies in `V`.
+    pub fn random_unit<V: Extensor<Slots = (), Coef = f64>>(&self, rng: &mut Rng) -> Option<V> {
+        let fits = |d: &Dense| {
+            let blades: Vec<u32> = <V::Kind as Kind>::BLADES
+                .iter()
+                .map(|b| self.alg.parse_blade(b).unwrap().0)
+                .collect();
+            d.iter()
+                .enumerate()
+                .all(|(i, c)| c.abs() < 1e-12 || blades.contains(&(i as u32)))
+        };
+        let v: V = random(rng);
+        if let Some(n) = self.normalize(&self.dense(&v)) {
+            return Some(self.from_dense(&n));
+        }
+        for factors in 1..=4 {
+            let mut d = vec![0.0; self.alg.blade_count()];
+            d[0] = 1.0;
+            for _ in 0..factors {
+                let mut vec = vec![0.0; self.alg.blade_count()];
+                for i in 0..self.alg.dim() {
+                    vec[1 << i] = rng.next_f64();
+                }
+                d = self.binop(BinOp::Gp, &d, &vec);
+            }
+            if let Some(n) = self.normalize(&d).filter(|n| fits(n)) {
+                return Some(self.from_dense(&n));
+            }
+        }
+        None
+    }
+}

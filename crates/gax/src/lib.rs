@@ -19,3 +19,15 @@ pub use gax_core::*;
 )]
 #[path = "algebras/pga2d.rs"]
 pub mod pga2d;
+
+/// Plane-based projective geometric algebra of Euclidean space.
+#[cfg(feature = "pga3d")]
+#[allow(
+    missing_docs,
+    unused_variables,
+    clippy::all,
+    clippy::pedantic,
+    unused_parens
+)]
+#[path = "algebras/pga3d.rs"]
+pub mod pga3d;

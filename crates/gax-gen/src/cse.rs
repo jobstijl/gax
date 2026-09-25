@@ -29,6 +29,8 @@ pub struct Options {
     pub passengers: BTreeSet<Var>,
     /// Polynomial identities (`p = 0`) that may be used to simplify.
     pub relations: Vec<Poly>,
+    /// Extract shared kernels (sums shared across outputs under different co-kernels).
+    pub kernels: bool,
 }
 
 /// Build programs with hash-consed instructions.
@@ -87,7 +89,8 @@ struct Term {
     atoms: Vec<Operand>,
 }
 
-/// Compile a set of polynomials into a program whose outputs equal them.
+/// Compile a set of polynomials into a program whose outputs equal them (modulo the
+/// relations, when relations are given).
 pub fn compile(polys: &[Poly], opts: &Options) -> Program {
     let polys: Vec<Poly> = if opts.relations.is_empty() {
         polys.to_vec()
@@ -99,10 +102,9 @@ pub fn compile(polys: &[Poly], opts: &Options) -> Program {
     };
     let mut b = Builder::default();
     let outs = if opts.passengers.is_empty() {
-        let terms = polys.iter().map(to_terms).collect::<Vec<_>>();
-        compile_terms(&mut b, terms)
+        compile_polys(&mut b, &polys, opts.kernels)
     } else {
-        compile_factored(&mut b, &polys, &opts.passengers)
+        compile_factored(&mut b, &polys, &opts.passengers, opts.kernels)
     };
     b.prog.outputs = outs;
     b.prog.compact();
@@ -121,21 +123,25 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
         } else {
             Vec::new()
         };
-        candidates.push(compile(
-            polys,
-            &Options {
-                passengers: BTreeSet::new(),
-                relations: rel.clone(),
-            },
-        ));
-        if !passengers.is_empty() {
+        for kernels in [false, true] {
             candidates.push(compile(
                 polys,
                 &Options {
-                    passengers: passengers.clone(),
-                    relations: rel,
+                    passengers: BTreeSet::new(),
+                    relations: rel.clone(),
+                    kernels,
                 },
             ));
+            if !passengers.is_empty() {
+                candidates.push(compile(
+                    polys,
+                    &Options {
+                        passengers: passengers.clone(),
+                        relations: rel.clone(),
+                        kernels,
+                    },
+                ));
+            }
         }
     }
     candidates
@@ -144,16 +150,171 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
         .expect("at least one candidate")
 }
 
-fn to_terms(p: &Poly) -> Vec<Term> {
+/// Compile polynomials, optionally extracting shared kernels first.
+fn compile_polys(b: &mut Builder, polys: &[Poly], kernels: bool) -> Vec<Operand> {
+    let mut polys = polys.to_vec();
+    let mut env: HashMap<Var, Operand> = HashMap::new();
+    if kernels {
+        let first_free = polys.iter().flat_map(Poly::vars).max().map_or(0, |v| v + 1);
+        let defs = extract_kernels(&mut polys, first_free);
+        for (t, def) in defs {
+            let op = compile_terms(b, vec![to_terms_env(&def, &env)])[0];
+            env.insert(t, op);
+        }
+    }
+    let terms = polys.iter().map(|p| to_terms_env(p, &env)).collect();
+    compile_terms(b, terms)
+}
+
+fn to_terms_env(p: &Poly, env: &HashMap<Var, Operand>) -> Vec<Term> {
     p.0.iter()
-        .map(|(m, &c)| Term {
-            coef: c,
-            atoms: m.0.iter().map(|&v| Operand::Var(v)).collect(),
+        .map(|(m, &c)| {
+            let mut atoms: Vec<Operand> =
+                m.0.iter()
+                    .map(|v| env.get(v).copied().unwrap_or(Operand::Var(*v)))
+                    .collect();
+            atoms.sort();
+            Term { coef: c, atoms }
         })
         .collect()
 }
 
-fn compile_factored(b: &mut Builder, polys: &[Poly], passengers: &BTreeSet<Var>) -> Vec<Operand> {
+/// One place where a candidate kernel occurs: `scale * v * kernel` is a part of output `k`.
+#[derive(Clone, Debug)]
+struct Occurrence {
+    output: usize,
+    cokernel: Var,
+    scale: Rational,
+    /// The original monomials of the output covered by this occurrence.
+    monomials: Vec<Monomial>,
+}
+
+/// Multiplications and additions to evaluate a polynomial term by term.
+fn naive_cost(p: &Poly) -> usize {
+    let mults: usize =
+        p.0.iter()
+            .map(|(m, c)| m.degree().saturating_sub(1) + usize::from(c.abs() != Rational::ONE))
+            .sum();
+    mults + p.len().saturating_sub(1)
+}
+
+/// Brayton–McMullen style kernel extraction.
+///
+/// For each output and each variable `v`, the terms divisible by `v` form a residual `R`
+/// (`P = v R + rest`). Every subset of `R` with at least two terms (up to a rational factor) is
+/// a candidate kernel. A kernel occurring in several places, with disjoint original terms, is
+/// named once and each occurrence becomes `scale * v * t`. The candidate with the largest
+/// estimated saving is taken, and the search repeats. The result is exact: the outputs are
+/// rewritten in terms of fresh variables whose definitions are returned in order.
+fn extract_kernels(polys: &mut [Poly], first_free: Var) -> Vec<(Var, Poly)> {
+    let mut defs = Vec::new();
+    let mut next = first_free;
+    for _round in 0..64 {
+        let mut candidates: HashMap<Poly, Vec<Occurrence>> = HashMap::new();
+        for (k, p) in polys.iter().enumerate() {
+            for v in p.vars() {
+                let vm = Monomial::var(v);
+                let residual: Vec<(Monomial, Rational, Monomial)> =
+                    p.0.iter()
+                        .filter_map(|(m, &c)| m.div(&vm).map(|q| (q, c, m.clone())))
+                        .collect();
+                let n = residual.len();
+                if n < 2 {
+                    continue;
+                }
+                let mut subsets: Vec<Vec<usize>> = Vec::new();
+                if n <= 7 {
+                    for mask in 1u32..(1 << n) {
+                        if mask.count_ones() >= 2 {
+                            subsets.push((0..n).filter(|i| mask & (1 << i) != 0).collect());
+                        }
+                    }
+                } else {
+                    subsets.push((0..n).collect());
+                    for skip in 0..n {
+                        subsets.push((0..n).filter(|&i| i != skip).collect());
+                    }
+                }
+                for sub in subsets {
+                    let lead = residual[sub[0]].1;
+                    let mut kernel = Poly::zero();
+                    for &i in &sub {
+                        kernel.add_term(residual[i].0.clone(), residual[i].1 * lead.recip());
+                    }
+                    // A kernel that is a single monomial times a constant is a product, not a sum.
+                    if kernel.len() < 2 {
+                        continue;
+                    }
+                    candidates.entry(kernel).or_default().push(Occurrence {
+                        output: k,
+                        cokernel: v,
+                        scale: lead,
+                        monomials: sub.iter().map(|&i| residual[i].2.clone()).collect(),
+                    });
+                }
+            }
+        }
+        // Score: pick non-overlapping occurrences greedily, estimate the saving.
+        let mut best: Option<(i64, Poly, Vec<Occurrence>)> = None;
+        let mut keys: Vec<&Poly> = candidates.keys().collect();
+        keys.sort();
+        for kernel in keys {
+            let occs = &candidates[kernel];
+            if occs.len() < 2 {
+                continue;
+            }
+            let mut used: BTreeSet<(usize, Monomial)> = BTreeSet::new();
+            let mut kept = Vec::new();
+            for o in occs {
+                if o.monomials
+                    .iter()
+                    .all(|m| !used.contains(&(o.output, m.clone())))
+                {
+                    for m in &o.monomials {
+                        used.insert((o.output, m.clone()));
+                    }
+                    kept.push(o.clone());
+                }
+            }
+            if kept.len() < 2 {
+                continue;
+            }
+            let kernel_cost = naive_cost(kernel) as i64;
+            let per_occurrence: i64 =
+                kernel.0.keys().map(|m| m.degree() as i64 + 1).sum::<i64>() - 1;
+            // Before: each covered term costs its multiplications plus one addition. After: one
+            // multiplication by the named kernel.
+            let saving = kept.len() as i64 * (per_occurrence - 1) - kernel_cost;
+            if saving > 0
+                && best
+                    .as_ref()
+                    .is_none_or(|(s, k, _)| saving > *s || (saving == *s && kernel < k))
+            {
+                best = Some((saving, kernel.clone(), kept));
+            }
+        }
+        let Some((_, kernel, occs)) = best else { break };
+        let t = next;
+        next += 1;
+        for o in &occs {
+            let p = &mut polys[o.output];
+            let vm = Monomial::var(o.cokernel);
+            for (m, &c) in &kernel.0 {
+                p.add_term(m.mul(&vm), -(c * o.scale));
+            }
+            p.add_term(vm.mul(&Monomial::var(t)), o.scale);
+        }
+        defs.push((t, kernel));
+    }
+    defs
+}
+
+fn compile_factored(
+    b: &mut Builder,
+    polys: &[Poly],
+    passengers: &BTreeSet<Var>,
+    kernels: bool,
+) -> Vec<Operand> {
     // out = Σ_g m_g * C_g, with m_g a passenger monomial and C_g a polynomial in the rest.
     let mut groups: Vec<Vec<(Monomial, Poly)>> = Vec::new();
     let mut coefs: Vec<Poly> = Vec::new();
@@ -183,8 +344,7 @@ fn compile_factored(b: &mut Builder, polys: &[Poly], passengers: &BTreeSet<Var>)
         groups.push(by_passenger.into_iter().collect());
         layout.push(row);
     }
-    let coef_terms: Vec<Vec<Term>> = coefs.iter().map(to_terms).collect();
-    let coef_ops = compile_terms(b, coef_terms);
+    let coef_ops = compile_polys(b, &coefs, kernels);
     let terms: Vec<Vec<Term>> = layout
         .iter()
         .map(|row| {
@@ -449,6 +609,17 @@ mod tests {
             Options {
                 passengers: [0].into(),
                 relations: vec![],
+                kernels: false,
+            },
+            Options {
+                passengers: BTreeSet::new(),
+                relations: vec![],
+                kernels: true,
+            },
+            Options {
+                passengers: [0].into(),
+                relations: vec![],
+                kernels: true,
             },
         ] {
             let prog = compile(&polys, &opts);
