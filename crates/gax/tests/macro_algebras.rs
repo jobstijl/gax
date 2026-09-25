@@ -90,3 +90,37 @@ fn csta_exp_by_scaling_and_squaring() {
     let n: Even<(), f64> = p * p.reverse();
     assert!((n.s() - 1.0).abs() < 1e-11 && n.c[1..].iter().all(|c| c.abs() < 1e-11));
 }
+
+gax::algebra! {
+    algebra pga4d "Plane-based PGA of 4D Euclidean space, R(4,0,1).";
+    basis e0 = 0, e1 = 1, e2 = 1, e3 = 1, e4 = 1;
+    kind Hyperplane = [e1, e2, e3, e4, e0];
+    kind Bivector = [e12, e13, e14, e23, e24, e34, e01, e02, e03, e04];
+    kind Point = [e0234, e0134, e0124, e0123, e1234];
+    versor Motor = [1, e12, e13, e14, e23, e24, e34, e01, e02, e03, e04,
+        e1234, e0123, e0124, e0134, e0234];
+}
+
+#[test]
+fn pga4d_motors_move_points_rigidly() {
+    use pga4d::*;
+    // A rotation in two orthogonal planes plus a translation: a 5D bivector with a 4-vector
+    // part in its square, so exp and log take the general Study-number path.
+    let b = Bivector::<(), f64>::new(0.3, 0.0, 0.0, 0.0, 0.0, 0.5, 0.1, -0.2, 0.3, 0.4);
+    let m = b.exp();
+    let back: Bivector<(), f64> = m.log();
+    for (x, y) in back.c.iter().zip(b.c.iter()) {
+        assert!((x - y).abs() < 1e-10, "{back:?} vs {b:?}");
+    }
+    // Rigid: the weight of a point and the distance between two points are preserved.
+    let p = Point::<(), f64>::new(1.0, 2.0, 3.0, 4.0, 1.0);
+    let q = Point::<(), f64>::new(-1.0, 0.5, 2.0, 0.0, 1.0);
+    let (p2, q2) = (m >> p, m >> q);
+    assert!((p2.e1234() - 1.0).abs() < 1e-12);
+    let d = |a: Point<(), f64>, b: Point<(), f64>| {
+        (0..4)
+            .map(|i| (a.c[i] / a.c[4] - b.c[i] / b.c[4]).powi(2))
+            .sum::<f64>()
+    };
+    assert!((d(p, q) - d(p2, q2)).abs() < 1e-10);
+}
