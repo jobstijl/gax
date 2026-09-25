@@ -39,3 +39,15 @@ trybuild = "1"
 
 [lints]
 workspace = true
+
+[[example]]
+name = "scene_graph"
+required-features = ["pga3d"]
+
+[[example]]
+name = "rigid_body_modes"
+required-features = ["pga2d"]
+
+[[example]]
+name = "cga_sta"
+required-features = ["cga3d", "sta"]

@@ -8,6 +8,8 @@
 
 pub use gax_core::*;
 
+mod extras;
+
 /// Declare a geometric algebra of any signature (see the crate documentation).
 #[cfg(feature = "macros")]
 pub use gax_macros::algebra;
