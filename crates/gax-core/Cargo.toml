@@ -1,0 +1,13 @@
+[package]
+name = "gax-core"
+description = "Core traits of gax: slots, kinds, coefficients and the small-matrix math core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true

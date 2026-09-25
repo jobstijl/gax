@@ -1,0 +1,16 @@
+[package]
+name = "gax-gen"
+description = "Code generator for gax: exact operation tables, symbolic simplification and Rust emission"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[dev-dependencies]
+proptest = "1"
+
+[lints]
+workspace = true
