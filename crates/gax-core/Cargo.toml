@@ -7,7 +7,12 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies]
+libm = { version = "0.2", optional = false }
 
 [lints]
 workspace = true

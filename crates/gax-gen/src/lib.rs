@@ -5,3 +5,10 @@
 //! that regenerates the standard algebras shipped in the `gax` crate.
 
 pub mod algebra;
+pub mod cse;
+pub mod emit;
+pub mod poly;
+pub mod slp;
+pub mod spec;
+pub mod symbolic;
+pub mod table;

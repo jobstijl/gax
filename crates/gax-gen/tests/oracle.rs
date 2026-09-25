@@ -53,7 +53,9 @@ type Mat = Vec<Vec<Q>>;
 fn diagonalize(g: &[Vec<i64>]) -> (Mat, Vec<Q>) {
     let n = g.len();
     // Work on the Gram matrix of the current basis f, expressed in e: f_k = Σ_i C[k][i] e_i.
-    let mut c: Mat = (0..n).map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect()).collect();
+    let mut c: Mat = (0..n)
+        .map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect())
+        .collect();
     let gram = |c: &Mat, a: usize, b: usize| {
         let mut s = Q::zero();
         for i in 0..n {
@@ -104,9 +106,13 @@ fn diagonalize(g: &[Vec<i64>]) -> (Mat, Vec<Q>) {
     }
     // P = C⁻¹ (e in terms of f), by Gauss-Jordan.
     let mut m = c.clone();
-    let mut inv: Mat = (0..n).map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect()).collect();
+    let mut inv: Mat = (0..n)
+        .map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect())
+        .collect();
     for col in 0..n {
-        let p = (col..n).find(|&r| !m[r][col].is_zero()).expect("singular basis change");
+        let p = (col..n)
+            .find(|&r| !m[r][col].is_zero())
+            .expect("singular basis change");
         m.swap(col, p);
         inv.swap(col, p);
         let pv = m[col][col];
@@ -136,9 +142,15 @@ fn det(m: &Mat) -> Q {
     }
     let mut total = Q::zero();
     for col in 0..n {
-        let minor: Mat = (1..n).map(|r| (0..n).filter(|&c| c != col).map(|c| m[r][c]).collect()).collect();
+        let minor: Mat = (1..n)
+            .map(|r| (0..n).filter(|&c| c != col).map(|c| m[r][c]).collect())
+            .collect();
         let term = m[0][col].mul(det(&minor));
-        total = if col % 2 == 0 { total.add(term) } else { total.sub(term) };
+        total = if col % 2 == 0 {
+            total.add(term)
+        } else {
+            total.sub(term)
+        };
     }
     total
 }
@@ -156,7 +168,10 @@ fn outermorphism(m: &Mat, a: u32, n: usize) -> BTreeMap<u32, Q> {
             continue;
         }
         let cols = bits(k);
-        let minor: Mat = rows.iter().map(|&r| cols.iter().map(|&c| m[r][c]).collect()).collect();
+        let minor: Mat = rows
+            .iter()
+            .map(|&r| cols.iter().map(|&c| m[r][c]).collect())
+            .collect();
         let d = det(&minor);
         if !d.is_zero() {
             out.insert(k, d);
@@ -190,7 +205,9 @@ fn oracle_product(alg: &Algebra, a: u32, b: u32) -> BTreeMap<u32, i64> {
     {
         // invert p again (Gauss-Jordan) to express f in e
         let mut m = p.clone();
-        pinv = (0..n).map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect()).collect();
+        pinv = (0..n)
+            .map(|k| (0..n).map(|i| Q::int(i128::from(k == i))).collect())
+            .collect();
         for col in 0..n {
             let pr = (col..n).find(|&r| !m[r][col].is_zero()).unwrap();
             m.swap(col, pr);
@@ -255,11 +272,20 @@ fn algebras() -> Vec<(&'static str, Algebra)> {
         ("pga3d", Algebra::diagonal("0123", &[0, 1, 1, 1]).unwrap()),
         ("vga3d", Algebra::diagonal("123", &[1, 1, 1]).unwrap()),
         ("sta", Algebra::diagonal("0123", &[1, -1, -1, -1]).unwrap()),
-        ("stap", Algebra::diagonal("p0123", &[0, 1, -1, -1, -1]).unwrap()),
+        (
+            "stap",
+            Algebra::diagonal("p0123", &[0, 1, -1, -1, -1]).unwrap(),
+        ),
         ("cga2d", cga("12")),
         ("cga3d", cga("123")),
-        ("csta", Algebra::diagonal("0123pm", &[1, -1, -1, -1, 1, -1]).unwrap()),
-        ("mixed", Algebra::new("abc", vec![vec![1, 2, 0], vec![2, -1, 1], vec![0, 1, 0]]).unwrap()),
+        (
+            "csta",
+            Algebra::diagonal("0123pm", &[1, -1, -1, -1, 1, -1]).unwrap(),
+        ),
+        (
+            "mixed",
+            Algebra::new("abc", vec![vec![1, 2, 0], vec![2, -1, 1], vec![0, 1, 0]]).unwrap(),
+        ),
     ]
 }
 
@@ -271,7 +297,13 @@ fn generator_matches_oracle_on_every_blade_pair() {
             for b in 0..n {
                 let got: BTreeMap<u32, i64> = alg.blade_product(a, b).iter().copied().collect();
                 let want = oracle_product(&alg, a, b);
-                assert_eq!(got, want, "{name}: {} * {}", alg.blade_name(a), alg.blade_name(b));
+                assert_eq!(
+                    got,
+                    want,
+                    "{name}: {} * {}",
+                    alg.blade_name(a),
+                    alg.blade_name(b)
+                );
             }
         }
     }

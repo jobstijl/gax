@@ -79,7 +79,9 @@ impl Algebra {
         let names: Vec<char> = basis.chars().collect();
         let n = names.len();
         if n > MAX_DIM {
-            return err(format!("dimension {n} exceeds the supported maximum {MAX_DIM}"));
+            return err(format!(
+                "dimension {n} exceeds the supported maximum {MAX_DIM}"
+            ));
         }
         if metric.len() != n || metric.iter().any(|row| row.len() != n) {
             return err("metric must be an n x n matrix");
@@ -93,13 +95,19 @@ impl Algebra {
         }
         for (i, c) in names.iter().enumerate() {
             if !c.is_ascii_alphanumeric() {
-                return err(format!("basis name suffix {c:?} must be ASCII alphanumeric"));
+                return err(format!(
+                    "basis name suffix {c:?} must be ASCII alphanumeric"
+                ));
             }
             if names[..i].contains(c) {
                 return err(format!("duplicate basis name e{c}"));
             }
         }
-        let mut alg = Algebra { names, metric, table: Vec::new() };
+        let mut alg = Algebra {
+            names,
+            metric,
+            table: Vec::new(),
+        };
         alg.table = alg.build_table();
         Ok(alg)
     }

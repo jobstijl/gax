@@ -1,0 +1,25 @@
+[package]
+name = "gax"
+description = "Geometric algebra with extensors: typed multivectors, maps and forms, fused at compile time"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["geometric-algebra", "clifford", "pga", "extensor", "math"]
+categories = ["mathematics", "graphics", "no-std"]
+
+[features]
+default = ["std", "pga2d"]
+std = ["gax-core/std"]
+pga2d = []
+
+[dependencies]
+gax-core = { workspace = true }
+
+[dev-dependencies]
+gax-gen = { workspace = true }
+proptest = "1"
+
+[lints]
+workspace = true

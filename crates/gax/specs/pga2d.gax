@@ -1,0 +1,18 @@
+// Plane-based projective geometric algebra of the Euclidean plane, R(2,0,1).
+// Blade orientations follow the bivector.net cheat sheet (e20, e01, e12); coefficient
+// orders are chosen so that coordinates read naturally (x, y, w for points).
+algebra pga2d "Plane-based projective geometric algebra of the Euclidean plane, `R(2,0,1)`, in the bivector.net conventions.";
+basis e0 = 0, e1 = 1, e2 = 1;
+
+kind Scalar = [1] "A scalar.";
+versor Line = [e1, e2, e0] "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection.";
+versor Point = [e20, e01, e12] "A point `(x, y)` with weight `w`, stored as `x e20 + y e01 + w e12`: the bivectors. With `w = 0` it is a direction, a point at infinity. As a versor it is a half turn.";
+kind Pseudoscalar = [e012] "The pseudoscalar `e012`.";
+versor Rotor = [1, e12] "A rotation about the origin, `cos(a/2) + sin(a/2) e12`.";
+versor Translator = [1, e20, e01] "A translation, `1 + (dx e20 + dy e01) / 2`.";
+versor Motor = [1, e12, e20, e01] "A rigid motion: the even subalgebra (scalar plus bivectors).";
+versor Flector = [e1, e2, e0, e012] "An improper rigid motion (a glide reflection): the odd subalgebra.";
+kind Multivector = [1, e0, e1, e2, e01, e20, e12, e012] "A general multivector, in the bivector.net order.";
+
+alias Twist = Point;
+alias Forque = Line;
