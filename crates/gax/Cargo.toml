@@ -8,6 +8,7 @@ license.workspace = true
 repository.workspace = true
 keywords = ["geometric-algebra", "clifford", "pga", "extensor", "math"]
 categories = ["mathematics", "graphics", "no-std"]
+readme = "README.md"
 
 [features]
 default = ["std", "macros", "pga2d", "pga3d"]

@@ -1,8 +1,4 @@
-//! Geometric algebra with extensors.
-//!
-//! Every multivector type is generic over its open slots: `Point` is a point, `Point<(Point,)>`
-//! a linear map on points, `Scalar<(Twist, Twist)>` a bilinear form on twists. Products work
-//! on all of them alike, so the same generic function evaluates a value or builds a map.
+#![doc = include_str!("../README.md")]
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -89,3 +85,8 @@ pub mod sta;
 )]
 #[path = "algebras/cga3d.rs"]
 pub mod cga3d;
+
+/// The code blocks of `docs/guide.md` and the README, compiled and run as doctests.
+#[cfg(all(doctest, feature = "pga3d"))]
+#[doc = include_str!("../../../docs/guide.md")]
+pub struct GuideDoctests;
