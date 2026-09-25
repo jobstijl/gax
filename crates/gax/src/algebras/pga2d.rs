@@ -264,7 +264,7 @@ impl<T: gx::Coef> Scalar<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -821,7 +821,7 @@ impl<T: gx::Coef> Line<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -1398,7 +1398,7 @@ impl<T: gx::Coef> Point<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -1981,7 +1981,7 @@ impl<T: gx::Coef> Pseudoscalar<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -2491,7 +2491,7 @@ impl<T: gx::Coef> Rotor<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -3083,7 +3083,7 @@ impl<T: gx::Coef> Translator<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -3672,7 +3672,7 @@ impl<T: gx::Coef> Motor<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -4284,7 +4284,7 @@ impl<T: gx::Coef> Flector<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
@@ -4870,7 +4870,7 @@ impl<T: gx::Coef> Multivector<(), T> {
     }
 
     /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where

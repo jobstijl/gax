@@ -375,7 +375,7 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         let _ = write!(
             self.out,
             "impl<T: Coef> {name}<(), T> {{\n    /// A value from its coefficients, in blade order.\n    #[inline(always)]\n    #[allow(clippy::too_many_arguments)]\n    pub const fn new({}) -> Self {{\n        {name} {{ c: [{}] }}\n    }}\n\n    /// Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`Prepared`](gx::Prepared)).
+    /// [`gx::Prepared`]).
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
     where
