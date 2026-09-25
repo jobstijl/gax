@@ -436,6 +436,76 @@ pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     [r0, r1]
 }
 
+/// A function of a Study number `a + X` whose non-scalar part squares to the scalar `q`
+/// (`X² = q`), as `(f0, f1)` with `f(a + X) = f0 + f1 X`.
+///
+/// This covers any direction `X`, not only a fixed blade, which is what 5D algebras need: there
+/// the square of a bivector is a scalar plus a 4-vector whose square is a scalar. With
+/// `w = √q` (a complex root), `f0 = (f(a+w) + f(a−w))/2` and `f1 = (f(a+w) − f(a−w))/(2w)`;
+/// near `q = 0` the derivative is used instead, `f1 = f'(a)`.
+#[inline]
+pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
+    let zero = T::zero();
+    let w = Cx::real(q).sqrt(); // real for q > 0, imaginary for q < 0
+    let lift = |z: Cx<T>| Dual {
+        p: z,
+        d: Cx::real(zero),
+    };
+    let plus = f(lift(Cx::real(a) + w)).p;
+    let minus = f(lift(Cx::real(a) - w)).p;
+    let half = T::from_f64(0.5);
+    let f0 = (plus.re + minus.re) * half;
+    let diff = (plus - minus) / (w + w);
+    // Near q = 0: the derivative, from a dual evaluation.
+    let d = f(Dual {
+        p: Cx::real(a),
+        d: Cx::real(T::one()),
+    });
+    // Lane-wise: where |q| is tiny the finite difference is 0/0, and the select discards it.
+    let eps = T::from_f64(1e-8);
+    (
+        T::select_lt(q.abs(), eps, d.p.re, f0),
+        T::select_lt(q.abs(), eps, d.d.re, diff.re),
+    )
+}
+
+/// [`exp_coeffs`] for `B² = lambda + Q` with `Q² = q`: `exp(B) = c0 + c1 Q + (s0 + s1 Q) B`.
+#[inline]
+pub fn exp_coeffs_q<T: Real>(lambda: T, q: T) -> [T; 4] {
+    let (c0, c1) = study_q(lambda, q, |x| exp_parts(x).0);
+    let (s0, s1) = study_q(lambda, q, |x| exp_parts(x).1);
+    [c0, c1, s0, s1]
+}
+
+/// `acosh(y)²`, the square of the bivector whose exponential has scalar part `y`, analytic
+/// at `y = 1` (series there).
+#[inline]
+fn acosh_sq<T: Real, N: Channel<T>>(y: N) -> N {
+    let one = N::real(T::one());
+    let t = y - one;
+    let direct = {
+        let w = (y + (y * y - one).sqrt()).ln();
+        w * w
+    };
+    let k = |v: f64| N::real(T::from_f64(v));
+    let series = t * k(2.0) - t * t * k(1.0 / 3.0) + t * t * t * k(4.0 / 45.0);
+    t.select_small(T::from_f64(1e-8), series, direct)
+}
+
+/// [`log_coeffs`] for a unit versor `R = C + P` whose scalar-plus-4-vector part is
+/// `C = c0 + C4` with `C4² = qc`: `log R = h0 P + h1 C4 P`.
+///
+/// `B² = acosh(C)²` is found from `C` alone, and `B = S(B²)⁻¹ P`.
+#[inline]
+pub fn log_coeffs_q<T: Real>(c0: T, qc: T) -> [T; 2] {
+    let (g0, g1) = study_q(c0, qc, acosh_sq);
+    let qx = g1 * g1 * qc;
+    let (s0, s1) = study_q(g0, qx, |x| exp_parts(x).1);
+    // (s0 + s1 g1 C4)⁻¹ = (s0 − s1 g1 C4) / (s0² − s1² g1² qc)
+    let d = (s0 * s0 - s1 * s1 * qx).recip();
+    [s0 * d, -(s1 * g1) * d]
+}
+
 /// Fast path of [`exp_coeffs`] for rotations: `B² = lambda + mu I` with `lambda <= 0` and
 /// `I² = 0` (or `mu = 0`), as for every bivector of plane-based PGA. With `a = √(-λ)`:
 /// `C = cos a`, `S = sin a / a`, `C' = S / 2`, `S' = (S - C) / (2 a²)`, and the `I` parts are
@@ -537,6 +607,35 @@ mod tests {
         let a = rsqrt(0, 2.0f64, 0.6);
         let b = rsqrt_nil(2.0f64, 0.6);
         assert!((a[0] - b[0]).abs() < 1e-14 && (a[1] - b[1]).abs() < 1e-14);
+    }
+
+    #[test]
+    fn general_study_functions() {
+        // q < 0 behaves like a complex channel, q > 0 like two real channels, q = 0 like duals.
+        for &(lam, mu, isq) in &[(-0.49f64, 0.3, -1i8), (0.3, 0.2, 1), (-0.8, 0.4, 0)] {
+            let q = f64::from(isq) * mu * mu;
+            let a = exp_coeffs(isq, lam, mu);
+            let b = exp_coeffs_q(lam, q);
+            // With X = mu I: f0 + f1 X = f0 + (f1 mu) I.
+            if isq != 0 {
+                assert!(
+                    (a[0] - b[0]).abs() < 1e-12 && (a[1] - b[1] * mu).abs() < 1e-12,
+                    "{a:?} {b:?}"
+                );
+                assert!(
+                    (a[2] - b[2]).abs() < 1e-12 && (a[3] - b[3] * mu).abs() < 1e-12,
+                    "{a:?} {b:?}"
+                );
+            }
+        }
+        // log inverts exp: for B² = λ + Q, C(B²) = c0 + c1 Q; log gives back B = h0 P + h1 C4 P.
+        // Check on a scalar case: c = cos θ, q = 0 -> h0 = θ / sin θ.
+        let th = 0.7f64;
+        let [h0, _] = log_coeffs_q(th.cos(), 0.0);
+        assert!((h0 - th / th.sin()).abs() < 1e-8, "{h0}");
+        let ph = 0.4f64;
+        let [h0, _] = log_coeffs_q(ph.cosh(), 0.0);
+        assert!((h0 - ph / ph.sinh()).abs() < 1e-8, "{h0}");
     }
 
     #[test]

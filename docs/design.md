@@ -370,8 +370,19 @@ files in `gax/src/algebras/`, behind cargo features.
   alike.
 * **Generation checks the structure first.** The generator verifies it symbolically per kind and emits
   the method only when it holds, so a kind without it has no method.
-* **Limitation.** In 5D algebras (CGA3D, STAP), `B²` has several grade-4 components, and bivector
-  exp/log are not generated. numga handles these by a numerical invariant decomposition; see the TODO.
+* **5D (added later).** In CGA3D and STAP, `B²` is a scalar plus a 4-vector `Q` with several
+  components, but `Q² = q` is still a scalar. `gax_core::study::study_q` evaluates functions of such
+  a pair through a complex root `w = √q`:
+  * `f₀ = (f(a+w) + f(a−w))/2` and `f₁ = (f(a+w) − f(a−w))/(2w)`;
+  * duals near `q = 0`.
+
+  exp is `c₀ + c₁Q + (s₀ + s₁Q)B`. log recovers `B² = acosh(C)²` from the versor's scalar-plus-4-vector
+  part and divides out `S(B²)`. Both are tested as round trips: CGA3D `Bivector ↔ Even` and
+  `Twist ↔ Motor`, and STAP through `algebra!`.
+* **Rotation fast paths.** When the generator proves the scalar part of `B²` is non-positive (minus a
+  sum of squares), it emits real-trigonometric closed forms instead. See performance.md.
+* **Still open: 6D (CSTA).** A bivector there splits into three commuting parts, which needs the cubic
+  case of the invariant decomposition.
 
 ## ADR-020: Certification by a wrapper type, `Unit<M>`
 *Status: accepted.*

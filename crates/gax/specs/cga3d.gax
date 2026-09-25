@@ -7,6 +7,7 @@ metric eo ei = -1;
 
 kind Scalar = [1] "A scalar.";
 versor Vector = [e1, e2, e3, eo, ei] "A vector: a point `x + ½x² ei + eo`, a sphere or a plane (dual representation). As a versor it is a reflection or an inversion.";
+kind Twist = [e23, e31, e12, e1i, e2i, e3i] "The bivectors of rigid motions (the Lie algebra of motors): rotations `e23, e31, e12` and translations `e1i, e2i, e3i`.";
 kind Bivector = [e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi] "A bivector: a point pair (dual), or the generator of a conformal transformation.";
 kind Trivector = [e23o, e31o, e12o, e23i, e31i, e12i, e1oi, e2oi, e3oi, e123] "A trivector: a circle or a line (direct representation).";
 kind Quadvector = [e23oi, e31oi, e12oi, e123o, e123i] "A quadvector: a sphere or a plane (direct representation).";

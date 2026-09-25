@@ -45,3 +45,19 @@ fn csta_is_six_dimensional() {
     let b: Bivector<(Vector,), f64> = a ^ Vector::slot();
     assert_eq!(b.of(a), Bivector::zero());
 }
+
+#[test]
+fn stap_bivector_exp_log_round_trip() {
+    use stap::*;
+    // A 5D bivector: its square has a scalar and a 4-vector part, handled by the general
+    // Study-number functions.
+    let b = Bivector::<(), f64>::new(0.1, -0.2, 0.05, 0.3, 0.2, 0.1, -0.15, 0.4, 0.25, -0.3);
+    let r = b.exp();
+    let back: Bivector<(), f64> = r.log();
+    for (x, y) in back.c.iter().zip(b.c.iter()) {
+        assert!((x - y).abs() < 1e-10, "{back:?} vs {b:?}");
+    }
+    // exp(B) is a unit versor: R ~R = 1.
+    let n: Even<(), f64> = r.into_inner() * r.into_inner().reverse();
+    assert!((n.s() - 1.0).abs() < 1e-12);
+}

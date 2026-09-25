@@ -198,8 +198,16 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         }
     }
 
+    // exp in 5D: B² = λ + Q with a 4-vector Q (several blades) whose square is a scalar.
+    if all_grade2 && meta.exp.is_none() {
+        meta.exp = emit_exp_general(spec, k, &x, &mut body);
+    }
+
     // log: for unit versors whose parts are a Study number and a bivector.
     meta.log = emit_log(spec, k, &x, &mut traits);
+    if meta.log.is_none() {
+        meta.log = emit_log_general(spec, k, &x, &mut traits);
+    }
 
     // sqrt of a unit versor: normalize(1 + R).
     let scalar_idx = k.layout.position(0);
@@ -419,6 +427,157 @@ fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) ->
             r[0], r[1], r[2], r[3]
         );
     }
+    prog.emit_lets(&names, "t", &mut lets);
+    let outs: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|o| render(o, &names, "t"))
+        .collect();
+    let (name, on) = (&k.name, &out_kind.name);
+    let _ = write!(
+        traits,
+        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n}}\n\n",
+        outs.join(", ")
+    );
+    Some(on.clone())
+}
+
+/// The grade-4 part of `mv` if everything else is scalar, it has several blades, and its
+/// square is a scalar: the structure of `B²` in 5D algebras.
+fn general_four(alg: &Algebra, mv: &SymMv) -> Option<(SymMv, Poly)> {
+    let q: SymMv = mv
+        .iter()
+        .filter(|(m, _)| **m != 0)
+        .map(|(m, c)| (*m, c.clone()))
+        .collect();
+    if q.is_empty() || q.keys().any(|m| m.count_ones() != 4) || q.len() < 2 {
+        return None;
+    }
+    let qq = symbolic::binop(alg, BinOp::Gp, &q, &q);
+    if symbolic::support(&qq).iter().any(|&m| m != 0) {
+        return None;
+    }
+    Some((q, coef(&qq, 0)))
+}
+
+fn emit_exp_general(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    x: &SymMv,
+    body: &mut String,
+) -> Option<String> {
+    let alg = &spec.algebra;
+    let nv = k.layout.len() as Var;
+    let bsq = symbolic::binop(alg, BinOp::Gp, x, x);
+    let (q, qpoly) = general_four(alg, &bsq)?;
+    let (c0, c1, s0, s1) = (nv, nv + 1, nv + 2, nv + 3);
+    let mut out = symbolic::add(&scalar_mv(Poly::var(c0)), &scale_mv(x, &Poly::var(s0)));
+    out = symbolic::add(&out, &scale_mv(&q, &Poly::var(c1)));
+    out = symbolic::add(
+        &out,
+        &symbolic::binop(alg, BinOp::Gp, &scale_mv(&q, &Poly::var(s1)), x),
+    );
+    let out_kind = spec.kind_for_support(&symbolic::support(&out))?.clone();
+    let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
+    let pre = cse::compile_best(&[coef(&bsq, 0), qpoly], &BTreeSet::new(), &[]);
+    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let names = move |v: Var| match v {
+        v if v < nv => format!("x[{v}]"),
+        v if v == c0 => "c0".into(),
+        v if v == c1 => "c1".into(),
+        v if v == s0 => "s0".into(),
+        _ => "s1".into(),
+    };
+    let mut lets = String::new();
+    pre.emit_lets(&xvar, "p", &mut lets);
+    let (lam, qq) = (
+        render(&pre.outputs[0], &xvar, "p"),
+        render(&pre.outputs[1], &xvar, "p"),
+    );
+    let _ = writeln!(
+        lets,
+        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_q({lam}, {qq});"
+    );
+    prog.emit_lets(&names, "t", &mut lets);
+    let outs: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|o| render(o, &names, "t"))
+        .collect();
+    let on = &out_kind.name;
+    let _ = write!(
+        body,
+        "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n    }}\n\n",
+        outs.join(", ")
+    );
+    Some(on.clone())
+}
+
+fn emit_log_general(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    x: &SymMv,
+    traits: &mut String,
+) -> Option<String> {
+    let alg = &spec.algebra;
+    let nv = k.layout.len() as Var;
+    k.layout.position(0)?;
+    let grades: BTreeSet<u32> = k
+        .layout
+        .blades
+        .iter()
+        .map(|(m, _)| m.count_ones())
+        .collect();
+    if !grades.contains(&2) || !grades.contains(&4) || grades.iter().any(|g| ![0, 2, 4].contains(g))
+    {
+        return None;
+    }
+    let c4: SymMv = x
+        .iter()
+        .filter(|(m, _)| m.count_ones() == 4)
+        .map(|(m, c)| (*m, c.clone()))
+        .collect();
+    let p: SymMv = x
+        .iter()
+        .filter(|(m, _)| m.count_ones() == 2)
+        .map(|(m, c)| (*m, c.clone()))
+        .collect();
+    let cc = symbolic::binop(alg, BinOp::Gp, &c4, &c4);
+    if symbolic::support(&cc).iter().any(|&m| m != 0) {
+        return None;
+    }
+    let (h0, h1) = (nv, nv + 1);
+    let full = symbolic::add(
+        &scale_mv(&p, &Poly::var(h0)),
+        &symbolic::binop(alg, BinOp::Gp, &scale_mv(&c4, &Poly::var(h1)), &p),
+    );
+    // For R = exp(B), C4 is a function of B∧B, which commutes with B, so C4 P is a bivector:
+    // its grade-4 part vanishes. Keep the bivector part.
+    let out: SymMv = full
+        .into_iter()
+        .filter(|(m, _)| m.count_ones() == 2)
+        .collect();
+    let out_kind = spec.kind_for_support(&symbolic::support(&out))?.clone();
+    let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
+    let pre = cse::compile_best(&[coef(x, 0), coef(&cc, 0)], &BTreeSet::new(), &[]);
+    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let names = move |v: Var| match v {
+        v if v < nv => format!("x[{v}]"),
+        v if v == h0 => "h0".into(),
+        _ => "h1".into(),
+    };
+    let mut lets = String::new();
+    pre.emit_lets(&xvar, "p", &mut lets);
+    let (c0, qc) = (
+        render(&pre.outputs[0], &xvar, "p"),
+        render(&pre.outputs[1], &xvar, "p"),
+    );
+    let _ = writeln!(
+        lets,
+        "        let [h0, h1] = gx::study::log_coeffs_q({c0}, {qc});"
+    );
     prog.emit_lets(&names, "t", &mut lets);
     let outs: Vec<String> = prog
         .outputs

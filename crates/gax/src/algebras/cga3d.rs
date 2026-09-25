@@ -1191,6 +1191,702 @@ impl<T: gx::Real> Vector<(), T> {
 
 }
 
+#[doc = "The bivectors of rigid motions (the Lie algebra of motors): rotations `e23, e31, e12` and translations `e1i, e2i, e3i`."]
+///
+/// Blades, in coefficient order: `[e23, e31, e12, e1i, e2i, e3i]`.
+///
+/// `S` lists the open slots: `Twist` (that is, `Twist<()>`) is a value, `Twist<(A,)>` a
+/// linear map from `A`, `Twist<(A, B)>` a bilinear map. `T` is the coefficient type.
+#[repr(C)]
+pub struct Twist<S: gx::Slots = (), T: gx::Coef = f32> {
+    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
+    pub c: [S::Arr<T>; 6],
+}
+
+impl<S: gx::Slots, T: gx::Coef> Clone for Twist<S, T> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> Copy for Twist<S, T> {}
+
+impl<S: gx::Slots, T: gx::Coef> PartialEq for Twist<S, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.c == other.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Twist<S, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut d = f.debug_struct("Twist");
+        for (b, c) in <Twist as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
+            d.field(b, c);
+        }
+        d.finish()
+    }
+}
+
+impl gx::Kind for Twist {
+    const N: usize = 6;
+    const NAME: &'static str = "Twist";
+    const MODULE: &'static str = module_path!();
+    const BLADES: &'static [&'static str] = &["e23", "e31", "e12", "e1i", "e2i", "e3i"];
+    type Arr<X: gx::Elem> = [X; 6];
+    type Mv<S: gx::Slots, T: gx::Coef> = Twist<S, T>;
+    type Scalar = Scalar;
+    #[inline(always)]
+    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 6] {
+        core::array::from_fn(f)
+    }
+    #[inline(always)]
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 6], f: impl FnMut(&X) -> Y) -> [Y; 6] {
+        a.each_ref().map(f)
+    }
+    #[inline(always)]
+    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
+        a: &[X; 6],
+        b: &[Y; 6],
+        mut f: impl FnMut(&X, &Y) -> Z,
+    ) -> [Z; 6] {
+        core::array::from_fn(|i| f(&a[i], &b[i]))
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Extensor for Twist<S, T> {
+    type Kind = Twist;
+    type Slots = S;
+    type Coef = T;
+    #[inline(always)]
+    fn from_coeffs(c: [S::Arr<T>; 6]) -> Self {
+        Twist { c }
+    }
+    #[inline(always)]
+    fn coeffs(&self) -> &[S::Arr<T>; 6] {
+        &self.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> Twist<S, T> {
+    /// Construct from output-first coefficients.
+    #[inline(always)]
+    pub const fn from_coeffs(c: [S::Arr<T>; 6]) -> Self {
+        Twist { c }
+    }
+
+    /// All coefficients zero.
+    #[inline(always)]
+    pub fn zero() -> Self {
+        Twist { c: [S::from_flat(&mut |_| T::zero(), 0); 6] }
+    }
+
+    /// Fill the first open slot with a value, or compose a map into it.
+    #[inline(always)]
+    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+    where
+        Self: gx::Of<X>,
+    {
+        gx::Of::of(self, x)
+    }
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Twist<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Twist { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Twist<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Twist { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
+    /// See [`gx::Gp`].
+    #[inline(always)]
+    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
+    where
+        Self: gx::Gp<R>,
+    {
+        gx::Gp::gp(self, rhs)
+    }
+
+    /// See [`gx::Wedge`].
+    #[inline(always)]
+    pub fn wedge<R>(self, rhs: R) -> <Self as gx::Wedge<R>>::Output
+    where
+        Self: gx::Wedge<R>,
+    {
+        gx::Wedge::wedge(self, rhs)
+    }
+
+    /// See [`gx::Vee`].
+    #[inline(always)]
+    pub fn vee<R>(self, rhs: R) -> <Self as gx::Vee<R>>::Output
+    where
+        Self: gx::Vee<R>,
+    {
+        gx::Vee::vee(self, rhs)
+    }
+
+    /// See [`gx::Dot`].
+    #[inline(always)]
+    pub fn dot<R>(self, rhs: R) -> <Self as gx::Dot<R>>::Output
+    where
+        Self: gx::Dot<R>,
+    {
+        gx::Dot::dot(self, rhs)
+    }
+
+    /// See [`gx::Lc`].
+    #[inline(always)]
+    pub fn lc<R>(self, rhs: R) -> <Self as gx::Lc<R>>::Output
+    where
+        Self: gx::Lc<R>,
+    {
+        gx::Lc::lc(self, rhs)
+    }
+
+    /// See [`gx::Rc`].
+    #[inline(always)]
+    pub fn rc<R>(self, rhs: R) -> <Self as gx::Rc<R>>::Output
+    where
+        Self: gx::Rc<R>,
+    {
+        gx::Rc::rc(self, rhs)
+    }
+
+    /// See [`gx::ScalarProduct`].
+    #[inline(always)]
+    pub fn scalar_product<R>(self, rhs: R) -> <Self as gx::ScalarProduct<R>>::Output
+    where
+        Self: gx::ScalarProduct<R>,
+    {
+        gx::ScalarProduct::scalar_product(self, rhs)
+    }
+
+    /// See [`gx::Commutator`].
+    #[inline(always)]
+    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
+    where
+        Self: gx::Commutator<R>,
+    {
+        gx::Commutator::commutator(self, rhs)
+    }
+
+    /// See [`gx::Anticommutator`].
+    #[inline(always)]
+    pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
+    where
+        Self: gx::Anticommutator<R>,
+    {
+        gx::Anticommutator::anticommutator(self, rhs)
+    }
+
+    /// See [`gx::Transform`].
+    #[inline(always)]
+    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
+    where
+        Self: gx::Transform<R>,
+    {
+        gx::Transform::transform(self, rhs)
+    }
+
+    /// See [`gx::TransformInv`].
+    #[inline(always)]
+    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
+    where
+        Self: gx::TransformInv<R>,
+    {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+
+    /// See [`gx::Reverse`].
+    #[inline(always)]
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+        gx::Reverse::reverse(self)
+    }
+
+    /// See [`gx::Involute`].
+    #[inline(always)]
+    pub fn involute(self) -> <Self as gx::Involute>::Output {
+        gx::Involute::involute(self)
+    }
+
+    /// See [`gx::Conjugate`].
+    #[inline(always)]
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+        gx::Conjugate::conjugate(self)
+    }
+
+    /// See [`gx::Dual`].
+    #[inline(always)]
+    pub fn dual(self) -> <Self as gx::Dual>::Output {
+        gx::Dual::dual(self)
+    }
+
+    /// See [`gx::Undual`].
+    #[inline(always)]
+    pub fn undual(self) -> <Self as gx::Undual>::Output {
+        gx::Undual::undual(self)
+    }
+}
+
+impl<T: gx::Coef> Twist<(), T> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e23: T, e31: T, e12: T, e1i: T, e2i: T, e3i: T) -> Self {
+        Twist { c: [e23, e31, e12, e1i, e2i, e3i] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`](gx::Prepared)).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
+    /// The identity map on `Twist`: a `Twist` with one open `Twist` slot.
+    #[inline(always)]
+    pub fn slot() -> Twist<(Twist,), T> {
+        Twist { c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+
+    /// Coefficient of `e23`.
+    #[inline(always)]
+    pub fn e23(&self) -> T {
+        self.c[0]
+    }
+
+    /// Coefficient of `e31`.
+    #[inline(always)]
+    pub fn e31(&self) -> T {
+        self.c[1]
+    }
+
+    /// Coefficient of `e12`.
+    #[inline(always)]
+    pub fn e12(&self) -> T {
+        self.c[2]
+    }
+
+    /// Coefficient of `e1i`.
+    #[inline(always)]
+    pub fn e1i(&self) -> T {
+        self.c[3]
+    }
+
+    /// Coefficient of `e2i`.
+    #[inline(always)]
+    pub fn e2i(&self) -> T {
+        self.c[4]
+    }
+
+    /// Coefficient of `e3i`.
+    #[inline(always)]
+    pub fn e3i(&self) -> T {
+        self.c[5]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
+    /// The inverse map, `A <- Twist`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+        X: gx::Extensor<Kind = Twist, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Twist as gx::Kind>::Arr<Twist<(), T>>, <Twist as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The trace of a map from `Twist` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Twist, Input = Twist>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Twist<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Twist<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Twist<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Twist, First = A, Second = B>,
+        R: gx::Extensor<Kind = Twist, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Twist<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Twist<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self {
+        Twist { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Twist<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self {
+        Twist { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::AddAssign for Twist<S, T> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::SubAssign for Twist<S, T> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Neg for Twist<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self {
+        Twist { c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Twist<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn gp(self, rhs: T) -> Self {
+        Twist { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Twist<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn div(self, rhs: T) -> Self {
+        let r = rhs.recip();
+        Twist { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots> core::ops::Mul<Twist<S, f32>> for f32 {
+    type Output = Twist<S, f32>;
+    #[inline(always)]
+    fn mul(self, rhs: Twist<S, f32>) -> Twist<S, f32> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots> core::ops::Mul<Twist<S, f64>> for f64 {
+    type Output = Twist<S, f64>;
+    #[inline(always)]
+    fn mul(self, rhs: Twist<S, f64>) -> Twist<S, f64> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Mul<R> for Twist<S, T>
+where
+    Self: gx::Gp<R>,
+{
+    type Output = <Self as gx::Gp<R>>::Output;
+    #[inline(always)]
+    fn mul(self, rhs: R) -> Self::Output {
+        gx::Gp::gp(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitXor<R> for Twist<S, T>
+where
+    Self: gx::Wedge<R>,
+{
+    type Output = <Self as gx::Wedge<R>>::Output;
+    #[inline(always)]
+    fn bitxor(self, rhs: R) -> Self::Output {
+        gx::Wedge::wedge(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitAnd<R> for Twist<S, T>
+where
+    Self: gx::Vee<R>,
+{
+    type Output = <Self as gx::Vee<R>>::Output;
+    #[inline(always)]
+    fn bitand(self, rhs: R) -> Self::Output {
+        gx::Vee::vee(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitOr<R> for Twist<S, T>
+where
+    Self: gx::Dot<R>,
+{
+    type Output = <Self as gx::Dot<R>>::Output;
+    #[inline(always)]
+    fn bitor(self, rhs: R) -> Self::Output {
+        gx::Dot::dot(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shr<R> for Twist<S, T>
+where
+    Self: gx::Transform<R>,
+{
+    type Output = <Self as gx::Transform<R>>::Output;
+    #[inline(always)]
+    fn shr(self, rhs: R) -> Self::Output {
+        gx::Transform::transform(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shl<R> for Twist<S, T>
+where
+    Self: gx::TransformInv<R>,
+{
+    type Output = <Self as gx::TransformInv<R>>::Output;
+    #[inline(always)]
+    fn shl(self, rhs: R) -> Self::Output {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real> Twist<(), T> {
+    /// The squared norm: the scalar part of `x ~x`.
+    #[inline]
+    pub fn norm_squared(self) -> T {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        t4
+    }
+
+    /// The norm, `sqrt(|norm_squared|)`.
+    #[inline]
+    pub fn norm(self) -> T {
+        self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (41 mul, 18 add, 1 div).
+    #[inline]
+    pub fn inverse(self) -> Twist<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 * t0;
+        let t4 = t0 * t1;
+        let t5 = t0 * t2;
+        let t6 = t1 * t1;
+        let t7 = t1 * t2;
+        let t8 = t2 * t2;
+        let t9 = t3 + t6;
+        let t10 = t8 + t9;
+        let t11 = t4 + t5;
+        let t12 = t7 + t11;
+        let t13 = t12 * T::from_i64(2);
+        let t14 = t10 + t13;
+        let t15 = t14.recip();
+        let t16 = t0 * t15;
+        let t17 = t1 * t15;
+        let t18 = t2 * t15;
+        let t19 = t16 + t17;
+        let t20 = t18 + t19;
+        let t21 = t16 - t17;
+        let t22 = x[2] * t15;
+        let t23 = x[0] * t15;
+        let t24 = x[2] * t22;
+        let t25 = x[0] * x[5];
+        let t26 = x[1] * x[4];
+        let t27 = x[1] * x[5];
+        let t28 = x[0] * t20;
+        let t29 = x[1] * t20;
+        let t30 = x[2] * t20;
+        let t31 = t23 * t26;
+        let t32 = t22 * t25;
+        let t33 = x[3] * t24;
+        let t34 = x[3] * t21;
+        let t35 = x[1] * x[3];
+        let t36 = t23 * t35;
+        let t37 = t22 * t27;
+        let t38 = x[4] * t24;
+        let t39 = x[4] * t21;
+        let t40 = t23 * t25;
+        let t41 = x[0] * x[3];
+        let t42 = t22 * t41;
+        let t43 = x[1] * t15;
+        let t44 = t27 * t43;
+        let t45 = t22 * t26;
+        let t46 = x[5] * t24;
+        let t47 = -t28;
+        let t48 = -t29;
+        let t49 = -t30;
+        let t50 = t34 - t33;
+        let t51 = t31 + t32;
+        let t52 = t51 * T::from_i64(2);
+        let t53 = t50 + t52;
+        let t54 = t38 + t39;
+        let t55 = t36 + t37;
+        let t56 = t55 * T::from_i64(2);
+        let t57 = t56 - t54;
+        let t58 = t46 - t40;
+        let t59 = t58 - t44;
+        let t60 = t42 + t45;
+        let t61 = t60 * T::from_i64(2);
+        let t62 = t59 + t61;
+        Twist::from_coeffs([t47, t48, t49, t53, t57, t62])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
+    #[inline]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[0] * x[3];
+        let p4 = x[1] * x[4];
+        let p5 = x[2] * x[5];
+        let p6 = p0 + p1;
+        let p7 = p2 + p6;
+        let p8 = p3 + p4;
+        let p9 = p5 + p8;
+        let p10 = p9 * T::from_i64(2);
+        let p11 = -p10;
+        let [s0, s1] = gx::study::rsqrt_nil(p7, p11);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[0] * s1;
+        let t4 = x[3] * s0;
+        let t5 = x[1] * s1;
+        let t6 = x[4] * s0;
+        let t7 = x[2] * s1;
+        let t8 = x[5] * s0;
+        let t9 = t4 - t3;
+        let t10 = t6 - t5;
+        let t11 = t8 - t7;
+        gx::Unit::new_unchecked(Twist::from_coeffs([t0, t1, t2, t9, t10, t11]))
+    }
+
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Motor<(), T>> {
+        let x = self.c;
+        let p0 = x[0] * x[0];
+        let p1 = x[1] * x[1];
+        let p2 = x[2] * x[2];
+        let p3 = x[0] * x[3];
+        let p4 = x[1] * x[4];
+        let p5 = x[2] * x[5];
+        let p6 = p0 + p1;
+        let p7 = p2 + p6;
+        let p8 = -p7;
+        let p9 = p3 + p4;
+        let p10 = p5 + p9;
+        let p11 = p10 * T::from_i64(2);
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation(p8, p11);
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        let t2 = x[2] * s0;
+        let t3 = x[0] * s1;
+        let t4 = x[3] * s0;
+        let t5 = x[1] * s1;
+        let t6 = x[4] * s0;
+        let t7 = x[2] * s1;
+        let t8 = x[5] * s0;
+        let t9 = t4 - t3;
+        let t10 = t6 - t5;
+        let t11 = t8 - t7;
+        gx::Unit::new_unchecked(Motor::from_coeffs([c0, t0, t1, t2, t9, t10, t11, c1]))
+    }
+
+}
+
 #[doc = "A bivector: a point pair (dual), or the generator of a conformal transformation."]
 ///
 /// Blades, in coefficient order: `[e23, e31, e12, e1o, e2o, e3o, e1i, e2i, e3i, eoi]`.
@@ -1781,6 +2477,267 @@ impl<T: gx::Real> Bivector<(), T> {
     #[inline]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
+    }
+
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B`, with `BÂ² = Î» + Q` and `QÂ² = q` a scalar.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Even<(), T>> {
+        let x = self.c;
+        let p0 = x[3] * x[6];
+        let p1 = x[4] * x[7];
+        let p2 = x[5] * x[8];
+        let p3 = x[9] * x[9];
+        let p4 = x[0] * x[0];
+        let p5 = x[1] * x[1];
+        let p6 = x[2] * x[2];
+        let p7 = x[3] * x[7];
+        let p8 = x[3] * x[8];
+        let p9 = x[4] * x[6];
+        let p10 = x[4] * x[8];
+        let p11 = x[5] * x[6];
+        let p12 = x[5] * x[7];
+        let p13 = x[0] * x[1];
+        let p14 = x[0] * x[2];
+        let p15 = x[0] * x[9];
+        let p16 = x[1] * x[2];
+        let p17 = x[1] * x[9];
+        let p18 = x[2] * x[9];
+        let p19 = p0 * p4;
+        let p20 = p3 * p4;
+        let p21 = p7 * p13;
+        let p22 = p9 * p13;
+        let p23 = p8 * p14;
+        let p24 = p11 * p14;
+        let p25 = p10 * p15;
+        let p26 = p12 * p15;
+        let p27 = p1 * p5;
+        let p28 = p3 * p5;
+        let p29 = p10 * p16;
+        let p30 = p12 * p16;
+        let p31 = p8 * p17;
+        let p32 = p11 * p17;
+        let p33 = p2 * p6;
+        let p34 = p3 * p6;
+        let p35 = p7 * p18;
+        let p36 = p9 * p18;
+        let p37 = p7 * p7;
+        let p38 = p8 * p8;
+        let p39 = p0 * p1;
+        let p40 = p0 * p2;
+        let p41 = p9 * p9;
+        let p42 = p10 * p10;
+        let p43 = p1 * p2;
+        let p44 = p11 * p11;
+        let p45 = p12 * p12;
+        let p46 = p3 - p4;
+        let p47 = p5 + p6;
+        let p48 = p46 - p47;
+        let p49 = p0 + p1;
+        let p50 = p2 + p49;
+        let p51 = p50 * T::from_i64(2);
+        let p52 = p48 + p51;
+        let p53 = p20 + p28;
+        let p54 = p34 + p53;
+        let p55 = p37 + p38;
+        let p56 = p54 + p55;
+        let p57 = p41 + p42;
+        let p58 = p44 + p45;
+        let p59 = p57 + p58;
+        let p60 = p56 + p59;
+        let p61 = p60 * T::from_i64(4);
+        let p62 = p25 + p32;
+        let p63 = p35 + p62;
+        let p64 = p39 + p40;
+        let p65 = p63 + p64;
+        let p66 = p43 - p19;
+        let p67 = p21 + p22;
+        let p68 = p66 - p67;
+        let p69 = p65 + p68;
+        let p70 = p23 + p24;
+        let p71 = p26 + p70;
+        let p72 = p27 + p29;
+        let p73 = p71 + p72;
+        let p74 = p30 + p31;
+        let p75 = p33 + p36;
+        let p76 = p74 + p75;
+        let p77 = p73 + p76;
+        let p78 = p69 - p77;
+        let p79 = p78 * T::from_i64(8);
+        let p80 = p79 - p61;
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs_q(p52, p80);
+        let t0 = x[0] * x[9];
+        let t1 = s1 * t0;
+        let t2 = x[4] * x[8];
+        let t3 = s1 * t2;
+        let t4 = x[5] * x[7];
+        let t5 = s1 * t4;
+        let t6 = t1 + t5;
+        let t7 = t6 - t3;
+        let t8 = x[1] * x[9];
+        let t9 = s1 * t8;
+        let t10 = x[3] * x[8];
+        let t11 = s1 * t10;
+        let t12 = x[5] * x[6];
+        let t13 = s1 * t12;
+        let t14 = t9 + t11;
+        let t15 = t14 - t13;
+        let t16 = x[2] * x[9];
+        let t17 = s1 * t16;
+        let t18 = x[3] * x[7];
+        let t19 = s1 * t18;
+        let t20 = x[4] * x[6];
+        let t21 = s1 * t20;
+        let t22 = t17 + t21;
+        let t23 = t22 - t19;
+        let t24 = x[0] * x[3];
+        let t25 = s1 * t24;
+        let t26 = x[1] * x[4];
+        let t27 = s1 * t26;
+        let t28 = x[2] * x[5];
+        let t29 = s1 * t28;
+        let t30 = t25 + t27;
+        let t31 = t29 + t30;
+        let t32 = x[0] * x[6];
+        let t33 = s1 * t32;
+        let t34 = x[1] * x[7];
+        let t35 = s1 * t34;
+        let t36 = x[2] * x[8];
+        let t37 = s1 * t36;
+        let t38 = t33 + t35;
+        let t39 = t37 + t38;
+        let t40 = t19 + t21;
+        let t41 = t11 + t13;
+        let t42 = t3 + t5;
+        let t43 = x[0] * c1;
+        let t44 = x[1] * c1;
+        let t45 = x[2] * c1;
+        let t46 = x[3] * c1;
+        let t47 = x[4] * c1;
+        let t48 = x[5] * c1;
+        let t49 = x[6] * t24;
+        let t50 = s1 * t49;
+        let t51 = x[0] * s0;
+        let t52 = x[1] * t40;
+        let t53 = x[2] * t41;
+        let t54 = x[9] * t7;
+        let t55 = x[0] * t40;
+        let t56 = x[7] * t26;
+        let t57 = s1 * t56;
+        let t58 = x[1] * s0;
+        let t59 = x[2] * t42;
+        let t60 = x[9] * t15;
+        let t61 = x[0] * t41;
+        let t62 = x[1] * t42;
+        let t63 = x[8] * t28;
+        let t64 = s1 * t63;
+        let t65 = x[2] * s0;
+        let t66 = x[9] * t23;
+        let t67 = x[0] * t31;
+        let t68 = x[3] * s0;
+        let t69 = x[4] * t23;
+        let t70 = x[5] * t15;
+        let t71 = x[1] * t31;
+        let t72 = x[3] * t23;
+        let t73 = x[4] * s0;
+        let t74 = x[5] * t7;
+        let t75 = x[2] * t31;
+        let t76 = x[3] * t15;
+        let t77 = x[4] * t7;
+        let t78 = x[5] * s0;
+        let t79 = x[0] * t39;
+        let t80 = x[6] * s0;
+        let t81 = x[7] * t23;
+        let t82 = x[8] * t15;
+        let t83 = x[1] * t39;
+        let t84 = x[6] * t23;
+        let t85 = x[7] * s0;
+        let t86 = x[8] * t7;
+        let t87 = x[2] * t39;
+        let t88 = x[6] * t15;
+        let t89 = x[7] * t7;
+        let t90 = x[8] * s0;
+        let t91 = x[0] * t7;
+        let t92 = x[1] * t15;
+        let t93 = x[2] * t23;
+        let t94 = x[9] * s0;
+        let t95 = x[9] * t43;
+        let t96 = x[8] * t47;
+        let t97 = x[7] * t48;
+        let t98 = x[9] * t44;
+        let t99 = x[8] * t46;
+        let t100 = x[6] * t48;
+        let t101 = x[9] * t45;
+        let t102 = x[7] * t46;
+        let t103 = x[6] * t47;
+        let t104 = x[3] * t43;
+        let t105 = x[4] * t44;
+        let t106 = x[5] * t45;
+        let t107 = x[6] * t43;
+        let t108 = x[7] * t44;
+        let t109 = x[8] * t45;
+        let t110 = t52 + t53;
+        let t111 = t54 + t110;
+        let t112 = t111 * T::from_i64(2);
+        let t113 = t50 * T::from_i64(4);
+        let t114 = t51 + t112;
+        let t115 = t113 + t114;
+        let t116 = t55 + t59;
+        let t117 = t60 + t116;
+        let t118 = t117 * T::from_i64(2);
+        let t119 = t57 * T::from_i64(4);
+        let t120 = t58 + t118;
+        let t121 = t119 + t120;
+        let t122 = t61 + t62;
+        let t123 = t66 + t122;
+        let t124 = t123 * T::from_i64(2);
+        let t125 = t64 * T::from_i64(4);
+        let t126 = t65 + t124;
+        let t127 = t125 + t126;
+        let t128 = t70 - t67;
+        let t129 = t128 - t69;
+        let t130 = t129 * T::from_i64(2);
+        let t131 = t68 + t130;
+        let t132 = t72 - t71;
+        let t133 = t132 - t74;
+        let t134 = t133 * T::from_i64(2);
+        let t135 = t73 + t134;
+        let t136 = t77 - t75;
+        let t137 = t136 - t76;
+        let t138 = t137 * T::from_i64(2);
+        let t139 = t78 + t138;
+        let t140 = t81 - t79;
+        let t141 = t140 - t82;
+        let t142 = t141 * T::from_i64(2);
+        let t143 = t80 + t142;
+        let t144 = t86 - t83;
+        let t145 = t144 - t84;
+        let t146 = t145 * T::from_i64(2);
+        let t147 = t85 + t146;
+        let t148 = t88 - t87;
+        let t149 = t148 - t89;
+        let t150 = t149 * T::from_i64(2);
+        let t151 = t90 + t150;
+        let t152 = t91 + t92;
+        let t153 = t93 + t152;
+        let t154 = t153 * T::from_i64(2);
+        let t155 = t94 - t154;
+        let t156 = t95 + t97;
+        let t157 = t156 - t96;
+        let t158 = t157 * T::from_i64(2);
+        let t159 = t98 + t99;
+        let t160 = t159 - t100;
+        let t161 = t160 * T::from_i64(2);
+        let t162 = t101 + t103;
+        let t163 = t162 - t102;
+        let t164 = t163 * T::from_i64(2);
+        let t165 = t104 + t105;
+        let t166 = t106 + t165;
+        let t167 = t166 * T::from_i64(2);
+        let t168 = t107 + t108;
+        let t169 = t109 + t168;
+        let t170 = t169 * T::from_i64(2);
+        gx::Unit::new_unchecked(Even::from_coeffs([c0, t115, t121, t127, t131, t135, t139, t143, t147, t151, t155, t158, t161, t164, t167, t170]))
     }
 
 }
@@ -4279,11 +5236,11 @@ impl<T: gx::Real> Motor<(), T> {
 
 }
 
-impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Motor<(), T>> {
+impl<T: gx::Real> gx::Log<Twist<(), T>> for gx::Unit<Motor<(), T>> {
     /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
     #[inline]
     #[allow(unused_variables)]
-    fn log(self) -> Bivector<(), T> {
+    fn log(self) -> Twist<(), T> {
         let x = self.into_inner().c;
         let p0 = x[1] * x[1];
         let p1 = x[2] * x[2];
@@ -4310,7 +5267,7 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Motor<(), T>> {
         let t9 = t4 - t3;
         let t10 = t6 - t5;
         let t11 = t8 - t7;
-        Bivector::from_coeffs([t0, t1, t2, T::from_i64(0), T::from_i64(0), T::from_i64(0), t9, t10, t11, T::from_i64(0)])
+        Twist::from_coeffs([t0, t1, t2, t9, t10, t11])
     }
 }
 
@@ -4952,6 +5909,101 @@ impl<T: gx::Real> Even<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
+}
+
+impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
+    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Bivector<(), T> {
+        let x = self.into_inner().c;
+        let p0 = x[11] * x[11];
+        let p1 = x[12] * x[12];
+        let p2 = x[13] * x[13];
+        let p3 = x[14] * x[15];
+        let p4 = p0 + p1;
+        let p5 = p2 + p4;
+        let p6 = p3 * T::from_i64(2);
+        let p7 = p5 + p6;
+        let p8 = -p7;
+        let [h0, h1] = gx::study::log_coeffs_q(x[0], p8);
+        let t0 = x[11] * h1;
+        let t1 = x[12] * h1;
+        let t2 = x[13] * h1;
+        let t3 = x[14] * h1;
+        let t4 = x[15] * h1;
+        let t5 = x[1] * h0;
+        let t6 = x[4] * t4;
+        let t7 = x[7] * t3;
+        let t8 = x[10] * t0;
+        let t9 = x[2] * h0;
+        let t10 = x[5] * t4;
+        let t11 = x[8] * t3;
+        let t12 = x[10] * t1;
+        let t13 = x[3] * h0;
+        let t14 = x[6] * t4;
+        let t15 = x[9] * t3;
+        let t16 = x[10] * t2;
+        let t17 = x[1] * t3;
+        let t18 = x[4] * h0;
+        let t19 = x[5] * t2;
+        let t20 = x[6] * t1;
+        let t21 = x[2] * t3;
+        let t22 = x[4] * t2;
+        let t23 = x[5] * h0;
+        let t24 = x[6] * t0;
+        let t25 = x[3] * t3;
+        let t26 = x[4] * t1;
+        let t27 = x[5] * t0;
+        let t28 = x[6] * h0;
+        let t29 = x[1] * t4;
+        let t30 = x[7] * h0;
+        let t31 = x[8] * t2;
+        let t32 = x[9] * t1;
+        let t33 = x[2] * t4;
+        let t34 = x[7] * t2;
+        let t35 = x[8] * h0;
+        let t36 = x[9] * t0;
+        let t37 = x[3] * t4;
+        let t38 = x[7] * t1;
+        let t39 = x[8] * t0;
+        let t40 = x[9] * h0;
+        let t41 = x[1] * t0;
+        let t42 = x[2] * t1;
+        let t43 = x[3] * t2;
+        let t44 = x[10] * h0;
+        let t45 = t5 + t6;
+        let t46 = t7 + t8;
+        let t47 = t45 + t46;
+        let t48 = t9 + t10;
+        let t49 = t11 + t12;
+        let t50 = t48 + t49;
+        let t51 = t13 + t14;
+        let t52 = t15 + t16;
+        let t53 = t51 + t52;
+        let t54 = t18 + t20;
+        let t55 = t17 + t19;
+        let t56 = t54 - t55;
+        let t57 = t22 + t23;
+        let t58 = t21 + t24;
+        let t59 = t57 - t58;
+        let t60 = t27 + t28;
+        let t61 = t25 + t26;
+        let t62 = t60 - t61;
+        let t63 = t30 + t31;
+        let t64 = t29 + t32;
+        let t65 = t63 - t64;
+        let t66 = t35 + t36;
+        let t67 = t33 + t34;
+        let t68 = t66 - t67;
+        let t69 = t38 + t40;
+        let t70 = t37 + t39;
+        let t71 = t69 - t70;
+        let t72 = t44 - t41;
+        let t73 = t42 + t43;
+        let t74 = t72 - t73;
+        Bivector::from_coeffs([t47, t50, t53, t56, t59, t62, t65, t68, t71, t74])
+    }
 }
 
 #[doc = "The odd subalgebra."]
@@ -6362,6 +7414,10 @@ impl gx::KindEq<Vector> for Scalar {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Twist> for Scalar {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Scalar {
     type Out = gx::False;
 }
@@ -6402,6 +7458,10 @@ impl gx::KindEq<Vector> for Vector {
     type Out = gx::True;
 }
 
+impl gx::KindEq<Twist> for Vector {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Vector {
     type Out = gx::False;
 }
@@ -6434,11 +7494,59 @@ impl gx::KindEq<Multivector> for Vector {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Scalar> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Vector> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Twist> for Twist {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Bivector> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Trivector> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Quadvector> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Pseudoscalar> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Even> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Odd> for Twist {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Twist {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Scalar> for Bivector {
     type Out = gx::False;
 }
 
 impl gx::KindEq<Vector> for Bivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Twist> for Bivector {
     type Out = gx::False;
 }
 
@@ -6482,6 +7590,10 @@ impl gx::KindEq<Vector> for Trivector {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Twist> for Trivector {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Trivector {
     type Out = gx::False;
 }
@@ -6519,6 +7631,10 @@ impl gx::KindEq<Scalar> for Quadvector {
 }
 
 impl gx::KindEq<Vector> for Quadvector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Twist> for Quadvector {
     type Out = gx::False;
 }
 
@@ -6562,6 +7678,10 @@ impl gx::KindEq<Vector> for Pseudoscalar {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Twist> for Pseudoscalar {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Pseudoscalar {
     type Out = gx::False;
 }
@@ -6599,6 +7719,10 @@ impl gx::KindEq<Scalar> for Motor {
 }
 
 impl gx::KindEq<Vector> for Motor {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Twist> for Motor {
     type Out = gx::False;
 }
 
@@ -6642,6 +7766,10 @@ impl gx::KindEq<Vector> for Even {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Twist> for Even {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Even {
     type Out = gx::False;
 }
@@ -6682,6 +7810,10 @@ impl gx::KindEq<Vector> for Odd {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Twist> for Odd {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Bivector> for Odd {
     type Out = gx::False;
 }
@@ -6719,6 +7851,10 @@ impl gx::KindEq<Scalar> for Multivector {
 }
 
 impl gx::KindEq<Vector> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Twist> for Multivector {
     type Out = gx::False;
 }
 
@@ -6781,6 +7917,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Scalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
             ],
         }
     }
@@ -7035,6 +8190,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                (a[3] * b[0]).0,
+                (a[3] * b[1]).0,
+                (a[3] * b[2]).0,
+                (((a[1] * b[5] + a[4] * b[0]) - a[2] * b[4])).0,
+                (((a[2] * b[3] + a[4] * b[1]) - a[0] * b[5])).0,
+                (((a[0] * b[4] + a[4] * b[2]) - a[1] * b[3])).0,
+                (-a[3] * b[3]).0,
+                (-a[3] * b[4]).0,
+                (-a[3] * b[5]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -7272,6 +8456,309 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for V
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                (a[0] * b[3]).0,
+                (a[1] * b[3]).0,
+                (a[2] * b[3]).0,
+                (((a[0] * b[4] + a[5] * b[1]) - a[4] * b[2])).0,
+                (((a[1] * b[4] + a[3] * b[2]) - a[5] * b[0])).0,
+                (((a[2] * b[4] + a[4] * b[0]) - a[3] * b[1])).0,
+                (-a[3] * b[3]).0,
+                (-a[4] * b[3]).0,
+                (-a[5] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                (((a[2] * b[4] + a[5] * b[1]) - (a[1] * b[5] + a[4] * b[2]))).0,
+                (((a[0] * b[5] + a[3] * b[2]) - (a[2] * b[3] + a[5] * b[0]))).0,
+                (((a[1] * b[3] + a[4] * b[0]) - (a[0] * b[4] + a[3] * b[1]))).0,
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                ((a[2] * b[4] - a[1] * b[5])).0,
+                ((a[0] * b[5] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[0] * b[4])).0,
+                ((((a[2] * b[7] + a[5] * b[1]) - a[1] * b[8]) - (a[3] * b[9] + a[4] * b[2]))).0,
+                ((((a[0] * b[8] + a[3] * b[2]) - a[2] * b[6]) - (a[4] * b[9] + a[5] * b[0]))).0,
+                ((((a[1] * b[6] + a[4] * b[0]) - a[0] * b[7]) - (a[3] * b[1] + a[5] * b[9]))).0,
+                (((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5])).0,
+                (((a[0] * b[9] + a[4] * b[5]) - a[5] * b[4])).0,
+                (((a[1] * b[9] + a[5] * b[3]) - a[3] * b[5])).0,
+                (((a[2] * b[9] + a[3] * b[4]) - a[4] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[4] * b[2] - a[0] * b[9]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[9]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[9]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((((a[2] * b[4] + a[4] * b[8]) - a[1] * b[5]) - (a[3] * b[9] + a[5] * b[7]))).0,
+                ((((a[0] * b[5] + a[5] * b[6]) - a[2] * b[3]) - (a[3] * b[8] + a[4] * b[9]))).0,
+                ((((a[1] * b[3] + a[3] * b[7]) - a[0] * b[4]) - (a[4] * b[6] + a[5] * b[9]))).0,
+                (((a[2] * b[7] + a[4] * b[2]) - (a[1] * b[8] + a[5] * b[1]))).0,
+                (((a[0] * b[8] + a[5] * b[0]) - (a[2] * b[6] + a[3] * b[2]))).0,
+                (((a[1] * b[6] + a[3] * b[1]) - (a[0] * b[7] + a[4] * b[0]))).0,
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[3]).0,
+                (a[4] * b[3]).0,
+                (a[5] * b[3]).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
+                (((a[4] * b[2] - a[0] * b[4]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[4]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[4] * b[3]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[5] * b[3]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[0] + a[2] * b[2]) - a[1] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[0]) - a[2] * b[1])).0,
+                (((a[1] * b[1] + a[2] * b[0]) - a[0] * b[2])).0,
+                ((((a[2] * b[5] + a[3] * b[0]) + a[5] * b[2]) - ((a[0] * b[7] + a[1] * b[6]) + a[4] * b[3]))).0,
+                ((((a[0] * b[6] + a[3] * b[3]) + a[4] * b[0]) - ((a[1] * b[7] + a[2] * b[4]) + a[5] * b[1]))).0,
+                ((((a[1] * b[4] + a[4] * b[1]) + a[5] * b[0]) - ((a[0] * b[5] + a[2] * b[7]) + a[3] * b[2]))).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+                ((((a[0] * b[0] + a[2] * b[2]) + a[3] * b[14]) + ((a[4] * b[6] - a[1] * b[3]) - a[5] * b[5]))).0,
+                ((((a[0] * b[3] + a[1] * b[0]) + a[4] * b[14]) + ((a[5] * b[4] - a[2] * b[1]) - a[3] * b[6]))).0,
+                ((((a[1] * b[1] + a[2] * b[0]) + a[3] * b[5]) + ((a[5] * b[14] - a[0] * b[2]) - a[4] * b[4]))).0,
+                (((a[2] * b[5] - a[0] * b[14]) - a[1] * b[6])).0,
+                (((a[0] * b[6] - a[1] * b[14]) - a[2] * b[4])).0,
+                (((a[1] * b[4] - a[0] * b[5]) - a[2] * b[14])).0,
+                (((((a[2] * b[8] + a[3] * b[0]) + a[4] * b[13]) + (a[5] * b[2] - a[0] * b[15])) - ((a[1] * b[9] + a[3] * b[10]) + (a[4] * b[3] + a[5] * b[12])))).0,
+                (((((a[0] * b[9] + a[3] * b[3]) + a[4] * b[0]) + (a[5] * b[11] - a[1] * b[15])) - ((a[2] * b[7] + a[3] * b[13]) + (a[4] * b[10] + a[5] * b[1])))).0,
+                (((((a[1] * b[7] + a[3] * b[12]) + a[4] * b[1]) + (a[5] * b[0] - a[0] * b[8])) - ((a[2] * b[15] + a[3] * b[2]) + (a[4] * b[11] + a[5] * b[10])))).0,
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13]))).0,
+                ((((a[0] * b[10] + a[2] * b[12]) + a[3] * b[14]) + ((a[4] * b[6] - a[1] * b[13]) - a[5] * b[5]))).0,
+                ((((a[0] * b[13] + a[1] * b[10]) + a[4] * b[14]) + ((a[5] * b[4] - a[2] * b[11]) - a[3] * b[6]))).0,
+                ((((a[1] * b[11] + a[2] * b[10]) + a[3] * b[5]) + ((a[5] * b[14] - a[0] * b[12]) - a[4] * b[4]))).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                (((((a[0] * b[7] + a[1] * b[8]) + a[2] * b[9]) + (a[3] * b[1] + a[4] * b[2])) + ((a[5] * b[3] - a[3] * b[11]) - (a[4] * b[12] + a[5] * b[13])))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                ((((a[2] * b[1] + a[4] * b[7]) - a[0] * b[14]) - ((a[1] * b[2] + a[3] * b[3]) + a[5] * b[6]))).0,
+                ((((a[0] * b[2] + a[5] * b[5]) - a[1] * b[14]) - ((a[2] * b[0] + a[3] * b[7]) + a[4] * b[3]))).0,
+                ((((a[1] * b[0] + a[3] * b[6]) - a[0] * b[1]) - ((a[2] * b[14] + a[4] * b[5]) + a[5] * b[3]))).0,
+                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                (((((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13]) - (a[0] * b[8] + a[1] * b[9])) - ((a[2] * b[10] + a[3] * b[0]) + (a[4] * b[1] + a[5] * b[2])))).0,
+                (((a[0] * b[3] + a[2] * b[6]) - a[1] * b[7])).0,
+                (((a[0] * b[7] + a[1] * b[3]) - a[2] * b[5])).0,
+                (((a[1] * b[5] + a[2] * b[3]) - a[0] * b[6])).0,
+                (((((a[0] * b[4] + a[2] * b[9]) + a[3] * b[15]) + (a[4] * b[13] + a[5] * b[1])) - ((a[1] * b[10] + a[3] * b[14]) + (a[4] * b[2] + a[5] * b[12])))).0,
+                (((((a[0] * b[10] + a[1] * b[4]) + a[3] * b[2]) + (a[4] * b[15] + a[5] * b[11])) - ((a[2] * b[8] + a[3] * b[13]) + (a[4] * b[14] + a[5] * b[0])))).0,
+                (((((a[1] * b[8] + a[2] * b[4]) + a[3] * b[12]) + (a[4] * b[0] + a[5] * b[15])) - ((a[0] * b[9] + a[3] * b[1]) + (a[4] * b[11] + a[5] * b[14])))).0,
+                ((((a[2] * b[12] + a[4] * b[7]) - a[0] * b[15]) - ((a[1] * b[13] + a[3] * b[3]) + a[5] * b[6]))).0,
+                ((((a[0] * b[13] + a[5] * b[5]) - a[1] * b[15]) - ((a[2] * b[11] + a[3] * b[7]) + a[4] * b[3]))).0,
+                ((((a[1] * b[11] + a[3] * b[6]) - a[0] * b[12]) - ((a[2] * b[15] + a[4] * b[5]) + a[5] * b[3]))).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13]) - ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+                ((((a[2] * b[2] + a[4] * b[18]) - a[0] * b[25]) - ((a[1] * b[3] + a[3] * b[4]) + a[5] * b[17]))).0,
+                ((((a[0] * b[3] + a[5] * b[16]) - a[1] * b[25]) - ((a[2] * b[1] + a[3] * b[18]) + a[4] * b[4]))).0,
+                ((((a[1] * b[1] + a[3] * b[17]) - a[0] * b[2]) - ((a[2] * b[25] + a[4] * b[16]) + a[5] * b[4]))).0,
+                (-((a[0] * b[16] + a[1] * b[17]) + a[2] * b[18])).0,
+                (((((a[3] * b[22] + a[4] * b[23]) + a[5] * b[24]) - (a[0] * b[19] + a[1] * b[20])) - ((a[2] * b[21] + a[3] * b[1]) + (a[4] * b[2] + a[5] * b[3])))).0,
+                ((((a[0] * b[0] + a[2] * b[7]) + a[3] * b[29]) + ((a[4] * b[11] - a[1] * b[8]) - a[5] * b[10]))).0,
+                ((((a[0] * b[8] + a[1] * b[0]) + a[4] * b[29]) + ((a[5] * b[9] - a[2] * b[6]) - a[3] * b[11]))).0,
+                ((((a[1] * b[6] + a[2] * b[0]) + a[3] * b[10]) + ((a[5] * b[29] - a[0] * b[7]) - a[4] * b[9]))).0,
+                (((a[2] * b[10] - a[0] * b[29]) - a[1] * b[11])).0,
+                (((a[0] * b[11] - a[1] * b[29]) - a[2] * b[9])).0,
+                (((a[1] * b[9] - a[0] * b[10]) - a[2] * b[29])).0,
+                (((((a[2] * b[13] + a[3] * b[0]) + a[4] * b[28]) + (a[5] * b[7] - a[0] * b[30])) - ((a[1] * b[14] + a[3] * b[15]) + (a[4] * b[8] + a[5] * b[27])))).0,
+                (((((a[0] * b[14] + a[3] * b[8]) + a[4] * b[0]) + (a[5] * b[26] - a[1] * b[30])) - ((a[2] * b[12] + a[3] * b[28]) + (a[4] * b[15] + a[5] * b[6])))).0,
+                (((((a[1] * b[12] + a[3] * b[27]) + a[4] * b[6]) + (a[5] * b[0] - a[0] * b[13])) - ((a[2] * b[30] + a[3] * b[7]) + (a[4] * b[26] + a[5] * b[15])))).0,
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[26] + a[1] * b[27]) + a[2] * b[28]))).0,
+                (((a[0] * b[4] + a[2] * b[17]) - a[1] * b[18])).0,
+                (((a[0] * b[18] + a[1] * b[4]) - a[2] * b[16])).0,
+                (((a[1] * b[16] + a[2] * b[4]) - a[0] * b[17])).0,
+                (((((a[0] * b[5] + a[2] * b[20]) + a[3] * b[31]) + (a[4] * b[24] + a[5] * b[2])) - ((a[1] * b[21] + a[3] * b[25]) + (a[4] * b[3] + a[5] * b[23])))).0,
+                (((((a[0] * b[21] + a[1] * b[5]) + a[3] * b[3]) + (a[4] * b[31] + a[5] * b[22])) - ((a[2] * b[19] + a[3] * b[24]) + (a[4] * b[25] + a[5] * b[1])))).0,
+                (((((a[1] * b[19] + a[2] * b[5]) + a[3] * b[23]) + (a[4] * b[1] + a[5] * b[31])) - ((a[0] * b[20] + a[3] * b[2]) + (a[4] * b[22] + a[5] * b[25])))).0,
+                ((((a[2] * b[23] + a[4] * b[18]) - a[0] * b[31]) - ((a[1] * b[24] + a[3] * b[4]) + a[5] * b[17]))).0,
+                ((((a[0] * b[24] + a[5] * b[16]) - a[1] * b[31]) - ((a[2] * b[22] + a[3] * b[18]) + a[4] * b[4]))).0,
+                ((((a[1] * b[22] + a[3] * b[17]) - a[0] * b[23]) - ((a[2] * b[31] + a[4] * b[16]) + a[5] * b[4]))).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18]))).0,
+                ((((a[0] * b[15] + a[2] * b[27]) + a[3] * b[29]) + ((a[4] * b[11] - a[1] * b[28]) - a[5] * b[10]))).0,
+                ((((a[0] * b[28] + a[1] * b[15]) + a[4] * b[29]) + ((a[5] * b[9] - a[2] * b[26]) - a[3] * b[11]))).0,
+                ((((a[1] * b[26] + a[2] * b[15]) + a[3] * b[10]) + ((a[5] * b[29] - a[0] * b[27]) - a[4] * b[9]))).0,
+                (((a[0] * b[9] + a[1] * b[10]) + a[2] * b[11])).0,
+                (((((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14]) + (a[3] * b[6] + a[4] * b[7])) + ((a[5] * b[8] - a[3] * b[26]) - (a[4] * b[27] + a[5] * b[28])))).0,
+                ((((a[0] * b[22] + a[1] * b[23]) + a[2] * b[24]) - ((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -7319,6 +8806,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivect
                 (((a[5] * b[4] + a[9] * b[2]) - a[8] * b[3])).0,
                 (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                ((a[5] * b[1] - a[4] * b[2])).0,
+                ((a[3] * b[2] - a[5] * b[0])).0,
+                ((a[4] * b[0] - a[3] * b[1])).0,
+                ((((a[2] * b[4] + a[8] * b[1]) + a[9] * b[3]) - (a[1] * b[5] + a[7] * b[2]))).0,
+                ((((a[0] * b[5] + a[6] * b[2]) + a[9] * b[4]) - (a[2] * b[3] + a[8] * b[0]))).0,
+                ((((a[1] * b[3] + a[7] * b[0]) + a[9] * b[5]) - (a[0] * b[4] + a[6] * b[1]))).0,
+                (-((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5])).0,
+                (((a[5] * b[4] + a[9] * b[0]) - a[4] * b[5])).0,
+                (((a[3] * b[5] + a[9] * b[1]) - a[5] * b[3])).0,
+                (((a[4] * b[3] + a[9] * b[2]) - a[3] * b[4])).0,
+                (((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
             ],
         }
     }
@@ -7618,6 +9134,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Trivec
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[4] - a[1] * b[5]) - a[9] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[9] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[9] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((((a[5] * b[1] + a[7] * b[5]) + a[9] * b[3]) - (a[4] * b[2] + a[8] * b[4]))).0,
+                ((((a[3] * b[2] + a[8] * b[3]) + a[9] * b[4]) - (a[5] * b[0] + a[6] * b[5]))).0,
+                ((((a[4] * b[0] + a[6] * b[4]) + a[9] * b[5]) - (a[3] * b[1] + a[7] * b[3]))).0,
+                (((a[1] * b[5] + a[8] * b[1]) - (a[2] * b[4] + a[7] * b[2]))).0,
+                (((a[2] * b[3] + a[6] * b[2]) - (a[0] * b[5] + a[8] * b[0]))).0,
+                (((a[0] * b[4] + a[7] * b[0]) - (a[1] * b[3] + a[6] * b[1]))).0,
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                ((((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -7907,6 +9452,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Quadve
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[3]).0,
+                (a[3] * b[4]).0,
+                (a[3] * b[5]).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
+                (((a[2] * b[4] - a[1] * b[5]) - a[4] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[4] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[4] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[3] * b[4])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[3] * b[5])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Quadvector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -8176,6 +9750,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudo
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -8431,6 +10028,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Motor<
                 (-a[6] * b[3]).0,
                 (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] - a[7] * b[3]))).0,
                 (-a[7] * b[3]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[0] * b[0] + a[3] * b[1]) - a[2] * b[2])).0,
+                (((a[0] * b[1] + a[1] * b[2]) - a[3] * b[0])).0,
+                (((a[0] * b[2] + a[2] * b[0]) - a[1] * b[1])).0,
+                ((((a[0] * b[3] + a[3] * b[4]) + a[6] * b[1]) - ((a[2] * b[5] + a[5] * b[2]) + a[7] * b[0]))).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + a[4] * b[2]) - ((a[3] * b[3] + a[6] * b[0]) + a[7] * b[1]))).0,
+                ((((a[0] * b[5] + a[2] * b[3]) + a[5] * b[0]) - ((a[1] * b[4] + a[4] * b[1]) + a[7] * b[2]))).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
             ],
         }
     }
@@ -8729,6 +10347,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S
                 ((((a[6] * b[4] + a[10] * b[2]) + a[12] * b[0]) - (a[9] * b[3] + a[11] * b[1]))).0,
                 ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - (a[14] * b[4] + a[15] * b[3]))).0,
                 ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) + (a[14] * b[4] - a[15] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                ((((a[0] * b[0] + a[3] * b[1]) + a[5] * b[5]) + ((a[14] * b[3] - a[2] * b[2]) - a[6] * b[4]))).0,
+                ((((a[0] * b[1] + a[1] * b[2]) + a[6] * b[3]) + ((a[14] * b[4] - a[3] * b[0]) - a[4] * b[5]))).0,
+                ((((a[0] * b[2] + a[2] * b[0]) + a[4] * b[4]) + ((a[14] * b[5] - a[1] * b[1]) - a[5] * b[3]))).0,
+                (((a[6] * b[1] - a[5] * b[2]) - a[14] * b[0])).0,
+                (((a[4] * b[2] - a[6] * b[0]) - a[14] * b[1])).0,
+                (((a[5] * b[0] - a[4] * b[1]) - a[14] * b[2])).0,
+                (((((a[0] * b[3] + a[3] * b[4]) + a[9] * b[1]) + (a[10] * b[3] + a[13] * b[4])) - ((a[2] * b[5] + a[8] * b[2]) + (a[12] * b[5] + a[15] * b[0])))).0,
+                (((((a[0] * b[4] + a[1] * b[5]) + a[7] * b[2]) + (a[10] * b[4] + a[11] * b[5])) - ((a[3] * b[3] + a[9] * b[0]) + (a[13] * b[3] + a[15] * b[1])))).0,
+                (((((a[0] * b[5] + a[2] * b[3]) + a[8] * b[0]) + (a[10] * b[5] + a[12] * b[3])) - ((a[1] * b[4] + a[7] * b[1]) + (a[11] * b[4] + a[15] * b[2])))).0,
+                (-(((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) + ((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]))).0,
+                ((((a[6] * b[4] + a[10] * b[0]) + a[13] * b[1]) - ((a[5] * b[5] + a[12] * b[2]) + a[14] * b[3]))).0,
+                ((((a[4] * b[5] + a[10] * b[1]) + a[11] * b[2]) - ((a[6] * b[3] + a[13] * b[0]) + a[14] * b[4]))).0,
+                ((((a[5] * b[3] + a[10] * b[2]) + a[12] * b[0]) - ((a[4] * b[4] + a[11] * b[1]) + a[14] * b[5]))).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                (((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + (a[7] * b[0] + a[8] * b[1])) + ((a[9] * b[2] + a[11] * b[3]) + (a[12] * b[4] + a[13] * b[5])))).0,
             ],
         }
     }
@@ -9035,6 +10682,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1
                 ((((a[7] * b[4] + a[11] * b[1]) + a[15] * b[2]) - (a[10] * b[3] + a[12] * b[0]))).0,
                 ((((a[14] * b[3] - a[5] * b[0]) - a[6] * b[1]) - (a[7] * b[2] + a[15] * b[3]))).0,
                 ((((a[14] * b[4] + a[15] * b[4]) - a[8] * b[0]) - (a[9] * b[1] + a[10] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                ((((a[2] * b[1] + a[3] * b[3]) + a[7] * b[4]) - ((a[1] * b[2] + a[6] * b[5]) + a[14] * b[0]))).0,
+                ((((a[0] * b[2] + a[3] * b[4]) + a[5] * b[5]) - ((a[2] * b[0] + a[7] * b[3]) + a[14] * b[1]))).0,
+                ((((a[1] * b[0] + a[3] * b[5]) + a[6] * b[3]) - ((a[0] * b[1] + a[5] * b[4]) + a[14] * b[2]))).0,
+                (-((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                (((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + (a[11] * b[3] + a[12] * b[4])) + ((a[13] * b[5] - a[8] * b[0]) - (a[9] * b[1] + a[10] * b[2])))).0,
+                (((a[3] * b[0] + a[7] * b[1]) - a[6] * b[2])).0,
+                (((a[3] * b[1] + a[5] * b[2]) - a[7] * b[0])).0,
+                (((a[3] * b[2] + a[6] * b[0]) - a[5] * b[1])).0,
+                (((((a[1] * b[5] + a[4] * b[0]) + a[10] * b[1]) + (a[12] * b[5] + a[14] * b[3])) + ((a[15] * b[3] - a[2] * b[4]) - (a[9] * b[2] + a[13] * b[4])))).0,
+                (((((a[2] * b[3] + a[4] * b[1]) + a[8] * b[2]) + (a[13] * b[3] + a[14] * b[4])) + ((a[15] * b[4] - a[0] * b[5]) - (a[10] * b[0] + a[11] * b[5])))).0,
+                (((((a[0] * b[4] + a[4] * b[2]) + a[9] * b[0]) + (a[11] * b[4] + a[14] * b[5])) + ((a[15] * b[5] - a[1] * b[3]) - (a[8] * b[1] + a[12] * b[3])))).0,
+                ((((a[6] * b[5] + a[13] * b[1]) - a[3] * b[3]) - ((a[7] * b[4] + a[12] * b[2]) + a[15] * b[0]))).0,
+                ((((a[7] * b[3] + a[11] * b[2]) - a[3] * b[4]) - ((a[5] * b[5] + a[13] * b[0]) + a[15] * b[1]))).0,
+                ((((a[5] * b[4] + a[12] * b[0]) - a[3] * b[5]) - ((a[6] * b[3] + a[11] * b[1]) + a[15] * b[2]))).0,
+                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) + ((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]))).0,
+                ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) - ((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]))).0,
             ],
         }
     }
@@ -9373,6 +11049,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multiv
                 ((((a[25] * b[3] - a[16] * b[0]) - a[17] * b[1]) - (a[18] * b[2] + a[31] * b[3]))).0,
                 ((((a[25] * b[4] + a[31] * b[4]) - a[19] * b[0]) - (a[20] * b[1] + a[21] * b[2]))).0,
                 ((((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2]) + (a[29] * b[4] - a[30] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+                ((((a[3] * b[1] + a[4] * b[3]) + a[18] * b[4]) - ((a[2] * b[2] + a[17] * b[5]) + a[25] * b[0]))).0,
+                ((((a[1] * b[2] + a[4] * b[4]) + a[16] * b[5]) - ((a[3] * b[0] + a[18] * b[3]) + a[25] * b[1]))).0,
+                ((((a[2] * b[0] + a[4] * b[5]) + a[17] * b[3]) - ((a[1] * b[1] + a[16] * b[4]) + a[25] * b[2]))).0,
+                (-((a[16] * b[0] + a[17] * b[1]) + a[18] * b[2])).0,
+                (((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + (a[22] * b[3] + a[23] * b[4])) + ((a[24] * b[5] - a[19] * b[0]) - (a[20] * b[1] + a[21] * b[2])))).0,
+                ((((a[0] * b[0] + a[8] * b[1]) + a[10] * b[5]) + ((a[29] * b[3] - a[7] * b[2]) - a[11] * b[4]))).0,
+                ((((a[0] * b[1] + a[6] * b[2]) + a[11] * b[3]) + ((a[29] * b[4] - a[8] * b[0]) - a[9] * b[5]))).0,
+                ((((a[0] * b[2] + a[7] * b[0]) + a[9] * b[4]) + ((a[29] * b[5] - a[6] * b[1]) - a[10] * b[3]))).0,
+                (((a[11] * b[1] - a[10] * b[2]) - a[29] * b[0])).0,
+                (((a[9] * b[2] - a[11] * b[0]) - a[29] * b[1])).0,
+                (((a[10] * b[0] - a[9] * b[1]) - a[29] * b[2])).0,
+                (((((a[0] * b[3] + a[8] * b[4]) + a[14] * b[1]) + (a[15] * b[3] + a[28] * b[4])) - ((a[7] * b[5] + a[13] * b[2]) + (a[27] * b[5] + a[30] * b[0])))).0,
+                (((((a[0] * b[4] + a[6] * b[5]) + a[12] * b[2]) + (a[15] * b[4] + a[26] * b[5])) - ((a[8] * b[3] + a[14] * b[0]) + (a[28] * b[3] + a[30] * b[1])))).0,
+                (((((a[0] * b[5] + a[7] * b[3]) + a[13] * b[0]) + (a[15] * b[5] + a[27] * b[3])) - ((a[6] * b[4] + a[12] * b[1]) + (a[26] * b[4] + a[30] * b[2])))).0,
+                (-(((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) + ((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2]))).0,
+                (((a[4] * b[0] + a[18] * b[1]) - a[17] * b[2])).0,
+                (((a[4] * b[1] + a[16] * b[2]) - a[18] * b[0])).0,
+                (((a[4] * b[2] + a[17] * b[0]) - a[16] * b[1])).0,
+                (((((a[2] * b[5] + a[5] * b[0]) + a[21] * b[1]) + (a[23] * b[5] + a[25] * b[3])) + ((a[31] * b[3] - a[3] * b[4]) - (a[20] * b[2] + a[24] * b[4])))).0,
+                (((((a[3] * b[3] + a[5] * b[1]) + a[19] * b[2]) + (a[24] * b[3] + a[25] * b[4])) + ((a[31] * b[4] - a[1] * b[5]) - (a[21] * b[0] + a[22] * b[5])))).0,
+                (((((a[1] * b[4] + a[5] * b[2]) + a[20] * b[0]) + (a[22] * b[4] + a[25] * b[5])) + ((a[31] * b[5] - a[2] * b[3]) - (a[19] * b[1] + a[23] * b[3])))).0,
+                ((((a[17] * b[5] + a[24] * b[1]) - a[4] * b[3]) - ((a[18] * b[4] + a[23] * b[2]) + a[31] * b[0]))).0,
+                ((((a[18] * b[3] + a[22] * b[2]) - a[4] * b[4]) - ((a[16] * b[5] + a[24] * b[0]) + a[31] * b[1]))).0,
+                ((((a[16] * b[4] + a[23] * b[0]) - a[4] * b[5]) - ((a[17] * b[3] + a[22] * b[1]) + a[31] * b[2]))).0,
+                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) + ((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5]))).0,
+                ((((a[11] * b[4] + a[15] * b[0]) + a[28] * b[1]) - ((a[10] * b[5] + a[27] * b[2]) + a[29] * b[3]))).0,
+                ((((a[9] * b[5] + a[15] * b[1]) + a[26] * b[2]) - ((a[11] * b[3] + a[28] * b[0]) + a[29] * b[4]))).0,
+                ((((a[10] * b[3] + a[15] * b[2]) + a[27] * b[0]) - ((a[9] * b[4] + a[26] * b[1]) + a[29] * b[5]))).0,
+                (((a[9] * b[0] + a[10] * b[1]) + a[11] * b[2])).0,
+                (((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) + (a[12] * b[0] + a[13] * b[1])) + ((a[14] * b[2] + a[26] * b[3]) + (a[27] * b[4] + a[28] * b[5])))).0,
+                ((((a[22] * b[0] + a[23] * b[1]) + a[24] * b[2]) - ((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5]))).0,
             ],
         }
     }
@@ -9770,6 +11491,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Sca
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Scalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -10013,6 +11753,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vec
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                (a[3] * b[0]).0,
+                (a[3] * b[1]).0,
+                (a[3] * b[2]).0,
+                (((a[1] * b[5] + a[4] * b[0]) - a[2] * b[4])).0,
+                (((a[2] * b[3] + a[4] * b[1]) - a[0] * b[5])).0,
+                (((a[0] * b[4] + a[4] * b[2]) - a[1] * b[3])).0,
+                (-a[3] * b[3]).0,
+                (-a[3] * b[4]).0,
+                (-a[3] * b[5]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -10200,6 +11963,222 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                (a[0] * b[3]).0,
+                (a[1] * b[3]).0,
+                (a[2] * b[3]).0,
+                (((a[0] * b[4] + a[5] * b[1]) - a[4] * b[2])).0,
+                (((a[1] * b[4] + a[3] * b[2]) - a[5] * b[0])).0,
+                (((a[2] * b[4] + a[4] * b[0]) - a[3] * b[1])).0,
+                (-a[3] * b[3]).0,
+                (-a[4] * b[3]).0,
+                (-a[5] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Quadvector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Bivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Quadvector {
+            c: [
+                (((a[0] * b[9] + a[4] * b[5]) - a[5] * b[4])).0,
+                (((a[1] * b[9] + a[5] * b[3]) - a[3] * b[5])).0,
+                (((a[2] * b[9] + a[3] * b[4]) - a[4] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Pseudoscalar {
+            c: [
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[10] + a[4] * b[6]) - a[5] * b[5])).0,
+                (((a[1] * b[10] + a[5] * b[4]) - a[3] * b[6])).0,
+                (((a[2] * b[10] + a[3] * b[5]) - a[4] * b[4])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                ((((a[0] * b[7] + a[1] * b[8]) + a[2] * b[9]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[1] * b[3]).0,
+                (a[2] * b[3]).0,
+                (((a[0] * b[4] + a[5] * b[1]) - a[4] * b[2])).0,
+                (((a[1] * b[4] + a[3] * b[2]) - a[5] * b[0])).0,
+                (((a[2] * b[4] + a[4] * b[0]) - a[3] * b[1])).0,
+                (-a[3] * b[3]).0,
+                (-a[4] * b[3]).0,
+                (-a[5] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13]) - ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[4]).0,
+                (a[1] * b[4]).0,
+                (a[2] * b[4]).0,
+                (((a[0] * b[5] + a[5] * b[2]) - a[4] * b[3])).0,
+                (((a[1] * b[5] + a[3] * b[3]) - a[5] * b[1])).0,
+                (((a[2] * b[5] + a[4] * b[1]) - a[3] * b[2])).0,
+                (-a[3] * b[4]).0,
+                (-a[4] * b[4]).0,
+                (-a[5] * b[4]).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[15] + a[4] * b[11]) - a[5] * b[10])).0,
+                (((a[1] * b[15] + a[5] * b[9]) - a[3] * b[11])).0,
+                (((a[2] * b[15] + a[3] * b[10]) - a[4] * b[9])).0,
+                (((a[0] * b[9] + a[1] * b[10]) + a[2] * b[11])).0,
+                ((((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14]) + ((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]))).0,
+                ((((a[0] * b[22] + a[1] * b[23]) + a[2] * b[24]) - ((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -10241,6 +12220,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Biv
                 (((a[4] * b[4] + a[9] * b[1]) - a[7] * b[3])).0,
                 (((a[5] * b[4] + a[9] * b[2]) - a[8] * b[3])).0,
                 (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Quadvector {
+            c: [
+                (((a[5] * b[4] + a[9] * b[0]) - a[4] * b[5])).0,
+                (((a[3] * b[5] + a[9] * b[1]) - a[5] * b[3])).0,
+                (((a[4] * b[3] + a[9] * b[2]) - a[3] * b[4])).0,
+                (((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
             ],
         }
     }
@@ -10446,6 +12443,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Tri
                 (((a[2] * b[4] + a[6] * b[1]) - (a[5] * b[3] + a[7] * b[0]))).0,
                 (((a[9] * b[3] - a[0] * b[0]) - (a[1] * b[1] + a[2] * b[2]))).0,
                 (((a[9] * b[4] - a[3] * b[0]) - (a[4] * b[1] + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Pseudoscalar {
+            c: [
+                ((((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
             ],
         }
     }
@@ -10819,6 +12830,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mot
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Motor<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -11086,6 +13118,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Eve
                 (((a[6] * b[4] + a[10] * b[2]) - a[9] * b[3])).0,
                 (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) + (a[14] * b[4] - a[15] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[6] * b[4] + a[10] * b[0]) - a[5] * b[5])).0,
+                (((a[4] * b[5] + a[10] * b[1]) - a[6] * b[3])).0,
+                (((a[5] * b[3] + a[10] * b[2]) - a[4] * b[4])).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[7] * b[0] + a[8] * b[1]) + a[9] * b[2]))).0,
             ],
         }
     }
@@ -11371,6 +13432,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[3] * b[1]).0,
+                (a[3] * b[2]).0,
+                (((a[1] * b[5] + a[4] * b[0]) - a[2] * b[4])).0,
+                (((a[2] * b[3] + a[4] * b[1]) - a[0] * b[5])).0,
+                (((a[0] * b[4] + a[4] * b[2]) - a[1] * b[3])).0,
+                (-a[3] * b[3]).0,
+                (-a[3] * b[4]).0,
+                (-a[3] * b[5]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) - ((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -11649,6 +13739,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
                 (((a[25] * b[3] - a[16] * b[0]) - (a[17] * b[1] + a[18] * b[2]))).0,
                 (((a[25] * b[4] - a[19] * b[0]) - (a[20] * b[1] + a[21] * b[2]))).0,
                 ((((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2]) + (a[29] * b[4] - a[30] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[4] * b[0]).0,
+                (a[4] * b[1]).0,
+                (a[4] * b[2]).0,
+                (((a[2] * b[5] + a[5] * b[0]) - a[3] * b[4])).0,
+                (((a[3] * b[3] + a[5] * b[1]) - a[1] * b[5])).0,
+                (((a[1] * b[4] + a[5] * b[2]) - a[2] * b[3])).0,
+                (-a[4] * b[3]).0,
+                (-a[4] * b[4]).0,
+                (-a[4] * b[5]).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[11] * b[4] + a[15] * b[0]) - a[10] * b[5])).0,
+                (((a[9] * b[5] + a[15] * b[1]) - a[11] * b[3])).0,
+                (((a[10] * b[3] + a[15] * b[2]) - a[9] * b[4])).0,
+                (((a[9] * b[0] + a[10] * b[1]) + a[11] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) + ((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2]))).0,
+                ((((a[22] * b[0] + a[23] * b[1]) + a[24] * b[2]) - ((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5]))).0,
             ],
         }
     }
@@ -12148,6 +14283,141 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Quadvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[1] * b[2] - a[2] * b[1]) - a[3] * b[3])).0,
+                (((a[2] * b[0] - a[0] * b[2]) - a[4] * b[3])).0,
+                (((a[0] * b[1] - a[1] * b[0]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Pseudoscalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[1] * b[13] - a[2] * b[12]) - a[3] * b[14])).0,
+                (((a[2] * b[11] - a[0] * b[13]) - a[4] * b[14])).0,
+                (((a[0] * b[12] - a[1] * b[11]) - a[5] * b[14])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Odd<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                ((((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13]) - ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                (a[0] * b[15]).0,
+                (a[1] * b[15]).0,
+                (a[2] * b[15]).0,
+                (a[3] * b[15]).0,
+                (a[4] * b[15]).0,
+                (a[5] * b[15]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[0] * b[22] + a[1] * b[23]) + a[2] * b[24]) - ((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18]))).0,
+                (((a[1] * b[28] - a[2] * b[27]) - a[3] * b[29])).0,
+                (((a[2] * b[26] - a[0] * b[28]) - a[4] * b[29])).0,
+                (((a[0] * b[27] - a[1] * b[26]) - a[5] * b[29])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[3] * b[26] + a[4] * b[27]) + a[5] * b[28])).0,
+                (a[0] * b[31]).0,
+                (a[1] * b[31]).0,
+                (a[2] * b[31]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[31]).0,
+                (a[4] * b[31]).0,
+                (a[5] * b[31]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -12308,6 +14578,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
             ],
         }
     }
@@ -12524,6 +14808,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Quadv
         Scalar {
             c: [
                 ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) + (a[3] * b[4] - a[4] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[1] * b[2] + a[3] * b[3]) - a[2] * b[1])).0,
+                (((a[2] * b[0] + a[3] * b[4]) - a[0] * b[2])).0,
+                (((a[0] * b[1] + a[3] * b[5]) - a[1] * b[0])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
             ],
         }
     }
@@ -12770,6 +15072,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseud
                 (a[0] * b[2]).0,
                 (a[0] * b[3]).0,
                 (a[0] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
             ],
         }
     }
@@ -13189,6 +15510,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Even<
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Even<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[12] * b[2] + a[14] * b[3]) - a[13] * b[1])).0,
+                (((a[13] * b[0] + a[14] * b[4]) - a[11] * b[2])).0,
+                (((a[11] * b[1] + a[14] * b[5]) - a[12] * b[0])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[11] * b[3] + a[12] * b[4]) + a[13] * b[5])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Even<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -13453,6 +15792,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S
                 (a[15] * b[2]).0,
                 (a[15] * b[3]).0,
                 (a[15] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) - ((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]))).0,
+                (a[15] * b[0]).0,
+                (a[15] * b[1]).0,
+                (a[15] * b[2]).0,
+                (a[15] * b[3]).0,
+                (a[15] * b[4]).0,
+                (a[15] * b[5]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -13735,6 +16095,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multi
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn vee(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[22] * b[0] + a[23] * b[1]) + a[24] * b[2]) - ((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5]))).0,
+                (((a[27] * b[2] + a[29] * b[3]) - a[28] * b[1])).0,
+                (((a[28] * b[0] + a[29] * b[4]) - a[26] * b[2])).0,
+                (((a[26] * b[1] + a[29] * b[5]) - a[27] * b[0])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[26] * b[3] + a[27] * b[4]) + a[28] * b[5])).0,
+                (a[31] * b[0]).0,
+                (a[31] * b[1]).0,
+                (a[31] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[31] * b[3]).0,
+                (a[31] * b[4]).0,
+                (a[31] * b[5]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -14149,6 +16554,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Scalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -14365,6 +16789,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -14574,6 +17016,236 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for V
                 (-a[3] * b[31]).0,
                 (a[4] * b[31]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[4] * b[2] - a[0] * b[9]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[9]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[9]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[4] * b[3]).0,
+                (a[5] * b[3]).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
+                (((a[4] * b[2] - a[0] * b[4]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[4]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-a[0] * b[7]).0,
+                (-a[1] * b[7]).0,
+                (-a[2] * b[7]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+                (a[3] * b[14]).0,
+                (a[4] * b[14]).0,
+                (a[5] * b[14]).0,
+                (-a[0] * b[14]).0,
+                (-a[1] * b[14]).0,
+                (-a[2] * b[14]).0,
+                (((a[4] * b[13] - a[0] * b[15]) - a[5] * b[12])).0,
+                (((a[5] * b[11] - a[1] * b[15]) - a[3] * b[13])).0,
+                (((a[3] * b[12] - a[2] * b[15]) - a[4] * b[11])).0,
+                (-((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[4] * b[7] - a[0] * b[14]) - a[5] * b[6])).0,
+                (((a[5] * b[5] - a[1] * b[14]) - a[3] * b[7])).0,
+                (((a[3] * b[6] - a[2] * b[14]) - a[4] * b[5])).0,
+                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                ((((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13]) - ((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[15]).0,
+                (a[4] * b[15]).0,
+                (a[5] * b[15]).0,
+                (-a[0] * b[15]).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+                (((a[4] * b[18] - a[0] * b[25]) - a[5] * b[17])).0,
+                (((a[5] * b[16] - a[1] * b[25]) - a[3] * b[18])).0,
+                (((a[3] * b[17] - a[2] * b[25]) - a[4] * b[16])).0,
+                (-((a[0] * b[16] + a[1] * b[17]) + a[2] * b[18])).0,
+                ((((a[3] * b[22] + a[4] * b[23]) + a[5] * b[24]) - ((a[0] * b[19] + a[1] * b[20]) + a[2] * b[21]))).0,
+                (a[3] * b[29]).0,
+                (a[4] * b[29]).0,
+                (a[5] * b[29]).0,
+                (-a[0] * b[29]).0,
+                (-a[1] * b[29]).0,
+                (-a[2] * b[29]).0,
+                (((a[4] * b[28] - a[0] * b[30]) - a[5] * b[27])).0,
+                (((a[5] * b[26] - a[1] * b[30]) - a[3] * b[28])).0,
+                (((a[3] * b[27] - a[2] * b[30]) - a[4] * b[26])).0,
+                (-((a[0] * b[26] + a[1] * b[27]) + a[2] * b[28])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[31]).0,
+                (a[4] * b[31]).0,
+                (a[5] * b[31]).0,
+                (-a[0] * b[31]).0,
+                (-a[1] * b[31]).0,
+                (-a[2] * b[31]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
             ],
         }
     }
@@ -15143,6 +17815,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Motor<
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Motor<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -15415,6 +18108,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Even<S
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Even<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Even<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -15664,6 +18378,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1
         Scalar {
             c: [
                 ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - (a[3] * b[4] + a[4] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
             ],
         }
     }
@@ -15943,6 +18675,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multiv
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn lc(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+                (((a[3] * b[1] + a[4] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] + a[4] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] + a[4] * b[5]) - a[1] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -16508,6 +19285,176 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for V
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Even<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[4])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[4])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[4])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -16544,6 +19491,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivect
                 (((a[1] * b[0] - a[0] * b[1]) - (a[5] * b[4] + a[8] * b[3]))).0,
                 (-((a[3] * b[0] + a[4] * b[1]) + (a[5] * b[2] + a[9] * b[3]))).0,
                 (((a[9] * b[4] - a[6] * b[0]) - (a[7] * b[1] + a[8] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
             ],
         }
     }
@@ -16725,6 +19686,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Trivec
                 (((a[5] * b[0] + a[7] * b[4]) - a[3] * b[2])).0,
                 (((a[3] * b[1] + a[8] * b[4]) - a[4] * b[0])).0,
                 (((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[4] - a[1] * b[5]) - a[9] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[9] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[9] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
             ],
         }
     }
@@ -16930,6 +19909,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Quadve
                 ((a[0] * b[2] - a[2] * b[0])).0,
                 ((a[1] * b[0] - a[0] * b[1])).0,
                 (-(a[3] * b[4] + a[4] * b[3])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[3] * b[4]).0,
+                (a[3] * b[5]).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
+                (((a[2] * b[4] - a[1] * b[5]) - a[4] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[4] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[4] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
             ],
         }
     }
@@ -17149,6 +20151,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudo
                 (a[0] * b[2]).0,
                 (-a[0] * b[3]).0,
                 (a[0] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -17414,6 +20439,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Motor<
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-a[7] * b[0]).0,
+                (-a[7] * b[1]).0,
+                (-a[7] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Motor<S1, T> {
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -17635,6 +20681,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Even<S
                 ((a[11] * b[2] - a[13] * b[0])).0,
                 ((a[12] * b[0] - a[11] * b[1])).0,
                 (-(a[14] * b[4] + a[15] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                (a[14] * b[3]).0,
+                (a[14] * b[4]).0,
+                (a[14] * b[5]).0,
+                (-a[14] * b[0]).0,
+                (-a[14] * b[1]).0,
+                (-a[14] * b[2]).0,
+                (((a[13] * b[4] - a[12] * b[5]) - a[15] * b[0])).0,
+                (((a[11] * b[5] - a[13] * b[3]) - a[15] * b[1])).0,
+                (((a[12] * b[3] - a[11] * b[4]) - a[15] * b[2])).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -17887,6 +20962,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1
                 (a[15] * b[2]).0,
                 (-a[15] * b[3]).0,
                 (a[15] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[7] * b[4] - a[6] * b[5]) - a[14] * b[0])).0,
+                (((a[5] * b[5] - a[7] * b[3]) - a[14] * b[1])).0,
+                (((a[6] * b[3] - a[5] * b[4]) - a[14] * b[2])).0,
+                (-((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                ((((a[11] * b[3] + a[12] * b[4]) + a[13] * b[5]) - ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[15] * b[3]).0,
+                (a[15] * b[4]).0,
+                (a[15] * b[5]).0,
+                (-a[15] * b[0]).0,
+                (-a[15] * b[1]).0,
+                (-a[15] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -18198,6 +21302,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multiv
                 (a[31] * b[2]).0,
                 (-a[31] * b[3]).0,
                 (a[31] * b[4]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+                (((a[18] * b[4] - a[17] * b[5]) - a[25] * b[0])).0,
+                (((a[16] * b[5] - a[18] * b[3]) - a[25] * b[1])).0,
+                (((a[17] * b[3] - a[16] * b[4]) - a[25] * b[2])).0,
+                (-((a[16] * b[0] + a[17] * b[1]) + a[18] * b[2])).0,
+                ((((a[22] * b[3] + a[23] * b[4]) + a[24] * b[5]) - ((a[19] * b[0] + a[20] * b[1]) + a[21] * b[2]))).0,
+                (a[29] * b[3]).0,
+                (a[29] * b[4]).0,
+                (a[29] * b[5]).0,
+                (-a[29] * b[0]).0,
+                (-a[29] * b[1]).0,
+                (-a[29] * b[2]).0,
+                (((a[28] * b[4] - a[27] * b[5]) - a[30] * b[0])).0,
+                (((a[26] * b[5] - a[28] * b[3]) - a[30] * b[1])).0,
+                (((a[27] * b[3] - a[26] * b[4]) - a[30] * b[2])).0,
+                (-((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[31] * b[3]).0,
+                (a[31] * b[4]).0,
+                (a[31] * b[5]).0,
+                (-a[31] * b[0]).0,
+                (-a[31] * b[1]).0,
+                (-a[31] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -18565,6 +21714,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scala
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Scalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -18799,6 +21967,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vecto
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -19013,6 +22199,259 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[4] * b[2] - a[0] * b[9]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[9]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[9]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[4] * b[3]).0,
+                (a[5] * b[3]).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
+                (((a[4] * b[2] - a[0] * b[4]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[4]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                ((a[3] * b[0] - a[0] * b[7])).0,
+                ((a[4] * b[0] - a[1] * b[7])).0,
+                ((a[5] * b[0] - a[2] * b[7])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+                ((a[0] * b[0] + a[3] * b[14])).0,
+                ((a[1] * b[0] + a[4] * b[14])).0,
+                ((a[2] * b[0] + a[5] * b[14])).0,
+                (-a[0] * b[14]).0,
+                (-a[1] * b[14]).0,
+                (-a[2] * b[14]).0,
+                (((a[3] * b[0] + a[4] * b[13]) - (a[0] * b[15] + a[5] * b[12]))).0,
+                (((a[4] * b[0] + a[5] * b[11]) - (a[1] * b[15] + a[3] * b[13]))).0,
+                (((a[3] * b[12] + a[5] * b[0]) - (a[2] * b[15] + a[4] * b[11]))).0,
+                (-((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                ((((a[2] * b[1] + a[4] * b[7]) - a[0] * b[14]) - ((a[1] * b[2] + a[3] * b[3]) + a[5] * b[6]))).0,
+                ((((a[0] * b[2] + a[5] * b[5]) - a[1] * b[14]) - ((a[2] * b[0] + a[3] * b[7]) + a[4] * b[3]))).0,
+                ((((a[1] * b[0] + a[3] * b[6]) - a[0] * b[1]) - ((a[2] * b[14] + a[4] * b[5]) + a[5] * b[3]))).0,
+                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                (((((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13]) - (a[0] * b[8] + a[1] * b[9])) - ((a[2] * b[10] + a[3] * b[0]) + (a[4] * b[1] + a[5] * b[2])))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[15]).0,
+                (a[4] * b[15]).0,
+                (a[5] * b[15]).0,
+                (-a[0] * b[15]).0,
+                (-a[1] * b[15]).0,
+                (-a[2] * b[15]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+                ((((a[2] * b[2] + a[4] * b[18]) - a[0] * b[25]) - ((a[1] * b[3] + a[3] * b[4]) + a[5] * b[17]))).0,
+                ((((a[0] * b[3] + a[5] * b[16]) - a[1] * b[25]) - ((a[2] * b[1] + a[3] * b[18]) + a[4] * b[4]))).0,
+                ((((a[1] * b[1] + a[3] * b[17]) - a[0] * b[2]) - ((a[2] * b[25] + a[4] * b[16]) + a[5] * b[4]))).0,
+                (-((a[0] * b[16] + a[1] * b[17]) + a[2] * b[18])).0,
+                (((((a[3] * b[22] + a[4] * b[23]) + a[5] * b[24]) - (a[0] * b[19] + a[1] * b[20])) - ((a[2] * b[21] + a[3] * b[1]) + (a[4] * b[2] + a[5] * b[3])))).0,
+                ((a[0] * b[0] + a[3] * b[29])).0,
+                ((a[1] * b[0] + a[4] * b[29])).0,
+                ((a[2] * b[0] + a[5] * b[29])).0,
+                (-a[0] * b[29]).0,
+                (-a[1] * b[29]).0,
+                (-a[2] * b[29]).0,
+                (((a[3] * b[0] + a[4] * b[28]) - (a[0] * b[30] + a[5] * b[27]))).0,
+                (((a[4] * b[0] + a[5] * b[26]) - (a[1] * b[30] + a[3] * b[28]))).0,
+                (((a[3] * b[27] + a[5] * b[0]) - (a[2] * b[30] + a[4] * b[26]))).0,
+                (-((a[0] * b[26] + a[1] * b[27]) + a[2] * b[28])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[31]).0,
+                (a[4] * b[31]).0,
+                (a[5] * b[31]).0,
+                (-a[0] * b[31]).0,
+                (-a[1] * b[31]).0,
+                (-a[2] * b[31]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -19049,6 +22488,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivec
                 (((a[1] * b[0] - a[0] * b[1]) - (a[5] * b[4] + a[8] * b[3]))).0,
                 (-((a[3] * b[0] + a[4] * b[1]) + (a[5] * b[2] + a[9] * b[3]))).0,
                 (((a[9] * b[4] - a[6] * b[0]) - (a[7] * b[1] + a[8] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
             ],
         }
     }
@@ -19310,6 +22763,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Trive
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[4] - a[1] * b[5]) - a[9] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[9] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[9] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -19556,6 +23027,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Quadv
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[3] * b[4]).0,
+                (a[3] * b[5]).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
+                (((a[2] * b[4] - a[1] * b[5]) - a[4] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[4] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[4] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Quadvector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -19788,6 +23282,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseud
                 (a[0] * b[2]).0,
                 (-a[0] * b[3]).0,
                 (a[0] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -20047,6 +23564,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Motor
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-a[7] * b[3]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                ((a[0] * b[3] - a[7] * b[0])).0,
+                ((a[0] * b[4] - a[7] * b[1])).0,
+                ((a[0] * b[5] - a[7] * b[2])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -20345,6 +23883,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Even<
                 ((a[11] * b[2] - a[13] * b[0])).0,
                 ((a[12] * b[0] - a[11] * b[1])).0,
                 (-(a[14] * b[4] + a[15] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                ((a[0] * b[0] + a[14] * b[3])).0,
+                ((a[0] * b[1] + a[14] * b[4])).0,
+                ((a[0] * b[2] + a[14] * b[5])).0,
+                (-a[14] * b[0]).0,
+                (-a[14] * b[1]).0,
+                (-a[14] * b[2]).0,
+                (((a[0] * b[3] + a[13] * b[4]) - (a[12] * b[5] + a[15] * b[0]))).0,
+                (((a[0] * b[4] + a[11] * b[5]) - (a[13] * b[3] + a[15] * b[1]))).0,
+                (((a[0] * b[5] + a[12] * b[3]) - (a[11] * b[4] + a[15] * b[2]))).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -20652,6 +24219,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S
                 (a[15] * b[2]).0,
                 (-a[15] * b[3]).0,
                 (a[15] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                ((((a[2] * b[1] + a[3] * b[3]) + a[7] * b[4]) - ((a[1] * b[2] + a[6] * b[5]) + a[14] * b[0]))).0,
+                ((((a[0] * b[2] + a[3] * b[4]) + a[5] * b[5]) - ((a[2] * b[0] + a[7] * b[3]) + a[14] * b[1]))).0,
+                ((((a[1] * b[0] + a[3] * b[5]) + a[6] * b[3]) - ((a[0] * b[1] + a[5] * b[4]) + a[14] * b[2]))).0,
+                (-((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                (((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + (a[11] * b[3] + a[12] * b[4])) + ((a[13] * b[5] - a[8] * b[0]) - (a[9] * b[1] + a[10] * b[2])))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[15] * b[3]).0,
+                (a[15] * b[4]).0,
+                (a[15] * b[5]).0,
+                (-a[15] * b[0]).0,
+                (-a[15] * b[1]).0,
+                (-a[15] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -20989,6 +24585,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multi
                 (a[31] * b[2]).0,
                 (-a[31] * b[3]).0,
                 (a[31] * b[4]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn dot(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+                ((((a[3] * b[1] + a[4] * b[3]) + a[18] * b[4]) - ((a[2] * b[2] + a[17] * b[5]) + a[25] * b[0]))).0,
+                ((((a[1] * b[2] + a[4] * b[4]) + a[16] * b[5]) - ((a[3] * b[0] + a[18] * b[3]) + a[25] * b[1]))).0,
+                ((((a[2] * b[0] + a[4] * b[5]) + a[17] * b[3]) - ((a[1] * b[1] + a[16] * b[4]) + a[25] * b[2]))).0,
+                (-((a[16] * b[0] + a[17] * b[1]) + a[18] * b[2])).0,
+                (((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + (a[22] * b[3] + a[23] * b[4])) + ((a[24] * b[5] - a[19] * b[0]) - (a[20] * b[1] + a[21] * b[2])))).0,
+                ((a[0] * b[0] + a[29] * b[3])).0,
+                ((a[0] * b[1] + a[29] * b[4])).0,
+                ((a[0] * b[2] + a[29] * b[5])).0,
+                (-a[29] * b[0]).0,
+                (-a[29] * b[1]).0,
+                (-a[29] * b[2]).0,
+                (((a[0] * b[3] + a[28] * b[4]) - (a[27] * b[5] + a[30] * b[0]))).0,
+                (((a[0] * b[4] + a[26] * b[5]) - (a[28] * b[3] + a[30] * b[1]))).0,
+                (((a[0] * b[5] + a[27] * b[3]) - (a[26] * b[4] + a[30] * b[2]))).0,
+                (-((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[31] * b[3]).0,
+                (a[31] * b[4]).0,
+                (a[31] * b[5]).0,
+                (-a[31] * b[0]).0,
+                (-a[31] * b[1]).0,
+                (-a[31] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -21453,6 +25094,90 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Motor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Bivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -21663,6 +25388,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Motor<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -21742,6 +25481,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
         Scalar {
             c: [
                 (a[0] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Twist<S2, T>> for Even<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
             ],
         }
     }
@@ -21915,6 +25668,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Scalar {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T>> for Multivector<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -22045,6 +25812,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 ((a[1] * b[4] - a[4] * b[1])).0,
                 ((a[2] * b[4] - a[4] * b[2])).0,
                 ((a[3] * b[4] - a[4] * b[3])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
             ],
         }
     }
@@ -22241,6 +26026,229 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Vector {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                (((a[2] * b[4] + a[5] * b[1]) - (a[1] * b[5] + a[4] * b[2]))).0,
+                (((a[0] * b[5] + a[3] * b[2]) - (a[2] * b[3] + a[5] * b[0]))).0,
+                (((a[1] * b[3] + a[4] * b[0]) - (a[0] * b[4] + a[3] * b[1]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                ((a[2] * b[4] - a[1] * b[5])).0,
+                ((a[0] * b[5] - a[2] * b[3])).0,
+                ((a[1] * b[3] - a[0] * b[4])).0,
+                ((((a[2] * b[7] + a[5] * b[1]) - a[1] * b[8]) - (a[3] * b[9] + a[4] * b[2]))).0,
+                ((((a[0] * b[8] + a[3] * b[2]) - a[2] * b[6]) - (a[4] * b[9] + a[5] * b[0]))).0,
+                ((((a[1] * b[6] + a[4] * b[0]) - a[0] * b[7]) - (a[3] * b[1] + a[5] * b[9]))).0,
+                (((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((((a[2] * b[4] + a[4] * b[8]) - a[1] * b[5]) - (a[3] * b[9] + a[5] * b[7]))).0,
+                ((((a[0] * b[5] + a[5] * b[6]) - a[2] * b[3]) - (a[3] * b[8] + a[4] * b[9]))).0,
+                ((((a[1] * b[3] + a[3] * b[7]) - a[0] * b[4]) - (a[4] * b[6] + a[5] * b[9]))).0,
+                (((a[2] * b[7] + a[4] * b[2]) - (a[1] * b[8] + a[5] * b[1]))).0,
+                (((a[0] * b[8] + a[5] * b[0]) - (a[2] * b[6] + a[3] * b[2]))).0,
+                (((a[1] * b[6] + a[3] * b[1]) - (a[0] * b[7] + a[4] * b[0]))).0,
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Quadvector {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[4] * b[3]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[5] * b[3]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Motor<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                ((a[2] * b[2] - a[1] * b[3])).0,
+                ((a[0] * b[3] - a[2] * b[1])).0,
+                ((a[1] * b[1] - a[0] * b[2])).0,
+                (((a[2] * b[5] + a[5] * b[2]) - (a[1] * b[6] + a[4] * b[3]))).0,
+                (((a[0] * b[6] + a[3] * b[3]) - (a[2] * b[4] + a[5] * b[1]))).0,
+                (((a[1] * b[4] + a[4] * b[1]) - (a[0] * b[5] + a[3] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[2] * b[2] + a[4] * b[6]) - (a[1] * b[3] + a[5] * b[5]))).0,
+                (((a[0] * b[3] + a[5] * b[4]) - (a[2] * b[1] + a[3] * b[6]))).0,
+                (((a[1] * b[1] + a[3] * b[5]) - (a[0] * b[2] + a[4] * b[4]))).0,
+                ((a[2] * b[5] - a[1] * b[6])).0,
+                ((a[0] * b[6] - a[2] * b[4])).0,
+                ((a[1] * b[4] - a[0] * b[5])).0,
+                ((((a[2] * b[8] + a[5] * b[2]) - a[1] * b[9]) - (a[3] * b[10] + a[4] * b[3]))).0,
+                ((((a[0] * b[9] + a[3] * b[3]) - a[2] * b[7]) - (a[4] * b[10] + a[5] * b[1]))).0,
+                ((((a[1] * b[7] + a[4] * b[1]) - a[0] * b[8]) - (a[3] * b[2] + a[5] * b[10]))).0,
+                (((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6])).0,
+                (((a[2] * b[12] + a[3] * b[14]) - a[1] * b[13])).0,
+                (((a[0] * b[13] + a[4] * b[14]) - a[2] * b[11])).0,
+                (((a[1] * b[11] + a[5] * b[14]) - a[0] * b[12])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[4] * b[3])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[5] * b[3])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                ((a[2] * b[6] - a[1] * b[7])).0,
+                ((a[0] * b[7] - a[2] * b[5])).0,
+                ((a[1] * b[5] - a[0] * b[6])).0,
+                ((((a[2] * b[9] + a[4] * b[13]) - a[1] * b[10]) - (a[3] * b[14] + a[5] * b[12]))).0,
+                ((((a[0] * b[10] + a[5] * b[11]) - a[2] * b[8]) - (a[3] * b[13] + a[4] * b[14]))).0,
+                ((((a[1] * b[8] + a[3] * b[12]) - a[0] * b[9]) - (a[4] * b[11] + a[5] * b[14]))).0,
+                (((a[2] * b[12] + a[4] * b[7]) - (a[1] * b[13] + a[5] * b[6]))).0,
+                (((a[0] * b[13] + a[5] * b[5]) - (a[2] * b[11] + a[3] * b[7]))).0,
+                (((a[1] * b[11] + a[3] * b[6]) - (a[0] * b[12] + a[4] * b[5]))).0,
+                (-((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[4])).0,
+                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[4])).0,
+                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[4])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
+                (((a[2] * b[7] + a[4] * b[11]) - (a[1] * b[8] + a[5] * b[10]))).0,
+                (((a[0] * b[8] + a[5] * b[9]) - (a[2] * b[6] + a[3] * b[11]))).0,
+                (((a[1] * b[6] + a[3] * b[10]) - (a[0] * b[7] + a[4] * b[9]))).0,
+                ((a[2] * b[10] - a[1] * b[11])).0,
+                ((a[0] * b[11] - a[2] * b[9])).0,
+                ((a[1] * b[9] - a[0] * b[10])).0,
+                ((((a[2] * b[13] + a[5] * b[7]) - a[1] * b[14]) - (a[3] * b[15] + a[4] * b[8]))).0,
+                ((((a[0] * b[14] + a[3] * b[8]) - a[2] * b[12]) - (a[4] * b[15] + a[5] * b[6]))).0,
+                ((((a[1] * b[12] + a[4] * b[6]) - a[0] * b[13]) - (a[3] * b[7] + a[5] * b[15]))).0,
+                (((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11])).0,
+                ((a[2] * b[17] - a[1] * b[18])).0,
+                ((a[0] * b[18] - a[2] * b[16])).0,
+                ((a[1] * b[16] - a[0] * b[17])).0,
+                ((((a[2] * b[20] + a[4] * b[24]) - a[1] * b[21]) - (a[3] * b[25] + a[5] * b[23]))).0,
+                ((((a[0] * b[21] + a[5] * b[22]) - a[2] * b[19]) - (a[3] * b[24] + a[4] * b[25]))).0,
+                ((((a[1] * b[19] + a[3] * b[23]) - a[0] * b[20]) - (a[4] * b[22] + a[5] * b[25]))).0,
+                (((a[2] * b[23] + a[4] * b[18]) - (a[1] * b[24] + a[5] * b[17]))).0,
+                (((a[0] * b[24] + a[5] * b[16]) - (a[2] * b[22] + a[3] * b[18]))).0,
+                (((a[1] * b[22] + a[3] * b[17]) - (a[0] * b[23] + a[4] * b[16]))).0,
+                (-((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18])).0,
+                (((a[2] * b[27] + a[3] * b[29]) - a[1] * b[28])).0,
+                (((a[0] * b[28] + a[4] * b[29]) - a[2] * b[26])).0,
+                (((a[1] * b[26] + a[5] * b[29]) - a[0] * b[27])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (-((a[3] * b[26] + a[4] * b[27]) + a[5] * b[28])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Bivector<S1, T> {
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -22254,6 +26262,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 (((a[1] * b[0] - a[0] * b[1]) - (a[5] * b[4] + a[8] * b[3]))).0,
                 (-((a[3] * b[0] + a[4] * b[1]) + (a[5] * b[2] + a[9] * b[3]))).0,
                 (((a[9] * b[4] - a[6] * b[0]) - (a[7] * b[1] + a[8] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
+                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                ((a[5] * b[1] - a[4] * b[2])).0,
+                ((a[3] * b[2] - a[5] * b[0])).0,
+                ((a[4] * b[0] - a[3] * b[1])).0,
+                ((((a[2] * b[4] + a[8] * b[1]) + a[9] * b[3]) - (a[1] * b[5] + a[7] * b[2]))).0,
+                ((((a[0] * b[5] + a[6] * b[2]) + a[9] * b[4]) - (a[2] * b[3] + a[8] * b[0]))).0,
+                ((((a[1] * b[3] + a[7] * b[0]) + a[9] * b[5]) - (a[0] * b[4] + a[6] * b[1]))).0,
+                (-((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5])).0,
             ],
         }
     }
@@ -22473,6 +26504,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                ((a[2] * b[1] - a[1] * b[2])).0,
+                ((a[0] * b[2] - a[2] * b[0])).0,
+                ((a[1] * b[0] - a[0] * b[1])).0,
+                ((((a[5] * b[1] + a[7] * b[5]) + a[9] * b[3]) - (a[4] * b[2] + a[8] * b[4]))).0,
+                ((((a[3] * b[2] + a[8] * b[3]) + a[9] * b[4]) - (a[5] * b[0] + a[6] * b[5]))).0,
+                ((((a[4] * b[0] + a[6] * b[4]) + a[9] * b[5]) - (a[3] * b[1] + a[7] * b[3]))).0,
+                (((a[1] * b[5] + a[8] * b[1]) - (a[2] * b[4] + a[7] * b[2]))).0,
+                (((a[2] * b[3] + a[6] * b[2]) - (a[0] * b[5] + a[8] * b[0]))).0,
+                (((a[0] * b[4] + a[7] * b[0]) - (a[1] * b[3] + a[6] * b[1]))).0,
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -22687,6 +26741,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 ((a[0] * b[2] - a[2] * b[0])).0,
                 ((a[1] * b[0] - a[0] * b[1])).0,
                 (-(a[3] * b[4] + a[4] * b[3])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Quadvector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Quadvector {
+            c: [
+                (((a[2] * b[1] - a[1] * b[2]) - a[3] * b[3])).0,
+                (((a[0] * b[2] - a[2] * b[0]) - a[3] * b[4])).0,
+                (((a[1] * b[0] - a[0] * b[1]) - a[3] * b[5])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
             ],
         }
     }
@@ -22912,6 +26984,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                ((a[3] * b[1] - a[2] * b[2])).0,
+                ((a[1] * b[2] - a[3] * b[0])).0,
+                ((a[2] * b[0] - a[1] * b[1])).0,
+                (((a[3] * b[4] + a[6] * b[1]) - (a[2] * b[5] + a[5] * b[2]))).0,
+                (((a[1] * b[5] + a[4] * b[2]) - (a[3] * b[3] + a[6] * b[0]))).0,
+                (((a[2] * b[3] + a[5] * b[0]) - (a[1] * b[4] + a[4] * b[1]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> for Motor<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -23000,23 +27091,19 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for Motor<S1, T> {
-    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn commutator(self, rhs: Motor<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+    fn commutator(self, rhs: Motor<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        Bivector {
+        Twist {
             c: [
                 ((a[3] * b[2] - a[2] * b[3])).0,
                 ((a[1] * b[3] - a[3] * b[1])).0,
                 ((a[2] * b[1] - a[1] * b[2])).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (((a[3] * b[5] + a[6] * b[2]) - (a[2] * b[6] + a[5] * b[3]))).0,
                 (((a[1] * b[6] + a[4] * b[3]) - (a[3] * b[4] + a[6] * b[1]))).0,
                 (((a[2] * b[4] + a[5] * b[1]) - (a[1] * b[5] + a[4] * b[2]))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -23149,6 +27236,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 ((a[12] * b[0] - a[11] * b[1])).0,
                 (-(a[14] * b[4] + a[15] * b[3])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[3] * b[1] + a[5] * b[5]) - (a[2] * b[2] + a[6] * b[4]))).0,
+                (((a[1] * b[2] + a[6] * b[3]) - (a[3] * b[0] + a[4] * b[5]))).0,
+                (((a[2] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[5] * b[3]))).0,
+                ((a[6] * b[1] - a[5] * b[2])).0,
+                ((a[4] * b[2] - a[6] * b[0])).0,
+                ((a[5] * b[0] - a[4] * b[1])).0,
+                ((((a[3] * b[4] + a[9] * b[1]) + a[10] * b[3]) - (a[2] * b[5] + a[8] * b[2]))).0,
+                ((((a[1] * b[5] + a[7] * b[2]) + a[10] * b[4]) - (a[3] * b[3] + a[9] * b[0]))).0,
+                ((((a[2] * b[3] + a[8] * b[0]) + a[10] * b[5]) - (a[1] * b[4] + a[7] * b[1]))).0,
+                (-((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5])).0,
+                (((a[13] * b[1] - a[12] * b[2]) - a[14] * b[3])).0,
+                (((a[11] * b[2] - a[13] * b[0]) - a[14] * b[4])).0,
+                (((a[12] * b[0] - a[11] * b[1]) - a[14] * b[5])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[11] * b[3] + a[12] * b[4]) + a[13] * b[5])).0,
             ],
         }
     }
@@ -23397,6 +27513,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 (((a[7] * b[4] + a[11] * b[1]) - (a[10] * b[3] + a[12] * b[0]))).0,
                 (((a[14] * b[3] - a[5] * b[0]) - (a[6] * b[1] + a[7] * b[2]))).0,
                 (((a[14] * b[4] - a[8] * b[0]) - (a[9] * b[1] + a[10] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[1] + a[3] * b[3]) - a[1] * b[2])).0,
+                (((a[0] * b[2] + a[3] * b[4]) - a[2] * b[0])).0,
+                (((a[1] * b[0] + a[3] * b[5]) - a[0] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                ((a[7] * b[1] - a[6] * b[2])).0,
+                ((a[5] * b[2] - a[7] * b[0])).0,
+                ((a[6] * b[0] - a[5] * b[1])).0,
+                ((((a[10] * b[1] + a[12] * b[5]) + a[14] * b[3]) - (a[9] * b[2] + a[13] * b[4]))).0,
+                ((((a[8] * b[2] + a[13] * b[3]) + a[14] * b[4]) - (a[10] * b[0] + a[11] * b[5]))).0,
+                ((((a[9] * b[0] + a[11] * b[4]) + a[14] * b[5]) - (a[8] * b[1] + a[12] * b[3]))).0,
+                (((a[6] * b[5] + a[13] * b[1]) - (a[7] * b[4] + a[12] * b[2]))).0,
+                (((a[7] * b[3] + a[11] * b[2]) - (a[5] * b[5] + a[13] * b[0]))).0,
+                (((a[5] * b[4] + a[12] * b[0]) - (a[6] * b[3] + a[11] * b[1]))).0,
+                (((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -23660,6 +27805,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
                 (((a[18] * b[4] + a[22] * b[1]) - (a[21] * b[3] + a[23] * b[0]))).0,
                 (((a[25] * b[3] - a[16] * b[0]) - (a[17] * b[1] + a[18] * b[2]))).0,
                 (((a[25] * b[4] - a[19] * b[0]) - (a[20] * b[1] + a[21] * b[2]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[3] * b[1] + a[4] * b[3]) - a[2] * b[2])).0,
+                (((a[1] * b[2] + a[4] * b[4]) - a[3] * b[0])).0,
+                (((a[2] * b[0] + a[4] * b[5]) - a[1] * b[1])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
+                (((a[8] * b[1] + a[10] * b[5]) - (a[7] * b[2] + a[11] * b[4]))).0,
+                (((a[6] * b[2] + a[11] * b[3]) - (a[8] * b[0] + a[9] * b[5]))).0,
+                (((a[7] * b[0] + a[9] * b[4]) - (a[6] * b[1] + a[10] * b[3]))).0,
+                ((a[11] * b[1] - a[10] * b[2])).0,
+                ((a[9] * b[2] - a[11] * b[0])).0,
+                ((a[10] * b[0] - a[9] * b[1])).0,
+                ((((a[8] * b[4] + a[14] * b[1]) + a[15] * b[3]) - (a[7] * b[5] + a[13] * b[2]))).0,
+                ((((a[6] * b[5] + a[12] * b[2]) + a[15] * b[4]) - (a[8] * b[3] + a[14] * b[0]))).0,
+                ((((a[7] * b[3] + a[13] * b[0]) + a[15] * b[5]) - (a[6] * b[4] + a[12] * b[1]))).0,
+                (-((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5])).0,
+                ((a[18] * b[1] - a[17] * b[2])).0,
+                ((a[16] * b[2] - a[18] * b[0])).0,
+                ((a[17] * b[0] - a[16] * b[1])).0,
+                ((((a[21] * b[1] + a[23] * b[5]) + a[25] * b[3]) - (a[20] * b[2] + a[24] * b[4]))).0,
+                ((((a[19] * b[2] + a[24] * b[3]) + a[25] * b[4]) - (a[21] * b[0] + a[22] * b[5]))).0,
+                ((((a[20] * b[0] + a[22] * b[4]) + a[25] * b[5]) - (a[19] * b[1] + a[23] * b[3]))).0,
+                (((a[17] * b[5] + a[24] * b[1]) - (a[18] * b[4] + a[23] * b[2]))).0,
+                (((a[18] * b[3] + a[22] * b[2]) - (a[16] * b[5] + a[24] * b[0]))).0,
+                (((a[16] * b[4] + a[23] * b[0]) - (a[17] * b[3] + a[22] * b[1]))).0,
+                (((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5])).0,
+                (((a[28] * b[1] - a[27] * b[2]) - a[29] * b[3])).0,
+                (((a[26] * b[2] - a[28] * b[0]) - a[29] * b[4])).0,
+                (((a[27] * b[0] - a[26] * b[1]) - a[29] * b[5])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[26] * b[3] + a[27] * b[4]) + a[28] * b[5])).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -24013,6 +28203,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Scalar<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Scalar<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -24247,6 +28456,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Vector<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                (a[3] * b[0]).0,
+                (a[3] * b[1]).0,
+                (a[3] * b[2]).0,
+                (((a[1] * b[5] + a[4] * b[0]) - a[2] * b[4])).0,
+                (((a[2] * b[3] + a[4] * b[1]) - a[0] * b[5])).0,
+                (((a[0] * b[4] + a[4] * b[2]) - a[1] * b[3])).0,
+                (-a[3] * b[3]).0,
+                (-a[3] * b[4]).0,
+                (-a[3] * b[5]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Vector<S1, T> {
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -24457,6 +28689,297 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Twist<S1, T> {
+    type Output = Twist<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Twist {
+            c: [
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                (a[0] * b[3]).0,
+                (a[1] * b[3]).0,
+                (a[2] * b[3]).0,
+                (((a[0] * b[4] + a[5] * b[1]) - a[4] * b[2])).0,
+                (((a[1] * b[4] + a[3] * b[2]) - a[5] * b[0])).0,
+                (((a[2] * b[4] + a[4] * b[0]) - a[3] * b[1])).0,
+                (-a[3] * b[3]).0,
+                (-a[4] * b[3]).0,
+                (-a[5] * b[3]).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[0] * b[9] + a[4] * b[5]) - a[5] * b[4])).0,
+                (((a[1] * b[9] + a[5] * b[3]) - a[3] * b[5])).0,
+                (((a[2] * b[9] + a[3] * b[4]) - a[4] * b[3])).0,
+                (((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5])).0,
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[4] * b[2] - a[0] * b[9]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[9]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[9]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Quadvector<S2, T>> for Twist<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[4] * b[3]).0,
+                (a[5] * b[3]).0,
+                (-a[0] * b[3]).0,
+                (-a[1] * b[3]).0,
+                (-a[2] * b[3]).0,
+                (((a[4] * b[2] - a[0] * b[4]) - a[5] * b[1])).0,
+                (((a[5] * b[0] - a[1] * b[4]) - a[3] * b[2])).0,
+                (((a[3] * b[1] - a[2] * b[4]) - a[4] * b[0])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Twist<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[3] * b[0]).0,
+                (a[4] * b[0]).0,
+                (a[5] * b[0]).0,
+                (-a[0] * b[0]).0,
+                (-a[1] * b[0]).0,
+                (-a[2] * b[0]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Motor<S2, T>> for Twist<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (a[0] * b[0]).0,
+                (a[1] * b[0]).0,
+                (a[2] * b[0]).0,
+                ((a[3] * b[0] - a[0] * b[7])).0,
+                ((a[4] * b[0] - a[1] * b[7])).0,
+                ((a[5] * b[0] - a[2] * b[7])).0,
+                ((((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> for Twist<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]) - ((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]))).0,
+                ((a[0] * b[0] + a[3] * b[14])).0,
+                ((a[1] * b[0] + a[4] * b[14])).0,
+                ((a[2] * b[0] + a[5] * b[14])).0,
+                (-a[0] * b[14]).0,
+                (-a[1] * b[14]).0,
+                (-a[2] * b[14]).0,
+                (((a[3] * b[0] + a[4] * b[13]) - (a[0] * b[15] + a[5] * b[12]))).0,
+                (((a[4] * b[0] + a[5] * b[11]) - (a[1] * b[15] + a[3] * b[13]))).0,
+                (((a[3] * b[12] + a[5] * b[0]) - (a[2] * b[15] + a[4] * b[11]))).0,
+                (-((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13])).0,
+                (((a[0] * b[10] + a[4] * b[6]) - a[5] * b[5])).0,
+                (((a[1] * b[10] + a[5] * b[4]) - a[3] * b[6])).0,
+                (((a[2] * b[10] + a[3] * b[5]) - a[4] * b[4])).0,
+                (((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6])).0,
+                ((((a[0] * b[7] + a[1] * b[8]) + a[2] * b[9]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> for Twist<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[4] * b[7] - a[0] * b[14]) - a[5] * b[6])).0,
+                (((a[5] * b[5] - a[1] * b[14]) - a[3] * b[7])).0,
+                (((a[3] * b[6] - a[2] * b[14]) - a[4] * b[5])).0,
+                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
+                ((((a[3] * b[11] + a[4] * b[12]) + a[5] * b[13]) - ((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]))).0,
+                (a[0] * b[3]).0,
+                (a[1] * b[3]).0,
+                (a[2] * b[3]).0,
+                (((a[0] * b[4] + a[3] * b[15]) + (a[5] * b[1] - a[4] * b[2]))).0,
+                (((a[1] * b[4] + a[3] * b[2]) + (a[4] * b[15] - a[5] * b[0]))).0,
+                (((a[2] * b[4] + a[4] * b[0]) + (a[5] * b[15] - a[3] * b[1]))).0,
+                (-(a[0] * b[15] + a[3] * b[3])).0,
+                (-(a[1] * b[15] + a[4] * b[3])).0,
+                (-(a[2] * b[15] + a[5] * b[3])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[0] * b[11] + a[1] * b[12]) + a[2] * b[13]) - ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S2, T>> for Twist<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[3] * b[9] + a[4] * b[10]) + a[5] * b[11]) - ((a[0] * b[6] + a[1] * b[7]) + a[2] * b[8]))).0,
+                (((a[4] * b[18] - a[0] * b[25]) - a[5] * b[17])).0,
+                (((a[5] * b[16] - a[1] * b[25]) - a[3] * b[18])).0,
+                (((a[3] * b[17] - a[2] * b[25]) - a[4] * b[16])).0,
+                (-((a[0] * b[16] + a[1] * b[17]) + a[2] * b[18])).0,
+                ((((a[3] * b[22] + a[4] * b[23]) + a[5] * b[24]) - ((a[0] * b[19] + a[1] * b[20]) + a[2] * b[21]))).0,
+                ((a[0] * b[0] + a[3] * b[29])).0,
+                ((a[1] * b[0] + a[4] * b[29])).0,
+                ((a[2] * b[0] + a[5] * b[29])).0,
+                (-a[0] * b[29]).0,
+                (-a[1] * b[29]).0,
+                (-a[2] * b[29]).0,
+                (((a[3] * b[0] + a[4] * b[28]) - (a[0] * b[30] + a[5] * b[27]))).0,
+                (((a[4] * b[0] + a[5] * b[26]) - (a[1] * b[30] + a[3] * b[28]))).0,
+                (((a[3] * b[27] + a[5] * b[0]) - (a[2] * b[30] + a[4] * b[26]))).0,
+                (-((a[0] * b[26] + a[1] * b[27]) + a[2] * b[28])).0,
+                (a[0] * b[4]).0,
+                (a[1] * b[4]).0,
+                (a[2] * b[4]).0,
+                (((a[0] * b[5] + a[3] * b[31]) + (a[5] * b[2] - a[4] * b[3]))).0,
+                (((a[1] * b[5] + a[3] * b[3]) + (a[4] * b[31] - a[5] * b[1]))).0,
+                (((a[2] * b[5] + a[4] * b[1]) + (a[5] * b[31] - a[3] * b[2]))).0,
+                (-(a[0] * b[31] + a[3] * b[4])).0,
+                (-(a[1] * b[31] + a[4] * b[4])).0,
+                (-(a[2] * b[31] + a[5] * b[4])).0,
+                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
+                (((a[0] * b[15] + a[4] * b[11]) - a[5] * b[10])).0,
+                (((a[1] * b[15] + a[5] * b[9]) - a[3] * b[11])).0,
+                (((a[2] * b[15] + a[3] * b[10]) - a[4] * b[9])).0,
+                (((a[0] * b[9] + a[1] * b[10]) + a[2] * b[11])).0,
+                ((((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14]) + ((a[3] * b[6] + a[4] * b[7]) + a[5] * b[8]))).0,
+                ((((a[0] * b[22] + a[1] * b[23]) + a[2] * b[24]) - ((a[3] * b[16] + a[4] * b[17]) + a[5] * b[18]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Bivector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -24498,6 +29021,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (((a[4] * b[4] + a[9] * b[1]) - a[7] * b[3])).0,
                 (((a[5] * b[4] + a[9] * b[2]) - a[8] * b[3])).0,
                 (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Bivector<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]) - ((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((a[5] * b[4] + a[9] * b[0]) - a[4] * b[5])).0,
+                (((a[3] * b[5] + a[9] * b[1]) - a[5] * b[3])).0,
+                (((a[4] * b[3] + a[9] * b[2]) - a[3] * b[4])).0,
+                (((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2])).0,
+                ((((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
             ],
         }
     }
@@ -24785,6 +29337,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Trivector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[2] * b[4] - a[1] * b[5]) - a[9] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[9] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[9] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) - ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]) - ((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -25053,6 +29634,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Quadvector<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Bivector {
+            c: [
+                (a[3] * b[3]).0,
+                (a[3] * b[4]).0,
+                (a[3] * b[5]).0,
+                (-a[3] * b[0]).0,
+                (-a[3] * b[1]).0,
+                (-a[3] * b[2]).0,
+                (((a[2] * b[4] - a[1] * b[5]) - a[4] * b[0])).0,
+                (((a[0] * b[5] - a[2] * b[3]) - a[4] * b[1])).0,
+                (((a[1] * b[3] - a[0] * b[4]) - a[4] * b[2])).0,
+                (-((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Quadvector<S1, T> {
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -25290,6 +29894,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (a[0] * b[2]).0,
                 (-a[0] * b[3]).0,
                 (a[0] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Trivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (a[0] * b[3]).0,
+                (a[0] * b[4]).0,
+                (a[0] * b[5]).0,
+                (-a[0] * b[0]).0,
+                (-a[0] * b[1]).0,
+                (-a[0] * b[2]).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -25550,6 +30177,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (-a[6] * b[3]).0,
                 (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 (-a[7] * b[3]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Motor<S1, T> {
+    type Output = Motor<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Motor {
+            c: [
+                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (a[0] * b[0]).0,
+                (a[0] * b[1]).0,
+                (a[0] * b[2]).0,
+                ((a[0] * b[3] - a[7] * b[0])).0,
+                ((a[0] * b[4] - a[7] * b[1])).0,
+                ((a[0] * b[5] - a[7] * b[2])).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
             ],
         }
     }
@@ -25848,6 +30496,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (((a[6] * b[4] + a[10] * b[2]) - a[9] * b[3])).0,
                 (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
                 ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) + (a[14] * b[4] - a[15] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Even {
+            c: [
+                ((((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
+                ((a[0] * b[0] + a[14] * b[3])).0,
+                ((a[0] * b[1] + a[14] * b[4])).0,
+                ((a[0] * b[2] + a[14] * b[5])).0,
+                (-a[14] * b[0]).0,
+                (-a[14] * b[1]).0,
+                (-a[14] * b[2]).0,
+                (((a[0] * b[3] + a[13] * b[4]) - (a[12] * b[5] + a[15] * b[0]))).0,
+                (((a[0] * b[4] + a[11] * b[5]) - (a[13] * b[3] + a[15] * b[1]))).0,
+                (((a[0] * b[5] + a[12] * b[3]) - (a[11] * b[4] + a[15] * b[2]))).0,
+                (-((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2])).0,
+                (((a[6] * b[4] + a[10] * b[0]) - a[5] * b[5])).0,
+                (((a[4] * b[5] + a[10] * b[1]) - a[6] * b[3])).0,
+                (((a[5] * b[3] + a[10] * b[2]) - a[4] * b[4])).0,
+                (((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2])).0,
+                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[7] * b[0] + a[8] * b[1]) + a[9] * b[2]))).0,
             ],
         }
     }
@@ -26154,6 +30831,35 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (a[15] * b[2]).0,
                 (-a[15] * b[3]).0,
                 (a[15] * b[4]).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Odd {
+            c: [
+                (((a[7] * b[4] - a[6] * b[5]) - a[14] * b[0])).0,
+                (((a[5] * b[5] - a[7] * b[3]) - a[14] * b[1])).0,
+                (((a[6] * b[3] - a[5] * b[4]) - a[14] * b[2])).0,
+                (-((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
+                ((((a[11] * b[3] + a[12] * b[4]) + a[13] * b[5]) - ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                (a[3] * b[0]).0,
+                (a[3] * b[1]).0,
+                (a[3] * b[2]).0,
+                (((a[1] * b[5] + a[4] * b[0]) + (a[15] * b[3] - a[2] * b[4]))).0,
+                (((a[2] * b[3] + a[4] * b[1]) + (a[15] * b[4] - a[0] * b[5]))).0,
+                (((a[0] * b[4] + a[4] * b[2]) + (a[15] * b[5] - a[1] * b[3]))).0,
+                (-(a[3] * b[3] + a[15] * b[0])).0,
+                (-(a[3] * b[4] + a[15] * b[1])).0,
+                (-(a[3] * b[5] + a[15] * b[2])).0,
+                (((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2])).0,
+                ((((a[11] * b[0] + a[12] * b[1]) + a[13] * b[2]) - ((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]))).0,
             ],
         }
     }
@@ -26492,6 +31198,51 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
                 (-a[31] * b[3]).0,
                 (a[31] * b[4]).0,
                 ((((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2]) + (a[29] * b[4] - a[30] * b[3]))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Twist<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn anticommutator(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        Multivector {
+            c: [
+                ((((a[9] * b[3] + a[10] * b[4]) + a[11] * b[5]) - ((a[6] * b[0] + a[7] * b[1]) + a[8] * b[2]))).0,
+                (((a[18] * b[4] - a[17] * b[5]) - a[25] * b[0])).0,
+                (((a[16] * b[5] - a[18] * b[3]) - a[25] * b[1])).0,
+                (((a[17] * b[3] - a[16] * b[4]) - a[25] * b[2])).0,
+                (-((a[16] * b[0] + a[17] * b[1]) + a[18] * b[2])).0,
+                ((((a[22] * b[3] + a[23] * b[4]) + a[24] * b[5]) - ((a[19] * b[0] + a[20] * b[1]) + a[21] * b[2]))).0,
+                ((a[0] * b[0] + a[29] * b[3])).0,
+                ((a[0] * b[1] + a[29] * b[4])).0,
+                ((a[0] * b[2] + a[29] * b[5])).0,
+                (-a[29] * b[0]).0,
+                (-a[29] * b[1]).0,
+                (-a[29] * b[2]).0,
+                (((a[0] * b[3] + a[28] * b[4]) - (a[27] * b[5] + a[30] * b[0]))).0,
+                (((a[0] * b[4] + a[26] * b[5]) - (a[28] * b[3] + a[30] * b[1]))).0,
+                (((a[0] * b[5] + a[27] * b[3]) - (a[26] * b[4] + a[30] * b[2]))).0,
+                (-((a[26] * b[0] + a[27] * b[1]) + a[28] * b[2])).0,
+                (a[4] * b[0]).0,
+                (a[4] * b[1]).0,
+                (a[4] * b[2]).0,
+                (((a[2] * b[5] + a[5] * b[0]) + (a[31] * b[3] - a[3] * b[4]))).0,
+                (((a[3] * b[3] + a[5] * b[1]) + (a[31] * b[4] - a[1] * b[5]))).0,
+                (((a[1] * b[4] + a[5] * b[2]) + (a[31] * b[5] - a[2] * b[3]))).0,
+                (-(a[4] * b[3] + a[31] * b[0])).0,
+                (-(a[4] * b[4] + a[31] * b[1])).0,
+                (-(a[4] * b[5] + a[31] * b[2])).0,
+                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
+                (((a[11] * b[4] + a[15] * b[0]) - a[10] * b[5])).0,
+                (((a[9] * b[5] + a[15] * b[1]) - a[11] * b[3])).0,
+                (((a[10] * b[3] + a[15] * b[2]) - a[9] * b[4])).0,
+                (((a[9] * b[0] + a[10] * b[1]) + a[11] * b[2])).0,
+                ((((a[6] * b[3] + a[7] * b[4]) + a[8] * b[5]) + ((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2]))).0,
+                ((((a[22] * b[0] + a[23] * b[1]) + a[24] * b[2]) - ((a[16] * b[3] + a[17] * b[4]) + a[18] * b[5]))).0,
             ],
         }
     }
@@ -26944,6 +31695,51 @@ impl<S: gx::Slots, T: gx::Coef> gx::Undual for Vector<S, T> {
     fn undual(self) -> Quadvector<S, T> {
         let a = self.c;
         Quadvector { c: [a[0], a[1], a[2], a[4], (-gx::SlotArr::<S, T>(a[3])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Reverse for Twist<S, T> {
+    type Output = Twist<S, T>;
+    #[inline]
+    fn reverse(self) -> Twist<S, T> {
+        let a = self.c;
+        Twist { c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Involute for Twist<S, T> {
+    type Output = Twist<S, T>;
+    #[inline]
+    fn involute(self) -> Twist<S, T> {
+        let a = self.c;
+        Twist { c: [a[0], a[1], a[2], a[3], a[4], a[5]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Conjugate for Twist<S, T> {
+    type Output = Twist<S, T>;
+    #[inline]
+    fn conjugate(self) -> Twist<S, T> {
+        let a = self.c;
+        Twist { c: [(-gx::SlotArr::<S, T>(a[0])).0, (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Dual for Twist<S, T> {
+    type Output = Trivector<S, T>;
+    #[inline]
+    fn dual(self) -> Trivector<S, T> {
+        let a = self.c;
+        Trivector { c: [(-gx::SlotArr::<S, T>(a[3])).0, (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2], S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Undual for Twist<S, T> {
+    type Output = Trivector<S, T>;
+    #[inline]
+    fn undual(self) -> Trivector<S, T> {
+        let a = self.c;
+        Trivector { c: [(-gx::SlotArr::<S, T>(a[3])).0, (-gx::SlotArr::<S, T>(a[4])).0, (-gx::SlotArr::<S, T>(a[5])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[0], a[1], a[2], S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
@@ -27785,6 +32581,481 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Vector, T, 21>> for Vector
     fn from(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 21>) -> Self {
         let m = p.m;
         Vector { c: [[m[0], m[1], m[2], m[3], m[4]], [m[1], m[5], m[6], m[7], m[8]], [m[2], m[6], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16]], [m[17], m[18], m[19], m[20], m[15]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for Vector<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = t0 - t1;
+        let t3 = v[2] * v[2];
+        let t4 = t0 + t1;
+        let t5 = t4 - t3;
+        let t6 = v[0] * xv[1];
+        let t7 = v[1] * xv[0];
+        let t8 = t6 - t7;
+        let t9 = v[0] * xv[2];
+        let t10 = v[2] * xv[0];
+        let t11 = t9 - t10;
+        let t12 = v[0] * xv[3];
+        let t13 = v[1] * xv[4];
+        let t14 = t12 + t13;
+        let t15 = v[0] * xv[4];
+        let t16 = v[4] * xv[2];
+        let t17 = t15 + t16;
+        let t18 = v[0] * xv[5];
+        let t19 = v[4] * xv[1];
+        let t20 = t18 - t19;
+        let t21 = v[1] * xv[2];
+        let t22 = v[3] * xv[3];
+        let t23 = t21 - t22;
+        let t24 = t3 - t2;
+        let t25 = t2 + t3;
+        let t26 = v[0] * v[1];
+        let t27 = v[2] * v[3];
+        let t28 = v[0] * v[2];
+        let t29 = v[1] * v[2];
+        let t30 = v[1] * v[3];
+        let t31 = v[3] * v[3];
+        let t32 = xv[1] * t26;
+        let t33 = xv[2] * t28;
+        let t34 = xv[5] * t30;
+        let t35 = xv[4] * t27;
+        let t36 = v[3] * v[4];
+        let t37 = xv[0] * t36;
+        let t38 = xv[0] * t24;
+        let t39 = xv[0] * t26;
+        let t40 = v[2] * t23;
+        let t41 = v[3] * t20;
+        let t42 = xv[1] * t25;
+        let t43 = xv[0] * t28;
+        let t44 = xv[1] * t29;
+        let t45 = xv[3] * t30;
+        let t46 = v[3] * t17;
+        let t47 = xv[2] * t5;
+        let t48 = xv[1] * t27;
+        let t49 = v[3] * t23;
+        let t50 = xv[4] * t31;
+        let t51 = v[3] * t11;
+        let t52 = xv[5] * t31;
+        let t53 = v[3] * t8;
+        let t54 = v[1] * t17;
+        let t55 = v[2] * t20;
+        let t56 = xv[3] * t24;
+        let t57 = xv[3] * t26;
+        let t58 = xv[5] * t29;
+        let t59 = v[4] * t11;
+        let t60 = xv[4] * t25;
+        let t61 = v[2] * t14;
+        let t62 = v[4] * t8;
+        let t63 = xv[5] * t5;
+        let t64 = xv[5] * t27;
+        let t65 = v[3] * t14;
+        let t66 = t32 + t33;
+        let t67 = t35 + t66;
+        let t68 = t34 + t37;
+        let t69 = t67 - t68;
+        let t70 = t69 * T::from_i64(2);
+        let t71 = t70 - t38;
+        let t72 = t39 + t40;
+        let t73 = t41 + t72;
+        let t74 = t73 * T::from_i64(2);
+        let t75 = t74 - t42;
+        let t76 = t43 + t44;
+        let t77 = t45 - t46;
+        let t78 = t76 + t77;
+        let t79 = t78 * T::from_i64(2);
+        let t80 = t79 - t47;
+        let t81 = t48 - t49;
+        let t82 = t81 * T::from_i64(2);
+        let t83 = t50 + t51;
+        let t84 = t83 * T::from_i64(2);
+        let t85 = t52 - t53;
+        let t86 = t85 * T::from_i64(2);
+        let t87 = t54 + t55;
+        let t88 = t87 * T::from_i64(2);
+        let t89 = t56 - t88;
+        let t90 = t59 - t57;
+        let t91 = t90 - t58;
+        let t92 = t91 * T::from_i64(2);
+        let t93 = t60 + t92;
+        let t94 = t61 + t62;
+        let t95 = t94 * T::from_i64(2);
+        let t96 = t63 - t95;
+        let t97 = t64 + t65;
+        let t98 = t97 * T::from_i64(2);
+        let t99 = -t98;
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t71, t75, t80, t82, t84, t86, t89, t93, t96, t99]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[3];
+        let m4 = v[1] * v[3];
+        let m5 = v[2] * v[3];
+        let m6 = v[0] * v[1];
+        let m7 = v[0] * v[2];
+        let m8 = v[1] * v[2];
+        let m9 = v[3] * v[3];
+        let m10 = v[3] * v[4];
+        let m11 = v[0] * v[4];
+        let m12 = v[1] * v[4];
+        let m13 = v[2] * v[4];
+        let m14 = m0 - m1;
+        let m15 = m0 + m1;
+        let m16 = m10 * T::from_i64(2);
+        let m17 = m2 + m16;
+        let m18 = m2 - m15;
+        let m19 = m14 - m17;
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m14 + m17;
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m22;
+        let m29 = m3 * T::from_i64(2);
+        let m30 = m18 - m16;
+        let m31 = -m29;
+        let m32 = m9 * T::from_i64(2);
+        let m33 = m13 * T::from_i64(2);
+        let m34 = m12 * T::from_i64(2);
+        let m35 = -m34;
+        let m36 = m2 - m14;
+        let m37 = -m20;
+        let m38 = -m21;
+        let m39 = -m33;
+        let m40 = m11 * T::from_i64(2);
+        let m41 = m2 + m14;
+        let m42 = -m27;
+        let m43 = -m40;
+        let m44 = -m18;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m19) + x[1].scale(m20) + x[2].scale(m21) + x[4].scale(m22) + x[5].scale(m24)).0, (x[0].scale(m20) + x[1].scale(m26) + x[2].scale(m27) + x[3].scale(m28) + x[5].scale(m29)).0, (x[0].scale(m21) + x[1].scale(m27) + x[2].scale(m30) + x[3].scale(m23) + x[4].scale(m31)).0, (x[1].scale(m22) + x[2].scale(m24) + x[3].scale(m32)).0, (x[0].scale(m28) + x[2].scale(m29) + x[4].scale(m32)).0, (x[0].scale(m23) + x[1].scale(m31) + x[5].scale(m32)).0, (x[1].scale(m33) + x[2].scale(m35) + x[3].scale(m36) + x[4].scale(m37) + x[5].scale(m38)).0, (x[0].scale(m39) + x[2].scale(m40) + x[3].scale(m37) + x[4].scale(m41) + x[5].scale(m42)).0, (x[0].scale(m34) + x[1].scale(m43) + x[3].scale(m38) + x[4].scale(m42) + x[5].scale(m44)).0, (x[3].scale(m31) + x[4].scale(m24) + x[5].scale(m28)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for Vector<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Twist, T, 25>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Twist, T, 25> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[3];
+        let m4 = v[1] * v[3];
+        let m5 = v[2] * v[3];
+        let m6 = v[0] * v[1];
+        let m7 = v[0] * v[2];
+        let m8 = v[1] * v[2];
+        let m9 = v[3] * v[3];
+        let m10 = v[3] * v[4];
+        let m11 = v[0] * v[4];
+        let m12 = v[1] * v[4];
+        let m13 = v[2] * v[4];
+        let m14 = m0 - m1;
+        let m15 = m0 + m1;
+        let m16 = m10 * T::from_i64(2);
+        let m17 = m2 + m16;
+        let m18 = m2 - m15;
+        let m19 = m14 - m17;
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m14 + m17;
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m22;
+        let m29 = m3 * T::from_i64(2);
+        let m30 = m18 - m16;
+        let m31 = -m29;
+        let m32 = m9 * T::from_i64(2);
+        let m33 = m13 * T::from_i64(2);
+        let m34 = m12 * T::from_i64(2);
+        let m35 = -m34;
+        let m36 = m2 - m14;
+        let m37 = -m20;
+        let m38 = -m21;
+        let m39 = -m33;
+        let m40 = m11 * T::from_i64(2);
+        let m41 = m2 + m14;
+        let m42 = -m27;
+        let m43 = -m40;
+        let m44 = -m18;
+        gx::Prepared::from_entries([m19, m20, m21, m22, m24, m26, m27, m28, m29, m30, m23, m31, m32, m33, m35, m36, m37, m38, m39, m40, m41, m42, m34, m43, m44])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<Vector, Twist, T, 25> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4])).0, (x[0].scale(m[1]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[2]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[12])).0, (x[0].scale(m[7]) + x[2].scale(m[8]) + x[4].scale(m[12])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[5].scale(m[12])).0, (x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[2].scale(m[19]) + x[3].scale(m[16]) + x[4].scale(m[20]) + x[5].scale(m[21])).0, (x[0].scale(m[22]) + x[1].scale(m[23]) + x[3].scale(m[17]) + x[4].scale(m[21]) + x[5].scale(m[24])).0, (x[3].scale(m[11]) + x[4].scale(m[4]) + x[5].scale(m[7])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Twist, T, 25>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Twist, T, 25>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], T::zero(), m[3], m[4]], [m[1], m[5], m[6], m[7], T::zero(), m[8]], [m[2], m[6], m[9], m[10], m[11], T::zero()], [T::zero(), m[3], m[4], m[12], T::zero(), T::zero()], [m[7], T::zero(), m[8], T::zero(), m[12], T::zero()], [m[10], m[11], T::zero(), T::zero(), T::zero(), m[12]], [T::zero(), m[13], m[14], m[15], m[16], m[17]], [m[18], T::zero(), m[19], m[16], m[20], m[21]], [m[22], m[23], T::zero(), m[17], m[21], m[24]], [T::zero(), T::zero(), T::zero(), m[11], m[4], m[7]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.into_inner().c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] * xv[0];
+        let t1 = v[1] * xv[1];
+        let t2 = v[2] * xv[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        let t5 = v[0] * xv[1];
+        let t6 = v[1] * xv[0];
+        let t7 = t5 - t6;
+        let t8 = v[0] * xv[2];
+        let t9 = v[2] * xv[0];
+        let t10 = t8 - t9;
+        let t11 = v[0] * v[0];
+        let t12 = v[1] * v[1];
+        let t13 = t11 - t12;
+        let t14 = v[0] * xv[3];
+        let t15 = v[1] * xv[4];
+        let t16 = t14 + t15;
+        let t17 = v[1] * xv[2];
+        let t18 = v[2] * xv[1];
+        let t19 = t17 - t18;
+        let t20 = v[3] * xv[4];
+        let t21 = t10 + t20;
+        let t22 = v[3] * xv[5];
+        let t23 = t22 - t7;
+        let t24 = v[3] * v[4];
+        let t25 = t24 + T::from_f64(1.0 / 4.0);
+        let t26 = v[2] * xv[5];
+        let t27 = v[3] * xv[3];
+        let t28 = v[0] * v[1];
+        let t29 = v[0] * v[3];
+        let t30 = v[2] * v[2];
+        let t31 = v[1] * t23;
+        let t32 = v[2] * t21;
+        let t33 = xv[5] * t29;
+        let t34 = v[1] * t4;
+        let t35 = v[2] * t27;
+        let t36 = xv[1] * t25;
+        let t37 = xv[4] * t29;
+        let t38 = v[1] * t27;
+        let t39 = v[2] * t4;
+        let t40 = xv[2] * t25;
+        let t41 = v[3] * t27;
+        let t42 = v[3] * t19;
+        let t43 = v[3] * t21;
+        let t44 = v[3] * t23;
+        let t45 = xv[4] * t28;
+        let t46 = v[0] * t26;
+        let t47 = xv[3] * t30;
+        let t48 = v[4] * t19;
+        let t49 = xv[3] * t13;
+        let t50 = xv[3] * t28;
+        let t51 = v[1] * t26;
+        let t52 = xv[4] * t30;
+        let t53 = v[4] * t10;
+        let t54 = xv[4] * t13;
+        let t55 = xv[5] * t11;
+        let t56 = xv[5] * t12;
+        let t57 = v[2] * t26;
+        let t58 = v[2] * t16;
+        let t59 = v[4] * t7;
+        let t60 = v[3] * t26;
+        let t61 = v[3] * t16;
+        let t62 = t32 - t31;
+        let t63 = t62 * T::from_i64(2);
+        let t64 = xv[0] + t63;
+        let t65 = t33 + t34;
+        let t66 = t65 - t35;
+        let t67 = t66 * T::from_i64(2);
+        let t68 = t36 * T::from_i64(4);
+        let t69 = t67 - t68;
+        let t70 = t38 + t39;
+        let t71 = t70 - t37;
+        let t72 = t71 * T::from_i64(2);
+        let t73 = t40 * T::from_i64(4);
+        let t74 = t72 - t73;
+        let t75 = t41 - t42;
+        let t76 = t75 * T::from_i64(2);
+        let t77 = t43 * T::from_i64(2);
+        let t78 = t44 * T::from_i64(2);
+        let t79 = t47 - t49;
+        let t80 = t45 + t46;
+        let t81 = t48 + t80;
+        let t82 = t81 * T::from_i64(2);
+        let t83 = t79 - t82;
+        let t84 = t52 + t54;
+        let t85 = t53 - t50;
+        let t86 = t85 - t51;
+        let t87 = t86 * T::from_i64(2);
+        let t88 = t84 + t87;
+        let t89 = t55 + t56;
+        let t90 = t89 - t57;
+        let t91 = t58 + t59;
+        let t92 = t91 * T::from_i64(2);
+        let t93 = t90 - t92;
+        let t94 = t60 + t61;
+        let t95 = t94 * T::from_i64(2);
+        let t96 = -t95;
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t64, t69, t74, t76, t77, t78, t83, t88, t93, t96]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[3];
+        let m4 = v[1] * v[3];
+        let m5 = v[2] * v[3];
+        let m6 = v[0] * v[1];
+        let m7 = v[0] * v[2];
+        let m8 = v[1] * v[2];
+        let m9 = v[3] * v[3];
+        let m10 = v[3] * v[4];
+        let m11 = v[0] * v[4];
+        let m12 = v[1] * v[4];
+        let m13 = v[2] * v[4];
+        let m14 = m0 - m1;
+        let m15 = m0 + m1;
+        let m16 = m10 * T::from_i64(2);
+        let m17 = m2 + m16;
+        let m18 = m2 - m15;
+        let m19 = m14 - m17;
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m14 + m17;
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m22;
+        let m29 = m3 * T::from_i64(2);
+        let m30 = m18 - m16;
+        let m31 = -m29;
+        let m32 = m9 * T::from_i64(2);
+        let m33 = m13 * T::from_i64(2);
+        let m34 = m12 * T::from_i64(2);
+        let m35 = -m34;
+        let m36 = m2 - m14;
+        let m37 = -m20;
+        let m38 = -m21;
+        let m39 = -m33;
+        let m40 = m11 * T::from_i64(2);
+        let m41 = m2 + m14;
+        let m42 = -m27;
+        let m43 = -m40;
+        let m44 = -m18;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m19) + x[1].scale(m20) + x[2].scale(m21) + x[4].scale(m22) + x[5].scale(m24)).0, (x[0].scale(m20) + x[1].scale(m26) + x[2].scale(m27) + x[3].scale(m28) + x[5].scale(m29)).0, (x[0].scale(m21) + x[1].scale(m27) + x[2].scale(m30) + x[3].scale(m23) + x[4].scale(m31)).0, (x[1].scale(m22) + x[2].scale(m24) + x[3].scale(m32)).0, (x[0].scale(m28) + x[2].scale(m29) + x[4].scale(m32)).0, (x[0].scale(m23) + x[1].scale(m31) + x[5].scale(m32)).0, (x[1].scale(m33) + x[2].scale(m35) + x[3].scale(m36) + x[4].scale(m37) + x[5].scale(m38)).0, (x[0].scale(m39) + x[2].scale(m40) + x[3].scale(m37) + x[4].scale(m41) + x[5].scale(m42)).0, (x[0].scale(m34) + x[1].scale(m43) + x[3].scale(m38) + x[4].scale(m42) + x[5].scale(m44)).0, (x[3].scale(m31) + x[4].scale(m24) + x[5].scale(m28)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Twist, T, 25>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Twist, T, 25> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[3];
+        let m4 = v[1] * v[3];
+        let m5 = v[2] * v[3];
+        let m6 = v[0] * v[1];
+        let m7 = v[0] * v[2];
+        let m8 = v[1] * v[2];
+        let m9 = v[3] * v[3];
+        let m10 = v[3] * v[4];
+        let m11 = v[0] * v[4];
+        let m12 = v[1] * v[4];
+        let m13 = v[2] * v[4];
+        let m14 = m0 - m1;
+        let m15 = m0 + m1;
+        let m16 = m10 * T::from_i64(2);
+        let m17 = m2 + m16;
+        let m18 = m2 - m15;
+        let m19 = m14 - m17;
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = -m23;
+        let m25 = m14 + m17;
+        let m26 = -m25;
+        let m27 = m8 * T::from_i64(2);
+        let m28 = -m22;
+        let m29 = m3 * T::from_i64(2);
+        let m30 = m18 - m16;
+        let m31 = -m29;
+        let m32 = m9 * T::from_i64(2);
+        let m33 = m13 * T::from_i64(2);
+        let m34 = m12 * T::from_i64(2);
+        let m35 = -m34;
+        let m36 = m2 - m14;
+        let m37 = -m20;
+        let m38 = -m21;
+        let m39 = -m33;
+        let m40 = m11 * T::from_i64(2);
+        let m41 = m2 + m14;
+        let m42 = -m27;
+        let m43 = -m40;
+        let m44 = -m18;
+        gx::Prepared::from_entries([m19, m20, m21, m22, m24, m26, m27, m28, m29, m30, m23, m31, m32, m33, m35, m36, m37, m38, m39, m40, m41, m42, m34, m43, m44])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<gx::Unit<Vector>, Twist, T, 25> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[4].scale(m[3]) + x[5].scale(m[4])).0, (x[0].scale(m[1]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7]) + x[5].scale(m[8])).0, (x[0].scale(m[2]) + x[1].scale(m[6]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[12])).0, (x[0].scale(m[7]) + x[2].scale(m[8]) + x[4].scale(m[12])).0, (x[0].scale(m[10]) + x[1].scale(m[11]) + x[5].scale(m[12])).0, (x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[2].scale(m[19]) + x[3].scale(m[16]) + x[4].scale(m[20]) + x[5].scale(m[21])).0, (x[0].scale(m[22]) + x[1].scale(m[23]) + x[3].scale(m[17]) + x[4].scale(m[21]) + x[5].scale(m[24])).0, (x[3].scale(m[11]) + x[4].scale(m[4]) + x[5].scale(m[7])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Twist, T, 25>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Twist, T, 25>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], T::zero(), m[3], m[4]], [m[1], m[5], m[6], m[7], T::zero(), m[8]], [m[2], m[6], m[9], m[10], m[11], T::zero()], [T::zero(), m[3], m[4], m[12], T::zero(), T::zero()], [m[7], T::zero(), m[8], T::zero(), m[12], T::zero()], [m[10], m[11], T::zero(), T::zero(), T::zero(), m[12]], [T::zero(), m[13], m[14], m[15], m[16], m[17]], [m[18], T::zero(), m[19], m[16], m[20], m[21]], [m[22], m[23], T::zero(), m[17], m[21], m[24]], [T::zero(), T::zero(), T::zero(), m[11], m[4], m[7]]] }
     }
 }
 
@@ -33142,6 +38413,614 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Vector, T, 16>> for Vector<
     fn from(p: gx::Prepared<gx::Unit<Motor>, Vector, T, 16>) -> Self {
         let m = p.m;
         Vector { c: [[m[0], m[1], m[2], m[3], T::zero()], [m[4], m[5], m[6], m[7], T::zero()], [m[8], m[9], m[10], m[11], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [m[12], m[13], m[14], m[15], T::from_i64(1)]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for Motor<(), T> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Twist<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] * xv[0];
+        let t1 = v[2] * xv[2];
+        let t2 = v[3] * xv[1];
+        let t3 = t0 + t2;
+        let t4 = t3 - t1;
+        let t5 = v[0] * xv[1];
+        let t6 = v[1] * xv[2];
+        let t7 = v[3] * xv[0];
+        let t8 = t5 + t6;
+        let t9 = t8 - t7;
+        let t10 = v[0] * xv[2];
+        let t11 = v[1] * xv[1];
+        let t12 = v[2] * xv[0];
+        let t13 = t10 + t12;
+        let t14 = t13 - t11;
+        let t15 = v[1] * xv[0];
+        let t16 = v[2] * xv[1];
+        let t17 = v[3] * xv[2];
+        let t18 = t15 + t16;
+        let t19 = t17 + t18;
+        let t20 = v[0] * v[0];
+        let t21 = v[1] * v[1];
+        let t22 = t20 - t21;
+        let t23 = v[2] * v[2];
+        let t24 = v[3] * v[3];
+        let t25 = t20 + t21;
+        let t26 = t23 + t24;
+        let t27 = t25 - t26;
+        let t28 = t23 - t24;
+        let t29 = v[0] * v[1];
+        let t30 = v[2] * v[3];
+        let t31 = t29 - t30;
+        let t32 = t29 + t30;
+        let t33 = v[0] * v[2];
+        let t34 = v[1] * v[3];
+        let t35 = t33 - t34;
+        let t36 = t33 + t34;
+        let t37 = v[0] * v[3];
+        let t38 = v[1] * v[2];
+        let t39 = t37 - t38;
+        let t40 = t37 + t38;
+        let t41 = t22 - t28;
+        let t42 = t22 + t28;
+        let t43 = xv[0] * t27;
+        let t44 = xv[1] * t40;
+        let t45 = xv[2] * t35;
+        let t46 = xv[0] * t39;
+        let t47 = xv[1] * t42;
+        let t48 = xv[2] * t32;
+        let t49 = xv[0] * t36;
+        let t50 = xv[1] * t31;
+        let t51 = xv[2] * t41;
+        let t52 = v[4] * t19;
+        let t53 = v[5] * t14;
+        let t54 = v[6] * t9;
+        let t55 = v[7] * t4;
+        let t56 = xv[3] * t27;
+        let t57 = xv[4] * t40;
+        let t58 = xv[5] * t35;
+        let t59 = v[4] * t14;
+        let t60 = v[5] * t19;
+        let t61 = v[6] * t4;
+        let t62 = v[7] * t9;
+        let t63 = xv[3] * t39;
+        let t64 = xv[4] * t42;
+        let t65 = xv[5] * t32;
+        let t66 = v[4] * t9;
+        let t67 = v[5] * t4;
+        let t68 = v[6] * t19;
+        let t69 = v[7] * t14;
+        let t70 = xv[3] * t36;
+        let t71 = xv[4] * t31;
+        let t72 = xv[5] * t41;
+        let t73 = t44 - t45;
+        let t74 = t73 * T::from_i64(2);
+        let t75 = t43 + t74;
+        let t76 = t48 - t46;
+        let t77 = t76 * T::from_i64(2);
+        let t78 = t47 + t77;
+        let t79 = t49 - t50;
+        let t80 = t79 * T::from_i64(2);
+        let t81 = t51 + t80;
+        let t82 = t52 + t54;
+        let t83 = t57 + t82;
+        let t84 = t53 + t55;
+        let t85 = t58 + t84;
+        let t86 = t83 - t85;
+        let t87 = t86 * T::from_i64(2);
+        let t88 = t56 + t87;
+        let t89 = t59 + t60;
+        let t90 = t65 + t89;
+        let t91 = t61 + t62;
+        let t92 = t63 + t91;
+        let t93 = t90 - t92;
+        let t94 = t93 * T::from_i64(2);
+        let t95 = t64 + t94;
+        let t96 = t67 + t68;
+        let t97 = t70 + t96;
+        let t98 = t66 + t69;
+        let t99 = t71 + t98;
+        let t100 = t97 - t99;
+        let t101 = t100 * T::from_i64(2);
+        let t102 = t72 + t101;
+            return Twist { c: gx::slots::from_values::<S, T, 6>([t75, t78, t81, t88, t95, t102]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[7];
+        let m11 = v[1] * v[4];
+        let m12 = v[2] * v[5];
+        let m13 = v[3] * v[6];
+        let m14 = v[0] * v[4];
+        let m15 = v[0] * v[5];
+        let m16 = v[0] * v[6];
+        let m17 = v[1] * v[5];
+        let m18 = v[1] * v[6];
+        let m19 = v[1] * v[7];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = m0 - m1;
+        let m27 = m2 - m3;
+        let m28 = m0 + m1;
+        let m29 = m2 + m3;
+        let m30 = m4 - m9;
+        let m31 = m4 + m9;
+        let m32 = m5 - m8;
+        let m33 = m5 + m8;
+        let m34 = m6 - m7;
+        let m35 = m6 + m7;
+        let m36 = m10 + m11;
+        let m37 = m12 - m13;
+        let m38 = m14 - m19;
+        let m39 = m15 - m22;
+        let m40 = m16 - m25;
+        let m41 = m17 + m20;
+        let m42 = m18 + m23;
+        let m43 = m21 + m24;
+        let m44 = m26 - m27;
+        let m45 = m26 + m27;
+        let m46 = m28 - m29;
+        let m47 = m35 * T::from_i64(2);
+        let m48 = m32 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m34 * T::from_i64(2);
+        let m51 = -m50;
+        let m52 = m31 * T::from_i64(2);
+        let m53 = m33 * T::from_i64(2);
+        let m54 = m30 * T::from_i64(2);
+        let m55 = -m54;
+        let m56 = m11 - m10;
+        let m57 = m12 + m13;
+        let m58 = m56 - m57;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m40 + m41;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m42 - m39;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m41 - m40;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m37 - m36;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m38 + m43;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m39 + m42;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m43 - m38;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m36 + m37;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = -m75;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Twist { c: [(x[0].scale(m46) + x[1].scale(m47) + x[2].scale(m49)).0, (x[0].scale(m51) + x[1].scale(m45) + x[2].scale(m52)).0, (x[0].scale(m53) + x[1].scale(m55) + x[2].scale(m44)).0, (x[0].scale(m59) + x[1].scale(m61) + x[2].scale(m63) + x[3].scale(m46) + x[4].scale(m47) + x[5].scale(m49)).0, (x[0].scale(m65) + x[1].scale(m67) + x[2].scale(m69) + x[3].scale(m51) + x[4].scale(m45) + x[5].scale(m52)).0, (x[0].scale(m71) + x[1].scale(m73) + x[2].scale(m76) + x[3].scale(m53) + x[4].scale(m55) + x[5].scale(m44)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for Motor<(), T> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Twist<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for Motor<(), T> {
+    type Output = gx::Prepared<Motor, Twist, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Motor, Twist, T, 18> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[7];
+        let m11 = v[1] * v[4];
+        let m12 = v[2] * v[5];
+        let m13 = v[3] * v[6];
+        let m14 = v[0] * v[4];
+        let m15 = v[0] * v[5];
+        let m16 = v[0] * v[6];
+        let m17 = v[1] * v[5];
+        let m18 = v[1] * v[6];
+        let m19 = v[1] * v[7];
+        let m20 = v[2] * v[4];
+        let m21 = v[2] * v[6];
+        let m22 = v[2] * v[7];
+        let m23 = v[3] * v[4];
+        let m24 = v[3] * v[5];
+        let m25 = v[3] * v[7];
+        let m26 = m0 - m1;
+        let m27 = m2 - m3;
+        let m28 = m0 + m1;
+        let m29 = m2 + m3;
+        let m30 = m4 - m9;
+        let m31 = m4 + m9;
+        let m32 = m5 - m8;
+        let m33 = m5 + m8;
+        let m34 = m6 - m7;
+        let m35 = m6 + m7;
+        let m36 = m10 + m11;
+        let m37 = m12 - m13;
+        let m38 = m14 - m19;
+        let m39 = m15 - m22;
+        let m40 = m16 - m25;
+        let m41 = m17 + m20;
+        let m42 = m18 + m23;
+        let m43 = m21 + m24;
+        let m44 = m26 - m27;
+        let m45 = m26 + m27;
+        let m46 = m28 - m29;
+        let m47 = m35 * T::from_i64(2);
+        let m48 = m32 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m34 * T::from_i64(2);
+        let m51 = -m50;
+        let m52 = m31 * T::from_i64(2);
+        let m53 = m33 * T::from_i64(2);
+        let m54 = m30 * T::from_i64(2);
+        let m55 = -m54;
+        let m56 = m11 - m10;
+        let m57 = m12 + m13;
+        let m58 = m56 - m57;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m40 + m41;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m42 - m39;
+        let m63 = m62 * T::from_i64(2);
+        let m64 = m41 - m40;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m37 - m36;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m38 + m43;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m39 + m42;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m43 - m38;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m36 + m37;
+        let m75 = m74 * T::from_i64(2);
+        let m76 = -m75;
+        gx::Prepared::from_entries([m46, m47, m49, m51, m45, m52, m53, m55, m44, m59, m61, m63, m65, m67, m69, m71, m73, m76])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<Motor, Twist, T, 18> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Twist<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Twist { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[0]) + x[4].scale(m[1]) + x[5].scale(m[2])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[6]) + x[4].scale(m[7]) + x[5].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Motor, Twist, T, 18>> for Twist<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Motor, Twist, T, 18>) -> Self {
+        let m = p.m;
+        Twist { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[0], m[1], m[2]], [m[12], m[13], m[14], m[3], m[4], m[5]], [m[15], m[16], m[17], m[6], m[7], m[8]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Unit<Motor<(), T>> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Twist<S, T> {
+        let v = self.into_inner().c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] * xv[0];
+        let t1 = v[2] * xv[2];
+        let t2 = v[3] * xv[1];
+        let t3 = t0 + t2;
+        let t4 = t3 - t1;
+        let t5 = v[0] * xv[1];
+        let t6 = v[1] * xv[2];
+        let t7 = v[3] * xv[0];
+        let t8 = t5 + t6;
+        let t9 = t8 - t7;
+        let t10 = v[0] * xv[2];
+        let t11 = v[1] * xv[1];
+        let t12 = v[2] * xv[0];
+        let t13 = t10 + t12;
+        let t14 = t13 - t11;
+        let t15 = v[1] * xv[0];
+        let t16 = v[2] * xv[1];
+        let t17 = v[3] * xv[2];
+        let t18 = t15 + t16;
+        let t19 = t17 + t18;
+        let t20 = v[0] * v[0];
+        let t21 = v[1] * v[1];
+        let t22 = t20 - t21;
+        let t23 = v[2] * v[2];
+        let t24 = v[3] * v[3];
+        let t25 = t20 + t21;
+        let t26 = t23 + t24;
+        let t27 = t25 - t26;
+        let t28 = t23 - t24;
+        let t29 = v[0] * v[1];
+        let t30 = v[2] * v[3];
+        let t31 = t29 - t30;
+        let t32 = t29 + t30;
+        let t33 = v[0] * v[2];
+        let t34 = v[1] * v[3];
+        let t35 = t33 - t34;
+        let t36 = t33 + t34;
+        let t37 = v[0] * v[3];
+        let t38 = v[1] * v[2];
+        let t39 = t37 - t38;
+        let t40 = t37 + t38;
+        let t41 = t22 - t28;
+        let t42 = t22 + t28;
+        let t43 = xv[0] * t27;
+        let t44 = xv[1] * t40;
+        let t45 = xv[2] * t35;
+        let t46 = xv[0] * t39;
+        let t47 = xv[1] * t42;
+        let t48 = xv[2] * t32;
+        let t49 = xv[0] * t36;
+        let t50 = xv[1] * t31;
+        let t51 = xv[2] * t41;
+        let t52 = v[4] * t19;
+        let t53 = v[5] * t14;
+        let t54 = v[6] * t9;
+        let t55 = v[7] * t4;
+        let t56 = xv[3] * t27;
+        let t57 = xv[4] * t40;
+        let t58 = xv[5] * t35;
+        let t59 = v[4] * t14;
+        let t60 = v[5] * t19;
+        let t61 = v[6] * t4;
+        let t62 = v[7] * t9;
+        let t63 = xv[3] * t39;
+        let t64 = xv[4] * t42;
+        let t65 = xv[5] * t32;
+        let t66 = v[4] * t9;
+        let t67 = v[5] * t4;
+        let t68 = v[6] * t19;
+        let t69 = v[7] * t14;
+        let t70 = xv[3] * t36;
+        let t71 = xv[4] * t31;
+        let t72 = xv[5] * t41;
+        let t73 = t44 - t45;
+        let t74 = t73 * T::from_i64(2);
+        let t75 = t43 + t74;
+        let t76 = t48 - t46;
+        let t77 = t76 * T::from_i64(2);
+        let t78 = t47 + t77;
+        let t79 = t49 - t50;
+        let t80 = t79 * T::from_i64(2);
+        let t81 = t51 + t80;
+        let t82 = t52 + t54;
+        let t83 = t57 + t82;
+        let t84 = t53 + t55;
+        let t85 = t58 + t84;
+        let t86 = t83 - t85;
+        let t87 = t86 * T::from_i64(2);
+        let t88 = t56 + t87;
+        let t89 = t59 + t60;
+        let t90 = t65 + t89;
+        let t91 = t61 + t62;
+        let t92 = t63 + t91;
+        let t93 = t90 - t92;
+        let t94 = t93 * T::from_i64(2);
+        let t95 = t64 + t94;
+        let t96 = t67 + t68;
+        let t97 = t70 + t96;
+        let t98 = t66 + t69;
+        let t99 = t71 + t98;
+        let t100 = t97 - t99;
+        let t101 = t100 * T::from_i64(2);
+        let t102 = t72 + t101;
+            return Twist { c: gx::slots::from_values::<S, T, 6>([t75, t78, t81, t88, t95, t102]) };
+        }
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[1] * v[1];
+        let m4 = v[1] * v[2];
+        let m5 = v[1] * v[3];
+        let m6 = v[2] * v[2];
+        let m7 = v[2] * v[3];
+        let m8 = v[3] * v[3];
+        let m9 = v[0] * v[4];
+        let m10 = v[0] * v[5];
+        let m11 = v[0] * v[6];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m14 = v[1] * v[6];
+        let m15 = v[1] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[2] * v[5];
+        let m18 = v[2] * v[6];
+        let m19 = v[2] * v[7];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = m0 - m7;
+        let m25 = m0 + m7;
+        let m26 = m1 - m5;
+        let m27 = m1 + m5;
+        let m28 = m2 - m4;
+        let m29 = m2 + m4;
+        let m30 = m3 + m6;
+        let m31 = m3 + m8;
+        let m32 = m6 + m8;
+        let m33 = m9 - m15;
+        let m34 = m10 - m19;
+        let m35 = m11 - m23;
+        let m36 = m13 + m16;
+        let m37 = m14 + m20;
+        let m38 = m18 + m21;
+        let m39 = m32 * T::from_i64(2);
+        let m40 = T::from_i64(1) - m39;
+        let m41 = m29 * T::from_i64(2);
+        let m42 = m26 * T::from_i64(2);
+        let m43 = -m42;
+        let m44 = m28 * T::from_i64(2);
+        let m45 = -m44;
+        let m46 = m31 * T::from_i64(2);
+        let m47 = T::from_i64(1) - m46;
+        let m48 = m25 * T::from_i64(2);
+        let m49 = m27 * T::from_i64(2);
+        let m50 = m24 * T::from_i64(2);
+        let m51 = -m50;
+        let m52 = m30 * T::from_i64(2);
+        let m53 = T::from_i64(1) - m52;
+        let m54 = m17 + m22;
+        let m55 = m54 * T::from_i64(4);
+        let m56 = -m55;
+        let m57 = m35 + m36;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m37 - m34;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m36 - m35;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m12 + m22;
+        let m64 = m63 * T::from_i64(4);
+        let m65 = -m64;
+        let m66 = m33 + m38;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m34 + m37;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m38 - m33;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m12 + m17;
+        let m73 = m72 * T::from_i64(4);
+        let m74 = -m73;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Twist { c: [(x[0].scale(m40) + x[1].scale(m41) + x[2].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m47) + x[2].scale(m48)).0, (x[0].scale(m49) + x[1].scale(m51) + x[2].scale(m53)).0, (x[0].scale(m56) + x[1].scale(m58) + x[2].scale(m60) + x[3].scale(m40) + x[4].scale(m41) + x[5].scale(m43)).0, (x[0].scale(m62) + x[1].scale(m65) + x[2].scale(m67) + x[3].scale(m45) + x[4].scale(m47) + x[5].scale(m48)).0, (x[0].scale(m69) + x[1].scale(m71) + x[2].scale(m74) + x[3].scale(m49) + x[4].scale(m51) + x[5].scale(m53)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for gx::Unit<Motor<(), T>> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Twist<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for gx::Unit<Motor<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Motor>, Twist, T, 18>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Twist, T, 18> {
+        let v = self.into_inner().c;
+        let m0 = v[0] * v[1];
+        let m1 = v[0] * v[2];
+        let m2 = v[0] * v[3];
+        let m3 = v[1] * v[1];
+        let m4 = v[1] * v[2];
+        let m5 = v[1] * v[3];
+        let m6 = v[2] * v[2];
+        let m7 = v[2] * v[3];
+        let m8 = v[3] * v[3];
+        let m9 = v[0] * v[4];
+        let m10 = v[0] * v[5];
+        let m11 = v[0] * v[6];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m14 = v[1] * v[6];
+        let m15 = v[1] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[2] * v[5];
+        let m18 = v[2] * v[6];
+        let m19 = v[2] * v[7];
+        let m20 = v[3] * v[4];
+        let m21 = v[3] * v[5];
+        let m22 = v[3] * v[6];
+        let m23 = v[3] * v[7];
+        let m24 = m0 - m7;
+        let m25 = m0 + m7;
+        let m26 = m1 - m5;
+        let m27 = m1 + m5;
+        let m28 = m2 - m4;
+        let m29 = m2 + m4;
+        let m30 = m3 + m6;
+        let m31 = m3 + m8;
+        let m32 = m6 + m8;
+        let m33 = m9 - m15;
+        let m34 = m10 - m19;
+        let m35 = m11 - m23;
+        let m36 = m13 + m16;
+        let m37 = m14 + m20;
+        let m38 = m18 + m21;
+        let m39 = m32 * T::from_i64(2);
+        let m40 = T::from_i64(1) - m39;
+        let m41 = m29 * T::from_i64(2);
+        let m42 = m26 * T::from_i64(2);
+        let m43 = -m42;
+        let m44 = m28 * T::from_i64(2);
+        let m45 = -m44;
+        let m46 = m31 * T::from_i64(2);
+        let m47 = T::from_i64(1) - m46;
+        let m48 = m25 * T::from_i64(2);
+        let m49 = m27 * T::from_i64(2);
+        let m50 = m24 * T::from_i64(2);
+        let m51 = -m50;
+        let m52 = m30 * T::from_i64(2);
+        let m53 = T::from_i64(1) - m52;
+        let m54 = m17 + m22;
+        let m55 = m54 * T::from_i64(4);
+        let m56 = -m55;
+        let m57 = m35 + m36;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m37 - m34;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m36 - m35;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = m12 + m22;
+        let m64 = m63 * T::from_i64(4);
+        let m65 = -m64;
+        let m66 = m33 + m38;
+        let m67 = m66 * T::from_i64(2);
+        let m68 = m34 + m37;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = m38 - m33;
+        let m71 = m70 * T::from_i64(2);
+        let m72 = m12 + m17;
+        let m73 = m72 * T::from_i64(4);
+        let m74 = -m73;
+        gx::Prepared::from_entries([m40, m41, m43, m45, m47, m48, m49, m51, m53, m56, m58, m60, m62, m65, m67, m69, m71, m74])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<gx::Unit<Motor>, Twist, T, 18> {
+    type Output = Twist<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Twist<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Twist { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[0]) + x[4].scale(m[1]) + x[5].scale(m[2])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[15]) + x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[6]) + x[4].scale(m[7]) + x[5].scale(m[8])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Twist, T, 18>> for Twist<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Twist, T, 18>) -> Self {
+        let m = p.m;
+        Twist { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[0], m[1], m[2]], [m[12], m[13], m[14], m[3], m[4], m[5]], [m[15], m[16], m[17], m[6], m[7], m[8]]] }
     }
 }
 
@@ -42753,6 +48632,2356 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Vector, T, 30>> for Odd<(Vec
     fn from(p: gx::Prepared<gx::Unit<Even>, Vector, T, 30>) -> Self {
         let m = p.m;
         Odd { c: [[m[0], m[1], m[2], m[3], m[4]], [m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14]], [m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[25], m[26], m[27], m[28], m[29]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for Even<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] + v[10];
+        let t1 = v[1] + v[11];
+        let t2 = v[2] + v[12];
+        let t3 = v[3] + v[13];
+        let t4 = v[0] - v[10];
+        let t5 = v[1] - v[11];
+        let t6 = v[2] - v[12];
+        let t7 = v[3] - v[13];
+        let t8 = v[10] * T::from_f64(1.0 / 2.0);
+        let t9 = v[0] + t8;
+        let t10 = v[11] * T::from_f64(1.0 / 2.0);
+        let t11 = v[1] + t10;
+        let t12 = v[12] * T::from_f64(1.0 / 2.0);
+        let t13 = v[2] + t12;
+        let t14 = v[13] * T::from_f64(1.0 / 2.0);
+        let t15 = v[3] + t14;
+        let t16 = v[0] * v[0];
+        let t17 = v[1] * v[1];
+        let t18 = v[2] * v[2];
+        let t19 = v[3] * v[3];
+        let t20 = v[4] * v[4];
+        let t21 = v[4] * v[7];
+        let t22 = v[4] * v[8];
+        let t23 = v[4] * v[9];
+        let t24 = v[4] * v[15];
+        let t25 = v[4] * t0;
+        let t26 = v[4] * t1;
+        let t27 = v[4] * t2;
+        let t28 = v[4] * t3;
+        let t29 = v[4] * t5;
+        let t30 = v[5] * v[5];
+        let t31 = v[5] * v[7];
+        let t32 = v[5] * v[8];
+        let t33 = v[5] * v[9];
+        let t34 = v[5] * v[15];
+        let t35 = v[5] * t0;
+        let t36 = v[5] * t1;
+        let t37 = v[5] * t2;
+        let t38 = v[5] * t3;
+        let t39 = v[5] * t6;
+        let t40 = v[6] * v[6];
+        let t41 = v[6] * v[7];
+        let t42 = v[6] * v[8];
+        let t43 = v[6] * v[9];
+        let t44 = v[6] * v[15];
+        let t45 = v[6] * t0;
+        let t46 = v[6] * t1;
+        let t47 = v[6] * t2;
+        let t48 = v[6] * t3;
+        let t49 = v[6] * t7;
+        let t50 = v[7] * v[14];
+        let t51 = v[7] * t1;
+        let t52 = v[8] * v[14];
+        let t53 = v[8] * t2;
+        let t54 = v[9] * v[14];
+        let t55 = v[9] * t3;
+        let t56 = v[10] * v[10];
+        let t57 = v[10] * t9;
+        let t58 = v[11] * v[11];
+        let t59 = v[11] * t11;
+        let t60 = v[12] * v[12];
+        let t61 = v[12] * t13;
+        let t62 = v[13] * v[13];
+        let t63 = v[13] * t15;
+        let t64 = v[14] * v[14];
+        let t65 = v[14] * v[15];
+        let t66 = v[14] * t0;
+        let t67 = v[14] * t1;
+        let t68 = v[14] * t2;
+        let t69 = v[14] * t3;
+        let t70 = v[14] * t4;
+        let t71 = v[15] * t0;
+        let t72 = v[0] * v[1];
+        let t73 = v[0] * v[2];
+        let t74 = v[0] * v[3];
+        let t75 = v[1] * v[2];
+        let t76 = v[1] * v[3];
+        let t77 = v[2] * v[3];
+        let t78 = v[4] * v[5];
+        let t79 = v[4] * v[6];
+        let t80 = v[4] * v[14];
+        let t81 = v[4] * t4;
+        let t82 = v[4] * t6;
+        let t83 = v[4] * t7;
+        let t84 = v[5] * v[6];
+        let t85 = v[5] * v[14];
+        let t86 = v[5] * t4;
+        let t87 = v[5] * t5;
+        let t88 = v[5] * t7;
+        let t89 = v[6] * v[14];
+        let t90 = v[6] * t4;
+        let t91 = v[6] * t5;
+        let t92 = v[6] * t6;
+        let t93 = v[7] * t0;
+        let t94 = v[7] * t2;
+        let t95 = v[7] * t3;
+        let t96 = v[8] * t0;
+        let t97 = v[8] * t1;
+        let t98 = v[8] * t3;
+        let t99 = v[9] * t0;
+        let t100 = v[9] * t1;
+        let t101 = v[9] * t2;
+        let t102 = v[10] * v[11];
+        let t103 = v[10] * v[12];
+        let t104 = v[10] * v[13];
+        let t105 = v[11] * v[12];
+        let t106 = v[11] * v[13];
+        let t107 = v[12] * v[13];
+        let t108 = v[14] * t5;
+        let t109 = v[14] * t6;
+        let t110 = v[14] * t7;
+        let t111 = v[15] * t1;
+        let t112 = v[15] * t2;
+        let t113 = v[15] * t3;
+        let t114 = t0 * t1;
+        let t115 = t0 * t2;
+        let t116 = t0 * t3;
+        let t117 = t1 * t2;
+        let t118 = t1 * t3;
+        let t119 = t2 * t3;
+        let t120 = v[0] * v[11];
+        let t121 = v[1] * v[10];
+        let t122 = v[2] * v[13];
+        let t123 = v[3] * v[12];
+        let t124 = v[0] * v[12];
+        let t125 = v[1] * v[13];
+        let t126 = v[2] * v[10];
+        let t127 = v[3] * v[11];
+        let t128 = v[0] * v[13];
+        let t129 = v[1] * v[12];
+        let t130 = v[2] * v[11];
+        let t131 = v[3] * v[10];
+        let t132 = t16 - t17;
+        let t133 = t18 - t19;
+        let t134 = t58 * T::from_f64(1.0 / 2.0);
+        let t135 = t21 + t134;
+        let t136 = t60 * T::from_f64(1.0 / 2.0);
+        let t137 = t32 + t136;
+        let t138 = t62 * T::from_f64(1.0 / 2.0);
+        let t139 = t43 + t138;
+        let t140 = t65 * T::from_i64(2);
+        let t141 = t56 + t140;
+        let t142 = t16 + t17;
+        let t143 = t18 + t19;
+        let t144 = t20 - t30;
+        let t145 = t22 + t31;
+        let t146 = t23 - t34;
+        let t147 = t24 + t33;
+        let t148 = t25 - t38;
+        let t149 = t26 - t37;
+        let t150 = t27 + t36;
+        let t151 = t28 + t35;
+        let t152 = t29 - t39;
+        let t153 = t40 - t64;
+        let t154 = t41 - t52;
+        let t155 = t42 + t50;
+        let t156 = t44 + t54;
+        let t157 = t45 - t69;
+        let t158 = t46 - t68;
+        let t159 = t47 + t67;
+        let t160 = t48 + t66;
+        let t161 = t49 + t70;
+        let t162 = t51 - t53;
+        let t163 = t55 + t71;
+        let t164 = t57 - t59;
+        let t165 = t61 - t63;
+        let t166 = t72 - t102;
+        let t167 = t73 - t103;
+        let t168 = t74 - t104;
+        let t169 = t75 - t105;
+        let t170 = t76 - t106;
+        let t171 = t77 - t107;
+        let t172 = t81 - t108;
+        let t173 = t82 + t87;
+        let t174 = t83 + t91;
+        let t175 = t86 - t109;
+        let t176 = t88 + t92;
+        let t177 = t90 - t110;
+        let t178 = t93 - t111;
+        let t179 = t94 + t97;
+        let t180 = t95 + t100;
+        let t181 = t96 - t112;
+        let t182 = t98 + t101;
+        let t183 = t99 - t113;
+        let t184 = t132 - t133;
+        let t185 = t132 + t133;
+        let t186 = t135 - t137;
+        let t187 = t141 * T::from_f64(-1.0 / 2.0);
+        let t188 = t139 + t187;
+        let t189 = t142 - t143;
+        let t190 = t145 - t169;
+        let t191 = t156 + t168;
+        let t192 = t188 - t186;
+        let t193 = t192 * T::from_i64(2);
+        let t194 = t189 + t193;
+        let t195 = t191 - t190;
+        let t196 = t23 + t34;
+        let t197 = t41 + t196;
+        let t198 = t52 + t167;
+        let t199 = t198 - t170;
+        let t200 = t197 + t199;
+        let t201 = t160 - t149;
+        let t202 = t150 + t157;
+        let t203 = t35 - t28;
+        let t204 = t46 + t68;
+        let t205 = t203 - t204;
+        let t206 = t190 + t191;
+        let t207 = t186 + t188;
+        let t208 = t207 * T::from_i64(2);
+        let t209 = t185 + t208;
+        let t210 = t24 + t50;
+        let t211 = t166 + t210;
+        let t212 = t171 - t33;
+        let t213 = t212 - t42;
+        let t214 = t211 + t213;
+        let t215 = t157 - t150;
+        let t216 = t149 + t160;
+        let t217 = t25 + t38;
+        let t218 = t47 - t67;
+        let t219 = t217 + t218;
+        let t220 = t167 + t170;
+        let t221 = t146 + t154;
+        let t222 = t220 - t221;
+        let t223 = t147 + t155;
+        let t224 = t166 - t171;
+        let t225 = t223 + t224;
+        let t226 = t184 - t141;
+        let t227 = t135 + t137;
+        let t228 = t227 - t139;
+        let t229 = t228 * T::from_i64(2);
+        let t230 = t226 + t229;
+        let t231 = t151 + t158;
+        let t232 = t148 - t159;
+        let t233 = t26 + t37;
+        let t234 = t66 - t48;
+        let t235 = t233 + t234;
+        let t236 = t161 - t152;
+        let t237 = t173 + t177;
+        let t238 = t175 - t174;
+        let t239 = t144 - t153;
+        let t240 = t78 - t89;
+        let t241 = t79 + t85;
+        let t242 = t177 - t173;
+        let t243 = t152 + t161;
+        let t244 = t172 + t176;
+        let t245 = t78 + t89;
+        let t246 = t144 + t153;
+        let t247 = t80 - t84;
+        let t248 = t174 + t175;
+        let t249 = t172 - t176;
+        let t250 = t29 + t39;
+        let t251 = t70 - t49;
+        let t252 = t250 + t251;
+        let t253 = t79 - t85;
+        let t254 = t80 + t84;
+        let t255 = t20 + t30;
+        let t256 = t40 + t64;
+        let t257 = t255 - t256;
+        let t258 = t163 - t162;
+        let t259 = t179 + t183;
+        let t260 = t181 - t180;
+        let t261 = t57 + t59;
+        let t262 = t61 + t63;
+        let t263 = t261 - t262;
+        let t264 = t263 * T::from_i64(2);
+        let t265 = t189 + t264;
+        let t266 = t116 + t117;
+        let t267 = t115 - t118;
+        let t268 = t183 - t179;
+        let t269 = t162 + t163;
+        let t270 = t178 + t182;
+        let t271 = t116 - t117;
+        let t272 = t164 + t165;
+        let t273 = t272 * T::from_i64(2);
+        let t274 = t185 + t273;
+        let t275 = t114 + t119;
+        let t276 = t180 + t181;
+        let t277 = t178 - t182;
+        let t278 = t51 + t53;
+        let t279 = t71 - t55;
+        let t280 = t278 + t279;
+        let t281 = t115 + t118;
+        let t282 = t114 - t119;
+        let t283 = t164 - t165;
+        let t284 = t283 * T::from_i64(2);
+        let t285 = t184 + t284;
+        let t286 = t120 + t122;
+        let t287 = t155 + t286;
+        let t288 = t121 + t123;
+        let t289 = t147 + t288;
+        let t290 = t287 - t289;
+        let t291 = t124 + t127;
+        let t292 = t146 + t291;
+        let t293 = t125 + t126;
+        let t294 = t154 + t293;
+        let t295 = t292 - t294;
+        let t296 = t31 + t54;
+        let t297 = t128 + t129;
+        let t298 = t296 + t297;
+        let t299 = t22 + t44;
+        let t300 = t130 + t131;
+        let t301 = t299 + t300;
+        let t302 = t298 - t301;
+        let t303 = t148 + t159;
+        let t304 = t151 - t158;
+        let t305 = t36 + t45;
+        let t306 = t69 - t27;
+        let t307 = t305 + t306;
+        let t308 = xv[0] * t194;
+        let t309 = xv[1] * t195;
+        let t310 = xv[2] * t200;
+        let t311 = xv[3] * t201;
+        let t312 = xv[4] * t202;
+        let t313 = xv[5] * t205;
+        let t314 = xv[0] * t206;
+        let t315 = xv[1] * t209;
+        let t316 = xv[2] * t214;
+        let t317 = xv[3] * t215;
+        let t318 = xv[4] * t216;
+        let t319 = xv[5] * t219;
+        let t320 = xv[0] * t222;
+        let t321 = xv[1] * t225;
+        let t322 = xv[2] * t230;
+        let t323 = xv[3] * t231;
+        let t324 = xv[4] * t232;
+        let t325 = xv[5] * t235;
+        let t326 = xv[0] * t236;
+        let t327 = xv[1] * t237;
+        let t328 = xv[2] * t238;
+        let t329 = xv[3] * t239;
+        let t330 = xv[4] * t240;
+        let t331 = xv[5] * t241;
+        let t332 = xv[0] * t242;
+        let t333 = xv[1] * t243;
+        let t334 = xv[2] * t244;
+        let t335 = xv[3] * t245;
+        let t336 = xv[4] * t246;
+        let t337 = xv[5] * t247;
+        let t338 = xv[0] * t248;
+        let t339 = xv[1] * t249;
+        let t340 = xv[2] * t252;
+        let t341 = xv[3] * t253;
+        let t342 = xv[4] * t254;
+        let t343 = xv[5] * t257;
+        let t344 = xv[0] * t258;
+        let t345 = xv[1] * t259;
+        let t346 = xv[2] * t260;
+        let t347 = xv[3] * t265;
+        let t348 = xv[4] * t266;
+        let t349 = xv[5] * t267;
+        let t350 = xv[0] * t268;
+        let t351 = xv[1] * t269;
+        let t352 = xv[2] * t270;
+        let t353 = xv[3] * t271;
+        let t354 = xv[4] * t274;
+        let t355 = xv[5] * t275;
+        let t356 = xv[0] * t276;
+        let t357 = xv[1] * t277;
+        let t358 = xv[2] * t280;
+        let t359 = xv[3] * t281;
+        let t360 = xv[4] * t282;
+        let t361 = xv[5] * t285;
+        let t362 = xv[0] * t290;
+        let t363 = xv[1] * t295;
+        let t364 = xv[2] * t302;
+        let t365 = xv[3] * t303;
+        let t366 = xv[4] * t304;
+        let t367 = xv[5] * t307;
+        let t368 = t309 + t311;
+        let t369 = t313 + t368;
+        let t370 = t310 + t312;
+        let t371 = t369 - t370;
+        let t372 = t371 * T::from_i64(2);
+        let t373 = t308 + t372;
+        let t374 = t316 + t317;
+        let t375 = t318 + t374;
+        let t376 = t314 + t319;
+        let t377 = t375 - t376;
+        let t378 = t377 * T::from_i64(2);
+        let t379 = t315 + t378;
+        let t380 = t320 + t324;
+        let t381 = t325 + t380;
+        let t382 = t321 + t323;
+        let t383 = t381 - t382;
+        let t384 = t383 * T::from_i64(2);
+        let t385 = t322 + t384;
+        let t386 = t327 - t326;
+        let t387 = t328 + t329;
+        let t388 = t386 - t387;
+        let t389 = t388 * T::from_i64(2);
+        let t390 = t330 + t331;
+        let t391 = t390 * T::from_i64(4);
+        let t392 = t389 - t391;
+        let t393 = t334 + t336;
+        let t394 = t332 + t333;
+        let t395 = t393 - t394;
+        let t396 = t395 * T::from_i64(2);
+        let t397 = t337 - t335;
+        let t398 = t397 * T::from_i64(4);
+        let t399 = t396 + t398;
+        let t400 = t338 + t343;
+        let t401 = t339 + t340;
+        let t402 = t400 - t401;
+        let t403 = t402 * T::from_i64(2);
+        let t404 = t341 + t342;
+        let t405 = t404 * T::from_i64(4);
+        let t406 = t403 - t405;
+        let t407 = t345 + t348;
+        let t408 = t407 - t344;
+        let t409 = t346 + t349;
+        let t410 = t408 - t409;
+        let t411 = t410 * T::from_i64(2);
+        let t412 = t347 + t411;
+        let t413 = t352 + t355;
+        let t414 = t413 - t350;
+        let t415 = t351 + t353;
+        let t416 = t414 - t415;
+        let t417 = t416 * T::from_i64(2);
+        let t418 = t354 + t417;
+        let t419 = t356 + t359;
+        let t420 = t419 - t357;
+        let t421 = t358 + t360;
+        let t422 = t420 - t421;
+        let t423 = t422 * T::from_i64(2);
+        let t424 = t361 + t423;
+        let t425 = t362 + t363;
+        let t426 = t364 + t425;
+        let t427 = t365 + t366;
+        let t428 = t367 + t427;
+        let t429 = t426 + t428;
+        let t430 = t429 * T::from_i64(2);
+        let t431 = -t430;
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t373, t379, t385, t392, t399, t406, t412, t418, t424, t431]) };
+        }
+        let m0 = v[0] + v[10];
+        let m1 = v[1] + v[11];
+        let m2 = v[2] + v[12];
+        let m3 = v[3] + v[13];
+        let m4 = v[0] - v[10];
+        let m5 = v[1] - v[11];
+        let m6 = v[2] - v[12];
+        let m7 = v[3] - v[13];
+        let m8 = v[10] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[11] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[12] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[13] * T::from_f64(1.0 / 2.0);
+        let m15 = v[3] + m14;
+        let m16 = v[0] * v[0];
+        let m17 = v[1] * v[1];
+        let m18 = v[2] * v[2];
+        let m19 = v[3] * v[3];
+        let m20 = v[4] * v[4];
+        let m21 = v[4] * v[7];
+        let m22 = v[4] * v[8];
+        let m23 = v[4] * v[9];
+        let m24 = v[4] * v[15];
+        let m25 = v[4] * m0;
+        let m26 = v[4] * m1;
+        let m27 = v[4] * m2;
+        let m28 = v[4] * m3;
+        let m29 = v[4] * m5;
+        let m30 = v[5] * v[5];
+        let m31 = v[5] * v[7];
+        let m32 = v[5] * v[8];
+        let m33 = v[5] * v[9];
+        let m34 = v[5] * v[15];
+        let m35 = v[5] * m0;
+        let m36 = v[5] * m1;
+        let m37 = v[5] * m2;
+        let m38 = v[5] * m3;
+        let m39 = v[5] * m6;
+        let m40 = v[6] * v[6];
+        let m41 = v[6] * v[7];
+        let m42 = v[6] * v[8];
+        let m43 = v[6] * v[9];
+        let m44 = v[6] * v[15];
+        let m45 = v[6] * m0;
+        let m46 = v[6] * m1;
+        let m47 = v[6] * m2;
+        let m48 = v[6] * m3;
+        let m49 = v[6] * m7;
+        let m50 = v[7] * v[14];
+        let m51 = v[7] * m1;
+        let m52 = v[8] * v[14];
+        let m53 = v[8] * m2;
+        let m54 = v[9] * v[14];
+        let m55 = v[9] * m3;
+        let m56 = v[10] * v[10];
+        let m57 = v[10] * m9;
+        let m58 = v[11] * v[11];
+        let m59 = v[11] * m11;
+        let m60 = v[12] * v[12];
+        let m61 = v[12] * m13;
+        let m62 = v[13] * v[13];
+        let m63 = v[13] * m15;
+        let m64 = v[14] * v[14];
+        let m65 = v[14] * v[15];
+        let m66 = v[14] * m0;
+        let m67 = v[14] * m1;
+        let m68 = v[14] * m2;
+        let m69 = v[14] * m3;
+        let m70 = v[14] * m4;
+        let m71 = v[15] * m0;
+        let m72 = v[0] * v[1];
+        let m73 = v[0] * v[2];
+        let m74 = v[0] * v[3];
+        let m75 = v[1] * v[2];
+        let m76 = v[1] * v[3];
+        let m77 = v[2] * v[3];
+        let m78 = v[4] * v[5];
+        let m79 = v[4] * v[6];
+        let m80 = v[4] * v[14];
+        let m81 = v[4] * m4;
+        let m82 = v[4] * m6;
+        let m83 = v[4] * m7;
+        let m84 = v[5] * v[6];
+        let m85 = v[5] * v[14];
+        let m86 = v[5] * m4;
+        let m87 = v[5] * m5;
+        let m88 = v[5] * m7;
+        let m89 = v[6] * v[14];
+        let m90 = v[6] * m4;
+        let m91 = v[6] * m5;
+        let m92 = v[6] * m6;
+        let m93 = v[7] * m0;
+        let m94 = v[7] * m2;
+        let m95 = v[7] * m3;
+        let m96 = v[8] * m0;
+        let m97 = v[8] * m1;
+        let m98 = v[8] * m3;
+        let m99 = v[9] * m0;
+        let m100 = v[9] * m1;
+        let m101 = v[9] * m2;
+        let m102 = v[10] * v[11];
+        let m103 = v[10] * v[12];
+        let m104 = v[10] * v[13];
+        let m105 = v[11] * v[12];
+        let m106 = v[11] * v[13];
+        let m107 = v[12] * v[13];
+        let m108 = v[14] * m5;
+        let m109 = v[14] * m6;
+        let m110 = v[14] * m7;
+        let m111 = v[15] * m1;
+        let m112 = v[15] * m2;
+        let m113 = v[15] * m3;
+        let m114 = m0 * m1;
+        let m115 = m0 * m2;
+        let m116 = m0 * m3;
+        let m117 = m1 * m2;
+        let m118 = m1 * m3;
+        let m119 = m2 * m3;
+        let m120 = v[0] * v[11];
+        let m121 = v[1] * v[10];
+        let m122 = v[2] * v[13];
+        let m123 = v[3] * v[12];
+        let m124 = v[0] * v[12];
+        let m125 = v[1] * v[13];
+        let m126 = v[2] * v[10];
+        let m127 = v[3] * v[11];
+        let m128 = v[0] * v[13];
+        let m129 = v[1] * v[12];
+        let m130 = v[2] * v[11];
+        let m131 = v[3] * v[10];
+        let m132 = m16 - m17;
+        let m133 = m18 - m19;
+        let m134 = m58 * T::from_f64(1.0 / 2.0);
+        let m135 = m21 + m134;
+        let m136 = m60 * T::from_f64(1.0 / 2.0);
+        let m137 = m32 + m136;
+        let m138 = m62 * T::from_f64(1.0 / 2.0);
+        let m139 = m43 + m138;
+        let m140 = m65 * T::from_i64(2);
+        let m141 = m56 + m140;
+        let m142 = m16 + m17;
+        let m143 = m18 + m19;
+        let m144 = m20 - m30;
+        let m145 = m22 + m31;
+        let m146 = m23 - m34;
+        let m147 = m24 + m33;
+        let m148 = m25 - m38;
+        let m149 = m26 - m37;
+        let m150 = m27 + m36;
+        let m151 = m28 + m35;
+        let m152 = m29 - m39;
+        let m153 = m40 - m64;
+        let m154 = m41 - m52;
+        let m155 = m42 + m50;
+        let m156 = m44 + m54;
+        let m157 = m45 - m69;
+        let m158 = m46 - m68;
+        let m159 = m47 + m67;
+        let m160 = m48 + m66;
+        let m161 = m49 + m70;
+        let m162 = m51 - m53;
+        let m163 = m55 + m71;
+        let m164 = m57 - m59;
+        let m165 = m61 - m63;
+        let m166 = m72 - m102;
+        let m167 = m73 - m103;
+        let m168 = m74 - m104;
+        let m169 = m75 - m105;
+        let m170 = m76 - m106;
+        let m171 = m77 - m107;
+        let m172 = m81 - m108;
+        let m173 = m82 + m87;
+        let m174 = m83 + m91;
+        let m175 = m86 - m109;
+        let m176 = m88 + m92;
+        let m177 = m90 - m110;
+        let m178 = m93 - m111;
+        let m179 = m94 + m97;
+        let m180 = m95 + m100;
+        let m181 = m96 - m112;
+        let m182 = m98 + m101;
+        let m183 = m99 - m113;
+        let m184 = m132 - m133;
+        let m185 = m132 + m133;
+        let m186 = m135 - m137;
+        let m187 = m141 * T::from_f64(-1.0 / 2.0);
+        let m188 = m139 + m187;
+        let m189 = m142 - m143;
+        let m190 = m145 - m169;
+        let m191 = m156 + m168;
+        let m192 = m188 - m186;
+        let m193 = m192 * T::from_i64(2);
+        let m194 = m189 + m193;
+        let m195 = m191 - m190;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = m170 - m23;
+        let m198 = m197 - m34;
+        let m199 = m41 + m52;
+        let m200 = m167 + m199;
+        let m201 = m198 - m200;
+        let m202 = m201 * T::from_i64(2);
+        let m203 = m160 - m149;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = m150 + m157;
+        let m206 = m205 * T::from_i64(2);
+        let m207 = -m206;
+        let m208 = m35 - m28;
+        let m209 = m46 + m68;
+        let m210 = m208 - m209;
+        let m211 = m210 * T::from_i64(2);
+        let m212 = m190 + m191;
+        let m213 = m212 * T::from_i64(2);
+        let m214 = -m213;
+        let m215 = m186 + m188;
+        let m216 = m215 * T::from_i64(2);
+        let m217 = m185 + m216;
+        let m218 = m24 + m50;
+        let m219 = m166 + m218;
+        let m220 = m171 - m33;
+        let m221 = m220 - m42;
+        let m222 = m219 + m221;
+        let m223 = m222 * T::from_i64(2);
+        let m224 = m157 - m150;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m149 + m160;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m67 - m25;
+        let m229 = m38 + m47;
+        let m230 = m228 - m229;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = m167 + m170;
+        let m233 = m146 + m154;
+        let m234 = m232 - m233;
+        let m235 = m234 * T::from_i64(2);
+        let m236 = m171 - m147;
+        let m237 = m155 + m166;
+        let m238 = m236 - m237;
+        let m239 = m238 * T::from_i64(2);
+        let m240 = m184 - m141;
+        let m241 = m135 + m137;
+        let m242 = m241 - m139;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m240 + m243;
+        let m245 = m151 + m158;
+        let m246 = m245 * T::from_i64(2);
+        let m247 = -m246;
+        let m248 = m148 - m159;
+        let m249 = m248 * T::from_i64(2);
+        let m250 = m26 + m37;
+        let m251 = m66 - m48;
+        let m252 = m250 + m251;
+        let m253 = m252 * T::from_i64(2);
+        let m254 = m152 - m161;
+        let m255 = m254 * T::from_i64(2);
+        let m256 = m173 + m177;
+        let m257 = m256 * T::from_i64(2);
+        let m258 = m174 - m175;
+        let m259 = m258 * T::from_i64(2);
+        let m260 = m153 - m144;
+        let m261 = m260 * T::from_i64(2);
+        let m262 = m89 - m78;
+        let m263 = m262 * T::from_i64(4);
+        let m264 = m79 + m85;
+        let m265 = m264 * T::from_i64(4);
+        let m266 = -m265;
+        let m267 = m173 - m177;
+        let m268 = m267 * T::from_i64(2);
+        let m269 = m152 + m161;
+        let m270 = m269 * T::from_i64(2);
+        let m271 = -m270;
+        let m272 = m172 + m176;
+        let m273 = m272 * T::from_i64(2);
+        let m274 = m78 + m89;
+        let m275 = m274 * T::from_i64(4);
+        let m276 = -m275;
+        let m277 = m144 + m153;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m80 - m84;
+        let m280 = m279 * T::from_i64(4);
+        let m281 = m174 + m175;
+        let m282 = m281 * T::from_i64(2);
+        let m283 = m176 - m172;
+        let m284 = m283 * T::from_i64(2);
+        let m285 = m49 - m29;
+        let m286 = m39 + m70;
+        let m287 = m285 - m286;
+        let m288 = m287 * T::from_i64(2);
+        let m289 = m85 - m79;
+        let m290 = m289 * T::from_i64(4);
+        let m291 = m80 + m84;
+        let m292 = m291 * T::from_i64(4);
+        let m293 = -m292;
+        let m294 = m20 + m30;
+        let m295 = m40 + m64;
+        let m296 = m294 - m295;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m162 - m163;
+        let m299 = m298 * T::from_i64(2);
+        let m300 = m179 + m183;
+        let m301 = m300 * T::from_i64(2);
+        let m302 = m180 - m181;
+        let m303 = m302 * T::from_i64(2);
+        let m304 = m57 + m59;
+        let m305 = m61 + m63;
+        let m306 = m304 - m305;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m189 + m307;
+        let m309 = m116 + m117;
+        let m310 = m309 * T::from_i64(2);
+        let m311 = m118 - m115;
+        let m312 = m311 * T::from_i64(2);
+        let m313 = m179 - m183;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m162 + m163;
+        let m316 = m315 * T::from_i64(2);
+        let m317 = -m316;
+        let m318 = m178 + m182;
+        let m319 = m318 * T::from_i64(2);
+        let m320 = m117 - m116;
+        let m321 = m320 * T::from_i64(2);
+        let m322 = m164 + m165;
+        let m323 = m322 * T::from_i64(2);
+        let m324 = m185 + m323;
+        let m325 = m114 + m119;
+        let m326 = m325 * T::from_i64(2);
+        let m327 = m180 + m181;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = m182 - m178;
+        let m330 = m329 * T::from_i64(2);
+        let m331 = m55 - m51;
+        let m332 = m53 + m71;
+        let m333 = m331 - m332;
+        let m334 = m333 * T::from_i64(2);
+        let m335 = m115 + m118;
+        let m336 = m335 * T::from_i64(2);
+        let m337 = m119 - m114;
+        let m338 = m337 * T::from_i64(2);
+        let m339 = m164 - m165;
+        let m340 = m339 * T::from_i64(2);
+        let m341 = m184 + m340;
+        let m342 = m121 + m123;
+        let m343 = m147 + m342;
+        let m344 = m120 + m122;
+        let m345 = m155 + m344;
+        let m346 = m343 - m345;
+        let m347 = m346 * T::from_i64(2);
+        let m348 = m125 + m126;
+        let m349 = m154 + m348;
+        let m350 = m124 + m127;
+        let m351 = m146 + m350;
+        let m352 = m349 - m351;
+        let m353 = m352 * T::from_i64(2);
+        let m354 = m22 + m44;
+        let m355 = m130 + m131;
+        let m356 = m354 + m355;
+        let m357 = m31 + m54;
+        let m358 = m128 + m129;
+        let m359 = m357 + m358;
+        let m360 = m356 - m359;
+        let m361 = m360 * T::from_i64(2);
+        let m362 = m148 + m159;
+        let m363 = m362 * T::from_i64(2);
+        let m364 = -m363;
+        let m365 = m158 - m151;
+        let m366 = m365 * T::from_i64(2);
+        let m367 = m27 - m36;
+        let m368 = m45 + m69;
+        let m369 = m367 - m368;
+        let m370 = m369 * T::from_i64(2);
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m194) + x[1].scale(m196) + x[2].scale(m202) + x[3].scale(m204) + x[4].scale(m207) + x[5].scale(m211)).0, (x[0].scale(m214) + x[1].scale(m217) + x[2].scale(m223) + x[3].scale(m225) + x[4].scale(m227) + x[5].scale(m231)).0, (x[0].scale(m235) + x[1].scale(m239) + x[2].scale(m244) + x[3].scale(m247) + x[4].scale(m249) + x[5].scale(m253)).0, (x[0].scale(m255) + x[1].scale(m257) + x[2].scale(m259) + x[3].scale(m261) + x[4].scale(m263) + x[5].scale(m266)).0, (x[0].scale(m268) + x[1].scale(m271) + x[2].scale(m273) + x[3].scale(m276) + x[4].scale(m278) + x[5].scale(m280)).0, (x[0].scale(m282) + x[1].scale(m284) + x[2].scale(m288) + x[3].scale(m290) + x[4].scale(m293) + x[5].scale(m297)).0, (x[0].scale(m299) + x[1].scale(m301) + x[2].scale(m303) + x[3].scale(m308) + x[4].scale(m310) + x[5].scale(m312)).0, (x[0].scale(m314) + x[1].scale(m317) + x[2].scale(m319) + x[3].scale(m321) + x[4].scale(m324) + x[5].scale(m326)).0, (x[0].scale(m328) + x[1].scale(m330) + x[2].scale(m334) + x[3].scale(m336) + x[4].scale(m338) + x[5].scale(m341)).0, (x[0].scale(m347) + x[1].scale(m353) + x[2].scale(m361) + x[3].scale(m364) + x[4].scale(m366) + x[5].scale(m370)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for Even<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for Even<(), T> {
+    type Output = gx::Prepared<Even, Twist, T, 60>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Even, Twist, T, 60> {
+        let v = self.c;
+        let m0 = v[0] + v[10];
+        let m1 = v[1] + v[11];
+        let m2 = v[2] + v[12];
+        let m3 = v[3] + v[13];
+        let m4 = v[0] - v[10];
+        let m5 = v[1] - v[11];
+        let m6 = v[2] - v[12];
+        let m7 = v[3] - v[13];
+        let m8 = v[10] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[11] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[12] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[13] * T::from_f64(1.0 / 2.0);
+        let m15 = v[3] + m14;
+        let m16 = v[0] * v[0];
+        let m17 = v[1] * v[1];
+        let m18 = v[2] * v[2];
+        let m19 = v[3] * v[3];
+        let m20 = v[4] * v[4];
+        let m21 = v[4] * v[7];
+        let m22 = v[4] * v[8];
+        let m23 = v[4] * v[9];
+        let m24 = v[4] * v[15];
+        let m25 = v[4] * m0;
+        let m26 = v[4] * m1;
+        let m27 = v[4] * m2;
+        let m28 = v[4] * m3;
+        let m29 = v[4] * m5;
+        let m30 = v[5] * v[5];
+        let m31 = v[5] * v[7];
+        let m32 = v[5] * v[8];
+        let m33 = v[5] * v[9];
+        let m34 = v[5] * v[15];
+        let m35 = v[5] * m0;
+        let m36 = v[5] * m1;
+        let m37 = v[5] * m2;
+        let m38 = v[5] * m3;
+        let m39 = v[5] * m6;
+        let m40 = v[6] * v[6];
+        let m41 = v[6] * v[7];
+        let m42 = v[6] * v[8];
+        let m43 = v[6] * v[9];
+        let m44 = v[6] * v[15];
+        let m45 = v[6] * m0;
+        let m46 = v[6] * m1;
+        let m47 = v[6] * m2;
+        let m48 = v[6] * m3;
+        let m49 = v[6] * m7;
+        let m50 = v[7] * v[14];
+        let m51 = v[7] * m1;
+        let m52 = v[8] * v[14];
+        let m53 = v[8] * m2;
+        let m54 = v[9] * v[14];
+        let m55 = v[9] * m3;
+        let m56 = v[10] * v[10];
+        let m57 = v[10] * m9;
+        let m58 = v[11] * v[11];
+        let m59 = v[11] * m11;
+        let m60 = v[12] * v[12];
+        let m61 = v[12] * m13;
+        let m62 = v[13] * v[13];
+        let m63 = v[13] * m15;
+        let m64 = v[14] * v[14];
+        let m65 = v[14] * v[15];
+        let m66 = v[14] * m0;
+        let m67 = v[14] * m1;
+        let m68 = v[14] * m2;
+        let m69 = v[14] * m3;
+        let m70 = v[14] * m4;
+        let m71 = v[15] * m0;
+        let m72 = v[0] * v[1];
+        let m73 = v[0] * v[2];
+        let m74 = v[0] * v[3];
+        let m75 = v[1] * v[2];
+        let m76 = v[1] * v[3];
+        let m77 = v[2] * v[3];
+        let m78 = v[4] * v[5];
+        let m79 = v[4] * v[6];
+        let m80 = v[4] * v[14];
+        let m81 = v[4] * m4;
+        let m82 = v[4] * m6;
+        let m83 = v[4] * m7;
+        let m84 = v[5] * v[6];
+        let m85 = v[5] * v[14];
+        let m86 = v[5] * m4;
+        let m87 = v[5] * m5;
+        let m88 = v[5] * m7;
+        let m89 = v[6] * v[14];
+        let m90 = v[6] * m4;
+        let m91 = v[6] * m5;
+        let m92 = v[6] * m6;
+        let m93 = v[7] * m0;
+        let m94 = v[7] * m2;
+        let m95 = v[7] * m3;
+        let m96 = v[8] * m0;
+        let m97 = v[8] * m1;
+        let m98 = v[8] * m3;
+        let m99 = v[9] * m0;
+        let m100 = v[9] * m1;
+        let m101 = v[9] * m2;
+        let m102 = v[10] * v[11];
+        let m103 = v[10] * v[12];
+        let m104 = v[10] * v[13];
+        let m105 = v[11] * v[12];
+        let m106 = v[11] * v[13];
+        let m107 = v[12] * v[13];
+        let m108 = v[14] * m5;
+        let m109 = v[14] * m6;
+        let m110 = v[14] * m7;
+        let m111 = v[15] * m1;
+        let m112 = v[15] * m2;
+        let m113 = v[15] * m3;
+        let m114 = m0 * m1;
+        let m115 = m0 * m2;
+        let m116 = m0 * m3;
+        let m117 = m1 * m2;
+        let m118 = m1 * m3;
+        let m119 = m2 * m3;
+        let m120 = v[0] * v[11];
+        let m121 = v[1] * v[10];
+        let m122 = v[2] * v[13];
+        let m123 = v[3] * v[12];
+        let m124 = v[0] * v[12];
+        let m125 = v[1] * v[13];
+        let m126 = v[2] * v[10];
+        let m127 = v[3] * v[11];
+        let m128 = v[0] * v[13];
+        let m129 = v[1] * v[12];
+        let m130 = v[2] * v[11];
+        let m131 = v[3] * v[10];
+        let m132 = m16 - m17;
+        let m133 = m18 - m19;
+        let m134 = m58 * T::from_f64(1.0 / 2.0);
+        let m135 = m21 + m134;
+        let m136 = m60 * T::from_f64(1.0 / 2.0);
+        let m137 = m32 + m136;
+        let m138 = m62 * T::from_f64(1.0 / 2.0);
+        let m139 = m43 + m138;
+        let m140 = m65 * T::from_i64(2);
+        let m141 = m56 + m140;
+        let m142 = m16 + m17;
+        let m143 = m18 + m19;
+        let m144 = m20 - m30;
+        let m145 = m22 + m31;
+        let m146 = m23 - m34;
+        let m147 = m24 + m33;
+        let m148 = m25 - m38;
+        let m149 = m26 - m37;
+        let m150 = m27 + m36;
+        let m151 = m28 + m35;
+        let m152 = m29 - m39;
+        let m153 = m40 - m64;
+        let m154 = m41 - m52;
+        let m155 = m42 + m50;
+        let m156 = m44 + m54;
+        let m157 = m45 - m69;
+        let m158 = m46 - m68;
+        let m159 = m47 + m67;
+        let m160 = m48 + m66;
+        let m161 = m49 + m70;
+        let m162 = m51 - m53;
+        let m163 = m55 + m71;
+        let m164 = m57 - m59;
+        let m165 = m61 - m63;
+        let m166 = m72 - m102;
+        let m167 = m73 - m103;
+        let m168 = m74 - m104;
+        let m169 = m75 - m105;
+        let m170 = m76 - m106;
+        let m171 = m77 - m107;
+        let m172 = m81 - m108;
+        let m173 = m82 + m87;
+        let m174 = m83 + m91;
+        let m175 = m86 - m109;
+        let m176 = m88 + m92;
+        let m177 = m90 - m110;
+        let m178 = m93 - m111;
+        let m179 = m94 + m97;
+        let m180 = m95 + m100;
+        let m181 = m96 - m112;
+        let m182 = m98 + m101;
+        let m183 = m99 - m113;
+        let m184 = m132 - m133;
+        let m185 = m132 + m133;
+        let m186 = m135 - m137;
+        let m187 = m141 * T::from_f64(-1.0 / 2.0);
+        let m188 = m139 + m187;
+        let m189 = m142 - m143;
+        let m190 = m145 - m169;
+        let m191 = m156 + m168;
+        let m192 = m188 - m186;
+        let m193 = m192 * T::from_i64(2);
+        let m194 = m189 + m193;
+        let m195 = m191 - m190;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = m170 - m23;
+        let m198 = m197 - m34;
+        let m199 = m41 + m52;
+        let m200 = m167 + m199;
+        let m201 = m198 - m200;
+        let m202 = m201 * T::from_i64(2);
+        let m203 = m160 - m149;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = m150 + m157;
+        let m206 = m205 * T::from_i64(2);
+        let m207 = -m206;
+        let m208 = m35 - m28;
+        let m209 = m46 + m68;
+        let m210 = m208 - m209;
+        let m211 = m210 * T::from_i64(2);
+        let m212 = m190 + m191;
+        let m213 = m212 * T::from_i64(2);
+        let m214 = -m213;
+        let m215 = m186 + m188;
+        let m216 = m215 * T::from_i64(2);
+        let m217 = m185 + m216;
+        let m218 = m24 + m50;
+        let m219 = m166 + m218;
+        let m220 = m171 - m33;
+        let m221 = m220 - m42;
+        let m222 = m219 + m221;
+        let m223 = m222 * T::from_i64(2);
+        let m224 = m157 - m150;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m149 + m160;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m67 - m25;
+        let m229 = m38 + m47;
+        let m230 = m228 - m229;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = m167 + m170;
+        let m233 = m146 + m154;
+        let m234 = m232 - m233;
+        let m235 = m234 * T::from_i64(2);
+        let m236 = m171 - m147;
+        let m237 = m155 + m166;
+        let m238 = m236 - m237;
+        let m239 = m238 * T::from_i64(2);
+        let m240 = m184 - m141;
+        let m241 = m135 + m137;
+        let m242 = m241 - m139;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m240 + m243;
+        let m245 = m151 + m158;
+        let m246 = m245 * T::from_i64(2);
+        let m247 = -m246;
+        let m248 = m148 - m159;
+        let m249 = m248 * T::from_i64(2);
+        let m250 = m26 + m37;
+        let m251 = m66 - m48;
+        let m252 = m250 + m251;
+        let m253 = m252 * T::from_i64(2);
+        let m254 = m152 - m161;
+        let m255 = m254 * T::from_i64(2);
+        let m256 = m173 + m177;
+        let m257 = m256 * T::from_i64(2);
+        let m258 = m174 - m175;
+        let m259 = m258 * T::from_i64(2);
+        let m260 = m153 - m144;
+        let m261 = m260 * T::from_i64(2);
+        let m262 = m89 - m78;
+        let m263 = m262 * T::from_i64(4);
+        let m264 = m79 + m85;
+        let m265 = m264 * T::from_i64(4);
+        let m266 = -m265;
+        let m267 = m173 - m177;
+        let m268 = m267 * T::from_i64(2);
+        let m269 = m152 + m161;
+        let m270 = m269 * T::from_i64(2);
+        let m271 = -m270;
+        let m272 = m172 + m176;
+        let m273 = m272 * T::from_i64(2);
+        let m274 = m78 + m89;
+        let m275 = m274 * T::from_i64(4);
+        let m276 = -m275;
+        let m277 = m144 + m153;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m80 - m84;
+        let m280 = m279 * T::from_i64(4);
+        let m281 = m174 + m175;
+        let m282 = m281 * T::from_i64(2);
+        let m283 = m176 - m172;
+        let m284 = m283 * T::from_i64(2);
+        let m285 = m49 - m29;
+        let m286 = m39 + m70;
+        let m287 = m285 - m286;
+        let m288 = m287 * T::from_i64(2);
+        let m289 = m85 - m79;
+        let m290 = m289 * T::from_i64(4);
+        let m291 = m80 + m84;
+        let m292 = m291 * T::from_i64(4);
+        let m293 = -m292;
+        let m294 = m20 + m30;
+        let m295 = m40 + m64;
+        let m296 = m294 - m295;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m162 - m163;
+        let m299 = m298 * T::from_i64(2);
+        let m300 = m179 + m183;
+        let m301 = m300 * T::from_i64(2);
+        let m302 = m180 - m181;
+        let m303 = m302 * T::from_i64(2);
+        let m304 = m57 + m59;
+        let m305 = m61 + m63;
+        let m306 = m304 - m305;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m189 + m307;
+        let m309 = m116 + m117;
+        let m310 = m309 * T::from_i64(2);
+        let m311 = m118 - m115;
+        let m312 = m311 * T::from_i64(2);
+        let m313 = m179 - m183;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m162 + m163;
+        let m316 = m315 * T::from_i64(2);
+        let m317 = -m316;
+        let m318 = m178 + m182;
+        let m319 = m318 * T::from_i64(2);
+        let m320 = m117 - m116;
+        let m321 = m320 * T::from_i64(2);
+        let m322 = m164 + m165;
+        let m323 = m322 * T::from_i64(2);
+        let m324 = m185 + m323;
+        let m325 = m114 + m119;
+        let m326 = m325 * T::from_i64(2);
+        let m327 = m180 + m181;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = m182 - m178;
+        let m330 = m329 * T::from_i64(2);
+        let m331 = m55 - m51;
+        let m332 = m53 + m71;
+        let m333 = m331 - m332;
+        let m334 = m333 * T::from_i64(2);
+        let m335 = m115 + m118;
+        let m336 = m335 * T::from_i64(2);
+        let m337 = m119 - m114;
+        let m338 = m337 * T::from_i64(2);
+        let m339 = m164 - m165;
+        let m340 = m339 * T::from_i64(2);
+        let m341 = m184 + m340;
+        let m342 = m121 + m123;
+        let m343 = m147 + m342;
+        let m344 = m120 + m122;
+        let m345 = m155 + m344;
+        let m346 = m343 - m345;
+        let m347 = m346 * T::from_i64(2);
+        let m348 = m125 + m126;
+        let m349 = m154 + m348;
+        let m350 = m124 + m127;
+        let m351 = m146 + m350;
+        let m352 = m349 - m351;
+        let m353 = m352 * T::from_i64(2);
+        let m354 = m22 + m44;
+        let m355 = m130 + m131;
+        let m356 = m354 + m355;
+        let m357 = m31 + m54;
+        let m358 = m128 + m129;
+        let m359 = m357 + m358;
+        let m360 = m356 - m359;
+        let m361 = m360 * T::from_i64(2);
+        let m362 = m148 + m159;
+        let m363 = m362 * T::from_i64(2);
+        let m364 = -m363;
+        let m365 = m158 - m151;
+        let m366 = m365 * T::from_i64(2);
+        let m367 = m27 - m36;
+        let m368 = m45 + m69;
+        let m369 = m367 - m368;
+        let m370 = m369 * T::from_i64(2);
+        gx::Prepared::from_entries([m194, m196, m202, m204, m207, m211, m214, m217, m223, m225, m227, m231, m235, m239, m244, m247, m249, m253, m255, m257, m259, m261, m263, m266, m268, m271, m273, m276, m278, m280, m282, m284, m288, m290, m293, m297, m299, m301, m303, m308, m310, m312, m314, m317, m319, m321, m324, m326, m328, m330, m334, m336, m338, m341, m347, m353, m361, m364, m366, m370])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<Even, Twist, T, 60> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Even, Twist, T, 60>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Even, Twist, T, 60>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Unit<Even<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.into_inner().c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[1] + v[11];
+        let t1 = v[2] + v[12];
+        let t2 = v[3] + v[13];
+        let t3 = v[0] + v[10];
+        let t4 = v[1] - v[11];
+        let t5 = v[2] - v[12];
+        let t6 = v[3] - v[13];
+        let t7 = v[0] - v[10];
+        let t8 = v[10] * T::from_f64(1.0 / 2.0);
+        let t9 = v[0] + t8;
+        let t10 = v[11] * T::from_f64(1.0 / 2.0);
+        let t11 = v[1] + t10;
+        let t12 = v[12] * T::from_f64(1.0 / 2.0);
+        let t13 = v[2] + t12;
+        let t14 = v[13] * T::from_f64(1.0 / 2.0);
+        let t15 = v[3] + t14;
+        let t16 = v[1] * v[1];
+        let t17 = v[2] * v[2];
+        let t18 = v[3] * v[3];
+        let t19 = v[0] * v[0];
+        let t20 = v[4] * v[4];
+        let t21 = v[4] * v[8];
+        let t22 = v[4] * v[9];
+        let t23 = v[4] * t1;
+        let t24 = v[4] * t2;
+        let t25 = v[4] * t3;
+        let t26 = v[5] * v[5];
+        let t27 = v[5] * v[7];
+        let t28 = v[5] * v[9];
+        let t29 = v[5] * t0;
+        let t30 = v[5] * t2;
+        let t31 = v[5] * t3;
+        let t32 = v[6] * v[6];
+        let t33 = v[6] * v[7];
+        let t34 = v[6] * v[8];
+        let t35 = v[6] * t0;
+        let t36 = v[6] * t1;
+        let t37 = v[6] * t3;
+        let t38 = v[10] * v[14];
+        let t39 = v[10] * t9;
+        let t40 = v[11] * t11;
+        let t41 = v[12] * t13;
+        let t42 = v[13] * t15;
+        let t43 = v[14] * v[14];
+        let t44 = v[14] * t0;
+        let t45 = v[14] * t1;
+        let t46 = v[14] * t2;
+        let t47 = v[0] * v[1];
+        let t48 = v[0] * v[2];
+        let t49 = v[0] * v[3];
+        let t50 = v[1] * v[2];
+        let t51 = v[1] * v[3];
+        let t52 = v[1] * v[4];
+        let t53 = v[2] * v[3];
+        let t54 = v[2] * v[5];
+        let t55 = v[3] * v[6];
+        let t56 = v[4] * v[5];
+        let t57 = v[4] * v[6];
+        let t58 = v[4] * v[7];
+        let t59 = v[4] * v[14];
+        let t60 = v[4] * v[15];
+        let t61 = v[4] * t4;
+        let t62 = v[4] * t5;
+        let t63 = v[4] * t6;
+        let t64 = v[4] * t7;
+        let t65 = v[5] * v[6];
+        let t66 = v[5] * v[8];
+        let t67 = v[5] * v[14];
+        let t68 = v[5] * v[15];
+        let t69 = v[5] * t4;
+        let t70 = v[5] * t5;
+        let t71 = v[5] * t6;
+        let t72 = v[5] * t7;
+        let t73 = v[6] * v[9];
+        let t74 = v[6] * v[14];
+        let t75 = v[6] * v[15];
+        let t76 = v[6] * t4;
+        let t77 = v[6] * t5;
+        let t78 = v[6] * t6;
+        let t79 = v[6] * t7;
+        let t80 = v[7] * v[14];
+        let t81 = v[7] * t0;
+        let t82 = v[7] * t1;
+        let t83 = v[7] * t2;
+        let t84 = v[7] * t3;
+        let t85 = v[8] * v[14];
+        let t86 = v[8] * t0;
+        let t87 = v[8] * t1;
+        let t88 = v[8] * t2;
+        let t89 = v[8] * t3;
+        let t90 = v[9] * v[14];
+        let t91 = v[9] * t0;
+        let t92 = v[9] * t1;
+        let t93 = v[9] * t2;
+        let t94 = v[9] * t3;
+        let t95 = v[10] * v[11];
+        let t96 = v[10] * v[12];
+        let t97 = v[10] * v[13];
+        let t98 = v[11] * v[11];
+        let t99 = v[11] * v[12];
+        let t100 = v[11] * v[13];
+        let t101 = v[12] * v[12];
+        let t102 = v[12] * v[13];
+        let t103 = v[13] * v[13];
+        let t104 = v[14] * t4;
+        let t105 = v[14] * t5;
+        let t106 = v[14] * t6;
+        let t107 = v[15] * t0;
+        let t108 = v[15] * t1;
+        let t109 = v[15] * t2;
+        let t110 = t0 * t1;
+        let t111 = t0 * t2;
+        let t112 = t0 * t3;
+        let t113 = t1 * t2;
+        let t114 = t1 * t3;
+        let t115 = t2 * t3;
+        let t116 = v[4] * v[11];
+        let t117 = v[5] * v[12];
+        let t118 = v[6] * v[13];
+        let t119 = v[2] * v[13];
+        let t120 = v[3] * v[12];
+        let t121 = v[1] * v[13];
+        let t122 = v[3] * v[11];
+        let t123 = v[1] * v[12];
+        let t124 = v[2] * v[11];
+        let t125 = t40 * T::from_i64(2);
+        let t126 = t16 + t125;
+        let t127 = t41 * T::from_i64(2);
+        let t128 = t17 + t127;
+        let t129 = t42 * T::from_i64(2);
+        let t130 = t18 + t129;
+        let t131 = t39 * T::from_i64(2);
+        let t132 = t19 + t131;
+        let t133 = t58 * T::from_i64(-2);
+        let t134 = t16 + t133;
+        let t135 = t66 * T::from_i64(-2);
+        let t136 = t17 + t135;
+        let t137 = t73 * T::from_i64(-2);
+        let t138 = t18 + t137;
+        let t139 = t20 - t26;
+        let t140 = t21 + t27;
+        let t141 = t22 + t33;
+        let t142 = t23 + t29;
+        let t143 = t24 + t31;
+        let t144 = t25 - t30;
+        let t145 = t28 + t34;
+        let t146 = t32 - t43;
+        let t147 = t35 - t45;
+        let t148 = t36 + t44;
+        let t149 = t37 - t46;
+        let t150 = t38 + t52;
+        let t151 = t47 + t60;
+        let t152 = t48 + t68;
+        let t153 = t49 + t75;
+        let t154 = t50 - t99;
+        let t155 = t51 - t100;
+        let t156 = t53 - t102;
+        let t157 = t62 + t69;
+        let t158 = t63 + t76;
+        let t159 = t64 - t104;
+        let t160 = t71 + t77;
+        let t161 = t72 - t105;
+        let t162 = t79 - t106;
+        let t163 = t80 - t95;
+        let t164 = t82 + t86;
+        let t165 = t83 + t91;
+        let t166 = t84 - t107;
+        let t167 = t85 - t96;
+        let t168 = t88 + t92;
+        let t169 = t89 - t108;
+        let t170 = t90 - t97;
+        let t171 = t94 - t109;
+        let t172 = t98 - t134;
+        let t173 = t101 - t136;
+        let t174 = t103 - t138;
+        let t175 = t126 - t128;
+        let t176 = t130 - t132;
+        let t177 = t140 - t154;
+        let t178 = t141 - t155;
+        let t179 = t145 - t156;
+        let t180 = t151 + t163;
+        let t181 = t152 + t167;
+        let t182 = t153 + t170;
+        let t183 = t173 + t174;
+        let t184 = t183 * T::from_i64(2);
+        let t185 = t184 + T::from_i64(1);
+        let t186 = t182 - t177;
+        let t187 = t178 + t181;
+        let t188 = t38 + t54;
+        let t189 = t55 - t116;
+        let t190 = t188 + t189;
+        let t191 = t142 + t149;
+        let t192 = t31 - t24;
+        let t193 = t35 + t45;
+        let t194 = t192 - t193;
+        let t195 = t177 + t182;
+        let t196 = t172 + t174;
+        let t197 = t196 * T::from_i64(2);
+        let t198 = t197 + T::from_i64(1);
+        let t199 = t180 - t179;
+        let t200 = t149 - t142;
+        let t201 = t55 + t150;
+        let t202 = t201 - t117;
+        let t203 = t25 + t30;
+        let t204 = t36 - t44;
+        let t205 = t203 + t204;
+        let t206 = t181 - t178;
+        let t207 = t179 + t180;
+        let t208 = t172 + t173;
+        let t209 = t208 * T::from_i64(2);
+        let t210 = t209 + T::from_i64(1);
+        let t211 = t143 + t147;
+        let t212 = t144 - t148;
+        let t213 = t54 + t150;
+        let t214 = t213 - t118;
+        let t215 = t70 + t78;
+        let t216 = t157 + t162;
+        let t217 = t161 - t158;
+        let t218 = t139 - t146;
+        let t219 = t56 - t74;
+        let t220 = t57 + t67;
+        let t221 = t162 - t157;
+        let t222 = t61 + t78;
+        let t223 = t159 + t160;
+        let t224 = t56 + t74;
+        let t225 = t139 + t146;
+        let t226 = t59 - t65;
+        let t227 = t158 + t161;
+        let t228 = t159 - t160;
+        let t229 = t61 + t70;
+        let t230 = t57 - t67;
+        let t231 = t59 + t65;
+        let t232 = t20 + t26;
+        let t233 = t32 + t43;
+        let t234 = t232 - t233;
+        let t235 = t87 + t93;
+        let t236 = t164 + t171;
+        let t237 = t169 - t165;
+        let t238 = t175 - t176;
+        let t239 = t110 + t115;
+        let t240 = t114 - t111;
+        let t241 = t171 - t164;
+        let t242 = t81 + t93;
+        let t243 = t166 + t168;
+        let t244 = t115 - t110;
+        let t245 = t175 + t176;
+        let t246 = -t245;
+        let t247 = t112 + t113;
+        let t248 = t165 + t169;
+        let t249 = t166 - t168;
+        let t250 = t81 + t87;
+        let t251 = t111 + t114;
+        let t252 = t112 - t113;
+        let t253 = t130 + t132;
+        let t254 = t126 + t128;
+        let t255 = t253 - t254;
+        let t256 = t34 + t119;
+        let t257 = t28 + t120;
+        let t258 = t256 - t257;
+        let t259 = t33 + t121;
+        let t260 = t22 + t122;
+        let t261 = t259 - t260;
+        let t262 = t27 + t123;
+        let t263 = t21 + t124;
+        let t264 = t262 - t263;
+        let t265 = t144 + t148;
+        let t266 = t143 - t147;
+        let t267 = t29 + t37;
+        let t268 = t46 - t23;
+        let t269 = t267 + t268;
+        let t270 = xv[0] * t185;
+        let t271 = xv[1] * t186;
+        let t272 = xv[2] * t187;
+        let t273 = xv[3] * t190;
+        let t274 = xv[4] * t191;
+        let t275 = xv[5] * t194;
+        let t276 = xv[0] * t195;
+        let t277 = xv[1] * t198;
+        let t278 = xv[2] * t199;
+        let t279 = xv[3] * t200;
+        let t280 = xv[4] * t202;
+        let t281 = xv[5] * t205;
+        let t282 = xv[0] * t206;
+        let t283 = xv[1] * t207;
+        let t284 = xv[2] * t210;
+        let t285 = xv[3] * t211;
+        let t286 = xv[4] * t212;
+        let t287 = xv[5] * t214;
+        let t288 = xv[0] * t215;
+        let t289 = xv[1] * t216;
+        let t290 = xv[2] * t217;
+        let t291 = xv[3] * t218;
+        let t292 = xv[4] * t219;
+        let t293 = xv[5] * t220;
+        let t294 = xv[0] * t221;
+        let t295 = xv[1] * t222;
+        let t296 = xv[2] * t223;
+        let t297 = xv[3] * t224;
+        let t298 = xv[4] * t225;
+        let t299 = xv[5] * t226;
+        let t300 = xv[0] * t227;
+        let t301 = xv[1] * t228;
+        let t302 = xv[2] * t229;
+        let t303 = xv[3] * t230;
+        let t304 = xv[4] * t231;
+        let t305 = xv[5] * t234;
+        let t306 = xv[0] * t235;
+        let t307 = xv[1] * t236;
+        let t308 = xv[2] * t237;
+        let t309 = xv[3] * t238;
+        let t310 = xv[4] * t239;
+        let t311 = xv[5] * t240;
+        let t312 = xv[0] * t241;
+        let t313 = xv[1] * t242;
+        let t314 = xv[2] * t243;
+        let t315 = xv[3] * t244;
+        let t316 = xv[4] * t246;
+        let t317 = xv[5] * t247;
+        let t318 = xv[0] * t248;
+        let t319 = xv[1] * t249;
+        let t320 = xv[2] * t250;
+        let t321 = xv[3] * t251;
+        let t322 = xv[4] * t252;
+        let t323 = xv[5] * t255;
+        let t324 = xv[0] * t258;
+        let t325 = xv[1] * t261;
+        let t326 = xv[2] * t264;
+        let t327 = xv[3] * t265;
+        let t328 = xv[4] * t266;
+        let t329 = xv[5] * t269;
+        let t330 = t271 + t275;
+        let t331 = t272 + t274;
+        let t332 = t330 - t331;
+        let t333 = t332 * T::from_i64(2);
+        let t334 = t273 * T::from_i64(4);
+        let t335 = t270 + t333;
+        let t336 = t334 + t335;
+        let t337 = t278 + t279;
+        let t338 = t276 + t281;
+        let t339 = t337 - t338;
+        let t340 = t339 * T::from_i64(2);
+        let t341 = t280 * T::from_i64(4);
+        let t342 = t277 + t340;
+        let t343 = t341 + t342;
+        let t344 = t282 + t286;
+        let t345 = t283 + t285;
+        let t346 = t344 - t345;
+        let t347 = t346 * T::from_i64(2);
+        let t348 = t287 * T::from_i64(4);
+        let t349 = t284 + t347;
+        let t350 = t348 + t349;
+        let t351 = t289 - t290;
+        let t352 = t351 - t291;
+        let t353 = t352 * T::from_i64(2);
+        let t354 = t288 + t292;
+        let t355 = t293 + t354;
+        let t356 = t355 * T::from_i64(4);
+        let t357 = t353 - t356;
+        let t358 = t296 + t298;
+        let t359 = t358 - t294;
+        let t360 = t359 * T::from_i64(2);
+        let t361 = t299 - t295;
+        let t362 = t361 - t297;
+        let t363 = t362 * T::from_i64(4);
+        let t364 = t360 + t363;
+        let t365 = t300 + t305;
+        let t366 = t365 - t301;
+        let t367 = t366 * T::from_i64(2);
+        let t368 = t302 + t303;
+        let t369 = t304 + t368;
+        let t370 = t369 * T::from_i64(4);
+        let t371 = t367 - t370;
+        let t372 = t307 + t310;
+        let t373 = t308 + t311;
+        let t374 = t372 - t373;
+        let t375 = t374 * T::from_i64(2);
+        let t376 = t306 * T::from_i64(4);
+        let t377 = t309 + t375;
+        let t378 = t377 - t376;
+        let t379 = t314 + t317;
+        let t380 = t312 + t315;
+        let t381 = t379 - t380;
+        let t382 = t381 * T::from_i64(2);
+        let t383 = t313 * T::from_i64(4);
+        let t384 = t316 + t382;
+        let t385 = t384 - t383;
+        let t386 = t318 + t321;
+        let t387 = t319 + t322;
+        let t388 = t386 - t387;
+        let t389 = t388 * T::from_i64(2);
+        let t390 = t320 * T::from_i64(4);
+        let t391 = t323 + t389;
+        let t392 = t391 - t390;
+        let t393 = t327 + t328;
+        let t394 = t329 + t393;
+        let t395 = t394 * T::from_i64(2);
+        let t396 = t325 - t324;
+        let t397 = t396 - t326;
+        let t398 = t397 * T::from_i64(4);
+        let t399 = t398 - t395;
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t336, t343, t350, t357, t364, t371, t378, t385, t392, t399]) };
+        }
+        let m0 = v[1] + v[11];
+        let m1 = v[2] + v[12];
+        let m2 = v[3] + v[13];
+        let m3 = v[0] + v[10];
+        let m4 = v[1] - v[11];
+        let m5 = v[2] - v[12];
+        let m6 = v[3] - v[13];
+        let m7 = v[0] - v[10];
+        let m8 = v[10] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[11] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[12] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[13] * T::from_f64(1.0 / 2.0);
+        let m15 = v[3] + m14;
+        let m16 = v[1] * v[1];
+        let m17 = v[2] * v[2];
+        let m18 = v[3] * v[3];
+        let m19 = v[0] * v[0];
+        let m20 = v[4] * v[4];
+        let m21 = v[4] * v[8];
+        let m22 = v[4] * v[9];
+        let m23 = v[4] * m1;
+        let m24 = v[4] * m2;
+        let m25 = v[4] * m3;
+        let m26 = v[5] * v[5];
+        let m27 = v[5] * v[7];
+        let m28 = v[5] * v[9];
+        let m29 = v[5] * m0;
+        let m30 = v[5] * m2;
+        let m31 = v[5] * m3;
+        let m32 = v[6] * v[6];
+        let m33 = v[6] * v[7];
+        let m34 = v[6] * v[8];
+        let m35 = v[6] * m0;
+        let m36 = v[6] * m1;
+        let m37 = v[6] * m3;
+        let m38 = v[10] * v[14];
+        let m39 = v[10] * m9;
+        let m40 = v[11] * m11;
+        let m41 = v[12] * m13;
+        let m42 = v[13] * m15;
+        let m43 = v[14] * v[14];
+        let m44 = v[14] * m0;
+        let m45 = v[14] * m1;
+        let m46 = v[14] * m2;
+        let m47 = v[0] * v[1];
+        let m48 = v[0] * v[2];
+        let m49 = v[0] * v[3];
+        let m50 = v[1] * v[2];
+        let m51 = v[1] * v[3];
+        let m52 = v[1] * v[4];
+        let m53 = v[2] * v[3];
+        let m54 = v[2] * v[5];
+        let m55 = v[3] * v[6];
+        let m56 = v[4] * v[5];
+        let m57 = v[4] * v[6];
+        let m58 = v[4] * v[7];
+        let m59 = v[4] * v[14];
+        let m60 = v[4] * v[15];
+        let m61 = v[4] * m4;
+        let m62 = v[4] * m5;
+        let m63 = v[4] * m6;
+        let m64 = v[4] * m7;
+        let m65 = v[5] * v[6];
+        let m66 = v[5] * v[8];
+        let m67 = v[5] * v[14];
+        let m68 = v[5] * v[15];
+        let m69 = v[5] * m4;
+        let m70 = v[5] * m5;
+        let m71 = v[5] * m6;
+        let m72 = v[5] * m7;
+        let m73 = v[6] * v[9];
+        let m74 = v[6] * v[14];
+        let m75 = v[6] * v[15];
+        let m76 = v[6] * m4;
+        let m77 = v[6] * m5;
+        let m78 = v[6] * m6;
+        let m79 = v[6] * m7;
+        let m80 = v[7] * v[14];
+        let m81 = v[7] * m0;
+        let m82 = v[7] * m1;
+        let m83 = v[7] * m2;
+        let m84 = v[7] * m3;
+        let m85 = v[8] * v[14];
+        let m86 = v[8] * m0;
+        let m87 = v[8] * m1;
+        let m88 = v[8] * m2;
+        let m89 = v[8] * m3;
+        let m90 = v[9] * v[14];
+        let m91 = v[9] * m0;
+        let m92 = v[9] * m1;
+        let m93 = v[9] * m2;
+        let m94 = v[9] * m3;
+        let m95 = v[10] * v[11];
+        let m96 = v[10] * v[12];
+        let m97 = v[10] * v[13];
+        let m98 = v[11] * v[11];
+        let m99 = v[11] * v[12];
+        let m100 = v[11] * v[13];
+        let m101 = v[12] * v[12];
+        let m102 = v[12] * v[13];
+        let m103 = v[13] * v[13];
+        let m104 = v[14] * m4;
+        let m105 = v[14] * m5;
+        let m106 = v[14] * m6;
+        let m107 = v[15] * m0;
+        let m108 = v[15] * m1;
+        let m109 = v[15] * m2;
+        let m110 = m0 * m1;
+        let m111 = m0 * m2;
+        let m112 = m0 * m3;
+        let m113 = m1 * m2;
+        let m114 = m1 * m3;
+        let m115 = m2 * m3;
+        let m116 = v[4] * v[11];
+        let m117 = v[5] * v[12];
+        let m118 = v[6] * v[13];
+        let m119 = v[2] * v[13];
+        let m120 = v[3] * v[12];
+        let m121 = v[1] * v[13];
+        let m122 = v[3] * v[11];
+        let m123 = v[1] * v[12];
+        let m124 = v[2] * v[11];
+        let m125 = m40 * T::from_i64(2);
+        let m126 = m16 + m125;
+        let m127 = m41 * T::from_i64(2);
+        let m128 = m17 + m127;
+        let m129 = m42 * T::from_i64(2);
+        let m130 = m18 + m129;
+        let m131 = m39 * T::from_i64(2);
+        let m132 = m19 + m131;
+        let m133 = m58 * T::from_i64(-2);
+        let m134 = m16 + m133;
+        let m135 = m66 * T::from_i64(-2);
+        let m136 = m17 + m135;
+        let m137 = m73 * T::from_i64(-2);
+        let m138 = m18 + m137;
+        let m139 = m20 - m26;
+        let m140 = m21 + m27;
+        let m141 = m22 + m33;
+        let m142 = m23 + m29;
+        let m143 = m24 + m31;
+        let m144 = m25 - m30;
+        let m145 = m28 + m34;
+        let m146 = m32 - m43;
+        let m147 = m35 - m45;
+        let m148 = m36 + m44;
+        let m149 = m37 - m46;
+        let m150 = m38 + m52;
+        let m151 = m47 + m60;
+        let m152 = m48 + m68;
+        let m153 = m49 + m75;
+        let m154 = m50 - m99;
+        let m155 = m51 - m100;
+        let m156 = m53 - m102;
+        let m157 = m62 + m69;
+        let m158 = m63 + m76;
+        let m159 = m64 - m104;
+        let m160 = m71 + m77;
+        let m161 = m72 - m105;
+        let m162 = m79 - m106;
+        let m163 = m80 - m95;
+        let m164 = m82 + m86;
+        let m165 = m83 + m91;
+        let m166 = m84 - m107;
+        let m167 = m85 - m96;
+        let m168 = m88 + m92;
+        let m169 = m89 - m108;
+        let m170 = m90 - m97;
+        let m171 = m94 - m109;
+        let m172 = m98 - m134;
+        let m173 = m101 - m136;
+        let m174 = m103 - m138;
+        let m175 = m126 - m128;
+        let m176 = m130 - m132;
+        let m177 = m140 - m154;
+        let m178 = m141 - m155;
+        let m179 = m145 - m156;
+        let m180 = m151 + m163;
+        let m181 = m152 + m167;
+        let m182 = m153 + m170;
+        let m183 = m173 + m174;
+        let m184 = m183 * T::from_i64(2);
+        let m185 = m184 + T::from_i64(1);
+        let m186 = m182 - m177;
+        let m187 = m186 * T::from_i64(2);
+        let m188 = m178 + m181;
+        let m189 = m188 * T::from_i64(2);
+        let m190 = -m189;
+        let m191 = m38 + m54;
+        let m192 = m55 - m116;
+        let m193 = m191 + m192;
+        let m194 = m193 * T::from_i64(4);
+        let m195 = m142 + m149;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = -m196;
+        let m198 = m31 - m24;
+        let m199 = m35 + m45;
+        let m200 = m198 - m199;
+        let m201 = m200 * T::from_i64(2);
+        let m202 = m177 + m182;
+        let m203 = m202 * T::from_i64(2);
+        let m204 = -m203;
+        let m205 = m172 + m174;
+        let m206 = m205 * T::from_i64(2);
+        let m207 = m206 + T::from_i64(1);
+        let m208 = m180 - m179;
+        let m209 = m208 * T::from_i64(2);
+        let m210 = m149 - m142;
+        let m211 = m210 * T::from_i64(2);
+        let m212 = m55 + m150;
+        let m213 = m212 - m117;
+        let m214 = m213 * T::from_i64(4);
+        let m215 = m44 - m25;
+        let m216 = m30 + m36;
+        let m217 = m215 - m216;
+        let m218 = m217 * T::from_i64(2);
+        let m219 = m181 - m178;
+        let m220 = m219 * T::from_i64(2);
+        let m221 = m179 + m180;
+        let m222 = m221 * T::from_i64(2);
+        let m223 = -m222;
+        let m224 = m172 + m173;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m225 + T::from_i64(1);
+        let m227 = m143 + m147;
+        let m228 = m227 * T::from_i64(2);
+        let m229 = -m228;
+        let m230 = m144 - m148;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = m54 + m150;
+        let m233 = m232 - m118;
+        let m234 = m233 * T::from_i64(4);
+        let m235 = m70 + m78;
+        let m236 = m235 * T::from_i64(4);
+        let m237 = -m236;
+        let m238 = m157 + m162;
+        let m239 = m238 * T::from_i64(2);
+        let m240 = m158 - m161;
+        let m241 = m240 * T::from_i64(2);
+        let m242 = m146 - m139;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m74 - m56;
+        let m245 = m244 * T::from_i64(4);
+        let m246 = m57 + m67;
+        let m247 = m246 * T::from_i64(4);
+        let m248 = -m247;
+        let m249 = m157 - m162;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m61 + m78;
+        let m252 = m251 * T::from_i64(4);
+        let m253 = -m252;
+        let m254 = m159 + m160;
+        let m255 = m254 * T::from_i64(2);
+        let m256 = m56 + m74;
+        let m257 = m256 * T::from_i64(4);
+        let m258 = -m257;
+        let m259 = m139 + m146;
+        let m260 = m259 * T::from_i64(2);
+        let m261 = m59 - m65;
+        let m262 = m261 * T::from_i64(4);
+        let m263 = m158 + m161;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m160 - m159;
+        let m266 = m265 * T::from_i64(2);
+        let m267 = m61 + m70;
+        let m268 = m267 * T::from_i64(4);
+        let m269 = -m268;
+        let m270 = m67 - m57;
+        let m271 = m270 * T::from_i64(4);
+        let m272 = m59 + m65;
+        let m273 = m272 * T::from_i64(4);
+        let m274 = -m273;
+        let m275 = m20 + m26;
+        let m276 = m32 + m43;
+        let m277 = m275 - m276;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m87 + m93;
+        let m280 = m279 * T::from_i64(4);
+        let m281 = -m280;
+        let m282 = m164 + m171;
+        let m283 = m282 * T::from_i64(2);
+        let m284 = m165 - m169;
+        let m285 = m284 * T::from_i64(2);
+        let m286 = m175 - m176;
+        let m287 = m110 + m115;
+        let m288 = m287 * T::from_i64(2);
+        let m289 = m111 - m114;
+        let m290 = m289 * T::from_i64(2);
+        let m291 = m164 - m171;
+        let m292 = m291 * T::from_i64(2);
+        let m293 = m81 + m93;
+        let m294 = m293 * T::from_i64(4);
+        let m295 = -m294;
+        let m296 = m166 + m168;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m110 - m115;
+        let m299 = m298 * T::from_i64(2);
+        let m300 = m175 + m176;
+        let m301 = -m300;
+        let m302 = m112 + m113;
+        let m303 = m302 * T::from_i64(2);
+        let m304 = m165 + m169;
+        let m305 = m304 * T::from_i64(2);
+        let m306 = m168 - m166;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m81 + m87;
+        let m309 = m308 * T::from_i64(4);
+        let m310 = -m309;
+        let m311 = m111 + m114;
+        let m312 = m311 * T::from_i64(2);
+        let m313 = m113 - m112;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m130 + m132;
+        let m316 = m126 + m128;
+        let m317 = m315 - m316;
+        let m318 = m28 + m120;
+        let m319 = m34 + m119;
+        let m320 = m318 - m319;
+        let m321 = m320 * T::from_i64(4);
+        let m322 = m33 + m121;
+        let m323 = m22 + m122;
+        let m324 = m322 - m323;
+        let m325 = m324 * T::from_i64(4);
+        let m326 = m21 + m124;
+        let m327 = m27 + m123;
+        let m328 = m326 - m327;
+        let m329 = m328 * T::from_i64(4);
+        let m330 = m144 + m148;
+        let m331 = m330 * T::from_i64(2);
+        let m332 = -m331;
+        let m333 = m147 - m143;
+        let m334 = m333 * T::from_i64(2);
+        let m335 = m23 - m29;
+        let m336 = m37 + m46;
+        let m337 = m335 - m336;
+        let m338 = m337 * T::from_i64(2);
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m185) + x[1].scale(m187) + x[2].scale(m190) + x[3].scale(m194) + x[4].scale(m197) + x[5].scale(m201)).0, (x[0].scale(m204) + x[1].scale(m207) + x[2].scale(m209) + x[3].scale(m211) + x[4].scale(m214) + x[5].scale(m218)).0, (x[0].scale(m220) + x[1].scale(m223) + x[2].scale(m226) + x[3].scale(m229) + x[4].scale(m231) + x[5].scale(m234)).0, (x[0].scale(m237) + x[1].scale(m239) + x[2].scale(m241) + x[3].scale(m243) + x[4].scale(m245) + x[5].scale(m248)).0, (x[0].scale(m250) + x[1].scale(m253) + x[2].scale(m255) + x[3].scale(m258) + x[4].scale(m260) + x[5].scale(m262)).0, (x[0].scale(m264) + x[1].scale(m266) + x[2].scale(m269) + x[3].scale(m271) + x[4].scale(m274) + x[5].scale(m278)).0, (x[0].scale(m281) + x[1].scale(m283) + x[2].scale(m285) + x[3].scale(m286) + x[4].scale(m288) + x[5].scale(m290)).0, (x[0].scale(m292) + x[1].scale(m295) + x[2].scale(m297) + x[3].scale(m299) + x[4].scale(m301) + x[5].scale(m303)).0, (x[0].scale(m305) + x[1].scale(m307) + x[2].scale(m310) + x[3].scale(m312) + x[4].scale(m314) + x[5].scale(m317)).0, (x[0].scale(m321) + x[1].scale(m325) + x[2].scale(m329) + x[3].scale(m332) + x[4].scale(m334) + x[5].scale(m338)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for gx::Unit<Even<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for gx::Unit<Even<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Even>, Twist, T, 60>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Even>, Twist, T, 60> {
+        let v = self.into_inner().c;
+        let m0 = v[1] + v[11];
+        let m1 = v[2] + v[12];
+        let m2 = v[3] + v[13];
+        let m3 = v[0] + v[10];
+        let m4 = v[1] - v[11];
+        let m5 = v[2] - v[12];
+        let m6 = v[3] - v[13];
+        let m7 = v[0] - v[10];
+        let m8 = v[10] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[11] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[12] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[13] * T::from_f64(1.0 / 2.0);
+        let m15 = v[3] + m14;
+        let m16 = v[1] * v[1];
+        let m17 = v[2] * v[2];
+        let m18 = v[3] * v[3];
+        let m19 = v[0] * v[0];
+        let m20 = v[4] * v[4];
+        let m21 = v[4] * v[8];
+        let m22 = v[4] * v[9];
+        let m23 = v[4] * m1;
+        let m24 = v[4] * m2;
+        let m25 = v[4] * m3;
+        let m26 = v[5] * v[5];
+        let m27 = v[5] * v[7];
+        let m28 = v[5] * v[9];
+        let m29 = v[5] * m0;
+        let m30 = v[5] * m2;
+        let m31 = v[5] * m3;
+        let m32 = v[6] * v[6];
+        let m33 = v[6] * v[7];
+        let m34 = v[6] * v[8];
+        let m35 = v[6] * m0;
+        let m36 = v[6] * m1;
+        let m37 = v[6] * m3;
+        let m38 = v[10] * v[14];
+        let m39 = v[10] * m9;
+        let m40 = v[11] * m11;
+        let m41 = v[12] * m13;
+        let m42 = v[13] * m15;
+        let m43 = v[14] * v[14];
+        let m44 = v[14] * m0;
+        let m45 = v[14] * m1;
+        let m46 = v[14] * m2;
+        let m47 = v[0] * v[1];
+        let m48 = v[0] * v[2];
+        let m49 = v[0] * v[3];
+        let m50 = v[1] * v[2];
+        let m51 = v[1] * v[3];
+        let m52 = v[1] * v[4];
+        let m53 = v[2] * v[3];
+        let m54 = v[2] * v[5];
+        let m55 = v[3] * v[6];
+        let m56 = v[4] * v[5];
+        let m57 = v[4] * v[6];
+        let m58 = v[4] * v[7];
+        let m59 = v[4] * v[14];
+        let m60 = v[4] * v[15];
+        let m61 = v[4] * m4;
+        let m62 = v[4] * m5;
+        let m63 = v[4] * m6;
+        let m64 = v[4] * m7;
+        let m65 = v[5] * v[6];
+        let m66 = v[5] * v[8];
+        let m67 = v[5] * v[14];
+        let m68 = v[5] * v[15];
+        let m69 = v[5] * m4;
+        let m70 = v[5] * m5;
+        let m71 = v[5] * m6;
+        let m72 = v[5] * m7;
+        let m73 = v[6] * v[9];
+        let m74 = v[6] * v[14];
+        let m75 = v[6] * v[15];
+        let m76 = v[6] * m4;
+        let m77 = v[6] * m5;
+        let m78 = v[6] * m6;
+        let m79 = v[6] * m7;
+        let m80 = v[7] * v[14];
+        let m81 = v[7] * m0;
+        let m82 = v[7] * m1;
+        let m83 = v[7] * m2;
+        let m84 = v[7] * m3;
+        let m85 = v[8] * v[14];
+        let m86 = v[8] * m0;
+        let m87 = v[8] * m1;
+        let m88 = v[8] * m2;
+        let m89 = v[8] * m3;
+        let m90 = v[9] * v[14];
+        let m91 = v[9] * m0;
+        let m92 = v[9] * m1;
+        let m93 = v[9] * m2;
+        let m94 = v[9] * m3;
+        let m95 = v[10] * v[11];
+        let m96 = v[10] * v[12];
+        let m97 = v[10] * v[13];
+        let m98 = v[11] * v[11];
+        let m99 = v[11] * v[12];
+        let m100 = v[11] * v[13];
+        let m101 = v[12] * v[12];
+        let m102 = v[12] * v[13];
+        let m103 = v[13] * v[13];
+        let m104 = v[14] * m4;
+        let m105 = v[14] * m5;
+        let m106 = v[14] * m6;
+        let m107 = v[15] * m0;
+        let m108 = v[15] * m1;
+        let m109 = v[15] * m2;
+        let m110 = m0 * m1;
+        let m111 = m0 * m2;
+        let m112 = m0 * m3;
+        let m113 = m1 * m2;
+        let m114 = m1 * m3;
+        let m115 = m2 * m3;
+        let m116 = v[4] * v[11];
+        let m117 = v[5] * v[12];
+        let m118 = v[6] * v[13];
+        let m119 = v[2] * v[13];
+        let m120 = v[3] * v[12];
+        let m121 = v[1] * v[13];
+        let m122 = v[3] * v[11];
+        let m123 = v[1] * v[12];
+        let m124 = v[2] * v[11];
+        let m125 = m40 * T::from_i64(2);
+        let m126 = m16 + m125;
+        let m127 = m41 * T::from_i64(2);
+        let m128 = m17 + m127;
+        let m129 = m42 * T::from_i64(2);
+        let m130 = m18 + m129;
+        let m131 = m39 * T::from_i64(2);
+        let m132 = m19 + m131;
+        let m133 = m58 * T::from_i64(-2);
+        let m134 = m16 + m133;
+        let m135 = m66 * T::from_i64(-2);
+        let m136 = m17 + m135;
+        let m137 = m73 * T::from_i64(-2);
+        let m138 = m18 + m137;
+        let m139 = m20 - m26;
+        let m140 = m21 + m27;
+        let m141 = m22 + m33;
+        let m142 = m23 + m29;
+        let m143 = m24 + m31;
+        let m144 = m25 - m30;
+        let m145 = m28 + m34;
+        let m146 = m32 - m43;
+        let m147 = m35 - m45;
+        let m148 = m36 + m44;
+        let m149 = m37 - m46;
+        let m150 = m38 + m52;
+        let m151 = m47 + m60;
+        let m152 = m48 + m68;
+        let m153 = m49 + m75;
+        let m154 = m50 - m99;
+        let m155 = m51 - m100;
+        let m156 = m53 - m102;
+        let m157 = m62 + m69;
+        let m158 = m63 + m76;
+        let m159 = m64 - m104;
+        let m160 = m71 + m77;
+        let m161 = m72 - m105;
+        let m162 = m79 - m106;
+        let m163 = m80 - m95;
+        let m164 = m82 + m86;
+        let m165 = m83 + m91;
+        let m166 = m84 - m107;
+        let m167 = m85 - m96;
+        let m168 = m88 + m92;
+        let m169 = m89 - m108;
+        let m170 = m90 - m97;
+        let m171 = m94 - m109;
+        let m172 = m98 - m134;
+        let m173 = m101 - m136;
+        let m174 = m103 - m138;
+        let m175 = m126 - m128;
+        let m176 = m130 - m132;
+        let m177 = m140 - m154;
+        let m178 = m141 - m155;
+        let m179 = m145 - m156;
+        let m180 = m151 + m163;
+        let m181 = m152 + m167;
+        let m182 = m153 + m170;
+        let m183 = m173 + m174;
+        let m184 = m183 * T::from_i64(2);
+        let m185 = m184 + T::from_i64(1);
+        let m186 = m182 - m177;
+        let m187 = m186 * T::from_i64(2);
+        let m188 = m178 + m181;
+        let m189 = m188 * T::from_i64(2);
+        let m190 = -m189;
+        let m191 = m38 + m54;
+        let m192 = m55 - m116;
+        let m193 = m191 + m192;
+        let m194 = m193 * T::from_i64(4);
+        let m195 = m142 + m149;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = -m196;
+        let m198 = m31 - m24;
+        let m199 = m35 + m45;
+        let m200 = m198 - m199;
+        let m201 = m200 * T::from_i64(2);
+        let m202 = m177 + m182;
+        let m203 = m202 * T::from_i64(2);
+        let m204 = -m203;
+        let m205 = m172 + m174;
+        let m206 = m205 * T::from_i64(2);
+        let m207 = m206 + T::from_i64(1);
+        let m208 = m180 - m179;
+        let m209 = m208 * T::from_i64(2);
+        let m210 = m149 - m142;
+        let m211 = m210 * T::from_i64(2);
+        let m212 = m55 + m150;
+        let m213 = m212 - m117;
+        let m214 = m213 * T::from_i64(4);
+        let m215 = m44 - m25;
+        let m216 = m30 + m36;
+        let m217 = m215 - m216;
+        let m218 = m217 * T::from_i64(2);
+        let m219 = m181 - m178;
+        let m220 = m219 * T::from_i64(2);
+        let m221 = m179 + m180;
+        let m222 = m221 * T::from_i64(2);
+        let m223 = -m222;
+        let m224 = m172 + m173;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m225 + T::from_i64(1);
+        let m227 = m143 + m147;
+        let m228 = m227 * T::from_i64(2);
+        let m229 = -m228;
+        let m230 = m144 - m148;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = m54 + m150;
+        let m233 = m232 - m118;
+        let m234 = m233 * T::from_i64(4);
+        let m235 = m70 + m78;
+        let m236 = m235 * T::from_i64(4);
+        let m237 = -m236;
+        let m238 = m157 + m162;
+        let m239 = m238 * T::from_i64(2);
+        let m240 = m158 - m161;
+        let m241 = m240 * T::from_i64(2);
+        let m242 = m146 - m139;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m74 - m56;
+        let m245 = m244 * T::from_i64(4);
+        let m246 = m57 + m67;
+        let m247 = m246 * T::from_i64(4);
+        let m248 = -m247;
+        let m249 = m157 - m162;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m61 + m78;
+        let m252 = m251 * T::from_i64(4);
+        let m253 = -m252;
+        let m254 = m159 + m160;
+        let m255 = m254 * T::from_i64(2);
+        let m256 = m56 + m74;
+        let m257 = m256 * T::from_i64(4);
+        let m258 = -m257;
+        let m259 = m139 + m146;
+        let m260 = m259 * T::from_i64(2);
+        let m261 = m59 - m65;
+        let m262 = m261 * T::from_i64(4);
+        let m263 = m158 + m161;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m160 - m159;
+        let m266 = m265 * T::from_i64(2);
+        let m267 = m61 + m70;
+        let m268 = m267 * T::from_i64(4);
+        let m269 = -m268;
+        let m270 = m67 - m57;
+        let m271 = m270 * T::from_i64(4);
+        let m272 = m59 + m65;
+        let m273 = m272 * T::from_i64(4);
+        let m274 = -m273;
+        let m275 = m20 + m26;
+        let m276 = m32 + m43;
+        let m277 = m275 - m276;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m87 + m93;
+        let m280 = m279 * T::from_i64(4);
+        let m281 = -m280;
+        let m282 = m164 + m171;
+        let m283 = m282 * T::from_i64(2);
+        let m284 = m165 - m169;
+        let m285 = m284 * T::from_i64(2);
+        let m286 = m175 - m176;
+        let m287 = m110 + m115;
+        let m288 = m287 * T::from_i64(2);
+        let m289 = m111 - m114;
+        let m290 = m289 * T::from_i64(2);
+        let m291 = m164 - m171;
+        let m292 = m291 * T::from_i64(2);
+        let m293 = m81 + m93;
+        let m294 = m293 * T::from_i64(4);
+        let m295 = -m294;
+        let m296 = m166 + m168;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m110 - m115;
+        let m299 = m298 * T::from_i64(2);
+        let m300 = m175 + m176;
+        let m301 = -m300;
+        let m302 = m112 + m113;
+        let m303 = m302 * T::from_i64(2);
+        let m304 = m165 + m169;
+        let m305 = m304 * T::from_i64(2);
+        let m306 = m168 - m166;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m81 + m87;
+        let m309 = m308 * T::from_i64(4);
+        let m310 = -m309;
+        let m311 = m111 + m114;
+        let m312 = m311 * T::from_i64(2);
+        let m313 = m113 - m112;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m130 + m132;
+        let m316 = m126 + m128;
+        let m317 = m315 - m316;
+        let m318 = m28 + m120;
+        let m319 = m34 + m119;
+        let m320 = m318 - m319;
+        let m321 = m320 * T::from_i64(4);
+        let m322 = m33 + m121;
+        let m323 = m22 + m122;
+        let m324 = m322 - m323;
+        let m325 = m324 * T::from_i64(4);
+        let m326 = m21 + m124;
+        let m327 = m27 + m123;
+        let m328 = m326 - m327;
+        let m329 = m328 * T::from_i64(4);
+        let m330 = m144 + m148;
+        let m331 = m330 * T::from_i64(2);
+        let m332 = -m331;
+        let m333 = m147 - m143;
+        let m334 = m333 * T::from_i64(2);
+        let m335 = m23 - m29;
+        let m336 = m37 + m46;
+        let m337 = m335 - m336;
+        let m338 = m337 * T::from_i64(2);
+        gx::Prepared::from_entries([m185, m187, m190, m194, m197, m201, m204, m207, m209, m211, m214, m218, m220, m223, m226, m229, m231, m234, m237, m239, m241, m243, m245, m248, m250, m253, m255, m258, m260, m262, m264, m266, m269, m271, m274, m278, m281, m283, m285, m286, m288, m290, m292, m295, m297, m299, m301, m303, m305, m307, m310, m312, m314, m317, m321, m325, m329, m332, m334, m338])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<gx::Unit<Even>, Twist, T, 60> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Even>, Twist, T, 60>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Even>, Twist, T, 60>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
     }
 }
 
@@ -69713,6 +77942,2337 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Vector, T, 30>> for Odd<(Vect
     fn from(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 30>) -> Self {
         let m = p.m;
         Odd { c: [[m[0], m[1], m[2], m[3], m[4]], [m[5], m[6], m[7], m[8], m[9]], [m[10], m[11], m[12], m[13], m[14]], [m[15], m[16], m[17], m[18], m[19]], [m[20], m[21], m[22], m[23], m[24]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[25], m[26], m[27], m[28], m[29]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for Odd<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[0] + v[11];
+        let t1 = v[1] + v[12];
+        let t2 = v[2] + v[13];
+        let t3 = v[14] + v[15];
+        let t4 = v[0] - v[11];
+        let t5 = v[1] - v[12];
+        let t6 = v[2] - v[13];
+        let t7 = v[14] - v[15];
+        let t8 = v[11] * T::from_f64(1.0 / 2.0);
+        let t9 = v[0] + t8;
+        let t10 = v[12] * T::from_f64(1.0 / 2.0);
+        let t11 = v[1] + t10;
+        let t12 = v[13] * T::from_f64(1.0 / 2.0);
+        let t13 = v[2] + t12;
+        let t14 = v[15] * T::from_f64(1.0 / 2.0);
+        let t15 = v[14] + t14;
+        let t16 = v[0] * v[0];
+        let t17 = v[1] * v[1];
+        let t18 = v[2] * v[2];
+        let t19 = v[14] * v[14];
+        let t20 = v[3] * v[3];
+        let t21 = v[3] * v[4];
+        let t22 = v[3] * v[8];
+        let t23 = v[3] * v[9];
+        let t24 = v[3] * v[10];
+        let t25 = v[3] * t0;
+        let t26 = v[3] * t1;
+        let t27 = v[3] * t2;
+        let t28 = v[3] * t3;
+        let t29 = v[3] * t7;
+        let t30 = v[4] * v[5];
+        let t31 = v[4] * v[6];
+        let t32 = v[4] * v[7];
+        let t33 = v[4] * t3;
+        let t34 = v[5] * v[5];
+        let t35 = v[5] * v[8];
+        let t36 = v[5] * v[9];
+        let t37 = v[5] * v[10];
+        let t38 = v[5] * t0;
+        let t39 = v[5] * t1;
+        let t40 = v[5] * t2;
+        let t41 = v[5] * t3;
+        let t42 = v[5] * t4;
+        let t43 = v[6] * v[6];
+        let t44 = v[6] * v[8];
+        let t45 = v[6] * v[9];
+        let t46 = v[6] * v[10];
+        let t47 = v[6] * t0;
+        let t48 = v[6] * t1;
+        let t49 = v[6] * t2;
+        let t50 = v[6] * t3;
+        let t51 = v[6] * t5;
+        let t52 = v[7] * v[7];
+        let t53 = v[7] * v[8];
+        let t54 = v[7] * v[9];
+        let t55 = v[7] * v[10];
+        let t56 = v[7] * t0;
+        let t57 = v[7] * t1;
+        let t58 = v[7] * t2;
+        let t59 = v[7] * t3;
+        let t60 = v[7] * t6;
+        let t61 = v[8] * t0;
+        let t62 = v[9] * t1;
+        let t63 = v[10] * t2;
+        let t64 = v[11] * v[11];
+        let t65 = v[11] * t9;
+        let t66 = v[12] * v[12];
+        let t67 = v[12] * t11;
+        let t68 = v[13] * v[13];
+        let t69 = v[13] * t13;
+        let t70 = v[15] * v[15];
+        let t71 = v[15] * t15;
+        let t72 = v[0] * v[1];
+        let t73 = v[0] * v[2];
+        let t74 = v[0] * v[14];
+        let t75 = v[1] * v[2];
+        let t76 = v[1] * v[14];
+        let t77 = v[2] * v[14];
+        let t78 = v[3] * v[5];
+        let t79 = v[3] * v[6];
+        let t80 = v[3] * v[7];
+        let t81 = v[3] * t4;
+        let t82 = v[3] * t5;
+        let t83 = v[3] * t6;
+        let t84 = v[4] * t0;
+        let t85 = v[4] * t1;
+        let t86 = v[4] * t2;
+        let t87 = v[5] * v[6];
+        let t88 = v[5] * v[7];
+        let t89 = v[5] * t5;
+        let t90 = v[5] * t6;
+        let t91 = v[5] * t7;
+        let t92 = v[6] * v[7];
+        let t93 = v[6] * t4;
+        let t94 = v[6] * t6;
+        let t95 = v[6] * t7;
+        let t96 = v[7] * t4;
+        let t97 = v[7] * t5;
+        let t98 = v[7] * t7;
+        let t99 = v[8] * t1;
+        let t100 = v[8] * t2;
+        let t101 = v[8] * t3;
+        let t102 = v[9] * t0;
+        let t103 = v[9] * t2;
+        let t104 = v[9] * t3;
+        let t105 = v[10] * t0;
+        let t106 = v[10] * t1;
+        let t107 = v[10] * t3;
+        let t108 = v[11] * v[12];
+        let t109 = v[11] * v[13];
+        let t110 = v[11] * v[15];
+        let t111 = v[12] * v[13];
+        let t112 = v[12] * v[15];
+        let t113 = v[13] * v[15];
+        let t114 = t0 * t1;
+        let t115 = t0 * t2;
+        let t116 = t0 * t3;
+        let t117 = t1 * t2;
+        let t118 = t1 * t3;
+        let t119 = t2 * t3;
+        let t120 = v[0] * v[15];
+        let t121 = v[1] * v[13];
+        let t122 = v[2] * v[12];
+        let t123 = v[11] * v[14];
+        let t124 = v[0] * v[13];
+        let t125 = v[1] * v[15];
+        let t126 = v[2] * v[11];
+        let t127 = v[12] * v[14];
+        let t128 = v[0] * v[12];
+        let t129 = v[1] * v[11];
+        let t130 = v[2] * v[15];
+        let t131 = v[13] * v[14];
+        let t132 = t16 - t17;
+        let t133 = t18 - t19;
+        let t134 = t70 * T::from_f64(1.0 / 2.0);
+        let t135 = t21 + t134;
+        let t136 = t64 * T::from_f64(1.0 / 2.0);
+        let t137 = t35 + t136;
+        let t138 = t66 * T::from_f64(1.0 / 2.0);
+        let t139 = t45 + t138;
+        let t140 = t68 * T::from_f64(1.0 / 2.0);
+        let t141 = t55 + t140;
+        let t142 = t16 + t17;
+        let t143 = t18 + t19;
+        let t144 = t20 - t34;
+        let t145 = t22 + t30;
+        let t146 = t23 + t31;
+        let t147 = t24 + t32;
+        let t148 = t25 - t41;
+        let t149 = t26 - t40;
+        let t150 = t27 + t39;
+        let t151 = t28 + t38;
+        let t152 = t29 + t42;
+        let t153 = t33 + t61;
+        let t154 = t36 + t44;
+        let t155 = t37 + t53;
+        let t156 = t43 - t52;
+        let t157 = t46 + t54;
+        let t158 = t47 - t59;
+        let t159 = t48 - t58;
+        let t160 = t49 + t57;
+        let t161 = t50 + t56;
+        let t162 = t51 - t60;
+        let t163 = t62 - t63;
+        let t164 = t65 - t67;
+        let t165 = t69 - t71;
+        let t166 = t72 - t108;
+        let t167 = t73 - t109;
+        let t168 = t74 - t110;
+        let t169 = t75 - t111;
+        let t170 = t76 - t112;
+        let t171 = t77 - t113;
+        let t172 = t81 - t91;
+        let t173 = t82 - t95;
+        let t174 = t83 - t98;
+        let t175 = t84 - t101;
+        let t176 = t85 - t104;
+        let t177 = t86 - t107;
+        let t178 = t89 + t93;
+        let t179 = t90 + t96;
+        let t180 = t94 + t97;
+        let t181 = t99 + t102;
+        let t182 = t100 + t105;
+        let t183 = t103 + t106;
+        let t184 = t132 - t133;
+        let t185 = t132 + t133;
+        let t186 = t135 - t137;
+        let t187 = t139 - t141;
+        let t188 = t142 - t143;
+        let t189 = t145 + t168;
+        let t190 = t146 + t170;
+        let t191 = t147 + t171;
+        let t192 = t154 - t166;
+        let t193 = t155 - t167;
+        let t194 = t157 - t169;
+        let t195 = t139 + t141;
+        let t196 = t135 + t137;
+        let t197 = t195 - t196;
+        let t198 = t197 * T::from_i64(2);
+        let t199 = t184 + t198;
+        let t200 = t191 + t192;
+        let t201 = -t200;
+        let t202 = t190 - t193;
+        let t203 = t38 - t28;
+        let t204 = t48 + t58;
+        let t205 = t203 - t204;
+        let t206 = t150 + t158;
+        let t207 = t161 - t149;
+        let t208 = t191 - t192;
+        let t209 = t186 + t187;
+        let t210 = t209 * T::from_i64(2);
+        let t211 = t185 + t210;
+        let t212 = t189 + t194;
+        let t213 = t39 + t47;
+        let t214 = t59 - t27;
+        let t215 = t213 + t214;
+        let t216 = t151 - t159;
+        let t217 = t148 + t160;
+        let t218 = t190 + t193;
+        let t219 = -t218;
+        let t220 = t189 - t194;
+        let t221 = t186 - t187;
+        let t222 = t221 * T::from_i64(2);
+        let t223 = t188 + t222;
+        let t224 = t26 + t40;
+        let t225 = t56 - t50;
+        let t226 = t224 + t225;
+        let t227 = t148 - t160;
+        let t228 = t151 + t159;
+        let t229 = t42 - t29;
+        let t230 = t51 + t60;
+        let t231 = t229 - t230;
+        let t232 = t174 + t178;
+        let t233 = t179 - t173;
+        let t234 = t20 + t34;
+        let t235 = t43 + t52;
+        let t236 = t234 - t235;
+        let t237 = t80 + t87;
+        let t238 = t79 - t88;
+        let t239 = t178 - t174;
+        let t240 = t152 - t162;
+        let t241 = t172 + t180;
+        let t242 = t80 - t87;
+        let t243 = t144 + t156;
+        let t244 = t78 + t92;
+        let t245 = t173 + t179;
+        let t246 = t172 - t180;
+        let t247 = t152 + t162;
+        let t248 = t79 + t88;
+        let t249 = t78 - t92;
+        let t250 = t144 - t156;
+        let t251 = t61 - t33;
+        let t252 = t62 + t63;
+        let t253 = t251 - t252;
+        let t254 = t177 + t181;
+        let t255 = t182 - t176;
+        let t256 = t164 - t165;
+        let t257 = t256 * T::from_i64(2);
+        let t258 = t184 + t257;
+        let t259 = t114 - t119;
+        let t260 = t115 + t118;
+        let t261 = t181 - t177;
+        let t262 = t153 - t163;
+        let t263 = t175 + t183;
+        let t264 = t114 + t119;
+        let t265 = t164 + t165;
+        let t266 = t265 * T::from_i64(2);
+        let t267 = t185 + t266;
+        let t268 = t116 - t117;
+        let t269 = t176 + t182;
+        let t270 = t175 - t183;
+        let t271 = t153 + t163;
+        let t272 = t115 - t118;
+        let t273 = t116 + t117;
+        let t274 = t65 + t67;
+        let t275 = t69 + t71;
+        let t276 = t274 - t275;
+        let t277 = t276 * T::from_i64(2);
+        let t278 = t188 + t277;
+        let t279 = t30 + t54;
+        let t280 = t120 + t121;
+        let t281 = t279 + t280;
+        let t282 = t22 + t46;
+        let t283 = t122 + t123;
+        let t284 = t282 + t283;
+        let t285 = t281 - t284;
+        let t286 = t23 + t53;
+        let t287 = t124 + t127;
+        let t288 = t286 + t287;
+        let t289 = t31 + t37;
+        let t290 = t125 + t126;
+        let t291 = t289 + t290;
+        let t292 = t288 - t291;
+        let t293 = t32 + t44;
+        let t294 = t128 + t130;
+        let t295 = t293 + t294;
+        let t296 = t24 + t36;
+        let t297 = t129 + t131;
+        let t298 = t296 + t297;
+        let t299 = t295 - t298;
+        let t300 = t25 + t41;
+        let t301 = t49 - t57;
+        let t302 = t300 + t301;
+        let t303 = t149 + t161;
+        let t304 = t158 - t150;
+        let t305 = xv[0] * t199;
+        let t306 = xv[1] * t201;
+        let t307 = xv[2] * t202;
+        let t308 = xv[3] * t205;
+        let t309 = xv[4] * t206;
+        let t310 = xv[5] * t207;
+        let t311 = xv[0] * t208;
+        let t312 = xv[1] * t211;
+        let t313 = xv[2] * t212;
+        let t314 = xv[3] * t215;
+        let t315 = xv[4] * t216;
+        let t316 = xv[5] * t217;
+        let t317 = xv[0] * t219;
+        let t318 = xv[1] * t220;
+        let t319 = xv[2] * t223;
+        let t320 = xv[3] * t226;
+        let t321 = xv[4] * t227;
+        let t322 = xv[5] * t228;
+        let t323 = xv[0] * t231;
+        let t324 = xv[1] * t232;
+        let t325 = xv[2] * t233;
+        let t326 = xv[3] * t236;
+        let t327 = xv[4] * t237;
+        let t328 = xv[5] * t238;
+        let t329 = xv[0] * t239;
+        let t330 = xv[1] * t240;
+        let t331 = xv[2] * t241;
+        let t332 = xv[3] * t242;
+        let t333 = xv[4] * t243;
+        let t334 = xv[5] * t244;
+        let t335 = xv[0] * t245;
+        let t336 = xv[1] * t246;
+        let t337 = xv[2] * t247;
+        let t338 = xv[3] * t248;
+        let t339 = xv[4] * t249;
+        let t340 = xv[5] * t250;
+        let t341 = xv[0] * t253;
+        let t342 = xv[1] * t254;
+        let t343 = xv[2] * t255;
+        let t344 = xv[3] * t258;
+        let t345 = xv[4] * t259;
+        let t346 = xv[5] * t260;
+        let t347 = xv[0] * t261;
+        let t348 = xv[1] * t262;
+        let t349 = xv[2] * t263;
+        let t350 = xv[3] * t264;
+        let t351 = xv[4] * t267;
+        let t352 = xv[5] * t268;
+        let t353 = xv[0] * t269;
+        let t354 = xv[1] * t270;
+        let t355 = xv[2] * t271;
+        let t356 = xv[3] * t272;
+        let t357 = xv[4] * t273;
+        let t358 = xv[5] * t278;
+        let t359 = xv[0] * t285;
+        let t360 = xv[1] * t292;
+        let t361 = xv[2] * t299;
+        let t362 = xv[3] * t302;
+        let t363 = xv[4] * t303;
+        let t364 = xv[5] * t304;
+        let t365 = t306 + t307;
+        let t366 = t308 + t365;
+        let t367 = t309 + t310;
+        let t368 = t366 + t367;
+        let t369 = t368 * T::from_i64(2);
+        let t370 = t305 + t369;
+        let t371 = t311 + t314;
+        let t372 = t316 + t371;
+        let t373 = t313 + t315;
+        let t374 = t372 - t373;
+        let t375 = t374 * T::from_i64(2);
+        let t376 = t375 - t312;
+        let t377 = t317 + t318;
+        let t378 = t320 + t377;
+        let t379 = t321 + t322;
+        let t380 = t378 - t379;
+        let t381 = t380 * T::from_i64(2);
+        let t382 = t381 - t319;
+        let t383 = t323 + t324;
+        let t384 = t325 + t326;
+        let t385 = t383 + t384;
+        let t386 = t385 * T::from_i64(2);
+        let t387 = t327 - t328;
+        let t388 = t387 * T::from_i64(4);
+        let t389 = t386 + t388;
+        let t390 = t329 + t331;
+        let t391 = t333 - t330;
+        let t392 = t390 + t391;
+        let t393 = t392 * T::from_i64(2);
+        let t394 = t334 - t332;
+        let t395 = t394 * T::from_i64(4);
+        let t396 = t393 + t395;
+        let t397 = t335 + t340;
+        let t398 = t336 + t337;
+        let t399 = t397 - t398;
+        let t400 = t399 * T::from_i64(2);
+        let t401 = t338 - t339;
+        let t402 = t401 * T::from_i64(4);
+        let t403 = t400 + t402;
+        let t404 = t341 + t342;
+        let t405 = t343 + t404;
+        let t406 = t345 + t346;
+        let t407 = t405 - t406;
+        let t408 = t407 * T::from_i64(2);
+        let t409 = t408 - t344;
+        let t410 = t347 + t349;
+        let t411 = t352 + t410;
+        let t412 = t348 + t350;
+        let t413 = t411 - t412;
+        let t414 = t413 * T::from_i64(2);
+        let t415 = t351 + t414;
+        let t416 = t353 - t354;
+        let t417 = t416 - t355;
+        let t418 = t356 + t357;
+        let t419 = t417 - t418;
+        let t420 = t419 * T::from_i64(2);
+        let t421 = t358 + t420;
+        let t422 = t360 + t364;
+        let t423 = t422 - t359;
+        let t424 = t361 + t362;
+        let t425 = t363 + t424;
+        let t426 = t423 - t425;
+        let t427 = t426 * T::from_i64(2);
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t370, t376, t382, t389, t396, t403, t409, t415, t421, t427]) };
+        }
+        let m0 = v[0] + v[11];
+        let m1 = v[1] + v[12];
+        let m2 = v[2] + v[13];
+        let m3 = v[14] + v[15];
+        let m4 = v[0] - v[11];
+        let m5 = v[1] - v[12];
+        let m6 = v[2] - v[13];
+        let m7 = v[14] - v[15];
+        let m8 = v[11] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[12] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[13] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[15] * T::from_f64(1.0 / 2.0);
+        let m15 = v[14] + m14;
+        let m16 = v[0] * v[0];
+        let m17 = v[1] * v[1];
+        let m18 = v[2] * v[2];
+        let m19 = v[14] * v[14];
+        let m20 = v[3] * v[3];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[8];
+        let m23 = v[3] * v[9];
+        let m24 = v[3] * v[10];
+        let m25 = v[3] * m0;
+        let m26 = v[3] * m1;
+        let m27 = v[3] * m2;
+        let m28 = v[3] * m3;
+        let m29 = v[3] * m7;
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[4] * m3;
+        let m34 = v[5] * v[5];
+        let m35 = v[5] * v[8];
+        let m36 = v[5] * v[9];
+        let m37 = v[5] * v[10];
+        let m38 = v[5] * m0;
+        let m39 = v[5] * m1;
+        let m40 = v[5] * m2;
+        let m41 = v[5] * m3;
+        let m42 = v[5] * m4;
+        let m43 = v[6] * v[6];
+        let m44 = v[6] * v[8];
+        let m45 = v[6] * v[9];
+        let m46 = v[6] * v[10];
+        let m47 = v[6] * m0;
+        let m48 = v[6] * m1;
+        let m49 = v[6] * m2;
+        let m50 = v[6] * m3;
+        let m51 = v[6] * m5;
+        let m52 = v[7] * v[7];
+        let m53 = v[7] * v[8];
+        let m54 = v[7] * v[9];
+        let m55 = v[7] * v[10];
+        let m56 = v[7] * m0;
+        let m57 = v[7] * m1;
+        let m58 = v[7] * m2;
+        let m59 = v[7] * m3;
+        let m60 = v[7] * m6;
+        let m61 = v[8] * m0;
+        let m62 = v[9] * m1;
+        let m63 = v[10] * m2;
+        let m64 = v[11] * v[11];
+        let m65 = v[11] * m9;
+        let m66 = v[12] * v[12];
+        let m67 = v[12] * m11;
+        let m68 = v[13] * v[13];
+        let m69 = v[13] * m13;
+        let m70 = v[15] * v[15];
+        let m71 = v[15] * m15;
+        let m72 = v[0] * v[1];
+        let m73 = v[0] * v[2];
+        let m74 = v[0] * v[14];
+        let m75 = v[1] * v[2];
+        let m76 = v[1] * v[14];
+        let m77 = v[2] * v[14];
+        let m78 = v[3] * v[5];
+        let m79 = v[3] * v[6];
+        let m80 = v[3] * v[7];
+        let m81 = v[3] * m4;
+        let m82 = v[3] * m5;
+        let m83 = v[3] * m6;
+        let m84 = v[4] * m0;
+        let m85 = v[4] * m1;
+        let m86 = v[4] * m2;
+        let m87 = v[5] * v[6];
+        let m88 = v[5] * v[7];
+        let m89 = v[5] * m5;
+        let m90 = v[5] * m6;
+        let m91 = v[5] * m7;
+        let m92 = v[6] * v[7];
+        let m93 = v[6] * m4;
+        let m94 = v[6] * m6;
+        let m95 = v[6] * m7;
+        let m96 = v[7] * m4;
+        let m97 = v[7] * m5;
+        let m98 = v[7] * m7;
+        let m99 = v[8] * m1;
+        let m100 = v[8] * m2;
+        let m101 = v[8] * m3;
+        let m102 = v[9] * m0;
+        let m103 = v[9] * m2;
+        let m104 = v[9] * m3;
+        let m105 = v[10] * m0;
+        let m106 = v[10] * m1;
+        let m107 = v[10] * m3;
+        let m108 = v[11] * v[12];
+        let m109 = v[11] * v[13];
+        let m110 = v[11] * v[15];
+        let m111 = v[12] * v[13];
+        let m112 = v[12] * v[15];
+        let m113 = v[13] * v[15];
+        let m114 = m0 * m1;
+        let m115 = m0 * m2;
+        let m116 = m0 * m3;
+        let m117 = m1 * m2;
+        let m118 = m1 * m3;
+        let m119 = m2 * m3;
+        let m120 = v[0] * v[15];
+        let m121 = v[1] * v[13];
+        let m122 = v[2] * v[12];
+        let m123 = v[11] * v[14];
+        let m124 = v[0] * v[13];
+        let m125 = v[1] * v[15];
+        let m126 = v[2] * v[11];
+        let m127 = v[12] * v[14];
+        let m128 = v[0] * v[12];
+        let m129 = v[1] * v[11];
+        let m130 = v[2] * v[15];
+        let m131 = v[13] * v[14];
+        let m132 = m16 - m17;
+        let m133 = m18 - m19;
+        let m134 = m70 * T::from_f64(1.0 / 2.0);
+        let m135 = m21 + m134;
+        let m136 = m64 * T::from_f64(1.0 / 2.0);
+        let m137 = m35 + m136;
+        let m138 = m66 * T::from_f64(1.0 / 2.0);
+        let m139 = m45 + m138;
+        let m140 = m68 * T::from_f64(1.0 / 2.0);
+        let m141 = m55 + m140;
+        let m142 = m16 + m17;
+        let m143 = m18 + m19;
+        let m144 = m20 - m34;
+        let m145 = m22 + m30;
+        let m146 = m23 + m31;
+        let m147 = m24 + m32;
+        let m148 = m25 - m41;
+        let m149 = m26 - m40;
+        let m150 = m27 + m39;
+        let m151 = m28 + m38;
+        let m152 = m29 + m42;
+        let m153 = m33 + m61;
+        let m154 = m36 + m44;
+        let m155 = m37 + m53;
+        let m156 = m43 - m52;
+        let m157 = m46 + m54;
+        let m158 = m47 - m59;
+        let m159 = m48 - m58;
+        let m160 = m49 + m57;
+        let m161 = m50 + m56;
+        let m162 = m51 - m60;
+        let m163 = m62 - m63;
+        let m164 = m65 - m67;
+        let m165 = m69 - m71;
+        let m166 = m72 - m108;
+        let m167 = m73 - m109;
+        let m168 = m74 - m110;
+        let m169 = m75 - m111;
+        let m170 = m76 - m112;
+        let m171 = m77 - m113;
+        let m172 = m81 - m91;
+        let m173 = m82 - m95;
+        let m174 = m83 - m98;
+        let m175 = m84 - m101;
+        let m176 = m85 - m104;
+        let m177 = m86 - m107;
+        let m178 = m89 + m93;
+        let m179 = m90 + m96;
+        let m180 = m94 + m97;
+        let m181 = m99 + m102;
+        let m182 = m100 + m105;
+        let m183 = m103 + m106;
+        let m184 = m132 - m133;
+        let m185 = m132 + m133;
+        let m186 = m135 - m137;
+        let m187 = m139 - m141;
+        let m188 = m142 - m143;
+        let m189 = m145 + m168;
+        let m190 = m146 + m170;
+        let m191 = m147 + m171;
+        let m192 = m154 - m166;
+        let m193 = m155 - m167;
+        let m194 = m157 - m169;
+        let m195 = m139 + m141;
+        let m196 = m135 + m137;
+        let m197 = m195 - m196;
+        let m198 = m197 * T::from_i64(2);
+        let m199 = m184 + m198;
+        let m200 = m191 + m192;
+        let m201 = m200 * T::from_i64(2);
+        let m202 = -m201;
+        let m203 = m190 - m193;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = m38 - m28;
+        let m206 = m48 + m58;
+        let m207 = m205 - m206;
+        let m208 = m207 * T::from_i64(2);
+        let m209 = m150 + m158;
+        let m210 = m209 * T::from_i64(2);
+        let m211 = m161 - m149;
+        let m212 = m211 * T::from_i64(2);
+        let m213 = m191 - m192;
+        let m214 = m213 * T::from_i64(2);
+        let m215 = m186 + m187;
+        let m216 = m215 * T::from_i64(2);
+        let m217 = m185 + m216;
+        let m218 = -m217;
+        let m219 = m189 + m194;
+        let m220 = m219 * T::from_i64(2);
+        let m221 = -m220;
+        let m222 = m39 + m47;
+        let m223 = m59 - m27;
+        let m224 = m222 + m223;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m159 - m151;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m148 + m160;
+        let m229 = m228 * T::from_i64(2);
+        let m230 = m190 + m193;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = -m231;
+        let m233 = m189 - m194;
+        let m234 = m233 * T::from_i64(2);
+        let m235 = m187 - m186;
+        let m236 = m235 * T::from_i64(2);
+        let m237 = m236 - m188;
+        let m238 = m26 + m40;
+        let m239 = m56 - m50;
+        let m240 = m238 + m239;
+        let m241 = m240 * T::from_i64(2);
+        let m242 = m160 - m148;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m151 + m159;
+        let m245 = m244 * T::from_i64(2);
+        let m246 = -m245;
+        let m247 = m42 - m29;
+        let m248 = m51 + m60;
+        let m249 = m247 - m248;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m174 + m178;
+        let m252 = m251 * T::from_i64(2);
+        let m253 = m179 - m173;
+        let m254 = m253 * T::from_i64(2);
+        let m255 = m20 + m34;
+        let m256 = m43 + m52;
+        let m257 = m255 - m256;
+        let m258 = m257 * T::from_i64(2);
+        let m259 = m80 + m87;
+        let m260 = m259 * T::from_i64(4);
+        let m261 = m88 - m79;
+        let m262 = m261 * T::from_i64(4);
+        let m263 = m178 - m174;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m162 - m152;
+        let m266 = m265 * T::from_i64(2);
+        let m267 = m172 + m180;
+        let m268 = m267 * T::from_i64(2);
+        let m269 = m87 - m80;
+        let m270 = m269 * T::from_i64(4);
+        let m271 = m144 + m156;
+        let m272 = m271 * T::from_i64(2);
+        let m273 = m78 + m92;
+        let m274 = m273 * T::from_i64(4);
+        let m275 = m173 + m179;
+        let m276 = m275 * T::from_i64(2);
+        let m277 = m180 - m172;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m152 + m162;
+        let m280 = m279 * T::from_i64(2);
+        let m281 = -m280;
+        let m282 = m79 + m88;
+        let m283 = m282 * T::from_i64(4);
+        let m284 = m92 - m78;
+        let m285 = m284 * T::from_i64(4);
+        let m286 = m144 - m156;
+        let m287 = m286 * T::from_i64(2);
+        let m288 = m61 - m33;
+        let m289 = m62 + m63;
+        let m290 = m288 - m289;
+        let m291 = m290 * T::from_i64(2);
+        let m292 = m177 + m181;
+        let m293 = m292 * T::from_i64(2);
+        let m294 = m182 - m176;
+        let m295 = m294 * T::from_i64(2);
+        let m296 = m165 - m164;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m297 - m184;
+        let m299 = m119 - m114;
+        let m300 = m299 * T::from_i64(2);
+        let m301 = m115 + m118;
+        let m302 = m301 * T::from_i64(2);
+        let m303 = -m302;
+        let m304 = m181 - m177;
+        let m305 = m304 * T::from_i64(2);
+        let m306 = m163 - m153;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m175 + m183;
+        let m309 = m308 * T::from_i64(2);
+        let m310 = m114 + m119;
+        let m311 = m310 * T::from_i64(2);
+        let m312 = -m311;
+        let m313 = m164 + m165;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m185 + m314;
+        let m316 = m116 - m117;
+        let m317 = m316 * T::from_i64(2);
+        let m318 = m176 + m182;
+        let m319 = m318 * T::from_i64(2);
+        let m320 = m183 - m175;
+        let m321 = m320 * T::from_i64(2);
+        let m322 = m153 + m163;
+        let m323 = m322 * T::from_i64(2);
+        let m324 = -m323;
+        let m325 = m118 - m115;
+        let m326 = m325 * T::from_i64(2);
+        let m327 = m116 + m117;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = -m328;
+        let m330 = m65 + m67;
+        let m331 = m69 + m71;
+        let m332 = m330 - m331;
+        let m333 = m332 * T::from_i64(2);
+        let m334 = m188 + m333;
+        let m335 = m22 + m46;
+        let m336 = m122 + m123;
+        let m337 = m335 + m336;
+        let m338 = m30 + m54;
+        let m339 = m120 + m121;
+        let m340 = m338 + m339;
+        let m341 = m337 - m340;
+        let m342 = m341 * T::from_i64(2);
+        let m343 = m23 + m53;
+        let m344 = m124 + m127;
+        let m345 = m343 + m344;
+        let m346 = m31 + m37;
+        let m347 = m125 + m126;
+        let m348 = m346 + m347;
+        let m349 = m345 - m348;
+        let m350 = m349 * T::from_i64(2);
+        let m351 = m24 + m36;
+        let m352 = m129 + m131;
+        let m353 = m351 + m352;
+        let m354 = m32 + m44;
+        let m355 = m128 + m130;
+        let m356 = m354 + m355;
+        let m357 = m353 - m356;
+        let m358 = m357 * T::from_i64(2);
+        let m359 = m57 - m25;
+        let m360 = m41 + m49;
+        let m361 = m359 - m360;
+        let m362 = m361 * T::from_i64(2);
+        let m363 = m149 + m161;
+        let m364 = m363 * T::from_i64(2);
+        let m365 = -m364;
+        let m366 = m158 - m150;
+        let m367 = m366 * T::from_i64(2);
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m199) + x[1].scale(m202) + x[2].scale(m204) + x[3].scale(m208) + x[4].scale(m210) + x[5].scale(m212)).0, (x[0].scale(m214) + x[1].scale(m218) + x[2].scale(m221) + x[3].scale(m225) + x[4].scale(m227) + x[5].scale(m229)).0, (x[0].scale(m232) + x[1].scale(m234) + x[2].scale(m237) + x[3].scale(m241) + x[4].scale(m243) + x[5].scale(m246)).0, (x[0].scale(m250) + x[1].scale(m252) + x[2].scale(m254) + x[3].scale(m258) + x[4].scale(m260) + x[5].scale(m262)).0, (x[0].scale(m264) + x[1].scale(m266) + x[2].scale(m268) + x[3].scale(m270) + x[4].scale(m272) + x[5].scale(m274)).0, (x[0].scale(m276) + x[1].scale(m278) + x[2].scale(m281) + x[3].scale(m283) + x[4].scale(m285) + x[5].scale(m287)).0, (x[0].scale(m291) + x[1].scale(m293) + x[2].scale(m295) + x[3].scale(m298) + x[4].scale(m300) + x[5].scale(m303)).0, (x[0].scale(m305) + x[1].scale(m307) + x[2].scale(m309) + x[3].scale(m312) + x[4].scale(m315) + x[5].scale(m317)).0, (x[0].scale(m319) + x[1].scale(m321) + x[2].scale(m324) + x[3].scale(m326) + x[4].scale(m329) + x[5].scale(m334)).0, (x[0].scale(m342) + x[1].scale(m350) + x[2].scale(m358) + x[3].scale(m362) + x[4].scale(m365) + x[5].scale(m367)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for Odd<(), T> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for Odd<(), T> {
+    type Output = gx::Prepared<Odd, Twist, T, 60>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Odd, Twist, T, 60> {
+        let v = self.c;
+        let m0 = v[0] + v[11];
+        let m1 = v[1] + v[12];
+        let m2 = v[2] + v[13];
+        let m3 = v[14] + v[15];
+        let m4 = v[0] - v[11];
+        let m5 = v[1] - v[12];
+        let m6 = v[2] - v[13];
+        let m7 = v[14] - v[15];
+        let m8 = v[11] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[12] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[13] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[15] * T::from_f64(1.0 / 2.0);
+        let m15 = v[14] + m14;
+        let m16 = v[0] * v[0];
+        let m17 = v[1] * v[1];
+        let m18 = v[2] * v[2];
+        let m19 = v[14] * v[14];
+        let m20 = v[3] * v[3];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[8];
+        let m23 = v[3] * v[9];
+        let m24 = v[3] * v[10];
+        let m25 = v[3] * m0;
+        let m26 = v[3] * m1;
+        let m27 = v[3] * m2;
+        let m28 = v[3] * m3;
+        let m29 = v[3] * m7;
+        let m30 = v[4] * v[5];
+        let m31 = v[4] * v[6];
+        let m32 = v[4] * v[7];
+        let m33 = v[4] * m3;
+        let m34 = v[5] * v[5];
+        let m35 = v[5] * v[8];
+        let m36 = v[5] * v[9];
+        let m37 = v[5] * v[10];
+        let m38 = v[5] * m0;
+        let m39 = v[5] * m1;
+        let m40 = v[5] * m2;
+        let m41 = v[5] * m3;
+        let m42 = v[5] * m4;
+        let m43 = v[6] * v[6];
+        let m44 = v[6] * v[8];
+        let m45 = v[6] * v[9];
+        let m46 = v[6] * v[10];
+        let m47 = v[6] * m0;
+        let m48 = v[6] * m1;
+        let m49 = v[6] * m2;
+        let m50 = v[6] * m3;
+        let m51 = v[6] * m5;
+        let m52 = v[7] * v[7];
+        let m53 = v[7] * v[8];
+        let m54 = v[7] * v[9];
+        let m55 = v[7] * v[10];
+        let m56 = v[7] * m0;
+        let m57 = v[7] * m1;
+        let m58 = v[7] * m2;
+        let m59 = v[7] * m3;
+        let m60 = v[7] * m6;
+        let m61 = v[8] * m0;
+        let m62 = v[9] * m1;
+        let m63 = v[10] * m2;
+        let m64 = v[11] * v[11];
+        let m65 = v[11] * m9;
+        let m66 = v[12] * v[12];
+        let m67 = v[12] * m11;
+        let m68 = v[13] * v[13];
+        let m69 = v[13] * m13;
+        let m70 = v[15] * v[15];
+        let m71 = v[15] * m15;
+        let m72 = v[0] * v[1];
+        let m73 = v[0] * v[2];
+        let m74 = v[0] * v[14];
+        let m75 = v[1] * v[2];
+        let m76 = v[1] * v[14];
+        let m77 = v[2] * v[14];
+        let m78 = v[3] * v[5];
+        let m79 = v[3] * v[6];
+        let m80 = v[3] * v[7];
+        let m81 = v[3] * m4;
+        let m82 = v[3] * m5;
+        let m83 = v[3] * m6;
+        let m84 = v[4] * m0;
+        let m85 = v[4] * m1;
+        let m86 = v[4] * m2;
+        let m87 = v[5] * v[6];
+        let m88 = v[5] * v[7];
+        let m89 = v[5] * m5;
+        let m90 = v[5] * m6;
+        let m91 = v[5] * m7;
+        let m92 = v[6] * v[7];
+        let m93 = v[6] * m4;
+        let m94 = v[6] * m6;
+        let m95 = v[6] * m7;
+        let m96 = v[7] * m4;
+        let m97 = v[7] * m5;
+        let m98 = v[7] * m7;
+        let m99 = v[8] * m1;
+        let m100 = v[8] * m2;
+        let m101 = v[8] * m3;
+        let m102 = v[9] * m0;
+        let m103 = v[9] * m2;
+        let m104 = v[9] * m3;
+        let m105 = v[10] * m0;
+        let m106 = v[10] * m1;
+        let m107 = v[10] * m3;
+        let m108 = v[11] * v[12];
+        let m109 = v[11] * v[13];
+        let m110 = v[11] * v[15];
+        let m111 = v[12] * v[13];
+        let m112 = v[12] * v[15];
+        let m113 = v[13] * v[15];
+        let m114 = m0 * m1;
+        let m115 = m0 * m2;
+        let m116 = m0 * m3;
+        let m117 = m1 * m2;
+        let m118 = m1 * m3;
+        let m119 = m2 * m3;
+        let m120 = v[0] * v[15];
+        let m121 = v[1] * v[13];
+        let m122 = v[2] * v[12];
+        let m123 = v[11] * v[14];
+        let m124 = v[0] * v[13];
+        let m125 = v[1] * v[15];
+        let m126 = v[2] * v[11];
+        let m127 = v[12] * v[14];
+        let m128 = v[0] * v[12];
+        let m129 = v[1] * v[11];
+        let m130 = v[2] * v[15];
+        let m131 = v[13] * v[14];
+        let m132 = m16 - m17;
+        let m133 = m18 - m19;
+        let m134 = m70 * T::from_f64(1.0 / 2.0);
+        let m135 = m21 + m134;
+        let m136 = m64 * T::from_f64(1.0 / 2.0);
+        let m137 = m35 + m136;
+        let m138 = m66 * T::from_f64(1.0 / 2.0);
+        let m139 = m45 + m138;
+        let m140 = m68 * T::from_f64(1.0 / 2.0);
+        let m141 = m55 + m140;
+        let m142 = m16 + m17;
+        let m143 = m18 + m19;
+        let m144 = m20 - m34;
+        let m145 = m22 + m30;
+        let m146 = m23 + m31;
+        let m147 = m24 + m32;
+        let m148 = m25 - m41;
+        let m149 = m26 - m40;
+        let m150 = m27 + m39;
+        let m151 = m28 + m38;
+        let m152 = m29 + m42;
+        let m153 = m33 + m61;
+        let m154 = m36 + m44;
+        let m155 = m37 + m53;
+        let m156 = m43 - m52;
+        let m157 = m46 + m54;
+        let m158 = m47 - m59;
+        let m159 = m48 - m58;
+        let m160 = m49 + m57;
+        let m161 = m50 + m56;
+        let m162 = m51 - m60;
+        let m163 = m62 - m63;
+        let m164 = m65 - m67;
+        let m165 = m69 - m71;
+        let m166 = m72 - m108;
+        let m167 = m73 - m109;
+        let m168 = m74 - m110;
+        let m169 = m75 - m111;
+        let m170 = m76 - m112;
+        let m171 = m77 - m113;
+        let m172 = m81 - m91;
+        let m173 = m82 - m95;
+        let m174 = m83 - m98;
+        let m175 = m84 - m101;
+        let m176 = m85 - m104;
+        let m177 = m86 - m107;
+        let m178 = m89 + m93;
+        let m179 = m90 + m96;
+        let m180 = m94 + m97;
+        let m181 = m99 + m102;
+        let m182 = m100 + m105;
+        let m183 = m103 + m106;
+        let m184 = m132 - m133;
+        let m185 = m132 + m133;
+        let m186 = m135 - m137;
+        let m187 = m139 - m141;
+        let m188 = m142 - m143;
+        let m189 = m145 + m168;
+        let m190 = m146 + m170;
+        let m191 = m147 + m171;
+        let m192 = m154 - m166;
+        let m193 = m155 - m167;
+        let m194 = m157 - m169;
+        let m195 = m139 + m141;
+        let m196 = m135 + m137;
+        let m197 = m195 - m196;
+        let m198 = m197 * T::from_i64(2);
+        let m199 = m184 + m198;
+        let m200 = m191 + m192;
+        let m201 = m200 * T::from_i64(2);
+        let m202 = -m201;
+        let m203 = m190 - m193;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = m38 - m28;
+        let m206 = m48 + m58;
+        let m207 = m205 - m206;
+        let m208 = m207 * T::from_i64(2);
+        let m209 = m150 + m158;
+        let m210 = m209 * T::from_i64(2);
+        let m211 = m161 - m149;
+        let m212 = m211 * T::from_i64(2);
+        let m213 = m191 - m192;
+        let m214 = m213 * T::from_i64(2);
+        let m215 = m186 + m187;
+        let m216 = m215 * T::from_i64(2);
+        let m217 = m185 + m216;
+        let m218 = -m217;
+        let m219 = m189 + m194;
+        let m220 = m219 * T::from_i64(2);
+        let m221 = -m220;
+        let m222 = m39 + m47;
+        let m223 = m59 - m27;
+        let m224 = m222 + m223;
+        let m225 = m224 * T::from_i64(2);
+        let m226 = m159 - m151;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m148 + m160;
+        let m229 = m228 * T::from_i64(2);
+        let m230 = m190 + m193;
+        let m231 = m230 * T::from_i64(2);
+        let m232 = -m231;
+        let m233 = m189 - m194;
+        let m234 = m233 * T::from_i64(2);
+        let m235 = m187 - m186;
+        let m236 = m235 * T::from_i64(2);
+        let m237 = m236 - m188;
+        let m238 = m26 + m40;
+        let m239 = m56 - m50;
+        let m240 = m238 + m239;
+        let m241 = m240 * T::from_i64(2);
+        let m242 = m160 - m148;
+        let m243 = m242 * T::from_i64(2);
+        let m244 = m151 + m159;
+        let m245 = m244 * T::from_i64(2);
+        let m246 = -m245;
+        let m247 = m42 - m29;
+        let m248 = m51 + m60;
+        let m249 = m247 - m248;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m174 + m178;
+        let m252 = m251 * T::from_i64(2);
+        let m253 = m179 - m173;
+        let m254 = m253 * T::from_i64(2);
+        let m255 = m20 + m34;
+        let m256 = m43 + m52;
+        let m257 = m255 - m256;
+        let m258 = m257 * T::from_i64(2);
+        let m259 = m80 + m87;
+        let m260 = m259 * T::from_i64(4);
+        let m261 = m88 - m79;
+        let m262 = m261 * T::from_i64(4);
+        let m263 = m178 - m174;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m162 - m152;
+        let m266 = m265 * T::from_i64(2);
+        let m267 = m172 + m180;
+        let m268 = m267 * T::from_i64(2);
+        let m269 = m87 - m80;
+        let m270 = m269 * T::from_i64(4);
+        let m271 = m144 + m156;
+        let m272 = m271 * T::from_i64(2);
+        let m273 = m78 + m92;
+        let m274 = m273 * T::from_i64(4);
+        let m275 = m173 + m179;
+        let m276 = m275 * T::from_i64(2);
+        let m277 = m180 - m172;
+        let m278 = m277 * T::from_i64(2);
+        let m279 = m152 + m162;
+        let m280 = m279 * T::from_i64(2);
+        let m281 = -m280;
+        let m282 = m79 + m88;
+        let m283 = m282 * T::from_i64(4);
+        let m284 = m92 - m78;
+        let m285 = m284 * T::from_i64(4);
+        let m286 = m144 - m156;
+        let m287 = m286 * T::from_i64(2);
+        let m288 = m61 - m33;
+        let m289 = m62 + m63;
+        let m290 = m288 - m289;
+        let m291 = m290 * T::from_i64(2);
+        let m292 = m177 + m181;
+        let m293 = m292 * T::from_i64(2);
+        let m294 = m182 - m176;
+        let m295 = m294 * T::from_i64(2);
+        let m296 = m165 - m164;
+        let m297 = m296 * T::from_i64(2);
+        let m298 = m297 - m184;
+        let m299 = m119 - m114;
+        let m300 = m299 * T::from_i64(2);
+        let m301 = m115 + m118;
+        let m302 = m301 * T::from_i64(2);
+        let m303 = -m302;
+        let m304 = m181 - m177;
+        let m305 = m304 * T::from_i64(2);
+        let m306 = m163 - m153;
+        let m307 = m306 * T::from_i64(2);
+        let m308 = m175 + m183;
+        let m309 = m308 * T::from_i64(2);
+        let m310 = m114 + m119;
+        let m311 = m310 * T::from_i64(2);
+        let m312 = -m311;
+        let m313 = m164 + m165;
+        let m314 = m313 * T::from_i64(2);
+        let m315 = m185 + m314;
+        let m316 = m116 - m117;
+        let m317 = m316 * T::from_i64(2);
+        let m318 = m176 + m182;
+        let m319 = m318 * T::from_i64(2);
+        let m320 = m183 - m175;
+        let m321 = m320 * T::from_i64(2);
+        let m322 = m153 + m163;
+        let m323 = m322 * T::from_i64(2);
+        let m324 = -m323;
+        let m325 = m118 - m115;
+        let m326 = m325 * T::from_i64(2);
+        let m327 = m116 + m117;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = -m328;
+        let m330 = m65 + m67;
+        let m331 = m69 + m71;
+        let m332 = m330 - m331;
+        let m333 = m332 * T::from_i64(2);
+        let m334 = m188 + m333;
+        let m335 = m22 + m46;
+        let m336 = m122 + m123;
+        let m337 = m335 + m336;
+        let m338 = m30 + m54;
+        let m339 = m120 + m121;
+        let m340 = m338 + m339;
+        let m341 = m337 - m340;
+        let m342 = m341 * T::from_i64(2);
+        let m343 = m23 + m53;
+        let m344 = m124 + m127;
+        let m345 = m343 + m344;
+        let m346 = m31 + m37;
+        let m347 = m125 + m126;
+        let m348 = m346 + m347;
+        let m349 = m345 - m348;
+        let m350 = m349 * T::from_i64(2);
+        let m351 = m24 + m36;
+        let m352 = m129 + m131;
+        let m353 = m351 + m352;
+        let m354 = m32 + m44;
+        let m355 = m128 + m130;
+        let m356 = m354 + m355;
+        let m357 = m353 - m356;
+        let m358 = m357 * T::from_i64(2);
+        let m359 = m57 - m25;
+        let m360 = m41 + m49;
+        let m361 = m359 - m360;
+        let m362 = m361 * T::from_i64(2);
+        let m363 = m149 + m161;
+        let m364 = m363 * T::from_i64(2);
+        let m365 = -m364;
+        let m366 = m158 - m150;
+        let m367 = m366 * T::from_i64(2);
+        gx::Prepared::from_entries([m199, m202, m204, m208, m210, m212, m214, m218, m221, m225, m227, m229, m232, m234, m237, m241, m243, m246, m250, m252, m254, m258, m260, m262, m264, m266, m268, m270, m272, m274, m276, m278, m281, m283, m285, m287, m291, m293, m295, m298, m300, m303, m305, m307, m309, m312, m315, m317, m319, m321, m324, m326, m329, m334, m342, m350, m358, m362, m365, m367])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<Odd, Twist, T, 60> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Odd, Twist, T, 60>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Odd, Twist, T, 60>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Unit<Odd<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let v = self.into_inner().c;
+        if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
+        let t0 = v[1] + v[12];
+        let t1 = v[2] + v[13];
+        let t2 = v[14] + v[15];
+        let t3 = v[0] + v[11];
+        let t4 = v[1] - v[12];
+        let t5 = v[2] - v[13];
+        let t6 = v[14] - v[15];
+        let t7 = v[0] - v[11];
+        let t8 = v[11] * T::from_f64(1.0 / 2.0);
+        let t9 = v[0] + t8;
+        let t10 = v[12] * T::from_f64(1.0 / 2.0);
+        let t11 = v[1] + t10;
+        let t12 = v[13] * T::from_f64(1.0 / 2.0);
+        let t13 = v[2] + t12;
+        let t14 = v[15] * T::from_f64(1.0 / 2.0);
+        let t15 = v[14] + t14;
+        let t16 = v[1] * v[1];
+        let t17 = v[2] * v[2];
+        let t18 = v[14] * v[14];
+        let t19 = v[0] * v[0];
+        let t20 = v[3] * v[3];
+        let t21 = v[3] * v[9];
+        let t22 = v[3] * v[10];
+        let t23 = v[3] * t0;
+        let t24 = v[3] * t1;
+        let t25 = v[3] * t3;
+        let t26 = v[4] * v[6];
+        let t27 = v[4] * v[7];
+        let t28 = v[5] * v[5];
+        let t29 = v[5] * v[11];
+        let t30 = v[5] * t0;
+        let t31 = v[5] * t1;
+        let t32 = v[5] * t2;
+        let t33 = v[6] * v[6];
+        let t34 = v[6] * v[10];
+        let t35 = v[6] * t1;
+        let t36 = v[6] * t2;
+        let t37 = v[6] * t3;
+        let t38 = v[7] * v[7];
+        let t39 = v[7] * v[9];
+        let t40 = v[7] * t0;
+        let t41 = v[7] * t2;
+        let t42 = v[7] * t3;
+        let t43 = v[11] * t9;
+        let t44 = v[12] * t11;
+        let t45 = v[13] * t13;
+        let t46 = v[15] * t15;
+        let t47 = v[0] * v[1];
+        let t48 = v[0] * v[2];
+        let t49 = v[0] * v[14];
+        let t50 = v[1] * v[2];
+        let t51 = v[1] * v[6];
+        let t52 = v[1] * v[14];
+        let t53 = v[2] * v[7];
+        let t54 = v[2] * v[14];
+        let t55 = v[3] * v[4];
+        let t56 = v[3] * v[5];
+        let t57 = v[3] * v[6];
+        let t58 = v[3] * v[7];
+        let t59 = v[3] * v[8];
+        let t60 = v[3] * v[14];
+        let t61 = v[3] * t4;
+        let t62 = v[3] * t5;
+        let t63 = v[3] * t6;
+        let t64 = v[3] * t7;
+        let t65 = v[4] * v[5];
+        let t66 = v[4] * t0;
+        let t67 = v[4] * t1;
+        let t68 = v[4] * t2;
+        let t69 = v[4] * t3;
+        let t70 = v[5] * v[6];
+        let t71 = v[5] * v[7];
+        let t72 = v[5] * v[9];
+        let t73 = v[5] * v[10];
+        let t74 = v[5] * t4;
+        let t75 = v[5] * t5;
+        let t76 = v[5] * t6;
+        let t77 = v[6] * v[7];
+        let t78 = v[6] * v[8];
+        let t79 = v[6] * v[9];
+        let t80 = v[6] * t4;
+        let t81 = v[6] * t5;
+        let t82 = v[6] * t6;
+        let t83 = v[6] * t7;
+        let t84 = v[7] * v[8];
+        let t85 = v[7] * v[10];
+        let t86 = v[7] * t4;
+        let t87 = v[7] * t5;
+        let t88 = v[7] * t6;
+        let t89 = v[7] * t7;
+        let t90 = v[8] * t0;
+        let t91 = v[8] * t1;
+        let t92 = v[8] * t2;
+        let t93 = v[9] * t0;
+        let t94 = v[9] * t1;
+        let t95 = v[9] * t2;
+        let t96 = v[9] * t3;
+        let t97 = v[10] * t0;
+        let t98 = v[10] * t1;
+        let t99 = v[10] * t2;
+        let t100 = v[10] * t3;
+        let t101 = v[11] * v[12];
+        let t102 = v[11] * v[13];
+        let t103 = v[11] * v[15];
+        let t104 = v[12] * v[12];
+        let t105 = v[12] * v[13];
+        let t106 = v[12] * v[15];
+        let t107 = v[13] * v[13];
+        let t108 = v[13] * v[15];
+        let t109 = v[15] * v[15];
+        let t110 = t0 * t1;
+        let t111 = t0 * t2;
+        let t112 = t0 * t3;
+        let t113 = t1 * t2;
+        let t114 = t1 * t3;
+        let t115 = t2 * t3;
+        let t116 = v[3] * v[15];
+        let t117 = v[7] * v[13];
+        let t118 = v[6] * v[12];
+        let t119 = v[1] * v[13];
+        let t120 = v[2] * v[12];
+        let t121 = v[1] * v[15];
+        let t122 = v[12] * v[14];
+        let t123 = v[2] * v[15];
+        let t124 = v[13] * v[14];
+        let t125 = t44 * T::from_i64(2);
+        let t126 = t16 + t125;
+        let t127 = t45 * T::from_i64(2);
+        let t128 = t17 + t127;
+        let t129 = t46 * T::from_i64(2);
+        let t130 = t18 + t129;
+        let t131 = t43 * T::from_i64(2);
+        let t132 = t19 + t131;
+        let t133 = t79 * T::from_i64(-2);
+        let t134 = t16 + t133;
+        let t135 = t85 * T::from_i64(-2);
+        let t136 = t17 + t135;
+        let t137 = t55 * T::from_i64(-2);
+        let t138 = t18 + t137;
+        let t139 = t20 - t28;
+        let t140 = t21 + t26;
+        let t141 = t22 + t27;
+        let t142 = t23 - t31;
+        let t143 = t24 + t30;
+        let t144 = t25 - t32;
+        let t145 = t29 - t51;
+        let t146 = t33 - t38;
+        let t147 = t34 + t39;
+        let t148 = t35 + t40;
+        let t149 = t36 + t42;
+        let t150 = t37 - t41;
+        let t151 = t47 - t72;
+        let t152 = t48 - t73;
+        let t153 = t49 + t59;
+        let t154 = t50 - t105;
+        let t155 = t52 - t106;
+        let t156 = t54 - t108;
+        let t157 = t61 - t82;
+        let t158 = t62 - t88;
+        let t159 = t64 - t76;
+        let t160 = t65 - t103;
+        let t161 = t66 - t95;
+        let t162 = t67 - t99;
+        let t163 = t69 - t92;
+        let t164 = t74 + t83;
+        let t165 = t75 + t89;
+        let t166 = t78 + t101;
+        let t167 = t81 + t86;
+        let t168 = t84 + t102;
+        let t169 = t90 + t96;
+        let t170 = t91 + t100;
+        let t171 = t94 + t97;
+        let t172 = t104 - t134;
+        let t173 = t107 - t136;
+        let t174 = t109 - t138;
+        let t175 = t126 - t128;
+        let t176 = t130 - t132;
+        let t177 = t140 + t155;
+        let t178 = t141 + t156;
+        let t179 = t147 - t154;
+        let t180 = t151 - t166;
+        let t181 = t152 - t168;
+        let t182 = t153 + t160;
+        let t183 = t172 + t173;
+        let t184 = t183 * T::from_i64(2);
+        let t185 = t184 + T::from_i64(1);
+        let t186 = t180 - t178;
+        let t187 = t177 + t181;
+        let t188 = t53 + t116;
+        let t189 = t188 - t145;
+        let t190 = t143 + t150;
+        let t191 = t149 - t142;
+        let t192 = t178 + t180;
+        let t193 = t172 + t174;
+        let t194 = t193 * T::from_i64(2);
+        let t195 = t194 + T::from_i64(1);
+        let t196 = t179 + t182;
+        let t197 = t30 + t37;
+        let t198 = t41 - t24;
+        let t199 = t197 + t198;
+        let t200 = t60 + t117;
+        let t201 = t145 + t200;
+        let t202 = -t201;
+        let t203 = t144 + t148;
+        let t204 = t181 - t177;
+        let t205 = t182 - t179;
+        let t206 = t173 + t174;
+        let t207 = t206 * T::from_i64(2);
+        let t208 = t207 + T::from_i64(1);
+        let t209 = t23 + t31;
+        let t210 = t42 - t36;
+        let t211 = t209 + t210;
+        let t212 = t144 - t148;
+        let t213 = t53 - t29;
+        let t214 = t60 + t118;
+        let t215 = t213 - t214;
+        let t216 = t80 + t87;
+        let t217 = t158 + t164;
+        let t218 = t165 - t157;
+        let t219 = t20 + t28;
+        let t220 = t33 + t38;
+        let t221 = t219 - t220;
+        let t222 = t58 + t70;
+        let t223 = t57 - t71;
+        let t224 = t164 - t158;
+        let t225 = t80 - t63;
+        let t226 = t159 + t167;
+        let t227 = t58 - t70;
+        let t228 = t139 + t146;
+        let t229 = t56 + t77;
+        let t230 = t157 + t165;
+        let t231 = t159 - t167;
+        let t232 = t87 - t63;
+        let t233 = t57 + t71;
+        let t234 = t56 - t77;
+        let t235 = t139 - t146;
+        let t236 = t93 + t98;
+        let t237 = t162 + t169;
+        let t238 = t170 - t161;
+        let t239 = t130 + t132;
+        let t240 = t126 + t128;
+        let t241 = t239 - t240;
+        let t242 = t112 - t113;
+        let t243 = t111 + t114;
+        let t244 = t169 - t162;
+        let t245 = t93 - t68;
+        let t246 = t163 + t171;
+        let t247 = t112 + t113;
+        let t248 = t175 + t176;
+        let t249 = -t248;
+        let t250 = t115 - t110;
+        let t251 = t161 + t170;
+        let t252 = t163 - t171;
+        let t253 = t98 - t68;
+        let t254 = t114 - t111;
+        let t255 = t110 + t115;
+        let t256 = t175 - t176;
+        let t257 = t39 + t119;
+        let t258 = t34 + t120;
+        let t259 = t257 - t258;
+        let t260 = t26 + t121;
+        let t261 = t21 + t122;
+        let t262 = t260 - t261;
+        let t263 = t27 + t123;
+        let t264 = t22 + t124;
+        let t265 = t263 - t264;
+        let t266 = t25 + t32;
+        let t267 = t35 - t40;
+        let t268 = t266 + t267;
+        let t269 = t142 + t149;
+        let t270 = t150 - t143;
+        let t271 = xv[0] * t185;
+        let t272 = xv[1] * t186;
+        let t273 = xv[2] * t187;
+        let t274 = xv[3] * t189;
+        let t275 = xv[4] * t190;
+        let t276 = xv[5] * t191;
+        let t277 = xv[0] * t192;
+        let t278 = xv[1] * t195;
+        let t279 = xv[2] * t196;
+        let t280 = xv[3] * t199;
+        let t281 = xv[4] * t202;
+        let t282 = xv[5] * t203;
+        let t283 = xv[0] * t204;
+        let t284 = xv[1] * t205;
+        let t285 = xv[2] * t208;
+        let t286 = xv[3] * t211;
+        let t287 = xv[4] * t212;
+        let t288 = xv[5] * t215;
+        let t289 = xv[0] * t216;
+        let t290 = xv[1] * t217;
+        let t291 = xv[2] * t218;
+        let t292 = xv[3] * t221;
+        let t293 = xv[4] * t222;
+        let t294 = xv[5] * t223;
+        let t295 = xv[0] * t224;
+        let t296 = xv[1] * t225;
+        let t297 = xv[2] * t226;
+        let t298 = xv[3] * t227;
+        let t299 = xv[4] * t228;
+        let t300 = xv[5] * t229;
+        let t301 = xv[0] * t230;
+        let t302 = xv[1] * t231;
+        let t303 = xv[2] * t232;
+        let t304 = xv[3] * t233;
+        let t305 = xv[4] * t234;
+        let t306 = xv[5] * t235;
+        let t307 = xv[0] * t236;
+        let t308 = xv[1] * t237;
+        let t309 = xv[2] * t238;
+        let t310 = xv[3] * t241;
+        let t311 = xv[4] * t242;
+        let t312 = xv[5] * t243;
+        let t313 = xv[0] * t244;
+        let t314 = xv[1] * t245;
+        let t315 = xv[2] * t246;
+        let t316 = xv[3] * t247;
+        let t317 = xv[4] * t249;
+        let t318 = xv[5] * t250;
+        let t319 = xv[0] * t251;
+        let t320 = xv[1] * t252;
+        let t321 = xv[2] * t253;
+        let t322 = xv[3] * t254;
+        let t323 = xv[4] * t255;
+        let t324 = xv[5] * t256;
+        let t325 = xv[0] * t259;
+        let t326 = xv[1] * t262;
+        let t327 = xv[2] * t265;
+        let t328 = xv[3] * t268;
+        let t329 = xv[4] * t269;
+        let t330 = xv[5] * t270;
+        let t331 = t272 + t273;
+        let t332 = t275 + t276;
+        let t333 = t331 + t332;
+        let t334 = t333 * T::from_i64(2);
+        let t335 = t274 * T::from_i64(4);
+        let t336 = t271 + t334;
+        let t337 = t336 - t335;
+        let t338 = t277 + t280;
+        let t339 = t282 - t279;
+        let t340 = t338 + t339;
+        let t341 = t340 * T::from_i64(2);
+        let t342 = t281 * T::from_i64(4);
+        let t343 = t341 + t342;
+        let t344 = t343 - t278;
+        let t345 = t283 + t284;
+        let t346 = t286 - t287;
+        let t347 = t345 + t346;
+        let t348 = t347 * T::from_i64(2);
+        let t349 = t288 * T::from_i64(4);
+        let t350 = t348 + t349;
+        let t351 = t350 - t285;
+        let t352 = t290 + t291;
+        let t353 = t292 + t352;
+        let t354 = t353 * T::from_i64(2);
+        let t355 = t293 - t289;
+        let t356 = t355 - t294;
+        let t357 = t356 * T::from_i64(4);
+        let t358 = t354 + t357;
+        let t359 = t295 + t297;
+        let t360 = t299 + t359;
+        let t361 = t360 * T::from_i64(2);
+        let t362 = t296 + t300;
+        let t363 = t362 - t298;
+        let t364 = t363 * T::from_i64(4);
+        let t365 = t361 + t364;
+        let t366 = t301 + t306;
+        let t367 = t366 - t302;
+        let t368 = t367 * T::from_i64(2);
+        let t369 = t303 + t304;
+        let t370 = t369 - t305;
+        let t371 = t370 * T::from_i64(4);
+        let t372 = t368 + t371;
+        let t373 = t308 + t309;
+        let t374 = t311 + t312;
+        let t375 = t373 - t374;
+        let t376 = t375 * T::from_i64(2);
+        let t377 = t307 * T::from_i64(4);
+        let t378 = t376 - t310;
+        let t379 = t378 - t377;
+        let t380 = t313 + t315;
+        let t381 = t318 - t316;
+        let t382 = t380 + t381;
+        let t383 = t382 * T::from_i64(2);
+        let t384 = t314 * T::from_i64(4);
+        let t385 = t317 + t383;
+        let t386 = t384 + t385;
+        let t387 = t319 - t320;
+        let t388 = t322 + t323;
+        let t389 = t387 - t388;
+        let t390 = t389 * T::from_i64(2);
+        let t391 = t321 * T::from_i64(4);
+        let t392 = t324 + t390;
+        let t393 = t391 + t392;
+        let t394 = t330 - t328;
+        let t395 = t394 - t329;
+        let t396 = t395 * T::from_i64(2);
+        let t397 = t325 + t326;
+        let t398 = t327 + t397;
+        let t399 = t398 * T::from_i64(4);
+        let t400 = t396 - t399;
+            return Bivector { c: gx::slots::from_values::<S, T, 10>([t337, t344, t351, t358, t365, t372, t379, t386, t393, t400]) };
+        }
+        let m0 = v[1] + v[12];
+        let m1 = v[2] + v[13];
+        let m2 = v[14] + v[15];
+        let m3 = v[0] + v[11];
+        let m4 = v[1] - v[12];
+        let m5 = v[2] - v[13];
+        let m6 = v[14] - v[15];
+        let m7 = v[0] - v[11];
+        let m8 = v[11] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[12] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[13] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[15] * T::from_f64(1.0 / 2.0);
+        let m15 = v[14] + m14;
+        let m16 = v[1] * v[1];
+        let m17 = v[2] * v[2];
+        let m18 = v[14] * v[14];
+        let m19 = v[0] * v[0];
+        let m20 = v[3] * v[3];
+        let m21 = v[3] * v[9];
+        let m22 = v[3] * v[10];
+        let m23 = v[3] * m0;
+        let m24 = v[3] * m1;
+        let m25 = v[3] * m3;
+        let m26 = v[4] * v[6];
+        let m27 = v[4] * v[7];
+        let m28 = v[5] * v[5];
+        let m29 = v[5] * v[11];
+        let m30 = v[5] * m0;
+        let m31 = v[5] * m1;
+        let m32 = v[5] * m2;
+        let m33 = v[6] * v[6];
+        let m34 = v[6] * v[10];
+        let m35 = v[6] * m1;
+        let m36 = v[6] * m2;
+        let m37 = v[6] * m3;
+        let m38 = v[7] * v[7];
+        let m39 = v[7] * v[9];
+        let m40 = v[7] * m0;
+        let m41 = v[7] * m2;
+        let m42 = v[7] * m3;
+        let m43 = v[11] * m9;
+        let m44 = v[12] * m11;
+        let m45 = v[13] * m13;
+        let m46 = v[15] * m15;
+        let m47 = v[0] * v[1];
+        let m48 = v[0] * v[2];
+        let m49 = v[0] * v[14];
+        let m50 = v[1] * v[2];
+        let m51 = v[1] * v[6];
+        let m52 = v[1] * v[14];
+        let m53 = v[2] * v[7];
+        let m54 = v[2] * v[14];
+        let m55 = v[3] * v[4];
+        let m56 = v[3] * v[5];
+        let m57 = v[3] * v[6];
+        let m58 = v[3] * v[7];
+        let m59 = v[3] * v[8];
+        let m60 = v[3] * v[14];
+        let m61 = v[3] * m4;
+        let m62 = v[3] * m5;
+        let m63 = v[3] * m6;
+        let m64 = v[3] * m7;
+        let m65 = v[4] * v[5];
+        let m66 = v[4] * m0;
+        let m67 = v[4] * m1;
+        let m68 = v[4] * m2;
+        let m69 = v[4] * m3;
+        let m70 = v[5] * v[6];
+        let m71 = v[5] * v[7];
+        let m72 = v[5] * v[9];
+        let m73 = v[5] * v[10];
+        let m74 = v[5] * m4;
+        let m75 = v[5] * m5;
+        let m76 = v[5] * m6;
+        let m77 = v[6] * v[7];
+        let m78 = v[6] * v[8];
+        let m79 = v[6] * v[9];
+        let m80 = v[6] * m4;
+        let m81 = v[6] * m5;
+        let m82 = v[6] * m6;
+        let m83 = v[6] * m7;
+        let m84 = v[7] * v[8];
+        let m85 = v[7] * v[10];
+        let m86 = v[7] * m4;
+        let m87 = v[7] * m5;
+        let m88 = v[7] * m6;
+        let m89 = v[7] * m7;
+        let m90 = v[8] * m0;
+        let m91 = v[8] * m1;
+        let m92 = v[8] * m2;
+        let m93 = v[9] * m0;
+        let m94 = v[9] * m1;
+        let m95 = v[9] * m2;
+        let m96 = v[9] * m3;
+        let m97 = v[10] * m0;
+        let m98 = v[10] * m1;
+        let m99 = v[10] * m2;
+        let m100 = v[10] * m3;
+        let m101 = v[11] * v[12];
+        let m102 = v[11] * v[13];
+        let m103 = v[11] * v[15];
+        let m104 = v[12] * v[12];
+        let m105 = v[12] * v[13];
+        let m106 = v[12] * v[15];
+        let m107 = v[13] * v[13];
+        let m108 = v[13] * v[15];
+        let m109 = v[15] * v[15];
+        let m110 = m0 * m1;
+        let m111 = m0 * m2;
+        let m112 = m0 * m3;
+        let m113 = m1 * m2;
+        let m114 = m1 * m3;
+        let m115 = m2 * m3;
+        let m116 = v[3] * v[15];
+        let m117 = v[7] * v[13];
+        let m118 = v[6] * v[12];
+        let m119 = v[1] * v[13];
+        let m120 = v[2] * v[12];
+        let m121 = v[1] * v[15];
+        let m122 = v[12] * v[14];
+        let m123 = v[2] * v[15];
+        let m124 = v[13] * v[14];
+        let m125 = m44 * T::from_i64(2);
+        let m126 = m16 + m125;
+        let m127 = m45 * T::from_i64(2);
+        let m128 = m17 + m127;
+        let m129 = m46 * T::from_i64(2);
+        let m130 = m18 + m129;
+        let m131 = m43 * T::from_i64(2);
+        let m132 = m19 + m131;
+        let m133 = m79 * T::from_i64(-2);
+        let m134 = m16 + m133;
+        let m135 = m85 * T::from_i64(-2);
+        let m136 = m17 + m135;
+        let m137 = m55 * T::from_i64(-2);
+        let m138 = m18 + m137;
+        let m139 = m20 - m28;
+        let m140 = m21 + m26;
+        let m141 = m22 + m27;
+        let m142 = m23 - m31;
+        let m143 = m24 + m30;
+        let m144 = m25 - m32;
+        let m145 = m29 - m51;
+        let m146 = m33 - m38;
+        let m147 = m34 + m39;
+        let m148 = m35 + m40;
+        let m149 = m36 + m42;
+        let m150 = m37 - m41;
+        let m151 = m47 - m72;
+        let m152 = m48 - m73;
+        let m153 = m49 + m59;
+        let m154 = m50 - m105;
+        let m155 = m52 - m106;
+        let m156 = m54 - m108;
+        let m157 = m61 - m82;
+        let m158 = m62 - m88;
+        let m159 = m64 - m76;
+        let m160 = m65 - m103;
+        let m161 = m66 - m95;
+        let m162 = m67 - m99;
+        let m163 = m69 - m92;
+        let m164 = m74 + m83;
+        let m165 = m75 + m89;
+        let m166 = m78 + m101;
+        let m167 = m81 + m86;
+        let m168 = m84 + m102;
+        let m169 = m90 + m96;
+        let m170 = m91 + m100;
+        let m171 = m94 + m97;
+        let m172 = m104 - m134;
+        let m173 = m107 - m136;
+        let m174 = m109 - m138;
+        let m175 = m126 - m128;
+        let m176 = m130 - m132;
+        let m177 = m140 + m155;
+        let m178 = m141 + m156;
+        let m179 = m147 - m154;
+        let m180 = m151 - m166;
+        let m181 = m152 - m168;
+        let m182 = m153 + m160;
+        let m183 = m172 + m173;
+        let m184 = m183 * T::from_i64(2);
+        let m185 = m184 + T::from_i64(1);
+        let m186 = m180 - m178;
+        let m187 = m186 * T::from_i64(2);
+        let m188 = m177 + m181;
+        let m189 = m188 * T::from_i64(2);
+        let m190 = m145 - m53;
+        let m191 = m190 - m116;
+        let m192 = m191 * T::from_i64(4);
+        let m193 = m143 + m150;
+        let m194 = m193 * T::from_i64(2);
+        let m195 = m149 - m142;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = m178 + m180;
+        let m198 = m197 * T::from_i64(2);
+        let m199 = m172 + m174;
+        let m200 = m199 * T::from_i64(2);
+        let m201 = m200 + T::from_i64(1);
+        let m202 = -m201;
+        let m203 = m179 + m182;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = -m204;
+        let m206 = m30 + m37;
+        let m207 = m41 - m24;
+        let m208 = m206 + m207;
+        let m209 = m208 * T::from_i64(2);
+        let m210 = m60 + m117;
+        let m211 = m145 + m210;
+        let m212 = m211 * T::from_i64(4);
+        let m213 = -m212;
+        let m214 = m144 + m148;
+        let m215 = m214 * T::from_i64(2);
+        let m216 = m181 - m177;
+        let m217 = m216 * T::from_i64(2);
+        let m218 = m182 - m179;
+        let m219 = m218 * T::from_i64(2);
+        let m220 = m173 + m174;
+        let m221 = m220 * T::from_i64(2);
+        let m222 = m221 + T::from_i64(1);
+        let m223 = -m222;
+        let m224 = m23 + m31;
+        let m225 = m42 - m36;
+        let m226 = m224 + m225;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m148 - m144;
+        let m229 = m228 * T::from_i64(2);
+        let m230 = m53 - m29;
+        let m231 = m60 + m118;
+        let m232 = m230 - m231;
+        let m233 = m232 * T::from_i64(4);
+        let m234 = m80 + m87;
+        let m235 = m234 * T::from_i64(4);
+        let m236 = -m235;
+        let m237 = m158 + m164;
+        let m238 = m237 * T::from_i64(2);
+        let m239 = m165 - m157;
+        let m240 = m239 * T::from_i64(2);
+        let m241 = m20 + m28;
+        let m242 = m33 + m38;
+        let m243 = m241 - m242;
+        let m244 = m243 * T::from_i64(2);
+        let m245 = m58 + m70;
+        let m246 = m245 * T::from_i64(4);
+        let m247 = m71 - m57;
+        let m248 = m247 * T::from_i64(4);
+        let m249 = m164 - m158;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m80 - m63;
+        let m252 = m251 * T::from_i64(4);
+        let m253 = m159 + m167;
+        let m254 = m253 * T::from_i64(2);
+        let m255 = m70 - m58;
+        let m256 = m255 * T::from_i64(4);
+        let m257 = m139 + m146;
+        let m258 = m257 * T::from_i64(2);
+        let m259 = m56 + m77;
+        let m260 = m259 * T::from_i64(4);
+        let m261 = m157 + m165;
+        let m262 = m261 * T::from_i64(2);
+        let m263 = m167 - m159;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m87 - m63;
+        let m266 = m265 * T::from_i64(4);
+        let m267 = m57 + m71;
+        let m268 = m267 * T::from_i64(4);
+        let m269 = m77 - m56;
+        let m270 = m269 * T::from_i64(4);
+        let m271 = m139 - m146;
+        let m272 = m271 * T::from_i64(2);
+        let m273 = m93 + m98;
+        let m274 = m273 * T::from_i64(4);
+        let m275 = -m274;
+        let m276 = m162 + m169;
+        let m277 = m276 * T::from_i64(2);
+        let m278 = m170 - m161;
+        let m279 = m278 * T::from_i64(2);
+        let m280 = m126 + m128;
+        let m281 = m130 + m132;
+        let m282 = m280 - m281;
+        let m283 = m113 - m112;
+        let m284 = m283 * T::from_i64(2);
+        let m285 = m111 + m114;
+        let m286 = m285 * T::from_i64(2);
+        let m287 = -m286;
+        let m288 = m169 - m162;
+        let m289 = m288 * T::from_i64(2);
+        let m290 = m93 - m68;
+        let m291 = m290 * T::from_i64(4);
+        let m292 = m163 + m171;
+        let m293 = m292 * T::from_i64(2);
+        let m294 = m112 + m113;
+        let m295 = m294 * T::from_i64(2);
+        let m296 = -m295;
+        let m297 = m175 + m176;
+        let m298 = -m297;
+        let m299 = m115 - m110;
+        let m300 = m299 * T::from_i64(2);
+        let m301 = m161 + m170;
+        let m302 = m301 * T::from_i64(2);
+        let m303 = m171 - m163;
+        let m304 = m303 * T::from_i64(2);
+        let m305 = m98 - m68;
+        let m306 = m305 * T::from_i64(4);
+        let m307 = m111 - m114;
+        let m308 = m307 * T::from_i64(2);
+        let m309 = m110 + m115;
+        let m310 = m309 * T::from_i64(2);
+        let m311 = -m310;
+        let m312 = m175 - m176;
+        let m313 = m34 + m120;
+        let m314 = m39 + m119;
+        let m315 = m313 - m314;
+        let m316 = m315 * T::from_i64(4);
+        let m317 = m21 + m122;
+        let m318 = m26 + m121;
+        let m319 = m317 - m318;
+        let m320 = m319 * T::from_i64(4);
+        let m321 = m22 + m124;
+        let m322 = m27 + m123;
+        let m323 = m321 - m322;
+        let m324 = m323 * T::from_i64(4);
+        let m325 = m40 - m25;
+        let m326 = m32 + m35;
+        let m327 = m325 - m326;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = m142 + m149;
+        let m330 = m329 * T::from_i64(2);
+        let m331 = -m330;
+        let m332 = m150 - m143;
+        let m333 = m332 * T::from_i64(2);
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m185) + x[1].scale(m187) + x[2].scale(m189) + x[3].scale(m192) + x[4].scale(m194) + x[5].scale(m196)).0, (x[0].scale(m198) + x[1].scale(m202) + x[2].scale(m205) + x[3].scale(m209) + x[4].scale(m213) + x[5].scale(m215)).0, (x[0].scale(m217) + x[1].scale(m219) + x[2].scale(m223) + x[3].scale(m227) + x[4].scale(m229) + x[5].scale(m233)).0, (x[0].scale(m236) + x[1].scale(m238) + x[2].scale(m240) + x[3].scale(m244) + x[4].scale(m246) + x[5].scale(m248)).0, (x[0].scale(m250) + x[1].scale(m252) + x[2].scale(m254) + x[3].scale(m256) + x[4].scale(m258) + x[5].scale(m260)).0, (x[0].scale(m262) + x[1].scale(m264) + x[2].scale(m266) + x[3].scale(m268) + x[4].scale(m270) + x[5].scale(m272)).0, (x[0].scale(m275) + x[1].scale(m277) + x[2].scale(m279) + x[3].scale(m282) + x[4].scale(m284) + x[5].scale(m287)).0, (x[0].scale(m289) + x[1].scale(m291) + x[2].scale(m293) + x[3].scale(m296) + x[4].scale(m298) + x[5].scale(m300)).0, (x[0].scale(m302) + x[1].scale(m304) + x[2].scale(m306) + x[3].scale(m308) + x[4].scale(m311) + x[5].scale(m312)).0, (x[0].scale(m316) + x[1].scale(m320) + x[2].scale(m324) + x[3].scale(m328) + x[4].scale(m331) + x[5].scale(m333)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Twist<S, T>> for gx::Unit<Odd<(), T>> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Twist<S, T>) -> Bivector<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Twist> for gx::Unit<Odd<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Odd>, Twist, T, 60>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Odd>, Twist, T, 60> {
+        let v = self.into_inner().c;
+        let m0 = v[1] + v[12];
+        let m1 = v[2] + v[13];
+        let m2 = v[14] + v[15];
+        let m3 = v[0] + v[11];
+        let m4 = v[1] - v[12];
+        let m5 = v[2] - v[13];
+        let m6 = v[14] - v[15];
+        let m7 = v[0] - v[11];
+        let m8 = v[11] * T::from_f64(1.0 / 2.0);
+        let m9 = v[0] + m8;
+        let m10 = v[12] * T::from_f64(1.0 / 2.0);
+        let m11 = v[1] + m10;
+        let m12 = v[13] * T::from_f64(1.0 / 2.0);
+        let m13 = v[2] + m12;
+        let m14 = v[15] * T::from_f64(1.0 / 2.0);
+        let m15 = v[14] + m14;
+        let m16 = v[1] * v[1];
+        let m17 = v[2] * v[2];
+        let m18 = v[14] * v[14];
+        let m19 = v[0] * v[0];
+        let m20 = v[3] * v[3];
+        let m21 = v[3] * v[9];
+        let m22 = v[3] * v[10];
+        let m23 = v[3] * m0;
+        let m24 = v[3] * m1;
+        let m25 = v[3] * m3;
+        let m26 = v[4] * v[6];
+        let m27 = v[4] * v[7];
+        let m28 = v[5] * v[5];
+        let m29 = v[5] * v[11];
+        let m30 = v[5] * m0;
+        let m31 = v[5] * m1;
+        let m32 = v[5] * m2;
+        let m33 = v[6] * v[6];
+        let m34 = v[6] * v[10];
+        let m35 = v[6] * m1;
+        let m36 = v[6] * m2;
+        let m37 = v[6] * m3;
+        let m38 = v[7] * v[7];
+        let m39 = v[7] * v[9];
+        let m40 = v[7] * m0;
+        let m41 = v[7] * m2;
+        let m42 = v[7] * m3;
+        let m43 = v[11] * m9;
+        let m44 = v[12] * m11;
+        let m45 = v[13] * m13;
+        let m46 = v[15] * m15;
+        let m47 = v[0] * v[1];
+        let m48 = v[0] * v[2];
+        let m49 = v[0] * v[14];
+        let m50 = v[1] * v[2];
+        let m51 = v[1] * v[6];
+        let m52 = v[1] * v[14];
+        let m53 = v[2] * v[7];
+        let m54 = v[2] * v[14];
+        let m55 = v[3] * v[4];
+        let m56 = v[3] * v[5];
+        let m57 = v[3] * v[6];
+        let m58 = v[3] * v[7];
+        let m59 = v[3] * v[8];
+        let m60 = v[3] * v[14];
+        let m61 = v[3] * m4;
+        let m62 = v[3] * m5;
+        let m63 = v[3] * m6;
+        let m64 = v[3] * m7;
+        let m65 = v[4] * v[5];
+        let m66 = v[4] * m0;
+        let m67 = v[4] * m1;
+        let m68 = v[4] * m2;
+        let m69 = v[4] * m3;
+        let m70 = v[5] * v[6];
+        let m71 = v[5] * v[7];
+        let m72 = v[5] * v[9];
+        let m73 = v[5] * v[10];
+        let m74 = v[5] * m4;
+        let m75 = v[5] * m5;
+        let m76 = v[5] * m6;
+        let m77 = v[6] * v[7];
+        let m78 = v[6] * v[8];
+        let m79 = v[6] * v[9];
+        let m80 = v[6] * m4;
+        let m81 = v[6] * m5;
+        let m82 = v[6] * m6;
+        let m83 = v[6] * m7;
+        let m84 = v[7] * v[8];
+        let m85 = v[7] * v[10];
+        let m86 = v[7] * m4;
+        let m87 = v[7] * m5;
+        let m88 = v[7] * m6;
+        let m89 = v[7] * m7;
+        let m90 = v[8] * m0;
+        let m91 = v[8] * m1;
+        let m92 = v[8] * m2;
+        let m93 = v[9] * m0;
+        let m94 = v[9] * m1;
+        let m95 = v[9] * m2;
+        let m96 = v[9] * m3;
+        let m97 = v[10] * m0;
+        let m98 = v[10] * m1;
+        let m99 = v[10] * m2;
+        let m100 = v[10] * m3;
+        let m101 = v[11] * v[12];
+        let m102 = v[11] * v[13];
+        let m103 = v[11] * v[15];
+        let m104 = v[12] * v[12];
+        let m105 = v[12] * v[13];
+        let m106 = v[12] * v[15];
+        let m107 = v[13] * v[13];
+        let m108 = v[13] * v[15];
+        let m109 = v[15] * v[15];
+        let m110 = m0 * m1;
+        let m111 = m0 * m2;
+        let m112 = m0 * m3;
+        let m113 = m1 * m2;
+        let m114 = m1 * m3;
+        let m115 = m2 * m3;
+        let m116 = v[3] * v[15];
+        let m117 = v[7] * v[13];
+        let m118 = v[6] * v[12];
+        let m119 = v[1] * v[13];
+        let m120 = v[2] * v[12];
+        let m121 = v[1] * v[15];
+        let m122 = v[12] * v[14];
+        let m123 = v[2] * v[15];
+        let m124 = v[13] * v[14];
+        let m125 = m44 * T::from_i64(2);
+        let m126 = m16 + m125;
+        let m127 = m45 * T::from_i64(2);
+        let m128 = m17 + m127;
+        let m129 = m46 * T::from_i64(2);
+        let m130 = m18 + m129;
+        let m131 = m43 * T::from_i64(2);
+        let m132 = m19 + m131;
+        let m133 = m79 * T::from_i64(-2);
+        let m134 = m16 + m133;
+        let m135 = m85 * T::from_i64(-2);
+        let m136 = m17 + m135;
+        let m137 = m55 * T::from_i64(-2);
+        let m138 = m18 + m137;
+        let m139 = m20 - m28;
+        let m140 = m21 + m26;
+        let m141 = m22 + m27;
+        let m142 = m23 - m31;
+        let m143 = m24 + m30;
+        let m144 = m25 - m32;
+        let m145 = m29 - m51;
+        let m146 = m33 - m38;
+        let m147 = m34 + m39;
+        let m148 = m35 + m40;
+        let m149 = m36 + m42;
+        let m150 = m37 - m41;
+        let m151 = m47 - m72;
+        let m152 = m48 - m73;
+        let m153 = m49 + m59;
+        let m154 = m50 - m105;
+        let m155 = m52 - m106;
+        let m156 = m54 - m108;
+        let m157 = m61 - m82;
+        let m158 = m62 - m88;
+        let m159 = m64 - m76;
+        let m160 = m65 - m103;
+        let m161 = m66 - m95;
+        let m162 = m67 - m99;
+        let m163 = m69 - m92;
+        let m164 = m74 + m83;
+        let m165 = m75 + m89;
+        let m166 = m78 + m101;
+        let m167 = m81 + m86;
+        let m168 = m84 + m102;
+        let m169 = m90 + m96;
+        let m170 = m91 + m100;
+        let m171 = m94 + m97;
+        let m172 = m104 - m134;
+        let m173 = m107 - m136;
+        let m174 = m109 - m138;
+        let m175 = m126 - m128;
+        let m176 = m130 - m132;
+        let m177 = m140 + m155;
+        let m178 = m141 + m156;
+        let m179 = m147 - m154;
+        let m180 = m151 - m166;
+        let m181 = m152 - m168;
+        let m182 = m153 + m160;
+        let m183 = m172 + m173;
+        let m184 = m183 * T::from_i64(2);
+        let m185 = m184 + T::from_i64(1);
+        let m186 = m180 - m178;
+        let m187 = m186 * T::from_i64(2);
+        let m188 = m177 + m181;
+        let m189 = m188 * T::from_i64(2);
+        let m190 = m145 - m53;
+        let m191 = m190 - m116;
+        let m192 = m191 * T::from_i64(4);
+        let m193 = m143 + m150;
+        let m194 = m193 * T::from_i64(2);
+        let m195 = m149 - m142;
+        let m196 = m195 * T::from_i64(2);
+        let m197 = m178 + m180;
+        let m198 = m197 * T::from_i64(2);
+        let m199 = m172 + m174;
+        let m200 = m199 * T::from_i64(2);
+        let m201 = m200 + T::from_i64(1);
+        let m202 = -m201;
+        let m203 = m179 + m182;
+        let m204 = m203 * T::from_i64(2);
+        let m205 = -m204;
+        let m206 = m30 + m37;
+        let m207 = m41 - m24;
+        let m208 = m206 + m207;
+        let m209 = m208 * T::from_i64(2);
+        let m210 = m60 + m117;
+        let m211 = m145 + m210;
+        let m212 = m211 * T::from_i64(4);
+        let m213 = -m212;
+        let m214 = m144 + m148;
+        let m215 = m214 * T::from_i64(2);
+        let m216 = m181 - m177;
+        let m217 = m216 * T::from_i64(2);
+        let m218 = m182 - m179;
+        let m219 = m218 * T::from_i64(2);
+        let m220 = m173 + m174;
+        let m221 = m220 * T::from_i64(2);
+        let m222 = m221 + T::from_i64(1);
+        let m223 = -m222;
+        let m224 = m23 + m31;
+        let m225 = m42 - m36;
+        let m226 = m224 + m225;
+        let m227 = m226 * T::from_i64(2);
+        let m228 = m148 - m144;
+        let m229 = m228 * T::from_i64(2);
+        let m230 = m53 - m29;
+        let m231 = m60 + m118;
+        let m232 = m230 - m231;
+        let m233 = m232 * T::from_i64(4);
+        let m234 = m80 + m87;
+        let m235 = m234 * T::from_i64(4);
+        let m236 = -m235;
+        let m237 = m158 + m164;
+        let m238 = m237 * T::from_i64(2);
+        let m239 = m165 - m157;
+        let m240 = m239 * T::from_i64(2);
+        let m241 = m20 + m28;
+        let m242 = m33 + m38;
+        let m243 = m241 - m242;
+        let m244 = m243 * T::from_i64(2);
+        let m245 = m58 + m70;
+        let m246 = m245 * T::from_i64(4);
+        let m247 = m71 - m57;
+        let m248 = m247 * T::from_i64(4);
+        let m249 = m164 - m158;
+        let m250 = m249 * T::from_i64(2);
+        let m251 = m80 - m63;
+        let m252 = m251 * T::from_i64(4);
+        let m253 = m159 + m167;
+        let m254 = m253 * T::from_i64(2);
+        let m255 = m70 - m58;
+        let m256 = m255 * T::from_i64(4);
+        let m257 = m139 + m146;
+        let m258 = m257 * T::from_i64(2);
+        let m259 = m56 + m77;
+        let m260 = m259 * T::from_i64(4);
+        let m261 = m157 + m165;
+        let m262 = m261 * T::from_i64(2);
+        let m263 = m167 - m159;
+        let m264 = m263 * T::from_i64(2);
+        let m265 = m87 - m63;
+        let m266 = m265 * T::from_i64(4);
+        let m267 = m57 + m71;
+        let m268 = m267 * T::from_i64(4);
+        let m269 = m77 - m56;
+        let m270 = m269 * T::from_i64(4);
+        let m271 = m139 - m146;
+        let m272 = m271 * T::from_i64(2);
+        let m273 = m93 + m98;
+        let m274 = m273 * T::from_i64(4);
+        let m275 = -m274;
+        let m276 = m162 + m169;
+        let m277 = m276 * T::from_i64(2);
+        let m278 = m170 - m161;
+        let m279 = m278 * T::from_i64(2);
+        let m280 = m126 + m128;
+        let m281 = m130 + m132;
+        let m282 = m280 - m281;
+        let m283 = m113 - m112;
+        let m284 = m283 * T::from_i64(2);
+        let m285 = m111 + m114;
+        let m286 = m285 * T::from_i64(2);
+        let m287 = -m286;
+        let m288 = m169 - m162;
+        let m289 = m288 * T::from_i64(2);
+        let m290 = m93 - m68;
+        let m291 = m290 * T::from_i64(4);
+        let m292 = m163 + m171;
+        let m293 = m292 * T::from_i64(2);
+        let m294 = m112 + m113;
+        let m295 = m294 * T::from_i64(2);
+        let m296 = -m295;
+        let m297 = m175 + m176;
+        let m298 = -m297;
+        let m299 = m115 - m110;
+        let m300 = m299 * T::from_i64(2);
+        let m301 = m161 + m170;
+        let m302 = m301 * T::from_i64(2);
+        let m303 = m171 - m163;
+        let m304 = m303 * T::from_i64(2);
+        let m305 = m98 - m68;
+        let m306 = m305 * T::from_i64(4);
+        let m307 = m111 - m114;
+        let m308 = m307 * T::from_i64(2);
+        let m309 = m110 + m115;
+        let m310 = m309 * T::from_i64(2);
+        let m311 = -m310;
+        let m312 = m175 - m176;
+        let m313 = m34 + m120;
+        let m314 = m39 + m119;
+        let m315 = m313 - m314;
+        let m316 = m315 * T::from_i64(4);
+        let m317 = m21 + m122;
+        let m318 = m26 + m121;
+        let m319 = m317 - m318;
+        let m320 = m319 * T::from_i64(4);
+        let m321 = m22 + m124;
+        let m322 = m27 + m123;
+        let m323 = m321 - m322;
+        let m324 = m323 * T::from_i64(4);
+        let m325 = m40 - m25;
+        let m326 = m32 + m35;
+        let m327 = m325 - m326;
+        let m328 = m327 * T::from_i64(2);
+        let m329 = m142 + m149;
+        let m330 = m329 * T::from_i64(2);
+        let m331 = -m330;
+        let m332 = m150 - m143;
+        let m333 = m332 * T::from_i64(2);
+        gx::Prepared::from_entries([m185, m187, m189, m192, m194, m196, m198, m202, m205, m209, m213, m215, m217, m219, m223, m227, m229, m233, m236, m238, m240, m244, m246, m248, m250, m252, m254, m256, m258, m260, m262, m264, m266, m268, m270, m272, m275, m277, m279, m282, m284, m287, m289, m291, m293, m296, m298, m300, m302, m304, m306, m308, m311, m312, m316, m320, m324, m328, m331, m333])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Twist<S, T>> for gx::Prepared<gx::Unit<Odd>, Twist, T, 60> {
+    type Output = Bivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Twist<S, T>) -> Bivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Bivector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4]) + x[5].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10]) + x[5].scale(m[11])).0, (x[0].scale(m[12]) + x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[16]) + x[5].scale(m[17])).0, (x[0].scale(m[18]) + x[1].scale(m[19]) + x[2].scale(m[20]) + x[3].scale(m[21]) + x[4].scale(m[22]) + x[5].scale(m[23])).0, (x[0].scale(m[24]) + x[1].scale(m[25]) + x[2].scale(m[26]) + x[3].scale(m[27]) + x[4].scale(m[28]) + x[5].scale(m[29])).0, (x[0].scale(m[30]) + x[1].scale(m[31]) + x[2].scale(m[32]) + x[3].scale(m[33]) + x[4].scale(m[34]) + x[5].scale(m[35])).0, (x[0].scale(m[36]) + x[1].scale(m[37]) + x[2].scale(m[38]) + x[3].scale(m[39]) + x[4].scale(m[40]) + x[5].scale(m[41])).0, (x[0].scale(m[42]) + x[1].scale(m[43]) + x[2].scale(m[44]) + x[3].scale(m[45]) + x[4].scale(m[46]) + x[5].scale(m[47])).0, (x[0].scale(m[48]) + x[1].scale(m[49]) + x[2].scale(m[50]) + x[3].scale(m[51]) + x[4].scale(m[52]) + x[5].scale(m[53])).0, (x[0].scale(m[54]) + x[1].scale(m[55]) + x[2].scale(m[56]) + x[3].scale(m[57]) + x[4].scale(m[58]) + x[5].scale(m[59])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Twist, T, 60>> for Bivector<(Twist,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Odd>, Twist, T, 60>) -> Self {
+        let m = p.m;
+        Bivector { c: [[m[0], m[1], m[2], m[3], m[4], m[5]], [m[6], m[7], m[8], m[9], m[10], m[11]], [m[12], m[13], m[14], m[15], m[16], m[17]], [m[18], m[19], m[20], m[21], m[22], m[23]], [m[24], m[25], m[26], m[27], m[28], m[29]], [m[30], m[31], m[32], m[33], m[34], m[35]], [m[36], m[37], m[38], m[39], m[40], m[41]], [m[42], m[43], m[44], m[45], m[46], m[47]], [m[48], m[49], m[50], m[51], m[52], m[53]], [m[54], m[55], m[56], m[57], m[58], m[59]]] }
     }
 }
 

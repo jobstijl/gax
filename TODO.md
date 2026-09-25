@@ -27,22 +27,25 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Value methods: norm, inverse, normalized, exp, log, sqrt (Study-number calculus)
 - [x] `at::<I>`, `swap`, `fill` (type-level kind equality)
 - [x] `algebra!` proc macro (STAP, CSTA tested)
-- [ ] exp/log for 5D algebras (CGA3D, STAP): a numerical invariant decomposition
-- [ ] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
+- [x] exp/log for 5D algebras (CGA3D, STAP): Study functions with a general 4-vector direction
+- [ ] exp/log for 6D (CSTA): the cubic invariant decomposition
+- [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
 - [ ] Compact principal-inertia representation
-- [ ] Prepared sparse sandwich maps (AoS speed); optional `mul_add` emission
+- [x] Prepared sparse sandwich maps; balanced summation trees
+- [ ] Optional `mul_add` emission when FMA is available
 - [ ] Multi-slot `trace::<I>`; outermorphism
 - [ ] Better line sandwich kernel (58 mul now)
 
 ## Phase 3: quality and documentation
-- [ ] trybuild compile-fail tests (slot mismatch, wrong kind bound, non-square inverse)
-- [ ] numga fixtures cross-check
-- [ ] Property tests of algebraic laws on the generated types
-- [ ] Fuzz the spec parser (cargo-fuzz)
-- [ ] clippy (pedantic) clean; cargo-deny config; miri on core
-- [ ] CI: stable plus MSRV on Linux/macOS/Windows, regen check, tests, clippy, deny
-- [ ] README, guide, rustdoc examples on public items
-- [ ] Examples: scene graph and camera; rigid body inertia and vibration modes; CGA/STA
+- [x] trybuild compile-fail tests (slot mismatch, wrong kind bound, non-square inverse)
+- [x] numga fixtures cross-check
+- [x] Property tests of algebraic laws on the generated types
+- [x] Fuzz the spec parser (cargo-fuzz)
+- [x] clippy (pedantic) clean; cargo-deny config; miri on core
+- [x] CI workflow: stable plus MSRV on Linux/macOS/Windows, regen check, tests, clippy, deny (verified locally; not yet run on a CI service)
+- [x] README, guide (doctested)
+- [ ] Runnable rustdoc examples on more public items
+- [x] Examples: scene graph and camera; rigid body inertia and vibration modes; CGA/STA
 - [x] `docs/performance.md` (first version)
 
 ## Decisions for the project owner
