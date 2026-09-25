@@ -188,3 +188,46 @@ macro_rules! tuple_traceable {
 tuple_traceable!(A0 0, A1 1);
 tuple_traceable!(A0 0, A1 1, A2 2);
 tuple_traceable!(A0 0, A1 1, A2 2, A3 3);
+
+/// Arrays of traceable values, such as `[T; 3]` of scalars.
+impl<A: Traceable, const N: usize> Traceable for [A; N] {
+    type Coef = A::Coef;
+    const LEN: usize = A::LEN * N;
+    fn from_fn(f: &mut dyn FnMut(usize) -> A::Coef) -> Self {
+        let mut k = 0;
+        core::array::from_fn(|_| {
+            let base = k;
+            k += A::LEN;
+            A::from_fn(&mut |i| f(base + i))
+        })
+    }
+    fn for_each(&self, f: &mut dyn FnMut(A::Coef)) {
+        for a in self {
+            a.for_each(f);
+        }
+    }
+    fn write_type(w: &mut dyn Write, coef: &str) -> fmt::Result {
+        w.write_str("[")?;
+        A::write_type(w, coef)?;
+        write!(w, "; {N}]")
+    }
+    fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result {
+        // Only arrays of scalars (LEN 1 each) are supported as kernel arguments.
+        write!(w, "{name}")
+    }
+    fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
+        w.write_str("[")?;
+        for i in 0..N {
+            if i > 0 {
+                w.write_str(", ")?;
+            }
+            A::write_construct(w, &parts[i * A::LEN..(i + 1) * A::LEN])?;
+        }
+        w.write_str("]")
+    }
+    fn for_each_condition(&self, f: &mut dyn FnMut(A::Coef)) {
+        for a in self {
+            a.for_each_condition(f);
+        }
+    }
+}

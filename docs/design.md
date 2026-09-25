@@ -328,6 +328,11 @@ files in `gax/src/algebras/`, behind cargo features.
 
   Without build-time constants the fused kernels match the generic code, which is the guarantee the
   limit-0 trace gives.
+* **Arithmetic is not wall time.** For the rigid-body step with constants traced, the fused kernel
+  does 98 mul and 1 div against the generic code's 113 and 5. On eight bodies in `f32x8` lanes it is
+  26% faster. On one body in f32 it is 35% *slower*, because LLVM's SLP vectorizer handles the regular
+  generic code better. Hypothesis 4 holds for batched and scalar execution, not for single values on
+  SIMD targets. performance.md has the details.
 
 ## ADR-017: Own small-matrix math core, generic over `Real`
 *Status: accepted, implemented (`gax-core/src/linalg.rs`, `extensor.rs`).*

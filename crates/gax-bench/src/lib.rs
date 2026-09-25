@@ -2,6 +2,14 @@
 //! `cargo rustc -p gax-bench --release -- --emit asm` and compared across libraries.
 
 use gax::Unit;
+
+pub mod kernels;
+
+/// Fused kernels traced from [`kernels`] at build time.
+pub mod fused {
+    #![allow(missing_docs)]
+    include!(concat!(env!("OUT_DIR"), "/fused.rs"));
+}
 use gax::pga3d::{Motor, Point, Rotor};
 
 /// gax: unit motor applied to a point (direct fused sandwich).
@@ -90,4 +98,24 @@ pub fn motor(angle: f32, axis: [f32; 3], t: [f32; 3]) -> Unit<Motor> {
         0.0,
     );
     Unit::new_unchecked(tr * r)
+}
+
+/// Probe: the rigid-body step, generic code with constants inlined.
+#[inline(never)]
+pub fn probe_rigid_generic(
+    m: Motor,
+    b: gax::pga3d::Line,
+    f: gax::pga3d::Line,
+) -> (Motor, gax::pga3d::Line) {
+    kernels::rigid_step_fixed(m, b, f)
+}
+
+/// Probe: the same, fused at build time.
+#[inline(never)]
+pub fn probe_rigid_fused(
+    m: Motor,
+    b: gax::pga3d::Line,
+    f: gax::pga3d::Line,
+) -> (Motor, gax::pga3d::Line) {
+    fused::rigid_step_fixed_fused(m, b, f)
 }

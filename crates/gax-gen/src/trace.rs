@@ -142,6 +142,8 @@ trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2);
 trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3);
 trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4);
 trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5);
+trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5, A6 a6 6);
+trace_fn!(A0 a0 0, A1 a1 1, A2 a2 2, A3 a3 3, A4 a4 4, A5 a5 5, A6 a6 6, A7 a7 7);
 
 /// Report on one traced kernel.
 #[derive(Clone, Debug)]
@@ -180,22 +182,42 @@ impl Tracer {
         // than the generic code; no limit expands everything into polynomials, which exposes
         // cancellations and type conditions across steps.
         let mut best: Option<(crate::slp::Program, Traced, Vec<VarDef>)> = None;
+        // A strategy whose polynomials grow too large is skipped, and one that overflows the
+        // exact rational arithmetic (which panics rather than wrap) is dropped: the limit-0
+        // trace, the computation as written, always succeeds.
+        const MAX_TERMS: usize = 20_000;
+        let quiet = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
         for limit in [Some(0), Some(1), Some(8), Some(32), Some(128), None] {
-            Sym::reset_with_limit(limit);
-            let traced = f.run();
-            let outputs: Vec<Poly> = traced.outputs.iter().map(|s| s.poly()).collect();
-            let stages = stages_of_arena();
-            let mut relations = traced.conditions.clone();
-            relations.extend(Sym::atom_relations());
-            let (prog, _env) = cse::compile_staged_best(&outputs, &stages, &relations);
-            let defs: Vec<VarDef> = (0..Sym::var_count() as Var).map(Sym::var_def).collect();
-            if best
-                .as_ref()
-                .is_none_or(|(p, ..)| prog.cost().weight() < p.cost().weight())
+            let attempt = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                Sym::reset_with_limit(limit);
+                let traced = f.run();
+                let outputs: Vec<Poly> = traced.outputs.iter().map(|s| s.poly()).collect();
+                let stages = stages_of_arena();
+                let size: usize = outputs.iter().map(Poly::len).sum::<usize>()
+                    + stages
+                        .iter()
+                        .flat_map(|st| st.args.iter())
+                        .map(Poly::len)
+                        .sum::<usize>();
+                if limit.is_some_and(|l| l > 0) && size > MAX_TERMS {
+                    return None;
+                }
+                let mut relations = traced.conditions.clone();
+                relations.extend(Sym::atom_relations());
+                let (prog, _env) = cse::compile_staged_best(&outputs, &stages, &relations);
+                let defs: Vec<VarDef> = (0..Sym::var_count() as Var).map(Sym::var_def).collect();
+                Some((prog, traced, defs))
+            }));
+            if let Ok(Some((prog, traced, defs))) = attempt
+                && best
+                    .as_ref()
+                    .is_none_or(|(p, ..)| prog.cost().weight() < p.cost().weight())
             {
                 best = Some((prog, traced, defs));
             }
         }
+        std::panic::set_hook(quiet);
         let (prog, traced, defs) = best.expect("at least one limit");
         // The cost of the generic code as it runs: every operation, nothing folded.
         let naive = {
@@ -233,7 +255,7 @@ impl Tracer {
         );
         let _ = writeln!(
             s,
-            "#[inline]\n#[allow(clippy::all, clippy::pedantic, unused_variables, unused_parens, non_snake_case)]"
+            "#[inline(always)]\n#[allow(clippy::all, clippy::pedantic, unused_variables, unused_parens, non_snake_case)]"
         );
         let _ = writeln!(
             s,

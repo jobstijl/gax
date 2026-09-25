@@ -217,6 +217,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "gax",
+ "geometric_algebra",
  "glam 0.30.10",
  "nalgebra",
  "ultraviolet",
@@ -252,6 +253,12 @@ version = "0.1.0"
 dependencies = [
  "gax-gen",
 ]
+
+[[package]]
+name = "geometric_algebra"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dea41acf362984b8642ed6bd9278c4dc2919703d80f3e63d935b315e9ad20959"
 
 [[package]]
 name = "getrandom"

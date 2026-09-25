@@ -67,6 +67,50 @@ Ranges show run-to-run variation, measured in separate runs of the suite.
 **Still open:** emitting `mul_add` when FMA is available, and SIMD-friendly layouts for single
 values.
 
+## Against nalgebra, ultraviolet and `geometric_algebra` (`benches/compare.rs`)
+
+| operation | gax | others |
+|---|---|---|
+| transform a point by a rigid motion (f32) | **6.3 ns** | `geometric_algebra` 0.3 `Motor::transformation`: 10.9 ns; nalgebra `Isometry3 * Point3`: 13.5 ns |
+| eight points at once (SoA `f32x8`) | 8.4 ns (rotation and translation) | ultraviolet `Rotor3x8 * Vec3x8` (rotation only): 8.0 ns |
+| compose a chain of 5 rigid motions | 43 ns | glam `Affine3A`: 13 ns; nalgebra `Isometry3`: 26 ns |
+| 6x6 map inverse (f64) | 465 ns | nalgebra `Matrix6::try_inverse`: 301 ns |
+| 6x6 solve | 217 ns | nalgebra LU solve: 190 ns |
+| 6x6 generalized eigenproblem (vibration modes) | 5.6 µs | nalgebra Cholesky + `SymmetricEigen`: 2.1 µs |
+| 4x4 SVD | **1.11 µs** | nalgebra `Matrix4::svd`: 1.35 µs |
+| CGA3D `Unit<Motor> >> point` (f32) | 6.96 ns | — |
+| CGA3D general even versor `>> point` | 38.7 ns | — |
+| CGA3D `Twist::exp` | 15.2 ns | — |
+| CSTA (6D) vector product | 13.2 ns | — |
+
+**The solvers are branch free** (ADR-017): fixed Jacobi sweeps and select-based pivoting, so they
+run unchanged on SIMD lanes. A scalar, branching implementation such as nalgebra's is faster for
+one matrix at a time: 1.5x for the inverse and 2.7x for the generalized eigenproblem. Early exit for
+scalar coefficients is planned (TODO). The SVD is already faster than nalgebra's.
+
+**A motor chain costs more than an `Affine3A` chain.** A motor product is 48 scalar mul and 40 add,
+while glam's affine product is a SIMD 3x3 product plus a translation.
+
+## Build-time tracing: arithmetic against wall time (`benches/compare.rs`, rigid-body step)
+
+An explicit Euler step of a free rigid body in PGA3D (motor, twist, principal inertia,
+renormalization), with the body's constants known at build time:
+
+| | arithmetic | one body (f32) | eight bodies (`f32x8` lanes) |
+|---|---|---|---|
+| generic code | 113 mul, 70 add, 5 div | **20.7 ns** | 43.6 ns |
+| fused at build time | 98 mul, 70 add, 1 div | 28.0 ns | **32.0 ns** |
+
+* **Batches.** In SoA lanes the arithmetic count is what runs, and the fused kernel is 26% faster.
+* **Single values.** Here LLVM's SLP vectorizer turns the *more regular* generic code into better SIMD
+  than the leaner but irregular fused program: 169 against 191 instructions, with more shuffles in the
+  fused one. The fused kernel is slower.
+* **What it means:**
+  * tracing pays off for batches and for scalar-only targets, and whenever constants remove work;
+  * for single values on a SIMD target, measure first.
+
+  Emitting fused code in a shape the SLP vectorizer handles well is open work (TODO).
+
 ## Fused sandwich kernels (op counts from the generator)
 
 | kernel | gax | reference |
