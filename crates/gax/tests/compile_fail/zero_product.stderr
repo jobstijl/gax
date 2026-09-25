@@ -1,0 +1,16 @@
+error[E0277]: no outer product (`^`) of `gax::pga3d::Point<(), {float}>` and `gax::pga3d::Point<(), {float}>`
+ --> tests/compile_fail/zero_product.rs:6:15
+  |
+6 |     let _ = p ^ p;
+  |               ^ the trait `Wedge<gax::pga3d::Point<(), {float}>>` is not implemented for `gax::pga3d::Point<(), {float}>`
+  |
+  = note: the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)
+  = help: `gax::pga3d::Point<S1, T>` implements trait `Wedge<Rhs>`:
+            Wedge<Plane<S2, T>>
+            Wedge<gax::pga3d::Flector<S2, T>>
+            Wedge<gax::pga3d::Motor<S2, T>>
+            Wedge<gax::pga3d::Multivector<S2, T>>
+            Wedge<gax::pga3d::Rotor<S2, T>>
+            Wedge<gax::pga3d::Scalar<S2, T>>
+            Wedge<gax::pga3d::Translator<S2, T>>
+  = note: required for `gax::pga3d::Point<(), {float}>` to implement `BitXor`

@@ -20,6 +20,10 @@ use crate::coef::Real;
 use core::ops::{Index, IndexMut};
 
 /// A square matrix stored as an array of rows: `m[i][j]` is row `i`, column `j`.
+#[diagnostic::on_unimplemented(
+    message = "the map is not square: `{Self}`",
+    note = "inverse, det, solve and svd need a map between kinds with the same number of coefficients"
+)]
 pub trait SquareArr<T: Real>: Copy + Index<usize, Output = Self::Vector> + IndexMut<usize> {
     /// Dimension.
     const N: usize;

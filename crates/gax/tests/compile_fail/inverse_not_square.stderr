@@ -1,0 +1,9 @@
+error[E0599]: the method `inverse` exists for struct `Plane<(gax::pga3d::Line,), f64>`, but its trait bounds were not satisfied
+ --> tests/compile_fail/inverse_not_square.rs:5:15
+  |
+5 |     let _ = m.inverse();
+  |               ^^^^^^^
+  |
+  = note: the following trait bounds were not satisfied:
+          `[[f64; 6]; 4]: SquareArr<f64>`
+          `[[f64; 4]; 6]: SquareArr<f64>`

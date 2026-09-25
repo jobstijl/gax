@@ -8,6 +8,10 @@ use crate::slots::{Cat, SlotArr, SplitFirst};
 /// With `m` a map `C <- (B, Rest...)` and `x` of kind `B` with slots `Sx`, `m.of(x)` has
 /// slots `Sx` followed by `Rest`: a value `x` fills the slot, and a map `x` is composed into
 /// it, its own slots taking the slot's place.
+#[diagnostic::on_unimplemented(
+    message = "cannot fill the first slot of `{Self}` with `{X}`",
+    note = "the argument's kind must be the slot's kind (move another slot to the front with `.at::<I>()`)"
+)]
 pub trait Of<X> {
     /// The result type.
     type Output;

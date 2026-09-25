@@ -6,8 +6,12 @@
 //! [`Wedge`], [`Vee`] and [`Dot`].
 
 macro_rules! binary_trait {
-    ($(#[$doc:meta])* $Trait:ident, $method:ident) => {
+    ($(#[$doc:meta])* $Trait:ident, $method:ident, $msg:literal) => {
         $(#[$doc])*
+        #[diagnostic::on_unimplemented(
+            message = $msg,
+            note = "the product is identically zero for these kinds (so it is not defined), or an operand is not a multivector of the same algebra and coefficient type (versor transport needs a declared versor kind as a value on the left)"
+        )]
         pub trait $Trait<Rhs> {
             /// The result type.
             type Output;
@@ -19,47 +23,58 @@ macro_rules! binary_trait {
 
 binary_trait!(
     /// Geometric product.
-    Gp, gp
+    Gp, gp,
+    "no geometric product of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Outer (wedge) product, the meet in plane-based PGA. Metric free.
-    Wedge, wedge
+    Wedge, wedge,
+    "no outer product (`^`) of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Regressive (vee) product, the join in plane-based PGA. Metric free.
-    Vee, vee
+    Vee, vee,
+    "no regressive product (`&`) of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Symmetric inner product: the grade `|ga - gb|` part of the geometric product.
-    Dot, dot
+    Dot, dot,
+    "no inner product (`|`) of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Left contraction.
-    Lc, lc
+    Lc, lc,
+    "no left contraction of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Right contraction.
-    Rc, rc
+    Rc, rc,
+    "no right contraction of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Scalar product: the grade-0 part of the geometric product.
-    ScalarProduct, scalar_product
+    ScalarProduct, scalar_product,
+    "no scalar product of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Commutator product `(ab - ba) / 2`.
-    Commutator, commutator
+    Commutator, commutator,
+    "no commutator product of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Anticommutator product `(ab + ba) / 2`.
-    Anticommutator, anticommutator
+    Anticommutator, anticommutator,
+    "no anticommutator product of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Versor transport `v x ~v` (the operator `v >> x`).
-    Transform, transform
+    Transform, transform,
+    "no versor transport (`>>`) of `{Self}` and `{Rhs}`"
 );
 binary_trait!(
     /// Inverse transport `~v x v` (the operator `v << x`).
-    TransformInv, transform_inv
+    TransformInv, transform_inv,
+    "no inverse versor transport (`<<`) of `{Self}` and `{Rhs}`"
 );
 
 macro_rules! unary_trait {

@@ -1,0 +1,19 @@
+error[E0271]: type mismatch resolving `<Plane as Extensor>::Kind == Point`
+ --> tests/compile_fail/bind_wrong_kind.rs:7:20
+  |
+7 |     let _ = map.of(plane);
+  |                 -- ^^^^^ expected `Point`, found `Plane`
+  |                 |
+  |                 required by a bound introduced by this call
+  |
+  = note: expected struct `gax::pga3d::Point`
+             found struct `Plane`
+  = note: required for `gax::pga3d::Line<(gax::pga3d::Point,)>` to implement `Of<Plane>`
+note: required by a bound in `gax::pga3d::Line::<S, T>::of`
+ --> src/algebras/pga3d.rs
+  |
+  |     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+  |            -- required by a bound in this associated function
+  |     where
+  |         Self: gx::Of<X>,
+  |               ^^^^^^^^^ required by this bound in `Line::<S, T>::of`

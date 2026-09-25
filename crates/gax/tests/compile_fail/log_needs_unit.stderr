@@ -1,0 +1,5 @@
+error[E0599]: no method named `log` found for struct `gax::pga3d::Motor<S, T>` in the current scope
+ --> tests/compile_fail/log_needs_unit.rs:6:15
+  |
+6 |     let _ = m.log();
+  |               ^^^ method not found in `gax::pga3d::Motor<(), {float}>`

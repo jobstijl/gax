@@ -9,6 +9,11 @@ use core::fmt::Debug;
 ///
 /// A kind is written as its multivector type with default parameters, so `Point` is both
 /// the type of a point value and the marker for an open point slot in `Line<(Point,)>`.
+#[diagnostic::on_unimplemented(
+    message = "`{Self}` is not a kind",
+    label = "not a kind",
+    note = "slot lists name kinds by their bare type name: write `Point<(Point,), f64>`, not `Point<(Point<(), f64>,), f64>`"
+)]
 pub trait Kind: Copy + Debug + PartialEq + 'static {
     /// Number of coefficients.
     const N: usize;
