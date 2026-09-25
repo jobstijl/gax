@@ -1,6 +1,6 @@
 //! Regenerate the standard algebras shipped in the `gax` crate.
 //!
-//! Usage: `cargo run -p gax-gen --bin gax-regen [--check]` from the workspace root.
+//! Usage: `cargo run -p gax-gen --bin gax-regen [--check] [--verbose]`.
 //! With `--check`, nothing is written and the exit code is nonzero when a committed file
 //! differs from what the generator produces (used in CI).
 
@@ -11,6 +11,7 @@ use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let check = std::env::args().any(|a| a == "--check");
+    let verbose = std::env::args().any(|a| a == "--verbose");
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../gax");
     let mut specs: Vec<_> = std::fs::read_dir(root.join("specs"))
         .expect("specs directory")
@@ -44,7 +45,7 @@ fn main() -> ExitCode {
         let test_target = root.join("tests").join(format!("ops_{}.rs", spec.name));
         stale |= write_or_check(&test_target, &tests, check);
         let target = root.join("src/algebras").join(format!("{}.rs", spec.name));
-        let current = std::fs::read_to_string(&target).unwrap_or_default();
+        stale |= write_or_check(&target, &code, check);
         eprintln!(
             "{}: {} lines, {} product impls, {} sandwich kernels",
             spec.name,
@@ -52,15 +53,9 @@ fn main() -> ExitCode {
             stats.binary_impls,
             stats.sandwich_impls
         );
-        for (v, x, unit, cost) in &stats.sandwich_costs {
-            eprintln!("    {}{v} >> {x}: {cost}", if *unit { "Unit " } else { "" });
-        }
-        if current != code {
-            if check {
-                eprintln!("{} is out of date", target.display());
-                stale = true;
-            } else {
-                std::fs::write(&target, code).expect("write generated file");
+        if verbose {
+            for (v, x, unit, cost) in &stats.sandwich_costs {
+                eprintln!("    {}{v} >> {x}: {cost}", if *unit { "Unit " } else { "" });
             }
         }
     }
