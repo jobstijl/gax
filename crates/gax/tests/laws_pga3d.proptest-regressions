@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0dc6637b155ad0f74664cc2bc35af387c4a3c62388e9066ad0567bcad796ceda # shrinks to m = Unit(Motor { 1: 1.0, e23: 0.0, e31: 0.0, e12: 0.0, e01: 0.0, e02: 0.0, e03: -0.11398397667796943, e0123: 0.0 }), l = Plane { e1: 0.0, e2: 0.0, e3: -0.6909211544419356, e0: 0.0 }, p = Point { e032: 0.0, e013: 0.0, e021: 0.0, e123: 0.0 }

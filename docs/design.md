@@ -178,6 +178,10 @@ files in `gax/src/algebras/`, behind cargo features.
   Types are subsets of these, so a PGA3D point is `[e032, e013, e021, e123]`, as in the cheat sheet.
 * **Plane before point:** as numga recommends, pairings are written plane first (`plane & point`), and
   the examples follow this.
+* **Pseudoscalar orientation differs from numga.** The PGA3D pseudoscalar is oriented as in
+  bivector.net, `e0123`. numga orients it as `x∧y∧z∧w = −e0123`. The regressive product and the
+  complement flip sign with that orientation, so in PGA3D `gax`'s `a & b` and `dual` are the negatives
+  of numga's; in PGA2D they agree. The numga fixture test (`tests/numga_fixtures.rs`) pins this.
 
 ## ADR-010: The symbolic coefficient `Sym` is a `Copy` handle to hash-consed polynomials
 *Status: accepted, implemented (`gax-gen/src/sym.rs`).*
