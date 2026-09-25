@@ -176,7 +176,6 @@ impl Tracer {
         // than the generic code; no limit expands everything into polynomials, which exposes
         // cancellations and type conditions across steps.
         let mut best: Option<(crate::slp::Program, Traced, Vec<VarDef>)> = None;
-        let mut unfused: Option<Cost> = None;
         for limit in [Some(0), Some(1), Some(8), Some(32), Some(128), None] {
             Sym::reset_with_limit(limit);
             let traced = f.run();
@@ -195,18 +194,15 @@ impl Tracer {
         }
         let (prog, traced, defs) = best.expect("at least one limit");
         // The cost of the generic code as it runs: every operation, nothing folded.
-        {
+        let naive = {
             Sym::reset_runtime_model();
             let run = f.run();
             let outputs: Vec<Poly> = run.outputs.iter().map(|s| s.poly()).collect();
             let stages = stages_of_arena();
-            unfused = Some(
-                cse::compile_staged(&outputs, &stages, &[], cse::Reduction::None, false)
-                    .0
-                    .cost(),
-            );
-        }
-        let naive = unfused.expect("runtime model traced");
+            cse::compile_staged(&outputs, &stages, &[], cse::Reduction::None, false)
+                .0
+                .cost()
+        };
         let var_name = |v: Var| match defs[v as usize].clone() {
             VarDef::Input { arg, index } => format!("a{arg}[{index}]"),
             VarDef::Constant(ConstKind::Float(x)) => format!("T::from_f64({x:?})"),
