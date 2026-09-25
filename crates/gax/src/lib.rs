@@ -17,5 +17,6 @@ pub use gax_core::*;
     clippy::pedantic,
     unused_parens
 )]
+#[rustfmt::skip]
 #[path = "algebras/pga2d.rs"]
 pub mod pga2d;
