@@ -47,7 +47,7 @@ pub use kernels::{
 };
 pub use lanes::{Lanes, Portable};
 use simd_lanes::Proof;
-pub use soa::{BLOCK, Soa, soa_map, soa_map2};
+pub use soa::{BLOCK, Soa, load_block, soa_map, soa_map2, store_block};
 
 extern crate std;
 use crate::coef::Real;

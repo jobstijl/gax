@@ -165,6 +165,25 @@ impl<K: Kind, E: LaneElem> Soa<K, E> {
         &mut self.data
     }
 
+    /// Block `b`: `K::N * BLOCK` values, coefficient-major.
+    ///
+    /// # Panics
+    /// If `b >= self.blocks()`.
+    #[inline(always)]
+    #[must_use]
+    pub fn block(&self, b: usize) -> &[E] {
+        &self.data[b * K::N * BLOCK..(b + 1) * K::N * BLOCK]
+    }
+
+    /// Block `b`, mutably.
+    ///
+    /// # Panics
+    /// If `b >= self.blocks()`.
+    #[inline(always)]
+    pub fn block_mut(&mut self, b: usize) -> &mut [E] {
+        &mut self.data[b * K::N * BLOCK..(b + 1) * K::N * BLOCK]
+    }
+
     /// The lanes of values `start..start + L::LANES` (padding past the end).
     ///
     /// # Panics
@@ -224,12 +243,8 @@ pub fn soa_map<X: Kind, Y: Kind, L: Batch>(
     for (xb, yb) in blocks.zip(out.data.chunks_exact_mut(Y::N * BLOCK)) {
         let mut j = 0;
         while j < BLOCK {
-            let x: Mv<X, L> =
-                Extensor::from_coeffs(X::arr_from_fn(|k| L::load(&xb[k * BLOCK + j..])));
-            let y = f(x);
-            for (k, c) in y.coeffs().as_ref().iter().enumerate() {
-                c.store(&mut yb[k * BLOCK + j..]);
-            }
+            let y = f(load_block::<X, L>(xb, j));
+            store_block::<Y, L>(yb, j, &y);
             j += L::LANES;
         }
     }
@@ -267,5 +282,30 @@ pub fn soa_map2<A: Kind, B: Kind, Y: Kind, L: Batch>(
             }
             j += L::LANES;
         }
+    }
+}
+
+/// The lanes at offset `j` (a multiple of `L::LANES` below [`BLOCK`]) of one block of a `Soa`.
+///
+/// # Panics
+/// If the block is shorter than `K::N * BLOCK` or `j + L::LANES > BLOCK`.
+#[inline(always)]
+pub fn load_block<K: Kind, L: Batch>(block: &[L::Elem], j: usize) -> Mv<K, L> {
+    let block = &block[..K::N * BLOCK];
+    Extensor::from_coeffs(K::arr_from_fn(
+        #[inline(always)]
+        |k| L::load(&block[k * BLOCK + j..]),
+    ))
+}
+
+/// Store lanes at offset `j` of one block of a `Soa` (see [`load_block`]).
+///
+/// # Panics
+/// If the block is shorter than `K::N * BLOCK` or `j + L::LANES > BLOCK`.
+#[inline(always)]
+pub fn store_block<K: Kind, L: Batch>(block: &mut [L::Elem], j: usize, v: &Mv<K, L>) {
+    let block = &mut block[..K::N * BLOCK];
+    for (k, c) in v.coeffs().as_ref().iter().enumerate() {
+        c.store(&mut block[k * BLOCK + j..]);
     }
 }

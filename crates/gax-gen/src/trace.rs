@@ -575,14 +575,33 @@ fn batch_form_soa(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
             (a.ty)("L")
         );
     }
+    // Block by block, so that the loads and stores sit at offsets the compiler knows.
     let _ = writeln!(
         s,
-        "            let mut i = 0;\n            while i < n {{\n                let m = (n - i).min(L::LANES);"
+        "            let blocks = n.div_ceil(::gax::batch::BLOCK);\n            for blk in 0..blocks {{"
+    );
+    for (k, a) in args.iter().enumerate() {
+        if a.kind.is_some() {
+            let _ = writeln!(
+                s,
+                "                let blk{k}: &[E] = if b{k} {{ &[] }} else {{ a{k}.block(blk) }};"
+            );
+        }
+    }
+    let _ = writeln!(
+        s,
+        "                let blko = out.block_mut(blk);\n                let mut j = 0;\n                while j < ::gax::batch::BLOCK {{\n                    let i = blk * ::gax::batch::BLOCK + j;\n                    if i >= n {{\n                        break;\n                    }}\n                    let m = (n - i).min(L::LANES);"
     );
     for (k, a) in args.iter().enumerate() {
         let load = match &a.kind {
-            Some((_, true)) => format!("::gax::Unit::new_unchecked(a{k}.load::<L>(i))"),
-            Some((_, false)) => format!("a{k}.load::<L>(i)"),
+            Some((path, unit)) => {
+                let l = format!("::gax::batch::load_block::<{path}, L>(blk{k}, j)");
+                if *unit {
+                    format!("::gax::Unit::new_unchecked({l})")
+                } else {
+                    l
+                }
+            }
             None => {
                 let parts: Vec<String> = (0..a.len)
                     .map(|j| {
@@ -597,7 +616,7 @@ fn batch_form_soa(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
         };
         let _ = writeln!(
             s,
-            "                let x{k}: {} = if b{k} {{ s{k} }} else {{ {load} }};",
+            "                    let x{k}: {} = if b{k} {{ s{k} }} else {{ {load} }};",
             (a.ty)("L")
         );
     }
@@ -605,7 +624,7 @@ fn batch_form_soa(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
     let store = if runit { "y.into_inner()" } else { "y" };
     let _ = writeln!(
         s,
-        "                let y: {} = {name}::<L>({});\n                out.store::<L>(i, &{store});\n                i += L::LANES;\n            }}\n        }}\n    }}",
+        "                    let y: {} = {name}::<L>({});\n                    ::gax::batch::store_block::<{rkind}, L>(blko, j, &{store});\n                    j += L::LANES;\n                }}\n            }}\n        }}\n    }}",
         (result.ty)("L"),
         xs.join(", ")
     );

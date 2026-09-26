@@ -193,10 +193,14 @@ gives `wide`, glam and scalar gax AVX2 and FMA too. "wide" is the same generic k
 | | native | 13.5 µs | 1.83 µs | 7.15 µs² | 3.75 µs | **1.63 µs** |
 | rigid-body step, traced (1024 bodies) | default | 17.3 µs | 7.24 µs | — | 7.59 µs | — |
 | | native | 15.0 µs | **2.63 µs** | — | 7.21 µs | — |
+| rigid-body rate, traced (1024 bodies)³ | default | 4.97 µs | 2.09 µs | — | 3.20 µs | **1.13 µs** |
+| | native | 5.00 µs | **0.68 µs** | — | 3.03 µs | 0.84 µs |
 
 ¹ `Affine3A::transform_point3a` per pair, with the affines built beforehand (9 multiply-adds,
 against the motor sandwich's 24 multiplies and 14 adds per point).
 ² `Quat::from_scaled_axis`: rotations only, where the motor exponential includes translations.
+³ The velocity half of the step, `Line` to `Line`, which has a struct-of-arrays form (`name_batch_soa`);
+the full step returns a tuple and is batched in AoS form only.
 
 Per level, in the default build, SoA with one motor takes 0.47 µs portable, 0.50 µs on SSE2 and
 SSE4.2, and 0.27 µs on AVX2.
@@ -205,7 +209,8 @@ SSE4.2, and 0.27 µs on AVX2.
   which statically compiled code cannot assume.
 * **With `target-cpu=native`, `wide` catches up** on the same generic kernels, and it wins where
   the batch form works on arrays of structs. The traced rigid step is batched only in AoS form,
-  and five transposes per batch cost more than the kernel.
+  and five transposes per batch cost more than the kernel. The SoA form of the traced rate kernel
+  comes within 25% of `wide`, and it beats `wide` by 1.85x in the default build.
 * **The vectorized elementary functions are fast.** `exp` on SoA is 19x faster than scalar gax and
   2.5x faster than `wide` in the default build, and it still beats `wide` natively.
 * **Arrays of structs cost transposes.** The AoS forms beat scalar loops but not glam's
