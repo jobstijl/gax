@@ -62,5 +62,29 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] A small windowed game (`examples/asteroids`, its own crate)
 - [x] `docs/performance.md` (first version)
 
+## Phase 4: laws
+- [x] `reassoc` (ADR-003 amended); the matrix is `v >> X::slot()`, no `to_matrix` (ADR-013 amended)
+- [x] `Sym` law harness and `law_suite!`, generated per algebra: multicategory, linearity, lifting, versor action, outermorphism, trace, fill, tiers
+- [x] Equivariance modulo the versor ideal, with the scale-factor table (`docs/law-factors.md`) and negative controls per algebra
+- [x] Conjugation laws (ADR-026: spelled with existing operators); the slow ones `#[ignore]`d and run in CI
+- [x] Adjoint through a signed-permutation pairing matrix; `Pairing::solve` property test
+- [x] Suites for all standard algebras, STAP/CSTA behind features, PGA4D through `algebra!` (test-only spec)
+- [x] `docs/laws.md` (each law linked to its test or marked [doc]), ADR-025, guide section "Laws you can rely on"
+- [x] Law-based rewrites in the tracer measured (performance.md: none pays off)
+- [ ] Laws for versors with more than 8 coefficients (the free polynomials explode; needs a structured approach)
+
+## Phase 5: numerics
+- [x] `docs/numerics.md`: the guarantee per tier, drift, determinism, transcendental edges, solvers, what is documented rather than fixed
+- [x] Drift-tolerant `Unit` kernels (homogeneous again; +6% multiplications), ADR-020 amended
+- [x] `Unit::renormalize_fast`, `Unit::mul_renormalized`, `NewtonStep`; the Newton identity proved symbolically
+- [x] `check-units` feature (asserts unit inputs to certified kernels); CI runs the tests with it
+- [x] Error-bound tier tests (`Program::error_bound`); the bound as a tiebreak in `compile_best`
+- [x] `deterministic` feature (no FMA, pure-Rust elementary functions), ADR-027; bit-equality across SIMD levels in CI
+- [x] Edge-case property tests for exp, log and normalize; fixed the `log` series (second-order error), the cancellation at the series boundaries, and the branch near a full turn
+- [x] CSTA `exp`: squarings chosen from the norm, Newton renormalization; measured across norms
+- [x] Solver agreement: LU bit-identical scalar vs lanes on nearly singular maps; eigh/svd within gap-scaled bounds
+- [ ] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series
+- [ ] Solver agreement on the native SIMD lane types (the tests use the portable lanes)
+
 ## Decisions for the project owner
 - Publishing to crates.io (later).

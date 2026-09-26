@@ -34,11 +34,12 @@
 
 mod kernels;
 mod lanes;
-pub mod math;
 mod math_simd;
 mod simd_lanes;
 mod soa;
 
+/// The elementary functions of one `f32` lane (the same as [`crate::math`]).
+pub use crate::math;
 pub use fearless_simd;
 pub use fearless_simd::Level;
 pub use kernels::{

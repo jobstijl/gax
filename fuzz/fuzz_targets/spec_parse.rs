@@ -14,6 +14,7 @@ fuzz_target!(|data: &[u8]| {
                     &gax_gen::emit::Config {
                         core: "::gax".into(),
                         batch: Some(String::new()),
+                    check_units: Some(String::new()),
                     },
                 );
             }

@@ -43,8 +43,31 @@ jobs:
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
+      - name: deterministic results across SIMD levels
+        run: cargo test -p gax --features batch,deterministic --test determinism
+      - name: certified kernels only see units (check-units)
+        run: cargo test -p gax --features check-units -- --skip compile_fail
       - name: no_std build of the core
         run: cargo build -p gax-core --no-default-features
+
+  laws:
+    name: slow law proofs (--ignored)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: the ignored laws of every algebra
+        shell: bash
+        run: |
+          set -o pipefail
+          for f in crates/gax/tests/laws_*.rs; do
+            t=$(basename "$f" .rs)
+            cargo test -p gax --features all-algebras,macros --test "$t" -- --ignored 2>&1 | tee -a test.log || {
+              grep -E -A3 "panicked|^error|FAILED|law failed" test.log | head -40 | sed 's/^/::error::/'
+              exit 1
+            }
+          done
 
   asteroids:
     name: example game (${{ matrix.os }})

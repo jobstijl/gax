@@ -27,6 +27,18 @@ pub trait Coef:
     fn from_i64(i: i64) -> Self;
     /// Convert a constant.
     fn from_f64(f: f64) -> Self;
+    /// Check that the parts of `u ~u − 1` of a `Unit` versor are zero within `√ε` (the
+    /// `check-units` feature calls this whenever a certified kernel consumes a `Unit`). Does
+    /// nothing by default; `f32` and `f64` panic when a part is too large.
+    #[inline(always)]
+    fn check_unit(_deviations: &[Self]) {}
+    //// The rational constant `num / den`. Generated code writes non-integer constants this way,
+    /// so that exact coefficient types (the symbolic `Sym`) get them exactly; for floating
+    /// point it is `from_f64(num / den)`, folded at compile time.
+    #[inline(always)]
+    fn from_ratio(num: i64, den: i64) -> Self {
+        Self::from_f64(num as f64 / den as f64)
+    }
     /// `self * a + b`. Fused (one rounding) where the target has a fused multiply-add, which
     /// generated kernels use for every product that feeds a single sum.
     #[inline(always)]
@@ -123,15 +135,25 @@ macro_rules! float_impl {
             fn from_f64(f: f64) -> Self {
                 f as $t
             }
+            fn check_unit(deviations: &[Self]) {
+                let tol = libm_shim::$t::sqrt(<$t>::EPSILON);
+                for (i, d) in deviations.iter().enumerate() {
+                    assert!(
+                        libm_shim::$t::abs(*d) <= tol,
+                        "check-units: a Unit versor is not unit (part {i} of u ~u - 1 is {d}, tolerance {tol}); renormalize it (Unit::renormalize_fast or normalized)"
+                    );
+                }
+            }
             #[inline(always)]
             fn mul_add(self, a: Self, b: Self) -> Self {
                 // Only with hardware FMA: the software fallback is much slower than `*` and `+`.
-                #[cfg(all(target_feature = "fma", feature = "std"))]
+                // With `deterministic`, never fused: results must not depend on the target.
+                #[cfg(all(target_feature = "fma", feature = "std", not(feature = "deterministic")))]
                 {
                     extern crate std;
                     <$t>::mul_add(self, a, b)
                 }
-                #[cfg(not(all(target_feature = "fma", feature = "std")))]
+                #[cfg(not(all(target_feature = "fma", feature = "std", not(feature = "deterministic"))))]
                 {
                     self * a + b
                 }
@@ -149,27 +171,27 @@ macro_rules! float_impl {
             }
             #[inline(always)]
             fn sin(self) -> Self {
-                libm_shim::$t::sin(self)
+                elementary::$t::sin(self)
             }
             #[inline(always)]
             fn cos(self) -> Self {
-                libm_shim::$t::cos(self)
+                elementary::$t::cos(self)
             }
             #[inline(always)]
             fn sinh(self) -> Self {
-                libm_shim::$t::sinh(self)
+                elementary::$t::sinh(self)
             }
             #[inline(always)]
             fn cosh(self) -> Self {
-                libm_shim::$t::cosh(self)
+                elementary::$t::cosh(self)
             }
             #[inline(always)]
             fn atan2(self, x: Self) -> Self {
-                libm_shim::$t::atan2(self, x)
+                elementary::$t::atan2(self, x)
             }
             #[inline(always)]
             fn ln(self) -> Self {
-                libm_shim::$t::ln(self)
+                elementary::$t::ln(self)
             }
             #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {
@@ -199,6 +221,65 @@ float_impl!(f32);
 float_impl!(f64);
 
 /// Elementary functions for `f32`/`f64`: `std` when available, else the `libm` crate.
+/// The elementary functions of `f32` and `f64`: the platform's (through `std`) by default; with
+/// the `deterministic` feature, pure Rust everywhere: `crate::math` for `f32` (the functions the
+/// SIMD lanes use) and the `libm` crate for `f64`.
+pub(crate) mod elementary {
+    pub mod f32 {
+        #[cfg(not(feature = "deterministic"))]
+        pub use super::super::libm_shim::f32::{atan2, cos, cosh, ln, sin, sinh};
+        #[cfg(feature = "deterministic")]
+        mod det {
+            use crate::math;
+            #[inline(always)]
+            pub fn sin(x: f32) -> f32 {
+                math::sin_cos(x).0
+            }
+            #[inline(always)]
+            pub fn cos(x: f32) -> f32 {
+                math::sin_cos(x).1
+            }
+            #[inline(always)]
+            pub fn sinh(x: f32) -> f32 {
+                math::sinh(x)
+            }
+            #[inline(always)]
+            pub fn cosh(x: f32) -> f32 {
+                math::cosh(x)
+            }
+            #[inline(always)]
+            pub fn atan2(y: f32, x: f32) -> f32 {
+                math::atan2(y, x)
+            }
+            #[inline(always)]
+            pub fn ln(x: f32) -> f32 {
+                math::ln(x)
+            }
+        }
+        #[cfg(feature = "deterministic")]
+        pub use det::{atan2, cos, cosh, ln, sin, sinh};
+    }
+    pub mod f64 {
+        #[cfg(not(feature = "deterministic"))]
+        pub use super::super::libm_shim::f64::{atan2, cos, cosh, ln, sin, sinh};
+        #[cfg(feature = "deterministic")]
+        mod det {
+            macro_rules! libm_fns {
+                ($($f:ident => $lf:ident ($($a:ident),*)),*) => {$(
+                    #[inline(always)]
+                    pub fn $f($($a: f64),*) -> f64 {
+                        libm::Libm::<f64>::$lf($($a),*)
+                    }
+                )*};
+            }
+            libm_fns!(sin => sin(x), cos => cos(x), sinh => sinh(x), cosh => cosh(x), atan2 => atan2(y, x), ln => log(x));
+        }
+        #[cfg(feature = "deterministic")]
+        pub use det::{atan2, cos, cosh, ln, sin, sinh};
+    }
+}
+
+#[cfg_attr(feature = "deterministic", allow(dead_code))]
 mod libm_shim {
     macro_rules! shim {
         ($t:ident, $libm:ident, [$($f:ident => $lf:ident ($($a:ident),*)),*]) => {

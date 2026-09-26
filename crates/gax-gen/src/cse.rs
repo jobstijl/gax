@@ -144,10 +144,29 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
             }
         }
     }
-    candidates
+    choose(candidates)
+}
+
+/// The cheapest candidate, unless it saves at most one operation over another whose error
+/// bound is less than half its own: then the more accurate one (see `Program::error_score`).
+fn choose(candidates: Vec<Program>) -> Program {
+    let scored: Vec<(f64, f64, Program)> = candidates
         .into_iter()
-        .min_by(|a, b| a.cost().weight().total_cmp(&b.cost().weight()))
-        .expect("at least one candidate")
+        .map(|p| (p.cost().weight(), p.error_score(), p))
+        .collect();
+    let best = scored
+        .iter()
+        .min_by(|a, b| a.0.total_cmp(&b.0))
+        .expect("at least one candidate");
+    let (w, e) = (best.0, best.1);
+    let accurate = scored
+        .iter()
+        .filter(|c| c.0 <= w + 1.01 && c.1 * 2.0 < e)
+        .min_by(|a, b| a.1.total_cmp(&b.1).then(a.0.total_cmp(&b.0)));
+    match accurate {
+        Some(c) => c.2.clone(),
+        None => best.2.clone(),
+    }
 }
 
 /// Compile polynomials, optionally extracting shared kernels first.
@@ -755,6 +774,105 @@ pub fn reduce_by_relations(p: &Poly, relations: &[Poly]) -> Poly {
             None => return p,
         }
     }
+}
+
+/// Make a program homogeneous of degree `target` in the variables below `nv` (a versor's
+/// coefficients) by multiplying lower-degree operands of sums, and outputs, by powers of
+/// `norm` (a quadratic form in those variables that equals 1 modulo the relations the program
+/// was simplified with). The program's structure is kept, so this costs a few multiplications
+/// where the simplifier substituted 1 for `norm`. `None` if the program has non-polynomial
+/// steps or a degree gap that is odd.
+pub fn repair_degree(prog: &Program, nv: Var, norm: &Poly, target: usize) -> Option<Program> {
+    struct State {
+        b: Builder,
+        norm: Option<Operand>,
+    }
+    fn norm_op(st: &mut State, norm: &Poly) -> Operand {
+        if let Some(n) = st.norm {
+            return n;
+        }
+        let n = compile_polys_env(
+            &mut st.b,
+            std::slice::from_ref(norm),
+            false,
+            &HashMap::new(),
+        )[0];
+        st.norm = Some(n);
+        n
+    }
+    fn raise(st: &mut State, norm: &Poly, (o, d): (Operand, usize), to: usize) -> Option<Operand> {
+        if d > to || (to - d) % 2 == 1 {
+            return None;
+        }
+        if matches!(o, Operand::Const(c) if c.is_zero()) {
+            return Some(o);
+        }
+        let mut o = o;
+        for _ in 0..(to - d) / 2 {
+            let n = norm_op(st, norm);
+            o = st.b.mul(o, n);
+        }
+        Some(o)
+    }
+    let mut st = State {
+        b: Builder::default(),
+        norm: None,
+    };
+    let mut temps: Vec<(Operand, usize)> = Vec::with_capacity(prog.instrs.len());
+    let get = |o: &Operand, temps: &[(Operand, usize)]| match *o {
+        Operand::Var(v) => (Operand::Var(v), usize::from(v < nv)),
+        Operand::Temp(k) => temps[k],
+        Operand::Const(c) => (Operand::Const(c), 0),
+    };
+    for i in &prog.instrs {
+        let r = match i {
+            Instr::Add(a, c) | Instr::Sub(a, c) => {
+                let (x, y) = (get(a, &temps), get(c, &temps));
+                let d = x.1.max(y.1);
+                // A zero constant has every degree.
+                let d = if matches!(x.0, Operand::Const(z) if z.is_zero()) {
+                    y.1
+                } else if matches!(y.0, Operand::Const(z) if z.is_zero()) {
+                    x.1
+                } else {
+                    d
+                };
+                let (x, y) = (raise(&mut st, norm, x, d)?, raise(&mut st, norm, y, d)?);
+                let op = if matches!(i, Instr::Add(..)) {
+                    st.b.emit(Instr::Add(x, y))
+                } else {
+                    st.b.emit(Instr::Sub(x, y))
+                };
+                (op, d)
+            }
+            Instr::Mul(a, c) => {
+                let (x, y) = (get(a, &temps), get(c, &temps));
+                (st.b.mul(x.0, y.0), x.1 + y.1)
+            }
+            Instr::Neg(a) => {
+                let x = get(a, &temps);
+                (st.b.emit(Instr::Neg(x.0)), x.1)
+            }
+            Instr::Div(a, c) => {
+                let (x, y) = (get(a, &temps), get(c, &temps));
+                if !matches!(y.0, Operand::Const(_)) {
+                    return None;
+                }
+                (st.b.emit(Instr::Div(x.0, y.0)), x.1)
+            }
+            Instr::Atan2(..) | Instr::Select(..) | Instr::Call(..) => return None,
+        };
+        temps.push(r);
+    }
+    let outs: Vec<(Operand, usize)> = prog.outputs.iter().map(|o| get(o, &temps)).collect();
+    let mut outputs = Vec::with_capacity(outs.len());
+    for o in outs {
+        outputs.push(raise(&mut st, norm, o, target)?);
+    }
+    let mut p = st.b.prog;
+    p.outputs = outputs;
+    p.compact();
+    Some(p)
 }
 
 #[cfg(test)]

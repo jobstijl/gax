@@ -13,7 +13,7 @@ verdict and evidence. The prior art behind each decision is in [research.md](res
 algebra description ──► gax-gen ──► exact tables ──► Rust source ──► gax (standard algebras, committed)
    (text / macro)        │                                         └─► algebra! (user algebras, proc macro)
                          └─► Sym (symbolic coefficient) ──► simplifier ──► fused kernels
-                                                                           ├─ tier 2: sandwich, to_matrix, norms, inverse, exp/log
+                                                                           ├─ tier 2: sandwich, its matrix, norms, inverse, exp/log
                                                                            └─ tier 3: user kernels traced in build.rs
 gax-core: Slots, Kind, Coef/Real, binding machinery, linear-algebra core (no_std)
 ```
@@ -80,8 +80,13 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Maximum length:** tuples have a maximum length of 8. A longer concatenation maps to a sentinel type
   whose witness fails in a `const` block, so it is a compile error only if it is actually used.
 * **Associativity** (`Cat<Cat<A,B>,C>` against `Cat<A,Cat<B,C>>`) is not known for generic lists. It only
-  matters when a generic signature brackets differently from the expression that produces it. A
-  zero-cost `reassoc` witness method covers that case.
+  matters when a generic signature brackets differently from the expression that produces it.
+  `gax::slots::reassoc::<A, B, C, _>(m)` rebrackets a value, map or form (amended: it now exists).
+  * It is the provided method `Slots::reassoc`: both lists hold the same slots in the same order, so
+    it copies the coefficients through their row-major flat index. There is no per-tuple impl.
+  * A doctest brackets a generic function differently from its expression. A compile-fail test
+    shows the error without the witness, and the law suite checks that it is the identity on
+    coefficients.
 
 ## ADR-004: One struct per kind; the bare type name is the slot marker
 *Status: accepted.*
@@ -259,10 +264,10 @@ files in `gax/src/algebras/`, behind cargo features.
 * **The operators:** `v >> x` is `v x ~v`, following numga, and `v << x` is `~v x v`.
 * **Value versor:** when `v` is a value, `>>` dispatches (ADR-012) as follows:
   * a value `x` uses the tier-2 fused sandwich;
-  * a map `x` uses the tier-2 `to_matrix(v)` and composes it into the output of `x`.
+  * a map `x` uses the tier-2 matrix of `v`'s action and composes it into the output of `x`.
 * **Open versor:** when `v` has open slots, `>>` falls back to tier-1 products.
-* **The matrix itself:** `to_matrix()` is `v >> X::slot()`, and is generated directly with its structural
-  zeros known. Applying a runtime `Point<(Point,)>` is dense; the crossover against the direct sandwich
+* **The matrix itself** is spelled `v >> X::slot()` (there is no separate `to_matrix` method, so there is one
+  spelling for one thing). It is generated directly with its structural zeros known. Applying a runtime `Point<(Point,)>` is dense; the crossover against the direct sandwich
   is measured (hypothesis 6).
 
 ## ADR-014: Binding and composition API
@@ -283,6 +288,12 @@ files in `gax/src/algebras/`, behind cargo features.
   * `Pairing::solve` accepts a right-hand side with leading slots, which become slots of the solution.
   * We dropped the dedicated method because the pairing has to be named anyway (`&` or `|`), and the
     solve says which one.
+  * **Laws (amended).** For pairings whose matrix `P` is a constant signed permutation (the join of
+    planes and points in PGA3D, the inner product of vectors in a non-degenerate metric), the
+    adjoint has the closed form `P tᵀ Pᵀ`. The law suite proves exactly that it satisfies the
+    defining identity, reverses composition, fixes the identity, and returns `t` when applied twice
+    with the flipped pairing. It also checks that `Pairing::solve` agrees in f64. The inner
+    product `|` is degenerate in PGA (`e0 · e0 = 0`), so the join `&` is the pairing there.
 * **Maps (`K<(A,), T>`):** `inverse`, `det`, `solve` (right-hand sides keep their slots), `svd` (typed
   singular vectors) and `trace`.
 * **Forms (`Scalar<(A, A)>`):** `eigh_with(metric)`, which returns the modes as values of the slot kind,
@@ -396,9 +407,26 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Rotation fast paths.** When the generator proves the scalar part of `B²` is non-positive (minus a
   sum of squares), it emits real-trigonometric closed forms instead. See performance.md.
 * **6D and up (CSTA).** A bivector there splits into three commuting parts, so no closed form is
-  generated. `exp` falls back to scaling and squaring in the smallest kind closed under the product:
-  a Taylor series of degree 8 on `B / 256`, then eight squarings. It is correct in any algebra, and
-  the CSTA test checks it against the exact rotation and for `exp(B)·exp(−B) = 1`.
+  generated. `exp` falls back to scaling and squaring in the smallest kind closed under the product.
+  It is correct in any algebra, and the CSTA test checks it against the exact rotation and for
+  `exp(B)·exp(−B) = 1`.
+  * **Amended.** The first version used a fixed `B / 256`, 8 Taylor terms and no renormalization,
+    so its unit error grew with `‖B‖` (to `10⁻¹⁰` at `‖B‖₁ = 64`).
+  * Now the number of halvings is chosen from `‖B‖₁` (Higham's scheme), the series has degree 10,
+    and Newton steps renormalize before squaring and, where it is well-conditioned, after it.
+  * The unit error is a few ε at every norm, except for mixed bivectors where the squarings'
+    rounding remains. See [numerics.md](numerics.md).
+* **Branch and series (amended).**
+  * `log` returns the rotation half-angle in `[0, π]`, so `exp(log R) = R`, and a versor with a
+    negative scalar part gets the long way round.
+  * At `R = −T` (a translation times −1) the log is not unique, and it returns `log(−R)`, the same
+    motion.
+  * Edge-case property tests found three defects, now fixed:
+    * a wrong second-order term in the `log` series;
+    * cancellation near the series thresholds of the translation coupling;
+    * a branch switch near a full turn.
+  * The series now reach far enough that both branches are within a few ulps at the boundary.
+    See [numerics.md](numerics.md), "Transcendental functions".
 * **Still open: 6D log.** It needs either the cubic invariant decomposition or square roots of
   versors, and the normalization those need is not closed form in 6D.
 
@@ -414,6 +442,33 @@ files in `gax/src/algebras/`, behind cargo features.
   * its sandwiches use kernels simplified with `x ~x = 1`;
   * tracing adds the condition to the ideal.
 * **Why a wrapper:** kinds stay plain subspaces, and the number of generated pairs does not double.
+* **Drift (amended).** `Unit * Unit` keeps the certificate without renormalizing, as nalgebra and
+  glam do, so a long chain drifts to `u ~u = (1 + δ)²`.
+  * **The problem.** The simplified `Unit` kernels were reduced modulo `u ~u = 1`, and so were no
+    longer homogeneous in `u`. A drifted versor then *distorted* shapes: in PGA3D, a drift of
+    `10⁻³` changed pairwise distances between moved points by `2.6·10⁻³`. The plain kernel,
+    homogeneous of degree 2, only scales the result, which cancels projectively.
+  * **The fix.** Every `Unit` kernel (the value path, the matrix path and the prepared action) is
+    made homogeneous of degree 2 again. `cse::repair_degree` multiplies by `‖u‖²` where the
+    reduction substituted 1, and falls back to re-expansion when that is cheaper. The generator
+    asserts that the result equals the sandwich modulo the unit condition and is homogeneous.
+  * **The effect.** Drift is now a uniform scale:
+    * points, lines and planes keep their incidences and shapes exactly
+      (`tests/numerics_drift.rs`);
+    * in non-projective algebras (VGA), all lengths scale by the same factor.
+  * **The cost.** `Unit<Motor> >> Point` (PGA3D) went from 25 to 33 multiplications (the plain
+    kernel has 38); over all kernels the multiplications went up 6%.
+  * **Renormalization.** `Unit::renormalize_fast()` is one Newton step, `u (3 − u ~u) / 2`,
+    with no square root. It turns an error `e` in `u ~u` into `O(e²)`: the identity
+    `r ~r = n (3 − n)² / 4` is proved on symbolic coefficients, and the convergence measured.
+    `Unit::mul_renormalized` composes and renormalizes in one call; `normalized()` stays the
+    exact path.
+    * Suggested policy: renormalize after every integration step, or after every few products.
+  * **Types are unchanged.** `Unit * Unit` still returns a `Unit`. Returning a plain versor would
+    lose the cheap inverse and the simplified kernels for every composition chain.
+  * **Debug check.** The opt-in `check-units` feature asserts, whenever a certified kernel
+    consumes a `Unit`, that `u ~u` is 1 within `√ε` of the coefficient type. With the feature
+    off it costs nothing.
 
 ## ADR-021: Output kinds
 *Status: accepted.*
@@ -502,6 +557,95 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Tests.** The generated oracle tests found that random unit Poincaré motors cannot be sampled by
   normalizing random elements. The harness now also builds them as products of simple factors
   `1 + c B`.
+
+## ADR-025: The laws are proved on symbolic coefficients
+*Status: accepted, implemented. See [laws.md](laws.md).*
+
+* **Method.** `gax_gen::sym::Sym` is a coefficient type whose values are exact polynomials over ℚ,
+  hash-consed, with unbounded expansion. On `Sym`, `==` is polynomial identity. So a law that
+  holds for fresh symbolic inputs is proved, for that algebra and those kinds and slot shapes.
+  * Conditional laws (unit versors, the conditions that make an element a versor) are checked
+    modulo a Gröbner basis of the condition. Its generators come from the library's own products
+    on the symbolic input.
+* **One suite per algebra, generated.** `gax-regen` writes `tests/laws_{alg}.rs` as one
+  `law_suite!` invocation. It lists every product, unary operation, sandwich, outermorphism and
+  signed-permutation pairing that the emitter produced among the small kinds (at most 8
+  coefficients). The suite then covers exactly what exists.
+  * The versor laws carry factors (`±‖m‖^2k`). The generator derives them from its own tables and
+    emits them as expected values, so the library's kernels are checked against an independent
+    derivation. `docs/law-factors.md` publishes them.
+  * Every suite has negative controls: the equivariance law without its factor must fail.
+* **Scope and cost.**
+  * Versor laws use versors with at most 8 coefficients, and outermorphism laws maps on kinds
+    with at most 5. A 16-component motor makes the free polynomials explode, and so does the
+    determinant of a product of free 6x6 maps.
+  * Two conjugation laws are degree 8 in a free versor (or degree 4 in two). They take minutes
+    in non-degenerate metrics, so they are `#[ignore]` and a CI job runs them.
+  * `gax-gen` is compiled with `opt-level = 3` in dev and test builds, which makes the suites
+    about 8x faster.
+* **Coverage.** The suites cover the eight standard algebras (STAP and CSTA behind their
+  features) and PGA4D declared through `algebra!`. They replace the earlier f64 property tests of
+  algebraic laws; the f64 tests left are about floating point: exp and log, normalization,
+  solvers and lanes.
+
+## ADR-026: Conjugation of maps is spelled with the existing operators
+*Status: accepted.*
+
+* **What it is.** Moving a map `f: K<(K,)>` by a versor means moving both its output and its
+  input: `conj_m(f) = (m >> f).of(m << K::slot())`. numga writes
+  `motor >> inertia(motor << Bivector)`.
+* **Laws.** They are proved in the law suites, and their factors are in `law-factors.md`:
+  * `conj_m(f).of(m >> x) == ‖m‖⁴ · (m >> f.of(x))`: it is `‖m‖⁴`, not `‖m‖²`, because
+    `~m (m x ~m) m = (~m m) x (~m m)`;
+  * `conj_m(f) ∘ conj_m(g) == ‖m‖⁴ · conj_m(f ∘ g)`;
+  * `conj_{ab} == conj_a ∘ conj_b` exactly;
+  * for `Unit` versors the factors are 1.
+* **Decision: no new method.**
+  * The expression is already short, and each side of it is a fused tier-2 matrix
+    (`m >> f` transports the output, `m << K::slot()` is the inverse action's matrix), so a
+    dedicated kernel would not save work.
+  * Rust has no free operator left for it.
+  * A method name would compete with `Conjugate`, the Clifford conjugation. The guide shows the
+    idiom instead.
+  * If a benchmark shows a fused conjugation kernel paying off (for example for inertia tensors
+    moved every frame), a `Unit`-only method can be added then.
+
+## ADR-027: Determinism is a feature, not the default
+*Status: accepted, implemented. See [numerics.md](numerics.md).*
+
+* **The problem.** The same program can give different last bits:
+  * scalar `mul_add` is a hardware FMA only when compiled with `target_feature = "fma"`, so the
+    default and `target-cpu=native` builds differ;
+  * batch lanes pick FMA at run time from the detected level, so the scalar and batch paths
+    differ too.
+
+  That is fine for most uses, but it breaks lockstep networking and replays, which games need.
+* **Options.**
+  * Document "no cross-build determinism", and stop there.
+  * An opt-in feature that makes every path compute the same bits.
+* **Decision: the feature, `deterministic`.**
+  * `Coef::mul_add` is `a * b + c`, never fused, for `f32` and `f64`, in the `wide` lanes and in
+    the batch lanes on every level.
+  * The elementary functions (`sin`, `cos`, `sinh`, `cosh`, `atan2`, `ln`) come from pure Rust
+    everywhere:
+    * `gax::math` (the polynomials the batch lanes vectorize) for `f32`;
+    * the `libm` crate for `f64`.
+
+    So they no longer depend on the platform's C library either.
+  * The summation trees are already fixed: they are the generated straight-line programs, the same
+    in scalar and lane code.
+* **Why not the default.**
+  * FMA is faster (the fused sandwich takes 5.3 ns with it and 6.3 ns without) and slightly more
+    accurate.
+  * The platform `libm` is faster than the portable functions for `f64`.
+  * Most users never compare results across machines.
+* **Verification.** `tests/determinism.rs` runs `exp`, the sandwich and `log` through the `Map`
+  pipeline, `transform_each` and `transform_slice`, and requires bit equality with the scalar path
+  on every SIMD level the machine has. CI runs it.
+* **Not covered.** Different compilers may still differ where Rust itself does not specify the
+  result:
+  * the bits of NaN payloads;
+  * `f64` transcendental functions from the standard library when the feature is off.
 
 ---
 

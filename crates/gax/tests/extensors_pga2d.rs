@@ -1,9 +1,9 @@
-//! Values, maps and forms through one API (PGA2D).
+//! Values, maps and forms through one API (PGA2D). The algebraic laws are proved in `laws_pga2d.rs`.
 
 mod common;
-use common::{Rng, assert_close, flat, random, random_map};
+use common::{Rng, assert_close, flat, random};
+use gax::Slots;
 use gax::pga2d::*;
-use gax::{Slots, Unit};
 
 /// The motivating example: written once, generic over the open slots.
 fn shadow<S: Slots>(
@@ -42,86 +42,6 @@ fn generic_function_evaluates_values_and_builds_maps() {
             &flat(&shadow_flipped(light, ground, p)),
             "flipped",
         );
-    }
-}
-
-#[test]
-fn identity_slot_is_the_identity() {
-    let mut rng = Rng::new(8);
-    let p: Point<(), f64> = random(&mut rng);
-    assert_eq!(Point::slot().of(p), p);
-    let m: Line<(Point,), f64> = random_map(&mut rng);
-    assert_eq!(m.of(Point::slot()), m);
-}
-
-#[test]
-fn composition_matches_sequential_application() {
-    let mut rng = Rng::new(9);
-    let f: Line<(Point,), f64> = random_map(&mut rng);
-    let g: Point<(Line,), f64> = random_map(&mut rng);
-    let h: Line<(Line,), f64> = random_map(&mut rng);
-    let fg: Line<(Line,), f64> = f.of(g);
-    let fgh = f.of(g.of(h));
-    let fg_h = f.of(g).of(h);
-    assert_close(&flat(&fgh), &flat(&fg_h), "associativity of composition");
-    for _ in 0..10 {
-        let x: Line<(), f64> = random(&mut rng);
-        assert_close(&flat(&fg.of(x)), &flat(&f.of(g.of(x))), "composition");
-    }
-}
-
-#[test]
-fn products_of_maps_bind_in_any_order() {
-    let mut rng = Rng::new(10);
-    // A bilinear map: the join of two open points.
-    let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
-    let a: Point<(), f64> = random(&mut rng);
-    let b: Point<(), f64> = random(&mut rng);
-    assert_close(&flat(&join.of(a).of(b)), &flat(&(a & b)), "join(a)(b)");
-    // Binding the second slot first: fix b by composing on the right.
-    let with_b: Line<(Point,), f64> = Point::slot() & b;
-    assert_close(&flat(&with_b.of(a)), &flat(&(a & b)), "join(., b)(a)");
-    // A map times a map times a value.
-    let f: Motor<(Line,), f64> = random_map(&mut rng);
-    let g: Point<(Point,), f64> = random_map(&mut rng);
-    let prod: Motor<(Line, Point), f64> = f * g;
-    let (x, y): (Line<(), f64>, Point<(), f64>) = (random(&mut rng), random(&mut rng));
-    assert_close(
-        &flat(&prod.of(x).of(y)),
-        &flat(&(f.of(x) * g.of(y))),
-        "bilinear product",
-    );
-}
-
-#[test]
-fn sandwich_matrix_path_matches_direct_path() {
-    let mut rng = Rng::new(11);
-    for _ in 0..10 {
-        let m: Motor<(), f64> = random(&mut rng);
-        let matrix: Point<(Point,), f64> = m >> Point::slot();
-        let p: Point<(), f64> = random(&mut rng);
-        assert_close(
-            &flat(&matrix.of(p)),
-            &flat(&(m >> p)),
-            "motor map vs direct",
-        );
-        // Transporting a map moves its output.
-        let f: Point<(Line,), f64> = random_map(&mut rng);
-        let l: Line<(), f64> = random(&mut rng);
-        assert_close(
-            &flat(&(m >> f).of(l)),
-            &flat(&(m >> f.of(l))),
-            "motor >> map",
-        );
-        // Unit versors take the simplified kernels.
-        let n = (m.s() * m.s() + m.e12() * m.e12()).sqrt();
-        let u = Unit::new_unchecked(m / n);
-        assert_close(
-            &flat(&(u >> Point::slot()).of(p)),
-            &flat(&(u >> p)),
-            "unit map vs direct",
-        );
-        assert_close(&flat(&(u << (u >> p))), &flat(&p), "u << (u >> p) == p");
     }
 }
 

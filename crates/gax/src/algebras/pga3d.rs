@@ -585,6 +585,19 @@ impl<T: gx::Real> Scalar<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t3 = x[0] * T::from_ratio(3, 2);
+        let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
+        Scalar::from_coeffs([t4])
+    }
+}
+
 #[doc = "A plane `a x + b y + c z + d = 0`, stored as `a e1 + b e2 + c e3 + d e0`: the vectors (grade 1). As a versor it is a reflection."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3, e0]`.
@@ -1191,6 +1204,27 @@ impl<T: gx::Real> Plane<(), T> {
         gx::Unit::new_unchecked(Plane::from_coeffs([t0, t1, t2, t3]))
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Plane<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t3 = x[0].mul_add(x[0], t1);
+        let t4 = x[2].mul_add(x[2], t3);
+        let t6 = (-t4).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t7 = x[0] * t6;
+        let t8 = x[1] * t6;
+        let t9 = x[2] * t6;
+        let t10 = x[3] * t6;
+        let t11 = t7 * T::from_ratio(3, 2);
+        let t12 = t8 * T::from_ratio(3, 2);
+        let t13 = t9 * T::from_ratio(3, 2);
+        let t14 = t10 * T::from_ratio(3, 2);
+        Plane::from_coeffs([t11, t12, t13, t14])
+    }
 }
 
 #[doc = "A line, or a twist or forque: the bivectors. `e23, e31, e12` hold the direction (the Euclidean part), `e01, e02, e03` the moment. As a versor it is a half turn."]
@@ -1880,6 +1914,55 @@ impl<T: gx::Real> Line<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Line<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        let t5 = t0 - T::from_i64(3);
+        let t7 = (-t4).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t8 = x[0] * x[3];
+        let t9 = x[1] * x[2];
+        let t10 = x[0] * t7;
+        let t11 = x[1] * t7;
+        let t12 = x[2] * t7;
+        let t14 = x[0] * x[1];
+        let t16 = x[0] * x[2];
+        let t17 = x[5] * t16;
+        let t19 = x[3] * t2;
+        let t21 = x[4] * t1;
+        let t22 = x[5] * t9;
+        let t24 = x[4] * t5;
+        let t27 = x[4] * t9;
+        let t28 = x[5] * t2;
+        let t29 = x[5] * t5;
+        let t30 = t10 * T::from_ratio(3, 2);
+        let t31 = t11 * T::from_ratio(3, 2);
+        let t32 = t12 * T::from_ratio(3, 2);
+        let t33 = x[4].mul_add(t14, t17);
+        let t34 = x[3].mul_add(t1, t19);
+        let t36 = (-x[0]).mul_add(t8, x[3]);
+        let t38 = t36.mul_add(T::from_ratio(3, 2), -t33);
+        let t39 = (-t34).mul_add(T::from_ratio(1, 2), t38);
+        let t40 = x[1].mul_add(t8, t22);
+        let t41 = x[4].mul_add(t2, t24);
+        let t44 = t41.mul_add(T::from_ratio(1, 2), t40);
+        let t45 = t21.mul_add(T::from_ratio(3, 2), t44);
+        let t46 = -t45;
+        let t47 = x[2].mul_add(t8, t27);
+        let t48 = x[5].mul_add(t1, t29);
+        let t51 = t48.mul_add(T::from_ratio(1, 2), t47);
+        let t52 = t28.mul_add(T::from_ratio(3, 2), t51);
+        let t53 = -t52;
+        Line::from_coeffs([t30, t31, t32, t39, t46, t53])
+    }
+}
+
 #[doc = "A point `(x, y, z)` with weight `w`, stored as `x e032 + y e013 + z e021 + w e123`: the trivectors. With `w = 0` it is a direction. As a versor it is a point reflection."]
 ///
 /// Blades, in coefficient order: `[e032, e013, e021, e123]`.
@@ -2477,6 +2560,25 @@ impl<T: gx::Real> Point<(), T> {
         gx::Unit::new_unchecked(Point::from_coeffs([t0, t1, t2, t3]))
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Point<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[3] * x[3];
+        let t2 = (-t0).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t3 = x[0] * t2;
+        let t4 = x[1] * t2;
+        let t5 = x[2] * t2;
+        let t6 = x[3] * t2;
+        let t7 = t3 * T::from_ratio(3, 2);
+        let t8 = t4 * T::from_ratio(3, 2);
+        let t9 = t5 * T::from_ratio(3, 2);
+        let t10 = t6 * T::from_ratio(3, 2);
+        Point::from_coeffs([t7, t8, t9, t10])
+    }
 }
 
 #[doc = "The pseudoscalar `e0123`."]
@@ -3642,6 +3744,29 @@ impl<T: gx::Real> Rotor<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Rotor<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t3 = x[3] * x[3];
+        let t4 = x[0].mul_add(x[0], t1);
+        let t5 = x[2].mul_add(x[2], t3);
+        let t6 = t4 + t5;
+        let t8 = (-t6).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t9 = x[0] * t8;
+        let t10 = x[1] * t8;
+        let t11 = x[2] * t8;
+        let t12 = x[3] * t8;
+        let t13 = t9 * T::from_ratio(3, 2);
+        let t14 = t10 * T::from_ratio(3, 2);
+        let t15 = t11 * T::from_ratio(3, 2);
+        let t16 = t12 * T::from_ratio(3, 2);
+        Rotor::from_coeffs([t13, t14, t15, t16])
+    }
+}
+
 impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Rotor<(), T>> {
     /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
     #[inline]
@@ -4266,6 +4391,29 @@ impl<T: gx::Real> Translator<(), T> {
         Translator::from_coeffs(c).normalized()
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Translator<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 - T::from_i64(3);
+        let t2 = x[0] * t0;
+        let t3 = x[1] * t1;
+        let t4 = x[2] * t1;
+        let t5 = x[3] * t1;
+        let t7 = x[0] * T::from_ratio(3, 2);
+        let t8 = (-t2).mul_add(T::from_ratio(1, 2), t7);
+        let t9 = t3 * T::from_ratio(1, 2);
+        let t10 = -t9;
+        let t11 = t4 * T::from_ratio(1, 2);
+        let t12 = -t11;
+        let t13 = t5 * T::from_ratio(1, 2);
+        let t14 = -t13;
+        Translator::from_coeffs([t8, t10, t12, t14])
+    }
 }
 
 impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Translator<(), T>> {
@@ -4988,6 +5136,67 @@ impl<T: gx::Real> Motor<(), T> {
         Motor::from_coeffs(c).normalized()
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = t0 + t1;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
+        let t7 = t4 - T::from_i64(3);
+        let t8 = t5 - T::from_i64(3);
+        let t9 = x[0] * x[7];
+        let t11 = (-x[1]).mul_add(x[4], t9);
+        let t13 = x[3] * x[6];
+        let t14 = x[2].mul_add(x[5], t13);
+        let t16 = (-t6).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t17 = x[0] * x[1];
+        let t18 = x[2] * x[3];
+        let t19 = x[0] * t16;
+        let t20 = x[1] * t16;
+        let t21 = x[2] * t16;
+        let t22 = x[3] * t16;
+        let t24 = x[7] * t17;
+        let t25 = x[4] * t1;
+        let t27 = x[4] * t8;
+        let t28 = x[5] * t2;
+        let t30 = x[2] * t11;
+        let t32 = x[5] * t7;
+        let t35 = x[6] * t3;
+        let t36 = x[3] * t11;
+        let t37 = x[6] * t7;
+        let t38 = x[7] * t0;
+        let t40 = x[0] * t14;
+        let t42 = x[7] * t8;
+        let t43 = t19 * T::from_ratio(3, 2);
+        let t44 = t20 * T::from_ratio(3, 2);
+        let t45 = t21 * T::from_ratio(3, 2);
+        let t46 = t22 * T::from_ratio(3, 2);
+        let t47 = (-x[1]).mul_add(t14, t24);
+        let t48 = x[4].mul_add(t0, t27);
+        let t51 = (-t48).mul_add(T::from_ratio(1, 2), t47);
+        let t52 = (-t25).mul_add(T::from_ratio(3, 2), t51);
+        let t53 = (-x[6]).mul_add(t18, t30);
+        let t54 = x[5].mul_add(t3, t32);
+        let t57 = (-t54).mul_add(T::from_ratio(1, 2), t53);
+        let t58 = (-t28).mul_add(T::from_ratio(3, 2), t57);
+        let t59 = (-x[5]).mul_add(t18, t36);
+        let t60 = x[6].mul_add(t2, t37);
+        let t63 = (-t60).mul_add(T::from_ratio(1, 2), t59);
+        let t64 = (-t35).mul_add(T::from_ratio(3, 2), t63);
+        let t65 = x[4].mul_add(t17, t40);
+        let t66 = x[7].mul_add(t1, t42);
+        let t69 = (-t66).mul_add(T::from_ratio(1, 2), t65);
+        let t70 = (-t38).mul_add(T::from_ratio(3, 2), t69);
+        Motor::from_coeffs([t43, t44, t45, t46, t52, t58, t64, t70])
+    }
 }
 
 impl<T: gx::Real> gx::Log<Line<(), T>> for gx::Unit<Motor<(), T>> {
@@ -5715,6 +5924,61 @@ impl<T: gx::Real> Flector<(), T> {
         gx::Unit::new_unchecked(Flector::from_coeffs([t0, t1, t2, t12, t13, t14, t15, t11]))
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Flector<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[7] * x[7];
+        let t4 = t0 + t1;
+        let t5 = t2 + t3;
+        let t6 = t4 + t5;
+        let t7 = t4 - T::from_i64(3);
+        let t8 = t5 - T::from_i64(3);
+        let t9 = t0 - t1;
+        let t11 = x[1] * x[5];
+        let t12 = x[0].mul_add(x[4], t11);
+        let t13 = t2 - t3;
+        let t15 = x[3] * x[7];
+        let t16 = x[2].mul_add(x[6], t15);
+        let t18 = (-t6).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t19 = x[0] * x[1];
+        let t20 = x[2] * x[7];
+        let t21 = x[0] * t18;
+        let t22 = x[1] * t18;
+        let t23 = x[2] * t18;
+        let t26 = x[3] * t13;
+        let t27 = x[7] * t12;
+        let t29 = x[0] * t16;
+        let t31 = x[4] * t9;
+        let t33 = x[1] * t16;
+        let t35 = x[5] * t9;
+        let t37 = x[2] * t12;
+        let t39 = x[6] * t13;
+        let t40 = x[7] * t18;
+        let t41 = t21 * T::from_ratio(3, 2);
+        let t42 = t22 * T::from_ratio(3, 2);
+        let t43 = t23 * T::from_ratio(3, 2);
+        let t44 = x[6].mul_add(t20, t27);
+        let t45 = x[3].mul_add(t7, t26);
+        let t47 = (-t45).mul_add(T::from_ratio(1, 2), t44);
+        let t48 = x[5].mul_add(t19, t29);
+        let t49 = (-x[4]).mul_add(t8, t31);
+        let t51 = t49.mul_add(T::from_ratio(1, 2), t48);
+        let t52 = x[4].mul_add(t19, t33);
+        let t53 = x[5].mul_add(t8, t35);
+        let t55 = (-t53).mul_add(T::from_ratio(1, 2), t52);
+        let t56 = x[3].mul_add(t20, t37);
+        let t57 = (-x[6]).mul_add(t7, t39);
+        let t59 = t57.mul_add(T::from_ratio(1, 2), t56);
+        let t60 = t40 * T::from_ratio(3, 2);
+        Flector::from_coeffs([t41, t42, t43, t47, t51, t55, t59, t60])
+    }
 }
 
 #[doc = "A general multivector, in the bivector.net order."]
@@ -22129,11 +22393,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Plane<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[0].mul_add(v[0], t1);
+        let t4 = v[2].mul_add(v[2], t3);
+        let t5 = xv[0] * t4;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t5]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m4)).0] }
     }
 }
 
@@ -22146,30 +22425,41 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Plan
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
+        gx::Prepared::from_entries([m4])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Plane>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Plane>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -22177,7 +22467,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>> for Scalar<(
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Plane {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -22187,16 +22477,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -22365,6 +22655,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Plane<()
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -22373,11 +22671,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Plane<()
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
         let t8 = v[3] * t4;
-        let t10 = t5.mul_add(T::from_i64(2), -xv[0]);
-        let t12 = t6.mul_add(T::from_i64(2), -xv[1]);
-        let t14 = t7.mul_add(T::from_i64(2), -xv[2]);
-        let t16 = t8.mul_add(T::from_i64(2), -xv[3]);
-            return Plane { c: gx::slots::from_values::<S, T, 4>([t10, t12, t14, t16]) };
+        let t9 = t5 * T::from_i64(2);
+        let t11 = v[1] * v[1];
+        let t13 = v[0].mul_add(v[0], t11);
+        let t14 = v[2].mul_add(v[2], t13);
+        let t16 = (-xv[0]).mul_add(t14, t9);
+        let t17 = t6 * T::from_i64(2);
+        let t19 = (-xv[1]).mul_add(t14, t17);
+        let t20 = t7 * T::from_i64(2);
+        let t22 = (-xv[2]).mul_add(t14, t20);
+        let t23 = t8 * T::from_i64(2);
+        let t25 = (-xv[3]).mul_add(t14, t23);
+            return Plane { c: gx::slots::from_values::<S, T, 4>([t16, t19, t22, t25]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -22389,20 +22694,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Plane<()
         let m7 = v[1] * v[3];
         let m8 = v[2] * v[3];
         let m9 = m0 - m1;
-        let m10 = m9 - m2;
-        let m11 = m3 * T::from_i64(2);
-        let m12 = m4 * T::from_i64(2);
-        let m13 = m2 + m9;
-        let m14 = -m13;
-        let m15 = m5 * T::from_i64(2);
-        let m16 = m2 - m0;
-        let m17 = m16 - m1;
+        let m10 = m0 + m1;
+        let m11 = m9 - m2;
+        let m12 = m3 * T::from_i64(2);
+        let m13 = m4 * T::from_i64(2);
+        let m14 = m2 + m9;
+        let m15 = -m14;
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m2 - m10;
         let m18 = m6 * T::from_i64(2);
         let m19 = m7 * T::from_i64(2);
         let m20 = m8 * T::from_i64(2);
-        let m21 = -T::from_i64(1);
+        let m21 = m2 + m10;
+        let m22 = -m21;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m10) + x[1].scale(m11) + x[2].scale(m12)).0, (x[0].scale(m11) + x[1].scale(m14) + x[2].scale(m15)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0] }
+        Plane { c: [(x[0].scale(m11) + x[1].scale(m12) + x[2].scale(m13)).0, (x[0].scale(m12) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m13) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m18) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0] }
     }
 }
 
@@ -22419,6 +22725,14 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Plane<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Plane, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -22429,19 +22743,20 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Plane<(), T>> {
         let m7 = v[1] * v[3];
         let m8 = v[2] * v[3];
         let m9 = m0 - m1;
-        let m10 = m9 - m2;
-        let m11 = m3 * T::from_i64(2);
-        let m12 = m4 * T::from_i64(2);
-        let m13 = m2 + m9;
-        let m14 = -m13;
-        let m15 = m5 * T::from_i64(2);
-        let m16 = m2 - m0;
-        let m17 = m16 - m1;
+        let m10 = m0 + m1;
+        let m11 = m9 - m2;
+        let m12 = m3 * T::from_i64(2);
+        let m13 = m4 * T::from_i64(2);
+        let m14 = m2 + m9;
+        let m15 = -m14;
+        let m16 = m5 * T::from_i64(2);
+        let m17 = m2 - m10;
         let m18 = m6 * T::from_i64(2);
         let m19 = m7 * T::from_i64(2);
         let m20 = m8 * T::from_i64(2);
-        let m21 = -T::from_i64(1);
-        gx::Prepared::from_entries([m10, m11, m12, m14, m15, m17, m18, m19, m20, m21])
+        let m21 = m2 + m10;
+        let m22 = -m21;
+        gx::Prepared::from_entries([m11, m12, m13, m15, m16, m17, m18, m19, m20, m22])
     }
 }
 
@@ -22687,6 +23002,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Plane<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -22703,19 +23026,28 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Plane<(),
         let t17 = xv[2] * t11;
         let t21 = xv[0] * t12;
         let t22 = xv[1] * t10;
-        let t26 = t13.mul_add(T::from_i64(2), -xv[0]);
-        let t28 = t14.mul_add(T::from_i64(2), -xv[1]);
-        let t30 = t15.mul_add(T::from_i64(2), -xv[2]);
-        let t31 = (-v[0]).mul_add(t9, t17);
-        let t32 = (-xv[1]).mul_add(t12, t31);
-        let t34 = t32.mul_add(T::from_i64(2), xv[3]);
-        let t35 = (-xv[2]).mul_add(t10, t21);
-        let t36 = (-v[1]).mul_add(t9, t35);
-        let t38 = t36.mul_add(T::from_i64(2), xv[4]);
-        let t39 = (-xv[0]).mul_add(t11, t22);
-        let t40 = (-v[2]).mul_add(t9, t39);
-        let t42 = t40.mul_add(T::from_i64(2), xv[5]);
-            return Line { c: gx::slots::from_values::<S, T, 6>([t26, t28, t30, t34, t38, t42]) };
+        let t25 = t13 * T::from_i64(2);
+        let t27 = v[1] * v[1];
+        let t29 = v[0].mul_add(v[0], t27);
+        let t30 = v[2].mul_add(v[2], t29);
+        let t32 = (-xv[0]).mul_add(t30, t25);
+        let t33 = t14 * T::from_i64(2);
+        let t35 = (-xv[1]).mul_add(t30, t33);
+        let t36 = t15 * T::from_i64(2);
+        let t38 = (-xv[2]).mul_add(t30, t36);
+        let t39 = (-v[0]).mul_add(t9, t17);
+        let t40 = (-xv[1]).mul_add(t12, t39);
+        let t42 = xv[3] * t30;
+        let t43 = t40.mul_add(T::from_i64(2), t42);
+        let t44 = (-xv[2]).mul_add(t10, t21);
+        let t45 = (-v[1]).mul_add(t9, t44);
+        let t47 = xv[4] * t30;
+        let t48 = t45.mul_add(T::from_i64(2), t47);
+        let t49 = (-xv[0]).mul_add(t11, t22);
+        let t50 = (-v[2]).mul_add(t9, t49);
+        let t52 = xv[5] * t30;
+        let t53 = t50.mul_add(T::from_i64(2), t52);
+            return Line { c: gx::slots::from_values::<S, T, 6>([t32, t35, t38, t43, t48, t53]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -22764,6 +23096,14 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Plane<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Line, T, 18> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -23020,6 +23360,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Plane<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[3] * xv[3];
@@ -23029,10 +23377,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Plane<()
         let t7 = v[0] * t6;
         let t8 = v[1] * t6;
         let t9 = v[2] * t6;
-        let t11 = (-t7).mul_add(T::from_i64(2), xv[0]);
-        let t13 = (-t8).mul_add(T::from_i64(2), xv[1]);
-        let t15 = (-t9).mul_add(T::from_i64(2), xv[2]);
-            return Point { c: gx::slots::from_values::<S, T, 4>([t11, t13, t15, xv[3]]) };
+        let t12 = v[1] * v[1];
+        let t14 = v[0].mul_add(v[0], t12);
+        let t15 = v[2].mul_add(v[2], t14);
+        let t16 = xv[0] * t15;
+        let t17 = (-t7).mul_add(T::from_i64(2), t16);
+        let t19 = xv[1] * t15;
+        let t20 = (-t8).mul_add(T::from_i64(2), t19);
+        let t22 = xv[2] * t15;
+        let t23 = (-t9).mul_add(T::from_i64(2), t22);
+        let t24 = xv[3] * t15;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t17, t20, t23, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -23060,8 +23415,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Plane<()
         let m23 = m22 - m2;
         let m24 = m8 * T::from_i64(2);
         let m25 = -m24;
+        let m26 = m2 + m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m10) + x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m16)).0, (x[0].scale(m12) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m14) + x[1].scale(m19) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m10) + x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m16)).0, (x[0].scale(m12) + x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m21)).0, (x[0].scale(m14) + x[1].scale(m19) + x[2].scale(m23) + x[3].scale(m25)).0, (x[3].scale(m26)).0] }
     }
 }
 
@@ -23074,10 +23430,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Plane
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Point, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Point, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Point, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Point, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -23104,26 +23468,27 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Plane<(), T>> {
         let m23 = m22 - m2;
         let m24 = m8 * T::from_i64(2);
         let m25 = -m24;
-        gx::Prepared::from_entries([m10, m12, m14, m16, m17, m19, m21, m23, m25])
+        let m26 = m2 + m22;
+        gx::Prepared::from_entries([m10, m12, m14, m16, m17, m19, m21, m23, m25, m26])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Plane>, Point, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Plane>, Point, T, 10> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Point, T, 9>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Point, T, 10>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Point, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Point, T, 10>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -23131,7 +23496,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Point, T, 9>> for Point<(Po
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Plane {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Point, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Point, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -23141,16 +23506,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Point, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Point, T, 10> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Point, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Point, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Point, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Point, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Point, T, 9>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Point, T, 10>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -23258,13 +23623,28 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<P
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = -xv[0];
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t0]) };
+        let t2 = v[1] * v[1];
+        let t4 = v[0].mul_add(v[0], t2);
+        let t5 = v[2].mul_add(v[2], t4);
+        let t6 = t0 * t5;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t6]) };
         }
-        let m0 = -T::from_i64(1);
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
+        let m5 = -m4;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0].scale(m0)).0] }
+        Pseudoscalar { c: [(x[0].scale(m5)).0] }
     }
 }
 
@@ -23281,8 +23661,19 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Plane<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        let m0 = -T::from_i64(1);
-        gx::Prepared::from_entries([m0])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
+        let m5 = -m4;
+        gx::Prepared::from_entries([m5])
     }
 }
 
@@ -23510,6 +23901,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Plane<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -23523,16 +23922,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Plane<()
         let t11 = xv[3] * t6;
         let t14 = xv[1] * t7;
         let t15 = xv[2] * t5;
-        let t18 = t8.mul_add(T::from_i64(2), -xv[1]);
-        let t20 = t9.mul_add(T::from_i64(2), -xv[2]);
-        let t22 = t10.mul_add(T::from_i64(2), -xv[3]);
-        let t23 = (-xv[2]).mul_add(t7, t11);
-        let t24 = t23 * T::from_i64(2);
-        let t25 = (-xv[3]).mul_add(t5, t14);
-        let t26 = t25 * T::from_i64(2);
-        let t27 = (-xv[1]).mul_add(t6, t15);
-        let t28 = t27 * T::from_i64(2);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t18, t20, t22, t24, t26, t28, T::from_i64(0)]) };
+        let t17 = t8 * T::from_i64(2);
+        let t19 = v[1] * v[1];
+        let t21 = v[0].mul_add(v[0], t19);
+        let t22 = v[2].mul_add(v[2], t21);
+        let t24 = (-xv[1]).mul_add(t22, t17);
+        let t25 = t9 * T::from_i64(2);
+        let t27 = (-xv[2]).mul_add(t22, t25);
+        let t28 = t10 * T::from_i64(2);
+        let t30 = (-xv[3]).mul_add(t22, t28);
+        let t31 = (-xv[2]).mul_add(t7, t11);
+        let t32 = t31 * T::from_i64(2);
+        let t33 = (-xv[3]).mul_add(t5, t14);
+        let t34 = t33 * T::from_i64(2);
+        let t35 = (-xv[1]).mul_add(t6, t15);
+        let t36 = t35 * T::from_i64(2);
+        let t37 = xv[0] * t22;
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t37, t24, t27, t30, t32, t34, t36, T::from_i64(0)]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -23544,22 +23950,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Plane<()
         let m7 = v[1] * v[3];
         let m8 = v[2] * v[3];
         let m9 = m0 - m1;
-        let m10 = m9 - m2;
-        let m11 = m3 * T::from_i64(2);
-        let m12 = m4 * T::from_i64(2);
-        let m13 = m2 + m9;
-        let m14 = -m13;
-        let m15 = m6 * T::from_i64(2);
-        let m16 = m2 - m0;
-        let m17 = m16 - m1;
-        let m18 = m8 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m7 * T::from_i64(2);
-        let m21 = m5 * T::from_i64(2);
-        let m22 = -m21;
-        let m23 = -m20;
+        let m10 = m0 + m1;
+        let m11 = m2 + m10;
+        let m12 = m9 - m2;
+        let m13 = m3 * T::from_i64(2);
+        let m14 = m4 * T::from_i64(2);
+        let m15 = m2 + m9;
+        let m16 = -m15;
+        let m17 = m6 * T::from_i64(2);
+        let m18 = m2 - m10;
+        let m19 = m8 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = -m21;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m10) + x[2].scale(m11) + x[3].scale(m12)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0, (x[1].scale(m12) + x[2].scale(m15) + x[3].scale(m17)).0, (x[2].scale(m19) + x[3].scale(m20)).0, (x[1].scale(m18) + x[3].scale(m22)).0, (x[1].scale(m23) + x[2].scale(m21)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Motor { c: [(x[0].scale(m11)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m13) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m14) + x[2].scale(m17) + x[3].scale(m18)).0, (x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m19) + x[3].scale(m23)).0, (x[1].scale(m24) + x[2].scale(m22)).0, S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
@@ -23572,10 +23979,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Plane
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Rotor, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Rotor, T, 13> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -23586,40 +24001,41 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Plane<(), T>> {
         let m7 = v[1] * v[3];
         let m8 = v[2] * v[3];
         let m9 = m0 - m1;
-        let m10 = m9 - m2;
-        let m11 = m3 * T::from_i64(2);
-        let m12 = m4 * T::from_i64(2);
-        let m13 = m2 + m9;
-        let m14 = -m13;
-        let m15 = m6 * T::from_i64(2);
-        let m16 = m2 - m0;
-        let m17 = m16 - m1;
-        let m18 = m8 * T::from_i64(2);
-        let m19 = -m18;
-        let m20 = m7 * T::from_i64(2);
-        let m21 = m5 * T::from_i64(2);
-        let m22 = -m21;
-        let m23 = -m20;
-        gx::Prepared::from_entries([m10, m11, m12, m14, m15, m17, m19, m20, m18, m22, m23, m21])
+        let m10 = m0 + m1;
+        let m11 = m2 + m10;
+        let m12 = m9 - m2;
+        let m13 = m3 * T::from_i64(2);
+        let m14 = m4 * T::from_i64(2);
+        let m15 = m2 + m9;
+        let m16 = -m15;
+        let m17 = m6 * T::from_i64(2);
+        let m18 = m2 - m10;
+        let m19 = m8 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m5 * T::from_i64(2);
+        let m23 = -m22;
+        let m24 = -m21;
+        gx::Prepared::from_entries([m11, m12, m13, m14, m16, m17, m18, m20, m21, m19, m23, m24, m22])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Plane>, Rotor, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Plane>, Rotor, T, 13> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[1].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[11]) + x[2].scale(m[12])).0, S::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]], [T::zero(), T::zero(), m[6], m[7]], [T::zero(), m[8], T::zero(), m[9]], [T::zero(), m[10], m[11], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), m[7], m[8]], [T::zero(), m[9], T::zero(), m[10]], [T::zero(), m[11], m[12], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]] }
     }
 }
 
@@ -23627,7 +24043,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>> for Motor<(R
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Plane {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -23637,16 +24053,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Rotor, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Rotor, T, 13> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Rotor, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Rotor, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 12>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Rotor, T, 13>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -23803,6 +24219,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Pla
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -23810,10 +24234,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Pla
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t9 = (-t5).mul_add(T::from_i64(2), xv[1]);
-        let t11 = (-t6).mul_add(T::from_i64(2), xv[2]);
-        let t13 = (-t7).mul_add(T::from_i64(2), xv[3]);
-            return Translator { c: gx::slots::from_values::<S, T, 4>([xv[0], t9, t11, t13]) };
+        let t10 = v[1] * v[1];
+        let t12 = v[0].mul_add(v[0], t10);
+        let t13 = v[2].mul_add(v[2], t12);
+        let t14 = xv[1] * t13;
+        let t15 = (-t5).mul_add(T::from_i64(2), t14);
+        let t17 = xv[2] * t13;
+        let t18 = (-t6).mul_add(T::from_i64(2), t17);
+        let t20 = xv[3] * t13;
+        let t21 = (-t7).mul_add(T::from_i64(2), t20);
+        let t22 = xv[0] * t13;
+            return Translator { c: gx::slots::from_values::<S, T, 4>([t22, t15, t18, t21]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -23832,8 +24263,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Pla
         let m14 = -m13;
         let m15 = m0 + m1;
         let m16 = m15 - m2;
+        let m17 = m2 + m15;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m7) + x[2].scale(m9) + x[3].scale(m11)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0] }
+        Translator { c: [(x[0].scale(m17)).0, (x[1].scale(m7) + x[2].scale(m9) + x[3].scale(m11)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m16)).0] }
     }
 }
 
@@ -23846,10 +24278,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Translator, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Translator, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Translator, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Translator, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -23867,26 +24307,27 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Plane<(), T>> {
         let m14 = -m13;
         let m15 = m0 + m1;
         let m16 = m15 - m2;
-        gx::Prepared::from_entries([m7, m9, m11, m12, m14, m16])
+        let m17 = m2 + m15;
+        gx::Prepared::from_entries([m17, m7, m9, m11, m12, m14, m16])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Plane>, Translator, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Plane>, Translator, T, 7> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Translator, T, 6>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Translator, T, 7>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 7>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]]] }
+        Translator { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]] }
     }
 }
 
@@ -23894,7 +24335,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Translator, T, 6>> for Tran
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Plane {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Translator, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Translator, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -23904,16 +24345,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Translator, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Translator, T, 7> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Translator, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Translator, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 6>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Translator, T, 7>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24121,6 +24562,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Plane<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -24137,20 +24586,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Plane<()
         let t17 = xv[3] * t11;
         let t21 = xv[1] * t12;
         let t22 = xv[2] * t10;
-        let t26 = t13.mul_add(T::from_i64(2), -xv[1]);
-        let t28 = t14.mul_add(T::from_i64(2), -xv[2]);
-        let t30 = t15.mul_add(T::from_i64(2), -xv[3]);
-        let t31 = (-v[0]).mul_add(t9, t17);
-        let t32 = (-xv[2]).mul_add(t12, t31);
-        let t34 = t32.mul_add(T::from_i64(2), xv[4]);
-        let t35 = (-xv[3]).mul_add(t10, t21);
-        let t36 = (-v[1]).mul_add(t9, t35);
-        let t38 = t36.mul_add(T::from_i64(2), xv[5]);
-        let t39 = (-xv[1]).mul_add(t11, t22);
-        let t40 = (-v[2]).mul_add(t9, t39);
-        let t42 = t40.mul_add(T::from_i64(2), xv[6]);
-        let t43 = -xv[7];
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t26, t28, t30, t34, t38, t42, t43]) };
+        let t25 = t13 * T::from_i64(2);
+        let t27 = v[1] * v[1];
+        let t29 = v[0].mul_add(v[0], t27);
+        let t30 = v[2].mul_add(v[2], t29);
+        let t32 = (-xv[1]).mul_add(t30, t25);
+        let t33 = t14 * T::from_i64(2);
+        let t35 = (-xv[2]).mul_add(t30, t33);
+        let t36 = t15 * T::from_i64(2);
+        let t38 = (-xv[3]).mul_add(t30, t36);
+        let t39 = (-v[0]).mul_add(t9, t17);
+        let t40 = (-xv[2]).mul_add(t12, t39);
+        let t42 = xv[4] * t30;
+        let t43 = t40.mul_add(T::from_i64(2), t42);
+        let t44 = (-xv[3]).mul_add(t10, t21);
+        let t45 = (-v[1]).mul_add(t9, t44);
+        let t47 = xv[5] * t30;
+        let t48 = t45.mul_add(T::from_i64(2), t47);
+        let t49 = (-xv[1]).mul_add(t11, t22);
+        let t50 = (-v[2]).mul_add(t9, t49);
+        let t52 = xv[6] * t30;
+        let t53 = t50.mul_add(T::from_i64(2), t52);
+        let t54 = -xv[7];
+        let t55 = xv[0] * t30;
+        let t56 = t30 * t54;
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t55, t32, t35, t38, t43, t48, t53, t56]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -24166,24 +24626,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Plane<()
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -m11;
-        let m15 = m3 * T::from_i64(2);
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m12;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = -m19;
-        let m21 = m7 * T::from_i64(2);
-        let m22 = -m15;
+        let m14 = m2 + m10;
+        let m15 = -m11;
+        let m16 = m3 * T::from_i64(2);
+        let m17 = m4 * T::from_i64(2);
+        let m18 = -m12;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m7 * T::from_i64(2);
         let m23 = -m16;
-        let m24 = m6 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = -m18;
-        let m27 = -m21;
-        let m28 = -m13;
-        let m29 = -T::from_i64(1);
+        let m24 = -m17;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m19;
+        let m28 = -m22;
+        let m29 = -m13;
+        let m30 = -m14;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m15) + x[3].scale(m16)).0, (x[1].scale(m15) + x[2].scale(m17) + x[3].scale(m18)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m13)).0, (x[2].scale(m20) + x[3].scale(m21) + x[4].scale(m11) + x[5].scale(m22) + x[6].scale(m23)).0, (x[1].scale(m19) + x[3].scale(m25) + x[4].scale(m22) + x[5].scale(m12) + x[6].scale(m26)).0, (x[1].scale(m27) + x[2].scale(m24) + x[4].scale(m23) + x[5].scale(m26) + x[6].scale(m28)).0, (x[7].scale(m29)).0] }
+        Motor { c: [(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17)).0, (x[1].scale(m16) + x[2].scale(m18) + x[3].scale(m19)).0, (x[1].scale(m17) + x[2].scale(m19) + x[3].scale(m13)).0, (x[2].scale(m21) + x[3].scale(m22) + x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m20) + x[3].scale(m26) + x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m25) + x[4].scale(m24) + x[5].scale(m27) + x[6].scale(m29)).0, (x[7].scale(m30)).0] }
     }
 }
 
@@ -24196,10 +24657,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Plane
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Motor, T, 19>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Motor, T, 20>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Motor, T, 19> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Motor, T, 20> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -24214,42 +24683,43 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Plane<(), T>> {
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -m11;
-        let m15 = m3 * T::from_i64(2);
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m12;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m8 * T::from_i64(2);
-        let m20 = -m19;
-        let m21 = m7 * T::from_i64(2);
-        let m22 = -m15;
+        let m14 = m2 + m10;
+        let m15 = -m11;
+        let m16 = m3 * T::from_i64(2);
+        let m17 = m4 * T::from_i64(2);
+        let m18 = -m12;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m8 * T::from_i64(2);
+        let m21 = -m20;
+        let m22 = m7 * T::from_i64(2);
         let m23 = -m16;
-        let m24 = m6 * T::from_i64(2);
-        let m25 = -m24;
-        let m26 = -m18;
-        let m27 = -m21;
-        let m28 = -m13;
-        let m29 = -T::from_i64(1);
-        gx::Prepared::from_entries([m14, m15, m16, m17, m18, m13, m20, m21, m11, m22, m23, m19, m25, m12, m26, m27, m24, m28, m29])
+        let m24 = -m17;
+        let m25 = m6 * T::from_i64(2);
+        let m26 = -m25;
+        let m27 = -m19;
+        let m28 = -m22;
+        let m29 = -m13;
+        let m30 = -m14;
+        gx::Prepared::from_entries([m14, m15, m16, m17, m18, m19, m13, m21, m22, m11, m23, m24, m20, m26, m12, m27, m28, m25, m29, m30])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Plane>, Motor, T, 19> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Plane>, Motor, T, 20> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8]) + x[5].scale(m[9]) + x[6].scale(m[10])).0, (x[1].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[9]) + x[5].scale(m[13]) + x[6].scale(m[14])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[17])).0, (x[7].scale(m[18])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9]) + x[5].scale(m[10]) + x[6].scale(m[11])).0, (x[1].scale(m[12]) + x[3].scale(m[13]) + x[4].scale(m[10]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[4].scale(m[11]) + x[5].scale(m[15]) + x[6].scale(m[18])).0, (x[7].scale(m[19])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Motor, T, 19>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Motor, T, 20>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 19>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 20>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[7], m[8], m[9], m[10], T::zero()], [T::zero(), m[11], T::zero(), m[12], m[9], m[13], m[14], T::zero()], [T::zero(), m[15], m[16], T::zero(), m[10], m[14], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], m[10], m[11], T::zero()], [T::zero(), m[12], T::zero(), m[13], m[10], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], T::zero(), m[11], m[15], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]] }
     }
 }
 
@@ -24257,7 +24727,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Motor, T, 19>> for Motor<(M
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Plane {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Motor, T, 19>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Motor, T, 20>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24267,16 +24737,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Motor, T, 19> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Motor, T, 20> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Motor, W, 19> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 20>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Motor, W, 20> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 19>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Motor, T, 20>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24481,6 +24951,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Plane<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -24497,14 +24975,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Plane<
         let t16 = v[0] * t11;
         let t17 = v[1] * t11;
         let t18 = v[2] * t11;
-        let t20 = t12.mul_add(T::from_i64(2), -xv[0]);
-        let t22 = t13.mul_add(T::from_i64(2), -xv[1]);
-        let t24 = t14.mul_add(T::from_i64(2), -xv[2]);
-        let t26 = t15.mul_add(T::from_i64(2), -xv[3]);
-        let t28 = (-t16).mul_add(T::from_i64(2), xv[4]);
-        let t30 = (-t17).mul_add(T::from_i64(2), xv[5]);
-        let t32 = (-t18).mul_add(T::from_i64(2), xv[6]);
-            return Flector { c: gx::slots::from_values::<S, T, 8>([t20, t22, t24, t26, t28, t30, t32, xv[7]]) };
+        let t19 = t12 * T::from_i64(2);
+        let t21 = v[1] * v[1];
+        let t23 = v[0].mul_add(v[0], t21);
+        let t24 = v[2].mul_add(v[2], t23);
+        let t26 = (-xv[0]).mul_add(t24, t19);
+        let t27 = t13 * T::from_i64(2);
+        let t29 = (-xv[1]).mul_add(t24, t27);
+        let t30 = t14 * T::from_i64(2);
+        let t32 = (-xv[2]).mul_add(t24, t30);
+        let t33 = t15 * T::from_i64(2);
+        let t35 = (-xv[3]).mul_add(t24, t33);
+        let t37 = xv[4] * t24;
+        let t38 = (-t16).mul_add(T::from_i64(2), t37);
+        let t40 = xv[5] * t24;
+        let t41 = (-t17).mul_add(T::from_i64(2), t40);
+        let t43 = xv[6] * t24;
+        let t44 = (-t18).mul_add(T::from_i64(2), t43);
+        let t45 = xv[7] * t24;
+            return Flector { c: gx::slots::from_values::<S, T, 8>([t26, t29, t32, t35, t38, t41, t44, t45]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -24520,24 +25009,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Plane<
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -m11;
-        let m15 = m3 * T::from_i64(2);
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m12;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m6 * T::from_i64(2);
-        let m20 = m7 * T::from_i64(2);
-        let m21 = m8 * T::from_i64(2);
-        let m22 = -T::from_i64(1);
-        let m23 = -m15;
+        let m14 = m2 + m10;
+        let m15 = -m11;
+        let m16 = m3 * T::from_i64(2);
+        let m17 = m4 * T::from_i64(2);
+        let m18 = -m12;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
+        let m23 = -m14;
         let m24 = -m16;
-        let m25 = -m19;
-        let m26 = -m18;
-        let m27 = -m20;
-        let m28 = -m13;
-        let m29 = -m21;
+        let m25 = -m17;
+        let m26 = -m20;
+        let m27 = -m19;
+        let m28 = -m21;
+        let m29 = -m13;
+        let m30 = -m22;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m13)).0, (x[0].scale(m19) + x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m22)).0, (x[4].scale(m11) + x[5].scale(m23) + x[6].scale(m24) + x[7].scale(m25)).0, (x[4].scale(m23) + x[5].scale(m12) + x[6].scale(m26) + x[7].scale(m27)).0, (x[4].scale(m24) + x[5].scale(m26) + x[6].scale(m28) + x[7].scale(m29)).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m15) + x[1].scale(m16) + x[2].scale(m17)).0, (x[0].scale(m16) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m17) + x[1].scale(m19) + x[2].scale(m13)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[4].scale(m11) + x[5].scale(m24) + x[6].scale(m25) + x[7].scale(m26)).0, (x[4].scale(m24) + x[5].scale(m12) + x[6].scale(m27) + x[7].scale(m28)).0, (x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m29) + x[7].scale(m30)).0, (x[7].scale(m14)).0] }
     }
 }
 
@@ -24550,10 +25040,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Pla
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Flector, T, 19>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Flector, T, 20>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Flector, T, 19> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Flector, T, 20> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -24568,42 +25066,43 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Plane<(), T>> {
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -m11;
-        let m15 = m3 * T::from_i64(2);
-        let m16 = m4 * T::from_i64(2);
-        let m17 = -m12;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m6 * T::from_i64(2);
-        let m20 = m7 * T::from_i64(2);
-        let m21 = m8 * T::from_i64(2);
-        let m22 = -T::from_i64(1);
-        let m23 = -m15;
+        let m14 = m2 + m10;
+        let m15 = -m11;
+        let m16 = m3 * T::from_i64(2);
+        let m17 = m4 * T::from_i64(2);
+        let m18 = -m12;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m6 * T::from_i64(2);
+        let m21 = m7 * T::from_i64(2);
+        let m22 = m8 * T::from_i64(2);
+        let m23 = -m14;
         let m24 = -m16;
-        let m25 = -m19;
-        let m26 = -m18;
-        let m27 = -m20;
-        let m28 = -m13;
-        let m29 = -m21;
-        gx::Prepared::from_entries([m14, m15, m16, m17, m18, m13, m19, m20, m21, m22, m11, m23, m24, m25, m12, m26, m27, m28, m29])
+        let m25 = -m17;
+        let m26 = -m20;
+        let m27 = -m19;
+        let m28 = -m21;
+        let m29 = -m13;
+        let m30 = -m22;
+        gx::Prepared::from_entries([m15, m16, m17, m18, m19, m13, m20, m21, m22, m23, m11, m24, m25, m26, m12, m27, m28, m29, m30, m14])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Plane>, Flector, T, 19> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Plane>, Flector, T, 20> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[10]) + x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13])).0, (x[4].scale(m[11]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[12]) + x[5].scale(m[15]) + x[6].scale(m[17]) + x[7].scale(m[18])).0, (x[7].scale(m[19])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Flector, T, 19>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Flector, T, 20>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 19>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 20>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], m[18]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19]]] }
     }
 }
 
@@ -24611,7 +25110,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Flector, T, 19>> for Flecto
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Plane {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Flector, T, 19>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Flector, T, 20>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24621,16 +25120,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Flector, T, 19> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Flector, T, 20> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Flector, W, 19> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 20>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Flector, W, 20> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 19>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Flector, T, 20>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24872,6 +25371,14 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Pl
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
         let t1 = v[1] * xv[3];
         let t3 = v[0].mul_add(xv[2], t1);
@@ -24903,27 +25410,46 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Pl
         let t41 = v[2] * t11;
         let t42 = v[1] * t11;
         let t43 = v[0] * t11;
-        let t45 = t25.mul_add(T::from_i64(2), -xv[1]);
-        let t47 = t26.mul_add(T::from_i64(2), -xv[2]);
-        let t49 = t27.mul_add(T::from_i64(2), -xv[3]);
-        let t51 = t28.mul_add(T::from_i64(2), -xv[4]);
-        let t52 = (-v[0]).mul_add(t16, t30);
-        let t53 = (-xv[9]).mul_add(t24, t52);
-        let t55 = t53.mul_add(T::from_i64(2), xv[5]);
-        let t56 = (-xv[8]).mul_add(t22, t34);
-        let t57 = (-v[1]).mul_add(t16, t56);
-        let t59 = t57.mul_add(T::from_i64(2), xv[6]);
-        let t60 = (-xv[10]).mul_add(t23, t35);
-        let t61 = (-v[2]).mul_add(t16, t60);
-        let t63 = t61.mul_add(T::from_i64(2), xv[7]);
-        let t65 = t38.mul_add(T::from_i64(2), -xv[8]);
-        let t67 = t39.mul_add(T::from_i64(2), -xv[9]);
-        let t69 = t40.mul_add(T::from_i64(2), -xv[10]);
-        let t71 = (-t41).mul_add(T::from_i64(2), xv[11]);
-        let t73 = (-t42).mul_add(T::from_i64(2), xv[12]);
-        let t75 = (-t43).mul_add(T::from_i64(2), xv[13]);
-        let t76 = -xv[15];
-            return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], t45, t47, t49, t51, t55, t59, t63, t65, t67, t69, t71, t73, t75, xv[14], t76]) };
+        let t44 = t25 * T::from_i64(2);
+        let t46 = v[1] * v[1];
+        let t48 = v[0].mul_add(v[0], t46);
+        let t49 = v[2].mul_add(v[2], t48);
+        let t51 = (-xv[1]).mul_add(t49, t44);
+        let t52 = t26 * T::from_i64(2);
+        let t54 = (-xv[2]).mul_add(t49, t52);
+        let t55 = t27 * T::from_i64(2);
+        let t57 = (-xv[3]).mul_add(t49, t55);
+        let t58 = t28 * T::from_i64(2);
+        let t60 = (-xv[4]).mul_add(t49, t58);
+        let t61 = (-v[0]).mul_add(t16, t30);
+        let t62 = (-xv[9]).mul_add(t24, t61);
+        let t64 = xv[5] * t49;
+        let t65 = t62.mul_add(T::from_i64(2), t64);
+        let t66 = (-xv[8]).mul_add(t22, t34);
+        let t67 = (-v[1]).mul_add(t16, t66);
+        let t69 = xv[6] * t49;
+        let t70 = t67.mul_add(T::from_i64(2), t69);
+        let t71 = (-xv[10]).mul_add(t23, t35);
+        let t72 = (-v[2]).mul_add(t16, t71);
+        let t74 = xv[7] * t49;
+        let t75 = t72.mul_add(T::from_i64(2), t74);
+        let t76 = t38 * T::from_i64(2);
+        let t78 = (-xv[8]).mul_add(t49, t76);
+        let t79 = t39 * T::from_i64(2);
+        let t81 = (-xv[9]).mul_add(t49, t79);
+        let t82 = t40 * T::from_i64(2);
+        let t84 = (-xv[10]).mul_add(t49, t82);
+        let t86 = xv[11] * t49;
+        let t87 = (-t41).mul_add(T::from_i64(2), t86);
+        let t89 = xv[12] * t49;
+        let t90 = (-t42).mul_add(T::from_i64(2), t89);
+        let t92 = xv[13] * t49;
+        let t93 = (-t43).mul_add(T::from_i64(2), t92);
+        let t94 = -xv[15];
+        let t95 = xv[0] * t49;
+        let t96 = xv[14] * t49;
+        let t97 = t49 * t94;
+            return Multivector { c: gx::slots::from_values::<S, T, 16>([t95, t51, t54, t57, t60, t65, t70, t75, t78, t81, t84, t87, t90, t93, t96, t97]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -24939,24 +25465,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Pl
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -T::from_i64(1);
-        let m15 = m6 * T::from_i64(2);
-        let m16 = m7 * T::from_i64(2);
-        let m17 = m8 * T::from_i64(2);
-        let m18 = -m11;
-        let m19 = m3 * T::from_i64(2);
-        let m20 = m4 * T::from_i64(2);
-        let m21 = -m12;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m19;
+        let m14 = m2 + m10;
+        let m15 = -m14;
+        let m16 = m6 * T::from_i64(2);
+        let m17 = m7 * T::from_i64(2);
+        let m18 = m8 * T::from_i64(2);
+        let m19 = -m11;
+        let m20 = m3 * T::from_i64(2);
+        let m21 = m4 * T::from_i64(2);
+        let m22 = -m12;
+        let m23 = m5 * T::from_i64(2);
         let m24 = -m20;
-        let m25 = -m17;
-        let m26 = -m22;
-        let m27 = -m15;
-        let m28 = -m13;
-        let m29 = -m16;
+        let m25 = -m21;
+        let m26 = -m18;
+        let m27 = -m23;
+        let m28 = -m16;
+        let m29 = -m13;
+        let m30 = -m17;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m15) + x[3].scale(m16) + x[4].scale(m17)).0, (x[2].scale(m18) + x[3].scale(m19) + x[4].scale(m20)).0, (x[2].scale(m19) + x[3].scale(m21) + x[4].scale(m22)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m23) + x[7].scale(m24) + x[8].scale(m16) + x[9].scale(m25)).0, (x[5].scale(m23) + x[6].scale(m12) + x[7].scale(m26) + x[8].scale(m27) + x[10].scale(m17)).0, (x[5].scale(m24) + x[6].scale(m26) + x[7].scale(m28) + x[9].scale(m15) + x[10].scale(m29)).0, (x[8].scale(m13) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m22) + x[9].scale(m21) + x[10].scale(m19)).0, (x[8].scale(m20) + x[9].scale(m19) + x[10].scale(m18)).0, (x[11].scale(m28) + x[12].scale(m26) + x[13].scale(m24) + x[14].scale(m25)).0, (x[11].scale(m26) + x[12].scale(m12) + x[13].scale(m23) + x[14].scale(m29)).0, (x[11].scale(m24) + x[12].scale(m23) + x[13].scale(m11) + x[14].scale(m27)).0, (x[14]).0, (x[15].scale(m14)).0] }
+        Multivector { c: [(x[0].scale(m14)).0, (x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m17) + x[4].scale(m18)).0, (x[2].scale(m19) + x[3].scale(m20) + x[4].scale(m21)).0, (x[2].scale(m20) + x[3].scale(m22) + x[4].scale(m23)).0, (x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m13)).0, (x[5].scale(m11) + x[6].scale(m24) + x[7].scale(m25) + x[8].scale(m17) + x[9].scale(m26)).0, (x[5].scale(m24) + x[6].scale(m12) + x[7].scale(m27) + x[8].scale(m28) + x[10].scale(m18)).0, (x[5].scale(m25) + x[6].scale(m27) + x[7].scale(m29) + x[9].scale(m16) + x[10].scale(m30)).0, (x[8].scale(m13) + x[9].scale(m23) + x[10].scale(m21)).0, (x[8].scale(m23) + x[9].scale(m22) + x[10].scale(m20)).0, (x[8].scale(m21) + x[9].scale(m20) + x[10].scale(m19)).0, (x[11].scale(m29) + x[12].scale(m27) + x[13].scale(m25) + x[14].scale(m26)).0, (x[11].scale(m27) + x[12].scale(m12) + x[13].scale(m24) + x[14].scale(m30)).0, (x[11].scale(m25) + x[12].scale(m24) + x[13].scale(m11) + x[14].scale(m28)).0, (x[14].scale(m14)).0, (x[15].scale(m15)).0] }
     }
 }
 
@@ -24969,10 +25496,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Plane<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>;
+    type Output = gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Multivector, T, 19> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Plane>, Multivector, T, 20> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -24987,42 +25522,43 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Plane<(), T>> {
         let m11 = m2 - m9;
         let m12 = m2 + m9;
         let m13 = m2 - m10;
-        let m14 = -T::from_i64(1);
-        let m15 = m6 * T::from_i64(2);
-        let m16 = m7 * T::from_i64(2);
-        let m17 = m8 * T::from_i64(2);
-        let m18 = -m11;
-        let m19 = m3 * T::from_i64(2);
-        let m20 = m4 * T::from_i64(2);
-        let m21 = -m12;
-        let m22 = m5 * T::from_i64(2);
-        let m23 = -m19;
+        let m14 = m2 + m10;
+        let m15 = -m14;
+        let m16 = m6 * T::from_i64(2);
+        let m17 = m7 * T::from_i64(2);
+        let m18 = m8 * T::from_i64(2);
+        let m19 = -m11;
+        let m20 = m3 * T::from_i64(2);
+        let m21 = m4 * T::from_i64(2);
+        let m22 = -m12;
+        let m23 = m5 * T::from_i64(2);
         let m24 = -m20;
-        let m25 = -m17;
-        let m26 = -m22;
-        let m27 = -m15;
-        let m28 = -m13;
-        let m29 = -m16;
-        gx::Prepared::from_entries([m14, m15, m16, m17, m18, m19, m20, m21, m22, m13, m11, m23, m24, m25, m12, m26, m27, m28, m29])
+        let m25 = -m21;
+        let m26 = -m18;
+        let m27 = -m23;
+        let m28 = -m16;
+        let m29 = -m13;
+        let m30 = -m17;
+        gx::Prepared::from_entries([m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m13, m11, m24, m25, m26, m12, m27, m28, m29, m30])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Plane>, Multivector, T, 19> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Plane>, Multivector, T, 20> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[6])).0, (x[2].scale(m[5]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[5].scale(m[10]) + x[6].scale(m[11]) + x[7].scale(m[12]) + x[8].scale(m[2]) + x[9].scale(m[13])).0, (x[5].scale(m[11]) + x[6].scale(m[14]) + x[7].scale(m[15]) + x[8].scale(m[16]) + x[10].scale(m[3])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[17]) + x[9].scale(m[1]) + x[10].scale(m[18])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[8]) + x[9].scale(m[7]) + x[10].scale(m[5])).0, (x[8].scale(m[6]) + x[9].scale(m[5]) + x[10].scale(m[4])).0, (x[11].scale(m[17]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[13])).0, (x[11].scale(m[15]) + x[12].scale(m[14]) + x[13].scale(m[11]) + x[14].scale(m[18])).0, (x[11].scale(m[12]) + x[12].scale(m[11]) + x[13].scale(m[10]) + x[14].scale(m[16])).0, (x[14]).0, (x[15].scale(m[0])).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[7]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[5].scale(m[11]) + x[6].scale(m[12]) + x[7].scale(m[13]) + x[8].scale(m[3]) + x[9].scale(m[14])).0, (x[5].scale(m[12]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[10].scale(m[4])).0, (x[5].scale(m[13]) + x[6].scale(m[16]) + x[7].scale(m[18]) + x[9].scale(m[2]) + x[10].scale(m[19])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[7])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[18]) + x[12].scale(m[16]) + x[13].scale(m[13]) + x[14].scale(m[14])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[12]) + x[14].scale(m[19])).0, (x[11].scale(m[13]) + x[12].scale(m[12]) + x[13].scale(m[11]) + x[14].scale(m[17])).0, (x[14].scale(m[0])).0, (x[15].scale(m[1])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[2], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[14], m[15], m[16], T::zero(), m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[17], T::zero(), m[1], m[18], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[17], m[15], m[12], m[13], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[14], m[11], m[18], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[11], m[10], m[16], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[12], m[13], m[3], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[15], m[16], m[17], T::zero(), m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[16], m[18], T::zero(), m[2], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[18], m[16], m[13], m[14], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[12], m[19], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], m[17], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]] }
     }
 }
 
@@ -25030,7 +25566,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>> for Mu
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Plane {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Plane<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Plane<(), T>) -> gx::Unit<Plane<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25040,16 +25576,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Plane {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Multivector, T, 19> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Plane<(), T>>) -> gx::Prepared<gx::Unit<Plane>, Multivector, T, 20> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Multivector, W, 19> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Plane>, Multivector, W, 20> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 19>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Plane>, Multivector, T, 20>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25170,11 +25706,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Line<()
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[0].mul_add(v[0], t1);
+        let t4 = v[2].mul_add(v[2], t3);
+        let t5 = xv[0] * t4;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t5]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m4)).0] }
     }
 }
 
@@ -25187,30 +25743,46 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Line
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Line>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
+        gx::Prepared::from_entries([m4])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -25218,7 +25790,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 0>> for Scalar<(S
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Line {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25228,16 +25800,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25417,6 +25989,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -25432,16 +26017,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Line<(),
         let t15 = xv[0] * t14;
         let t16 = v[2] * v[3];
         let t18 = v[2] * v[4];
-        let t21 = t5.mul_add(T::from_i64(2), -xv[0]);
-        let t23 = t6.mul_add(T::from_i64(2), -xv[1]);
-        let t25 = t7.mul_add(T::from_i64(2), -xv[2]);
-        let t26 = xv[2].mul_add(t8, t15);
-        let t27 = xv[1].mul_add(t16, t26);
-        let t28 = xv[1].mul_add(t10, t13);
-        let t29 = xv[0].mul_add(t18, t28);
-        let t30 = t27 - t29;
-        let t32 = t30.mul_add(T::from_i64(2), xv[3]);
-            return Plane { c: gx::slots::from_values::<S, T, 4>([t21, t23, t25, t32]) };
+        let t20 = t5 * T::from_i64(2);
+        let t22 = v[1] * v[1];
+        let t24 = v[0].mul_add(v[0], t22);
+        let t25 = v[2].mul_add(v[2], t24);
+        let t27 = (-xv[0]).mul_add(t25, t20);
+        let t28 = t6 * T::from_i64(2);
+        let t30 = (-xv[1]).mul_add(t25, t28);
+        let t31 = t7 * T::from_i64(2);
+        let t33 = (-xv[2]).mul_add(t25, t31);
+        let t34 = xv[2].mul_add(t8, t15);
+        let t35 = xv[1].mul_add(t16, t34);
+        let t36 = xv[1].mul_add(t10, t13);
+        let t37 = xv[0].mul_add(t18, t36);
+        let t38 = t35 - t37;
+        let t40 = xv[3] * t25;
+        let t41 = t38.mul_add(T::from_i64(2), t40);
+            return Plane { c: gx::slots::from_values::<S, T, 4>([t27, t30, t33, t41]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -25453,22 +26045,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Line<(),
         let m9 = v[2] * v[3];
         let m10 = v[0] * v[4];
         let m12 = m0 - m1;
-        let m13 = m12 - m2;
-        let m14 = m3 * T::from_i64(2);
-        let m15 = m4 * T::from_i64(2);
-        let m16 = m2 + m12;
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m2 - m0;
-        let m20 = m19 - m1;
+        let m13 = m0 + m1;
+        let m14 = m12 - m2;
+        let m15 = m3 * T::from_i64(2);
+        let m16 = m4 * T::from_i64(2);
+        let m17 = m2 + m12;
+        let m18 = -m17;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m2 - m13;
         let m21 = (-v[2]).mul_add(v[4], m6);
         let m22 = m21 * T::from_i64(2);
         let m23 = (-v[0]).mul_add(v[5], m9);
         let m24 = m23 * T::from_i64(2);
         let m25 = (-v[1]).mul_add(v[3], m10);
         let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m13) + x[1].scale(m14) + x[2].scale(m15)).0, (x[0].scale(m14) + x[1].scale(m17) + x[2].scale(m18)).0, (x[0].scale(m15) + x[1].scale(m18) + x[2].scale(m20)).0, (x[0].scale(m22) + x[1].scale(m24) + x[2].scale(m26) + x[3]).0] }
+        Plane { c: [(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16)).0, (x[0].scale(m15) + x[1].scale(m18) + x[2].scale(m19)).0, (x[0].scale(m16) + x[1].scale(m19) + x[2].scale(m20)).0, (x[0].scale(m22) + x[1].scale(m24) + x[2].scale(m26) + x[3].scale(m27)).0] }
     }
 }
 
@@ -25481,10 +26074,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Plane<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Plane, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Line>, Plane, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Plane, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Plane, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -25495,40 +26101,41 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Line<(), T>> {
         let m9 = v[2] * v[3];
         let m10 = v[0] * v[4];
         let m12 = m0 - m1;
-        let m13 = m12 - m2;
-        let m14 = m3 * T::from_i64(2);
-        let m15 = m4 * T::from_i64(2);
-        let m16 = m2 + m12;
-        let m17 = -m16;
-        let m18 = m5 * T::from_i64(2);
-        let m19 = m2 - m0;
-        let m20 = m19 - m1;
+        let m13 = m0 + m1;
+        let m14 = m12 - m2;
+        let m15 = m3 * T::from_i64(2);
+        let m16 = m4 * T::from_i64(2);
+        let m17 = m2 + m12;
+        let m18 = -m17;
+        let m19 = m5 * T::from_i64(2);
+        let m20 = m2 - m13;
         let m21 = (-v[2]).mul_add(v[4], m6);
         let m22 = m21 * T::from_i64(2);
         let m23 = (-v[0]).mul_add(v[5], m9);
         let m24 = m23 * T::from_i64(2);
         let m25 = (-v[1]).mul_add(v[3], m10);
         let m26 = m25 * T::from_i64(2);
-        gx::Prepared::from_entries([m13, m14, m15, m17, m18, m20, m22, m24, m26])
+        let m27 = m2 + m13;
+        gx::Prepared::from_entries([m14, m15, m16, m18, m19, m20, m22, m24, m26, m27])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Line>, Plane, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Line>, Plane, T, 10> {
     type Output = Plane<S, T>;
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3]).0] }
+        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Plane, T, 9>> for Plane<(Plane,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Plane, T, 10>> for Plane<(Plane,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Plane, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Plane, T, 10>) -> Self {
         let m = p.m;
-        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::from_i64(1)]] }
+        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [m[6], m[7], m[8], m[9]]] }
     }
 }
 
@@ -25536,7 +26143,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Plane, T, 9>> for Plane<(Pla
 impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Line {
     type Y = Plane;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Plane, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Plane, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25546,16 +26153,16 @@ impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Plane, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Plane, T, 10> {
         gx::Prepare::<Plane>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Plane, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Plane, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Plane, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Plane, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Plane, T, 9>, x: Plane<(), T>) -> Plane<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Plane, T, 10>, x: Plane<(), T>) -> Plane<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25780,6 +26387,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Line<(), 
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -25805,55 +26425,65 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Line<(), 
         let t32 = v[2] * v[5];
         let t33 = xv[2] * t32;
         let t35 = xv[0] * t15;
-        let t38 = t19.mul_add(T::from_i64(2), -xv[0]);
-        let t40 = t20.mul_add(T::from_i64(2), -xv[1]);
-        let t42 = t21.mul_add(T::from_i64(2), -xv[2]);
-        let t43 = v[0].mul_add(t9, t25);
-        let t44 = xv[2].mul_add(t15, t43);
-        let t46 = t23 * T::from_i64(4);
-        let t47 = t44.mul_add(T::from_i64(2), t46);
-        let t48 = t47 - xv[3];
-        let t49 = v[1].mul_add(t9, t30);
-        let t50 = xv[2].mul_add(t18, t49);
-        let t52 = t28 * T::from_i64(4);
-        let t53 = t50.mul_add(T::from_i64(2), t52);
-        let t54 = t53 - xv[4];
-        let t55 = v[2].mul_add(t9, t35);
-        let t56 = xv[1].mul_add(t18, t55);
-        let t58 = t33 * T::from_i64(4);
-        let t59 = t56.mul_add(T::from_i64(2), t58);
-        let t60 = t59 - xv[5];
-            return Line { c: gx::slots::from_values::<S, T, 6>([t38, t40, t42, t48, t54, t60]) };
+        let t37 = t19 * T::from_i64(2);
+        let t39 = v[1] * v[1];
+        let t41 = v[0].mul_add(v[0], t39);
+        let t42 = v[2].mul_add(v[2], t41);
+        let t44 = (-xv[0]).mul_add(t42, t37);
+        let t45 = t20 * T::from_i64(2);
+        let t47 = (-xv[1]).mul_add(t42, t45);
+        let t48 = t21 * T::from_i64(2);
+        let t50 = (-xv[2]).mul_add(t42, t48);
+        let t51 = v[0].mul_add(t9, t25);
+        let t52 = xv[2].mul_add(t15, t51);
+        let t54 = t23 * T::from_i64(4);
+        let t55 = t52.mul_add(T::from_i64(2), t54);
+        let t57 = (-xv[3]).mul_add(t42, t55);
+        let t58 = v[1].mul_add(t9, t30);
+        let t59 = xv[2].mul_add(t18, t58);
+        let t61 = t28 * T::from_i64(4);
+        let t62 = t59.mul_add(T::from_i64(2), t61);
+        let t64 = (-xv[4]).mul_add(t42, t62);
+        let t65 = v[2].mul_add(t9, t35);
+        let t66 = xv[1].mul_add(t18, t65);
+        let t68 = t33 * T::from_i64(4);
+        let t69 = t66.mul_add(T::from_i64(2), t68);
+        let t71 = (-xv[5]).mul_add(t42, t69);
+            return Line { c: gx::slots::from_values::<S, T, 6>([t44, t47, t50, t57, t64, t71]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m9 = v[2] * v[2];
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m8 = v[1] * v[3];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m7);
-        let m16 = v[0].mul_add(v[5], m10);
-        let m17 = v[1].mul_add(v[5], m11);
-        let m19 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m2 * T::from_i64(2);
-        let m26 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = v[0].mul_add(v[4], m8);
+        let m21 = v[0].mul_add(v[5], m10);
+        let m22 = v[1].mul_add(v[5], m11);
+        let m23 = -m17;
+        let m24 = m3 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m18;
+        let m27 = m5 * T::from_i64(2);
+        let m28 = m12 * T::from_i64(4);
+        let m29 = m20 * T::from_i64(2);
+        let m30 = m21 * T::from_i64(2);
+        let m31 = m13 * T::from_i64(4);
+        let m32 = m22 * T::from_i64(2);
+        let m33 = m14 * T::from_i64(4);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m19) + x[1].scale(m20) + x[2].scale(m21)).0, (x[0].scale(m20) + x[1].scale(m23) + x[2].scale(m24)).0, (x[0].scale(m21) + x[1].scale(m24) + x[2].scale(m26)).0, (x[0].scale(m27) + x[1].scale(m28) + x[2].scale(m29) + x[3].scale(m19) + x[4].scale(m20) + x[5].scale(m21)).0, (x[0].scale(m28) + x[1].scale(m30) + x[2].scale(m31) + x[3].scale(m20) + x[4].scale(m23) + x[5].scale(m24)).0, (x[0].scale(m29) + x[1].scale(m31) + x[2].scale(m32) + x[3].scale(m21) + x[4].scale(m24) + x[5].scale(m26)).0] }
+        Line { c: [(x[0].scale(m23) + x[1].scale(m24) + x[2].scale(m25)).0, (x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m27)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m19)).0, (x[0].scale(m28) + x[1].scale(m29) + x[2].scale(m30) + x[3].scale(m23) + x[4].scale(m24) + x[5].scale(m25)).0, (x[0].scale(m29) + x[1].scale(m31) + x[2].scale(m32) + x[3].scale(m24) + x[4].scale(m26) + x[5].scale(m27)).0, (x[0].scale(m30) + x[1].scale(m32) + x[2].scale(m33) + x[3].scale(m25) + x[4].scale(m27) + x[5].scale(m19)).0] }
     }
 }
 
@@ -25870,34 +26500,51 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Line<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Line, T, 12> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m9 = v[2] * v[2];
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m8 = v[1] * v[3];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m7);
-        let m16 = v[0].mul_add(v[5], m10);
-        let m17 = v[1].mul_add(v[5], m11);
-        let m19 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m2 * T::from_i64(2);
-        let m26 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
-        gx::Prepared::from_entries([m19, m20, m21, m23, m24, m26, m27, m28, m29, m30, m31, m32])
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = v[0].mul_add(v[4], m8);
+        let m21 = v[0].mul_add(v[5], m10);
+        let m22 = v[1].mul_add(v[5], m11);
+        let m23 = -m17;
+        let m24 = m3 * T::from_i64(2);
+        let m25 = m4 * T::from_i64(2);
+        let m26 = -m18;
+        let m27 = m5 * T::from_i64(2);
+        let m28 = m12 * T::from_i64(4);
+        let m29 = m20 * T::from_i64(2);
+        let m30 = m21 * T::from_i64(2);
+        let m31 = m13 * T::from_i64(4);
+        let m32 = m22 * T::from_i64(2);
+        let m33 = m14 * T::from_i64(4);
+        gx::Prepared::from_entries([m23, m24, m25, m26, m27, m19, m28, m29, m30, m31, m32, m33])
     }
 }
 
@@ -26122,6 +26769,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -26134,14 +26794,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
         let t16 = v[2] * t4;
         let t17 = v[0].mul_add(t4, t9);
         let t18 = (-v[4]).mul_add(t7, t17);
-        let t20 = t18.mul_add(T::from_i64(2), -xv[0]);
-        let t21 = v[1].mul_add(t4, t13);
-        let t22 = (-v[5]).mul_add(t5, t21);
-        let t24 = t22.mul_add(T::from_i64(2), -xv[1]);
-        let t25 = v[4].mul_add(t5, t16);
-        let t26 = (-v[3]).mul_add(t6, t25);
-        let t28 = t26.mul_add(T::from_i64(2), -xv[2]);
-            return Point { c: gx::slots::from_values::<S, T, 4>([t20, t24, t28, xv[3]]) };
+        let t19 = t18 * T::from_i64(2);
+        let t21 = v[1] * v[1];
+        let t23 = v[0].mul_add(v[0], t21);
+        let t24 = v[2].mul_add(v[2], t23);
+        let t26 = (-xv[0]).mul_add(t24, t19);
+        let t27 = v[1].mul_add(t4, t13);
+        let t28 = (-v[5]).mul_add(t5, t27);
+        let t29 = t28 * T::from_i64(2);
+        let t31 = (-xv[1]).mul_add(t24, t29);
+        let t32 = v[4].mul_add(t5, t16);
+        let t33 = (-v[3]).mul_add(t6, t32);
+        let t34 = t33 * T::from_i64(2);
+        let t36 = (-xv[2]).mul_add(t24, t34);
+        let t37 = xv[3] * t24;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t26, t31, t36, t37]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -26153,22 +26820,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
         let m9 = v[2] * v[3];
         let m10 = v[0] * v[4];
         let m12 = m0 - m1;
-        let m13 = m12 - m2;
-        let m14 = m3 * T::from_i64(2);
-        let m15 = m4 * T::from_i64(2);
-        let m16 = (-v[2]).mul_add(v[4], m6);
-        let m17 = m16 * T::from_i64(2);
-        let m18 = m2 + m12;
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
-        let m21 = (-v[0]).mul_add(v[5], m9);
-        let m22 = m21 * T::from_i64(2);
-        let m23 = m2 - m0;
-        let m24 = m23 - m1;
+        let m13 = m0 + m1;
+        let m14 = m12 - m2;
+        let m15 = m3 * T::from_i64(2);
+        let m16 = m4 * T::from_i64(2);
+        let m17 = (-v[2]).mul_add(v[4], m6);
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m2 + m12;
+        let m20 = -m19;
+        let m21 = m5 * T::from_i64(2);
+        let m22 = (-v[0]).mul_add(v[5], m9);
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m2 - m13;
         let m25 = (-v[1]).mul_add(v[3], m10);
         let m26 = m25 * T::from_i64(2);
+        let m27 = m2 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m13) + x[1].scale(m14) + x[2].scale(m15) + x[3].scale(m17)).0, (x[0].scale(m14) + x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m22)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m24) + x[3].scale(m26)).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m14) + x[1].scale(m15) + x[2].scale(m16) + x[3].scale(m18)).0, (x[0].scale(m15) + x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[0].scale(m16) + x[1].scale(m21) + x[2].scale(m24) + x[3].scale(m26)).0, (x[3].scale(m27)).0] }
     }
 }
 
@@ -26181,10 +26849,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Point, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Line>, Point, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Point, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Point, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -26195,40 +26876,41 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Line<(), T>> {
         let m9 = v[2] * v[3];
         let m10 = v[0] * v[4];
         let m12 = m0 - m1;
-        let m13 = m12 - m2;
-        let m14 = m3 * T::from_i64(2);
-        let m15 = m4 * T::from_i64(2);
-        let m16 = (-v[2]).mul_add(v[4], m6);
-        let m17 = m16 * T::from_i64(2);
-        let m18 = m2 + m12;
-        let m19 = -m18;
-        let m20 = m5 * T::from_i64(2);
-        let m21 = (-v[0]).mul_add(v[5], m9);
-        let m22 = m21 * T::from_i64(2);
-        let m23 = m2 - m0;
-        let m24 = m23 - m1;
+        let m13 = m0 + m1;
+        let m14 = m12 - m2;
+        let m15 = m3 * T::from_i64(2);
+        let m16 = m4 * T::from_i64(2);
+        let m17 = (-v[2]).mul_add(v[4], m6);
+        let m18 = m17 * T::from_i64(2);
+        let m19 = m2 + m12;
+        let m20 = -m19;
+        let m21 = m5 * T::from_i64(2);
+        let m22 = (-v[0]).mul_add(v[5], m9);
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m2 - m13;
         let m25 = (-v[1]).mul_add(v[3], m10);
         let m26 = m25 * T::from_i64(2);
-        gx::Prepared::from_entries([m13, m14, m15, m17, m19, m20, m22, m24, m26])
+        let m27 = m2 + m13;
+        gx::Prepared::from_entries([m14, m15, m16, m18, m20, m21, m23, m24, m26, m27])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Line>, Point, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Line>, Point, T, 10> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[1]) + x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[0].scale(m[2]) + x[1].scale(m[5]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Point, T, 9>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Point, T, 10>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Point, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Point, T, 10>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2], m[3]], [m[1], m[4], m[5], m[6]], [m[2], m[5], m[7], m[8]], [T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -26236,7 +26918,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Point, T, 9>> for Point<(Poi
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Line {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Point, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Point, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26246,16 +26928,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Point, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Point, T, 10> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Point, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Point, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Point, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Point, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Point, T, 9>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Point, T, 10>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26360,11 +27042,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<L
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[0].mul_add(v[0], t1);
+        let t4 = v[2].mul_add(v[2], t3);
+        let t5 = xv[0] * t4;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t5]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m4)).0] }
     }
 }
 
@@ -26377,30 +27079,46 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[0].mul_add(v[0], m1);
+        let m4 = v[2].mul_add(v[2], m3);
+        gx::Prepared::from_entries([m4])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -26408,7 +27126,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>> for Pse
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Line {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26418,16 +27136,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26657,6 +27375,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -26679,49 +27410,60 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Line<(),
         let t25 = v[2] * v[5];
         let t26 = xv[3] * t25;
         let t28 = xv[2] * t13;
-        let t30 = t14.mul_add(T::from_i64(2), -xv[1]);
-        let t32 = t15.mul_add(T::from_i64(2), -xv[2]);
-        let t34 = t16.mul_add(T::from_i64(2), -xv[3]);
-        let t35 = xv[2].mul_add(t7, t20);
-        let t37 = t18 * T::from_i64(4);
-        let t38 = t35.mul_add(T::from_i64(2), t37);
-        let t39 = xv[1].mul_add(t7, t24);
-        let t41 = t22 * T::from_i64(4);
-        let t42 = t39.mul_add(T::from_i64(2), t41);
-        let t43 = xv[1].mul_add(t10, t28);
-        let t45 = t26 * T::from_i64(4);
+        let t29 = t14 * T::from_i64(2);
+        let t31 = v[1] * v[1];
+        let t33 = v[0].mul_add(v[0], t31);
+        let t34 = v[2].mul_add(v[2], t33);
+        let t36 = (-xv[1]).mul_add(t34, t29);
+        let t37 = t15 * T::from_i64(2);
+        let t39 = (-xv[2]).mul_add(t34, t37);
+        let t40 = t16 * T::from_i64(2);
+        let t42 = (-xv[3]).mul_add(t34, t40);
+        let t43 = xv[2].mul_add(t7, t20);
+        let t45 = t18 * T::from_i64(4);
         let t46 = t43.mul_add(T::from_i64(2), t45);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t30, t32, t34, t38, t42, t46, T::from_i64(0)]) };
+        let t47 = xv[1].mul_add(t7, t24);
+        let t49 = t22 * T::from_i64(4);
+        let t50 = t47.mul_add(T::from_i64(2), t49);
+        let t51 = xv[1].mul_add(t10, t28);
+        let t53 = t26 * T::from_i64(4);
+        let t54 = t51.mul_add(T::from_i64(2), t53);
+        let t55 = xv[0] * t34;
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t55, t36, t39, t42, t46, t50, t54, T::from_i64(0)]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m7 = v[2] * v[3];
-        let m8 = v[2] * v[4];
-        let m9 = v[0] * v[0];
-        let m10 = v[1] * v[1];
-        let m11 = v[2] * v[2];
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m10 = v[2] * v[3];
+        let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m5);
-        let m16 = v[0].mul_add(v[5], m7);
-        let m17 = v[1].mul_add(v[5], m8);
-        let m19 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m10.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m4 * T::from_i64(2);
-        let m26 = m11.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = v[0].mul_add(v[4], m8);
+        let m18 = v[0].mul_add(v[5], m10);
+        let m19 = v[1].mul_add(v[5], m11);
+        let m20 = m2 + m16;
+        let m21 = m15 - m2;
+        let m22 = m3 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = m2 + m15;
+        let m25 = -m24;
+        let m26 = m7 * T::from_i64(2);
+        let m27 = m2 - m16;
+        let m28 = m12 * T::from_i64(4);
+        let m29 = m17 * T::from_i64(2);
+        let m30 = m18 * T::from_i64(2);
+        let m31 = m13 * T::from_i64(4);
+        let m32 = m19 * T::from_i64(2);
+        let m33 = m14 * T::from_i64(4);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m20) + x[2].scale(m23) + x[3].scale(m24)).0, (x[1].scale(m21) + x[2].scale(m24) + x[3].scale(m26)).0, (x[1].scale(m27) + x[2].scale(m28) + x[3].scale(m29)).0, (x[1].scale(m28) + x[2].scale(m30) + x[3].scale(m31)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m32)).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m20)).0, (x[1].scale(m21) + x[2].scale(m22) + x[3].scale(m23)).0, (x[1].scale(m22) + x[2].scale(m25) + x[3].scale(m26)).0, (x[1].scale(m23) + x[2].scale(m26) + x[3].scale(m27)).0, (x[1].scale(m28) + x[2].scale(m29) + x[3].scale(m30)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m32)).0, (x[1].scale(m30) + x[2].scale(m32) + x[3].scale(m33)).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
@@ -26734,57 +27476,74 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Rotor, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Line>, Rotor, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 13> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m7 = v[2] * v[3];
-        let m8 = v[2] * v[4];
-        let m9 = v[0] * v[0];
-        let m10 = v[1] * v[1];
-        let m11 = v[2] * v[2];
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m10 = v[2] * v[3];
+        let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m5);
-        let m16 = v[0].mul_add(v[5], m7);
-        let m17 = v[1].mul_add(v[5], m8);
-        let m19 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m10.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m4 * T::from_i64(2);
-        let m26 = m11.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
-        gx::Prepared::from_entries([m19, m20, m21, m23, m24, m26, m27, m28, m29, m30, m31, m32])
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = v[0].mul_add(v[4], m8);
+        let m18 = v[0].mul_add(v[5], m10);
+        let m19 = v[1].mul_add(v[5], m11);
+        let m20 = m2 + m16;
+        let m21 = m15 - m2;
+        let m22 = m3 * T::from_i64(2);
+        let m23 = m4 * T::from_i64(2);
+        let m24 = m2 + m15;
+        let m25 = -m24;
+        let m26 = m7 * T::from_i64(2);
+        let m27 = m2 - m16;
+        let m28 = m12 * T::from_i64(4);
+        let m29 = m17 * T::from_i64(2);
+        let m30 = m18 * T::from_i64(2);
+        let m31 = m13 * T::from_i64(4);
+        let m32 = m19 * T::from_i64(2);
+        let m33 = m14 * T::from_i64(4);
+        gx::Prepared::from_entries([m20, m21, m22, m23, m25, m26, m27, m28, m29, m30, m31, m32, m33])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Line>, Rotor, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Line>, Rotor, T, 13> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[7]) + x[2].scale(m[9]) + x[3].scale(m[10])).0, (x[1].scale(m[8]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[8]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[1].scale(m[9]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 12>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 13>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 13>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[6], m[7], m[8]], [T::zero(), m[7], m[9], m[10]], [T::zero(), m[8], m[10], m[11]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), m[7], m[8], m[9]], [T::zero(), m[8], m[10], m[11]], [T::zero(), m[9], m[11], m[12]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
     }
 }
 
@@ -26792,7 +27551,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 12>> for Motor<(Ro
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Line {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Rotor, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Rotor, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26802,16 +27561,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 13> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Rotor, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Rotor, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 12>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 13>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26979,6 +27738,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Lin
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -26986,10 +27758,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Lin
         let t5 = v[0] * t4;
         let t6 = v[1] * t4;
         let t7 = v[2] * t4;
-        let t9 = t5.mul_add(T::from_i64(2), -xv[1]);
-        let t11 = t6.mul_add(T::from_i64(2), -xv[2]);
-        let t13 = t7.mul_add(T::from_i64(2), -xv[3]);
-            return Translator { c: gx::slots::from_values::<S, T, 4>([xv[0], t9, t11, t13]) };
+        let t8 = t5 * T::from_i64(2);
+        let t10 = v[1] * v[1];
+        let t12 = v[0].mul_add(v[0], t10);
+        let t13 = v[2].mul_add(v[2], t12);
+        let t15 = (-xv[1]).mul_add(t13, t8);
+        let t16 = t6 * T::from_i64(2);
+        let t18 = (-xv[2]).mul_add(t13, t16);
+        let t19 = t7 * T::from_i64(2);
+        let t21 = (-xv[3]).mul_add(t13, t19);
+        let t22 = xv[0] * t13;
+            return Translator { c: gx::slots::from_values::<S, T, 4>([t22, t15, t18, t21]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -26998,16 +27777,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Lin
         let m4 = v[0] * v[2];
         let m5 = v[1] * v[2];
         let m6 = m0 - m1;
-        let m7 = m6 - m2;
-        let m8 = m3 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = m2 + m6;
-        let m11 = -m10;
-        let m12 = m5 * T::from_i64(2);
-        let m13 = m2 - m0;
-        let m14 = m13 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m7) + x[2].scale(m8) + x[3].scale(m9)).0, (x[1].scale(m8) + x[2].scale(m11) + x[3].scale(m12)).0, (x[1].scale(m9) + x[2].scale(m12) + x[3].scale(m14)).0] }
+        Translator { c: [(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0] }
     }
 }
 
@@ -27020,10 +27800,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Translator, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Line>, Translator, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Translator, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Translator, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -27031,34 +27824,35 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Line<(), T>> {
         let m4 = v[0] * v[2];
         let m5 = v[1] * v[2];
         let m6 = m0 - m1;
-        let m7 = m6 - m2;
-        let m8 = m3 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = m2 + m6;
-        let m11 = -m10;
-        let m12 = m5 * T::from_i64(2);
-        let m13 = m2 - m0;
-        let m14 = m13 - m1;
-        gx::Prepared::from_entries([m7, m8, m9, m11, m12, m14])
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        gx::Prepared::from_entries([m8, m9, m10, m11, m13, m14, m15])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Line>, Translator, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Line>, Translator, T, 7> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 6>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 7>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Translator, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Translator, T, 7>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]]] }
+        Translator { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]]] }
     }
 }
 
@@ -27066,7 +27860,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 6>> for Trans
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Line {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Translator, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Translator, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27076,16 +27870,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Translator, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Translator, T, 7> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Translator, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Translator, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 6>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 7>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -27329,6 +28123,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -27354,55 +28161,68 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Line<(),
         let t32 = v[2] * v[5];
         let t33 = xv[3] * t32;
         let t35 = xv[1] * t15;
-        let t38 = t19.mul_add(T::from_i64(2), -xv[1]);
-        let t40 = t20.mul_add(T::from_i64(2), -xv[2]);
-        let t42 = t21.mul_add(T::from_i64(2), -xv[3]);
-        let t43 = v[0].mul_add(t9, t25);
-        let t44 = xv[3].mul_add(t15, t43);
-        let t46 = t23 * T::from_i64(4);
-        let t47 = t44.mul_add(T::from_i64(2), t46);
-        let t48 = t47 - xv[4];
-        let t49 = v[1].mul_add(t9, t30);
-        let t50 = xv[3].mul_add(t18, t49);
-        let t52 = t28 * T::from_i64(4);
-        let t53 = t50.mul_add(T::from_i64(2), t52);
-        let t54 = t53 - xv[5];
-        let t55 = v[2].mul_add(t9, t35);
-        let t56 = xv[2].mul_add(t18, t55);
-        let t58 = t33 * T::from_i64(4);
-        let t59 = t56.mul_add(T::from_i64(2), t58);
-        let t60 = t59 - xv[6];
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t38, t40, t42, t48, t54, t60, xv[7]]) };
+        let t37 = t19 * T::from_i64(2);
+        let t39 = v[1] * v[1];
+        let t41 = v[0].mul_add(v[0], t39);
+        let t42 = v[2].mul_add(v[2], t41);
+        let t44 = (-xv[1]).mul_add(t42, t37);
+        let t45 = t20 * T::from_i64(2);
+        let t47 = (-xv[2]).mul_add(t42, t45);
+        let t48 = t21 * T::from_i64(2);
+        let t50 = (-xv[3]).mul_add(t42, t48);
+        let t51 = v[0].mul_add(t9, t25);
+        let t52 = xv[3].mul_add(t15, t51);
+        let t54 = t23 * T::from_i64(4);
+        let t55 = t52.mul_add(T::from_i64(2), t54);
+        let t57 = (-xv[4]).mul_add(t42, t55);
+        let t58 = v[1].mul_add(t9, t30);
+        let t59 = xv[3].mul_add(t18, t58);
+        let t61 = t28 * T::from_i64(4);
+        let t62 = t59.mul_add(T::from_i64(2), t61);
+        let t64 = (-xv[5]).mul_add(t42, t62);
+        let t65 = v[2].mul_add(t9, t35);
+        let t66 = xv[2].mul_add(t18, t65);
+        let t68 = t33 * T::from_i64(4);
+        let t69 = t66.mul_add(T::from_i64(2), t68);
+        let t71 = (-xv[6]).mul_add(t42, t69);
+        let t72 = xv[0] * t42;
+        let t73 = xv[7] * t42;
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t72, t44, t47, t50, t57, t64, t71, t73]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m9 = v[2] * v[2];
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m8 = v[1] * v[3];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m7);
-        let m16 = v[0].mul_add(v[5], m10);
-        let m17 = v[1].mul_add(v[5], m11);
-        let m19 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m2 * T::from_i64(2);
-        let m26 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = m2 + m16;
+        let m21 = v[0].mul_add(v[4], m8);
+        let m22 = v[0].mul_add(v[5], m10);
+        let m23 = v[1].mul_add(v[5], m11);
+        let m24 = -m17;
+        let m25 = m3 * T::from_i64(2);
+        let m26 = m4 * T::from_i64(2);
+        let m27 = -m18;
+        let m28 = m5 * T::from_i64(2);
+        let m29 = m12 * T::from_i64(4);
+        let m30 = m21 * T::from_i64(2);
+        let m31 = m22 * T::from_i64(2);
+        let m32 = m13 * T::from_i64(4);
+        let m33 = m23 * T::from_i64(2);
+        let m34 = m14 * T::from_i64(4);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m19) + x[2].scale(m20) + x[3].scale(m21)).0, (x[1].scale(m20) + x[2].scale(m23) + x[3].scale(m24)).0, (x[1].scale(m21) + x[2].scale(m24) + x[3].scale(m26)).0, (x[1].scale(m27) + x[2].scale(m28) + x[3].scale(m29) + x[4].scale(m19) + x[5].scale(m20) + x[6].scale(m21)).0, (x[1].scale(m28) + x[2].scale(m30) + x[3].scale(m31) + x[4].scale(m20) + x[5].scale(m23) + x[6].scale(m24)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m32) + x[4].scale(m21) + x[5].scale(m24) + x[6].scale(m26)).0, (x[0].scale(T::from_i64(0)) + x[7]).0] }
+        Motor { c: [(x[0].scale(m20)).0, (x[1].scale(m24) + x[2].scale(m25) + x[3].scale(m26)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0, (x[1].scale(m26) + x[2].scale(m28) + x[3].scale(m19)).0, (x[1].scale(m29) + x[2].scale(m30) + x[3].scale(m31) + x[4].scale(m24) + x[5].scale(m25) + x[6].scale(m26)).0, (x[1].scale(m30) + x[2].scale(m32) + x[3].scale(m33) + x[4].scale(m25) + x[5].scale(m27) + x[6].scale(m28)).0, (x[1].scale(m31) + x[2].scale(m33) + x[3].scale(m34) + x[4].scale(m26) + x[5].scale(m28) + x[6].scale(m19)).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m20)).0] }
     }
 }
 
@@ -27415,57 +28235,75 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Motor, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Line>, Motor, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Motor, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Motor, T, 13> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m9 = v[2] * v[2];
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m8 = v[1] * v[3];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = v[0].mul_add(v[4], m7);
-        let m16 = v[0].mul_add(v[5], m10);
-        let m17 = v[1].mul_add(v[5], m11);
-        let m19 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m20 = m0 * T::from_i64(2);
-        let m21 = m1 * T::from_i64(2);
-        let m23 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m24 = m2 * T::from_i64(2);
-        let m26 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m12 * T::from_i64(4);
-        let m28 = m15 * T::from_i64(2);
-        let m29 = m16 * T::from_i64(2);
-        let m30 = m13 * T::from_i64(4);
-        let m31 = m17 * T::from_i64(2);
-        let m32 = m14 * T::from_i64(4);
-        gx::Prepared::from_entries([m19, m20, m21, m23, m24, m26, m27, m28, m29, m30, m31, m32])
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = m2 + m16;
+        let m21 = v[0].mul_add(v[4], m8);
+        let m22 = v[0].mul_add(v[5], m10);
+        let m23 = v[1].mul_add(v[5], m11);
+        let m24 = -m17;
+        let m25 = m3 * T::from_i64(2);
+        let m26 = m4 * T::from_i64(2);
+        let m27 = -m18;
+        let m28 = m5 * T::from_i64(2);
+        let m29 = m12 * T::from_i64(4);
+        let m30 = m21 * T::from_i64(2);
+        let m31 = m22 * T::from_i64(2);
+        let m32 = m13 * T::from_i64(4);
+        let m33 = m23 * T::from_i64(2);
+        let m34 = m14 * T::from_i64(4);
+        gx::Prepared::from_entries([m20, m24, m25, m26, m27, m28, m19, m29, m30, m31, m32, m33, m34])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Line>, Motor, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Line>, Motor, T, 13> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[1]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[1].scale(m[7]) + x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[1]) + x[5].scale(m[3]) + x[6].scale(m[4])).0, (x[1].scale(m[8]) + x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[0].scale(T::from_i64(0)) + x[7]).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[1].scale(m[8]) + x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[1].scale(m[9]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[3]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 12>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 13>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Motor, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Motor, T, 13>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], m[0], m[1], m[2], T::zero()], [T::zero(), m[7], m[9], m[10], m[1], m[3], m[4], T::zero()], [T::zero(), m[8], m[10], m[11], m[2], m[4], m[5], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], m[1], m[2], m[3], T::zero()], [T::zero(), m[8], m[10], m[11], m[2], m[4], m[5], T::zero()], [T::zero(), m[9], m[11], m[12], m[3], m[5], m[6], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -27473,7 +28311,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 12>> for Motor<(Mo
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Line {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Motor, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Motor, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27483,16 +28321,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Motor, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Motor, T, 13> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Motor, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Motor, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 12>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 13>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -27692,6 +28530,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -27712,19 +28563,30 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
         let t26 = xv[7] * t18;
         let t27 = v[1] * t9;
         let t30 = xv[7] * t12;
-        let t32 = t19.mul_add(T::from_i64(2), -xv[0]);
-        let t34 = t20.mul_add(T::from_i64(2), -xv[1]);
-        let t36 = t21.mul_add(T::from_i64(2), -xv[2]);
-        let t37 = xv[0].mul_add(t18, t24);
-        let t38 = (-xv[1]).mul_add(t15, t37);
-        let t40 = t38.mul_add(T::from_i64(2), xv[3]);
-        let t41 = v[0].mul_add(t9, t26);
-        let t43 = t41.mul_add(T::from_i64(2), -xv[4]);
-        let t44 = (-xv[7]).mul_add(t15, t27);
-        let t46 = t44.mul_add(T::from_i64(2), -xv[5]);
-        let t47 = v[2].mul_add(t9, t30);
-        let t49 = t47.mul_add(T::from_i64(2), -xv[6]);
-            return Flector { c: gx::slots::from_values::<S, T, 8>([t32, t34, t36, t40, t43, t46, t49, xv[7]]) };
+        let t31 = t19 * T::from_i64(2);
+        let t33 = v[1] * v[1];
+        let t35 = v[0].mul_add(v[0], t33);
+        let t36 = v[2].mul_add(v[2], t35);
+        let t38 = (-xv[0]).mul_add(t36, t31);
+        let t39 = t20 * T::from_i64(2);
+        let t41 = (-xv[1]).mul_add(t36, t39);
+        let t42 = t21 * T::from_i64(2);
+        let t44 = (-xv[2]).mul_add(t36, t42);
+        let t45 = xv[0].mul_add(t18, t24);
+        let t46 = (-xv[1]).mul_add(t15, t45);
+        let t48 = xv[3] * t36;
+        let t49 = t46.mul_add(T::from_i64(2), t48);
+        let t50 = v[0].mul_add(t9, t26);
+        let t51 = t50 * T::from_i64(2);
+        let t53 = (-xv[4]).mul_add(t36, t51);
+        let t54 = (-xv[7]).mul_add(t15, t27);
+        let t55 = t54 * T::from_i64(2);
+        let t57 = (-xv[5]).mul_add(t36, t55);
+        let t58 = v[2].mul_add(t9, t30);
+        let t59 = t58 * T::from_i64(2);
+        let t61 = (-xv[6]).mul_add(t36, t59);
+        let t62 = xv[7] * t36;
+            return Flector { c: gx::slots::from_values::<S, T, 8>([t38, t41, t44, t49, t53, t57, t61, t62]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -27752,8 +28614,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
         let m26 = m18 * T::from_i64(2);
         let m27 = -m26;
         let m28 = m17 * T::from_i64(2);
+        let m29 = m2 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22)).0, (x[0].scale(m21) + x[1].scale(m23) + x[2].scale(m24)).0, (x[0].scale(m22) + x[1].scale(m24) + x[2].scale(m16)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28) + x[3]).0, (x[4].scale(m20) + x[5].scale(m21) + x[6].scale(m22) + x[7].scale(m25)).0, (x[4].scale(m21) + x[5].scale(m23) + x[6].scale(m24) + x[7].scale(m27)).0, (x[4].scale(m22) + x[5].scale(m24) + x[6].scale(m16) + x[7].scale(m28)).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m22)).0, (x[0].scale(m21) + x[1].scale(m23) + x[2].scale(m24)).0, (x[0].scale(m22) + x[1].scale(m24) + x[2].scale(m16)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28) + x[3].scale(m29)).0, (x[4].scale(m20) + x[5].scale(m21) + x[6].scale(m22) + x[7].scale(m25)).0, (x[4].scale(m21) + x[5].scale(m23) + x[6].scale(m24) + x[7].scale(m27)).0, (x[4].scale(m22) + x[5].scale(m24) + x[6].scale(m16) + x[7].scale(m28)).0, (x[7].scale(m29)).0] }
     }
 }
 
@@ -27766,10 +28629,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Lin
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Flector, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Line>, Flector, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Flector, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Flector, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -27796,26 +28672,27 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Line<(), T>> {
         let m26 = m18 * T::from_i64(2);
         let m27 = -m26;
         let m28 = m17 * T::from_i64(2);
-        gx::Prepared::from_entries([m20, m21, m22, m23, m24, m16, m25, m27, m28])
+        let m29 = m2 + m13;
+        gx::Prepared::from_entries([m20, m21, m22, m23, m24, m16, m25, m27, m28, m29])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Line>, Flector, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Line>, Flector, T, 10> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3]).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[6])).0, (x[4].scale(m[1]) + x[5].scale(m[3]) + x[6].scale(m[4]) + x[7].scale(m[7])).0, (x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[8])).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[1]) + x[1].scale(m[3]) + x[2].scale(m[4])).0, (x[0].scale(m[2]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[6])).0, (x[4].scale(m[1]) + x[5].scale(m[3]) + x[6].scale(m[4]) + x[7].scale(m[7])).0, (x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[8])).0, (x[7].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 9>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 10>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Flector, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Flector, T, 10>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[3], m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], m[5], m[8]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[1], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[2], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], m[6]], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[3], m[4], m[7]], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], m[5], m[8]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -27823,7 +28700,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 9>> for Flector<
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Line {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Flector, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Flector, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27833,16 +28710,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Flector, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Flector, T, 10> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Flector, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Flector, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 9>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 10>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -28145,6 +29022,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Li
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
         let t1 = v[1] * xv[3];
         let t3 = v[0].mul_add(xv[2], t1);
@@ -28191,75 +29081,96 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Li
         let t61 = xv[14] * t30;
         let t62 = xv[2].mul_add(t30, t34);
         let t63 = (-xv[3]).mul_add(t26, t62);
-        let t65 = t63.mul_add(T::from_i64(2), xv[1]);
-        let t67 = t35.mul_add(T::from_i64(2), -xv[2]);
-        let t69 = t36.mul_add(T::from_i64(2), -xv[3]);
-        let t71 = t37.mul_add(T::from_i64(2), -xv[4]);
-        let t72 = v[0].mul_add(t9, t41);
-        let t73 = xv[9].mul_add(t23, t72);
-        let t75 = t39 * T::from_i64(4);
-        let t76 = t73.mul_add(T::from_i64(2), t75);
-        let t77 = t76 - xv[5];
-        let t78 = v[1].mul_add(t9, t46);
-        let t79 = xv[10].mul_add(t23, t78);
-        let t81 = t44 * T::from_i64(4);
-        let t82 = t79.mul_add(T::from_i64(2), t81);
-        let t83 = t82 - xv[6];
-        let t84 = v[2].mul_add(t9, t51);
-        let t85 = xv[10].mul_add(t27, t84);
-        let t87 = t49 * T::from_i64(4);
-        let t88 = t85.mul_add(T::from_i64(2), t87);
-        let t89 = t88 - xv[7];
-        let t91 = t53.mul_add(T::from_i64(2), -xv[8]);
-        let t93 = t54.mul_add(T::from_i64(2), -xv[9]);
-        let t95 = t55.mul_add(T::from_i64(2), -xv[10]);
-        let t96 = v[2].mul_add(t19, t57);
-        let t98 = t96.mul_add(T::from_i64(2), -xv[11]);
-        let t99 = (-xv[14]).mul_add(t26, t58);
-        let t101 = t99.mul_add(T::from_i64(2), -xv[12]);
-        let t102 = v[0].mul_add(t19, t61);
-        let t104 = t102.mul_add(T::from_i64(2), -xv[13]);
-            return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], t65, t67, t69, t71, t77, t83, t89, t91, t93, t95, t98, t101, t104, xv[14], xv[15]]) };
+        let t66 = v[1] * v[1];
+        let t68 = v[0].mul_add(v[0], t66);
+        let t69 = v[2].mul_add(v[2], t68);
+        let t70 = xv[1] * t69;
+        let t71 = t63.mul_add(T::from_i64(2), t70);
+        let t72 = t35 * T::from_i64(2);
+        let t74 = (-xv[2]).mul_add(t69, t72);
+        let t75 = t36 * T::from_i64(2);
+        let t77 = (-xv[3]).mul_add(t69, t75);
+        let t78 = t37 * T::from_i64(2);
+        let t80 = (-xv[4]).mul_add(t69, t78);
+        let t81 = v[0].mul_add(t9, t41);
+        let t82 = xv[9].mul_add(t23, t81);
+        let t84 = t39 * T::from_i64(4);
+        let t85 = t82.mul_add(T::from_i64(2), t84);
+        let t87 = (-xv[5]).mul_add(t69, t85);
+        let t88 = v[1].mul_add(t9, t46);
+        let t89 = xv[10].mul_add(t23, t88);
+        let t91 = t44 * T::from_i64(4);
+        let t92 = t89.mul_add(T::from_i64(2), t91);
+        let t94 = (-xv[6]).mul_add(t69, t92);
+        let t95 = v[2].mul_add(t9, t51);
+        let t96 = xv[10].mul_add(t27, t95);
+        let t98 = t49 * T::from_i64(4);
+        let t99 = t96.mul_add(T::from_i64(2), t98);
+        let t101 = (-xv[7]).mul_add(t69, t99);
+        let t102 = t53 * T::from_i64(2);
+        let t104 = (-xv[8]).mul_add(t69, t102);
+        let t105 = t54 * T::from_i64(2);
+        let t107 = (-xv[9]).mul_add(t69, t105);
+        let t108 = t55 * T::from_i64(2);
+        let t110 = (-xv[10]).mul_add(t69, t108);
+        let t111 = v[2].mul_add(t19, t57);
+        let t112 = t111 * T::from_i64(2);
+        let t114 = (-xv[11]).mul_add(t69, t112);
+        let t115 = (-xv[14]).mul_add(t26, t58);
+        let t116 = t115 * T::from_i64(2);
+        let t118 = (-xv[12]).mul_add(t69, t116);
+        let t119 = v[0].mul_add(t19, t61);
+        let t120 = t119 * T::from_i64(2);
+        let t122 = (-xv[13]).mul_add(t69, t120);
+        let t123 = xv[0] * t69;
+        let t124 = xv[14] * t69;
+        let t125 = xv[15] * t69;
+            return Multivector { c: gx::slots::from_values::<S, T, 16>([t123, t71, t74, t77, t80, t87, t94, t101, t104, t107, t110, t114, t118, t122, t124, t125]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m4 = v[0] * v[4];
-        let m5 = v[0] * v[5];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m8 = v[1] * v[5];
-        let m9 = v[2] * v[2];
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = v[0] * v[4];
+        let m7 = v[0] * v[5];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[5];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = m4 - m7;
-        let m16 = m4 + m7;
-        let m17 = m5 - m10;
-        let m18 = m5 + m10;
-        let m19 = m8 - m11;
-        let m20 = m8 + m11;
-        let m21 = m19 * T::from_i64(2);
-        let m22 = m17 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m15 * T::from_i64(2);
-        let m26 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m0 * T::from_i64(2);
-        let m28 = m1 * T::from_i64(2);
-        let m30 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m31 = m2 * T::from_i64(2);
-        let m33 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m34 = m18 * T::from_i64(2);
-        let m35 = m16 * T::from_i64(2);
-        let m36 = m12 * T::from_i64(4);
-        let m37 = m20 * T::from_i64(2);
-        let m38 = m13 * T::from_i64(4);
-        let m39 = m14 * T::from_i64(4);
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = m2 + m16;
+        let m21 = m6 - m8;
+        let m22 = m6 + m8;
+        let m23 = m7 - m10;
+        let m24 = m7 + m10;
+        let m25 = m9 - m11;
+        let m26 = m9 + m11;
+        let m27 = m25 * T::from_i64(2);
+        let m28 = m23 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m21 * T::from_i64(2);
+        let m31 = -m17;
+        let m32 = m3 * T::from_i64(2);
+        let m33 = m4 * T::from_i64(2);
+        let m34 = -m18;
+        let m35 = m5 * T::from_i64(2);
+        let m36 = m24 * T::from_i64(2);
+        let m37 = m22 * T::from_i64(2);
+        let m38 = m12 * T::from_i64(4);
+        let m39 = m26 * T::from_i64(2);
+        let m40 = m13 * T::from_i64(4);
+        let m41 = m14 * T::from_i64(4);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m21) + x[3].scale(m23) + x[4].scale(m24)).0, (x[2].scale(m26) + x[3].scale(m27) + x[4].scale(m28)).0, (x[2].scale(m27) + x[3].scale(m30) + x[4].scale(m31)).0, (x[2].scale(m28) + x[3].scale(m31) + x[4].scale(m33)).0, (x[5].scale(m26) + x[6].scale(m27) + x[7].scale(m28) + x[8].scale(m34) + x[9].scale(m35) + x[10].scale(m36)).0, (x[5].scale(m27) + x[6].scale(m30) + x[7].scale(m31) + x[8].scale(m37) + x[9].scale(m38) + x[10].scale(m35)).0, (x[5].scale(m28) + x[6].scale(m31) + x[7].scale(m33) + x[8].scale(m39) + x[9].scale(m37) + x[10].scale(m34)).0, (x[8].scale(m33) + x[9].scale(m31) + x[10].scale(m28)).0, (x[8].scale(m31) + x[9].scale(m30) + x[10].scale(m27)).0, (x[8].scale(m28) + x[9].scale(m27) + x[10].scale(m26)).0, (x[11].scale(m33) + x[12].scale(m31) + x[13].scale(m28) + x[14].scale(m24)).0, (x[11].scale(m31) + x[12].scale(m30) + x[13].scale(m27) + x[14].scale(m23)).0, (x[11].scale(m28) + x[12].scale(m27) + x[13].scale(m26) + x[14].scale(m21)).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15]).0] }
+        Multivector { c: [(x[0].scale(m20)).0, (x[1].scale(m20) + x[2].scale(m27) + x[3].scale(m29) + x[4].scale(m30)).0, (x[2].scale(m31) + x[3].scale(m32) + x[4].scale(m33)).0, (x[2].scale(m32) + x[3].scale(m34) + x[4].scale(m35)).0, (x[2].scale(m33) + x[3].scale(m35) + x[4].scale(m19)).0, (x[5].scale(m31) + x[6].scale(m32) + x[7].scale(m33) + x[8].scale(m36) + x[9].scale(m37) + x[10].scale(m38)).0, (x[5].scale(m32) + x[6].scale(m34) + x[7].scale(m35) + x[8].scale(m39) + x[9].scale(m40) + x[10].scale(m37)).0, (x[5].scale(m33) + x[6].scale(m35) + x[7].scale(m19) + x[8].scale(m41) + x[9].scale(m39) + x[10].scale(m36)).0, (x[8].scale(m19) + x[9].scale(m35) + x[10].scale(m33)).0, (x[8].scale(m35) + x[9].scale(m34) + x[10].scale(m32)).0, (x[8].scale(m33) + x[9].scale(m32) + x[10].scale(m31)).0, (x[11].scale(m19) + x[12].scale(m35) + x[13].scale(m33) + x[14].scale(m30)).0, (x[11].scale(m35) + x[12].scale(m34) + x[13].scale(m32) + x[14].scale(m29)).0, (x[11].scale(m33) + x[12].scale(m32) + x[13].scale(m31) + x[14].scale(m27)).0, (x[14].scale(m20)).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m20)).0] }
     }
 }
 
@@ -28272,67 +29183,85 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Multivector, T, 15>;
+    type Output = gx::Prepared<gx::Unit<Line>, Multivector, T, 16>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 15> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 16> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[1] * v[2];
-        let m3 = v[0] * v[0];
-        let m4 = v[0] * v[4];
-        let m5 = v[0] * v[5];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[3];
-        let m8 = v[1] * v[5];
-        let m9 = v[2] * v[2];
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[1] * v[4];
+        let u6 = v[0].mul_add(v[0], u1);
+        let u7 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u8 = u6 + u7;
+        let u9 = v[0].mul_add(v[3], u4);
+        let u10 = v[2].mul_add(v[5], u9);
+        let u11 = u10 * T::from_i64(2);
+        let u12 = -u11;
+            T::check_unit(&[u8, u12]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = v[0] * v[4];
+        let m7 = v[0] * v[5];
+        let m8 = v[1] * v[3];
+        let m9 = v[1] * v[5];
         let m10 = v[2] * v[3];
         let m11 = v[2] * v[4];
         let m12 = v[0] * v[3];
         let m13 = v[1] * v[4];
         let m14 = v[2] * v[5];
-        let m15 = m4 - m7;
-        let m16 = m4 + m7;
-        let m17 = m5 - m10;
-        let m18 = m5 + m10;
-        let m19 = m8 - m11;
-        let m20 = m8 + m11;
-        let m21 = m19 * T::from_i64(2);
-        let m22 = m17 * T::from_i64(2);
-        let m23 = -m22;
-        let m24 = m15 * T::from_i64(2);
-        let m26 = m3.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m27 = m0 * T::from_i64(2);
-        let m28 = m1 * T::from_i64(2);
-        let m30 = m6.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m31 = m2 * T::from_i64(2);
-        let m33 = m9.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m34 = m18 * T::from_i64(2);
-        let m35 = m16 * T::from_i64(2);
-        let m36 = m12 * T::from_i64(4);
-        let m37 = m20 * T::from_i64(2);
-        let m38 = m13 * T::from_i64(4);
-        let m39 = m14 * T::from_i64(4);
-        gx::Prepared::from_entries([m21, m23, m24, m26, m27, m28, m30, m31, m33, m34, m35, m36, m37, m38, m39])
+        let m15 = m0 - m1;
+        let m16 = m0 + m1;
+        let m17 = m2 - m15;
+        let m18 = m2 + m15;
+        let m19 = m2 - m16;
+        let m20 = m2 + m16;
+        let m21 = m6 - m8;
+        let m22 = m6 + m8;
+        let m23 = m7 - m10;
+        let m24 = m7 + m10;
+        let m25 = m9 - m11;
+        let m26 = m9 + m11;
+        let m27 = m25 * T::from_i64(2);
+        let m28 = m23 * T::from_i64(2);
+        let m29 = -m28;
+        let m30 = m21 * T::from_i64(2);
+        let m31 = -m17;
+        let m32 = m3 * T::from_i64(2);
+        let m33 = m4 * T::from_i64(2);
+        let m34 = -m18;
+        let m35 = m5 * T::from_i64(2);
+        let m36 = m24 * T::from_i64(2);
+        let m37 = m22 * T::from_i64(2);
+        let m38 = m12 * T::from_i64(4);
+        let m39 = m26 * T::from_i64(2);
+        let m40 = m13 * T::from_i64(4);
+        let m41 = m14 * T::from_i64(4);
+        gx::Prepared::from_entries([m20, m27, m29, m30, m31, m32, m33, m34, m35, m19, m36, m37, m38, m39, m40, m41])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Line>, Multivector, T, 15> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Line>, Multivector, T, 16> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m[0]) + x[3].scale(m[1]) + x[4].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5])).0, (x[2].scale(m[4]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[5]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[5].scale(m[3]) + x[6].scale(m[4]) + x[7].scale(m[5]) + x[8].scale(m[9]) + x[9].scale(m[10]) + x[10].scale(m[11])).0, (x[5].scale(m[4]) + x[6].scale(m[6]) + x[7].scale(m[7]) + x[8].scale(m[12]) + x[9].scale(m[13]) + x[10].scale(m[10])).0, (x[5].scale(m[5]) + x[6].scale(m[7]) + x[7].scale(m[8]) + x[8].scale(m[14]) + x[9].scale(m[12]) + x[10].scale(m[9])).0, (x[8].scale(m[8]) + x[9].scale(m[7]) + x[10].scale(m[5])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[4])).0, (x[8].scale(m[5]) + x[9].scale(m[4]) + x[10].scale(m[3])).0, (x[11].scale(m[8]) + x[12].scale(m[7]) + x[13].scale(m[5]) + x[14].scale(m[2])).0, (x[11].scale(m[7]) + x[12].scale(m[6]) + x[13].scale(m[4]) + x[14].scale(m[1])).0, (x[11].scale(m[5]) + x[12].scale(m[4]) + x[13].scale(m[3]) + x[14].scale(m[0])).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[6])).0, (x[2].scale(m[5]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[2].scale(m[6]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[6]) + x[8].scale(m[10]) + x[9].scale(m[11]) + x[10].scale(m[12])).0, (x[5].scale(m[5]) + x[6].scale(m[7]) + x[7].scale(m[8]) + x[8].scale(m[13]) + x[9].scale(m[14]) + x[10].scale(m[11])).0, (x[5].scale(m[6]) + x[6].scale(m[8]) + x[7].scale(m[9]) + x[8].scale(m[15]) + x[9].scale(m[13]) + x[10].scale(m[10])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[6])).0, (x[8].scale(m[8]) + x[9].scale(m[7]) + x[10].scale(m[5])).0, (x[8].scale(m[6]) + x[9].scale(m[5]) + x[10].scale(m[4])).0, (x[11].scale(m[9]) + x[12].scale(m[8]) + x[13].scale(m[6]) + x[14].scale(m[3])).0, (x[11].scale(m[8]) + x[12].scale(m[7]) + x[13].scale(m[5]) + x[14].scale(m[2])).0, (x[11].scale(m[6]) + x[12].scale(m[5]) + x[13].scale(m[4]) + x[14].scale(m[1])).0, (x[14].scale(m[0])).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 15>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 16>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 15>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 16>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[6], m[7], m[12], m[13], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[7], m[8], m[14], m[12], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[5], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[4], m[1], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[7], m[8], m[13], m[14], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[8], m[9], m[15], m[13], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[6], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[5], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], m[1], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -28340,7 +29269,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 15>> for Mul
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Line {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Multivector, T, 15>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Multivector, T, 16>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -28350,16 +29279,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 15> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 16> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 15>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Multivector, W, 15> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 16>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Multivector, W, 16> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 15>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 16>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -28458,6 +29387,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Point<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = xv[0] * t0;
@@ -28482,6 +29416,11 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Scalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         gx::Prepared::from_entries([m0])
     }
@@ -28659,6 +29598,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = xv[0] * t0;
@@ -28704,6 +29648,11 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Plane, T, 5> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -28897,6 +29846,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Point<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[0] * v[3];
@@ -28948,6 +29902,11 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Line, T, 8> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -29128,6 +30087,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[3] * xv[3];
@@ -29169,6 +30133,11 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Point, T, 5> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -29325,6 +30294,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<P
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = xv[0] * t0;
@@ -29351,6 +30325,11 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = -m0;
         gx::Prepared::from_entries([m1])
@@ -29531,6 +30510,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[0] * v[3];
@@ -29579,6 +30563,11 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Rotor, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -29742,6 +30731,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Poi
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = xv[0] * t0;
@@ -29773,6 +30767,11 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Translator, T, 2> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = -m0;
         gx::Prepared::from_entries([m0, m1])
@@ -29960,6 +30959,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[0] * v[3];
@@ -30014,6 +31018,11 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Motor, T, 8> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -30211,6 +31220,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Point<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[0] * v[3];
@@ -30266,6 +31280,11 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Flector, T, 8> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -30481,6 +31500,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Po
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
         let t0 = v[3] * v[3];
         let t1 = v[0] * v[3];
@@ -30554,6 +31578,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Multivector, T, 8> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[3].mul_add(v[3], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[3] * v[3];
         let m1 = v[0] * v[3];
         let m2 = v[1] * v[3];
@@ -30722,11 +31751,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Rotor<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[3] * v[3];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 + t5;
+        let t7 = xv[0] * t6;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m6)).0] }
     }
 }
 
@@ -30739,30 +31788,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Roto
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -30770,7 +31833,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Rotor {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -30780,16 +31843,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -30981,6 +32044,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[1];
         let t3 = v[0].mul_add(xv[0], t2);
@@ -30995,12 +32067,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Rotor<()
         let t17 = v[1] * t14;
         let t20 = v[2] * t4;
         let t21 = (-v[2]).mul_add(t14, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
-        let t24 = (-v[3]).mul_add(t4, t17);
-        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
-        let t27 = (-v[1]).mul_add(t9, t20);
-        let t29 = t27.mul_add(T::from_i64(2), xv[2]);
-            return Plane { c: gx::slots::from_values::<S, T, 4>([t23, t26, t29, xv[3]]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[0] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[1] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[2] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+        let t40 = xv[3] * t29;
+            return Plane { c: gx::slots::from_values::<S, T, 4>([t31, t35, t39, t40]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -31031,8 +32112,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Rotor<()
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
+        let m29 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3]).0] }
+        Plane { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3].scale(m29)).0] }
     }
 }
 
@@ -31045,10 +32127,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Plane<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Plane, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Plane, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -31078,26 +32169,27 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Rotor<(), T>> {
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+        let m29 = m12 + m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28, m29])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Rotor>, Plane, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Rotor>, Plane, T, 10> {
     type Output = Plane<S, T>;
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3]).0] }
+        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>> for Plane<(Plane,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>> for Plane<(Plane,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>) -> Self {
         let m = p.m;
-        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -31105,7 +32197,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>> for Plane<(Pl
 impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Rotor {
     type Y = Plane;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -31115,16 +32207,16 @@ impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Plane, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Plane, T, 10> {
         gx::Prepare::<Plane>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Plane, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Plane, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 9>, x: Plane<(), T>) -> Plane<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Plane, T, 10>, x: Plane<(), T>) -> Plane<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -31330,6 +32422,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Rotor<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[1] * v[1];
@@ -31430,6 +32531,15 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Rotor<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Line, T, 9> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -31700,6 +32810,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[1];
         let t3 = v[0].mul_add(xv[0], t2);
@@ -31714,12 +32833,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Rotor<()
         let t17 = v[1] * t14;
         let t20 = v[2] * t4;
         let t21 = (-v[2]).mul_add(t14, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[0]);
-        let t24 = (-v[3]).mul_add(t4, t17);
-        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
-        let t27 = (-v[1]).mul_add(t9, t20);
-        let t29 = t27.mul_add(T::from_i64(2), xv[2]);
-            return Point { c: gx::slots::from_values::<S, T, 4>([t23, t26, t29, xv[3]]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[0] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[1] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[2] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+        let t40 = xv[3] * t29;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t31, t35, t39, t40]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -31750,8 +32878,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Rotor<()
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
+        let m29 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m14) + x[1].scale(m16) + x[2].scale(m18)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m27) + x[2].scale(m28)).0, (x[3].scale(m29)).0] }
     }
 }
 
@@ -31764,10 +32893,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Point, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Point, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -31797,26 +32935,27 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Rotor<(), T>> {
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+        let m29 = m12 + m13;
+        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28, m29])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Rotor>, Point, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Rotor>, Point, T, 10> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 9>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 10>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 10>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -31824,7 +32963,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 9>> for Point<(Po
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Rotor {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Point, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Point, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -31834,16 +32973,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 10> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Point, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Point, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 9>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 10>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -31954,11 +33093,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<R
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[3] * v[3];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 + t5;
+        let t7 = xv[0] * t6;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m6)).0] }
     }
 }
 
@@ -31971,30 +33130,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -32002,7 +33175,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Ps
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Rotor {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -32012,16 +33185,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -32213,6 +33386,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[2];
         let t3 = v[0].mul_add(xv[1], t2);
@@ -32227,12 +33409,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
         let t17 = v[1] * t14;
         let t20 = v[2] * t4;
         let t21 = (-v[2]).mul_add(t14, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
-        let t24 = (-v[3]).mul_add(t4, t17);
-        let t26 = t24.mul_add(T::from_i64(2), xv[2]);
-        let t27 = (-v[1]).mul_add(t9, t20);
-        let t29 = t27.mul_add(T::from_i64(2), xv[3]);
-            return Rotor { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[1] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[2] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[3] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+        let t40 = xv[0] * t29;
+            return Rotor { c: gx::slots::from_values::<S, T, 4>([t40, t31, t35, t39]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -32263,8 +33454,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
+        let m29 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
+        Rotor { c: [(x[0].scale(m29)).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
     }
 }
 
@@ -32277,10 +33469,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -32310,26 +33511,27 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Rotor<(), T>> {
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+        let m29 = m12 + m13;
+        gx::Prepared::from_entries([m29, m14, m16, m18, m20, m21, m23, m25, m27, m28])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10> {
     type Output = Rotor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+        Rotor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>> for Rotor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>> for Rotor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>) -> Self {
         let m = p.m;
-        Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+        Rotor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
     }
 }
 
@@ -32337,7 +33539,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>> for Rotor<(Ro
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Rotor {
     type Y = Rotor;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -32347,16 +33549,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Rotor, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Rotor, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>, x: Rotor<(), T>) -> Rotor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 10>, x: Rotor<(), T>) -> Rotor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -32548,6 +33750,15 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Rot
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[2];
         let t3 = v[0].mul_add(xv[1], t2);
@@ -32562,12 +33773,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Rot
         let t17 = v[1] * t14;
         let t20 = v[2] * t4;
         let t21 = (-v[2]).mul_add(t14, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
-        let t24 = (-v[3]).mul_add(t4, t17);
-        let t26 = t24.mul_add(T::from_i64(2), xv[2]);
-        let t27 = (-v[1]).mul_add(t9, t20);
-        let t29 = t27.mul_add(T::from_i64(2), xv[3]);
-            return Translator { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[1] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[2] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[3] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+        let t40 = xv[0] * t29;
+            return Translator { c: gx::slots::from_values::<S, T, 4>([t40, t31, t35, t39]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -32598,8 +33818,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Rot
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
+        let m29 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
+        Translator { c: [(x[0].scale(m29)).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
     }
 }
 
@@ -32612,10 +33833,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -32645,26 +33875,27 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Rotor<(), T>> {
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+        let m29 = m12 + m13;
+        gx::Prepared::from_entries([m29, m14, m16, m18, m20, m21, m23, m25, m27, m28])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Rotor>, Translator, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Rotor>, Translator, T, 10> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+        Translator { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
     }
 }
 
@@ -32672,7 +33903,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>> for Tran
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Rotor {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -32682,16 +33913,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 10> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Translator, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Translator, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 9>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 10>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -32902,53 +34133,67 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * v[1];
-        let t1 = v[0] * v[2];
-        let t2 = v[0] * v[3];
-        let t3 = v[1] * v[1];
-        let t4 = v[1] * v[2];
-        let t5 = v[1] * v[3];
-        let t6 = v[2] * v[2];
-        let t7 = v[2] * v[3];
-        let t8 = v[3] * v[3];
-        let t9 = t6 + t8;
-        let t11 = (-t9).mul_add(T::from_i64(2), T::from_i64(1));
-        let t12 = t2 + t4;
-        let t13 = t1 - t5;
-        let t14 = t2 - t4;
-        let t15 = t3 + t8;
-        let t17 = (-t15).mul_add(T::from_i64(2), T::from_i64(1));
-        let t18 = t0 + t7;
-        let t19 = t1 + t5;
-        let t20 = t0 - t7;
-        let t21 = t3 + t6;
-        let t23 = (-t21).mul_add(T::from_i64(2), T::from_i64(1));
-        let t25 = xv[2] * t12;
-        let t29 = xv[3] * t18;
-        let t30 = xv[1] * t19;
-        let t34 = xv[5] * t12;
-        let t38 = xv[6] * t18;
-        let t39 = xv[4] * t19;
-        let t42 = (-xv[3]).mul_add(t13, t25);
-        let t43 = t42 * T::from_i64(2);
-        let t44 = xv[1].mul_add(t11, t43);
-        let t45 = (-xv[1]).mul_add(t14, t29);
-        let t46 = t45 * T::from_i64(2);
-        let t47 = xv[2].mul_add(t17, t46);
-        let t48 = (-xv[2]).mul_add(t20, t30);
-        let t49 = t48 * T::from_i64(2);
-        let t50 = xv[3].mul_add(t23, t49);
-        let t51 = (-xv[6]).mul_add(t13, t34);
-        let t52 = t51 * T::from_i64(2);
-        let t53 = xv[4].mul_add(t11, t52);
-        let t54 = (-xv[4]).mul_add(t14, t38);
-        let t55 = t54 * T::from_i64(2);
-        let t56 = xv[5].mul_add(t17, t55);
-        let t57 = (-xv[5]).mul_add(t20, t39);
-        let t58 = t57 * T::from_i64(2);
-        let t59 = xv[6].mul_add(t23, t58);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t44, t47, t50, t53, t56, t59, xv[7]]) };
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[3];
+        let t9 = v[2] * v[3];
+        let t10 = t0 - t1;
+        let t11 = t0 + t1;
+        let t12 = t2 - t3;
+        let t13 = t2 + t3;
+        let t14 = t11 + t13;
+        let t15 = t11 - t13;
+        let t16 = t6 + t7;
+        let t17 = t5 - t8;
+        let t18 = t6 - t7;
+        let t19 = t10 + t12;
+        let t20 = t4 + t9;
+        let t21 = t5 + t8;
+        let t22 = t4 - t9;
+        let t23 = t10 - t12;
+        let t24 = xv[0] * t14;
+        let t26 = xv[2] * t16;
+        let t30 = xv[3] * t20;
+        let t31 = xv[1] * t21;
+        let t35 = xv[5] * t16;
+        let t39 = xv[6] * t20;
+        let t40 = xv[4] * t21;
+        let t43 = xv[7] * t14;
+        let t44 = (-xv[3]).mul_add(t17, t26);
+        let t45 = t44 * T::from_i64(2);
+        let t46 = xv[1].mul_add(t15, t45);
+        let t47 = (-xv[1]).mul_add(t18, t30);
+        let t48 = t47 * T::from_i64(2);
+        let t49 = xv[2].mul_add(t19, t48);
+        let t50 = (-xv[2]).mul_add(t22, t31);
+        let t51 = t50 * T::from_i64(2);
+        let t52 = xv[3].mul_add(t23, t51);
+        let t53 = (-xv[6]).mul_add(t17, t35);
+        let t54 = t53 * T::from_i64(2);
+        let t55 = xv[4].mul_add(t15, t54);
+        let t56 = (-xv[4]).mul_add(t18, t39);
+        let t57 = t56 * T::from_i64(2);
+        let t58 = xv[5].mul_add(t19, t57);
+        let t59 = (-xv[5]).mul_add(t22, t40);
+        let t60 = t59 * T::from_i64(2);
+        let t61 = xv[6].mul_add(t23, t60);
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t24, t46, t49, t52, t55, t58, t61, t43]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -32982,8 +34227,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Rotor<()
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
+        let m32 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m25)).0, (x[1].scale(m27) + x[2].scale(m21) + x[3].scale(m28)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m20)).0, (x[4].scale(m22) + x[5].scale(m23) + x[6].scale(m25)).0, (x[4].scale(m27) + x[5].scale(m21) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m31) + x[6].scale(m20)).0, (x[7]).0] }
+        Motor { c: [(x[0].scale(m32)).0, (x[1].scale(m22) + x[2].scale(m23) + x[3].scale(m25)).0, (x[1].scale(m27) + x[2].scale(m21) + x[3].scale(m28)).0, (x[1].scale(m29) + x[2].scale(m31) + x[3].scale(m20)).0, (x[4].scale(m22) + x[5].scale(m23) + x[6].scale(m25)).0, (x[4].scale(m27) + x[5].scale(m21) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m31) + x[6].scale(m20)).0, (x[7].scale(m32)).0] }
     }
 }
 
@@ -32996,10 +34242,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -33032,26 +34287,27 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Rotor<(), T>> {
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
-        gx::Prepared::from_entries([m22, m23, m25, m27, m21, m28, m29, m31, m20])
+        let m32 = m12 + m13;
+        gx::Prepared::from_entries([m32, m22, m23, m25, m27, m21, m28, m29, m31, m20])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Motor, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Motor, T, 10> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[7]).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[4].scale(m[7]) + x[5].scale(m[8]) + x[6].scale(m[9])).0, (x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[2], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[8], m[9], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -33059,7 +34315,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>> for Motor<(Mo
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Rotor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -33069,16 +34325,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 10> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Motor, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Motor, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 9>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 10>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -33289,53 +34545,67 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Rotor<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * v[1];
-        let t1 = v[0] * v[2];
-        let t2 = v[0] * v[3];
-        let t3 = v[1] * v[1];
-        let t4 = v[1] * v[2];
-        let t5 = v[1] * v[3];
-        let t6 = v[2] * v[2];
-        let t7 = v[2] * v[3];
-        let t8 = v[3] * v[3];
-        let t9 = t6 + t8;
-        let t11 = (-t9).mul_add(T::from_i64(2), T::from_i64(1));
-        let t12 = t2 + t4;
-        let t13 = t1 - t5;
-        let t14 = t2 - t4;
-        let t15 = t3 + t8;
-        let t17 = (-t15).mul_add(T::from_i64(2), T::from_i64(1));
-        let t18 = t0 + t7;
-        let t19 = t1 + t5;
-        let t20 = t0 - t7;
-        let t21 = t3 + t6;
-        let t23 = (-t21).mul_add(T::from_i64(2), T::from_i64(1));
-        let t25 = xv[1] * t12;
-        let t29 = xv[2] * t18;
-        let t30 = xv[0] * t19;
-        let t34 = xv[5] * t12;
-        let t38 = xv[6] * t18;
-        let t39 = xv[4] * t19;
-        let t42 = (-xv[2]).mul_add(t13, t25);
-        let t43 = t42 * T::from_i64(2);
-        let t44 = xv[0].mul_add(t11, t43);
-        let t45 = (-xv[0]).mul_add(t14, t29);
-        let t46 = t45 * T::from_i64(2);
-        let t47 = xv[1].mul_add(t17, t46);
-        let t48 = (-xv[1]).mul_add(t20, t30);
-        let t49 = t48 * T::from_i64(2);
-        let t50 = xv[2].mul_add(t23, t49);
-        let t51 = (-xv[6]).mul_add(t13, t34);
-        let t52 = t51 * T::from_i64(2);
-        let t53 = xv[4].mul_add(t11, t52);
-        let t54 = (-xv[4]).mul_add(t14, t38);
-        let t55 = t54 * T::from_i64(2);
-        let t56 = xv[5].mul_add(t17, t55);
-        let t57 = (-xv[5]).mul_add(t20, t39);
-        let t58 = t57 * T::from_i64(2);
-        let t59 = xv[6].mul_add(t23, t58);
-            return Flector { c: gx::slots::from_values::<S, T, 8>([t44, t47, t50, xv[3], t53, t56, t59, xv[7]]) };
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[3];
+        let t9 = v[2] * v[3];
+        let t10 = t0 - t1;
+        let t11 = t0 + t1;
+        let t12 = t2 - t3;
+        let t13 = t2 + t3;
+        let t14 = t11 - t13;
+        let t15 = t6 + t7;
+        let t16 = t5 - t8;
+        let t17 = t6 - t7;
+        let t18 = t10 + t12;
+        let t19 = t4 + t9;
+        let t20 = t5 + t8;
+        let t21 = t4 - t9;
+        let t22 = t10 - t12;
+        let t23 = t11 + t13;
+        let t25 = xv[1] * t15;
+        let t29 = xv[2] * t19;
+        let t30 = xv[0] * t20;
+        let t33 = xv[3] * t23;
+        let t35 = xv[5] * t15;
+        let t39 = xv[6] * t19;
+        let t40 = xv[4] * t20;
+        let t43 = xv[7] * t23;
+        let t44 = (-xv[2]).mul_add(t16, t25);
+        let t45 = t44 * T::from_i64(2);
+        let t46 = xv[0].mul_add(t14, t45);
+        let t47 = (-xv[0]).mul_add(t17, t29);
+        let t48 = t47 * T::from_i64(2);
+        let t49 = xv[1].mul_add(t18, t48);
+        let t50 = (-xv[1]).mul_add(t21, t30);
+        let t51 = t50 * T::from_i64(2);
+        let t52 = xv[2].mul_add(t22, t51);
+        let t53 = (-xv[6]).mul_add(t16, t35);
+        let t54 = t53 * T::from_i64(2);
+        let t55 = xv[4].mul_add(t14, t54);
+        let t56 = (-xv[4]).mul_add(t17, t39);
+        let t57 = t56 * T::from_i64(2);
+        let t58 = xv[5].mul_add(t18, t57);
+        let t59 = (-xv[5]).mul_add(t21, t40);
+        let t60 = t59 * T::from_i64(2);
+        let t61 = xv[6].mul_add(t22, t60);
+            return Flector { c: gx::slots::from_values::<S, T, 8>([t46, t49, t52, t33, t55, t58, t61, t43]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -33369,8 +34639,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Rotor<
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
+        let m32 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m22) + x[1].scale(m23) + x[2].scale(m25)).0, (x[0].scale(m27) + x[1].scale(m21) + x[2].scale(m28)).0, (x[0].scale(m29) + x[1].scale(m31) + x[2].scale(m20)).0, (x[3]).0, (x[4].scale(m22) + x[5].scale(m23) + x[6].scale(m25)).0, (x[4].scale(m27) + x[5].scale(m21) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m31) + x[6].scale(m20)).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m22) + x[1].scale(m23) + x[2].scale(m25)).0, (x[0].scale(m27) + x[1].scale(m21) + x[2].scale(m28)).0, (x[0].scale(m29) + x[1].scale(m31) + x[2].scale(m20)).0, (x[3].scale(m32)).0, (x[4].scale(m22) + x[5].scale(m23) + x[6].scale(m25)).0, (x[4].scale(m27) + x[5].scale(m21) + x[6].scale(m28)).0, (x[4].scale(m29) + x[5].scale(m31) + x[6].scale(m20)).0, (x[7].scale(m32)).0] }
     }
 }
 
@@ -33383,10 +34654,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Rot
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -33419,26 +34699,27 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Rotor<(), T>> {
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
-        gx::Prepared::from_entries([m22, m23, m25, m27, m21, m28, m29, m31, m20])
+        let m32 = m12 + m13;
+        gx::Prepared::from_entries([m22, m23, m25, m27, m21, m28, m29, m31, m20, m32])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Flector, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Flector, T, 10> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3]).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[3].scale(m[9])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[7].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9]]] }
     }
 }
 
@@ -33446,7 +34727,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>> for Flector
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Rotor {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -33456,16 +34737,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 10> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Flector, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Flector, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 9>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 10>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -33702,77 +34983,93 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
-        let t0 = v[1] * v[1];
-        let t1 = v[2] * v[2];
-        let t2 = t0 + t1;
-        let t3 = t2 - T::from_f64(1.0 / 2.0);
-        let t4 = v[3] * v[3];
-        let t5 = t0 + t4;
-        let t6 = t5 - T::from_f64(1.0 / 2.0);
-        let t7 = t1 + t4;
-        let t8 = t7 - T::from_f64(1.0 / 2.0);
-        let t9 = v[0] * v[1];
-        let t10 = v[2] * v[3];
-        let t11 = t9 - t10;
-        let t12 = t9 + t10;
-        let t13 = v[0] * v[2];
-        let t14 = v[1] * v[3];
-        let t15 = t13 - t14;
-        let t16 = t13 + t14;
-        let t17 = v[0] * v[3];
-        let t18 = v[1] * v[2];
-        let t19 = t17 - t18;
-        let t20 = t17 + t18;
-        let t22 = xv[3] * t20;
-        let t26 = xv[4] * t12;
-        let t27 = xv[2] * t16;
-        let t31 = xv[6] * t20;
-        let t35 = xv[7] * t12;
-        let t36 = xv[5] * t16;
-        let t41 = xv[10] * t16;
-        let t42 = xv[8] * t12;
-        let t46 = xv[9] * t20;
-        let t50 = xv[13] * t16;
-        let t51 = xv[11] * t12;
-        let t55 = xv[12] * t20;
-        let t57 = (-xv[2]).mul_add(t8, t22);
-        let t58 = (-xv[4]).mul_add(t15, t57);
-        let t59 = t58 * T::from_i64(2);
-        let t60 = (-xv[2]).mul_add(t19, t26);
-        let t61 = (-xv[3]).mul_add(t6, t60);
-        let t62 = t61 * T::from_i64(2);
-        let t63 = (-xv[3]).mul_add(t11, t27);
-        let t64 = (-xv[4]).mul_add(t3, t63);
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[3];
+        let t9 = v[2] * v[3];
+        let t10 = t0 - t1;
+        let t11 = t0 + t1;
+        let t12 = t2 - t3;
+        let t13 = t2 + t3;
+        let t14 = t11 + t13;
+        let t15 = t11 - t13;
+        let t16 = t6 + t7;
+        let t17 = t5 - t8;
+        let t18 = t6 - t7;
+        let t19 = t10 + t12;
+        let t20 = t4 + t9;
+        let t21 = t5 + t8;
+        let t22 = t4 - t9;
+        let t23 = t10 - t12;
+        let t24 = xv[0] * t14;
+        let t25 = xv[1] * t14;
+        let t27 = xv[3] * t16;
+        let t31 = xv[4] * t20;
+        let t32 = xv[2] * t21;
+        let t36 = xv[6] * t16;
+        let t40 = xv[7] * t20;
+        let t41 = xv[5] * t21;
+        let t46 = xv[10] * t21;
+        let t47 = xv[8] * t20;
+        let t51 = xv[9] * t16;
+        let t55 = xv[13] * t21;
+        let t56 = xv[11] * t20;
+        let t60 = xv[12] * t16;
+        let t62 = xv[14] * t14;
+        let t63 = xv[15] * t14;
+        let t64 = (-xv[4]).mul_add(t17, t27);
         let t65 = t64 * T::from_i64(2);
-        let t66 = (-xv[5]).mul_add(t8, t31);
-        let t67 = (-xv[7]).mul_add(t15, t66);
+        let t66 = xv[2].mul_add(t15, t65);
+        let t67 = (-xv[2]).mul_add(t18, t31);
         let t68 = t67 * T::from_i64(2);
-        let t69 = (-xv[5]).mul_add(t19, t35);
-        let t70 = (-xv[6]).mul_add(t6, t69);
+        let t69 = xv[3].mul_add(t19, t68);
+        let t70 = (-xv[3]).mul_add(t22, t32);
         let t71 = t70 * T::from_i64(2);
-        let t72 = (-xv[6]).mul_add(t11, t36);
-        let t73 = (-xv[7]).mul_add(t3, t72);
+        let t72 = xv[4].mul_add(t23, t71);
+        let t73 = (-xv[7]).mul_add(t17, t36);
         let t74 = t73 * T::from_i64(2);
-        let t75 = (-xv[8]).mul_add(t3, t41);
-        let t76 = (-xv[9]).mul_add(t11, t75);
+        let t75 = xv[5].mul_add(t15, t74);
+        let t76 = (-xv[5]).mul_add(t18, t40);
         let t77 = t76 * T::from_i64(2);
-        let t78 = (-xv[9]).mul_add(t6, t42);
-        let t79 = (-xv[10]).mul_add(t19, t78);
+        let t78 = xv[6].mul_add(t19, t77);
+        let t79 = (-xv[6]).mul_add(t22, t41);
         let t80 = t79 * T::from_i64(2);
-        let t81 = (-xv[8]).mul_add(t15, t46);
-        let t82 = (-xv[10]).mul_add(t8, t81);
+        let t81 = xv[7].mul_add(t23, t80);
+        let t82 = (-xv[9]).mul_add(t22, t46);
         let t83 = t82 * T::from_i64(2);
-        let t84 = (-xv[11]).mul_add(t3, t50);
-        let t85 = (-xv[12]).mul_add(t11, t84);
+        let t84 = xv[8].mul_add(t23, t83);
+        let t85 = (-xv[10]).mul_add(t18, t47);
         let t86 = t85 * T::from_i64(2);
-        let t87 = (-xv[12]).mul_add(t6, t51);
-        let t88 = (-xv[13]).mul_add(t19, t87);
+        let t87 = xv[9].mul_add(t19, t86);
+        let t88 = (-xv[8]).mul_add(t17, t51);
         let t89 = t88 * T::from_i64(2);
-        let t90 = (-xv[11]).mul_add(t15, t55);
-        let t91 = (-xv[13]).mul_add(t8, t90);
+        let t90 = xv[10].mul_add(t15, t89);
+        let t91 = (-xv[12]).mul_add(t22, t55);
         let t92 = t91 * T::from_i64(2);
-            return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], xv[1], t59, t62, t65, t68, t71, t74, t77, t80, t83, t86, t89, t92, xv[14], xv[15]]) };
+        let t93 = xv[11].mul_add(t23, t92);
+        let t94 = (-xv[13]).mul_add(t18, t56);
+        let t95 = t94 * T::from_i64(2);
+        let t96 = xv[12].mul_add(t19, t95);
+        let t97 = (-xv[11]).mul_add(t17, t60);
+        let t98 = t97 * T::from_i64(2);
+        let t99 = xv[13].mul_add(t15, t98);
+            return Multivector { c: gx::slots::from_values::<S, T, 16>([t24, t25, t66, t69, t72, t75, t78, t81, t84, t87, t90, t93, t96, t99, t62, t63]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -33806,8 +35103,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
+        let m32 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1]).0, (x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m25)).0, (x[2].scale(m27) + x[3].scale(m21) + x[4].scale(m28)).0, (x[2].scale(m29) + x[3].scale(m31) + x[4].scale(m20)).0, (x[5].scale(m22) + x[6].scale(m23) + x[7].scale(m25)).0, (x[5].scale(m27) + x[6].scale(m21) + x[7].scale(m28)).0, (x[5].scale(m29) + x[6].scale(m31) + x[7].scale(m20)).0, (x[8].scale(m20) + x[9].scale(m31) + x[10].scale(m29)).0, (x[8].scale(m28) + x[9].scale(m21) + x[10].scale(m27)).0, (x[8].scale(m25) + x[9].scale(m23) + x[10].scale(m22)).0, (x[11].scale(m20) + x[12].scale(m31) + x[13].scale(m29)).0, (x[11].scale(m28) + x[12].scale(m21) + x[13].scale(m27)).0, (x[11].scale(m25) + x[12].scale(m23) + x[13].scale(m22)).0, (x[14]).0, (x[15]).0] }
+        Multivector { c: [(x[0].scale(m32)).0, (x[1].scale(m32)).0, (x[2].scale(m22) + x[3].scale(m23) + x[4].scale(m25)).0, (x[2].scale(m27) + x[3].scale(m21) + x[4].scale(m28)).0, (x[2].scale(m29) + x[3].scale(m31) + x[4].scale(m20)).0, (x[5].scale(m22) + x[6].scale(m23) + x[7].scale(m25)).0, (x[5].scale(m27) + x[6].scale(m21) + x[7].scale(m28)).0, (x[5].scale(m29) + x[6].scale(m31) + x[7].scale(m20)).0, (x[8].scale(m20) + x[9].scale(m31) + x[10].scale(m29)).0, (x[8].scale(m28) + x[9].scale(m21) + x[10].scale(m27)).0, (x[8].scale(m25) + x[9].scale(m23) + x[10].scale(m22)).0, (x[11].scale(m20) + x[12].scale(m31) + x[13].scale(m29)).0, (x[11].scale(m28) + x[12].scale(m21) + x[13].scale(m27)).0, (x[11].scale(m25) + x[12].scale(m23) + x[13].scale(m22)).0, (x[14].scale(m32)).0, (x[15].scale(m32)).0] }
     }
 }
 
@@ -33820,10 +35118,19 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0].mul_add(v[0], u1);
+        let u5 = v[2].mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u7 = u5 + u6;
+            T::check_unit(&[u7]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -33856,26 +35163,27 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Rotor<(), T>> {
         let m29 = m17 * T::from_i64(2);
         let m30 = m14 * T::from_i64(2);
         let m31 = -m30;
-        gx::Prepared::from_entries([m22, m23, m25, m27, m21, m28, m29, m31, m20])
+        let m32 = m12 + m13;
+        gx::Prepared::from_entries([m32, m22, m23, m25, m27, m21, m28, m29, m31, m20])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1]).0, (x[2].scale(m[0]) + x[3].scale(m[1]) + x[4].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5])).0, (x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[5].scale(m[0]) + x[6].scale(m[1]) + x[7].scale(m[2])).0, (x[5].scale(m[3]) + x[6].scale(m[4]) + x[7].scale(m[5])).0, (x[5].scale(m[6]) + x[6].scale(m[7]) + x[7].scale(m[8])).0, (x[8].scale(m[8]) + x[9].scale(m[7]) + x[10].scale(m[6])).0, (x[8].scale(m[5]) + x[9].scale(m[4]) + x[10].scale(m[3])).0, (x[8].scale(m[2]) + x[9].scale(m[1]) + x[10].scale(m[0])).0, (x[11].scale(m[8]) + x[12].scale(m[7]) + x[13].scale(m[6])).0, (x[11].scale(m[5]) + x[12].scale(m[4]) + x[13].scale(m[3])).0, (x[11].scale(m[2]) + x[12].scale(m[1]) + x[13].scale(m[0])).0, (x[14]).0, (x[15]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[3])).0, (x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[6])).0, (x[5].scale(m[7]) + x[6].scale(m[8]) + x[7].scale(m[9])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[7])).0, (x[8].scale(m[6]) + x[9].scale(m[5]) + x[10].scale(m[4])).0, (x[8].scale(m[3]) + x[9].scale(m[2]) + x[10].scale(m[1])).0, (x[11].scale(m[9]) + x[12].scale(m[8]) + x[13].scale(m[7])).0, (x[11].scale(m[6]) + x[12].scale(m[5]) + x[13].scale(m[4])).0, (x[11].scale(m[3]) + x[12].scale(m[2]) + x[13].scale(m[1])).0, (x[14].scale(m[0])).0, (x[15].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[1], m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[6], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[1], m[0], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[2], m[1], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[7], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[2], m[1], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -33883,7 +35191,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>> for Mul
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Rotor {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -33893,16 +35201,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Multivector, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Multivector, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 10>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -34001,6 +35309,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Transla
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -34025,6 +35338,11 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Scalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -34193,6 +35511,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -34233,6 +35556,11 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Plane, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -34420,6 +35748,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Translato
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -34470,6 +35803,11 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Line, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -34653,6 +35991,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * xv[3];
@@ -34696,6 +36039,11 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Point, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -34851,6 +36199,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<T
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -34875,6 +36228,11 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -35054,6 +36412,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -35102,6 +36465,11 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Rotor, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -35260,6 +36628,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Tra
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -35287,6 +36660,11 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Translator, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -35470,6 +36848,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -35522,6 +36905,11 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Motor, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -35715,6 +37103,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Transl
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -35768,6 +37161,11 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Flector, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -35978,6 +37376,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Tr
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -36048,6 +37451,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Multivector, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -36234,11 +37642,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Motor<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[3] * v[3];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 + t5;
+        let t7 = xv[0] * t6;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m6)).0] }
     }
 }
 
@@ -36251,30 +37685,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Moto
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -36282,7 +37736,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>> for Scalar<(
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Motor {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -36292,16 +37746,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -36548,6 +38002,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[1];
         let t3 = v[0].mul_add(xv[0], t2);
@@ -36567,18 +38036,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Motor<()
         let t25 = v[3] * v[7];
         let t28 = v[5] * t9;
         let t30 = (-v[2]).mul_add(t14, t16);
-        let t32 = t30.mul_add(T::from_i64(2), xv[0]);
-        let t33 = (-v[3]).mul_add(t4, t17);
-        let t35 = t33.mul_add(T::from_i64(2), xv[1]);
-        let t36 = (-v[1]).mul_add(t9, t20);
-        let t38 = t36.mul_add(T::from_i64(2), xv[2]);
-        let t39 = xv[0].mul_add(t21, t24);
-        let t40 = xv[2].mul_add(t25, t39);
-        let t41 = v[4].mul_add(t4, t28);
-        let t42 = v[6].mul_add(t14, t41);
-        let t43 = t40 + t42;
-        let t45 = t43.mul_add(T::from_i64(2), xv[3]);
-            return Plane { c: gx::slots::from_values::<S, T, 4>([t32, t35, t38, t45]) };
+        let t33 = v[1] * v[1];
+        let t35 = v[3] * v[3];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t39 = xv[0] * t38;
+        let t40 = t30.mul_add(T::from_i64(2), t39);
+        let t41 = (-v[3]).mul_add(t4, t17);
+        let t43 = xv[1] * t38;
+        let t44 = t41.mul_add(T::from_i64(2), t43);
+        let t45 = (-v[1]).mul_add(t9, t20);
+        let t47 = xv[2] * t38;
+        let t48 = t45.mul_add(T::from_i64(2), t47);
+        let t49 = xv[0].mul_add(t21, t24);
+        let t50 = xv[2].mul_add(t25, t49);
+        let t51 = v[4].mul_add(t4, t28);
+        let t52 = v[6].mul_add(t14, t51);
+        let t53 = t50 + t52;
+        let t55 = xv[3] * t38;
+        let t56 = t53.mul_add(T::from_i64(2), t55);
+            return Plane { c: gx::slots::from_values::<S, T, 4>([t40, t44, t48, t56]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -36627,8 +38105,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Motor<()
         let m50 = (-v[2]).mul_add(v[4], m21);
         let m51 = m49 + m50;
         let m52 = m51 * T::from_i64(2);
+        let m53 = m24 + m25;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30)).0, (x[0].scale(m32) + x[1].scale(m33) + x[2].scale(m35)).0, (x[0].scale(m37) + x[1].scale(m39) + x[2].scale(m40)).0, (x[0].scale(m44) + x[1].scale(m48) + x[2].scale(m52) + x[3]).0] }
+        Plane { c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30)).0, (x[0].scale(m32) + x[1].scale(m33) + x[2].scale(m35)).0, (x[0].scale(m37) + x[1].scale(m39) + x[2].scale(m40)).0, (x[0].scale(m44) + x[1].scale(m48) + x[2].scale(m52) + x[3].scale(m53)).0] }
     }
 }
 
@@ -36641,10 +38120,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Plane<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Plane, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Plane, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Plane, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Plane, T, 13> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -36692,26 +38186,27 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Motor<(), T>> {
         let m50 = (-v[2]).mul_add(v[4], m21);
         let m51 = m49 + m50;
         let m52 = m51 * T::from_i64(2);
-        gx::Prepared::from_entries([m26, m28, m30, m32, m33, m35, m37, m39, m40, m44, m48, m52])
+        let m53 = m24 + m25;
+        gx::Prepared::from_entries([m26, m28, m30, m32, m33, m35, m37, m39, m40, m44, m48, m52, m53])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Motor>, Plane, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Prepared<gx::Unit<Motor>, Plane, T, 13> {
     type Output = Plane<S, T>;
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3]).0] }
+        Plane { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Plane, T, 12>> for Plane<(Plane,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Plane, T, 13>> for Plane<(Plane,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 13>) -> Self {
         let m = p.m;
-        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [m[9], m[10], m[11], T::from_i64(1)]] }
+        Plane { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [m[9], m[10], m[11], m[12]]] }
     }
 }
 
@@ -36719,7 +38214,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Plane, T, 12>> for Plane<(P
 impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Motor {
     type Y = Plane;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Plane, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Plane, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -36729,16 +38224,16 @@ impl gx::batch::SandwichKernel<Plane, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Plane, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Plane, T, 13> {
         gx::Prepare::<Plane>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Plane, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Plane, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 12>, x: Plane<(), T>) -> Plane<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Plane, T, 13>, x: Plane<(), T>) -> Plane<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -37049,6 +38544,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Motor<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t2 = v[3] * xv[1];
         let t3 = v[0].mul_add(xv[0], t2);
@@ -37126,74 +38636,76 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Motor<(),
         let t102 = xv[5].mul_add(t41, t101);
             return Line { c: gx::slots::from_values::<S, T, 6>([t75, t78, t81, t88, t95, t102]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[4];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = (-v[1]).mul_add(v[7], m9);
-        let m34 = (-v[2]).mul_add(v[7], m10);
-        let m35 = (-v[3]).mul_add(v[7], m11);
-        let m36 = v[1].mul_add(v[5], m16);
-        let m37 = v[1].mul_add(v[6], m20);
-        let m38 = v[2].mul_add(v[6], m21);
-        let m40 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m41 = m29 * T::from_i64(2);
-        let m42 = m26 * T::from_i64(2);
-        let m43 = -m42;
-        let m44 = m28 * T::from_i64(2);
-        let m45 = -m44;
-        let m47 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m48 = m25 * T::from_i64(2);
-        let m49 = m27 * T::from_i64(2);
-        let m50 = m24 * T::from_i64(2);
-        let m51 = -m50;
-        let m53 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m54 = m17 + m22;
-        let m55 = m54 * T::from_i64(4);
-        let m56 = -m55;
-        let m57 = m35 + m36;
-        let m58 = m57 * T::from_i64(2);
-        let m59 = m37 - m34;
-        let m60 = m59 * T::from_i64(2);
-        let m61 = m36 - m35;
-        let m62 = m61 * T::from_i64(2);
-        let m63 = m12 + m22;
-        let m64 = m63 * T::from_i64(4);
-        let m65 = -m64;
-        let m66 = m33 + m38;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = m34 + m37;
-        let m69 = m68 * T::from_i64(2);
-        let m70 = m38 - m33;
-        let m71 = m70 * T::from_i64(2);
-        let m72 = m12 + m17;
-        let m73 = m72 * T::from_i64(4);
-        let m74 = -m73;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[4];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = m0 + m1;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = (-v[1]).mul_add(v[7], m10);
+        let m36 = (-v[2]).mul_add(v[7], m11);
+        let m37 = (-v[3]).mul_add(v[7], m12);
+        let m38 = v[1].mul_add(v[5], m17);
+        let m39 = v[1].mul_add(v[6], m21);
+        let m40 = v[2].mul_add(v[6], m22);
+        let m41 = m25 - m26;
+        let m42 = m25 + m26;
+        let m43 = m27 - m28;
+        let m44 = m34 * T::from_i64(2);
+        let m45 = m31 * T::from_i64(2);
+        let m46 = -m45;
+        let m47 = m33 * T::from_i64(2);
+        let m48 = -m47;
+        let m49 = m30 * T::from_i64(2);
+        let m50 = m32 * T::from_i64(2);
+        let m51 = m29 * T::from_i64(2);
+        let m52 = -m51;
+        let m53 = m18 + m23;
+        let m54 = m53 * T::from_i64(4);
+        let m55 = -m54;
+        let m56 = m37 + m38;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m39 - m36;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m38 - m37;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m13 + m23;
+        let m63 = m62 * T::from_i64(4);
+        let m64 = -m63;
+        let m65 = m35 + m40;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m36 + m39;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m40 - m35;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m13 + m18;
+        let m72 = m71 * T::from_i64(4);
+        let m73 = -m72;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m40) + x[1].scale(m41) + x[2].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m47) + x[2].scale(m48)).0, (x[0].scale(m49) + x[1].scale(m51) + x[2].scale(m53)).0, (x[0].scale(m56) + x[1].scale(m58) + x[2].scale(m60) + x[3].scale(m40) + x[4].scale(m41) + x[5].scale(m43)).0, (x[0].scale(m62) + x[1].scale(m65) + x[2].scale(m67) + x[3].scale(m45) + x[4].scale(m47) + x[5].scale(m48)).0, (x[0].scale(m69) + x[1].scale(m71) + x[2].scale(m74) + x[3].scale(m49) + x[4].scale(m51) + x[5].scale(m53)).0] }
+        Line { c: [(x[0].scale(m43) + x[1].scale(m44) + x[2].scale(m46)).0, (x[0].scale(m48) + x[1].scale(m42) + x[2].scale(m49)).0, (x[0].scale(m50) + x[1].scale(m52) + x[2].scale(m41)).0, (x[0].scale(m55) + x[1].scale(m57) + x[2].scale(m59) + x[3].scale(m43) + x[4].scale(m44) + x[5].scale(m46)).0, (x[0].scale(m61) + x[1].scale(m64) + x[2].scale(m66) + x[3].scale(m48) + x[4].scale(m42) + x[5].scale(m49)).0, (x[0].scale(m68) + x[1].scale(m70) + x[2].scale(m73) + x[3].scale(m50) + x[4].scale(m52) + x[5].scale(m41)).0] }
     }
 }
 
@@ -37210,73 +38722,90 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Motor<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Line, T, 18> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[4];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = (-v[1]).mul_add(v[7], m9);
-        let m34 = (-v[2]).mul_add(v[7], m10);
-        let m35 = (-v[3]).mul_add(v[7], m11);
-        let m36 = v[1].mul_add(v[5], m16);
-        let m37 = v[1].mul_add(v[6], m20);
-        let m38 = v[2].mul_add(v[6], m21);
-        let m40 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m41 = m29 * T::from_i64(2);
-        let m42 = m26 * T::from_i64(2);
-        let m43 = -m42;
-        let m44 = m28 * T::from_i64(2);
-        let m45 = -m44;
-        let m47 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m48 = m25 * T::from_i64(2);
-        let m49 = m27 * T::from_i64(2);
-        let m50 = m24 * T::from_i64(2);
-        let m51 = -m50;
-        let m53 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m54 = m17 + m22;
-        let m55 = m54 * T::from_i64(4);
-        let m56 = -m55;
-        let m57 = m35 + m36;
-        let m58 = m57 * T::from_i64(2);
-        let m59 = m37 - m34;
-        let m60 = m59 * T::from_i64(2);
-        let m61 = m36 - m35;
-        let m62 = m61 * T::from_i64(2);
-        let m63 = m12 + m22;
-        let m64 = m63 * T::from_i64(4);
-        let m65 = -m64;
-        let m66 = m33 + m38;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = m34 + m37;
-        let m69 = m68 * T::from_i64(2);
-        let m70 = m38 - m33;
-        let m71 = m70 * T::from_i64(2);
-        let m72 = m12 + m17;
-        let m73 = m72 * T::from_i64(4);
-        let m74 = -m73;
-        gx::Prepared::from_entries([m40, m41, m43, m45, m47, m48, m49, m51, m53, m56, m58, m60, m62, m65, m67, m69, m71, m74])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[4];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = m0 + m1;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = (-v[1]).mul_add(v[7], m10);
+        let m36 = (-v[2]).mul_add(v[7], m11);
+        let m37 = (-v[3]).mul_add(v[7], m12);
+        let m38 = v[1].mul_add(v[5], m17);
+        let m39 = v[1].mul_add(v[6], m21);
+        let m40 = v[2].mul_add(v[6], m22);
+        let m41 = m25 - m26;
+        let m42 = m25 + m26;
+        let m43 = m27 - m28;
+        let m44 = m34 * T::from_i64(2);
+        let m45 = m31 * T::from_i64(2);
+        let m46 = -m45;
+        let m47 = m33 * T::from_i64(2);
+        let m48 = -m47;
+        let m49 = m30 * T::from_i64(2);
+        let m50 = m32 * T::from_i64(2);
+        let m51 = m29 * T::from_i64(2);
+        let m52 = -m51;
+        let m53 = m18 + m23;
+        let m54 = m53 * T::from_i64(4);
+        let m55 = -m54;
+        let m56 = m37 + m38;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m39 - m36;
+        let m59 = m58 * T::from_i64(2);
+        let m60 = m38 - m37;
+        let m61 = m60 * T::from_i64(2);
+        let m62 = m13 + m23;
+        let m63 = m62 * T::from_i64(4);
+        let m64 = -m63;
+        let m65 = m35 + m40;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m36 + m39;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m40 - m35;
+        let m70 = m69 * T::from_i64(2);
+        let m71 = m13 + m18;
+        let m72 = m71 * T::from_i64(4);
+        let m73 = -m72;
+        gx::Prepared::from_entries([m43, m44, m46, m48, m42, m49, m50, m52, m41, m55, m57, m59, m61, m64, m66, m68, m70, m73])
     }
 }
 
@@ -37568,6 +39097,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[6] * xv[3];
         let t3 = v[1].mul_add(xv[1], t2);
@@ -37588,16 +39132,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
         let t28 = v[2].mul_add(t4, t19);
         let t29 = v[0].mul_add(t14, t17);
         let t30 = t28 - t29;
-        let t32 = t30.mul_add(T::from_i64(2), xv[0]);
-        let t33 = v[0].mul_add(t9, t23);
-        let t34 = v[1].mul_add(t4, t22);
-        let t35 = t33 - t34;
-        let t37 = t35.mul_add(T::from_i64(2), xv[1]);
-        let t38 = v[0].mul_add(t4, t25);
-        let t39 = v[2].mul_add(t14, t27);
-        let t40 = t38 + t39;
-        let t42 = (-t40).mul_add(T::from_i64(2), xv[2]);
-            return Point { c: gx::slots::from_values::<S, T, 4>([t32, t37, t42, xv[3]]) };
+        let t33 = v[1] * v[1];
+        let t35 = v[3] * v[3];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t39 = xv[0] * t38;
+        let t40 = t30.mul_add(T::from_i64(2), t39);
+        let t41 = v[0].mul_add(t9, t23);
+        let t42 = v[1].mul_add(t4, t22);
+        let t43 = t41 - t42;
+        let t45 = xv[1] * t38;
+        let t46 = t43.mul_add(T::from_i64(2), t45);
+        let t47 = v[0].mul_add(t4, t25);
+        let t48 = v[2].mul_add(t14, t27);
+        let t49 = t47 + t48;
+        let t51 = xv[2] * t38;
+        let t52 = (-t49).mul_add(T::from_i64(2), t51);
+        let t53 = xv[3] * t38;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t40, t46, t52, t53]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -37646,8 +39199,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
         let m50 = v[2].mul_add(v[4], m21);
         let m51 = m49 - m50;
         let m52 = m51 * T::from_i64(2);
+        let m53 = m24 + m25;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30) + x[3].scale(m34)).0, (x[0].scale(m36) + x[1].scale(m37) + x[2].scale(m39) + x[3].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m47) + x[2].scale(m48) + x[3].scale(m52)).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30) + x[3].scale(m34)).0, (x[0].scale(m36) + x[1].scale(m37) + x[2].scale(m39) + x[3].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m47) + x[2].scale(m48) + x[3].scale(m52)).0, (x[3].scale(m53)).0] }
     }
 }
 
@@ -37660,10 +39214,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Point, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Point, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Point, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Point, T, 13> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -37711,26 +39280,27 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Motor<(), T>> {
         let m50 = v[2].mul_add(v[4], m21);
         let m51 = m49 - m50;
         let m52 = m51 * T::from_i64(2);
-        gx::Prepared::from_entries([m26, m28, m30, m34, m36, m37, m39, m43, m45, m47, m48, m52])
+        let m53 = m24 + m25;
+        gx::Prepared::from_entries([m26, m28, m30, m34, m36, m37, m39, m43, m45, m47, m48, m52, m53])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Motor>, Point, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Motor>, Point, T, 13> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[3].scale(m[12])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 12>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 13>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Point, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Point, T, 13>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), m[12]]] }
     }
 }
 
@@ -37738,7 +39308,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 12>> for Point<(P
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Motor {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Point, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Point, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -37748,16 +39318,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Point, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Point, T, 13> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Point, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Point, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 12>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 13>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -37868,11 +39438,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<M
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[3] * v[3];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 + t5;
+        let t7 = xv[0] * t6;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m6)).0] }
     }
 }
 
@@ -37885,30 +39481,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[3] * v[3];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -37916,7 +39532,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>> for Ps
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Motor {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -37926,16 +39542,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -38255,134 +39871,168 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[1] * xv[2];
-        let t2 = (-v[2]).mul_add(xv[1], t0);
-        let t3 = v[1] * xv[3];
-        let t5 = (-v[3]).mul_add(xv[1], t3);
-        let t6 = v[2] * xv[3];
-        let t8 = (-v[3]).mul_add(xv[2], t6);
-        let t10 = v[2] * v[4];
-        let t11 = v[1].mul_add(v[5], t10);
-        let t13 = v[3] * v[4];
-        let t14 = v[1].mul_add(v[6], t13);
-        let t16 = v[3] * v[5];
-        let t17 = v[2].mul_add(v[6], t16);
-        let t18 = v[0] * v[4];
-        let t19 = v[0] * v[5];
-        let t20 = v[0] * v[6];
-        let t21 = v[1] * v[4];
-        let t22 = v[2] * v[5];
-        let t23 = v[3] * v[6];
-        let t26 = v[3] * t5;
-        let t29 = v[3] * t8;
-        let t31 = v[1] * t5;
-        let t36 = xv[1] * t23;
-        let t37 = v[7] * t8;
-        let t39 = xv[3] * t14;
-        let t43 = xv[2] * t23;
-        let t44 = v[7] * t5;
-        let t45 = xv[1] * t11;
-        let t50 = xv[3] * t22;
-        let t51 = v[7] * t2;
-        let t53 = xv[2] * t17;
-        let t54 = v[2].mul_add(t2, t26);
-        let t55 = (-v[0]).mul_add(t8, t54);
-        let t57 = t55.mul_add(T::from_i64(2), xv[1]);
-        let t58 = v[0].mul_add(t5, t29);
-        let t59 = (-v[1]).mul_add(t2, t58);
-        let t61 = t59.mul_add(T::from_i64(2), xv[2]);
-        let t62 = v[0].mul_add(t2, t31);
-        let t63 = v[2].mul_add(t8, t62);
-        let t65 = (-t63).mul_add(T::from_i64(2), xv[3]);
-        let t66 = xv[2].mul_add(t20, t37);
-        let t67 = xv[2].mul_add(t11, t66);
-        let t68 = (-xv[3]).mul_add(t19, t39);
-        let t69 = t67 + t68;
-        let t70 = t69 * T::from_i64(2);
-        let t71 = xv[1].mul_add(t22, t36);
-        let t73 = (-t71).mul_add(T::from_i64(4), t70);
-        let t74 = xv[3].mul_add(t18, t45);
-        let t75 = xv[3].mul_add(t17, t74);
-        let t76 = xv[1].mul_add(t20, t44);
-        let t77 = t75 - t76;
-        let t78 = t77 * T::from_i64(2);
-        let t79 = xv[2].mul_add(t21, t43);
-        let t81 = (-t79).mul_add(T::from_i64(4), t78);
-        let t82 = xv[1].mul_add(t19, t51);
-        let t83 = xv[1].mul_add(t14, t82);
-        let t84 = (-xv[2]).mul_add(t18, t53);
-        let t85 = t83 + t84;
-        let t86 = t85 * T::from_i64(2);
-        let t87 = xv[3].mul_add(t21, t50);
-        let t89 = (-t87).mul_add(T::from_i64(4), t86);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t57, t61, t65, t73, t81, t89, T::from_i64(0)]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[0] * v[4];
-        let m4 = v[0] * v[5];
-        let m5 = v[0] * v[6];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[2];
-        let m8 = v[1] * v[3];
-        let m9 = v[1] * v[4];
-        let m13 = v[2] * v[2];
-        let m14 = v[2] * v[3];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[5];
-        let m19 = v[3] * v[3];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = (-v[1]).mul_add(v[7], m3);
-        let m25 = (-v[2]).mul_add(v[7], m4);
-        let m26 = (-v[3]).mul_add(v[7], m5);
-        let m27 = v[1].mul_add(v[5], m15);
-        let m28 = v[1].mul_add(v[6], m20);
-        let m29 = v[2].mul_add(v[6], m21);
-        let m30 = m13 + m19;
-        let m32 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m33 = m2 + m7;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m8 - m1;
-        let m36 = m35 * T::from_i64(2);
-        let m37 = m7 - m2;
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[0] * v[4];
+        let t8 = v[0] * v[5];
+        let t9 = v[0] * v[6];
+        let t10 = v[1] * v[2];
+        let t11 = v[1] * v[3];
+        let t12 = v[1] * v[4];
+        let t16 = v[2] * v[3];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t21 = v[3] * v[4];
+        let t22 = v[3] * v[5];
+        let t23 = v[3] * v[6];
+        let t25 = t0 - t1;
+        let t26 = t0 + t1;
+        let t27 = t2 - t3;
+        let t28 = t2 + t3;
+        let t29 = (-v[1]).mul_add(v[7], t7);
+        let t30 = (-v[2]).mul_add(v[7], t8);
+        let t31 = (-v[3]).mul_add(v[7], t9);
+        let t32 = v[1].mul_add(v[5], t17);
+        let t33 = v[1].mul_add(v[6], t21);
+        let t34 = v[2].mul_add(v[6], t22);
+        let t35 = t26 + t28;
+        let t36 = t26 - t28;
+        let t37 = t6 + t10;
+        let t38 = t5 - t11;
+        let t39 = t6 - t10;
+        let t40 = t25 + t27;
+        let t41 = t4 + t16;
+        let t42 = t5 + t11;
+        let t43 = t4 - t16;
+        let t44 = t25 - t27;
+        let t45 = t18 + t23;
+        let t46 = t31 + t32;
+        let t47 = t30 - t33;
+        let t48 = t31 - t32;
+        let t49 = t12 + t23;
+        let t50 = t29 + t34;
+        let t51 = t30 + t33;
+        let t52 = t29 - t34;
+        let t53 = t12 + t18;
+        let t54 = xv[0] * t35;
+        let t56 = xv[2] * t37;
+        let t60 = xv[3] * t41;
+        let t61 = xv[1] * t42;
+        let t64 = xv[1] * t45;
+        let t65 = xv[2] * t46;
+        let t68 = xv[2] * t49;
+        let t69 = xv[3] * t50;
+        let t70 = xv[1] * t51;
+        let t72 = xv[3] * t53;
+        let t73 = (-xv[3]).mul_add(t38, t56);
+        let t74 = t73 * T::from_i64(2);
+        let t75 = xv[1].mul_add(t36, t74);
+        let t76 = (-xv[1]).mul_add(t39, t60);
+        let t77 = t76 * T::from_i64(2);
+        let t78 = xv[2].mul_add(t40, t77);
+        let t79 = (-xv[2]).mul_add(t43, t61);
+        let t80 = t79 * T::from_i64(2);
+        let t81 = xv[3].mul_add(t44, t80);
+        let t82 = (-xv[3]).mul_add(t47, t65);
+        let t83 = t82 * T::from_i64(2);
+        let t85 = (-t64).mul_add(T::from_i64(4), t83);
+        let t86 = (-xv[1]).mul_add(t48, t69);
+        let t87 = t86 * T::from_i64(2);
+        let t89 = (-t68).mul_add(T::from_i64(4), t87);
+        let t90 = (-xv[2]).mul_add(t52, t70);
+        let t91 = t90 * T::from_i64(2);
+        let t93 = (-t72).mul_add(T::from_i64(4), t91);
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t54, t75, t78, t81, t85, t89, t93, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[0] * v[4];
+        let m8 = v[0] * v[5];
+        let m9 = v[0] * v[6];
+        let m10 = v[1] * v[2];
+        let m11 = v[1] * v[3];
+        let m12 = v[1] * v[4];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = (-v[1]).mul_add(v[7], m7);
+        let m30 = (-v[2]).mul_add(v[7], m8);
+        let m31 = (-v[3]).mul_add(v[7], m9);
+        let m32 = v[1].mul_add(v[5], m17);
+        let m33 = v[1].mul_add(v[6], m21);
+        let m34 = v[2].mul_add(v[6], m22);
+        let m35 = m26 + m28;
+        let m36 = m26 - m28;
+        let m37 = m6 + m10;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m6 + m19;
-        let m41 = (-m39).mul_add(T::from_i64(2), T::from_i64(1));
-        let m42 = m0 + m14;
-        let m43 = m42 * T::from_i64(2);
-        let m44 = m1 + m8;
+        let m39 = m11 - m5;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m10 - m6;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m25 + m27;
+        let m44 = m4 + m16;
         let m45 = m44 * T::from_i64(2);
-        let m46 = m14 - m0;
+        let m46 = m5 + m11;
         let m47 = m46 * T::from_i64(2);
-        let m48 = m6 + m13;
-        let m50 = (-m48).mul_add(T::from_i64(2), T::from_i64(1));
-        let m51 = m16 + m22;
+        let m48 = m16 - m4;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = m25 - m27;
+        let m51 = m18 + m23;
         let m52 = m51 * T::from_i64(4);
         let m53 = -m52;
-        let m54 = m26 + m27;
+        let m54 = m31 + m32;
         let m55 = m54 * T::from_i64(2);
-        let m56 = m28 - m25;
+        let m56 = m33 - m30;
         let m57 = m56 * T::from_i64(2);
-        let m58 = m27 - m26;
+        let m58 = m32 - m31;
         let m59 = m58 * T::from_i64(2);
-        let m60 = m9 + m22;
+        let m60 = m12 + m23;
         let m61 = m60 * T::from_i64(4);
         let m62 = -m61;
-        let m63 = m24 + m29;
+        let m63 = m29 + m34;
         let m64 = m63 * T::from_i64(2);
-        let m65 = m25 + m28;
+        let m65 = m30 + m33;
         let m66 = m65 * T::from_i64(2);
-        let m67 = m29 - m24;
+        let m67 = m34 - m29;
         let m68 = m67 * T::from_i64(2);
-        let m69 = m9 + m16;
+        let m69 = m12 + m18;
         let m70 = m69 * T::from_i64(4);
         let m71 = -m70;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m32) + x[2].scale(m34) + x[3].scale(m36)).0, (x[1].scale(m38) + x[2].scale(m41) + x[3].scale(m43)).0, (x[1].scale(m45) + x[2].scale(m47) + x[3].scale(m50)).0, (x[1].scale(m53) + x[2].scale(m55) + x[3].scale(m57)).0, (x[1].scale(m59) + x[2].scale(m62) + x[3].scale(m64)).0, (x[1].scale(m66) + x[2].scale(m68) + x[3].scale(m71)).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m35)).0, (x[1].scale(m36) + x[2].scale(m38) + x[3].scale(m40)).0, (x[1].scale(m42) + x[2].scale(m43) + x[3].scale(m45)).0, (x[1].scale(m47) + x[2].scale(m49) + x[3].scale(m50)).0, (x[1].scale(m53) + x[2].scale(m55) + x[3].scale(m57)).0, (x[1].scale(m59) + x[2].scale(m62) + x[3].scale(m64)).0, (x[1].scale(m66) + x[2].scale(m68) + x[3].scale(m71)).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
@@ -38395,93 +40045,111 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 18> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 19> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[0] * v[4];
-        let m4 = v[0] * v[5];
-        let m5 = v[0] * v[6];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[2];
-        let m8 = v[1] * v[3];
-        let m9 = v[1] * v[4];
-        let m13 = v[2] * v[2];
-        let m14 = v[2] * v[3];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[5];
-        let m19 = v[3] * v[3];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = (-v[1]).mul_add(v[7], m3);
-        let m25 = (-v[2]).mul_add(v[7], m4);
-        let m26 = (-v[3]).mul_add(v[7], m5);
-        let m27 = v[1].mul_add(v[5], m15);
-        let m28 = v[1].mul_add(v[6], m20);
-        let m29 = v[2].mul_add(v[6], m21);
-        let m30 = m13 + m19;
-        let m32 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m33 = m2 + m7;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m8 - m1;
-        let m36 = m35 * T::from_i64(2);
-        let m37 = m7 - m2;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[0] * v[4];
+        let m8 = v[0] * v[5];
+        let m9 = v[0] * v[6];
+        let m10 = v[1] * v[2];
+        let m11 = v[1] * v[3];
+        let m12 = v[1] * v[4];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = (-v[1]).mul_add(v[7], m7);
+        let m30 = (-v[2]).mul_add(v[7], m8);
+        let m31 = (-v[3]).mul_add(v[7], m9);
+        let m32 = v[1].mul_add(v[5], m17);
+        let m33 = v[1].mul_add(v[6], m21);
+        let m34 = v[2].mul_add(v[6], m22);
+        let m35 = m26 + m28;
+        let m36 = m26 - m28;
+        let m37 = m6 + m10;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m6 + m19;
-        let m41 = (-m39).mul_add(T::from_i64(2), T::from_i64(1));
-        let m42 = m0 + m14;
-        let m43 = m42 * T::from_i64(2);
-        let m44 = m1 + m8;
+        let m39 = m11 - m5;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m10 - m6;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m25 + m27;
+        let m44 = m4 + m16;
         let m45 = m44 * T::from_i64(2);
-        let m46 = m14 - m0;
+        let m46 = m5 + m11;
         let m47 = m46 * T::from_i64(2);
-        let m48 = m6 + m13;
-        let m50 = (-m48).mul_add(T::from_i64(2), T::from_i64(1));
-        let m51 = m16 + m22;
+        let m48 = m16 - m4;
+        let m49 = m48 * T::from_i64(2);
+        let m50 = m25 - m27;
+        let m51 = m18 + m23;
         let m52 = m51 * T::from_i64(4);
         let m53 = -m52;
-        let m54 = m26 + m27;
+        let m54 = m31 + m32;
         let m55 = m54 * T::from_i64(2);
-        let m56 = m28 - m25;
+        let m56 = m33 - m30;
         let m57 = m56 * T::from_i64(2);
-        let m58 = m27 - m26;
+        let m58 = m32 - m31;
         let m59 = m58 * T::from_i64(2);
-        let m60 = m9 + m22;
+        let m60 = m12 + m23;
         let m61 = m60 * T::from_i64(4);
         let m62 = -m61;
-        let m63 = m24 + m29;
+        let m63 = m29 + m34;
         let m64 = m63 * T::from_i64(2);
-        let m65 = m25 + m28;
+        let m65 = m30 + m33;
         let m66 = m65 * T::from_i64(2);
-        let m67 = m29 - m24;
+        let m67 = m34 - m29;
         let m68 = m67 * T::from_i64(2);
-        let m69 = m9 + m16;
+        let m69 = m12 + m18;
         let m70 = m69 * T::from_i64(4);
         let m71 = -m70;
-        gx::Prepared::from_entries([m32, m34, m36, m38, m41, m43, m45, m47, m50, m53, m55, m57, m59, m62, m64, m66, m68, m71])
+        gx::Prepared::from_entries([m35, m36, m38, m40, m42, m43, m45, m47, m49, m50, m53, m55, m57, m59, m62, m64, m66, m68, m71])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Motor>, Rotor, T, 18> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Motor>, Rotor, T, 19> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[3].scale(m[17])).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18])).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]], [T::zero(), m[9], m[10], m[11]], [T::zero(), m[12], m[13], m[14]], [T::zero(), m[15], m[16], m[17]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]], [T::zero(), m[10], m[11], m[12]], [T::zero(), m[13], m[14], m[15]], [T::zero(), m[16], m[17], m[18]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
     }
 }
 
@@ -38489,7 +40157,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>> for Motor<(R
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Motor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -38499,16 +40167,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 18> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 19> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Rotor, W, 18> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Rotor, W, 19> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 18>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 19>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -38719,6 +40387,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Mot
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t2 = v[3] * xv[2];
         let t3 = v[0].mul_add(xv[1], t2);
@@ -38733,12 +40416,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Mot
         let t17 = v[1] * t14;
         let t20 = v[2] * t4;
         let t21 = (-v[2]).mul_add(t14, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
-        let t24 = (-v[3]).mul_add(t4, t17);
-        let t26 = t24.mul_add(T::from_i64(2), xv[2]);
-        let t27 = (-v[1]).mul_add(t9, t20);
-        let t29 = t27.mul_add(T::from_i64(2), xv[3]);
-            return Translator { c: gx::slots::from_values::<S, T, 4>([xv[0], t23, t26, t29]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[3] * v[3];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[1] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = (-v[3]).mul_add(t4, t17);
+        let t34 = xv[2] * t29;
+        let t35 = t32.mul_add(T::from_i64(2), t34);
+        let t36 = (-v[1]).mul_add(t9, t20);
+        let t38 = xv[3] * t29;
+        let t39 = t36.mul_add(T::from_i64(2), t38);
+        let t40 = xv[0] * t29;
+            return Translator { c: gx::slots::from_values::<S, T, 4>([t40, t31, t35, t39]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -38769,8 +40461,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Mot
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
+        let m29 = m12 + m13;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
+        Translator { c: [(x[0].scale(m29)).0, (x[1].scale(m14) + x[2].scale(m16) + x[3].scale(m18)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m27) + x[3].scale(m28)).0] }
     }
 }
 
@@ -38783,10 +40476,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Translator, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Translator, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -38816,26 +40524,27 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Motor<(), T>> {
         let m26 = m9 - m4;
         let m27 = m26 * T::from_i64(2);
         let m28 = m10 - m11;
-        gx::Prepared::from_entries([m14, m16, m18, m20, m21, m23, m25, m27, m28])
+        let m29 = m12 + m13;
+        gx::Prepared::from_entries([m29, m14, m16, m18, m20, m21, m23, m25, m27, m28])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Motor>, Translator, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Motor>, Translator, T, 10> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 9>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 10>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 10>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+        Translator { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
     }
 }
 
@@ -38843,7 +40552,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 9>> for Tran
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Motor {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Translator, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Translator, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -38853,16 +40562,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 10> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Translator, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Translator, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 9>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 10>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -39201,161 +40910,184 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * v[1];
-        let t1 = v[0] * v[2];
-        let t2 = v[0] * v[3];
-        let t3 = v[0] * v[4];
-        let t4 = v[0] * v[5];
-        let t5 = v[0] * v[6];
-        let t6 = v[1] * v[1];
-        let t7 = v[1] * v[2];
-        let t8 = v[1] * v[3];
-        let t9 = v[1] * v[4];
-        let t13 = v[2] * v[2];
-        let t14 = v[2] * v[3];
-        let t15 = v[2] * v[4];
-        let t16 = v[2] * v[5];
-        let t19 = v[3] * v[3];
-        let t20 = v[3] * v[4];
-        let t21 = v[3] * v[5];
-        let t22 = v[3] * v[6];
-        let t24 = (-v[1]).mul_add(v[7], t3);
-        let t25 = (-v[2]).mul_add(v[7], t4);
-        let t26 = (-v[3]).mul_add(v[7], t5);
-        let t27 = v[1].mul_add(v[5], t15);
-        let t28 = v[1].mul_add(v[6], t20);
-        let t29 = v[2].mul_add(v[6], t21);
-        let t30 = t13 + t19;
-        let t32 = (-t30).mul_add(T::from_i64(2), T::from_i64(1));
-        let t33 = t2 + t7;
-        let t34 = t1 - t8;
-        let t35 = t2 - t7;
-        let t36 = t6 + t19;
-        let t38 = (-t36).mul_add(T::from_i64(2), T::from_i64(1));
-        let t39 = t0 + t14;
-        let t40 = t1 + t8;
-        let t41 = t0 - t14;
-        let t42 = t6 + t13;
-        let t44 = (-t42).mul_add(T::from_i64(2), T::from_i64(1));
-        let t45 = t16 + t22;
-        let t46 = t26 + t27;
-        let t47 = t25 - t28;
-        let t48 = t26 - t27;
-        let t49 = t9 + t22;
-        let t50 = t24 + t29;
-        let t51 = t25 + t28;
-        let t52 = t24 - t29;
-        let t53 = t9 + t16;
-        let t55 = xv[2] * t33;
-        let t59 = xv[3] * t39;
-        let t60 = xv[1] * t40;
-        let t63 = xv[1] * t45;
-        let t67 = xv[5] * t33;
-        let t68 = xv[6] * t34;
-        let t70 = xv[2] * t49;
-        let t72 = xv[4] * t35;
-        let t74 = xv[6] * t39;
-        let t77 = xv[3] * t53;
-        let t78 = xv[4] * t40;
-        let t79 = xv[5] * t41;
-        let t81 = (-xv[3]).mul_add(t34, t55);
-        let t82 = t81 * T::from_i64(2);
-        let t83 = xv[1].mul_add(t32, t82);
-        let t84 = (-xv[1]).mul_add(t35, t59);
-        let t85 = t84 * T::from_i64(2);
-        let t86 = xv[2].mul_add(t38, t85);
-        let t87 = (-xv[2]).mul_add(t41, t60);
-        let t88 = t87 * T::from_i64(2);
-        let t89 = xv[3].mul_add(t44, t88);
-        let t90 = xv[2].mul_add(t46, t67);
-        let t91 = xv[3].mul_add(t47, t68);
-        let t92 = t90 - t91;
-        let t93 = t92 * T::from_i64(2);
-        let t95 = xv[4].mul_add(t32, t93);
-        let t96 = (-t63).mul_add(T::from_i64(4), t95);
-        let t97 = xv[3].mul_add(t50, t74);
-        let t98 = xv[1].mul_add(t48, t72);
-        let t99 = t97 - t98;
-        let t100 = t99 * T::from_i64(2);
-        let t102 = xv[5].mul_add(t38, t100);
-        let t103 = (-t70).mul_add(T::from_i64(4), t102);
-        let t104 = xv[1].mul_add(t51, t78);
-        let t105 = xv[2].mul_add(t52, t79);
-        let t106 = t104 - t105;
-        let t107 = t106 * T::from_i64(2);
-        let t109 = xv[6].mul_add(t44, t107);
-        let t110 = (-t77).mul_add(T::from_i64(4), t109);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t83, t86, t89, t96, t103, t110, xv[7]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[4];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = (-v[1]).mul_add(v[7], m9);
-        let m34 = (-v[2]).mul_add(v[7], m10);
-        let m35 = (-v[3]).mul_add(v[7], m11);
-        let m36 = v[1].mul_add(v[5], m16);
-        let m37 = v[1].mul_add(v[6], m20);
-        let m38 = v[2].mul_add(v[6], m21);
-        let m40 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m41 = m29 * T::from_i64(2);
-        let m42 = m26 * T::from_i64(2);
-        let m43 = -m42;
-        let m44 = m28 * T::from_i64(2);
-        let m45 = -m44;
-        let m47 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m48 = m25 * T::from_i64(2);
-        let m49 = m27 * T::from_i64(2);
-        let m50 = m24 * T::from_i64(2);
-        let m51 = -m50;
-        let m53 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m54 = m17 + m22;
+        if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[0] * v[4];
+        let t8 = v[0] * v[5];
+        let t9 = v[0] * v[6];
+        let t10 = v[1] * v[2];
+        let t11 = v[1] * v[3];
+        let t12 = v[1] * v[4];
+        let t16 = v[2] * v[3];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t21 = v[3] * v[4];
+        let t22 = v[3] * v[5];
+        let t23 = v[3] * v[6];
+        let t25 = t0 - t1;
+        let t26 = t0 + t1;
+        let t27 = t2 - t3;
+        let t28 = t2 + t3;
+        let t29 = (-v[1]).mul_add(v[7], t7);
+        let t30 = (-v[2]).mul_add(v[7], t8);
+        let t31 = (-v[3]).mul_add(v[7], t9);
+        let t32 = v[1].mul_add(v[5], t17);
+        let t33 = v[1].mul_add(v[6], t21);
+        let t34 = v[2].mul_add(v[6], t22);
+        let t35 = t26 + t28;
+        let t36 = t26 - t28;
+        let t37 = t6 + t10;
+        let t38 = t5 - t11;
+        let t39 = t6 - t10;
+        let t40 = t25 + t27;
+        let t41 = t4 + t16;
+        let t42 = t5 + t11;
+        let t43 = t4 - t16;
+        let t44 = t25 - t27;
+        let t45 = t18 + t23;
+        let t46 = t31 + t32;
+        let t47 = t30 - t33;
+        let t48 = t31 - t32;
+        let t49 = t12 + t23;
+        let t50 = t29 + t34;
+        let t51 = t30 + t33;
+        let t52 = t29 - t34;
+        let t53 = t12 + t18;
+        let t54 = xv[0] * t35;
+        let t56 = xv[2] * t37;
+        let t60 = xv[3] * t41;
+        let t61 = xv[1] * t42;
+        let t64 = xv[1] * t45;
+        let t68 = xv[5] * t37;
+        let t69 = xv[6] * t38;
+        let t71 = xv[2] * t49;
+        let t73 = xv[4] * t39;
+        let t75 = xv[6] * t41;
+        let t78 = xv[3] * t53;
+        let t79 = xv[4] * t42;
+        let t80 = xv[5] * t43;
+        let t82 = xv[7] * t35;
+        let t83 = (-xv[3]).mul_add(t38, t56);
+        let t84 = t83 * T::from_i64(2);
+        let t85 = xv[1].mul_add(t36, t84);
+        let t86 = (-xv[1]).mul_add(t39, t60);
+        let t87 = t86 * T::from_i64(2);
+        let t88 = xv[2].mul_add(t40, t87);
+        let t89 = (-xv[2]).mul_add(t43, t61);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = xv[3].mul_add(t44, t90);
+        let t92 = xv[2].mul_add(t46, t68);
+        let t93 = xv[3].mul_add(t47, t69);
+        let t94 = t92 - t93;
+        let t95 = t94 * T::from_i64(2);
+        let t97 = xv[4].mul_add(t36, t95);
+        let t98 = (-t64).mul_add(T::from_i64(4), t97);
+        let t99 = xv[3].mul_add(t50, t75);
+        let t100 = xv[1].mul_add(t48, t73);
+        let t101 = t99 - t100;
+        let t102 = t101 * T::from_i64(2);
+        let t104 = xv[5].mul_add(t40, t102);
+        let t105 = (-t71).mul_add(T::from_i64(4), t104);
+        let t106 = xv[1].mul_add(t51, t79);
+        let t107 = xv[2].mul_add(t52, t80);
+        let t108 = t106 - t107;
+        let t109 = t108 * T::from_i64(2);
+        let t111 = xv[6].mul_add(t44, t109);
+        let t112 = (-t78).mul_add(T::from_i64(4), t111);
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t54, t85, t88, t91, t98, t105, t112, t82]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[4];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = (-v[1]).mul_add(v[7], m10);
+        let m36 = (-v[2]).mul_add(v[7], m11);
+        let m37 = (-v[3]).mul_add(v[7], m12);
+        let m38 = v[1].mul_add(v[5], m17);
+        let m39 = v[1].mul_add(v[6], m21);
+        let m40 = v[2].mul_add(v[6], m22);
+        let m41 = m25 - m27;
+        let m42 = m25 + m27;
+        let m43 = m26 - m28;
+        let m44 = m26 + m28;
+        let m45 = m34 * T::from_i64(2);
+        let m46 = m31 * T::from_i64(2);
+        let m47 = -m46;
+        let m48 = m33 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m30 * T::from_i64(2);
+        let m51 = m32 * T::from_i64(2);
+        let m52 = m29 * T::from_i64(2);
+        let m53 = -m52;
+        let m54 = m18 + m23;
         let m55 = m54 * T::from_i64(4);
         let m56 = -m55;
-        let m57 = m35 + m36;
+        let m57 = m37 + m38;
         let m58 = m57 * T::from_i64(2);
-        let m59 = m37 - m34;
+        let m59 = m39 - m36;
         let m60 = m59 * T::from_i64(2);
-        let m61 = m36 - m35;
+        let m61 = m38 - m37;
         let m62 = m61 * T::from_i64(2);
-        let m63 = m12 + m22;
+        let m63 = m13 + m23;
         let m64 = m63 * T::from_i64(4);
         let m65 = -m64;
-        let m66 = m33 + m38;
+        let m66 = m35 + m40;
         let m67 = m66 * T::from_i64(2);
-        let m68 = m34 + m37;
+        let m68 = m36 + m39;
         let m69 = m68 * T::from_i64(2);
-        let m70 = m38 - m33;
+        let m70 = m40 - m35;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m12 + m17;
+        let m72 = m13 + m18;
         let m73 = m72 * T::from_i64(4);
         let m74 = -m73;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m40) + x[2].scale(m41) + x[3].scale(m43)).0, (x[1].scale(m45) + x[2].scale(m47) + x[3].scale(m48)).0, (x[1].scale(m49) + x[2].scale(m51) + x[3].scale(m53)).0, (x[1].scale(m56) + x[2].scale(m58) + x[3].scale(m60) + x[4].scale(m40) + x[5].scale(m41) + x[6].scale(m43)).0, (x[1].scale(m62) + x[2].scale(m65) + x[3].scale(m67) + x[4].scale(m45) + x[5].scale(m47) + x[6].scale(m48)).0, (x[1].scale(m69) + x[2].scale(m71) + x[3].scale(m74) + x[4].scale(m49) + x[5].scale(m51) + x[6].scale(m53)).0, (x[0].scale(T::from_i64(0)) + x[7]).0] }
+        Motor { c: [(x[0].scale(m44)).0, (x[1].scale(m43) + x[2].scale(m45) + x[3].scale(m47)).0, (x[1].scale(m49) + x[2].scale(m42) + x[3].scale(m50)).0, (x[1].scale(m51) + x[2].scale(m53) + x[3].scale(m41)).0, (x[1].scale(m56) + x[2].scale(m58) + x[3].scale(m60) + x[4].scale(m43) + x[5].scale(m45) + x[6].scale(m47)).0, (x[1].scale(m62) + x[2].scale(m65) + x[3].scale(m67) + x[4].scale(m49) + x[5].scale(m42) + x[6].scale(m50)).0, (x[1].scale(m69) + x[2].scale(m71) + x[3].scale(m74) + x[4].scale(m51) + x[5].scale(m53) + x[6].scale(m41)).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m44)).0] }
     }
 }
 
@@ -39368,96 +41100,114 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Motor, T, 18>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Motor, T, 19>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 18> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 19> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[4];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m20 = v[3] * v[4];
-        let m21 = v[3] * v[5];
-        let m22 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = (-v[1]).mul_add(v[7], m9);
-        let m34 = (-v[2]).mul_add(v[7], m10);
-        let m35 = (-v[3]).mul_add(v[7], m11);
-        let m36 = v[1].mul_add(v[5], m16);
-        let m37 = v[1].mul_add(v[6], m20);
-        let m38 = v[2].mul_add(v[6], m21);
-        let m40 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m41 = m29 * T::from_i64(2);
-        let m42 = m26 * T::from_i64(2);
-        let m43 = -m42;
-        let m44 = m28 * T::from_i64(2);
-        let m45 = -m44;
-        let m47 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m48 = m25 * T::from_i64(2);
-        let m49 = m27 * T::from_i64(2);
-        let m50 = m24 * T::from_i64(2);
-        let m51 = -m50;
-        let m53 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m54 = m17 + m22;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[4];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m21 = v[3] * v[4];
+        let m22 = v[3] * v[5];
+        let m23 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = (-v[1]).mul_add(v[7], m10);
+        let m36 = (-v[2]).mul_add(v[7], m11);
+        let m37 = (-v[3]).mul_add(v[7], m12);
+        let m38 = v[1].mul_add(v[5], m17);
+        let m39 = v[1].mul_add(v[6], m21);
+        let m40 = v[2].mul_add(v[6], m22);
+        let m41 = m25 - m27;
+        let m42 = m25 + m27;
+        let m43 = m26 - m28;
+        let m44 = m26 + m28;
+        let m45 = m34 * T::from_i64(2);
+        let m46 = m31 * T::from_i64(2);
+        let m47 = -m46;
+        let m48 = m33 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m30 * T::from_i64(2);
+        let m51 = m32 * T::from_i64(2);
+        let m52 = m29 * T::from_i64(2);
+        let m53 = -m52;
+        let m54 = m18 + m23;
         let m55 = m54 * T::from_i64(4);
         let m56 = -m55;
-        let m57 = m35 + m36;
+        let m57 = m37 + m38;
         let m58 = m57 * T::from_i64(2);
-        let m59 = m37 - m34;
+        let m59 = m39 - m36;
         let m60 = m59 * T::from_i64(2);
-        let m61 = m36 - m35;
+        let m61 = m38 - m37;
         let m62 = m61 * T::from_i64(2);
-        let m63 = m12 + m22;
+        let m63 = m13 + m23;
         let m64 = m63 * T::from_i64(4);
         let m65 = -m64;
-        let m66 = m33 + m38;
+        let m66 = m35 + m40;
         let m67 = m66 * T::from_i64(2);
-        let m68 = m34 + m37;
+        let m68 = m36 + m39;
         let m69 = m68 * T::from_i64(2);
-        let m70 = m38 - m33;
+        let m70 = m40 - m35;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m12 + m17;
+        let m72 = m13 + m18;
         let m73 = m72 * T::from_i64(4);
         let m74 = -m73;
-        gx::Prepared::from_entries([m40, m41, m43, m45, m47, m48, m49, m51, m53, m56, m58, m60, m62, m65, m67, m69, m71, m74])
+        gx::Prepared::from_entries([m44, m43, m45, m47, m49, m42, m50, m51, m53, m41, m56, m58, m60, m62, m65, m67, m69, m71, m74])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Motor>, Motor, T, 18> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Motor>, Motor, T, 19> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14]) + x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[3].scale(m[17]) + x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8])).0, (x[0].scale(T::from_i64(0)) + x[7]).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[1]) + x[5].scale(m[2]) + x[6].scale(m[3])).0, (x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15]) + x[4].scale(m[4]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18]) + x[4].scale(m[7]) + x[5].scale(m[8]) + x[6].scale(m[9])).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 18>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 19>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 18>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 19>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[9], m[10], m[11], m[0], m[1], m[2], T::zero()], [T::zero(), m[12], m[13], m[14], m[3], m[4], m[5], T::zero()], [T::zero(), m[15], m[16], m[17], m[6], m[7], m[8], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[1], m[2], m[3], T::zero()], [T::zero(), m[13], m[14], m[15], m[4], m[5], m[6], T::zero()], [T::zero(), m[16], m[17], m[18], m[7], m[8], m[9], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -39465,7 +41215,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 18>> for Motor<(M
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Motor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Motor, T, 18>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Motor, T, 19>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -39475,16 +41225,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 18> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 19> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Motor, W, 18> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Motor, W, 19> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 18>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 19>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -39770,65 +41520,98 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Motor<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t2 = v[3] * xv[1];
-        let t3 = v[0].mul_add(xv[0], t2);
-        let t4 = (-v[2]).mul_add(xv[2], t3);
-        let t6 = v[1] * xv[2];
-        let t8 = v[0].mul_add(xv[1], t6);
-        let t9 = (-v[3]).mul_add(xv[0], t8);
-        let t12 = v[2] * xv[0];
-        let t13 = v[0].mul_add(xv[2], t12);
-        let t14 = (-v[1]).mul_add(xv[1], t13);
-        let t17 = v[6] * xv[7];
-        let t18 = v[1].mul_add(xv[5], t17);
-        let t19 = (-v[2]).mul_add(xv[4], t18);
-        let t20 = v[1] * xv[6];
-        let t23 = (-v[3]).mul_add(xv[4], t20);
-        let t24 = (-v[5]).mul_add(xv[7], t23);
-        let t27 = v[4] * xv[7];
-        let t28 = v[2].mul_add(xv[6], t27);
-        let t29 = (-v[3]).mul_add(xv[5], t28);
-        let t30 = v[7] * xv[7];
-        let t32 = v[3] * t9;
-        let t33 = v[1] * t14;
-        let t36 = v[2] * t4;
-        let t37 = v[1] * v[7];
-        let t39 = v[2] * v[7];
-        let t40 = xv[1] * t39;
-        let t41 = v[3] * v[7];
-        let t44 = v[5] * t9;
-        let t47 = v[1] * t30;
-        let t49 = v[3] * t24;
-        let t52 = v[2] * t30;
-        let t53 = v[3] * t29;
-        let t55 = v[1] * t24;
-        let t57 = v[3] * t30;
-        let t58 = (-v[2]).mul_add(t14, t32);
-        let t60 = t58.mul_add(T::from_i64(2), xv[0]);
-        let t61 = (-v[3]).mul_add(t4, t33);
-        let t63 = t61.mul_add(T::from_i64(2), xv[1]);
-        let t64 = (-v[1]).mul_add(t9, t36);
-        let t66 = t64.mul_add(T::from_i64(2), xv[2]);
-        let t67 = xv[0].mul_add(t37, t40);
-        let t68 = xv[2].mul_add(t41, t67);
-        let t69 = v[4].mul_add(t4, t44);
-        let t70 = v[6].mul_add(t14, t69);
-        let t71 = t68 + t70;
-        let t73 = t71.mul_add(T::from_i64(2), xv[3]);
-        let t74 = v[2].mul_add(t19, t49);
-        let t75 = v[0].mul_add(t29, t47);
-        let t76 = t74 - t75;
-        let t78 = t76.mul_add(T::from_i64(2), xv[4]);
-        let t79 = v[0].mul_add(t24, t53);
-        let t80 = v[1].mul_add(t19, t52);
-        let t81 = t79 - t80;
-        let t83 = t81.mul_add(T::from_i64(2), xv[5]);
-        let t84 = v[0].mul_add(t19, t55);
-        let t85 = v[2].mul_add(t29, t57);
-        let t86 = t84 + t85;
-        let t88 = (-t86).mul_add(T::from_i64(2), xv[6]);
-            return Flector { c: gx::slots::from_values::<S, T, 8>([t60, t63, t66, t73, t78, t83, t88, xv[7]]) };
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[3] * v[3];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t10 = v[1] * v[2];
+        let t11 = v[1] * v[3];
+        let t12 = v[1] * v[5];
+        let t13 = v[1] * v[6];
+        let t14 = v[1] * v[7];
+        let t15 = v[2] * v[3];
+        let t17 = v[2] * v[6];
+        let t18 = v[2] * v[7];
+        let t21 = v[3] * v[7];
+        let t22 = t0 - t1;
+        let t23 = t0 + t1;
+        let t24 = t2 - t3;
+        let t25 = t2 + t3;
+        let t26 = v[0].mul_add(v[4], t14);
+        let t27 = v[0].mul_add(v[5], t18);
+        let t28 = v[0].mul_add(v[6], t21);
+        let t29 = (-v[2]).mul_add(v[4], t12);
+        let t30 = (-v[3]).mul_add(v[4], t13);
+        let t31 = (-v[3]).mul_add(v[5], t17);
+        let t32 = t23 - t25;
+        let t33 = t6 + t10;
+        let t34 = t5 - t11;
+        let t35 = t6 - t10;
+        let t36 = t22 + t24;
+        let t37 = t4 + t15;
+        let t38 = t5 + t11;
+        let t39 = t4 - t15;
+        let t40 = t22 - t24;
+        let t41 = t26 + t31;
+        let t42 = t27 - t30;
+        let t43 = t28 + t29;
+        let t44 = t23 + t25;
+        let t45 = t26 - t31;
+        let t46 = t27 + t30;
+        let t47 = t28 - t29;
+        let t49 = xv[1] * t33;
+        let t53 = xv[2] * t37;
+        let t54 = xv[0] * t38;
+        let t58 = xv[1] * t42;
+        let t62 = xv[5] * t33;
+        let t67 = xv[6] * t37;
+        let t69 = xv[4] * t38;
+        let t73 = xv[7] * t44;
+        let t74 = (-xv[2]).mul_add(t34, t49);
+        let t75 = t74 * T::from_i64(2);
+        let t76 = xv[0].mul_add(t32, t75);
+        let t77 = (-xv[0]).mul_add(t35, t53);
+        let t78 = t77 * T::from_i64(2);
+        let t79 = xv[1].mul_add(t36, t78);
+        let t80 = (-xv[1]).mul_add(t39, t54);
+        let t81 = t80 * T::from_i64(2);
+        let t82 = xv[2].mul_add(t40, t81);
+        let t83 = xv[0].mul_add(t41, t58);
+        let t84 = xv[2].mul_add(t43, t83);
+        let t85 = t84 * T::from_i64(2);
+        let t86 = xv[3].mul_add(t44, t85);
+        let t87 = (-xv[6]).mul_add(t34, t62);
+        let t88 = (-xv[7]).mul_add(t45, t87);
+        let t89 = t88 * T::from_i64(2);
+        let t90 = xv[4].mul_add(t32, t89);
+        let t91 = (-xv[4]).mul_add(t35, t67);
+        let t92 = (-xv[7]).mul_add(t46, t91);
+        let t93 = t92 * T::from_i64(2);
+        let t94 = xv[5].mul_add(t36, t93);
+        let t95 = (-xv[5]).mul_add(t39, t69);
+        let t96 = (-xv[7]).mul_add(t47, t95);
+        let t97 = t96 * T::from_i64(2);
+        let t98 = xv[6].mul_add(t40, t97);
+            return Flector { c: gx::slots::from_values::<S, T, 8>([t76, t79, t82, t86, t90, t94, t98, t73]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -39887,8 +41670,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Motor<
         let m60 = -m59;
         let m61 = m35 - m34;
         let m62 = m61 * T::from_i64(2);
+        let m63 = m24 + m25;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m40) + x[1].scale(m41) + x[2].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m39) + x[2].scale(m46)).0, (x[0].scale(m47) + x[1].scale(m49) + x[2].scale(m38)).0, (x[0].scale(m51) + x[1].scale(m53) + x[2].scale(m55) + x[3]).0, (x[4].scale(m40) + x[5].scale(m41) + x[6].scale(m43) + x[7].scale(m57)).0, (x[4].scale(m45) + x[5].scale(m39) + x[6].scale(m46) + x[7].scale(m60)).0, (x[4].scale(m47) + x[5].scale(m49) + x[6].scale(m38) + x[7].scale(m62)).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m40) + x[1].scale(m41) + x[2].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m39) + x[2].scale(m46)).0, (x[0].scale(m47) + x[1].scale(m49) + x[2].scale(m38)).0, (x[0].scale(m51) + x[1].scale(m53) + x[2].scale(m55) + x[3].scale(m63)).0, (x[4].scale(m40) + x[5].scale(m41) + x[6].scale(m43) + x[7].scale(m57)).0, (x[4].scale(m45) + x[5].scale(m39) + x[6].scale(m46) + x[7].scale(m60)).0, (x[4].scale(m47) + x[5].scale(m49) + x[6].scale(m38) + x[7].scale(m62)).0, (x[7].scale(m63)).0] }
     }
 }
 
@@ -39901,10 +41685,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Mot
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Flector, T, 15>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Flector, T, 16>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 15> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 16> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -39962,26 +41761,27 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Motor<(), T>> {
         let m60 = -m59;
         let m61 = m35 - m34;
         let m62 = m61 * T::from_i64(2);
-        gx::Prepared::from_entries([m40, m41, m43, m45, m39, m46, m47, m49, m38, m51, m53, m55, m57, m60, m62])
+        let m63 = m24 + m25;
+        gx::Prepared::from_entries([m40, m41, m43, m45, m39, m46, m47, m49, m38, m51, m53, m55, m63, m57, m60, m62])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Motor>, Flector, T, 15> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Motor>, Flector, T, 16> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3]).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[12])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[13])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8]) + x[7].scale(m[14])).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[4].scale(m[0]) + x[5].scale(m[1]) + x[6].scale(m[2]) + x[7].scale(m[13])).0, (x[4].scale(m[3]) + x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[14])).0, (x[4].scale(m[6]) + x[5].scale(m[7]) + x[6].scale(m[8]) + x[7].scale(m[15])).0, (x[7].scale(m[12])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 15>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 16>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 15>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 16>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], m[12]], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], m[14]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[1], m[2], m[13]], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], m[14]], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], m[15]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12]]] }
     }
 }
 
@@ -39989,7 +41789,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 15>> for Flecto
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Motor {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Flector, T, 15>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Flector, T, 16>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -39999,16 +41799,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 15> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 16> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 15>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Flector, W, 15> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 16>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Flector, W, 16> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 15>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 16>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -40450,236 +42250,261 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Mo
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
-        let t0 = v[0] * v[4];
-        let t1 = v[0] * v[5];
-        let t2 = v[0] * v[6];
-        let t3 = v[1] * v[5];
-        let t4 = v[1] * v[6];
-        let t5 = v[1] * v[7];
-        let t6 = v[2] * v[4];
-        let t7 = v[2] * v[6];
-        let t8 = v[2] * v[7];
-        let t9 = v[3] * v[4];
-        let t10 = v[3] * v[5];
-        let t11 = v[3] * v[7];
-        let t12 = v[0] * v[1];
-        let t13 = v[0] * v[2];
-        let t14 = v[0] * v[3];
-        let t15 = v[1] * v[1];
-        let t16 = v[1] * v[2];
-        let t17 = v[1] * v[3];
-        let t18 = v[1] * v[4];
-        let t19 = v[2] * v[2];
-        let t20 = v[2] * v[3];
-        let t21 = v[2] * v[5];
-        let t22 = v[3] * v[3];
-        let t23 = v[3] * v[6];
-        let t24 = t0 - t5;
-        let t25 = t0 + t5;
-        let t26 = t1 - t4;
-        let t27 = t1 + t4;
-        let t28 = t2 - t3;
-        let t29 = t2 + t3;
-        let t30 = t6 - t11;
-        let t31 = t6 + t11;
-        let t32 = t7 - t10;
-        let t33 = t7 + t10;
-        let t34 = t8 - t9;
-        let t35 = t8 + t9;
-        let t36 = t25 + t32;
-        let t37 = t26 + t35;
-        let t38 = t29 - t30;
-        let t39 = t19 + t22;
-        let t41 = (-t39).mul_add(T::from_i64(2), T::from_i64(1));
-        let t42 = t14 + t16;
-        let t43 = t13 - t17;
-        let t44 = t14 - t16;
-        let t45 = t15 + t22;
-        let t47 = (-t45).mul_add(T::from_i64(2), T::from_i64(1));
-        let t48 = t12 + t20;
-        let t49 = t13 + t17;
-        let t50 = t12 - t20;
-        let t51 = t15 + t19;
-        let t53 = (-t51).mul_add(T::from_i64(2), T::from_i64(1));
-        let t54 = t26 - t35;
-        let t55 = t29 + t30;
-        let t56 = t21 + t23;
-        let t57 = t24 + t33;
-        let t58 = t18 + t23;
-        let t59 = t28 - t31;
-        let t60 = t18 + t21;
-        let t61 = t24 - t33;
-        let t62 = t27 - t34;
-        let t63 = t28 + t31;
-        let t64 = t27 + t34;
-        let t65 = t25 - t32;
-        let t67 = xv[3] * t37;
-        let t70 = xv[3] * t42;
-        let t74 = xv[4] * t48;
-        let t75 = xv[2] * t49;
-        let t81 = xv[8] * t54;
-        let t82 = xv[9] * t55;
-        let t83 = xv[10] * t56;
-        let t87 = xv[8] * t57;
-        let t88 = xv[9] * t58;
-        let t89 = xv[10] * t59;
-        let t93 = xv[8] * t60;
-        let t94 = xv[9] * t61;
-        let t95 = xv[10] * t62;
-        let t98 = xv[10] * t49;
-        let t99 = xv[8] * t48;
-        let t103 = xv[9] * t42;
-        let t107 = xv[13] * t49;
-        let t109 = xv[11] * t48;
-        let t114 = xv[12] * t42;
-        let t117 = xv[2].mul_add(t36, t67);
-        let t118 = xv[4].mul_add(t38, t117);
-        let t120 = t118.mul_add(T::from_i64(2), xv[1]);
-        let t121 = (-xv[4]).mul_add(t43, t70);
-        let t122 = t121 * T::from_i64(2);
-        let t123 = xv[2].mul_add(t41, t122);
-        let t124 = (-xv[2]).mul_add(t44, t74);
-        let t125 = t124 * T::from_i64(2);
-        let t126 = xv[3].mul_add(t47, t125);
-        let t127 = (-xv[3]).mul_add(t50, t75);
-        let t128 = t127 * T::from_i64(2);
-        let t129 = xv[4].mul_add(t53, t128);
-        let t130 = xv[6].mul_add(t42, t82);
-        let t131 = xv[7].mul_add(t43, t81);
-        let t132 = t130 - t131;
-        let t133 = t132 * T::from_i64(2);
-        let t135 = xv[5].mul_add(t41, t133);
-        let t136 = (-t83).mul_add(T::from_i64(4), t135);
-        let t137 = xv[7].mul_add(t48, t87);
-        let t138 = xv[5].mul_add(t44, t89);
-        let t139 = t137 - t138;
-        let t140 = t139 * T::from_i64(2);
-        let t142 = xv[6].mul_add(t47, t140);
-        let t143 = (-t88).mul_add(T::from_i64(4), t142);
-        let t144 = xv[5].mul_add(t49, t95);
-        let t145 = xv[6].mul_add(t50, t94);
-        let t146 = t144 - t145;
-        let t147 = t146 * T::from_i64(2);
-        let t149 = xv[7].mul_add(t53, t147);
-        let t150 = (-t93).mul_add(T::from_i64(4), t149);
-        let t151 = (-xv[9]).mul_add(t50, t98);
-        let t152 = t151 * T::from_i64(2);
-        let t153 = xv[8].mul_add(t53, t152);
-        let t154 = (-xv[10]).mul_add(t44, t99);
-        let t155 = t154 * T::from_i64(2);
-        let t156 = xv[9].mul_add(t47, t155);
-        let t157 = (-xv[8]).mul_add(t43, t103);
-        let t158 = t157 * T::from_i64(2);
-        let t159 = xv[10].mul_add(t41, t158);
-        let t160 = (-xv[12]).mul_add(t50, t107);
-        let t161 = (-xv[14]).mul_add(t63, t160);
-        let t162 = t161 * T::from_i64(2);
-        let t163 = xv[11].mul_add(t53, t162);
-        let t164 = (-xv[13]).mul_add(t44, t109);
-        let t165 = (-xv[14]).mul_add(t64, t164);
-        let t166 = t165 * T::from_i64(2);
-        let t167 = xv[12].mul_add(t47, t166);
-        let t168 = (-xv[11]).mul_add(t43, t114);
-        let t169 = (-xv[14]).mul_add(t65, t168);
-        let t170 = t169 * T::from_i64(2);
-        let t171 = xv[13].mul_add(t41, t170);
-            return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], t120, t123, t126, t129, t136, t143, t150, t153, t156, t159, t163, t167, t171, xv[14], xv[15]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[5];
-        let m13 = v[1] * v[6];
-        let m14 = v[1] * v[7];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[6];
-        let m17 = v[2] * v[7];
-        let m18 = v[3] * v[4];
-        let m19 = v[3] * v[5];
-        let m20 = v[3] * v[7];
-        let m21 = v[1] * v[4];
-        let m22 = v[2] * v[5];
-        let m23 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = m9 - m14;
-        let m34 = m9 + m14;
-        let m35 = m10 - m13;
-        let m36 = m10 + m13;
-        let m37 = m11 - m12;
-        let m38 = m11 + m12;
-        let m39 = m15 - m20;
-        let m40 = m15 + m20;
-        let m41 = m16 - m19;
-        let m42 = m16 + m19;
-        let m43 = m17 - m18;
-        let m44 = m17 + m18;
-        let m45 = m34 + m41;
-        let m46 = m45 * T::from_i64(2);
-        let m47 = m35 + m44;
-        let m48 = m47 * T::from_i64(2);
-        let m49 = m38 - m39;
-        let m50 = m49 * T::from_i64(2);
-        let m52 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m53 = m29 * T::from_i64(2);
-        let m54 = m26 * T::from_i64(2);
-        let m55 = -m54;
-        let m56 = m28 * T::from_i64(2);
-        let m57 = -m56;
-        let m59 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m60 = m25 * T::from_i64(2);
-        let m61 = m27 * T::from_i64(2);
-        let m62 = m24 * T::from_i64(2);
-        let m63 = -m62;
-        let m65 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m66 = m44 - m35;
+        if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[4];
+        let t2 = v[0] * v[5];
+        let t3 = v[0] * v[6];
+        let t4 = v[1] * v[1];
+        let t5 = v[1] * v[5];
+        let t6 = v[1] * v[6];
+        let t7 = v[1] * v[7];
+        let t8 = v[2] * v[2];
+        let t9 = v[2] * v[4];
+        let t10 = v[2] * v[6];
+        let t11 = v[2] * v[7];
+        let t12 = v[3] * v[3];
+        let t13 = v[3] * v[4];
+        let t14 = v[3] * v[5];
+        let t15 = v[3] * v[7];
+        let t16 = v[0] * v[1];
+        let t17 = v[0] * v[2];
+        let t18 = v[0] * v[3];
+        let t19 = v[1] * v[2];
+        let t20 = v[1] * v[3];
+        let t21 = v[1] * v[4];
+        let t22 = v[2] * v[3];
+        let t23 = v[2] * v[5];
+        let t24 = v[3] * v[6];
+        let t25 = t0 - t4;
+        let t26 = t0 + t4;
+        let t27 = t1 - t7;
+        let t28 = t1 + t7;
+        let t29 = t2 - t6;
+        let t30 = t2 + t6;
+        let t31 = t3 - t5;
+        let t32 = t3 + t5;
+        let t33 = t8 - t12;
+        let t34 = t8 + t12;
+        let t35 = t9 - t15;
+        let t36 = t9 + t15;
+        let t37 = t10 - t14;
+        let t38 = t10 + t14;
+        let t39 = t11 - t13;
+        let t40 = t11 + t13;
+        let t41 = t26 + t34;
+        let t42 = t28 + t37;
+        let t43 = t29 + t40;
+        let t44 = t32 - t35;
+        let t45 = t26 - t34;
+        let t46 = t18 + t19;
+        let t47 = t17 - t20;
+        let t48 = t18 - t19;
+        let t49 = t25 + t33;
+        let t50 = t16 + t22;
+        let t51 = t17 + t20;
+        let t52 = t16 - t22;
+        let t53 = t25 - t33;
+        let t54 = t29 - t40;
+        let t55 = t32 + t35;
+        let t56 = t23 + t24;
+        let t57 = t27 + t38;
+        let t58 = t21 + t24;
+        let t59 = t31 - t36;
+        let t60 = t21 + t23;
+        let t61 = t27 - t38;
+        let t62 = t30 - t39;
+        let t63 = t31 + t36;
+        let t64 = t30 + t39;
+        let t65 = t28 - t37;
+        let t66 = xv[0] * t41;
+        let t69 = xv[3] * t43;
+        let t72 = xv[3] * t46;
+        let t76 = xv[4] * t50;
+        let t77 = xv[2] * t51;
+        let t83 = xv[8] * t54;
+        let t84 = xv[9] * t55;
+        let t85 = xv[10] * t56;
+        let t89 = xv[8] * t57;
+        let t90 = xv[9] * t58;
+        let t91 = xv[10] * t59;
+        let t95 = xv[8] * t60;
+        let t96 = xv[9] * t61;
+        let t97 = xv[10] * t62;
+        let t100 = xv[10] * t51;
+        let t101 = xv[8] * t50;
+        let t105 = xv[9] * t46;
+        let t109 = xv[13] * t51;
+        let t111 = xv[11] * t50;
+        let t116 = xv[12] * t46;
+        let t119 = xv[14] * t41;
+        let t120 = xv[15] * t41;
+        let t121 = xv[2].mul_add(t42, t69);
+        let t122 = xv[4].mul_add(t44, t121);
+        let t123 = t122 * T::from_i64(2);
+        let t124 = xv[1].mul_add(t41, t123);
+        let t125 = (-xv[4]).mul_add(t47, t72);
+        let t126 = t125 * T::from_i64(2);
+        let t127 = xv[2].mul_add(t45, t126);
+        let t128 = (-xv[2]).mul_add(t48, t76);
+        let t129 = t128 * T::from_i64(2);
+        let t130 = xv[3].mul_add(t49, t129);
+        let t131 = (-xv[3]).mul_add(t52, t77);
+        let t132 = t131 * T::from_i64(2);
+        let t133 = xv[4].mul_add(t53, t132);
+        let t134 = xv[6].mul_add(t46, t84);
+        let t135 = xv[7].mul_add(t47, t83);
+        let t136 = t134 - t135;
+        let t137 = t136 * T::from_i64(2);
+        let t139 = xv[5].mul_add(t45, t137);
+        let t140 = (-t85).mul_add(T::from_i64(4), t139);
+        let t141 = xv[7].mul_add(t50, t89);
+        let t142 = xv[5].mul_add(t48, t91);
+        let t143 = t141 - t142;
+        let t144 = t143 * T::from_i64(2);
+        let t146 = xv[6].mul_add(t49, t144);
+        let t147 = (-t90).mul_add(T::from_i64(4), t146);
+        let t148 = xv[5].mul_add(t51, t97);
+        let t149 = xv[6].mul_add(t52, t96);
+        let t150 = t148 - t149;
+        let t151 = t150 * T::from_i64(2);
+        let t153 = xv[7].mul_add(t53, t151);
+        let t154 = (-t95).mul_add(T::from_i64(4), t153);
+        let t155 = (-xv[9]).mul_add(t52, t100);
+        let t156 = t155 * T::from_i64(2);
+        let t157 = xv[8].mul_add(t53, t156);
+        let t158 = (-xv[10]).mul_add(t48, t101);
+        let t159 = t158 * T::from_i64(2);
+        let t160 = xv[9].mul_add(t49, t159);
+        let t161 = (-xv[8]).mul_add(t47, t105);
+        let t162 = t161 * T::from_i64(2);
+        let t163 = xv[10].mul_add(t45, t162);
+        let t164 = (-xv[12]).mul_add(t52, t109);
+        let t165 = (-xv[14]).mul_add(t63, t164);
+        let t166 = t165 * T::from_i64(2);
+        let t167 = xv[11].mul_add(t53, t166);
+        let t168 = (-xv[13]).mul_add(t48, t111);
+        let t169 = (-xv[14]).mul_add(t64, t168);
+        let t170 = t169 * T::from_i64(2);
+        let t171 = xv[12].mul_add(t49, t170);
+        let t172 = (-xv[11]).mul_add(t47, t116);
+        let t173 = (-xv[14]).mul_add(t65, t172);
+        let t174 = t173 * T::from_i64(2);
+        let t175 = xv[13].mul_add(t45, t174);
+            return Multivector { c: gx::slots::from_values::<S, T, 16>([t66, t124, t127, t130, t133, t140, t147, t154, t157, t160, t163, t167, t171, t175, t119, t120]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[5];
+        let m14 = v[1] * v[6];
+        let m15 = v[1] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[4];
+        let m20 = v[3] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = v[1] * v[4];
+        let m23 = v[2] * v[5];
+        let m24 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = m25 - m27;
+        let m36 = m25 + m27;
+        let m37 = m26 - m28;
+        let m38 = m26 + m28;
+        let m39 = m10 - m15;
+        let m40 = m10 + m15;
+        let m41 = m11 - m14;
+        let m42 = m11 + m14;
+        let m43 = m12 - m13;
+        let m44 = m12 + m13;
+        let m45 = m16 - m21;
+        let m46 = m16 + m21;
+        let m47 = m17 - m20;
+        let m48 = m17 + m20;
+        let m49 = m18 - m19;
+        let m50 = m18 + m19;
+        let m51 = m40 + m47;
+        let m52 = m51 * T::from_i64(2);
+        let m53 = m41 + m50;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m44 - m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m34 * T::from_i64(2);
+        let m58 = m31 * T::from_i64(2);
+        let m59 = -m58;
+        let m60 = m33 * T::from_i64(2);
+        let m61 = -m60;
+        let m62 = m30 * T::from_i64(2);
+        let m63 = m32 * T::from_i64(2);
+        let m64 = m29 * T::from_i64(2);
+        let m65 = -m64;
+        let m66 = m50 - m41;
         let m67 = m66 * T::from_i64(2);
-        let m68 = m38 + m39;
+        let m68 = m44 + m45;
         let m69 = m68 * T::from_i64(2);
-        let m70 = m22 + m23;
+        let m70 = m23 + m24;
         let m71 = m70 * T::from_i64(4);
         let m72 = -m71;
-        let m73 = m33 + m42;
+        let m73 = m39 + m48;
         let m74 = m73 * T::from_i64(2);
-        let m75 = m21 + m23;
+        let m75 = m22 + m24;
         let m76 = m75 * T::from_i64(4);
         let m77 = -m76;
-        let m78 = m40 - m37;
+        let m78 = m46 - m43;
         let m79 = m78 * T::from_i64(2);
-        let m80 = m21 + m22;
+        let m80 = m22 + m23;
         let m81 = m80 * T::from_i64(4);
         let m82 = -m81;
-        let m83 = m42 - m33;
+        let m83 = m48 - m39;
         let m84 = m83 * T::from_i64(2);
-        let m85 = m36 - m43;
+        let m85 = m42 - m49;
         let m86 = m85 * T::from_i64(2);
-        let m87 = m37 + m40;
+        let m87 = m43 + m46;
         let m88 = m87 * T::from_i64(2);
         let m89 = -m88;
-        let m90 = m36 + m43;
+        let m90 = m42 + m49;
         let m91 = m90 * T::from_i64(2);
         let m92 = -m91;
-        let m93 = m41 - m34;
+        let m93 = m47 - m40;
         let m94 = m93 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m46) + x[3].scale(m48) + x[4].scale(m50)).0, (x[2].scale(m52) + x[3].scale(m53) + x[4].scale(m55)).0, (x[2].scale(m57) + x[3].scale(m59) + x[4].scale(m60)).0, (x[2].scale(m61) + x[3].scale(m63) + x[4].scale(m65)).0, (x[5].scale(m52) + x[6].scale(m53) + x[7].scale(m55) + x[8].scale(m67) + x[9].scale(m69) + x[10].scale(m72)).0, (x[5].scale(m57) + x[6].scale(m59) + x[7].scale(m60) + x[8].scale(m74) + x[9].scale(m77) + x[10].scale(m79)).0, (x[5].scale(m61) + x[6].scale(m63) + x[7].scale(m65) + x[8].scale(m82) + x[9].scale(m84) + x[10].scale(m86)).0, (x[8].scale(m65) + x[9].scale(m63) + x[10].scale(m61)).0, (x[8].scale(m60) + x[9].scale(m59) + x[10].scale(m57)).0, (x[8].scale(m55) + x[9].scale(m53) + x[10].scale(m52)).0, (x[11].scale(m65) + x[12].scale(m63) + x[13].scale(m61) + x[14].scale(m89)).0, (x[11].scale(m60) + x[12].scale(m59) + x[13].scale(m57) + x[14].scale(m92)).0, (x[11].scale(m55) + x[12].scale(m53) + x[13].scale(m52) + x[14].scale(m94)).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15]).0] }
+        Multivector { c: [(x[0].scale(m38)).0, (x[1].scale(m38) + x[2].scale(m52) + x[3].scale(m54) + x[4].scale(m56)).0, (x[2].scale(m37) + x[3].scale(m57) + x[4].scale(m59)).0, (x[2].scale(m61) + x[3].scale(m36) + x[4].scale(m62)).0, (x[2].scale(m63) + x[3].scale(m65) + x[4].scale(m35)).0, (x[5].scale(m37) + x[6].scale(m57) + x[7].scale(m59) + x[8].scale(m67) + x[9].scale(m69) + x[10].scale(m72)).0, (x[5].scale(m61) + x[6].scale(m36) + x[7].scale(m62) + x[8].scale(m74) + x[9].scale(m77) + x[10].scale(m79)).0, (x[5].scale(m63) + x[6].scale(m65) + x[7].scale(m35) + x[8].scale(m82) + x[9].scale(m84) + x[10].scale(m86)).0, (x[8].scale(m35) + x[9].scale(m65) + x[10].scale(m63)).0, (x[8].scale(m62) + x[9].scale(m36) + x[10].scale(m61)).0, (x[8].scale(m59) + x[9].scale(m57) + x[10].scale(m37)).0, (x[11].scale(m35) + x[12].scale(m65) + x[13].scale(m63) + x[14].scale(m89)).0, (x[11].scale(m62) + x[12].scale(m36) + x[13].scale(m61) + x[14].scale(m92)).0, (x[11].scale(m59) + x[12].scale(m57) + x[13].scale(m37) + x[14].scale(m94)).0, (x[14].scale(m38)).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m38)).0] }
     }
 }
 
@@ -40692,122 +42517,140 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 24> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 25> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[3];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[3];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[3];
-        let m8 = v[3] * v[3];
-        let m9 = v[0] * v[4];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[5];
-        let m13 = v[1] * v[6];
-        let m14 = v[1] * v[7];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[6];
-        let m17 = v[2] * v[7];
-        let m18 = v[3] * v[4];
-        let m19 = v[3] * v[5];
-        let m20 = v[3] * v[7];
-        let m21 = v[1] * v[4];
-        let m22 = v[2] * v[5];
-        let m23 = v[3] * v[6];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = m9 - m14;
-        let m34 = m9 + m14;
-        let m35 = m10 - m13;
-        let m36 = m10 + m13;
-        let m37 = m11 - m12;
-        let m38 = m11 + m12;
-        let m39 = m15 - m20;
-        let m40 = m15 + m20;
-        let m41 = m16 - m19;
-        let m42 = m16 + m19;
-        let m43 = m17 - m18;
-        let m44 = m17 + m18;
-        let m45 = m34 + m41;
-        let m46 = m45 * T::from_i64(2);
-        let m47 = m35 + m44;
-        let m48 = m47 * T::from_i64(2);
-        let m49 = m38 - m39;
-        let m50 = m49 * T::from_i64(2);
-        let m52 = (-m32).mul_add(T::from_i64(2), T::from_i64(1));
-        let m53 = m29 * T::from_i64(2);
-        let m54 = m26 * T::from_i64(2);
-        let m55 = -m54;
-        let m56 = m28 * T::from_i64(2);
-        let m57 = -m56;
-        let m59 = (-m31).mul_add(T::from_i64(2), T::from_i64(1));
-        let m60 = m25 * T::from_i64(2);
-        let m61 = m27 * T::from_i64(2);
-        let m62 = m24 * T::from_i64(2);
-        let m63 = -m62;
-        let m65 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m66 = m44 - m35;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u4 = v[0] * v[7];
+        let u7 = v[3] * v[6];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[3].mul_add(v[3], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = (-v[1]).mul_add(v[4], u4);
+        let u13 = v[2].mul_add(v[5], u7);
+        let u14 = u12 - u13;
+        let u15 = u14 * T::from_i64(2);
+            T::check_unit(&[u11, u15]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[3] * v[3];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[3];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[3];
+        let m9 = v[2] * v[3];
+        let m10 = v[0] * v[4];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[5];
+        let m14 = v[1] * v[6];
+        let m15 = v[1] * v[7];
+        let m16 = v[2] * v[4];
+        let m17 = v[2] * v[6];
+        let m18 = v[2] * v[7];
+        let m19 = v[3] * v[4];
+        let m20 = v[3] * v[5];
+        let m21 = v[3] * v[7];
+        let m22 = v[1] * v[4];
+        let m23 = v[2] * v[5];
+        let m24 = v[3] * v[6];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = m25 - m27;
+        let m36 = m25 + m27;
+        let m37 = m26 - m28;
+        let m38 = m26 + m28;
+        let m39 = m10 - m15;
+        let m40 = m10 + m15;
+        let m41 = m11 - m14;
+        let m42 = m11 + m14;
+        let m43 = m12 - m13;
+        let m44 = m12 + m13;
+        let m45 = m16 - m21;
+        let m46 = m16 + m21;
+        let m47 = m17 - m20;
+        let m48 = m17 + m20;
+        let m49 = m18 - m19;
+        let m50 = m18 + m19;
+        let m51 = m40 + m47;
+        let m52 = m51 * T::from_i64(2);
+        let m53 = m41 + m50;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m44 - m45;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m34 * T::from_i64(2);
+        let m58 = m31 * T::from_i64(2);
+        let m59 = -m58;
+        let m60 = m33 * T::from_i64(2);
+        let m61 = -m60;
+        let m62 = m30 * T::from_i64(2);
+        let m63 = m32 * T::from_i64(2);
+        let m64 = m29 * T::from_i64(2);
+        let m65 = -m64;
+        let m66 = m50 - m41;
         let m67 = m66 * T::from_i64(2);
-        let m68 = m38 + m39;
+        let m68 = m44 + m45;
         let m69 = m68 * T::from_i64(2);
-        let m70 = m22 + m23;
+        let m70 = m23 + m24;
         let m71 = m70 * T::from_i64(4);
         let m72 = -m71;
-        let m73 = m33 + m42;
+        let m73 = m39 + m48;
         let m74 = m73 * T::from_i64(2);
-        let m75 = m21 + m23;
+        let m75 = m22 + m24;
         let m76 = m75 * T::from_i64(4);
         let m77 = -m76;
-        let m78 = m40 - m37;
+        let m78 = m46 - m43;
         let m79 = m78 * T::from_i64(2);
-        let m80 = m21 + m22;
+        let m80 = m22 + m23;
         let m81 = m80 * T::from_i64(4);
         let m82 = -m81;
-        let m83 = m42 - m33;
+        let m83 = m48 - m39;
         let m84 = m83 * T::from_i64(2);
-        let m85 = m36 - m43;
+        let m85 = m42 - m49;
         let m86 = m85 * T::from_i64(2);
-        let m87 = m37 + m40;
+        let m87 = m43 + m46;
         let m88 = m87 * T::from_i64(2);
         let m89 = -m88;
-        let m90 = m36 + m43;
+        let m90 = m42 + m49;
         let m91 = m90 * T::from_i64(2);
         let m92 = -m91;
-        let m93 = m41 - m34;
+        let m93 = m47 - m40;
         let m94 = m93 * T::from_i64(2);
-        gx::Prepared::from_entries([m46, m48, m50, m52, m53, m55, m57, m59, m60, m61, m63, m65, m67, m69, m72, m74, m77, m79, m82, m84, m86, m89, m92, m94])
+        gx::Prepared::from_entries([m38, m52, m54, m56, m37, m57, m59, m61, m36, m62, m63, m65, m35, m67, m69, m72, m74, m77, m79, m82, m84, m86, m89, m92, m94])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Motor>, Multivector, T, 24> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Motor>, Multivector, T, 25> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m[0]) + x[3].scale(m[1]) + x[4].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4]) + x[4].scale(m[5])).0, (x[2].scale(m[6]) + x[3].scale(m[7]) + x[4].scale(m[8])).0, (x[2].scale(m[9]) + x[3].scale(m[10]) + x[4].scale(m[11])).0, (x[5].scale(m[3]) + x[6].scale(m[4]) + x[7].scale(m[5]) + x[8].scale(m[12]) + x[9].scale(m[13]) + x[10].scale(m[14])).0, (x[5].scale(m[6]) + x[6].scale(m[7]) + x[7].scale(m[8]) + x[8].scale(m[15]) + x[9].scale(m[16]) + x[10].scale(m[17])).0, (x[5].scale(m[9]) + x[6].scale(m[10]) + x[7].scale(m[11]) + x[8].scale(m[18]) + x[9].scale(m[19]) + x[10].scale(m[20])).0, (x[8].scale(m[11]) + x[9].scale(m[10]) + x[10].scale(m[9])).0, (x[8].scale(m[8]) + x[9].scale(m[7]) + x[10].scale(m[6])).0, (x[8].scale(m[5]) + x[9].scale(m[4]) + x[10].scale(m[3])).0, (x[11].scale(m[11]) + x[12].scale(m[10]) + x[13].scale(m[9]) + x[14].scale(m[21])).0, (x[11].scale(m[8]) + x[12].scale(m[7]) + x[13].scale(m[6]) + x[14].scale(m[22])).0, (x[11].scale(m[5]) + x[12].scale(m[4]) + x[13].scale(m[3]) + x[14].scale(m[23])).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[12])).0, (x[5].scale(m[4]) + x[6].scale(m[5]) + x[7].scale(m[6]) + x[8].scale(m[13]) + x[9].scale(m[14]) + x[10].scale(m[15])).0, (x[5].scale(m[7]) + x[6].scale(m[8]) + x[7].scale(m[9]) + x[8].scale(m[16]) + x[9].scale(m[17]) + x[10].scale(m[18])).0, (x[5].scale(m[10]) + x[6].scale(m[11]) + x[7].scale(m[12]) + x[8].scale(m[19]) + x[9].scale(m[20]) + x[10].scale(m[21])).0, (x[8].scale(m[12]) + x[9].scale(m[11]) + x[10].scale(m[10])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[7])).0, (x[8].scale(m[6]) + x[9].scale(m[5]) + x[10].scale(m[4])).0, (x[11].scale(m[12]) + x[12].scale(m[11]) + x[13].scale(m[10]) + x[14].scale(m[22])).0, (x[11].scale(m[9]) + x[12].scale(m[8]) + x[13].scale(m[7]) + x[14].scale(m[23])).0, (x[11].scale(m[6]) + x[12].scale(m[5]) + x[13].scale(m[4]) + x[14].scale(m[24])).0, (x[14].scale(m[0])).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[9], m[10], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[4], m[5], m[12], m[13], m[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[7], m[8], m[15], m[16], m[17], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[10], m[11], m[18], m[19], m[20], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[10], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[11], m[10], m[9], m[21], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[8], m[7], m[6], m[22], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[3], m[23], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[5], m[6], m[13], m[14], m[15], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[8], m[9], m[16], m[17], m[18], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[11], m[12], m[19], m[20], m[21], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[11], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[11], m[10], m[22], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[7], m[23], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], m[24], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -40815,7 +42658,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>> for Mu
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Motor {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -40825,16 +42668,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 24> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 25> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Multivector, W, 24> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Multivector, W, 25> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 24>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 25>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -40967,11 +42810,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Flector
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t3 = v[7] * v[7];
+        let t4 = v[0].mul_add(v[0], t1);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 + t5;
+        let t7 = xv[0] * t6;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t7]) };
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[7] * v[7];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m6)).0] }
     }
 }
 
@@ -40984,30 +42854,51 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Flec
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[7] * v[7];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        gx::Prepared::from_entries([m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -41015,7 +42906,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>> for Scalar
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Flector {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -41025,16 +42916,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -41285,6 +43176,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Plane<S, T>) -> Plane<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -41304,18 +43211,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Flector<
         let t26 = v[4] * v[7];
         let t27 = xv[0] * t26;
         let t30 = v[1].mul_add(t9, t16);
-        let t32 = t30.mul_add(T::from_i64(2), xv[0]);
-        let t33 = (-v[7]).mul_add(t14, t17);
-        let t35 = t33.mul_add(T::from_i64(2), -xv[1]);
-        let t36 = v[2].mul_add(t4, t20);
-        let t38 = t36.mul_add(T::from_i64(2), -xv[2]);
-        let t39 = xv[1].mul_add(t23, t25);
-        let t40 = v[5].mul_add(t14, t39);
-        let t41 = xv[2].mul_add(t21, t27);
-        let t42 = v[6].mul_add(t9, t41);
-        let t43 = t40 - t42;
-        let t45 = t43.mul_add(T::from_i64(2), -xv[3]);
-            return Plane { c: gx::slots::from_values::<S, T, 4>([t32, t35, t38, t45]) };
+        let t33 = v[1] * v[1];
+        let t35 = v[7] * v[7];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t39 = xv[0] * t38;
+        let t40 = t30.mul_add(T::from_i64(2), t39);
+        let t41 = (-v[7]).mul_add(t14, t17);
+        let t42 = t41 * T::from_i64(2);
+        let t44 = (-xv[1]).mul_add(t38, t42);
+        let t45 = v[2].mul_add(t4, t20);
+        let t46 = t45 * T::from_i64(2);
+        let t48 = (-xv[2]).mul_add(t38, t46);
+        let t49 = xv[1].mul_add(t23, t25);
+        let t50 = v[5].mul_add(t14, t49);
+        let t51 = xv[2].mul_add(t21, t27);
+        let t52 = v[6].mul_add(t9, t51);
+        let t53 = t50 - t52;
+        let t54 = t53 * T::from_i64(2);
+        let t56 = (-xv[3]).mul_add(t38, t54);
+            return Plane { c: gx::slots::from_values::<S, T, 4>([t40, t44, t48, t56]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -41334,25 +43250,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Flector<
         let m20 = v[2] * v[3];
         let m21 = v[6] * v[7];
         let m22 = m0 - m1;
-        let m23 = m2 - m3;
-        let m24 = m22 - m23;
-        let m25 = m4 - m9;
-        let m26 = m25 * T::from_i64(2);
-        let m27 = m5 + m8;
+        let m23 = m0 + m1;
+        let m24 = m2 - m3;
+        let m25 = m2 + m3;
+        let m26 = m22 - m24;
+        let m27 = m4 - m9;
         let m28 = m27 * T::from_i64(2);
-        let m29 = m4 + m9;
+        let m29 = m5 + m8;
         let m30 = m29 * T::from_i64(2);
-        let m31 = m22 + m23;
-        let m32 = -m31;
-        let m33 = m7 - m6;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m5 - m8;
+        let m31 = m4 + m9;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m24;
+        let m34 = -m33;
+        let m35 = m7 - m6;
         let m36 = m35 * T::from_i64(2);
-        let m37 = m6 + m7;
+        let m37 = m5 - m8;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m2 + m3;
-        let m40 = m0 + m1;
-        let m41 = m39 - m40;
+        let m39 = m6 + m7;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m25 - m23;
         let m42 = v[0].mul_add(v[3], m11);
         let m43 = v[2].mul_add(v[5], m13);
         let m44 = m42 - m43;
@@ -41365,9 +43281,10 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Plane<S, T>> for gx::Unit<Flector<
         let m51 = v[1].mul_add(v[4], m21);
         let m52 = m50 - m51;
         let m53 = m52 * T::from_i64(2);
-        let m54 = -T::from_i64(1);
+        let m54 = m23 + m25;
+        let m55 = -m54;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Plane { c: [(x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m28)).0, (x[0].scale(m30) + x[1].scale(m32) + x[2].scale(m34)).0, (x[0].scale(m36) + x[1].scale(m38) + x[2].scale(m41)).0, (x[0].scale(m45) + x[1].scale(m49) + x[2].scale(m53) + x[3].scale(m54)).0] }
+        Plane { c: [(x[0].scale(m26) + x[1].scale(m28) + x[2].scale(m30)).0, (x[0].scale(m32) + x[1].scale(m34) + x[2].scale(m36)).0, (x[0].scale(m38) + x[1].scale(m40) + x[2].scale(m41)).0, (x[0].scale(m45) + x[1].scale(m49) + x[2].scale(m53) + x[3].scale(m55)).0] }
     }
 }
 
@@ -41384,6 +43301,22 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Plane, T, 13> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -41401,25 +43334,25 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Flector<(), T>> {
         let m20 = v[2] * v[3];
         let m21 = v[6] * v[7];
         let m22 = m0 - m1;
-        let m23 = m2 - m3;
-        let m24 = m22 - m23;
-        let m25 = m4 - m9;
-        let m26 = m25 * T::from_i64(2);
-        let m27 = m5 + m8;
+        let m23 = m0 + m1;
+        let m24 = m2 - m3;
+        let m25 = m2 + m3;
+        let m26 = m22 - m24;
+        let m27 = m4 - m9;
         let m28 = m27 * T::from_i64(2);
-        let m29 = m4 + m9;
+        let m29 = m5 + m8;
         let m30 = m29 * T::from_i64(2);
-        let m31 = m22 + m23;
-        let m32 = -m31;
-        let m33 = m7 - m6;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m5 - m8;
+        let m31 = m4 + m9;
+        let m32 = m31 * T::from_i64(2);
+        let m33 = m22 + m24;
+        let m34 = -m33;
+        let m35 = m7 - m6;
         let m36 = m35 * T::from_i64(2);
-        let m37 = m6 + m7;
+        let m37 = m5 - m8;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m2 + m3;
-        let m40 = m0 + m1;
-        let m41 = m39 - m40;
+        let m39 = m6 + m7;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m25 - m23;
         let m42 = v[0].mul_add(v[3], m11);
         let m43 = v[2].mul_add(v[5], m13);
         let m44 = m42 - m43;
@@ -41432,8 +43365,9 @@ impl<T: gx::Coef> gx::Prepare<Plane> for gx::Unit<Flector<(), T>> {
         let m51 = v[1].mul_add(v[4], m21);
         let m52 = m50 - m51;
         let m53 = m52 * T::from_i64(2);
-        let m54 = -T::from_i64(1);
-        gx::Prepared::from_entries([m24, m26, m28, m30, m32, m34, m36, m38, m41, m45, m49, m53, m54])
+        let m54 = m23 + m25;
+        let m55 = -m54;
+        gx::Prepared::from_entries([m26, m28, m30, m32, m34, m36, m38, m40, m41, m45, m49, m53, m55])
     }
 }
 
@@ -41802,6 +43736,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Flector<(
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 6>(&x.c) {
         let t1 = v[1] * xv[1];
         let t3 = v[0].mul_add(xv[0], t1);
@@ -41879,81 +43829,80 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Flector<(
         let t102 = xv[5].mul_add(t27, t101);
             return Line { c: gx::slots::from_values::<S, T, 6>([t75, t78, t81, t88, t95, t102]) };
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[5];
-        let m17 = v[2] * v[4];
-        let m18 = v[2] * v[5];
-        let m19 = v[2] * v[6];
-        let m20 = v[3] * v[7];
-        let m21 = v[4] * v[7];
-        let m22 = v[5] * v[7];
-        let m23 = v[6] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = v[0].mul_add(v[3], m21);
-        let m34 = v[0].mul_add(v[5], m13);
-        let m35 = v[0].mul_add(v[6], m17);
-        let m36 = v[1].mul_add(v[3], m22);
-        let m37 = v[1].mul_add(v[6], m18);
-        let m38 = v[2].mul_add(v[3], m23);
-        let m39 = m30 * T::from_i64(2);
-        let m40 = T::from_i64(1) - m39;
-        let m41 = m24 * T::from_i64(2);
-        let m42 = m27 * T::from_i64(2);
-        let m43 = m25 * T::from_i64(2);
-        let m44 = m31 * T::from_i64(2);
-        let m45 = m44 - T::from_i64(1);
-        let m46 = m28 * T::from_i64(2);
-        let m47 = -m46;
-        let m48 = m26 * T::from_i64(2);
-        let m49 = m29 * T::from_i64(2);
-        let m50 = m32 * T::from_i64(2);
-        let m51 = m50 - T::from_i64(1);
-        let m52 = m14 + m19;
-        let m53 = m52 * T::from_i64(4);
-        let m54 = -m53;
-        let m55 = m34 - m38;
-        let m56 = m55 * T::from_i64(2);
-        let m57 = m35 + m36;
-        let m58 = m57 * T::from_i64(2);
-        let m59 = m39 - T::from_i64(1);
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[5];
+        let m18 = v[2] * v[4];
+        let m19 = v[2] * v[5];
+        let m20 = v[2] * v[6];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = m0 + m1;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = v[0].mul_add(v[3], m22);
+        let m36 = v[0].mul_add(v[5], m14);
+        let m37 = v[0].mul_add(v[6], m18);
+        let m38 = v[1].mul_add(v[3], m23);
+        let m39 = v[1].mul_add(v[6], m19);
+        let m40 = v[2].mul_add(v[3], m24);
+        let m41 = m25 - m26;
+        let m42 = m25 + m26;
+        let m43 = m27 - m28;
+        let m44 = m29 * T::from_i64(2);
+        let m45 = m32 * T::from_i64(2);
+        let m46 = m30 * T::from_i64(2);
+        let m47 = -m42;
+        let m48 = m33 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m31 * T::from_i64(2);
+        let m51 = m34 * T::from_i64(2);
+        let m52 = -m43;
+        let m53 = m15 + m20;
+        let m54 = m53 * T::from_i64(4);
+        let m55 = -m54;
+        let m56 = m36 - m40;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m37 + m38;
+        let m59 = m58 * T::from_i64(2);
         let m60 = -m41;
-        let m61 = -m42;
-        let m62 = m34 + m38;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m14 + m20;
-        let m65 = m64 * T::from_i64(4);
-        let m66 = m37 - m33;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = -m43;
-        let m69 = T::from_i64(1) - m44;
-        let m70 = m35 - m36;
+        let m61 = -m44;
+        let m62 = -m45;
+        let m63 = m36 + m40;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m15 + m21;
+        let m66 = m65 * T::from_i64(4);
+        let m67 = m39 - m35;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = -m46;
+        let m70 = m37 - m38;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m33 + m37;
+        let m72 = m35 + m39;
         let m73 = m72 * T::from_i64(2);
-        let m74 = m19 + m20;
+        let m74 = m20 + m21;
         let m75 = m74 * T::from_i64(4);
-        let m76 = -m48;
-        let m77 = -m49;
-        let m78 = T::from_i64(1) - m50;
+        let m76 = -m50;
+        let m77 = -m51;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m40) + x[1].scale(m41) + x[2].scale(m42)).0, (x[0].scale(m43) + x[1].scale(m45) + x[2].scale(m47)).0, (x[0].scale(m48) + x[1].scale(m49) + x[2].scale(m51)).0, (x[0].scale(m54) + x[1].scale(m56) + x[2].scale(m58) + x[3].scale(m59) + x[4].scale(m60) + x[5].scale(m61)).0, (x[0].scale(m63) + x[1].scale(m65) + x[2].scale(m67) + x[3].scale(m68) + x[4].scale(m69) + x[5].scale(m46)).0, (x[0].scale(m71) + x[1].scale(m73) + x[2].scale(m75) + x[3].scale(m76) + x[4].scale(m77) + x[5].scale(m78)).0] }
+        Line { c: [(x[0].scale(m41) + x[1].scale(m44) + x[2].scale(m45)).0, (x[0].scale(m46) + x[1].scale(m47) + x[2].scale(m49)).0, (x[0].scale(m50) + x[1].scale(m51) + x[2].scale(m52)).0, (x[0].scale(m55) + x[1].scale(m57) + x[2].scale(m59) + x[3].scale(m60) + x[4].scale(m61) + x[5].scale(m62)).0, (x[0].scale(m64) + x[1].scale(m66) + x[2].scale(m68) + x[3].scale(m69) + x[4].scale(m42) + x[5].scale(m48)).0, (x[0].scale(m71) + x[1].scale(m73) + x[2].scale(m75) + x[3].scale(m76) + x[4].scale(m77) + x[5].scale(m43)).0] }
     }
 }
 
@@ -41970,80 +43919,95 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Line, T, 27> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[5];
-        let m17 = v[2] * v[4];
-        let m18 = v[2] * v[5];
-        let m19 = v[2] * v[6];
-        let m20 = v[3] * v[7];
-        let m21 = v[4] * v[7];
-        let m22 = v[5] * v[7];
-        let m23 = v[6] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = v[0].mul_add(v[3], m21);
-        let m34 = v[0].mul_add(v[5], m13);
-        let m35 = v[0].mul_add(v[6], m17);
-        let m36 = v[1].mul_add(v[3], m22);
-        let m37 = v[1].mul_add(v[6], m18);
-        let m38 = v[2].mul_add(v[3], m23);
-        let m39 = m30 * T::from_i64(2);
-        let m40 = T::from_i64(1) - m39;
-        let m41 = m24 * T::from_i64(2);
-        let m42 = m27 * T::from_i64(2);
-        let m43 = m25 * T::from_i64(2);
-        let m44 = m31 * T::from_i64(2);
-        let m45 = m44 - T::from_i64(1);
-        let m46 = m28 * T::from_i64(2);
-        let m47 = -m46;
-        let m48 = m26 * T::from_i64(2);
-        let m49 = m29 * T::from_i64(2);
-        let m50 = m32 * T::from_i64(2);
-        let m51 = m50 - T::from_i64(1);
-        let m52 = m14 + m19;
-        let m53 = m52 * T::from_i64(4);
-        let m54 = -m53;
-        let m55 = m34 - m38;
-        let m56 = m55 * T::from_i64(2);
-        let m57 = m35 + m36;
-        let m58 = m57 * T::from_i64(2);
-        let m59 = m39 - T::from_i64(1);
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[5];
+        let m18 = v[2] * v[4];
+        let m19 = v[2] * v[5];
+        let m20 = v[2] * v[6];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m2 - m3;
+        let m27 = m0 + m1;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = v[0].mul_add(v[3], m22);
+        let m36 = v[0].mul_add(v[5], m14);
+        let m37 = v[0].mul_add(v[6], m18);
+        let m38 = v[1].mul_add(v[3], m23);
+        let m39 = v[1].mul_add(v[6], m19);
+        let m40 = v[2].mul_add(v[3], m24);
+        let m41 = m25 - m26;
+        let m42 = m25 + m26;
+        let m43 = m27 - m28;
+        let m44 = m29 * T::from_i64(2);
+        let m45 = m32 * T::from_i64(2);
+        let m46 = m30 * T::from_i64(2);
+        let m47 = -m42;
+        let m48 = m33 * T::from_i64(2);
+        let m49 = -m48;
+        let m50 = m31 * T::from_i64(2);
+        let m51 = m34 * T::from_i64(2);
+        let m52 = -m43;
+        let m53 = m15 + m20;
+        let m54 = m53 * T::from_i64(4);
+        let m55 = -m54;
+        let m56 = m36 - m40;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m37 + m38;
+        let m59 = m58 * T::from_i64(2);
         let m60 = -m41;
-        let m61 = -m42;
-        let m62 = m34 + m38;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m14 + m20;
-        let m65 = m64 * T::from_i64(4);
-        let m66 = m37 - m33;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = -m43;
-        let m69 = T::from_i64(1) - m44;
-        let m70 = m35 - m36;
+        let m61 = -m44;
+        let m62 = -m45;
+        let m63 = m36 + m40;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m15 + m21;
+        let m66 = m65 * T::from_i64(4);
+        let m67 = m39 - m35;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = -m46;
+        let m70 = m37 - m38;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m33 + m37;
+        let m72 = m35 + m39;
         let m73 = m72 * T::from_i64(2);
-        let m74 = m19 + m20;
+        let m74 = m20 + m21;
         let m75 = m74 * T::from_i64(4);
-        let m76 = -m48;
-        let m77 = -m49;
-        let m78 = T::from_i64(1) - m50;
-        gx::Prepared::from_entries([m40, m41, m42, m43, m45, m47, m48, m49, m51, m54, m56, m58, m59, m60, m61, m63, m65, m67, m68, m69, m46, m71, m73, m75, m76, m77, m78])
+        let m76 = -m50;
+        let m77 = -m51;
+        gx::Prepared::from_entries([m41, m44, m45, m46, m47, m49, m50, m51, m52, m55, m57, m59, m60, m61, m62, m64, m66, m68, m69, m42, m48, m71, m73, m75, m76, m77, m43])
     }
 }
 
@@ -42342,6 +44306,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[6] * xv[3];
         let t3 = v[1].mul_add(xv[0], t1);
@@ -42362,16 +44342,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
         let t28 = v[1].mul_add(t4, t18);
         let t29 = (-v[0]).mul_add(t9, t19);
         let t30 = t28 + t29;
-        let t32 = t30.mul_add(T::from_i64(2), -xv[0]);
-        let t33 = (-v[0]).mul_add(t4, t22);
-        let t34 = v[1].mul_add(t9, t23);
-        let t35 = t33 - t34;
-        let t37 = t35.mul_add(T::from_i64(2), xv[1]);
-        let t38 = (-v[0]).mul_add(t14, t27);
-        let t39 = v[1].mul_add(t15, t26);
-        let t40 = t38 - t39;
-        let t42 = t40.mul_add(T::from_i64(2), xv[2]);
-            return Point { c: gx::slots::from_values::<S, T, 4>([t32, t37, t42, xv[3]]) };
+        let t31 = t30 * T::from_i64(2);
+        let t33 = v[1] * v[1];
+        let t35 = v[7] * v[7];
+        let t36 = v[0].mul_add(v[0], t33);
+        let t37 = v[2].mul_add(v[2], t35);
+        let t38 = t36 + t37;
+        let t40 = (-xv[0]).mul_add(t38, t31);
+        let t41 = (-v[0]).mul_add(t4, t22);
+        let t42 = v[1].mul_add(t9, t23);
+        let t43 = t41 - t42;
+        let t45 = xv[1] * t38;
+        let t46 = t43.mul_add(T::from_i64(2), t45);
+        let t47 = (-v[0]).mul_add(t14, t27);
+        let t48 = v[1].mul_add(t15, t26);
+        let t49 = t47 - t48;
+        let t51 = xv[2] * t38;
+        let t52 = t49.mul_add(T::from_i64(2), t51);
+        let t53 = xv[3] * t38;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t40, t46, t52, t53]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -42423,8 +44412,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
         let m53 = v[1].mul_add(v[4], m20);
         let m54 = m52 - m53;
         let m55 = m54 * T::from_i64(2);
+        let m56 = m49 + m50;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29) + x[3].scale(m33)).0, (x[0].scale(m36) + x[1].scale(m37) + x[2].scale(m39) + x[3].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m48) + x[2].scale(m51) + x[3].scale(m55)).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m24) + x[1].scale(m26) + x[2].scale(m29) + x[3].scale(m33)).0, (x[0].scale(m36) + x[1].scale(m37) + x[2].scale(m39) + x[3].scale(m43)).0, (x[0].scale(m45) + x[1].scale(m48) + x[2].scale(m51) + x[3].scale(m55)).0, (x[3].scale(m56)).0] }
     }
 }
 
@@ -42437,10 +44427,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Flect
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Point, T, 12>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Point, T, 13>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Point, T, 12> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Point, T, 13> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -42491,26 +44497,27 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Flector<(), T>> {
         let m53 = v[1].mul_add(v[4], m20);
         let m54 = m52 - m53;
         let m55 = m54 * T::from_i64(2);
-        gx::Prepared::from_entries([m24, m26, m29, m33, m36, m37, m39, m43, m45, m48, m51, m55])
+        let m56 = m49 + m50;
+        gx::Prepared::from_entries([m24, m26, m29, m33, m36, m37, m39, m43, m45, m48, m51, m55, m56])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Flector>, Point, T, 12> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Flector>, Point, T, 13> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[3]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[0].scale(m[4]) + x[1].scale(m[5]) + x[2].scale(m[6]) + x[3].scale(m[7])).0, (x[0].scale(m[8]) + x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[3].scale(m[12])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Point, T, 12>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Point, T, 13>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Point, T, 12>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Point, T, 13>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2], m[3]], [m[4], m[5], m[6], m[7]], [m[8], m[9], m[10], m[11]], [T::zero(), T::zero(), T::zero(), m[12]]] }
     }
 }
 
@@ -42518,7 +44525,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Point, T, 12>> for Point<
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Flector {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Point, T, 12>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Point, T, 13>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -42528,16 +44535,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Point, T, 12> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Point, T, 13> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Point, T, 12>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Point, W, 12> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Point, T, 13>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Point, W, 13> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Point, T, 12>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Point, T, 13>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -42651,13 +44658,40 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<F
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = -xv[0];
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t0]) };
+        let t2 = v[1] * v[1];
+        let t4 = v[7] * v[7];
+        let t5 = v[0].mul_add(v[0], t2);
+        let t6 = v[2].mul_add(v[2], t4);
+        let t7 = t5 + t6;
+        let t8 = t0 * t7;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t8]) };
         }
-        let m0 = -T::from_i64(1);
+        let m1 = v[1] * v[1];
+        let m3 = v[7] * v[7];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        let m7 = -m6;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0].scale(m0)).0] }
+        Pseudoscalar { c: [(x[0].scale(m7)).0] }
     }
 }
 
@@ -42674,8 +44708,29 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        let m0 = -T::from_i64(1);
-        gx::Prepared::from_entries([m0])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[7] * v[7];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 + m5;
+        let m7 = -m6;
+        gx::Prepared::from_entries([m7])
     }
 }
 
@@ -43044,132 +45099,168 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
-        let t0 = v[1] * xv[1];
-        let t2 = (-v[7]).mul_add(xv[3], t0);
-        let t4 = v[2] * xv[3];
-        let t5 = v[1].mul_add(xv[2], t4);
-        let t7 = v[7] * xv[2];
-        let t8 = v[2].mul_add(xv[1], t7);
-        let t10 = v[5] * v[7];
-        let t11 = v[1].mul_add(v[3], t10);
-        let t13 = v[2] * v[5];
-        let t14 = v[1].mul_add(v[6], t13);
-        let t16 = v[6] * v[7];
-        let t17 = v[2].mul_add(v[3], t16);
-        let t18 = v[0] * v[3];
-        let t19 = v[0] * v[5];
-        let t20 = v[0] * v[6];
-        let t21 = v[1] * v[5];
-        let t22 = v[2] * v[6];
-        let t23 = v[3] * v[7];
-        let t24 = v[0] * t5;
-        let t28 = v[1] * t5;
-        let t31 = v[2] * t5;
-        let t34 = xv[3] * t20;
-        let t36 = xv[1] * t22;
-        let t39 = xv[3] * t11;
-        let t43 = xv[2] * t23;
-        let t44 = v[4] * t2;
-        let t46 = xv[3] * t14;
-        let t48 = xv[1] * t20;
-        let t50 = xv[3] * t23;
-        let t53 = xv[2] * t14;
-        let t54 = (-v[1]).mul_add(t2, t24);
-        let t55 = (-v[2]).mul_add(t8, t54);
-        let t57 = t55.mul_add(T::from_i64(2), xv[1]);
-        let t58 = v[0].mul_add(t2, t28);
-        let t59 = v[7].mul_add(t8, t58);
-        let t61 = t59.mul_add(T::from_i64(2), -xv[2]);
-        let t62 = v[0].mul_add(t8, t31);
-        let t63 = (-v[7]).mul_add(t2, t62);
-        let t65 = t63.mul_add(T::from_i64(2), -xv[3]);
-        let t66 = xv[2].mul_add(t19, t34);
-        let t67 = v[4].mul_add(t5, t66);
-        let t68 = (-xv[2]).mul_add(t17, t39);
-        let t69 = t67 + t68;
-        let t70 = t69 * T::from_i64(2);
-        let t71 = xv[1].mul_add(t21, t36);
-        let t73 = (-t71).mul_add(T::from_i64(4), t70);
-        let t74 = xv[1].mul_add(t19, t44);
-        let t75 = xv[1].mul_add(t17, t74);
-        let t76 = (-xv[3]).mul_add(t18, t46);
-        let t77 = t75 + t76;
-        let t79 = xv[2].mul_add(t21, t43);
-        let t80 = t79 * T::from_i64(4);
-        let t81 = t77.mul_add(T::from_i64(2), t80);
-        let t82 = xv[2].mul_add(t18, t48);
-        let t83 = v[4].mul_add(t8, t82);
-        let t84 = (-xv[1]).mul_add(t11, t53);
-        let t85 = t83 + t84;
-        let t87 = xv[3].mul_add(t22, t50);
-        let t88 = t87 * T::from_i64(4);
-        let t89 = t85.mul_add(T::from_i64(2), t88);
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t57, t61, t65, t73, t81, t89, T::from_i64(0)]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m5 = v[0] * v[7];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[2];
-        let m9 = v[1] * v[4];
-        let m10 = v[1] * v[5];
-        let m12 = v[1] * v[7];
-        let m13 = v[2] * v[2];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[5];
-        let m17 = v[2] * v[6];
-        let m18 = v[2] * v[7];
-        let m19 = v[3] * v[7];
-        let m20 = v[4] * v[7];
-        let m21 = v[5] * v[7];
-        let m22 = v[6] * v[7];
-        let m23 = v[7] * v[7];
-        let m24 = v[0].mul_add(v[3], m20);
-        let m25 = v[0].mul_add(v[5], m9);
-        let m26 = v[0].mul_add(v[6], m15);
-        let m27 = v[1].mul_add(v[3], m21);
-        let m28 = v[1].mul_add(v[6], m16);
-        let m29 = v[2].mul_add(v[3], m22);
-        let m30 = m6 + m13;
-        let m32 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m33 = m0 - m18;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m1 + m12;
-        let m36 = m35 * T::from_i64(2);
-        let m37 = m0 + m18;
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t9 = v[0] * v[7];
+        let t10 = v[1] * v[2];
+        let t12 = v[1] * v[4];
+        let t13 = v[1] * v[5];
+        let t15 = v[1] * v[7];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t19 = v[2] * v[6];
+        let t20 = v[2] * v[7];
+        let t21 = v[3] * v[7];
+        let t22 = v[4] * v[7];
+        let t23 = v[5] * v[7];
+        let t24 = v[6] * v[7];
+        let t25 = t0 - t1;
+        let t26 = t0 + t1;
+        let t27 = t2 - t3;
+        let t28 = t2 + t3;
+        let t29 = v[0].mul_add(v[3], t22);
+        let t30 = v[0].mul_add(v[5], t12);
+        let t31 = v[0].mul_add(v[6], t17);
+        let t32 = v[1].mul_add(v[3], t23);
+        let t33 = v[1].mul_add(v[6], t18);
+        let t34 = v[2].mul_add(v[3], t24);
+        let t35 = t26 + t28;
+        let t36 = t25 - t27;
+        let t37 = t4 - t20;
+        let t38 = t5 + t15;
+        let t39 = t4 + t20;
+        let t40 = t25 + t27;
+        let t41 = t9 - t10;
+        let t42 = t5 - t15;
+        let t43 = t9 + t10;
+        let t44 = t26 - t28;
+        let t45 = t13 + t19;
+        let t46 = t30 - t34;
+        let t47 = t31 + t32;
+        let t48 = t30 + t34;
+        let t49 = t13 + t21;
+        let t50 = t29 - t33;
+        let t51 = t31 - t32;
+        let t52 = t29 + t33;
+        let t53 = t19 + t21;
+        let t54 = xv[0] * t35;
+        let t57 = xv[3] * t38;
+        let t58 = xv[1] * t39;
+        let t62 = xv[2] * t43;
+        let t64 = xv[1] * t45;
+        let t66 = xv[3] * t47;
+        let t67 = xv[1] * t48;
+        let t68 = xv[2] * t49;
+        let t71 = xv[2] * t52;
+        let t72 = xv[3] * t53;
+        let t73 = xv[2].mul_add(t37, t57);
+        let t74 = t73 * T::from_i64(2);
+        let t75 = xv[1].mul_add(t36, t74);
+        let t76 = (-xv[3]).mul_add(t41, t58);
+        let t77 = t76 * T::from_i64(2);
+        let t78 = (-xv[2]).mul_add(t40, t77);
+        let t79 = xv[1].mul_add(t42, t62);
+        let t80 = t79 * T::from_i64(2);
+        let t81 = (-xv[3]).mul_add(t44, t80);
+        let t82 = xv[2].mul_add(t46, t66);
+        let t83 = t82 * T::from_i64(2);
+        let t85 = (-t64).mul_add(T::from_i64(4), t83);
+        let t86 = (-xv[3]).mul_add(t50, t67);
+        let t88 = t68 * T::from_i64(4);
+        let t89 = t86.mul_add(T::from_i64(2), t88);
+        let t90 = xv[1].mul_add(t51, t71);
+        let t92 = t72 * T::from_i64(4);
+        let t93 = t90.mul_add(T::from_i64(2), t92);
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t54, t75, t78, t81, t85, t89, t93, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m9 = v[0] * v[7];
+        let m10 = v[1] * v[2];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m15 = v[1] * v[7];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[2] * v[6];
+        let m20 = v[2] * v[7];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = v[0].mul_add(v[3], m22);
+        let m30 = v[0].mul_add(v[5], m12);
+        let m31 = v[0].mul_add(v[6], m17);
+        let m32 = v[1].mul_add(v[3], m23);
+        let m33 = v[1].mul_add(v[6], m18);
+        let m34 = v[2].mul_add(v[3], m24);
+        let m35 = m26 + m28;
+        let m36 = m25 - m27;
+        let m37 = m4 - m20;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m6 + m23;
-        let m41 = m39.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m42 = m7 - m5;
-        let m43 = m42 * T::from_i64(2);
-        let m44 = m1 - m12;
-        let m45 = m44 * T::from_i64(2);
-        let m46 = m5 + m7;
-        let m47 = m46 * T::from_i64(2);
-        let m48 = m13 + m23;
-        let m50 = m48.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m51 = m10 + m17;
-        let m52 = m51 * T::from_i64(4);
-        let m53 = -m52;
-        let m54 = m25 - m29;
-        let m55 = m54 * T::from_i64(2);
-        let m56 = m26 + m27;
-        let m57 = m56 * T::from_i64(2);
-        let m58 = m25 + m29;
-        let m59 = m58 * T::from_i64(2);
-        let m60 = m10 + m19;
-        let m61 = m60 * T::from_i64(4);
-        let m62 = m28 - m24;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m26 - m27;
-        let m65 = m64 * T::from_i64(2);
-        let m66 = m24 + m28;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = m17 + m19;
-        let m69 = m68 * T::from_i64(4);
+        let m39 = m5 + m15;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m4 + m20;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m25 + m27;
+        let m44 = -m43;
+        let m45 = m10 - m9;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m5 - m15;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m9 + m10;
+        let m50 = m49 * T::from_i64(2);
+        let m51 = m28 - m26;
+        let m52 = m13 + m19;
+        let m53 = m52 * T::from_i64(4);
+        let m54 = -m53;
+        let m55 = m30 - m34;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m31 + m32;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m30 + m34;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m13 + m21;
+        let m62 = m61 * T::from_i64(4);
+        let m63 = m33 - m29;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m31 - m32;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m29 + m33;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m19 + m21;
+        let m70 = m69 * T::from_i64(4);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m32) + x[2].scale(m34) + x[3].scale(m36)).0, (x[1].scale(m38) + x[2].scale(m41) + x[3].scale(m43)).0, (x[1].scale(m45) + x[2].scale(m47) + x[3].scale(m50)).0, (x[1].scale(m53) + x[2].scale(m55) + x[3].scale(m57)).0, (x[1].scale(m59) + x[2].scale(m61) + x[3].scale(m63)).0, (x[1].scale(m65) + x[2].scale(m67) + x[3].scale(m69)).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m35)).0, (x[1].scale(m36) + x[2].scale(m38) + x[3].scale(m40)).0, (x[1].scale(m42) + x[2].scale(m44) + x[3].scale(m46)).0, (x[1].scale(m48) + x[2].scale(m50) + x[3].scale(m51)).0, (x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58)).0, (x[1].scale(m60) + x[2].scale(m62) + x[3].scale(m64)).0, (x[1].scale(m66) + x[2].scale(m68) + x[3].scale(m70)).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
@@ -43182,91 +45273,111 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Flect
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 18> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 19> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m5 = v[0] * v[7];
-        let m6 = v[1] * v[1];
-        let m7 = v[1] * v[2];
-        let m9 = v[1] * v[4];
-        let m10 = v[1] * v[5];
-        let m12 = v[1] * v[7];
-        let m13 = v[2] * v[2];
-        let m15 = v[2] * v[4];
-        let m16 = v[2] * v[5];
-        let m17 = v[2] * v[6];
-        let m18 = v[2] * v[7];
-        let m19 = v[3] * v[7];
-        let m20 = v[4] * v[7];
-        let m21 = v[5] * v[7];
-        let m22 = v[6] * v[7];
-        let m23 = v[7] * v[7];
-        let m24 = v[0].mul_add(v[3], m20);
-        let m25 = v[0].mul_add(v[5], m9);
-        let m26 = v[0].mul_add(v[6], m15);
-        let m27 = v[1].mul_add(v[3], m21);
-        let m28 = v[1].mul_add(v[6], m16);
-        let m29 = v[2].mul_add(v[3], m22);
-        let m30 = m6 + m13;
-        let m32 = (-m30).mul_add(T::from_i64(2), T::from_i64(1));
-        let m33 = m0 - m18;
-        let m34 = m33 * T::from_i64(2);
-        let m35 = m1 + m12;
-        let m36 = m35 * T::from_i64(2);
-        let m37 = m0 + m18;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m9 = v[0] * v[7];
+        let m10 = v[1] * v[2];
+        let m12 = v[1] * v[4];
+        let m13 = v[1] * v[5];
+        let m15 = v[1] * v[7];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[2] * v[6];
+        let m20 = v[2] * v[7];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = v[0].mul_add(v[3], m22);
+        let m30 = v[0].mul_add(v[5], m12);
+        let m31 = v[0].mul_add(v[6], m17);
+        let m32 = v[1].mul_add(v[3], m23);
+        let m33 = v[1].mul_add(v[6], m18);
+        let m34 = v[2].mul_add(v[3], m24);
+        let m35 = m26 + m28;
+        let m36 = m25 - m27;
+        let m37 = m4 - m20;
         let m38 = m37 * T::from_i64(2);
-        let m39 = m6 + m23;
-        let m41 = m39.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m42 = m7 - m5;
-        let m43 = m42 * T::from_i64(2);
-        let m44 = m1 - m12;
-        let m45 = m44 * T::from_i64(2);
-        let m46 = m5 + m7;
-        let m47 = m46 * T::from_i64(2);
-        let m48 = m13 + m23;
-        let m50 = m48.mul_add(T::from_i64(2), -T::from_i64(1));
-        let m51 = m10 + m17;
-        let m52 = m51 * T::from_i64(4);
-        let m53 = -m52;
-        let m54 = m25 - m29;
-        let m55 = m54 * T::from_i64(2);
-        let m56 = m26 + m27;
-        let m57 = m56 * T::from_i64(2);
-        let m58 = m25 + m29;
-        let m59 = m58 * T::from_i64(2);
-        let m60 = m10 + m19;
-        let m61 = m60 * T::from_i64(4);
-        let m62 = m28 - m24;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m26 - m27;
-        let m65 = m64 * T::from_i64(2);
-        let m66 = m24 + m28;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = m17 + m19;
-        let m69 = m68 * T::from_i64(4);
-        gx::Prepared::from_entries([m32, m34, m36, m38, m41, m43, m45, m47, m50, m53, m55, m57, m59, m61, m63, m65, m67, m69])
+        let m39 = m5 + m15;
+        let m40 = m39 * T::from_i64(2);
+        let m41 = m4 + m20;
+        let m42 = m41 * T::from_i64(2);
+        let m43 = m25 + m27;
+        let m44 = -m43;
+        let m45 = m10 - m9;
+        let m46 = m45 * T::from_i64(2);
+        let m47 = m5 - m15;
+        let m48 = m47 * T::from_i64(2);
+        let m49 = m9 + m10;
+        let m50 = m49 * T::from_i64(2);
+        let m51 = m28 - m26;
+        let m52 = m13 + m19;
+        let m53 = m52 * T::from_i64(4);
+        let m54 = -m53;
+        let m55 = m30 - m34;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = m31 + m32;
+        let m58 = m57 * T::from_i64(2);
+        let m59 = m30 + m34;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = m13 + m21;
+        let m62 = m61 * T::from_i64(4);
+        let m63 = m33 - m29;
+        let m64 = m63 * T::from_i64(2);
+        let m65 = m31 - m32;
+        let m66 = m65 * T::from_i64(2);
+        let m67 = m29 + m33;
+        let m68 = m67 * T::from_i64(2);
+        let m69 = m19 + m21;
+        let m70 = m69 * T::from_i64(4);
+        gx::Prepared::from_entries([m35, m36, m38, m40, m42, m44, m46, m48, m50, m51, m54, m56, m58, m60, m62, m64, m66, m68, m70])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Flector>, Rotor, T, 18> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Flector>, Rotor, T, 19> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11])).0, (x[1].scale(m[12]) + x[2].scale(m[13]) + x[3].scale(m[14])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[3].scale(m[17])).0, (x[0].scale(T::from_i64(0))).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[1].scale(m[13]) + x[2].scale(m[14]) + x[3].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18])).0, (x[0].scale(T::from_i64(0))).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]], [T::zero(), m[9], m[10], m[11]], [T::zero(), m[12], m[13], m[14]], [T::zero(), m[15], m[16], m[17]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]], [T::zero(), m[10], m[11], m[12]], [T::zero(), m[13], m[14], m[15]], [T::zero(), m[16], m[17], m[18]], [T::from_i64(0), T::zero(), T::zero(), T::zero()]] }
     }
 }
 
@@ -43274,7 +45385,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>> for Motor<
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Flector {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -43284,16 +45395,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 18> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 19> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Rotor, W, 18> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Rotor, W, 19> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 18>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 19>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -43514,6 +45625,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Fle
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * xv[2];
         let t3 = v[0].mul_add(xv[1], t1);
@@ -43528,13 +45655,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Fle
         let t18 = v[7] * t14;
         let t20 = v[7] * t9;
         let t21 = v[1].mul_add(t9, t16);
-        let t23 = t21.mul_add(T::from_i64(2), xv[1]);
-        let t24 = -t23;
-        let t25 = (-v[1]).mul_add(t4, t18);
-        let t27 = t25.mul_add(T::from_i64(2), xv[2]);
-        let t28 = v[2].mul_add(t4, t20);
-        let t30 = (-t28).mul_add(T::from_i64(2), xv[3]);
-            return Translator { c: gx::slots::from_values::<S, T, 4>([xv[0], t24, t27, t30]) };
+        let t24 = v[1] * v[1];
+        let t26 = v[7] * v[7];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[1] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = -t31;
+        let t33 = (-v[1]).mul_add(t4, t18);
+        let t35 = xv[2] * t29;
+        let t36 = t33.mul_add(T::from_i64(2), t35);
+        let t37 = v[2].mul_add(t4, t20);
+        let t39 = xv[3] * t29;
+        let t40 = (-t37).mul_add(T::from_i64(2), t39);
+        let t41 = xv[0] * t29;
+            return Translator { c: gx::slots::from_values::<S, T, 4>([t41, t32, t36, t40]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -43568,8 +45704,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Fle
         let m29 = m0 + m1;
         let m30 = m2 + m3;
         let m31 = m29 - m30;
+        let m32 = m29 + m30;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m17)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m28) + x[3].scale(m31)).0] }
+        Translator { c: [(x[0].scale(m32)).0, (x[1].scale(m12) + x[2].scale(m14) + x[3].scale(m17)).0, (x[1].scale(m20) + x[2].scale(m21) + x[3].scale(m23)).0, (x[1].scale(m25) + x[2].scale(m28) + x[3].scale(m31)).0] }
     }
 }
 
@@ -43582,10 +45719,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Translator, T, 9>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Translator, T, 10>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 9> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 10> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -43618,26 +45771,27 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Flector<(), T>> {
         let m29 = m0 + m1;
         let m30 = m2 + m3;
         let m31 = m29 - m30;
-        gx::Prepared::from_entries([m12, m14, m17, m20, m21, m23, m25, m28, m31])
+        let m32 = m29 + m30;
+        gx::Prepared::from_entries([m32, m12, m14, m17, m20, m21, m23, m25, m28, m31])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Flector>, Translator, T, 9> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Flector>, Translator, T, 10> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 9>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 10>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 9>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 10>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+        Translator { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[6]], [T::zero(), m[7], m[8], m[9]]] }
     }
 }
 
@@ -43645,7 +45799,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 9>> for Tr
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Flector {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Translator, T, 9>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Translator, T, 10>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -43655,16 +45809,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 9> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 10> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Translator, W, 9> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Translator, W, 10> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 9>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 10>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -44018,170 +46172,191 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t0 = v[0] * v[1];
-        let t1 = v[0] * v[2];
-        let t5 = v[0] * v[7];
-        let t6 = v[1] * v[1];
-        let t7 = v[1] * v[2];
-        let t9 = v[1] * v[4];
-        let t10 = v[1] * v[5];
-        let t12 = v[1] * v[7];
-        let t13 = v[2] * v[2];
-        let t15 = v[2] * v[4];
-        let t16 = v[2] * v[5];
-        let t17 = v[2] * v[6];
-        let t18 = v[2] * v[7];
-        let t19 = v[3] * v[7];
-        let t20 = v[4] * v[7];
-        let t21 = v[5] * v[7];
-        let t22 = v[6] * v[7];
-        let t23 = v[7] * v[7];
-        let t24 = v[0].mul_add(v[3], t20);
-        let t25 = v[0].mul_add(v[5], t9);
-        let t26 = v[0].mul_add(v[6], t15);
-        let t27 = v[1].mul_add(v[3], t21);
-        let t28 = v[1].mul_add(v[6], t16);
-        let t29 = v[2].mul_add(v[3], t22);
-        let t30 = t6 + t13;
-        let t32 = (-t30).mul_add(T::from_i64(2), T::from_i64(1));
-        let t33 = t0 - t18;
-        let t34 = t1 + t12;
-        let t35 = t0 + t18;
-        let t36 = t6 + t23;
-        let t38 = (-t36).mul_add(T::from_i64(2), T::from_i64(1));
-        let t39 = t5 - t7;
-        let t40 = t1 - t12;
-        let t41 = t5 + t7;
-        let t42 = t13 + t23;
-        let t44 = (-t42).mul_add(T::from_i64(2), T::from_i64(1));
-        let t45 = t10 + t17;
-        let t46 = t25 - t29;
-        let t47 = t26 + t27;
-        let t48 = t25 + t29;
-        let t49 = t10 + t19;
-        let t50 = t24 - t28;
-        let t51 = t26 - t27;
-        let t52 = t24 + t28;
-        let t53 = t17 + t19;
-        let t56 = xv[3] * t34;
-        let t57 = xv[1] * t35;
-        let t61 = xv[2] * t41;
-        let t63 = xv[1] * t45;
-        let t65 = xv[3] * t47;
-        let t68 = xv[6] * t34;
-        let t70 = xv[2] * t49;
-        let t72 = xv[4] * t35;
-        let t74 = xv[6] * t39;
-        let t76 = xv[2] * t52;
-        let t77 = xv[3] * t53;
-        let t79 = xv[5] * t41;
-        let t81 = xv[2].mul_add(t33, t56);
-        let t82 = t81 * T::from_i64(2);
-        let t83 = xv[1].mul_add(t32, t82);
-        let t84 = (-xv[3]).mul_add(t39, t57);
-        let t85 = t84 * T::from_i64(2);
-        let t86 = (-xv[2]).mul_add(t38, t85);
-        let t87 = xv[1].mul_add(t40, t61);
-        let t88 = t87 * T::from_i64(2);
-        let t89 = (-xv[3]).mul_add(t44, t88);
-        let t90 = xv[2].mul_add(t46, t65);
-        let t91 = xv[5].mul_add(t33, t68);
-        let t92 = t90 - t91;
-        let t93 = t92 * T::from_i64(2);
-        let t95 = (-xv[4]).mul_add(t32, t93);
-        let t96 = (-t63).mul_add(T::from_i64(4), t95);
-        let t97 = xv[1].mul_add(t48, t74);
-        let t98 = xv[3].mul_add(t50, t72);
-        let t99 = t97 - t98;
-        let t100 = t99 * T::from_i64(2);
-        let t102 = xv[5].mul_add(t38, t100);
-        let t103 = t70.mul_add(T::from_i64(4), t102);
-        let t104 = xv[1].mul_add(t51, t76);
-        let t105 = xv[4].mul_add(t40, t79);
-        let t106 = t104 - t105;
-        let t107 = t106 * T::from_i64(2);
-        let t109 = xv[6].mul_add(t44, t107);
-        let t110 = t77.mul_add(T::from_i64(4), t109);
-        let t111 = -xv[7];
-            return Motor { c: gx::slots::from_values::<S, T, 8>([xv[0], t83, t86, t89, t96, t103, t110, t111]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[5];
-        let m17 = v[2] * v[4];
-        let m18 = v[2] * v[5];
-        let m19 = v[2] * v[6];
-        let m20 = v[3] * v[7];
-        let m21 = v[4] * v[7];
-        let m22 = v[5] * v[7];
-        let m23 = v[6] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = v[0].mul_add(v[3], m21);
-        let m34 = v[0].mul_add(v[5], m13);
-        let m35 = v[0].mul_add(v[6], m17);
-        let m36 = v[1].mul_add(v[3], m22);
-        let m37 = v[1].mul_add(v[6], m18);
-        let m38 = v[2].mul_add(v[3], m23);
-        let m39 = m30 * T::from_i64(2);
-        let m40 = T::from_i64(1) - m39;
-        let m41 = m24 * T::from_i64(2);
-        let m42 = m27 * T::from_i64(2);
-        let m43 = m25 * T::from_i64(2);
-        let m44 = m31 * T::from_i64(2);
-        let m45 = m44 - T::from_i64(1);
-        let m46 = m28 * T::from_i64(2);
-        let m47 = -m46;
-        let m48 = m26 * T::from_i64(2);
-        let m49 = m29 * T::from_i64(2);
-        let m50 = m32 * T::from_i64(2);
-        let m51 = m50 - T::from_i64(1);
-        let m52 = m14 + m19;
-        let m53 = m52 * T::from_i64(4);
-        let m54 = -m53;
-        let m55 = m34 - m38;
-        let m56 = m55 * T::from_i64(2);
-        let m57 = m35 + m36;
+        if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t9 = v[0] * v[7];
+        let t10 = v[1] * v[2];
+        let t12 = v[1] * v[4];
+        let t13 = v[1] * v[5];
+        let t15 = v[1] * v[7];
+        let t17 = v[2] * v[4];
+        let t18 = v[2] * v[5];
+        let t19 = v[2] * v[6];
+        let t20 = v[2] * v[7];
+        let t21 = v[3] * v[7];
+        let t22 = v[4] * v[7];
+        let t23 = v[5] * v[7];
+        let t24 = v[6] * v[7];
+        let t25 = t0 - t1;
+        let t26 = t0 + t1;
+        let t27 = t2 - t3;
+        let t28 = t2 + t3;
+        let t29 = v[0].mul_add(v[3], t22);
+        let t30 = v[0].mul_add(v[5], t12);
+        let t31 = v[0].mul_add(v[6], t17);
+        let t32 = v[1].mul_add(v[3], t23);
+        let t33 = v[1].mul_add(v[6], t18);
+        let t34 = v[2].mul_add(v[3], t24);
+        let t35 = t26 + t28;
+        let t36 = t25 - t27;
+        let t37 = t4 - t20;
+        let t38 = t5 + t15;
+        let t39 = t4 + t20;
+        let t40 = t25 + t27;
+        let t41 = t9 - t10;
+        let t42 = t5 - t15;
+        let t43 = t9 + t10;
+        let t44 = t26 - t28;
+        let t45 = t13 + t19;
+        let t46 = t30 - t34;
+        let t47 = t31 + t32;
+        let t48 = t30 + t34;
+        let t49 = t13 + t21;
+        let t50 = t29 - t33;
+        let t51 = t31 - t32;
+        let t52 = t29 + t33;
+        let t53 = t19 + t21;
+        let t54 = xv[0] * t35;
+        let t57 = xv[3] * t38;
+        let t58 = xv[1] * t39;
+        let t62 = xv[2] * t43;
+        let t64 = xv[1] * t45;
+        let t66 = xv[3] * t47;
+        let t69 = xv[6] * t38;
+        let t71 = xv[2] * t49;
+        let t73 = xv[4] * t39;
+        let t75 = xv[6] * t41;
+        let t77 = xv[2] * t52;
+        let t78 = xv[3] * t53;
+        let t80 = xv[5] * t43;
+        let t82 = xv[7] * t35;
+        let t83 = xv[2].mul_add(t37, t57);
+        let t84 = t83 * T::from_i64(2);
+        let t85 = xv[1].mul_add(t36, t84);
+        let t86 = (-xv[3]).mul_add(t41, t58);
+        let t87 = t86 * T::from_i64(2);
+        let t88 = (-xv[2]).mul_add(t40, t87);
+        let t89 = xv[1].mul_add(t42, t62);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = (-xv[3]).mul_add(t44, t90);
+        let t92 = xv[2].mul_add(t46, t66);
+        let t93 = xv[5].mul_add(t37, t69);
+        let t94 = t92 - t93;
+        let t95 = t94 * T::from_i64(2);
+        let t97 = (-xv[4]).mul_add(t36, t95);
+        let t98 = (-t64).mul_add(T::from_i64(4), t97);
+        let t99 = xv[1].mul_add(t48, t75);
+        let t100 = xv[3].mul_add(t50, t73);
+        let t101 = t99 - t100;
+        let t102 = t101 * T::from_i64(2);
+        let t104 = xv[5].mul_add(t40, t102);
+        let t105 = t71.mul_add(T::from_i64(4), t104);
+        let t106 = xv[1].mul_add(t51, t77);
+        let t107 = xv[4].mul_add(t42, t80);
+        let t108 = t106 - t107;
+        let t109 = t108 * T::from_i64(2);
+        let t111 = xv[6].mul_add(t44, t109);
+        let t112 = t78.mul_add(T::from_i64(4), t111);
+        let t113 = -t82;
+            return Motor { c: gx::slots::from_values::<S, T, 8>([t54, t85, t88, t91, t98, t105, t112, t113]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[5];
+        let m18 = v[2] * v[4];
+        let m19 = v[2] * v[5];
+        let m20 = v[2] * v[6];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = v[0].mul_add(v[3], m22);
+        let m36 = v[0].mul_add(v[5], m14);
+        let m37 = v[0].mul_add(v[6], m18);
+        let m38 = v[1].mul_add(v[3], m23);
+        let m39 = v[1].mul_add(v[6], m19);
+        let m40 = v[2].mul_add(v[3], m24);
+        let m41 = m25 - m27;
+        let m42 = m25 + m27;
+        let m43 = m26 - m28;
+        let m44 = m26 + m28;
+        let m45 = m29 * T::from_i64(2);
+        let m46 = m32 * T::from_i64(2);
+        let m47 = m30 * T::from_i64(2);
+        let m48 = -m42;
+        let m49 = m33 * T::from_i64(2);
+        let m50 = -m49;
+        let m51 = m31 * T::from_i64(2);
+        let m52 = m34 * T::from_i64(2);
+        let m53 = -m43;
+        let m54 = m15 + m20;
+        let m55 = m54 * T::from_i64(4);
+        let m56 = -m55;
+        let m57 = m36 - m40;
         let m58 = m57 * T::from_i64(2);
-        let m59 = m39 - T::from_i64(1);
-        let m60 = -m41;
-        let m61 = -m42;
-        let m62 = m34 + m38;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m14 + m20;
-        let m65 = m64 * T::from_i64(4);
-        let m66 = m37 - m33;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = -m43;
-        let m69 = T::from_i64(1) - m44;
-        let m70 = m35 - m36;
-        let m71 = m70 * T::from_i64(2);
-        let m72 = m33 + m37;
-        let m73 = m72 * T::from_i64(2);
-        let m74 = m19 + m20;
-        let m75 = m74 * T::from_i64(4);
-        let m76 = -m48;
-        let m77 = -m49;
-        let m78 = T::from_i64(1) - m50;
-        let m79 = -T::from_i64(1);
+        let m59 = m37 + m38;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = -m41;
+        let m62 = -m45;
+        let m63 = -m46;
+        let m64 = m36 + m40;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m15 + m21;
+        let m67 = m66 * T::from_i64(4);
+        let m68 = m39 - m35;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = -m47;
+        let m71 = m37 - m38;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m35 + m39;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m20 + m21;
+        let m76 = m75 * T::from_i64(4);
+        let m77 = -m51;
+        let m78 = -m52;
+        let m79 = -m44;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m40) + x[2].scale(m41) + x[3].scale(m42)).0, (x[1].scale(m43) + x[2].scale(m45) + x[3].scale(m47)).0, (x[1].scale(m48) + x[2].scale(m49) + x[3].scale(m51)).0, (x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m58) + x[4].scale(m59) + x[5].scale(m60) + x[6].scale(m61)).0, (x[1].scale(m63) + x[2].scale(m65) + x[3].scale(m67) + x[4].scale(m68) + x[5].scale(m69) + x[6].scale(m46)).0, (x[1].scale(m71) + x[2].scale(m73) + x[3].scale(m75) + x[4].scale(m76) + x[5].scale(m77) + x[6].scale(m78)).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m79)).0] }
+        Motor { c: [(x[0].scale(m44)).0, (x[1].scale(m41) + x[2].scale(m45) + x[3].scale(m46)).0, (x[1].scale(m47) + x[2].scale(m48) + x[3].scale(m50)).0, (x[1].scale(m51) + x[2].scale(m52) + x[3].scale(m53)).0, (x[1].scale(m56) + x[2].scale(m58) + x[3].scale(m60) + x[4].scale(m61) + x[5].scale(m62) + x[6].scale(m63)).0, (x[1].scale(m65) + x[2].scale(m67) + x[3].scale(m69) + x[4].scale(m70) + x[5].scale(m42) + x[6].scale(m49)).0, (x[1].scale(m72) + x[2].scale(m74) + x[3].scale(m76) + x[4].scale(m77) + x[5].scale(m78) + x[6].scale(m43)).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m79)).0] }
     }
 }
 
@@ -44194,104 +46369,120 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Flect
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Motor, T, 28>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Motor, T, 29>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 28> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 29> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[5];
-        let m17 = v[2] * v[4];
-        let m18 = v[2] * v[5];
-        let m19 = v[2] * v[6];
-        let m20 = v[3] * v[7];
-        let m21 = v[4] * v[7];
-        let m22 = v[5] * v[7];
-        let m23 = v[6] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = v[0].mul_add(v[3], m21);
-        let m34 = v[0].mul_add(v[5], m13);
-        let m35 = v[0].mul_add(v[6], m17);
-        let m36 = v[1].mul_add(v[3], m22);
-        let m37 = v[1].mul_add(v[6], m18);
-        let m38 = v[2].mul_add(v[3], m23);
-        let m39 = m30 * T::from_i64(2);
-        let m40 = T::from_i64(1) - m39;
-        let m41 = m24 * T::from_i64(2);
-        let m42 = m27 * T::from_i64(2);
-        let m43 = m25 * T::from_i64(2);
-        let m44 = m31 * T::from_i64(2);
-        let m45 = m44 - T::from_i64(1);
-        let m46 = m28 * T::from_i64(2);
-        let m47 = -m46;
-        let m48 = m26 * T::from_i64(2);
-        let m49 = m29 * T::from_i64(2);
-        let m50 = m32 * T::from_i64(2);
-        let m51 = m50 - T::from_i64(1);
-        let m52 = m14 + m19;
-        let m53 = m52 * T::from_i64(4);
-        let m54 = -m53;
-        let m55 = m34 - m38;
-        let m56 = m55 * T::from_i64(2);
-        let m57 = m35 + m36;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[5];
+        let m18 = v[2] * v[4];
+        let m19 = v[2] * v[5];
+        let m20 = v[2] * v[6];
+        let m21 = v[3] * v[7];
+        let m22 = v[4] * v[7];
+        let m23 = v[5] * v[7];
+        let m24 = v[6] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = v[0].mul_add(v[3], m22);
+        let m36 = v[0].mul_add(v[5], m14);
+        let m37 = v[0].mul_add(v[6], m18);
+        let m38 = v[1].mul_add(v[3], m23);
+        let m39 = v[1].mul_add(v[6], m19);
+        let m40 = v[2].mul_add(v[3], m24);
+        let m41 = m25 - m27;
+        let m42 = m25 + m27;
+        let m43 = m26 - m28;
+        let m44 = m26 + m28;
+        let m45 = m29 * T::from_i64(2);
+        let m46 = m32 * T::from_i64(2);
+        let m47 = m30 * T::from_i64(2);
+        let m48 = -m42;
+        let m49 = m33 * T::from_i64(2);
+        let m50 = -m49;
+        let m51 = m31 * T::from_i64(2);
+        let m52 = m34 * T::from_i64(2);
+        let m53 = -m43;
+        let m54 = m15 + m20;
+        let m55 = m54 * T::from_i64(4);
+        let m56 = -m55;
+        let m57 = m36 - m40;
         let m58 = m57 * T::from_i64(2);
-        let m59 = m39 - T::from_i64(1);
-        let m60 = -m41;
-        let m61 = -m42;
-        let m62 = m34 + m38;
-        let m63 = m62 * T::from_i64(2);
-        let m64 = m14 + m20;
-        let m65 = m64 * T::from_i64(4);
-        let m66 = m37 - m33;
-        let m67 = m66 * T::from_i64(2);
-        let m68 = -m43;
-        let m69 = T::from_i64(1) - m44;
-        let m70 = m35 - m36;
-        let m71 = m70 * T::from_i64(2);
-        let m72 = m33 + m37;
-        let m73 = m72 * T::from_i64(2);
-        let m74 = m19 + m20;
-        let m75 = m74 * T::from_i64(4);
-        let m76 = -m48;
-        let m77 = -m49;
-        let m78 = T::from_i64(1) - m50;
-        let m79 = -T::from_i64(1);
-        gx::Prepared::from_entries([m40, m41, m42, m43, m45, m47, m48, m49, m51, m54, m56, m58, m59, m60, m61, m63, m65, m67, m68, m69, m46, m71, m73, m75, m76, m77, m78, m79])
+        let m59 = m37 + m38;
+        let m60 = m59 * T::from_i64(2);
+        let m61 = -m41;
+        let m62 = -m45;
+        let m63 = -m46;
+        let m64 = m36 + m40;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = m15 + m21;
+        let m67 = m66 * T::from_i64(4);
+        let m68 = m39 - m35;
+        let m69 = m68 * T::from_i64(2);
+        let m70 = -m47;
+        let m71 = m37 - m38;
+        let m72 = m71 * T::from_i64(2);
+        let m73 = m35 + m39;
+        let m74 = m73 * T::from_i64(2);
+        let m75 = m20 + m21;
+        let m76 = m75 * T::from_i64(4);
+        let m77 = -m51;
+        let m78 = -m52;
+        let m79 = -m44;
+        gx::Prepared::from_entries([m44, m41, m45, m46, m47, m48, m50, m51, m52, m53, m56, m58, m60, m61, m62, m63, m65, m67, m69, m70, m42, m49, m72, m74, m76, m77, m78, m43, m79])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Flector>, Motor, T, 28> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Flector>, Motor, T, 29> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[6]) + x[2].scale(m[7]) + x[3].scale(m[8])).0, (x[1].scale(m[9]) + x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[12]) + x[5].scale(m[13]) + x[6].scale(m[14])).0, (x[1].scale(m[15]) + x[2].scale(m[16]) + x[3].scale(m[17]) + x[4].scale(m[18]) + x[5].scale(m[19]) + x[6].scale(m[20])).0, (x[1].scale(m[21]) + x[2].scale(m[22]) + x[3].scale(m[23]) + x[4].scale(m[24]) + x[5].scale(m[25]) + x[6].scale(m[26])).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m[27])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[1].scale(m[7]) + x[2].scale(m[8]) + x[3].scale(m[9])).0, (x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13]) + x[5].scale(m[14]) + x[6].scale(m[15])).0, (x[1].scale(m[16]) + x[2].scale(m[17]) + x[3].scale(m[18]) + x[4].scale(m[19]) + x[5].scale(m[20]) + x[6].scale(m[21])).0, (x[1].scale(m[22]) + x[2].scale(m[23]) + x[3].scale(m[24]) + x[4].scale(m[25]) + x[5].scale(m[26]) + x[6].scale(m[27])).0, (x[0].scale(T::from_i64(0)) + x[7].scale(m[28])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 28>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 29>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 28>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 29>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[9], m[10], m[11], m[12], m[13], m[14], T::zero()], [T::zero(), m[15], m[16], m[17], m[18], m[19], m[20], T::zero()], [T::zero(), m[21], m[22], m[23], m[24], m[25], m[26], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[10], m[11], m[12], m[13], m[14], m[15], T::zero()], [T::zero(), m[16], m[17], m[18], m[19], m[20], m[21], T::zero()], [T::zero(), m[22], m[23], m[24], m[25], m[26], m[27], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[28]]] }
     }
 }
 
@@ -44299,7 +46490,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 28>> for Motor<
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Flector {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Motor, T, 28>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Motor, T, 29>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -44309,16 +46500,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 28> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 29> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 28>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Motor, W, 28> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 29>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Motor, W, 29> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 28>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 29>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -44619,65 +46810,100 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
-        let t1 = v[1] * xv[1];
-        let t3 = v[0].mul_add(xv[0], t1);
-        let t4 = v[2].mul_add(xv[2], t3);
-        let t7 = v[7] * xv[2];
-        let t8 = v[0].mul_add(xv[1], t7);
-        let t9 = (-v[1]).mul_add(xv[0], t8);
-        let t10 = v[0] * xv[2];
-        let t13 = (-v[2]).mul_add(xv[0], t10);
-        let t14 = (-v[7]).mul_add(xv[1], t13);
-        let t16 = v[6] * xv[7];
-        let t18 = v[1].mul_add(xv[4], t16);
-        let t19 = (-v[7]).mul_add(xv[6], t18);
-        let t21 = v[2] * xv[6];
-        let t23 = v[1].mul_add(xv[5], t21);
-        let t24 = v[3].mul_add(xv[7], t23);
-        let t27 = v[7] * xv[5];
-        let t28 = v[2].mul_add(xv[4], t27);
-        let t29 = (-v[5]).mul_add(xv[7], t28);
-        let t30 = v[4] * xv[7];
-        let t32 = v[2] * t14;
-        let t33 = v[1] * t4;
-        let t36 = v[7] * t9;
-        let t37 = v[1] * v[4];
-        let t39 = v[2] * v[4];
-        let t41 = v[3] * t4;
-        let t42 = v[4] * v[7];
-        let t43 = xv[0] * t42;
-        let t48 = v[2] * t29;
-        let t49 = v[7] * t30;
-        let t52 = v[2] * t30;
-        let t53 = v[7] * t29;
-        let t56 = v[2] * t24;
-        let t57 = v[7] * t19;
-        let t58 = v[1].mul_add(t9, t32);
-        let t60 = t58.mul_add(T::from_i64(2), xv[0]);
-        let t61 = (-v[7]).mul_add(t14, t33);
-        let t63 = t61.mul_add(T::from_i64(2), -xv[1]);
-        let t64 = v[2].mul_add(t4, t36);
-        let t66 = t64.mul_add(T::from_i64(2), -xv[2]);
-        let t67 = xv[1].mul_add(t39, t41);
-        let t68 = v[5].mul_add(t14, t67);
-        let t69 = xv[2].mul_add(t37, t43);
-        let t70 = v[6].mul_add(t9, t69);
-        let t71 = t68 - t70;
-        let t73 = t71.mul_add(T::from_i64(2), -xv[3]);
-        let t74 = v[1].mul_add(t19, t48);
-        let t75 = (-v[0]).mul_add(t24, t49);
-        let t76 = t74 + t75;
-        let t78 = t76.mul_add(T::from_i64(2), -xv[4]);
-        let t79 = (-v[0]).mul_add(t19, t52);
-        let t80 = v[1].mul_add(t24, t53);
-        let t81 = t79 - t80;
-        let t83 = t81.mul_add(T::from_i64(2), xv[5]);
-        let t84 = (-v[0]).mul_add(t29, t57);
-        let t85 = v[1].mul_add(t30, t56);
-        let t86 = t84 - t85;
-        let t88 = t86.mul_add(T::from_i64(2), xv[6]);
-            return Flector { c: gx::slots::from_values::<S, T, 8>([t60, t63, t66, t73, t78, t83, t88, xv[7]]) };
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[3];
+        let t7 = v[0] * v[5];
+        let t8 = v[0] * v[6];
+        let t9 = v[0] * v[7];
+        let t10 = v[1] * v[2];
+        let t11 = v[1] * v[3];
+        let t13 = v[1] * v[6];
+        let t14 = v[1] * v[7];
+        let t15 = v[2] * v[3];
+        let t18 = v[2] * v[7];
+        let t22 = t0 - t1;
+        let t23 = t0 + t1;
+        let t24 = t2 - t3;
+        let t25 = t2 + t3;
+        let t26 = (-v[4]).mul_add(v[7], t6);
+        let t27 = (-v[1]).mul_add(v[4], t7);
+        let t28 = (-v[2]).mul_add(v[4], t8);
+        let t29 = (-v[5]).mul_add(v[7], t11);
+        let t30 = (-v[2]).mul_add(v[5], t13);
+        let t31 = (-v[6]).mul_add(v[7], t15);
+        let t32 = t22 - t24;
+        let t33 = t4 - t18;
+        let t34 = t5 + t14;
+        let t35 = t4 + t18;
+        let t36 = t22 + t24;
+        let t37 = t9 - t10;
+        let t38 = t5 - t14;
+        let t39 = t9 + t10;
+        let t40 = t23 - t25;
+        let t41 = t26 + t30;
+        let t42 = t28 - t29;
+        let t43 = t27 + t31;
+        let t44 = t23 + t25;
+        let t45 = t26 - t30;
+        let t46 = t28 + t29;
+        let t47 = t27 - t31;
+        let t50 = xv[2] * t34;
+        let t51 = xv[0] * t35;
+        let t55 = xv[1] * t39;
+        let t59 = xv[2] * t43;
+        let t63 = xv[6] * t34;
+        let t67 = xv[6] * t37;
+        let t72 = xv[7] * t47;
+        let t73 = xv[7] * t44;
+        let t74 = xv[1].mul_add(t33, t50);
+        let t75 = t74 * T::from_i64(2);
+        let t76 = xv[0].mul_add(t32, t75);
+        let t77 = (-xv[2]).mul_add(t37, t51);
+        let t78 = t77 * T::from_i64(2);
+        let t79 = (-xv[1]).mul_add(t36, t78);
+        let t80 = xv[0].mul_add(t38, t55);
+        let t81 = t80 * T::from_i64(2);
+        let t82 = (-xv[2]).mul_add(t40, t81);
+        let t83 = xv[0].mul_add(t41, t59);
+        let t84 = (-xv[1]).mul_add(t42, t83);
+        let t85 = t84 * T::from_i64(2);
+        let t86 = (-xv[3]).mul_add(t44, t85);
+        let t87 = xv[5].mul_add(t33, t63);
+        let t88 = xv[7].mul_add(t45, t87);
+        let t89 = t88 * T::from_i64(2);
+        let t90 = xv[4].mul_add(t32, t89);
+        let t91 = -t90;
+        let t92 = (-xv[4]).mul_add(t35, t67);
+        let t93 = (-xv[7]).mul_add(t46, t92);
+        let t94 = t93 * T::from_i64(2);
+        let t95 = xv[5].mul_add(t36, t94);
+        let t96 = (-xv[4]).mul_add(t38, t72);
+        let t97 = (-xv[5]).mul_add(t39, t96);
+        let t98 = t97 * T::from_i64(2);
+        let t99 = xv[6].mul_add(t40, t98);
+            return Flector { c: gx::slots::from_values::<S, T, 8>([t76, t79, t82, t86, t91, t95, t99, t73]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
@@ -44696,8 +46922,8 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
         let m15 = v[1] * v[6];
         let m16 = v[2] * v[3];
         let m22 = m0 - m1;
-        let m23 = m2 - m3;
-        let m24 = m0 + m1;
+        let m23 = m0 + m1;
+        let m24 = m2 - m3;
         let m25 = m2 + m3;
         let m26 = m4 - m9;
         let m27 = m4 + m9;
@@ -44711,40 +46937,41 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
         let m35 = (-v[5]).mul_add(v[7], m13);
         let m36 = (-v[2]).mul_add(v[5], m15);
         let m37 = (-v[6]).mul_add(v[7], m16);
-        let m38 = m22 - m23;
-        let m39 = m22 + m23;
-        let m40 = m24 - m25;
-        let m41 = m26 * T::from_i64(2);
-        let m42 = m29 * T::from_i64(2);
-        let m43 = m27 * T::from_i64(2);
-        let m44 = -m39;
-        let m45 = m30 * T::from_i64(2);
-        let m46 = -m45;
-        let m47 = m28 * T::from_i64(2);
-        let m48 = m31 * T::from_i64(2);
-        let m49 = -m40;
-        let m50 = m32 + m36;
-        let m51 = m50 * T::from_i64(2);
-        let m52 = m35 - m34;
-        let m53 = m52 * T::from_i64(2);
-        let m54 = m33 + m37;
-        let m55 = m54 * T::from_i64(2);
-        let m56 = -T::from_i64(1);
-        let m57 = -m38;
-        let m58 = -m41;
+        let m38 = m22 - m24;
+        let m39 = m22 + m24;
+        let m40 = m23 - m25;
+        let m41 = m23 + m25;
+        let m42 = m26 * T::from_i64(2);
+        let m43 = m29 * T::from_i64(2);
+        let m44 = m27 * T::from_i64(2);
+        let m45 = -m39;
+        let m46 = m30 * T::from_i64(2);
+        let m47 = -m46;
+        let m48 = m28 * T::from_i64(2);
+        let m49 = m31 * T::from_i64(2);
+        let m50 = -m40;
+        let m51 = m32 + m36;
+        let m52 = m51 * T::from_i64(2);
+        let m53 = m35 - m34;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m33 + m37;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = -m41;
+        let m58 = -m38;
         let m59 = -m42;
-        let m60 = m36 - m32;
-        let m61 = m60 * T::from_i64(2);
-        let m62 = -m43;
-        let m63 = m34 + m35;
-        let m64 = m63 * T::from_i64(2);
-        let m65 = -m64;
-        let m66 = -m47;
+        let m60 = -m43;
+        let m61 = m36 - m32;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = -m44;
+        let m64 = m34 + m35;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = -m65;
         let m67 = -m48;
-        let m68 = m33 - m37;
-        let m69 = m68 * T::from_i64(2);
+        let m68 = -m49;
+        let m69 = m33 - m37;
+        let m70 = m69 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m38) + x[1].scale(m41) + x[2].scale(m42)).0, (x[0].scale(m43) + x[1].scale(m44) + x[2].scale(m46)).0, (x[0].scale(m47) + x[1].scale(m48) + x[2].scale(m49)).0, (x[0].scale(m51) + x[1].scale(m53) + x[2].scale(m55) + x[3].scale(m56)).0, (x[4].scale(m57) + x[5].scale(m58) + x[6].scale(m59) + x[7].scale(m61)).0, (x[4].scale(m62) + x[5].scale(m39) + x[6].scale(m45) + x[7].scale(m65)).0, (x[4].scale(m66) + x[5].scale(m67) + x[6].scale(m40) + x[7].scale(m69)).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m38) + x[1].scale(m42) + x[2].scale(m43)).0, (x[0].scale(m44) + x[1].scale(m45) + x[2].scale(m47)).0, (x[0].scale(m48) + x[1].scale(m49) + x[2].scale(m50)).0, (x[0].scale(m52) + x[1].scale(m54) + x[2].scale(m56) + x[3].scale(m57)).0, (x[4].scale(m58) + x[5].scale(m59) + x[6].scale(m60) + x[7].scale(m62)).0, (x[4].scale(m63) + x[5].scale(m39) + x[6].scale(m46) + x[7].scale(m66)).0, (x[4].scale(m67) + x[5].scale(m68) + x[6].scale(m40) + x[7].scale(m70)).0, (x[7].scale(m41)).0] }
     }
 }
 
@@ -44757,10 +46984,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Fle
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Flector, T, 25>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Flector, T, 26>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 25> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 26> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[1] * v[1];
         let m2 = v[2] * v[2];
@@ -44778,8 +47021,8 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Flector<(), T>> {
         let m15 = v[1] * v[6];
         let m16 = v[2] * v[3];
         let m22 = m0 - m1;
-        let m23 = m2 - m3;
-        let m24 = m0 + m1;
+        let m23 = m0 + m1;
+        let m24 = m2 - m3;
         let m25 = m2 + m3;
         let m26 = m4 - m9;
         let m27 = m4 + m9;
@@ -44793,58 +47036,59 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Flector<(), T>> {
         let m35 = (-v[5]).mul_add(v[7], m13);
         let m36 = (-v[2]).mul_add(v[5], m15);
         let m37 = (-v[6]).mul_add(v[7], m16);
-        let m38 = m22 - m23;
-        let m39 = m22 + m23;
-        let m40 = m24 - m25;
-        let m41 = m26 * T::from_i64(2);
-        let m42 = m29 * T::from_i64(2);
-        let m43 = m27 * T::from_i64(2);
-        let m44 = -m39;
-        let m45 = m30 * T::from_i64(2);
-        let m46 = -m45;
-        let m47 = m28 * T::from_i64(2);
-        let m48 = m31 * T::from_i64(2);
-        let m49 = -m40;
-        let m50 = m32 + m36;
-        let m51 = m50 * T::from_i64(2);
-        let m52 = m35 - m34;
-        let m53 = m52 * T::from_i64(2);
-        let m54 = m33 + m37;
-        let m55 = m54 * T::from_i64(2);
-        let m56 = -T::from_i64(1);
-        let m57 = -m38;
-        let m58 = -m41;
+        let m38 = m22 - m24;
+        let m39 = m22 + m24;
+        let m40 = m23 - m25;
+        let m41 = m23 + m25;
+        let m42 = m26 * T::from_i64(2);
+        let m43 = m29 * T::from_i64(2);
+        let m44 = m27 * T::from_i64(2);
+        let m45 = -m39;
+        let m46 = m30 * T::from_i64(2);
+        let m47 = -m46;
+        let m48 = m28 * T::from_i64(2);
+        let m49 = m31 * T::from_i64(2);
+        let m50 = -m40;
+        let m51 = m32 + m36;
+        let m52 = m51 * T::from_i64(2);
+        let m53 = m35 - m34;
+        let m54 = m53 * T::from_i64(2);
+        let m55 = m33 + m37;
+        let m56 = m55 * T::from_i64(2);
+        let m57 = -m41;
+        let m58 = -m38;
         let m59 = -m42;
-        let m60 = m36 - m32;
-        let m61 = m60 * T::from_i64(2);
-        let m62 = -m43;
-        let m63 = m34 + m35;
-        let m64 = m63 * T::from_i64(2);
-        let m65 = -m64;
-        let m66 = -m47;
+        let m60 = -m43;
+        let m61 = m36 - m32;
+        let m62 = m61 * T::from_i64(2);
+        let m63 = -m44;
+        let m64 = m34 + m35;
+        let m65 = m64 * T::from_i64(2);
+        let m66 = -m65;
         let m67 = -m48;
-        let m68 = m33 - m37;
-        let m69 = m68 * T::from_i64(2);
-        gx::Prepared::from_entries([m38, m41, m42, m43, m44, m46, m47, m48, m49, m51, m53, m55, m56, m57, m58, m59, m61, m62, m39, m45, m65, m66, m67, m40, m69])
+        let m68 = -m49;
+        let m69 = m33 - m37;
+        let m70 = m69 * T::from_i64(2);
+        gx::Prepared::from_entries([m38, m42, m43, m44, m45, m47, m48, m49, m50, m52, m54, m56, m57, m58, m59, m60, m62, m63, m39, m46, m66, m67, m68, m40, m70, m41])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Flector>, Flector, T, 25> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Flector>, Flector, T, 26> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[17]) + x[5].scale(m[18]) + x[6].scale(m[19]) + x[7].scale(m[20])).0, (x[4].scale(m[21]) + x[5].scale(m[22]) + x[6].scale(m[23]) + x[7].scale(m[24])).0, (x[7]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, (x[0].scale(m[9]) + x[1].scale(m[10]) + x[2].scale(m[11]) + x[3].scale(m[12])).0, (x[4].scale(m[13]) + x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16])).0, (x[4].scale(m[17]) + x[5].scale(m[18]) + x[6].scale(m[19]) + x[7].scale(m[20])).0, (x[4].scale(m[21]) + x[5].scale(m[22]) + x[6].scale(m[23]) + x[7].scale(m[24])).0, (x[7].scale(m[25])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 25>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 26>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 25>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 26>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[17], m[18], m[19], m[20]], [T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[22], m[23], m[24]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[3], m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[6], m[7], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [m[9], m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[14], m[15], m[16]], [T::zero(), T::zero(), T::zero(), T::zero(), m[17], m[18], m[19], m[20]], [T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[22], m[23], m[24]], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[25]]] }
     }
 }
 
@@ -44852,7 +47096,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 25>> for Flec
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Flector {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Flector, T, 25>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Flector, T, 26>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -44862,16 +47106,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 25> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 26> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 25>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Flector, W, 25> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 26>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Flector, W, 26> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 25>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 26>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -45327,245 +47571,268 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Fl
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
-        let t0 = v[0] * v[3];
-        let t1 = v[0] * v[5];
-        let t2 = v[0] * v[6];
-        let t3 = v[1] * v[3];
-        let t4 = v[1] * v[4];
-        let t5 = v[1] * v[6];
-        let t6 = v[2] * v[3];
-        let t7 = v[2] * v[4];
-        let t8 = v[2] * v[5];
-        let t9 = v[4] * v[7];
-        let t10 = v[5] * v[7];
-        let t11 = v[6] * v[7];
-        let t12 = v[0] * v[1];
-        let t13 = v[0] * v[2];
-        let t14 = v[0] * v[7];
-        let t15 = v[1] * v[1];
-        let t16 = v[1] * v[2];
-        let t17 = v[1] * v[5];
-        let t18 = v[1] * v[7];
-        let t19 = v[2] * v[2];
-        let t20 = v[2] * v[6];
-        let t21 = v[2] * v[7];
-        let t22 = v[3] * v[7];
-        let t23 = v[7] * v[7];
-        let t24 = t0 - t5;
-        let t25 = t0 + t5;
-        let t26 = t1 - t4;
-        let t27 = t1 + t4;
-        let t28 = t2 - t3;
-        let t29 = t2 + t3;
-        let t30 = t6 - t11;
-        let t31 = t6 + t11;
-        let t32 = t7 - t10;
-        let t33 = t7 + t10;
-        let t34 = t8 - t9;
-        let t35 = t8 + t9;
-        let t36 = t25 - t35;
-        let t37 = t28 - t32;
-        let t38 = t26 + t30;
-        let t39 = t15 + t19;
-        let t41 = (-t39).mul_add(T::from_i64(2), T::from_i64(1));
-        let t42 = t12 - t21;
-        let t43 = t13 + t18;
-        let t44 = t12 + t21;
-        let t45 = t15 + t23;
-        let t47 = (-t45).mul_add(T::from_i64(2), T::from_i64(1));
-        let t48 = t14 - t16;
-        let t49 = t13 - t18;
-        let t50 = t14 + t16;
-        let t51 = t19 + t23;
-        let t53 = (-t51).mul_add(T::from_i64(2), T::from_i64(1));
-        let t54 = t29 + t33;
-        let t55 = t27 - t31;
-        let t56 = t17 + t20;
-        let t57 = t24 - t34;
-        let t58 = t17 + t22;
-        let t59 = t27 + t31;
-        let t60 = t20 + t22;
-        let t61 = t25 + t35;
-        let t62 = t28 + t32;
-        let t63 = t26 - t30;
-        let t64 = t29 - t33;
-        let t65 = t24 + t34;
-        let t68 = xv[4] * t38;
-        let t71 = xv[4] * t43;
-        let t72 = xv[2] * t44;
-        let t76 = xv[3] * t50;
-        let t80 = xv[7] * t43;
-        let t82 = xv[9] * t55;
-        let t83 = xv[10] * t56;
-        let t87 = xv[8] * t57;
-        let t88 = xv[9] * t58;
-        let t89 = xv[10] * t59;
-        let t91 = xv[6] * t50;
-        let t93 = xv[8] * t60;
-        let t95 = xv[10] * t62;
-        let t98 = xv[10] * t49;
-        let t101 = xv[10] * t44;
-        let t103 = xv[9] * t42;
-        let t108 = xv[14] * t63;
-        let t109 = xv[11] * t48;
-        let t114 = xv[12] * t42;
-        let t117 = xv[2].mul_add(t36, t68);
-        let t118 = (-xv[3]).mul_add(t37, t117);
-        let t120 = t118.mul_add(T::from_i64(2), -xv[1]);
-        let t121 = xv[3].mul_add(t42, t71);
-        let t122 = t121 * T::from_i64(2);
-        let t123 = xv[2].mul_add(t41, t122);
-        let t124 = (-xv[4]).mul_add(t48, t72);
-        let t125 = t124 * T::from_i64(2);
-        let t126 = (-xv[3]).mul_add(t47, t125);
-        let t127 = xv[2].mul_add(t49, t76);
-        let t128 = t127 * T::from_i64(2);
-        let t129 = (-xv[4]).mul_add(t53, t128);
-        let t130 = xv[8].mul_add(t54, t82);
-        let t131 = xv[6].mul_add(t42, t80);
-        let t132 = t130 - t131;
-        let t133 = t132 * T::from_i64(2);
-        let t135 = (-xv[5]).mul_add(t41, t133);
-        let t136 = (-t83).mul_add(T::from_i64(4), t135);
-        let t137 = xv[7].mul_add(t48, t89);
-        let t138 = xv[5].mul_add(t44, t87);
-        let t139 = t137 - t138;
-        let t140 = t139 * T::from_i64(2);
-        let t142 = xv[6].mul_add(t47, t140);
-        let t143 = t88.mul_add(T::from_i64(4), t142);
-        let t144 = xv[9].mul_add(t61, t95);
-        let t145 = xv[5].mul_add(t49, t91);
-        let t146 = t144 - t145;
-        let t147 = t146 * T::from_i64(2);
-        let t149 = xv[7].mul_add(t53, t147);
-        let t150 = t93.mul_add(T::from_i64(4), t149);
-        let t151 = xv[9].mul_add(t50, t98);
-        let t152 = t151 * T::from_i64(2);
-        let t153 = (-xv[8]).mul_add(t53, t152);
-        let t154 = (-xv[8]).mul_add(t48, t101);
-        let t155 = t154 * T::from_i64(2);
-        let t156 = (-xv[9]).mul_add(t47, t155);
-        let t157 = xv[8].mul_add(t43, t103);
-        let t158 = t157 * T::from_i64(2);
-        let t159 = xv[10].mul_add(t41, t158);
-        let t160 = (-xv[12]).mul_add(t50, t108);
-        let t161 = (-xv[13]).mul_add(t49, t160);
-        let t162 = t161 * T::from_i64(2);
-        let t163 = xv[11].mul_add(t53, t162);
-        let t164 = (-xv[13]).mul_add(t44, t109);
-        let t165 = (-xv[14]).mul_add(t64, t164);
-        let t166 = t165 * T::from_i64(2);
-        let t167 = xv[12].mul_add(t47, t166);
-        let t168 = xv[11].mul_add(t43, t114);
-        let t169 = xv[14].mul_add(t65, t168);
-        let t170 = t169 * T::from_i64(2);
-        let t171 = xv[13].mul_add(t41, t170);
-        let t172 = -t171;
-        let t173 = -xv[15];
-            return Multivector { c: gx::slots::from_values::<S, T, 16>([xv[0], t120, t123, t126, t129, t136, t143, t150, t153, t156, t159, t163, t167, t172, xv[14], t173]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
         }
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m9 = v[0] * v[3];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[3];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[6];
-        let m15 = v[2] * v[3];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m18 = v[4] * v[7];
-        let m19 = v[5] * v[7];
-        let m20 = v[6] * v[7];
-        let m21 = v[1] * v[5];
-        let m22 = v[2] * v[6];
-        let m23 = v[3] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = m9 - m14;
-        let m34 = m9 + m14;
-        let m35 = m10 - m13;
-        let m36 = m10 + m13;
-        let m37 = m11 - m12;
-        let m38 = m11 + m12;
-        let m39 = m15 - m20;
-        let m40 = m15 + m20;
-        let m41 = m16 - m19;
-        let m42 = m16 + m19;
-        let m43 = m17 - m18;
-        let m44 = m17 + m18;
-        let m45 = -T::from_i64(1);
-        let m46 = m34 - m44;
-        let m47 = m46 * T::from_i64(2);
-        let m48 = m41 - m37;
-        let m49 = m48 * T::from_i64(2);
-        let m50 = m35 + m39;
-        let m51 = m50 * T::from_i64(2);
-        let m52 = m30 * T::from_i64(2);
-        let m53 = T::from_i64(1) - m52;
-        let m54 = m24 * T::from_i64(2);
-        let m55 = m27 * T::from_i64(2);
-        let m56 = m25 * T::from_i64(2);
-        let m57 = m31 * T::from_i64(2);
-        let m58 = m57 - T::from_i64(1);
-        let m59 = m28 * T::from_i64(2);
-        let m60 = -m59;
-        let m61 = m26 * T::from_i64(2);
-        let m62 = m29 * T::from_i64(2);
-        let m63 = m32 * T::from_i64(2);
-        let m64 = m63 - T::from_i64(1);
-        let m65 = m52 - T::from_i64(1);
-        let m66 = -m54;
-        let m67 = -m55;
-        let m68 = m38 + m42;
-        let m69 = m68 * T::from_i64(2);
-        let m70 = m36 - m40;
+        if let Some(xv) = gx::slots::values::<S, T, 16>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[0] * v[3];
+        let t2 = v[0] * v[5];
+        let t3 = v[0] * v[6];
+        let t4 = v[1] * v[1];
+        let t5 = v[1] * v[3];
+        let t6 = v[1] * v[4];
+        let t7 = v[1] * v[6];
+        let t8 = v[2] * v[2];
+        let t9 = v[2] * v[3];
+        let t10 = v[2] * v[4];
+        let t11 = v[2] * v[5];
+        let t12 = v[4] * v[7];
+        let t13 = v[5] * v[7];
+        let t14 = v[6] * v[7];
+        let t15 = v[7] * v[7];
+        let t16 = v[0] * v[1];
+        let t17 = v[0] * v[2];
+        let t18 = v[0] * v[7];
+        let t19 = v[1] * v[2];
+        let t20 = v[1] * v[5];
+        let t21 = v[1] * v[7];
+        let t22 = v[2] * v[6];
+        let t23 = v[2] * v[7];
+        let t24 = v[3] * v[7];
+        let t25 = t0 - t4;
+        let t26 = t0 + t4;
+        let t27 = t1 - t7;
+        let t28 = t1 + t7;
+        let t29 = t2 - t6;
+        let t30 = t2 + t6;
+        let t31 = t3 - t5;
+        let t32 = t3 + t5;
+        let t33 = t8 - t15;
+        let t34 = t8 + t15;
+        let t35 = t9 - t14;
+        let t36 = t9 + t14;
+        let t37 = t10 - t13;
+        let t38 = t10 + t13;
+        let t39 = t11 - t12;
+        let t40 = t11 + t12;
+        let t41 = t26 + t34;
+        let t42 = t28 - t40;
+        let t43 = t31 - t37;
+        let t44 = t29 + t35;
+        let t45 = t25 - t33;
+        let t46 = t16 - t23;
+        let t47 = t17 + t21;
+        let t48 = t16 + t23;
+        let t49 = t25 + t33;
+        let t50 = t18 - t19;
+        let t51 = t17 - t21;
+        let t52 = t18 + t19;
+        let t53 = t26 - t34;
+        let t54 = t32 + t38;
+        let t55 = t30 - t36;
+        let t56 = t20 + t22;
+        let t57 = t27 - t39;
+        let t58 = t20 + t24;
+        let t59 = t30 + t36;
+        let t60 = t22 + t24;
+        let t61 = t28 + t40;
+        let t62 = t31 + t37;
+        let t63 = t29 - t35;
+        let t64 = t32 - t38;
+        let t65 = t27 + t39;
+        let t66 = xv[0] * t41;
+        let t70 = xv[4] * t44;
+        let t73 = xv[4] * t47;
+        let t74 = xv[2] * t48;
+        let t78 = xv[3] * t52;
+        let t82 = xv[7] * t47;
+        let t84 = xv[9] * t55;
+        let t85 = xv[10] * t56;
+        let t89 = xv[8] * t57;
+        let t90 = xv[9] * t58;
+        let t91 = xv[10] * t59;
+        let t93 = xv[6] * t52;
+        let t95 = xv[8] * t60;
+        let t97 = xv[10] * t62;
+        let t100 = xv[10] * t51;
+        let t103 = xv[10] * t48;
+        let t105 = xv[9] * t46;
+        let t110 = xv[14] * t63;
+        let t111 = xv[11] * t50;
+        let t116 = xv[12] * t46;
+        let t119 = xv[14] * t41;
+        let t120 = xv[15] * t41;
+        let t121 = xv[2].mul_add(t42, t70);
+        let t122 = (-xv[3]).mul_add(t43, t121);
+        let t123 = t122 * T::from_i64(2);
+        let t124 = (-xv[1]).mul_add(t41, t123);
+        let t125 = xv[3].mul_add(t46, t73);
+        let t126 = t125 * T::from_i64(2);
+        let t127 = xv[2].mul_add(t45, t126);
+        let t128 = (-xv[4]).mul_add(t50, t74);
+        let t129 = t128 * T::from_i64(2);
+        let t130 = (-xv[3]).mul_add(t49, t129);
+        let t131 = xv[2].mul_add(t51, t78);
+        let t132 = t131 * T::from_i64(2);
+        let t133 = (-xv[4]).mul_add(t53, t132);
+        let t134 = xv[8].mul_add(t54, t84);
+        let t135 = xv[6].mul_add(t46, t82);
+        let t136 = t134 - t135;
+        let t137 = t136 * T::from_i64(2);
+        let t139 = (-xv[5]).mul_add(t45, t137);
+        let t140 = (-t85).mul_add(T::from_i64(4), t139);
+        let t141 = xv[7].mul_add(t50, t91);
+        let t142 = xv[5].mul_add(t48, t89);
+        let t143 = t141 - t142;
+        let t144 = t143 * T::from_i64(2);
+        let t146 = xv[6].mul_add(t49, t144);
+        let t147 = t90.mul_add(T::from_i64(4), t146);
+        let t148 = xv[9].mul_add(t61, t97);
+        let t149 = xv[5].mul_add(t51, t93);
+        let t150 = t148 - t149;
+        let t151 = t150 * T::from_i64(2);
+        let t153 = xv[7].mul_add(t53, t151);
+        let t154 = t95.mul_add(T::from_i64(4), t153);
+        let t155 = xv[9].mul_add(t52, t100);
+        let t156 = t155 * T::from_i64(2);
+        let t157 = (-xv[8]).mul_add(t53, t156);
+        let t158 = (-xv[8]).mul_add(t50, t103);
+        let t159 = t158 * T::from_i64(2);
+        let t160 = (-xv[9]).mul_add(t49, t159);
+        let t161 = xv[8].mul_add(t47, t105);
+        let t162 = t161 * T::from_i64(2);
+        let t163 = xv[10].mul_add(t45, t162);
+        let t164 = (-xv[12]).mul_add(t52, t110);
+        let t165 = (-xv[13]).mul_add(t51, t164);
+        let t166 = t165 * T::from_i64(2);
+        let t167 = xv[11].mul_add(t53, t166);
+        let t168 = (-xv[13]).mul_add(t48, t111);
+        let t169 = (-xv[14]).mul_add(t64, t168);
+        let t170 = t169 * T::from_i64(2);
+        let t171 = xv[12].mul_add(t49, t170);
+        let t172 = xv[11].mul_add(t47, t116);
+        let t173 = xv[14].mul_add(t65, t172);
+        let t174 = t173 * T::from_i64(2);
+        let t175 = xv[13].mul_add(t45, t174);
+        let t176 = -t175;
+        let t177 = -t120;
+            return Multivector { c: gx::slots::from_values::<S, T, 16>([t66, t124, t127, t130, t133, t140, t147, t154, t157, t160, t163, t167, t171, t176, t119, t177]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[3];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[6];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[4] * v[7];
+        let m20 = v[5] * v[7];
+        let m21 = v[6] * v[7];
+        let m22 = v[1] * v[5];
+        let m23 = v[2] * v[6];
+        let m24 = v[3] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = m25 - m27;
+        let m36 = m25 + m27;
+        let m37 = m26 - m28;
+        let m38 = m26 + m28;
+        let m39 = m10 - m15;
+        let m40 = m10 + m15;
+        let m41 = m11 - m14;
+        let m42 = m11 + m14;
+        let m43 = m12 - m13;
+        let m44 = m12 + m13;
+        let m45 = m16 - m21;
+        let m46 = m16 + m21;
+        let m47 = m17 - m20;
+        let m48 = m17 + m20;
+        let m49 = m18 - m19;
+        let m50 = m18 + m19;
+        let m51 = -m38;
+        let m52 = m40 - m50;
+        let m53 = m52 * T::from_i64(2);
+        let m54 = m47 - m43;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m41 + m45;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m29 * T::from_i64(2);
+        let m59 = m32 * T::from_i64(2);
+        let m60 = m30 * T::from_i64(2);
+        let m61 = -m36;
+        let m62 = m33 * T::from_i64(2);
+        let m63 = -m62;
+        let m64 = m31 * T::from_i64(2);
+        let m65 = m34 * T::from_i64(2);
+        let m66 = -m37;
+        let m67 = -m35;
+        let m68 = -m58;
+        let m69 = -m59;
+        let m70 = m44 + m48;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m21 + m22;
-        let m73 = m72 * T::from_i64(4);
-        let m74 = -m73;
-        let m75 = -m56;
-        let m76 = T::from_i64(1) - m57;
-        let m77 = m43 - m33;
-        let m78 = m77 * T::from_i64(2);
-        let m79 = m21 + m23;
-        let m80 = m79 * T::from_i64(4);
-        let m81 = m36 + m40;
-        let m82 = m81 * T::from_i64(2);
-        let m83 = -m61;
-        let m84 = -m62;
-        let m85 = T::from_i64(1) - m63;
-        let m86 = m22 + m23;
+        let m72 = m42 - m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m22 + m23;
+        let m75 = m74 * T::from_i64(4);
+        let m76 = -m75;
+        let m77 = -m60;
+        let m78 = m49 - m39;
+        let m79 = m78 * T::from_i64(2);
+        let m80 = m22 + m24;
+        let m81 = m80 * T::from_i64(4);
+        let m82 = m42 + m46;
+        let m83 = m82 * T::from_i64(2);
+        let m84 = -m64;
+        let m85 = -m65;
+        let m86 = m23 + m24;
         let m87 = m86 * T::from_i64(4);
-        let m88 = m34 + m44;
+        let m88 = m40 + m50;
         let m89 = m88 * T::from_i64(2);
-        let m90 = m37 + m41;
+        let m90 = m43 + m47;
         let m91 = m90 * T::from_i64(2);
-        let m92 = m35 - m39;
+        let m92 = m41 - m45;
         let m93 = m92 * T::from_i64(2);
-        let m94 = m42 - m38;
+        let m94 = m48 - m44;
         let m95 = m94 * T::from_i64(2);
-        let m96 = m33 + m43;
+        let m96 = m39 + m49;
         let m97 = m96 * T::from_i64(2);
         let m98 = -m97;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m45) + x[2].scale(m47) + x[3].scale(m49) + x[4].scale(m51)).0, (x[2].scale(m53) + x[3].scale(m54) + x[4].scale(m55)).0, (x[2].scale(m56) + x[3].scale(m58) + x[4].scale(m60)).0, (x[2].scale(m61) + x[3].scale(m62) + x[4].scale(m64)).0, (x[5].scale(m65) + x[6].scale(m66) + x[7].scale(m67) + x[8].scale(m69) + x[9].scale(m71) + x[10].scale(m74)).0, (x[5].scale(m75) + x[6].scale(m76) + x[7].scale(m59) + x[8].scale(m78) + x[9].scale(m80) + x[10].scale(m82)).0, (x[5].scale(m83) + x[6].scale(m84) + x[7].scale(m85) + x[8].scale(m87) + x[9].scale(m89) + x[10].scale(m91)).0, (x[8].scale(m64) + x[9].scale(m62) + x[10].scale(m61)).0, (x[8].scale(m60) + x[9].scale(m58) + x[10].scale(m56)).0, (x[8].scale(m55) + x[9].scale(m54) + x[10].scale(m53)).0, (x[11].scale(m85) + x[12].scale(m84) + x[13].scale(m83) + x[14].scale(m93)).0, (x[11].scale(m59) + x[12].scale(m76) + x[13].scale(m75) + x[14].scale(m95)).0, (x[11].scale(m67) + x[12].scale(m66) + x[13].scale(m65) + x[14].scale(m98)).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m45)).0] }
+        Multivector { c: [(x[0].scale(m38)).0, (x[1].scale(m51) + x[2].scale(m53) + x[3].scale(m55) + x[4].scale(m57)).0, (x[2].scale(m35) + x[3].scale(m58) + x[4].scale(m59)).0, (x[2].scale(m60) + x[3].scale(m61) + x[4].scale(m63)).0, (x[2].scale(m64) + x[3].scale(m65) + x[4].scale(m66)).0, (x[5].scale(m67) + x[6].scale(m68) + x[7].scale(m69) + x[8].scale(m71) + x[9].scale(m73) + x[10].scale(m76)).0, (x[5].scale(m77) + x[6].scale(m36) + x[7].scale(m62) + x[8].scale(m79) + x[9].scale(m81) + x[10].scale(m83)).0, (x[5].scale(m84) + x[6].scale(m85) + x[7].scale(m37) + x[8].scale(m87) + x[9].scale(m89) + x[10].scale(m91)).0, (x[8].scale(m66) + x[9].scale(m65) + x[10].scale(m64)).0, (x[8].scale(m63) + x[9].scale(m61) + x[10].scale(m60)).0, (x[8].scale(m59) + x[9].scale(m58) + x[10].scale(m35)).0, (x[11].scale(m37) + x[12].scale(m85) + x[13].scale(m84) + x[14].scale(m93)).0, (x[11].scale(m62) + x[12].scale(m36) + x[13].scale(m77) + x[14].scale(m95)).0, (x[11].scale(m69) + x[12].scale(m68) + x[13].scale(m67) + x[14].scale(m98)).0, (x[14].scale(m38)).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m51)).0] }
     }
 }
 
@@ -45578,129 +47845,145 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 34> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 35> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[1];
-        let m1 = v[0] * v[2];
-        let m2 = v[0] * v[7];
-        let m3 = v[1] * v[1];
-        let m4 = v[1] * v[2];
-        let m5 = v[1] * v[7];
-        let m6 = v[2] * v[2];
-        let m7 = v[2] * v[7];
-        let m8 = v[7] * v[7];
-        let m9 = v[0] * v[3];
-        let m10 = v[0] * v[5];
-        let m11 = v[0] * v[6];
-        let m12 = v[1] * v[3];
-        let m13 = v[1] * v[4];
-        let m14 = v[1] * v[6];
-        let m15 = v[2] * v[3];
-        let m16 = v[2] * v[4];
-        let m17 = v[2] * v[5];
-        let m18 = v[4] * v[7];
-        let m19 = v[5] * v[7];
-        let m20 = v[6] * v[7];
-        let m21 = v[1] * v[5];
-        let m22 = v[2] * v[6];
-        let m23 = v[3] * v[7];
-        let m24 = m0 - m7;
-        let m25 = m0 + m7;
-        let m26 = m1 - m5;
-        let m27 = m1 + m5;
-        let m28 = m2 - m4;
-        let m29 = m2 + m4;
-        let m30 = m3 + m6;
-        let m31 = m3 + m8;
-        let m32 = m6 + m8;
-        let m33 = m9 - m14;
-        let m34 = m9 + m14;
-        let m35 = m10 - m13;
-        let m36 = m10 + m13;
-        let m37 = m11 - m12;
-        let m38 = m11 + m12;
-        let m39 = m15 - m20;
-        let m40 = m15 + m20;
-        let m41 = m16 - m19;
-        let m42 = m16 + m19;
-        let m43 = m17 - m18;
-        let m44 = m17 + m18;
-        let m45 = -T::from_i64(1);
-        let m46 = m34 - m44;
-        let m47 = m46 * T::from_i64(2);
-        let m48 = m41 - m37;
-        let m49 = m48 * T::from_i64(2);
-        let m50 = m35 + m39;
-        let m51 = m50 * T::from_i64(2);
-        let m52 = m30 * T::from_i64(2);
-        let m53 = T::from_i64(1) - m52;
-        let m54 = m24 * T::from_i64(2);
-        let m55 = m27 * T::from_i64(2);
-        let m56 = m25 * T::from_i64(2);
-        let m57 = m31 * T::from_i64(2);
-        let m58 = m57 - T::from_i64(1);
-        let m59 = m28 * T::from_i64(2);
-        let m60 = -m59;
-        let m61 = m26 * T::from_i64(2);
-        let m62 = m29 * T::from_i64(2);
-        let m63 = m32 * T::from_i64(2);
-        let m64 = m63 - T::from_i64(1);
-        let m65 = m52 - T::from_i64(1);
-        let m66 = -m54;
-        let m67 = -m55;
-        let m68 = m38 + m42;
-        let m69 = m68 * T::from_i64(2);
-        let m70 = m36 - m40;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = v[0] * v[3];
+        let m11 = v[0] * v[5];
+        let m12 = v[0] * v[6];
+        let m13 = v[1] * v[3];
+        let m14 = v[1] * v[4];
+        let m15 = v[1] * v[6];
+        let m16 = v[2] * v[3];
+        let m17 = v[2] * v[4];
+        let m18 = v[2] * v[5];
+        let m19 = v[4] * v[7];
+        let m20 = v[5] * v[7];
+        let m21 = v[6] * v[7];
+        let m22 = v[1] * v[5];
+        let m23 = v[2] * v[6];
+        let m24 = v[3] * v[7];
+        let m25 = m0 - m1;
+        let m26 = m0 + m1;
+        let m27 = m2 - m3;
+        let m28 = m2 + m3;
+        let m29 = m4 - m9;
+        let m30 = m4 + m9;
+        let m31 = m5 - m8;
+        let m32 = m5 + m8;
+        let m33 = m6 - m7;
+        let m34 = m6 + m7;
+        let m35 = m25 - m27;
+        let m36 = m25 + m27;
+        let m37 = m26 - m28;
+        let m38 = m26 + m28;
+        let m39 = m10 - m15;
+        let m40 = m10 + m15;
+        let m41 = m11 - m14;
+        let m42 = m11 + m14;
+        let m43 = m12 - m13;
+        let m44 = m12 + m13;
+        let m45 = m16 - m21;
+        let m46 = m16 + m21;
+        let m47 = m17 - m20;
+        let m48 = m17 + m20;
+        let m49 = m18 - m19;
+        let m50 = m18 + m19;
+        let m51 = -m38;
+        let m52 = m40 - m50;
+        let m53 = m52 * T::from_i64(2);
+        let m54 = m47 - m43;
+        let m55 = m54 * T::from_i64(2);
+        let m56 = m41 + m45;
+        let m57 = m56 * T::from_i64(2);
+        let m58 = m29 * T::from_i64(2);
+        let m59 = m32 * T::from_i64(2);
+        let m60 = m30 * T::from_i64(2);
+        let m61 = -m36;
+        let m62 = m33 * T::from_i64(2);
+        let m63 = -m62;
+        let m64 = m31 * T::from_i64(2);
+        let m65 = m34 * T::from_i64(2);
+        let m66 = -m37;
+        let m67 = -m35;
+        let m68 = -m58;
+        let m69 = -m59;
+        let m70 = m44 + m48;
         let m71 = m70 * T::from_i64(2);
-        let m72 = m21 + m22;
-        let m73 = m72 * T::from_i64(4);
-        let m74 = -m73;
-        let m75 = -m56;
-        let m76 = T::from_i64(1) - m57;
-        let m77 = m43 - m33;
-        let m78 = m77 * T::from_i64(2);
-        let m79 = m21 + m23;
-        let m80 = m79 * T::from_i64(4);
-        let m81 = m36 + m40;
-        let m82 = m81 * T::from_i64(2);
-        let m83 = -m61;
-        let m84 = -m62;
-        let m85 = T::from_i64(1) - m63;
-        let m86 = m22 + m23;
+        let m72 = m42 - m46;
+        let m73 = m72 * T::from_i64(2);
+        let m74 = m22 + m23;
+        let m75 = m74 * T::from_i64(4);
+        let m76 = -m75;
+        let m77 = -m60;
+        let m78 = m49 - m39;
+        let m79 = m78 * T::from_i64(2);
+        let m80 = m22 + m24;
+        let m81 = m80 * T::from_i64(4);
+        let m82 = m42 + m46;
+        let m83 = m82 * T::from_i64(2);
+        let m84 = -m64;
+        let m85 = -m65;
+        let m86 = m23 + m24;
         let m87 = m86 * T::from_i64(4);
-        let m88 = m34 + m44;
+        let m88 = m40 + m50;
         let m89 = m88 * T::from_i64(2);
-        let m90 = m37 + m41;
+        let m90 = m43 + m47;
         let m91 = m90 * T::from_i64(2);
-        let m92 = m35 - m39;
+        let m92 = m41 - m45;
         let m93 = m92 * T::from_i64(2);
-        let m94 = m42 - m38;
+        let m94 = m48 - m44;
         let m95 = m94 * T::from_i64(2);
-        let m96 = m33 + m43;
+        let m96 = m39 + m49;
         let m97 = m96 * T::from_i64(2);
         let m98 = -m97;
-        gx::Prepared::from_entries([m45, m47, m49, m51, m53, m54, m55, m56, m58, m60, m61, m62, m64, m65, m66, m67, m69, m71, m74, m75, m76, m59, m78, m80, m82, m83, m84, m85, m87, m89, m91, m93, m95, m98])
+        gx::Prepared::from_entries([m38, m51, m53, m55, m57, m35, m58, m59, m60, m61, m63, m64, m65, m66, m67, m68, m69, m71, m73, m76, m77, m36, m62, m79, m81, m83, m84, m85, m37, m87, m89, m91, m93, m95, m98])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Flector>, Multivector, T, 34> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Flector>, Multivector, T, 35> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2]) + x[4].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5]) + x[4].scale(m[6])).0, (x[2].scale(m[7]) + x[3].scale(m[8]) + x[4].scale(m[9])).0, (x[2].scale(m[10]) + x[3].scale(m[11]) + x[4].scale(m[12])).0, (x[5].scale(m[13]) + x[6].scale(m[14]) + x[7].scale(m[15]) + x[8].scale(m[16]) + x[9].scale(m[17]) + x[10].scale(m[18])).0, (x[5].scale(m[19]) + x[6].scale(m[20]) + x[7].scale(m[21]) + x[8].scale(m[22]) + x[9].scale(m[23]) + x[10].scale(m[24])).0, (x[5].scale(m[25]) + x[6].scale(m[26]) + x[7].scale(m[27]) + x[8].scale(m[28]) + x[9].scale(m[29]) + x[10].scale(m[30])).0, (x[8].scale(m[12]) + x[9].scale(m[11]) + x[10].scale(m[10])).0, (x[8].scale(m[9]) + x[9].scale(m[8]) + x[10].scale(m[7])).0, (x[8].scale(m[6]) + x[9].scale(m[5]) + x[10].scale(m[4])).0, (x[11].scale(m[27]) + x[12].scale(m[26]) + x[13].scale(m[25]) + x[14].scale(m[31])).0, (x[11].scale(m[21]) + x[12].scale(m[20]) + x[13].scale(m[19]) + x[14].scale(m[32])).0, (x[11].scale(m[15]) + x[12].scale(m[14]) + x[13].scale(m[13]) + x[14].scale(m[33])).0, (x[14]).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m[0])).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3]) + x[4].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[6]) + x[4].scale(m[7])).0, (x[2].scale(m[8]) + x[3].scale(m[9]) + x[4].scale(m[10])).0, (x[2].scale(m[11]) + x[3].scale(m[12]) + x[4].scale(m[13])).0, (x[5].scale(m[14]) + x[6].scale(m[15]) + x[7].scale(m[16]) + x[8].scale(m[17]) + x[9].scale(m[18]) + x[10].scale(m[19])).0, (x[5].scale(m[20]) + x[6].scale(m[21]) + x[7].scale(m[22]) + x[8].scale(m[23]) + x[9].scale(m[24]) + x[10].scale(m[25])).0, (x[5].scale(m[26]) + x[6].scale(m[27]) + x[7].scale(m[28]) + x[8].scale(m[29]) + x[9].scale(m[30]) + x[10].scale(m[31])).0, (x[8].scale(m[13]) + x[9].scale(m[12]) + x[10].scale(m[11])).0, (x[8].scale(m[10]) + x[9].scale(m[9]) + x[10].scale(m[8])).0, (x[8].scale(m[7]) + x[9].scale(m[6]) + x[10].scale(m[5])).0, (x[11].scale(m[28]) + x[12].scale(m[27]) + x[13].scale(m[26]) + x[14].scale(m[32])).0, (x[11].scale(m[22]) + x[12].scale(m[21]) + x[13].scale(m[20]) + x[14].scale(m[33])).0, (x[11].scale(m[16]) + x[12].scale(m[15]) + x[13].scale(m[14]) + x[14].scale(m[34])).0, (x[14].scale(m[0])).0, (x[0].scale(T::from_i64(0)) + x[15].scale(m[1])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[7], m[8], m[9], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[10], m[11], m[12], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[14], m[15], m[16], m[17], m[18], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[19], m[20], m[21], m[22], m[23], m[24], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[25], m[26], m[27], m[28], m[29], m[30], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[12], m[11], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[9], m[8], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[27], m[26], m[25], m[31], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[21], m[20], m[19], m[32], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[15], m[14], m[13], m[33], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], m[7], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[8], m[9], m[10], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[11], m[12], m[13], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[14], m[15], m[16], m[17], m[18], m[19], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[20], m[21], m[22], m[23], m[24], m[25], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[26], m[27], m[28], m[29], m[30], m[31], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[13], m[12], m[11], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[10], m[9], m[8], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[7], m[6], m[5], T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[28], m[27], m[26], m[32], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[22], m[21], m[20], m[33], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[16], m[15], m[14], m[34], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::from_i64(0), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1]]] }
     }
 }
 
@@ -45708,7 +47991,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>> for 
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Flector {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -45718,16 +48001,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 34> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 35> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Multivector, W, 34> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Multivector, W, 35> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9]), f(m[10]), f(m[11]), f(m[12]), f(m[13]), f(m[14]), f(m[15]), f(m[16]), f(m[17]), f(m[18]), f(m[19]), f(m[20]), f(m[21]), f(m[22]), f(m[23]), f(m[24]), f(m[25]), f(m[26]), f(m[27]), f(m[28]), f(m[29]), f(m[30]), f(m[31]), f(m[32]), f(m[33]), f(m[34])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 34>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 35>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]

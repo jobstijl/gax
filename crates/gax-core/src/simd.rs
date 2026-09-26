@@ -28,7 +28,14 @@ macro_rules! lanes {
             }
             #[inline(always)]
             fn mul_add(self, a: Self, b: Self) -> Self {
-                $t::mul_add(self, a, b)
+                #[cfg(not(feature = "deterministic"))]
+                {
+                    $t::mul_add(self, a, b)
+                }
+                #[cfg(feature = "deterministic")]
+                {
+                    self * a + b
+                }
             }
         }
 
@@ -48,31 +55,69 @@ macro_rules! lanes {
             }
             #[inline(always)]
             fn sin(self) -> Self {
-                $t::sin_cos(self).0
+                self.sin_cos().0
             }
             #[inline(always)]
             fn cos(self) -> Self {
-                $t::sin_cos(self).1
+                self.sin_cos().1
             }
+            #[cfg(not(feature = "deterministic"))]
             #[inline(always)]
             fn sin_cos(self) -> (Self, Self) {
                 $t::sin_cos(self)
             }
+            #[cfg(not(feature = "deterministic"))]
             #[inline(always)]
             fn sinh(self) -> Self {
                 $t::sinh(self)
             }
+            #[cfg(not(feature = "deterministic"))]
             #[inline(always)]
             fn cosh(self) -> Self {
                 $t::cosh(self)
             }
+            #[cfg(not(feature = "deterministic"))]
             #[inline(always)]
             fn atan2(self, x: Self) -> Self {
                 $t::atan2(self, x)
             }
+            #[cfg(not(feature = "deterministic"))]
             #[inline(always)]
             fn ln(self) -> Self {
                 $t::ln(self)
+            }
+            // Deterministic: lane by lane, with the scalar type's functions.
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn sin_cos(self) -> (Self, Self) {
+                let a = self.to_array();
+                (
+                    $t::new(a.map(crate::coef::elementary::$s::sin)),
+                    $t::new(a.map(crate::coef::elementary::$s::cos)),
+                )
+            }
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn sinh(self) -> Self {
+                $t::new(self.to_array().map(crate::coef::elementary::$s::sinh))
+            }
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn cosh(self) -> Self {
+                $t::new(self.to_array().map(crate::coef::elementary::$s::cosh))
+            }
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn atan2(self, x: Self) -> Self {
+                let (a, b) = (self.to_array(), x.to_array());
+                $t::new(core::array::from_fn(|i| {
+                    crate::coef::elementary::$s::atan2(a[i], b[i])
+                }))
+            }
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn ln(self) -> Self {
+                $t::new(self.to_array().map(crate::coef::elementary::$s::ln))
             }
             #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {

@@ -36,6 +36,11 @@ return_self_not_must_use = "allow"
 implicit_hasher = "allow"
 
 # The generator runs inside the algebra! proc macro; optimize it even in dev builds.
+# The symbolic law suites (tests/laws_*.rs) run the generator's polynomial arithmetic in
+# test builds; optimizing it makes them several times faster.
+[profile.dev.package.gax-gen]
+opt-level = 3
+
 [profile.dev.build-override]
 opt-level = 3
 

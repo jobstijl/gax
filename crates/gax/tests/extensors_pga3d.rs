@@ -1,36 +1,9 @@
-//! Slot permutation, equality groups by kind, and pairings (PGA3D).
+//! Filling slots, induced maps and outermorphisms on concrete geometry (PGA3D). The algebraic laws are proved in `laws_pga3d.rs`.
 
 mod common;
 use common::{Rng, assert_close, flat, random, random_map};
 use gax::Unit;
 use gax::pga3d::*;
-
-#[test]
-fn at_moves_a_slot_to_the_front() {
-    let mut rng = Rng::new(31);
-    let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
-    let (a, b): (Point<(), f64>, Point<(), f64>) = (random(&mut rng), random(&mut rng));
-    // Fill the second slot first.
-    let second: Line<(Point,), f64> = join.at::<1>().of(b);
-    assert_close(&flat(&second.of(a)), &flat(&(a & b)), "at::<1>");
-    // Three slots: the volume spanned by three open points and a fixed one. Move the last
-    // slot to the front.
-    let q: Point<(), f64> = random(&mut rng);
-    let tri: Scalar<(Point, Point, Point), f64> =
-        ((Point::slot() & Point::slot()) & Point::slot()) & q;
-    let c: Point<(), f64> = random(&mut rng);
-    let direct = tri.of(a).of(b).of(c);
-    let moved = tri.at::<2>().of(c).of(a).of(b);
-    assert_close(&flat(&moved), &flat(&direct), "at::<2>");
-}
-
-#[test]
-fn swap_transposes_a_form() {
-    let mut rng = Rng::new(32);
-    let f: Scalar<(Line, Point), f64> = random_map(&mut rng);
-    let (l, p): (Line<(), f64>, Point<(), f64>) = (random(&mut rng), random(&mut rng));
-    assert_close(&flat(&f.swap().of(p).of(l)), &flat(&f.of(l).of(p)), "swap");
-}
 
 #[test]
 fn fill_binds_every_slot_of_a_kind() {
@@ -81,27 +54,12 @@ fn induced_map_on_planes_from_a_pairing() {
         );
     }
     // A rigid motion's induced map on planes is the motion acting on planes.
-    let m = Unit::new_unchecked(Motor::new(0.8, 0.6, 0.0, 0.0, 0.3, -0.1, 0.2, 0.0));
+    // Unit: 0.8² + 0.6² = 1, and the Study part 0.8 · 0.225 − 0.6 · 0.3 vanishes.
+    let m = Unit::new_unchecked(Motor::new(0.8, 0.6, 0.0, 0.0, 0.3, -0.1, 0.2, 0.225));
     let on_points: Point<(Point,), f64> = m >> Point::slot();
     let on_planes: Plane<(Plane,), f64> = pairing.solve(Plane::slot() & on_points.inverse());
     let l: Plane<(), f64> = random(&mut rng);
     let _ = on_planes.of(l);
-}
-
-#[test]
-fn trace_at_contracts_a_slot_with_the_output() {
-    let mut rng = Rng::new(35);
-    // For a map on points, tracing its only slot is the matrix trace.
-    let t: Point<(Point,), f64> = random_map(&mut rng);
-    let s: Scalar<(), f64> = t.trace_at::<0>();
-    assert!((s.s() - t.trace()).abs() < 1e-12);
-    // A bilinear map Point <- (Line, Point): tracing the point slot leaves a linear form on lines,
-    // which on any line l equals the trace of the map q -> m(l, q).
-    let m: Point<(Line, Point), f64> = random_map(&mut rng);
-    let form: Scalar<(Line,), f64> = m.trace_at::<1>();
-    let l: Line<(), f64> = random(&mut rng);
-    let direct = m.of(l).trace();
-    assert!((form.of(l).s() - direct).abs() < 1e-12);
 }
 
 #[test]

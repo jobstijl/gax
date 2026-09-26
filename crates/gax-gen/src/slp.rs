@@ -292,6 +292,108 @@ impl Program {
         self.outputs.iter().map(|o| get(o, &vals)).collect()
     }
 
+    /// Evaluate in `f32`, rounding every operation (no fused multiply-adds): the program as
+    /// scalar code runs it on a target without FMA.
+    pub fn eval_f32(&self, var: &impl Fn(Var) -> f32) -> Vec<f32> {
+        let mut vals: Vec<f32> = Vec::with_capacity(self.instrs.len());
+        let get = |o: &Operand, vals: &Vec<f32>| match o {
+            Operand::Var(v) => var(*v),
+            Operand::Temp(k) => vals[*k],
+            Operand::Const(c) => c.to_f64() as f32,
+        };
+        for i in &self.instrs {
+            let x = match i {
+                Instr::Add(a, b) => get(a, &vals) + get(b, &vals),
+                Instr::Sub(a, b) => get(a, &vals) - get(b, &vals),
+                Instr::Mul(a, b) => get(a, &vals) * get(b, &vals),
+                Instr::Neg(a) => -get(a, &vals),
+                Instr::Div(a, b) => get(a, &vals) / get(b, &vals),
+                Instr::Atan2(a, b) => get(a, &vals).atan2(get(b, &vals)),
+                Instr::Select(a, b, x, y) => {
+                    if get(a, &vals) < get(b, &vals) {
+                        get(x, &vals)
+                    } else {
+                        get(y, &vals)
+                    }
+                }
+                Instr::Call(f, a) => {
+                    let x = get(a, &vals);
+                    match f {
+                        Func::Recip => 1.0 / x,
+                        Func::Sqrt => x.sqrt(),
+                        Func::Sin => x.sin(),
+                        Func::Cos => x.cos(),
+                        Func::Sinh => x.sinh(),
+                        Func::Cosh => x.cosh(),
+                        Func::Ln => x.ln(),
+                        Func::Abs => x.abs(),
+                    }
+                }
+            };
+            vals.push(x);
+        }
+        self.outputs.iter().map(|o| get(o, &vals)).collect()
+    }
+
+    /// A first-order bound on the forward error of evaluating the program in floating point
+    /// with unit roundoff `u` (`2⁻²⁴` for `f32`), per output: `|computed − exact| ≤ bound`,
+    /// given bounds `mag` on the magnitudes of the (exact) inputs.
+    ///
+    /// Standard running error analysis: every operation contributes `u` times a bound on its
+    /// result, and errors propagate through `+`, `−`, `×` and division by constants; a
+    /// constant that is not a dyadic rational contributes its own rounding. Fusing a product
+    /// into a sum (`mul_add`) only removes roundings, so the bound holds for fused code too.
+    /// Non-polynomial steps give an infinite bound.
+    pub fn error_bound(&self, mag: &impl Fn(Var) -> f64, u: f64) -> Vec<f64> {
+        let mut vals: Vec<(f64, f64)> = Vec::with_capacity(self.instrs.len());
+        let get = |o: &Operand, vals: &Vec<(f64, f64)>| match o {
+            Operand::Var(v) => (mag(*v).abs(), 0.0),
+            Operand::Temp(k) => vals[*k],
+            Operand::Const(c) => {
+                let x = c.to_f64().abs();
+                let dyadic = c.den().count_ones() == 1 && c.num().unsigned_abs() < (1 << 24);
+                (x, if dyadic { 0.0 } else { u * x })
+            }
+        };
+        for i in &self.instrs {
+            let r = match i {
+                Instr::Add(a, b) | Instr::Sub(a, b) => {
+                    let ((ma, ea), (mb, eb)) = (get(a, &vals), get(b, &vals));
+                    let m = ma + mb;
+                    (m, ea + eb + u * m)
+                }
+                Instr::Mul(a, b) => {
+                    let ((ma, ea), (mb, eb)) = (get(a, &vals), get(b, &vals));
+                    let m = ma * mb;
+                    (m, ma * eb + mb * ea + ea * eb + u * m)
+                }
+                Instr::Neg(a) => get(a, &vals),
+                Instr::Div(a, b) => match b {
+                    Operand::Const(c) if !c.is_zero() => {
+                        let (ma, ea) = get(a, &vals);
+                        let d = c.to_f64().abs();
+                        (ma / d, ea / d + u * ma / d)
+                    }
+                    _ => (f64::INFINITY, f64::INFINITY),
+                },
+                Instr::Atan2(..) | Instr::Select(..) | Instr::Call(..) => {
+                    (f64::INFINITY, f64::INFINITY)
+                }
+            };
+            vals.push(r);
+        }
+        self.outputs.iter().map(|o| get(o, &vals).1).collect()
+    }
+
+    /// The largest [`error_bound`](Self::error_bound) over the outputs for inputs of
+    /// magnitude at most 1, in units of `u`: the score the simplifier uses to compare
+    /// candidates.
+    pub fn error_score(&self) -> f64 {
+        self.error_bound(&|_| 1.0, 1.0)
+            .into_iter()
+            .fold(0.0, f64::max)
+    }
+
     /// Emit the instructions as Rust `let` statements over a coefficient type `T`.
     ///
     /// `var` renders an input variable, and temporaries are named `{prefix}{k}`.
@@ -386,7 +488,10 @@ pub fn render(o: &Operand, var: &impl Fn(Var) -> String, prefix: &str) -> String
             if c.is_integer() {
                 format!("T::from_i64({})", c.num())
             } else {
-                format!("T::from_f64({}.0 / {}.0)", c.num(), c.den())
+                match (i64::try_from(c.num()), i64::try_from(c.den())) {
+                    (Ok(n), Ok(d)) => format!("T::from_ratio({n}, {d})"),
+                    _ => format!("T::from_f64({}.0 / {}.0)", c.num(), c.den()),
+                }
             }
         }
     }

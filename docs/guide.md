@@ -126,10 +126,20 @@ motors, and maps. `Unit<Motor>` certifies that `m ~m = 1`, and certified versors
 
 * `unit.inverse()` is the reverse, with no arithmetic;
 * sandwiches use formulas simplified with the unit condition (a unit motor on a point takes
-  25 mul and 18 add);
+  33 mul and 21 add, against 38 and 32);
 * the product of units is a unit.
 
 Get a unit with `normalized()`, `exp()`, or constructors such as `Motor::translation`.
+
+**Drift.** A product of units is certified without renormalizing, so a long chain drifts slightly
+from `m ~m = 1`. The simplified formulas are built so that drift only scales the result
+uniformly. In PGA that cancels: shapes stay rigid. Still, renormalize now and then:
+
+* `m.renormalize_fast()` is one Newton step, with no square root;
+* `a.mul_renormalized(b)` multiplies and renormalizes in one call;
+* the `check-units` feature asserts, in debug runs, that certified kernels only see units.
+
+See [numerics.md](numerics.md).
 
 The matrix of a motor is not a separate concept. It is the motor applied to an open slot:
 
@@ -292,7 +302,30 @@ gax::algebra! {
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
   with `opt-level = 3` to your `Cargo.toml`, or large algebras expand slowly.
 
-## 10. Conventions and pitfalls
+## 10. Laws you can rely on
+
+Every rule below is proved exactly for every standard algebra, on symbolic coefficients
+([laws.md](laws.md) has the full list and how).
+
+* **Filling and composing don't depend on the order you do them in.** `f.of(g.of(h))` is
+  `f.of(g).of(h)`. Binding slot 0 and then slot 1 gives the same as binding slot 1 first
+  (`at::<1>`). `K::slot()` is the identity.
+* **Maps are linear.** `f.of(x + y) == f.of(x) + f.of(y)`, and scalars pull through.
+* **Operations work the same on maps and values.** Combining two maps and then filling them is
+  the same as filling them and then combining: `(f ^ g).of(x).of(y) == f.of(x) ^ g.of(y)`.
+* **Versor chains fold.** `a >> (b >> x) == (a * b) >> x`, and the matrix of `a * b` is the
+  composition of the two matrices.
+* **Versors respect products, up to a known scale.** `(m >> a) * (m >> b)` equals
+  `m >> (a * b)` times `‖m‖²` (the scalar part of `m ~m`). For a `Unit` versor that factor is 1.
+  Products that go through the complement (`&`) can pick up a sign under reflections.
+  [law-factors.md](law-factors.md) has the factor for every versor and product.
+* **Moving a map** (its input and its output) by a versor is `(m >> f).of(m << K::slot())`,
+  which is how you would move an inertia tensor with a body. For a `Unit` versor it satisfies
+  `moved.of(m >> x) == m >> f.of(x)`.
+* **`fill` is the diagonal.** `form.fill(x)` binds `x` into every slot of its kind, so it is a
+  quadratic (or higher) form in `x`.
+
+## 11. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);
@@ -303,6 +336,13 @@ gax::algebra! {
   (`e0123` here); see ADR-009 in the [design record](design.md).
 * **Float literals.** Type parameter defaults do not drive inference in Rust. `Point::xyz(1.0, 2.0, 3.0)`
   alone is `f64` by the literal fallback; annotate (`let p: Point = …`) for the `f32` default.
+* **Floating point.** See [numerics.md](numerics.md) for the details:
+  * In `f32`, positions far from the origin lose accuracy (about 2 ulp of the distance, so
+    `10⁻³` at `10⁴`). Use `f64` or a floating origin.
+  * `log` of a motor with a negative scalar part is the long way round; negate it for the
+    shortest motion.
+  * Results can differ in the last bits between builds and between scalar and batch code, unless
+    the `deterministic` feature is on.
 * **Degenerate metrics.** In PGA the metric pairing `|` of lines ignores the moment part, so energy
   forms built with it are singular. Build them with the regressive pairing `&`, as the modes example
   does.

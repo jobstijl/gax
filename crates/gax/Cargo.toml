@@ -30,6 +30,12 @@ csta = []
 wide = ["gax-core/wide"]
 ## Runtime-dispatched SIMD batch kernels (`gax::batch`) built on `fearless_simd`.
 batch = ["std", "gax-core/batch", "gax-macros?/batch"]
+## Debug check: assert that a `Unit` versor is unit (within √ε) whenever a certified kernel
+## consumes it (sandwiches and prepared actions). No cost when off.
+check-units = ["gax-macros?/check-units"]
+## The same bits on every target and SIMD level (docs/numerics.md): no fused multiply-add, and
+## the elementary functions from pure Rust.
+deterministic = ["gax-core/deterministic"]
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
 trace = ["dep:gax-gen"]
 ## The `algebra!` macro for declaring algebras of any signature.

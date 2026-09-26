@@ -1,4 +1,4 @@
-//! The functions of [`math`](super::math) on `fearless_simd` vectors: the same polynomials
+//! The functions of [`math`](crate::math) on `fearless_simd` vectors: the same polynomials
 //! and reductions, with lane masks for the selects.
 
 use fearless_simd::{Bytes, Select, Simd, SimdBase, SimdFloat, SimdInt, f32x8, i32x8};
@@ -29,7 +29,7 @@ fn ints<S: Simd>(t: S, v: i32) -> i32x8<S> {
     i32x8::splat(t, v)
 }
 
-/// Sine and cosine (see [`math::sin_cos`](super::math::sin_cos)).
+/// Sine and cosine (see [`math::sin_cos`](crate::math::sin_cos)).
 #[inline(always)]
 #[allow(clippy::excessive_precision)]
 pub fn sin_cos<S: Simd>(x: f32x8<S>) -> (f32x8<S>, f32x8<S>) {
@@ -65,7 +65,7 @@ pub fn sin_cos<S: Simd>(x: f32x8<S>) -> (f32x8<S>, f32x8<S>) {
     (x.simd_eq(0.0).select(x, sin), cos)
 }
 
-/// `e^x` (see [`math::exp`](super::math::exp)).
+/// `e^x` (see [`math::exp`](crate::math::exp)).
 #[inline(always)]
 #[allow(clippy::excessive_precision)]
 pub fn exp<S: Simd>(x: f32x8<S>) -> f32x8<S> {
@@ -90,7 +90,7 @@ pub fn exp<S: Simd>(x: f32x8<S>) -> f32x8<S> {
     x.simd_eq(x).select(e, x)
 }
 
-/// Natural logarithm (see [`math::ln`](super::math::ln)).
+/// Natural logarithm (see [`math::ln`](crate::math::ln)).
 #[inline(always)]
 #[allow(clippy::excessive_precision)]
 pub fn ln<S: Simd>(x: f32x8<S>) -> f32x8<S> {
@@ -126,7 +126,7 @@ pub fn ln<S: Simd>(x: f32x8<S>) -> f32x8<S> {
     x.simd_ge(0.0).select(r, f32x8::splat(t, f32::NAN))
 }
 
-/// Four-quadrant arctangent of `y / x` (see [`math::atan2`](super::math::atan2)).
+/// Four-quadrant arctangent of `y / x` (see [`math::atan2`](crate::math::atan2)).
 #[inline(always)]
 #[allow(clippy::excessive_precision)]
 pub fn atan2<S: Simd>(y: f32x8<S>, x: f32x8<S>) -> f32x8<S> {

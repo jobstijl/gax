@@ -76,7 +76,7 @@ pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
     /// Associativity witness: an array over `Cat<Cat<Self, B>, C>` as an array over
     /// `Cat<Self, Cat<B, C>>`. The two lists are the same slots in the same order, so this is
     /// the identity on the coefficients; it exists because the compiler cannot prove the two
-    /// types equal for generic lists. See [`reassoc`](crate::slots::reassoc).
+    /// types equal for generic lists. See [`reassoc`].
     #[inline(always)]
     fn reassoc<B: Slots, C: Slots, X: Elem>(
         a: &<Cat<Cat<Self, B>, C> as Slots>::Arr<X>,

@@ -382,6 +382,15 @@ impl Coef for Sym {
         Sym::runtime_constant(i as f64)
             .unwrap_or_else(|| Sym::from_poly(Poly::constant(Rational::int(i128::from(i)))))
     }
+    fn from_ratio(num: i64, den: i64) -> Sym {
+        if Sym::runtime_constant(num as f64 / den as f64).is_some() {
+            return Sym::from_f64(num as f64 / den as f64);
+        }
+        Sym::from_poly(Poly::constant(Rational::new(
+            i128::from(num),
+            i128::from(den),
+        )))
+    }
     fn from_f64(f: f64) -> Sym {
         if let Some(c) = Sym::runtime_constant(f) {
             return c;

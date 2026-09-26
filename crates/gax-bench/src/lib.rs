@@ -38,7 +38,7 @@ pub fn gax_apply_matrix(t: Point<(Point,)>, p: Point) -> Point {
 
 /// gax: apply a prepared (sparse) motor action to a point.
 #[inline(never)]
-pub fn gax_apply_prepared(t: gax::Prepared<Unit<Motor>, Point, f32, 12>, p: Point) -> Point {
+pub fn gax_apply_prepared(t: <Unit<Motor> as gax::Prepare<Point>>::Output, p: Point) -> Point {
     t >> p
 }
 

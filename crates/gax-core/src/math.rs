@@ -1,4 +1,5 @@
-//! Branch-free `f32` elementary functions for SIMD lanes.
+//! Branch-free `f32` elementary functions: the ones SIMD lanes use (`batch`), and the ones every
+//! `f32` uses with the `deterministic` feature.
 //!
 //! Each function is written for one lane with selects instead of branches, so that inside a
 //! lane loop the compiler vectorizes it at whatever SIMD level the dispatcher selected. The

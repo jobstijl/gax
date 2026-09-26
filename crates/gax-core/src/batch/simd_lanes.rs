@@ -149,7 +149,14 @@ macro_rules! common {
             /// Fused where the level has FMA (AVX2, AVX-512, NEON), `self * a + b` otherwise.
             #[inline(always)]
             fn mul_add(self, a: Self, b: Self) -> Self {
-                $T(self.0.mul_add(a.0, b.0))
+                #[cfg(not(feature = "deterministic"))]
+                {
+                    $T(self.0.mul_add(a.0, b.0))
+                }
+                #[cfg(feature = "deterministic")]
+                {
+                    $T(self.0 * a.0 + b.0)
+                }
             }
         }
         impl<P: Proven> Batch for $T<P> {
@@ -256,26 +263,29 @@ impl<P: Proven> Real for F64x4<P> {
     real_common!();
     #[inline(always)]
     fn sin_cos(self) -> (Self, Self) {
-        (per_lane!(self, f64::sin), per_lane!(self, f64::cos))
+        (
+            per_lane!(self, crate::coef::elementary::f64::sin),
+            per_lane!(self, crate::coef::elementary::f64::cos),
+        )
     }
     #[inline(always)]
     fn sinh(self) -> Self {
-        per_lane!(self, f64::sinh)
+        per_lane!(self, crate::coef::elementary::f64::sinh)
     }
     #[inline(always)]
     fn cosh(self) -> Self {
-        per_lane!(self, f64::cosh)
+        per_lane!(self, crate::coef::elementary::f64::cosh)
     }
     #[inline(always)]
     fn atan2(self, x: Self) -> Self {
         let (a, b) = (self.0, x.0);
         F64x4(f64x4::from_fn(P::token(), |i| {
-            a.as_slice()[i].atan2(b.as_slice()[i])
+            crate::coef::elementary::f64::atan2(a.as_slice()[i], b.as_slice()[i])
         }))
     }
     #[inline(always)]
     fn ln(self) -> Self {
-        per_lane!(self, f64::ln)
+        per_lane!(self, crate::coef::elementary::f64::ln)
     }
     #[inline(always)]
     fn epsilon() -> Self {

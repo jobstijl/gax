@@ -135,6 +135,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     {
         meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
         meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body);
+        emit_newton_step(spec, k, &x, &norm, &mut traits);
     }
 
     // exp: for kinds made of bivectors, when B² is a Study number.
@@ -347,6 +348,38 @@ fn emit_normalized(
         outs.join(", ")
     );
     true
+}
+
+/// `NewtonStep`: `x (3 − x ~x) / 2`, one Newton step towards `x ~x = 1` without a square root.
+/// For `x ~x = 1 + e` it leaves an error of order `e²`.
+fn emit_newton_step(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    x: &SymMv,
+    norm: &SymMv,
+    traits: &mut String,
+) {
+    let alg = &spec.algebra;
+    let half = Rational::new(1, 2);
+    let q: SymMv = symbolic::add(
+        &scalar_mv(Poly::constant(Rational::new(3, 2))),
+        &norm.iter().map(|(m, p)| (*m, p.scale(-half))).collect(),
+    );
+    let out = symbolic::binop(alg, BinOp::Gp, x, &q);
+    let Some(coeffs) = symbolic::to_coeffs(&k.layout, &out) else {
+        return;
+    };
+    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let mut lets = String::new();
+    prog.emit_lets(&xvar, "t", &mut lets);
+    let outs: Vec<String> = prog.outputs.iter().map(|o| render(o, &xvar, "t")).collect();
+    let name = &k.name;
+    let _ = write!(
+        traits,
+        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `x (3 − x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n}}\n\n",
+        outs.join(", ")
+    );
 }
 
 fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) -> Option<String> {
@@ -636,7 +669,7 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
     };
     let _ = write!(
         body,
-        "    /// The exponential, a unit versor, by scaling and squaring: a Taylor series of `B / 256` in\n    /// `{en}`, then eight squarings. (No closed form is generated for `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let h = T::from_f64(1.0 / 256.0);\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/8))))\n        let mut r = one;\n        for k in (1..=8).rev() {{\n            r = one + (x * r).gp(T::from_f64(1.0 / f64::from(k)));\n        }}\n        for _ in 0..8 {{\n            r = r * r;\n        }}\n        gx::Unit::new_unchecked(r)\n        }})\n    }}\n\n"
+        "    /// The exponential, a unit versor, by scaling and squaring in `{en}`: `B` is halved `s` times\n    /// until `‖B / 2^s‖₁ ≤ 1/16` (the sum of absolute coefficients), a Taylor series of degree 10\n    /// gives `exp(B / 2^s)` to below `10⁻²⁰` relative, a Newton step renormalizes it while it is\n    /// near 1, `s` squarings undo the scaling, and a second Newton step renormalizes the result\n    /// where it is small (a large boost is left as squared: there `~r r − 1` cancels). (No closed form is generated for\n    /// `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut norm = T::zero();\n        for c in self.c {{\n            norm = norm + c.abs();\n        }}\n        let (limit, half) = (T::from_ratio(1, 16), T::from_ratio(1, 2));\n        let (mut h, mut s) = (T::one(), 0u32);\n        while s < 64 && !T::all_lt(norm * h, limit) {{\n            h = h * half;\n            s += 1;\n        }}\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/10))))\n        let mut r = one;\n        for k in (1..=10).rev() {{\n            r = one + (x * r).gp(T::from_ratio(1, k));\n        }}\n        // A Newton step r (3 - ~r r) / 2 while r is near 1, where ~r r - 1 has no cancellation.\n        let three = one.gp(T::from_i64(3));\n        let m = r.reverse() * r;\n        r = r * (three - m).gp(half);\n        for _ in 0..s {{\n            r = r * r;\n        }}\n        // Another after squaring, lane by lane, only where r is small (‖r‖₁ < 4, compact\n        // motions): for a large boost ~r r - 1 cancels at the scale of ‖r‖², and the step\n        // would add error rather than remove it.\n        let mut size = T::zero();\n        for c in r.c {{\n            size = size + c.abs();\n        }}\n        let m = r.reverse() * r;\n        let fixed = r * (three - m).gp(half);\n        for (c, f) in r.c.iter_mut().zip(fixed.c) {{\n            *c = T::select_lt(size, T::from_i64(4), f, *c);\n        }}\n        gx::Unit::new_unchecked(r)\n        }})\n    }}\n\n"
     );
     Some(en.clone())
 }

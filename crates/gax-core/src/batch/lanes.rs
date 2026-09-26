@@ -1,7 +1,8 @@
 //! Portable lanes: `N` values in an array, combined lane by lane.
 
-use super::{Batch, math};
+use super::Batch;
 use crate::coef::{Coef, Real};
+use crate::math;
 use core::fmt;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
@@ -197,4 +198,14 @@ lanes!(
     math::atan2,
     math::ln
 );
-lanes!(f64, f64::sin_cos, f64::sinh, f64::cosh, f64::atan2, f64::ln);
+lanes!(
+    f64,
+    |x| (
+        crate::coef::elementary::f64::sin(x),
+        crate::coef::elementary::f64::cos(x)
+    ),
+    crate::coef::elementary::f64::sinh,
+    crate::coef::elementary::f64::cosh,
+    crate::coef::elementary::f64::atan2,
+    crate::coef::elementary::f64::ln
+);

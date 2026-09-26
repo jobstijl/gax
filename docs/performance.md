@@ -29,6 +29,10 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 | motor logarithm `Unit<Motor>::log` | 24 ns | — |
 | build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 7.1 / 11.9 ns | `Affine3A::from_rotation_translation`: 2.9–4.1 ns |
 
+These timings predate two changes: the drift-tolerant `Unit` kernels (8 more multiplications on
+motor-on-point; see "Fused sandwich kernels" below), and the longer series near the boundaries of
+`exp` and `log` (numerics.md). Re-measuring them is open (TODO).
+
 Ranges show run-to-run variation, measured in separate runs of the suite.
 
 ### Where gax is faster
@@ -130,12 +134,26 @@ renormalization), with the body's constants known at build time:
 
 | kernel | gax | reference |
 |---|---|---|
-| `Unit<Rotor> >> Point` (PGA3D) | 18 mul, 12 add | the quaternion formula: 18 mul, 12 add |
-| `Unit<Motor> >> Point` (PGA3D, general weight) | 25 mul, 18 add | GAmphetamine, weight fixed at 1: 21 mul, 18 add |
+| `Unit<Rotor> >> Point` (PGA3D) | 26 mul, 15 add (18 mul, 12 add before) | the quaternion formula (not homogeneous): 18 mul, 12 add |
+| `Unit<Motor> >> Point` (PGA3D, general weight) | 33 mul, 21 add (25 mul, 18 add before) | GAmphetamine, weight fixed at 1: 21 mul, 18 add |
 | `Motor >> Point` (not unit) | 38 mul, 32 add | GAmphetamine, weight fixed at 1: 28 mul, 21 add |
-| `Unit<Motor> >> Plane` | 28 mul, 18 add | — |
+| `Unit<Motor> >> Plane` | 36 mul, 21 add (28 mul, 18 add before) | — |
 | `Unit<Motor> >> Line` | 58 mul, 45 add | open: the line kernel is not yet as good as the point kernel |
-| `Unit<Motor> >> Point` (PGA2D) | 15 mul, 7 add | hand-derived: 16 mul, 7 add |
+| `Unit<Motor> >> Point` (PGA2D) | 16 mul, 8 add (15 mul, 7 add before) | hand-derived: 16 mul, 7 add |
+
+**The `Unit` kernels are drift-tolerant** (ADR-020, [numerics.md](numerics.md)). The simplifier
+reduces a `Unit` kernel modulo `u ~u = 1`, which makes it cheaper but no longer homogeneous in `u`,
+so a drifted versor (`u ~u = (1 + δ)²`) distorted shapes by about `2δ`. The kernels are now made
+homogeneous again: a pass over the simplified program multiplies by `‖u‖²` where the reduction
+had substituted 1 (`cse::repair_degree`), and the generator verifies the result exactly. The
+"before" numbers above are the non-homogeneous kernels.
+
+* **Cost.** Over all 314 `Unit` sandwich kernels, multiplications went from 19,895 to 21,146
+  (+6%); the plain kernels total 22,703.
+* **Why not free.** In the quadratic slice, the only homogeneous representatives of a `Unit`
+  kernel are the plain kernel plus multiples of the Study condition. So re-expanding and
+  simplifying afresh gives back the plain kernel's cost (38 mul for motor on point). Repairing
+  degrees in place keeps most of the reduced structure (33 mul).
 
 Run `cargo run -p gax-gen --bin gax-regen -- --verbose` to list every kernel's cost.
 
@@ -218,6 +236,44 @@ SSE4.2, and 0.27 µs on AVX2.
 
 How the kernels stay vectorized (inlining, `Coef::vectorize`, the block layout) is in ADR-023 of
 the [design record](design.md).
+
+## Law-based rewrites in the tracer
+
+The laws license rewrites (docs/laws.md §4), such as folding a versor chain
+`a >> (b >> x)` into `(a * b) >> x`, or reassociating a composition. At run time Rust executes
+the expression as written, so a rewrite would have to happen in the tracer. Expanded polynomials
+do not depend on bracketing, so the only place a rewrite can matter is the low expansion limits
+of the portfolio (ADR-010), where the traced DAG keeps the shape as written.
+
+`crates/gax/tests/trace_rewrites.rs` traces each pair of equivalent kernels and prints the cost at
+every limit. The kept kernel is the cheapest; "—" means the strategy was skipped (too many
+terms) or overflowed. PGA3D, `Unit` motors unless marked plain:
+
+| kernel | kept | limit 0 | limit 8 | unbounded |
+|---|---|---|---|---|
+| `a >> (b >> (c >> p))` | **99 mul, 63 add** | 99m 63a | — | 1167m 870a |
+| `(a * b * c) >> p` | 129 mul, 101 add | 129m 101a | 375m 291a | 1167m 870a |
+| `a >> (b >> p)`, plain | **76 mul, 64 add** | 76m 64a | 118m 72a | 390m 312a |
+| `(a * b) >> p`, plain | 86 mul, 72 add | 86m 72a | 113m 89a | 390m 312a |
+| `((a * b) >> Point::slot()).of(p)` | 92 mul, 72 add | 92m 72a | 116m 84a | 172m 129a |
+| `f.of(g.of(h.of(p)))`, maps of motors | **132 mul, 96 add** | 132m 96a | — | 1167m 870a |
+| `f.of(g).of(h).of(p)` | 186 mul, 132 add | 186m 132a | — | 1167m 870a |
+| `(m * b) · s` | 42 mul, 28 add | 44m 28a | 42m 28a | 42m 28a |
+| `m * (b · s)` | 42 mul, 28 add | 42m 28a | 42m 28a | 42m 28a |
+
+**The result is negative, so no rewrite pass was built.**
+
+* **Folding a versor chain costs more for a single object.** The product of the versors (48 mul
+  per motor product) and one sandwich cost more than two sandwiches. Folding pays only when the
+  product is reused across many objects, which is visible to the user (prepare it once, as the
+  batch kernels do) and not to a trace of one application.
+* **Composing maps before applying them** costs more for the same reason.
+* **Pulling scalars through products** is found by the portfolio at higher limits anyway.
+* **Trace cyclicity and outermorphism fusion** were not tried: no benchmark motivates them, and
+  `emit_outer` already derives the minors symbolically.
+
+These numbers are for the drift-tolerant `Unit` kernels. With the earlier kernels the nested unit
+chain was 75 mul, and the conclusions were the same.
 
 ## Compile time and code size
 

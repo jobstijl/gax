@@ -192,6 +192,9 @@ pub struct KernelReport {
     pub cost: Cost,
     /// Cost of the generic code as it runs: every operation, constants not folded.
     pub naive: Cost,
+    /// The cost at each expansion limit tried (`None` in the second place: the strategy was
+    /// skipped or failed).
+    pub limits: Vec<(Option<usize>, Option<Cost>)>,
 }
 
 /// Collects traced kernels and emits their source.
@@ -233,6 +236,7 @@ impl Tracer {
         // exact rational arithmetic (which panics rather than wrap) is dropped: the limit-0
         // trace, the computation as written, always succeeds.
         let mut failure: Option<String> = None;
+        let mut limits = Vec::new();
         let quiet = std::panic::take_hook();
         std::panic::set_hook(Box::new(|_| {}));
         for limit in [Some(0), Some(1), Some(8), Some(32), Some(128), None] {
@@ -256,6 +260,14 @@ impl Tracer {
                 let defs: Vec<VarDef> = (0..Sym::var_count() as Var).map(Sym::var_def).collect();
                 Some((prog, traced, defs))
             }));
+            limits.push((
+                limit,
+                attempt
+                    .as_ref()
+                    .ok()
+                    .and_then(|a| a.as_ref())
+                    .map(|(p, ..)| p.cost()),
+            ));
             if let Err(e) = &attempt {
                 failure = e
                     .downcast_ref::<String>()
@@ -348,6 +360,7 @@ impl Tracer {
             name: name.to_string(),
             cost,
             naive,
+            limits,
         });
         self
     }

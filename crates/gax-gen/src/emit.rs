@@ -21,6 +21,9 @@ pub struct Config {
     /// Emit the batch kernels (`gax::batch`), prefixed by this attribute (e.g.
     /// `#[cfg(feature = "batch")]`, or empty for unconditional); `None` omits them.
     pub batch: Option<String>,
+    /// Emit the `check-units` assertions in the `Unit` kernels, prefixed by this attribute
+    /// (e.g. `#[cfg(feature = "check-units")]`, or empty for unconditional); `None` omits them.
+    pub check_units: Option<String>,
 }
 
 /// Summary statistics of an emitted algebra.
@@ -34,6 +37,14 @@ pub struct Stats {
     pub sandwich_costs: Vec<(String, String, bool, crate::slp::Cost)>,
     /// Every generated binary impl: `(op, left, right)`.
     pub binary: Vec<(BinOp, String, String)>,
+    /// Every generated binary impl with its output kind: `(op, left, right, output)`.
+    pub products: Vec<(BinOp, String, String, String)>,
+    /// Every generated unary impl: `(op, kind, output)`.
+    pub unary: Vec<(UnOp, String, String)>,
+    /// Every sandwich kernel: `(versor, target, unit, output)`.
+    pub sandwiches: Vec<(String, String, bool, String)>,
+    /// Every outermorphism: `(base kind, extended kind, whether the extended kind is the top)`.
+    pub outermorphisms: Vec<(String, String, bool)>,
     /// The value methods emitted per kind.
     pub values: Vec<crate::emit_values::ValueMethods>,
 }
@@ -81,7 +92,9 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             e.sandwich(v, x, true);
         }
     }
-    e.out.push_str(&crate::emit_outer::outermorphisms(spec));
+    let (outer, pairs) = crate::emit_outer::outermorphisms(spec);
+    e.out.push_str(&outer);
+    e.stats.outermorphisms = pairs;
     for (alias, kind) in &spec.aliases {
         let _ = writeln!(
             e.out,
@@ -690,6 +703,9 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         self.w(&body);
         self.stats.binary_impls += 1;
         self.stats.binary.push((op, a.name.clone(), b.name.clone()));
+        self.stats
+            .products
+            .push((op, a.name.clone(), b.name.clone(), out.name.clone()));
     }
 
     fn unary(&mut self, op: UnOp, k: &KindSpec) {
@@ -701,6 +717,9 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             .expect("a full kind exists")
             .clone();
         let table = unop_table(alg, op, &k.layout, &out.layout);
+        self.stats
+            .unary
+            .push((op, k.name.clone(), out.name.clone()));
         let (tr, m) = unop_trait(op);
         let (kn, on) = (&k.name, &out.name);
         let mut exprs = Vec::new();
@@ -764,8 +783,26 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let coeffs = symbolic::to_coeffs(&out.layout, &projected).expect("support fits");
         let passengers: BTreeSet<Var> = (nv..nv + xk.layout.len() as Var).collect();
 
-        // Value path: the whole formula, simplified jointly.
+        // Value path: the whole formula, simplified jointly. For a `Unit` versor the simplified
+        // formulas are made homogeneous again in the versor (ADR-020, drift), so that a drifted
+        // versor (`v ~v = (1 + δ)²`) scales results uniformly instead of distorting them.
+        let norm = symbolic::binop(alg, BinOp::Gp, &v, &rev)
+            .get(&0)
+            .cloned()
+            .unwrap_or_else(Poly::zero);
         let direct = cse::compile_best(&coeffs, &passengers, &relations);
+        let direct = if unit {
+            let h = homogeneous(&direct, nv, &norm, &passengers);
+            assert!(
+                check_equal(&h, &coeffs, &relations) && is_homogeneous(&h, nv, 2),
+                "the drift-tolerant {}>>{} kernel must equal the sandwich and be homogeneous",
+                vk.name,
+                xk.name
+            );
+            h
+        } else {
+            direct
+        };
         debug_assert!(check_equal(&direct, &coeffs, &relations));
 
         // Map path: the matrix M[o][i] = d out[o] / d x[i], a polynomial in v.
@@ -800,8 +837,39 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             })
             .collect();
         let matrix = cse::compile_best(&matrix_polys, &BTreeSet::new(), &relations);
+        let matrix = if unit {
+            let h = homogeneous(&matrix, nv, &norm, &BTreeSet::new());
+            assert!(
+                check_equal(&h, &matrix_polys, &relations) && is_homogeneous(&h, nv, 2),
+                "the drift-tolerant {}>>{} matrix must equal the sandwich's and be homogeneous",
+                vk.name,
+                xk.name
+            );
+            h
+        } else {
+            matrix
+        };
 
         let (vn, xn, on) = (&vk.name, &xk.name, &out.name);
+        // check-units: the parts of v ~v - 1, handed to Coef::check_unit.
+        let check = match (&self.cfg.check_units, unit) {
+            (Some(gate), true) => {
+                let prog = cse::compile_best(&relations, &BTreeSet::new(), &[]);
+                let vname = |var: Var| format!("v[{var}]");
+                let mut lets = String::new();
+                prog.emit_lets(&vname, "u", &mut lets);
+                let parts: Vec<String> = prog
+                    .outputs
+                    .iter()
+                    .map(|o| render(o, &vname, "u"))
+                    .collect();
+                format!(
+                    "        {gate}\n        {{\n{lets}            T::check_unit(&[{}]);\n        }}\n",
+                    parts.join(", ")
+                )
+            }
+            _ => String::new(),
+        };
         let self_ty = if unit {
             format!("Unit<{vn}<(), T>>")
         } else {
@@ -824,7 +892,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let mut s = String::new();
         let _ = write!(
             s,
-            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n"
+            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n{check}        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n"
         );
         direct.emit_lets(&var_name, "t", &mut s);
         let outs: Vec<String> = direct
@@ -899,7 +967,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let vals: Vec<String> = stored.iter().map(|o| render(o, &mat_name, "m")).collect();
         let _ = write!(
             s,
-            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
+            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
             vals.join(", ")
         );
         let mut cols = Vec::new();
@@ -983,7 +1051,67 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         self.stats
             .sandwich_costs
             .push((vn.clone(), xn.clone(), unit, direct.cost()));
+        self.stats
+            .sandwiches
+            .push((vn.clone(), xn.clone(), unit, on.clone()));
     }
+}
+
+/// The program made homogeneous in the versor variables
+/// `0..nv`: each monomial of lower degree than the highest is multiplied by a power of `norm`,
+/// the scalar part of `v ~v`, which is 1 modulo the unit relations. The result is equal to the
+/// program modulo the relations, and a uniform drift of the versor scales it uniformly.
+fn homogeneous(prog: &Program, nv: Var, norm: &Poly, passengers: &BTreeSet<Var>) -> Program {
+    let recompiled = homogeneous_recompiled(prog, nv, norm, passengers);
+    match cse::repair_degree(prog, nv, norm, 2) {
+        Some(p) if p.cost().weight() <= recompiled.cost().weight() => p,
+        _ => recompiled,
+    }
+}
+
+/// The program's polynomials made homogeneous and compiled afresh.
+fn homogeneous_recompiled(
+    prog: &Program,
+    nv: Var,
+    norm: &Poly,
+    passengers: &BTreeSet<Var>,
+) -> Program {
+    let polys = prog.to_polys();
+    let degree = |m: &crate::poly::Monomial| m.0.iter().filter(|&&v| v < nv).count();
+    // A sandwich is quadratic in the versor; reduction only lowers degrees.
+    let top = polys
+        .iter()
+        .flat_map(|p| p.0.keys().map(degree))
+        .max()
+        .unwrap_or(0)
+        .max(2);
+    let mut out = Vec::with_capacity(polys.len());
+    for p in &polys {
+        let mut h = Poly::zero();
+        for (m, &c) in &p.0 {
+            let gap = top - degree(m);
+            if gap % 2 == 1 {
+                // Not reachable by powers of the (quadratic) norm: keep the program as it was.
+                return prog.clone();
+            }
+            let mut term = Poly::term(m.clone(), c);
+            for _ in 0..gap / 2 {
+                term = &term * norm;
+            }
+            h = &h + &term;
+        }
+        out.push(h);
+    }
+    cse::compile_best(&out, passengers, &[])
+}
+
+/// Whether every output is a homogeneous polynomial of the given degree in the variables below
+/// `nv` (or zero).
+fn is_homogeneous(prog: &Program, nv: Var, degree: usize) -> bool {
+    prog.to_polys().iter().all(|p| {
+        p.0.keys()
+            .all(|m| m.0.iter().filter(|&&v| v < nv).count() == degree)
+    })
 }
 
 fn check_equal(prog: &Program, want: &[Poly], relations: &[Poly]) -> bool {

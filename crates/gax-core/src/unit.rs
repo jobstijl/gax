@@ -36,6 +36,49 @@ impl<M> Unit<M> {
     }
 }
 
+/// One Newton step towards the unit condition, `x (3 − x ~x) / 2` (implemented by the
+/// generated algebras for the kinds whose norm is a Study number). For `x ~x = 1 + e` the result
+/// is off by `O(e²)`, with no square root. See [`Unit::renormalize_fast`].
+pub trait NewtonStep {
+    /// `x (3 − x ~x) / 2`.
+    fn newton_step(self) -> Self;
+}
+
+impl<M: NewtonStep> Unit<M> {
+    /// Pull a drifted unit versor back towards `x ~x = 1` with one Newton step,
+    /// `x (3 − x ~x) / 2`: an error `e` in the norm becomes `O(e²)`, for a few multiplications and
+    /// no square root. `normalized()` is the exact path.
+    ///
+    /// A policy that keeps the certificate honest: call it after every integration step, or
+    /// after every few products of unit versors.
+    ///
+    /// ```
+    /// use gax::pga3d::Line;
+    /// use gax::Unit;
+    /// let u = Line::<(), f64>::new(0.4, -0.3, 0.8, 0.9, -0.5, 0.2).exp();
+    /// let drifted = Unit::new_unchecked(u.into_inner().gp(1.0 + 1e-4));
+    /// let fixed = drifted.renormalize_fast();
+    /// let err = |m: Unit<gax::pga3d::Motor<(), f64>>| (m.into_inner().norm_squared() - 1.0).abs();
+    /// assert!(err(drifted) > 1e-4 && err(fixed) < 1e-7);
+    /// ```
+    #[inline(always)]
+    #[must_use]
+    pub fn renormalize_fast(self) -> Self {
+        Unit(self.0.newton_step())
+    }
+}
+
+impl<M: NewtonStep + core::ops::Mul<Output = M>> Unit<M> {
+    /// The product of two unit versors, renormalized with one Newton step
+    /// ([`renormalize_fast`](Unit::renormalize_fast)). `*` keeps the certificate without
+    /// renormalizing, like nalgebra and glam; use this in long chains of compositions.
+    #[inline(always)]
+    #[must_use]
+    pub fn mul_renormalized(self, other: Self) -> Self {
+        Unit((self.0 * other.0).newton_step())
+    }
+}
+
 impl<M> Deref for Unit<M> {
     type Target = M;
     #[inline(always)]

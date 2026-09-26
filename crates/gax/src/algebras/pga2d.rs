@@ -584,6 +584,19 @@ impl<T: gx::Real> Scalar<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[0] * t0;
+        let t3 = x[0] * T::from_ratio(3, 2);
+        let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
+        Scalar::from_coeffs([t4])
+    }
+}
+
 #[doc = "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e0]`.
@@ -1175,6 +1188,24 @@ impl<T: gx::Real> Line<(), T> {
         gx::Unit::new_unchecked(Line::from_coeffs([t0, t1, t2]))
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Line<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        let t4 = (-t2).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = t5 * T::from_ratio(3, 2);
+        let t9 = t6 * T::from_ratio(3, 2);
+        let t10 = t7 * T::from_ratio(3, 2);
+        Line::from_coeffs([t8, t9, t10])
+    }
 }
 
 #[doc = "A point `(x, y)` with weight `w`, stored as `x e20 + y e01 + w e12`: the bivectors. With `w = 0` it is a direction, a point at infinity. As a versor it is a half turn."]
@@ -1781,6 +1812,23 @@ impl<T: gx::Real> Point<(), T> {
         })
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Point<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[2] * x[2];
+        let t2 = (-t0).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t3 = x[0] * t2;
+        let t4 = x[1] * t2;
+        let t5 = x[2] * t2;
+        let t6 = t3 * T::from_ratio(3, 2);
+        let t7 = t4 * T::from_ratio(3, 2);
+        let t8 = t5 * T::from_ratio(3, 2);
+        Point::from_coeffs([t6, t7, t8])
+    }
 }
 
 #[doc = "The pseudoscalar `e012`."]
@@ -2908,6 +2956,23 @@ impl<T: gx::Real> Rotor<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Rotor<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        let t3 = x[0] * t2;
+        let t4 = x[1] * t2;
+        let t6 = x[0] * T::from_ratio(3, 2);
+        let t7 = (-t3).mul_add(T::from_ratio(1, 2), t6);
+        let t9 = x[1] * T::from_ratio(3, 2);
+        let t10 = (-t4).mul_add(T::from_ratio(1, 2), t9);
+        Rotor::from_coeffs([t7, t10])
+    }
+}
+
 impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Rotor<(), T>> {
     /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
     #[inline]
@@ -3519,6 +3584,26 @@ impl<T: gx::Real> Translator<(), T> {
         Translator::from_coeffs(c).normalized()
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Translator<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = t0 - T::from_i64(3);
+        let t2 = x[0] * t0;
+        let t3 = x[1] * t1;
+        let t4 = x[2] * t1;
+        let t6 = x[0] * T::from_ratio(3, 2);
+        let t7 = (-t2).mul_add(T::from_ratio(1, 2), t6);
+        let t8 = t3 * T::from_ratio(1, 2);
+        let t9 = -t8;
+        let t10 = t4 * T::from_ratio(1, 2);
+        let t11 = -t10;
+        Translator::from_coeffs([t7, t9, t11])
+    }
 }
 
 impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Translator<(), T>> {
@@ -4148,6 +4233,26 @@ impl<T: gx::Real> Motor<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        let t4 = (-t2).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = x[3] * t4;
+        let t9 = t5 * T::from_ratio(3, 2);
+        let t10 = t6 * T::from_ratio(3, 2);
+        let t11 = t7 * T::from_ratio(3, 2);
+        let t12 = t8 * T::from_ratio(3, 2);
+        Motor::from_coeffs([t9, t10, t11, t12])
+    }
+}
+
 impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Motor<(), T>> {
     /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.
     #[inline]
@@ -4766,6 +4871,26 @@ impl<T: gx::Real> Flector<(), T> {
         gx::Unit::new_unchecked(Flector::from_coeffs([t0, t1, t2, t3]))
     }
 
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Flector<(), T> {
+    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[1] * x[1];
+        let t2 = x[0].mul_add(x[0], t1);
+        let t4 = (-t2).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t5 = x[0] * t4;
+        let t6 = x[1] * t4;
+        let t7 = x[2] * t4;
+        let t8 = x[3] * t4;
+        let t9 = t5 * T::from_ratio(3, 2);
+        let t10 = t6 * T::from_ratio(3, 2);
+        let t11 = t7 * T::from_ratio(3, 2);
+        let t12 = t8 * T::from_ratio(3, 2);
+        Flector::from_coeffs([t9, t10, t11, t12])
+    }
 }
 
 #[doc = "A general multivector, in the bivector.net order."]
@@ -16335,11 +16460,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Line<()
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -16352,30 +16489,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Line
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Line>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -16383,7 +16529,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Scalar, T, 0>> for Scalar<(S
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Line {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -16393,16 +16539,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -16538,12 +16684,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Line<(), 
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t4 = v[1] * v[2];
-        let t5 = (-v[1]).mul_add(v[1], t0);
+        let t5 = t0 - t1;
         let t7 = xv[1] * t2;
         let t8 = xv[0] * t2;
         let t11 = xv[1] * t4;
@@ -16552,21 +16706,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Line<(), 
         let t14 = t8 * T::from_i64(2);
         let t15 = (-xv[1]).mul_add(t5, t14);
         let t16 = xv[0].mul_add(t3, t11);
-        let t18 = t16.mul_add(T::from_i64(2), -xv[2]);
-            return Line { c: gx::slots::from_values::<S, T, 3>([t13, t15, t18]) };
+        let t17 = t16 * T::from_i64(2);
+        let t18 = t0 + t1;
+        let t20 = (-xv[2]).mul_add(t18, t17);
+            return Line { c: gx::slots::from_values::<S, T, 3>([t13, t15, t20]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
+        let m5 = m0 - m1;
+        let m6 = m2 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
         let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
+        let m10 = m0 + m1;
+        let m11 = -m10;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m5) + x[1].scale(m6)).0, (x[0].scale(m6) + x[1].scale(m7)).0, (x[0].scale(m8) + x[1].scale(m9) + x[2].scale(m10)).0] }
+        Line { c: [(x[0].scale(m5) + x[1].scale(m6)).0, (x[0].scale(m6) + x[1].scale(m7)).0, (x[0].scale(m8) + x[1].scale(m9) + x[2].scale(m11)).0] }
     }
 }
 
@@ -16583,17 +16741,26 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Line<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Line, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
+        let m5 = m0 - m1;
+        let m6 = m2 * T::from_i64(2);
         let m7 = -m5;
         let m8 = m3 * T::from_i64(2);
         let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
-        gx::Prepared::from_entries([m5, m6, m7, m8, m9, m10])
+        let m10 = m0 + m1;
+        let m11 = -m10;
+        gx::Prepared::from_entries([m5, m6, m7, m8, m9, m11])
     }
 }
 
@@ -16775,9 +16942,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
-        let t2 = (-v[1]).mul_add(v[1], t0);
+        let t1 = v[1] * v[1];
+        let t2 = t0 - t1;
         let t3 = v[0] * v[1];
         let t4 = v[2] * xv[2];
         let t6 = v[0] * t4;
@@ -16789,20 +16964,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Line<(),
         let t15 = t14 * T::from_i64(2);
         let t16 = (-xv[1]).mul_add(t2, t15);
         let t17 = -xv[2];
-            return Point { c: gx::slots::from_values::<S, T, 3>([t13, t16, t17]) };
+        let t18 = t0 + t1;
+        let t19 = t17 * t18;
+            return Point { c: gx::slots::from_values::<S, T, 3>([t13, t16, t19]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
+        let m5 = m0 - m1;
+        let m6 = m2 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
         let m8 = -m5;
         let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
+        let m10 = m0 + m1;
+        let m11 = -m10;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m5) + x[1].scale(m6) + x[2].scale(m7)).0, (x[0].scale(m6) + x[1].scale(m8) + x[2].scale(m9)).0, (x[2].scale(m10)).0] }
+        Point { c: [(x[0].scale(m5) + x[1].scale(m6) + x[2].scale(m7)).0, (x[0].scale(m6) + x[1].scale(m8) + x[2].scale(m9)).0, (x[2].scale(m11)).0] }
     }
 }
 
@@ -16819,17 +16998,26 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Line<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Point, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
+        let m5 = m0 - m1;
+        let m6 = m2 * T::from_i64(2);
         let m7 = m3 * T::from_i64(2);
         let m8 = -m5;
         let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
-        gx::Prepared::from_entries([m5, m6, m7, m8, m9, m10])
+        let m10 = m0 + m1;
+        let m11 = -m10;
+        gx::Prepared::from_entries([m5, m6, m7, m8, m9, m11])
     }
 }
 
@@ -16977,11 +17165,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<L
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -16994,30 +17194,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -17025,7 +17234,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>> for Pse
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Line {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -17035,16 +17244,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -17163,6 +17372,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[2] * xv[1];
         let t1 = v[0] * t0;
@@ -17170,15 +17386,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Line<(),
         let t3 = -xv[1];
         let t4 = t1 * T::from_i64(2);
         let t5 = t2 * T::from_i64(2);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t3, t4, t5]) };
+        let t7 = v[1] * v[1];
+        let t8 = v[0].mul_add(v[0], t7);
+        let t9 = xv[0] * t8;
+        let t10 = t3 * t8;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t9, t10, t4, t5]) };
         }
-        let m0 = v[0] * v[2];
-        let m1 = v[1] * v[2];
-        let m2 = -T::from_i64(1);
-        let m3 = m0 * T::from_i64(2);
-        let m4 = m1 * T::from_i64(2);
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[2];
+        let m3 = v[1] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = -m4;
+        let m6 = m2 * T::from_i64(2);
+        let m7 = m3 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m2)).0, (x[1].scale(m3)).0, (x[1].scale(m4)).0] }
+        Motor { c: [(x[0].scale(m4)).0, (x[1].scale(m5)).0, (x[1].scale(m6)).0, (x[1].scale(m7)).0] }
     }
 }
 
@@ -17191,35 +17413,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Rotor, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Line>, Rotor, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 4> {
         let v = self.into_inner().c;
-        let m0 = v[0] * v[2];
-        let m1 = v[1] * v[2];
-        let m2 = -T::from_i64(1);
-        let m3 = m0 * T::from_i64(2);
-        let m4 = m1 * T::from_i64(2);
-        gx::Prepared::from_entries([m2, m3, m4])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[2];
+        let m3 = v[1] * v[2];
+        let m4 = v[0].mul_add(v[0], m1);
+        let m5 = -m4;
+        let m6 = m2 * T::from_i64(2);
+        let m7 = m3 * T::from_i64(2);
+        gx::Prepared::from_entries([m4, m5, m6, m7])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Line>, Rotor, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Line>, Rotor, T, 4> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2])).0, (x[1].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 3>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 4>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 4>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero()], [T::zero(), m[0]], [T::zero(), m[1]], [T::zero(), m[2]]] }
+        Motor { c: [[m[0], T::zero()], [T::zero(), m[1]], [T::zero(), m[2]], [T::zero(), m[3]]] }
     }
 }
 
@@ -17227,7 +17458,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Rotor, T, 3>> for Motor<(Rot
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Line {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Rotor, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Rotor, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -17237,16 +17468,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Rotor, T, 4> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Rotor, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Rotor, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 3>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Rotor, T, 4>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -17367,25 +17598,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Lin
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[1].mul_add(t3, t8);
         let t10 = t6 * T::from_i64(2);
         let t11 = (-xv[2]).mul_add(t3, t10);
-            return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
+        let t12 = t0 + t1;
+        let t13 = xv[0] * t12;
+            return Translator { c: gx::slots::from_values::<S, T, 3>([t13, t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m4) + x[2].scale(m5)).0] }
+        Translator { c: [(x[0].scale(m6)).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m4) + x[2].scale(m5)).0] }
     }
 }
 
@@ -17398,35 +17641,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Translator, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Line>, Translator, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Translator, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Translator, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Line>, Translator, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Line>, Translator, T, 4> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[2]) + x[2].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 3>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 4>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Translator, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Translator, T, 4>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero()], [T::zero(), m[0], m[1]], [T::zero(), m[1], m[2]]] }
+        Translator { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2]], [T::zero(), m[2], m[3]]] }
     }
 }
 
@@ -17434,7 +17686,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Translator, T, 3>> for Trans
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Line {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Translator, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Translator, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -17444,16 +17696,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Translator, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Translator, T, 4> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Translator, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Translator, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 3>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Translator, T, 4>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -17589,9 +17841,17 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Line<(),
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
-        let t2 = (-v[1]).mul_add(v[1], t0);
+        let t1 = v[1] * v[1];
+        let t2 = t0 - t1;
         let t3 = v[0] * v[1];
         let t4 = v[2] * xv[1];
         let t6 = v[0] * t4;
@@ -17603,20 +17863,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Line<(),
         let t15 = xv[2].mul_add(t3, t9);
         let t16 = t15 * T::from_i64(2);
         let t17 = (-xv[3]).mul_add(t2, t16);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t11, t14, t17]) };
+        let t18 = t0 + t1;
+        let t19 = xv[0] * t18;
+        let t20 = t11 * t18;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t19, t20, t14, t17]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = -T::from_i64(1);
-        let m7 = m3 * T::from_i64(2);
-        let m8 = m1 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = -m5;
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = -m6;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m2 * T::from_i64(2);
+        let m10 = m4 * T::from_i64(2);
+        let m11 = -m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m6)).0, (x[1].scale(m7) + x[2].scale(m5) + x[3].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m8) + x[3].scale(m10)).0] }
+        Motor { c: [(x[0].scale(m6)).0, (x[1].scale(m7)).0, (x[1].scale(m8) + x[2].scale(m5) + x[3].scale(m9)).0, (x[1].scale(m10) + x[2].scale(m9) + x[3].scale(m11)).0] }
     }
 }
 
@@ -17629,40 +17894,49 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Line<
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Motor, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Line>, Motor, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Motor, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Motor, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = -T::from_i64(1);
-        let m7 = m3 * T::from_i64(2);
-        let m8 = m1 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = -m5;
-        gx::Prepared::from_entries([m6, m7, m5, m8, m9, m10])
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = -m6;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m2 * T::from_i64(2);
+        let m10 = m4 * T::from_i64(2);
+        let m11 = -m5;
+        gx::Prepared::from_entries([m6, m7, m8, m5, m9, m10, m11])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Line>, Motor, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Line>, Motor, T, 7> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[3]) + x[3].scale(m[5])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[5]) + x[2].scale(m[4]) + x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 6>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 7>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Motor, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Motor, T, 7>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[3], m[5]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), m[2], m[3], m[4]], [T::zero(), m[5], m[4], m[6]]] }
     }
 }
 
@@ -17670,7 +17944,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Motor, T, 6>> for Motor<(Mot
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Line {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Motor, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Motor, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -17680,16 +17954,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Motor, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Motor, T, 7> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Motor, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Motor, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 6>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Motor, T, 7>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -17826,12 +18100,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t4 = v[1] * v[2];
-        let t5 = (-v[1]).mul_add(v[1], t0);
+        let t5 = t0 - t1;
         let t7 = xv[1] * t2;
         let t8 = xv[0] * t2;
         let t11 = xv[1] * t4;
@@ -17840,21 +18122,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Line<(
         let t14 = t8 * T::from_i64(2);
         let t15 = (-xv[1]).mul_add(t5, t14);
         let t16 = xv[0].mul_add(t3, t11);
-        let t18 = t16.mul_add(T::from_i64(2), -xv[2]);
-            return Flector { c: gx::slots::from_values::<S, T, 4>([t13, t15, t18, xv[3]]) };
+        let t17 = t16 * T::from_i64(2);
+        let t18 = t0 + t1;
+        let t20 = (-xv[2]).mul_add(t18, t17);
+        let t21 = xv[3] * t18;
+            return Flector { c: gx::slots::from_values::<S, T, 4>([t13, t15, t20, t21]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
-        let m7 = -m5;
-        let m8 = m3 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = m2 * T::from_i64(2);
+        let m8 = -m5;
+        let m9 = m3 * T::from_i64(2);
+        let m10 = m4 * T::from_i64(2);
+        let m11 = -m6;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m5) + x[1].scale(m6)).0, (x[0].scale(m6) + x[1].scale(m7)).0, (x[0].scale(m8) + x[1].scale(m9) + x[2].scale(m10)).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m5) + x[1].scale(m7)).0, (x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m10) + x[2].scale(m11)).0, (x[3].scale(m6)).0] }
     }
 }
 
@@ -17867,40 +18154,49 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Lin
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Flector, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Line>, Flector, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Flector, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Flector, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = m1 * T::from_i64(2);
-        let m7 = -m5;
-        let m8 = m3 * T::from_i64(2);
-        let m9 = m4 * T::from_i64(2);
-        let m10 = -T::from_i64(1);
-        gx::Prepared::from_entries([m5, m6, m7, m8, m9, m10])
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = m2 * T::from_i64(2);
+        let m8 = -m5;
+        let m9 = m3 * T::from_i64(2);
+        let m10 = m4 * T::from_i64(2);
+        let m11 = -m6;
+        gx::Prepared::from_entries([m5, m7, m8, m9, m10, m11, m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Line>, Flector, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Line>, Flector, T, 7> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 6>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 7>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Flector, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Flector, T, 7>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[1], m[2], T::zero(), T::zero()], [m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[1], m[2], T::zero(), T::zero()], [m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), m[6]]] }
     }
 }
 
@@ -17908,7 +18204,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Flector, T, 6>> for Flector<
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Line {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Flector, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Flector, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -17918,16 +18214,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Flector, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Flector, T, 7> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Flector, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Flector, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 6>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Flector, T, 7>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -18075,44 +18371,59 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Li
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[2];
         let t1 = v[1] * v[2];
         let t2 = v[0] * v[0];
+        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
-        let t5 = (-v[1]).mul_add(v[1], t2);
+        let t5 = t2 - t3;
         let t7 = xv[3] * t1;
         let t9 = xv[3] * t4;
         let t10 = xv[2] * t4;
         let t14 = xv[6] * t1;
         let t17 = xv[6] * t0;
         let t18 = xv[2].mul_add(t0, t7);
-        let t20 = t18.mul_add(T::from_i64(2), -xv[1]);
-        let t21 = t9 * T::from_i64(2);
-        let t22 = xv[2].mul_add(t5, t21);
-        let t23 = t10 * T::from_i64(2);
-        let t24 = (-xv[3]).mul_add(t5, t23);
-        let t25 = xv[5].mul_add(t4, t14);
-        let t26 = t25 * T::from_i64(2);
-        let t27 = (-xv[4]).mul_add(t5, t26);
-        let t28 = xv[4].mul_add(t4, t17);
-        let t29 = t28 * T::from_i64(2);
-        let t30 = xv[5].mul_add(t5, t29);
-        let t31 = -xv[6];
-            return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t20, t22, t24, t27, t30, t31, xv[7]]) };
+        let t19 = t18 * T::from_i64(2);
+        let t20 = t2 + t3;
+        let t22 = (-xv[1]).mul_add(t20, t19);
+        let t23 = t9 * T::from_i64(2);
+        let t24 = xv[2].mul_add(t5, t23);
+        let t25 = t10 * T::from_i64(2);
+        let t26 = (-xv[3]).mul_add(t5, t25);
+        let t27 = xv[5].mul_add(t4, t14);
+        let t28 = t27 * T::from_i64(2);
+        let t29 = (-xv[4]).mul_add(t5, t28);
+        let t30 = xv[4].mul_add(t4, t17);
+        let t31 = t30 * T::from_i64(2);
+        let t32 = xv[5].mul_add(t5, t31);
+        let t33 = -xv[6];
+        let t34 = xv[0] * t20;
+        let t35 = t20 * t33;
+        let t36 = xv[7] * t20;
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t34, t22, t24, t26, t29, t32, t35, t36]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = -T::from_i64(1);
-        let m7 = m3 * T::from_i64(2);
-        let m8 = m4 * T::from_i64(2);
-        let m9 = m1 * T::from_i64(2);
-        let m10 = -m5;
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = -m6;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 * T::from_i64(2);
+        let m11 = -m5;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m6) + x[2].scale(m7) + x[3].scale(m8)).0, (x[2].scale(m5) + x[3].scale(m9)).0, (x[2].scale(m9) + x[3].scale(m10)).0, (x[4].scale(m10) + x[5].scale(m9) + x[6].scale(m8)).0, (x[4].scale(m9) + x[5].scale(m5) + x[6].scale(m7)).0, (x[6].scale(m6)).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m6)).0, (x[1].scale(m7) + x[2].scale(m8) + x[3].scale(m9)).0, (x[2].scale(m5) + x[3].scale(m10)).0, (x[2].scale(m10) + x[3].scale(m11)).0, (x[4].scale(m11) + x[5].scale(m10) + x[6].scale(m9)).0, (x[4].scale(m10) + x[5].scale(m5) + x[6].scale(m8)).0, (x[6].scale(m7)).0, (x[7].scale(m6)).0] }
     }
 }
 
@@ -18125,40 +18436,49 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Line<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Line>, Multivector, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Line>, Multivector, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[1] * v[2];
-        let m5 = (-v[1]).mul_add(v[1], m0);
-        let m6 = -T::from_i64(1);
-        let m7 = m3 * T::from_i64(2);
-        let m8 = m4 * T::from_i64(2);
-        let m9 = m1 * T::from_i64(2);
-        let m10 = -m5;
-        gx::Prepared::from_entries([m6, m7, m8, m5, m9, m10])
+        let m5 = m0 - m1;
+        let m6 = m0 + m1;
+        let m7 = -m6;
+        let m8 = m3 * T::from_i64(2);
+        let m9 = m4 * T::from_i64(2);
+        let m10 = m2 * T::from_i64(2);
+        let m11 = -m5;
+        gx::Prepared::from_entries([m6, m7, m8, m9, m5, m10, m11])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Line>, Multivector, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Line>, Multivector, T, 7> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[4].scale(m[5]) + x[5].scale(m[4]) + x[6].scale(m[2])).0, (x[4].scale(m[4]) + x[5].scale(m[3]) + x[6].scale(m[1])).0, (x[6].scale(m[0])).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[4].scale(m[6]) + x[5].scale(m[5]) + x[6].scale(m[3])).0, (x[4].scale(m[5]) + x[5].scale(m[4]) + x[6].scale(m[2])).0, (x[6].scale(m[1])).0, (x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 6>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 7>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 7>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[3], m[1], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[3], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[2], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -18166,7 +18486,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Line>, Multivector, T, 6>> for Mult
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Line {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Line<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Multivector, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Line>, Multivector, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Line<(), T>) -> gx::Unit<Line<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -18176,16 +18496,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Line {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Line<(), T>>) -> gx::Prepared<gx::Unit<Line>, Multivector, T, 7> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Multivector, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Line>, Multivector, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 6>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Line>, Multivector, T, 7>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -18284,6 +18604,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Point<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = xv[0] * t0;
@@ -18308,6 +18633,11 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Scalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         gx::Prepared::from_entries([m0])
     }
@@ -18473,6 +18803,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Point<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = xv[0] * t0;
@@ -18511,6 +18846,11 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Line, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -18679,6 +19019,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = v[2] * xv[2];
@@ -18715,6 +19060,11 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Point, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -18866,6 +19216,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<P
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = xv[0] * t0;
@@ -18890,6 +19245,11 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         gx::Prepared::from_entries([m0])
     }
@@ -19050,6 +19410,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[2] * xv[1];
         let t1 = v[2] * v[2];
@@ -19084,6 +19449,11 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Rotor, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -19240,6 +19610,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Poi
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = xv[0] * t0;
@@ -19269,6 +19644,11 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Translator, T, 2> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = -m0;
         gx::Prepared::from_entries([m0, m1])
@@ -19434,6 +19814,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Point<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = v[2] * xv[1];
@@ -19471,6 +19856,11 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Motor, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -19642,6 +20032,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Point<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = xv[0] * t0;
@@ -19681,6 +20076,11 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Flector, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -19860,6 +20260,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Po
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[2] * v[2];
         let t1 = v[0] * v[2];
@@ -19907,6 +20312,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Point<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Point>, Multivector, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[2].mul_add(v[2], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[2] * v[2];
         let m1 = v[0] * v[2];
         let m2 = v[1] * v[2];
@@ -20061,11 +20471,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Rotor<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -20078,30 +20500,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Roto
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -20109,7 +20540,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Rotor {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -20119,16 +20550,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -20249,25 +20680,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Rotor<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[0].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Line { c: gx::slots::from_values::<S, T, 3>([t9, t11, xv[2]]) };
+        let t12 = t0 + t1;
+        let t13 = xv[2] * t12;
+            return Line { c: gx::slots::from_values::<S, T, 3>([t9, t11, t13]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2]).0] }
+        Line { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2].scale(m6)).0] }
     }
 }
 
@@ -20280,35 +20723,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Line<S, T>> for gx::Unit<Rotor<
 }
 
 impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Line, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Line, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Line, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Line, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m3, m4, m5, m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Prepared<gx::Unit<Rotor>, Line, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Prepared<gx::Unit<Rotor>, Line, T, 4> {
     type Output = Line<S, T>;
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2]).0] }
+        Line { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Line, T, 3>> for Line<(Line,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Line, T, 4>> for Line<(Line,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 4>) -> Self {
         let m = p.m;
-        Line { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [T::zero(), T::zero(), T::from_i64(1)]] }
+        Line { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [T::zero(), T::zero(), m[3]]] }
     }
 }
 
@@ -20316,7 +20768,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Line, T, 3>> for Line<(Line
 impl gx::batch::SandwichKernel<Line, gx::batch::Certified> for Rotor {
     type Y = Line;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Line, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Line, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -20326,16 +20778,16 @@ impl gx::batch::SandwichKernel<Line, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Line, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Line, T, 4> {
         gx::Prepare::<Line>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Line, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Line, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 3>, x: Line<(), T>) -> Line<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Line, T, 4>, x: Line<(), T>) -> Line<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -20456,25 +20908,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[0].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Point { c: gx::slots::from_values::<S, T, 3>([t9, t11, xv[2]]) };
+        let t12 = t0 + t1;
+        let t13 = xv[2] * t12;
+            return Point { c: gx::slots::from_values::<S, T, 3>([t9, t11, t13]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2]).0] }
+        Point { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2].scale(m6)).0] }
     }
 }
 
@@ -20487,35 +20951,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Point, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Point, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m3, m4, m5, m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Rotor>, Point, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Rotor>, Point, T, 4> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 3>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 4>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 4>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [T::zero(), T::zero(), m[3]]] }
     }
 }
 
@@ -20523,7 +20996,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Point, T, 3>> for Point<(Po
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Rotor {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Point, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Point, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -20533,16 +21006,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Point, T, 4> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Point, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Point, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 3>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Point, T, 4>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -20644,11 +21117,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<R
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -20661,30 +21146,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -20692,7 +21186,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Ps
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Rotor {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -20702,16 +21196,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -20814,11 +21308,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
-            return Rotor { c: gx::slots::from_values::<S, T, 2>([xv[0], xv[1]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+        let t4 = xv[1] * t2;
+            return Rotor { c: gx::slots::from_values::<S, T, 2>([t3, t4]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0]).0, (x[1]).0] }
+        Rotor { c: [(x[0].scale(m2)).0, (x[1].scale(m2)).0] }
     }
 }
 
@@ -20831,30 +21338,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1> {
     type Output = Rotor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Rotor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Rotor { c: [(x[0]).0, (x[1]).0] }
+        Rotor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>> for Rotor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>> for Rotor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>) -> Self {
         let m = p.m;
-        Rotor { c: [[T::from_i64(1), T::zero()], [T::zero(), T::from_i64(1)]] }
+        Rotor { c: [[m[0], T::zero()], [T::zero(), m[0]]] }
     }
 }
 
@@ -20862,7 +21378,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>> for Rotor<(Ro
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Rotor {
     type Y = Rotor;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -20872,16 +21388,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Rotor, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Rotor, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 0>, x: Rotor<(), T>) -> Rotor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 1>, x: Rotor<(), T>) -> Rotor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -21002,25 +21518,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Rot
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[1].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
+        let t12 = t0 + t1;
+        let t13 = xv[0] * t12;
+            return Translator { c: gx::slots::from_values::<S, T, 3>([t13, t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m5) + x[2].scale(m3)).0] }
+        Translator { c: [(x[0].scale(m6)).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m5) + x[2].scale(m3)).0] }
     }
 }
 
@@ -21033,35 +21561,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Rotor>, Translator, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Rotor>, Translator, T, 4> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[0])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[1])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero()], [T::zero(), m[0], m[1]], [T::zero(), m[2], m[0]]] }
+        Translator { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2]], [T::zero(), m[3], m[1]]] }
     }
 }
 
@@ -21069,7 +21606,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>> for Tran
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Rotor {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -21079,16 +21616,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Translator, T, 4> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Translator, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Translator, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 3>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Translator, T, 4>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -21210,25 +21747,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Rotor<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[3] * t2;
         let t6 = xv[2] * t2;
         let t7 = xv[3] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[2].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t9, t11]) };
+        let t12 = t0 + t1;
+        let t13 = xv[0] * t12;
+        let t14 = xv[1] * t12;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t13, t14, t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[2].scale(m3) + x[3].scale(m4)).0, (x[2].scale(m5) + x[3].scale(m3)).0] }
+        Motor { c: [(x[0].scale(m6)).0, (x[1].scale(m6)).0, (x[2].scale(m3) + x[3].scale(m4)).0, (x[2].scale(m5) + x[3].scale(m3)).0] }
     }
 }
 
@@ -21241,35 +21791,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Rotor
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Motor, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Rotor>, Motor, T, 4> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[2].scale(m[0]) + x[3].scale(m[1])).0, (x[2].scale(m[2]) + x[3].scale(m[0])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[1])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], m[1]], [T::zero(), T::zero(), m[2], m[0]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2]], [T::zero(), T::zero(), m[3], m[1]]] }
     }
 }
 
@@ -21277,7 +21836,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>> for Motor<(Mo
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Rotor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -21287,16 +21846,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Motor, T, 4> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Motor, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Motor, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 3>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Motor, T, 4>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -21418,25 +21977,38 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Rotor<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[1] * t2;
         let t6 = xv[0] * t2;
         let t7 = xv[1] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[0].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Flector { c: gx::slots::from_values::<S, T, 4>([t9, t11, xv[2], xv[3]]) };
+        let t12 = t0 + t1;
+        let t13 = xv[2] * t12;
+        let t14 = xv[3] * t12;
+            return Flector { c: gx::slots::from_values::<S, T, 4>([t9, t11, t13, t14]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2]).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m3) + x[1].scale(m4)).0, (x[0].scale(m5) + x[1].scale(m3)).0, (x[2].scale(m6)).0, (x[3].scale(m6)).0] }
     }
 }
 
@@ -21449,35 +22021,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Rot
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m3, m4, m5, m6])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Flector, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Flector, T, 4> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2]).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[2].scale(m[3])).0, (x[3].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[2], m[0], T::zero(), T::zero()], [T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[2], m[0], T::zero(), T::zero()], [T::zero(), T::zero(), m[3], T::zero()], [T::zero(), T::zero(), T::zero(), m[3]]] }
     }
 }
 
@@ -21485,7 +22066,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>> for Flector
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Rotor {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -21495,16 +22076,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Flector, T, 4> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Flector, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Flector, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 3>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Flector, T, 4>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -21634,10 +22215,18 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[3] * t2;
         let t6 = xv[2] * t2;
         let t7 = xv[3] * t3;
@@ -21650,15 +22239,22 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Ro
         let t17 = (-t9).mul_add(T::from_i64(2), t8);
         let t18 = t10 * T::from_i64(2);
         let t19 = xv[5].mul_add(t3, t18);
-            return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], xv[1], t13, t15, t17, t19, xv[6], xv[7]]) };
+        let t20 = t0 + t1;
+        let t21 = xv[0] * t20;
+        let t22 = xv[1] * t20;
+        let t23 = xv[6] * t20;
+        let t24 = xv[7] * t20;
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t21, t22, t13, t15, t17, t19, t23, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1]).0, (x[2].scale(m3) + x[3].scale(m4)).0, (x[2].scale(m5) + x[3].scale(m3)).0, (x[4].scale(m3) + x[5].scale(m5)).0, (x[4].scale(m4) + x[5].scale(m3)).0, (x[6]).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m6)).0, (x[1].scale(m6)).0, (x[2].scale(m3) + x[3].scale(m4)).0, (x[2].scale(m5) + x[3].scale(m3)).0, (x[4].scale(m3) + x[5].scale(m5)).0, (x[4].scale(m4) + x[5].scale(m3)).0, (x[6].scale(m6)).0, (x[7].scale(m6)).0] }
     }
 }
 
@@ -21671,35 +22267,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Rotor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1]).0, (x[2].scale(m[0]) + x[3].scale(m[1])).0, (x[2].scale(m[2]) + x[3].scale(m[0])).0, (x[4].scale(m[0]) + x[5].scale(m[2])).0, (x[4].scale(m[1]) + x[5].scale(m[0])).0, (x[6]).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[1])).0, (x[4].scale(m[1]) + x[5].scale(m[3])).0, (x[4].scale(m[2]) + x[5].scale(m[1])).0, (x[6].scale(m[0])).0, (x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[0], m[1], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[2], m[0], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[0], m[2], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[0], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[1], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[1], m[3], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[1], T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -21707,7 +22312,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>> for Mul
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Rotor {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -21717,16 +22322,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Rotor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Multivector, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Multivector, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 3>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 4>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -21825,6 +22430,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Transla
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -21849,6 +22459,11 @@ impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Scalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -22012,6 +22627,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Translato
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -22048,6 +22668,11 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Line, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[2];
         let m2 = v[0] * v[1];
@@ -22216,6 +22841,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * xv[2];
@@ -22252,6 +22882,11 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Point, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[2];
         let m2 = v[0] * v[1];
@@ -22403,6 +23038,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<T
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -22427,6 +23067,11 @@ impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -22590,6 +23235,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[0] * xv[1];
         let t1 = v[0] * v[0];
@@ -22626,6 +23276,11 @@ impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Rotor, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[2];
         let m2 = v[0] * v[1];
@@ -22779,6 +23434,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Tra
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -22805,6 +23465,11 @@ impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Translator, T, 1> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         gx::Prepared::from_entries([m0])
     }
@@ -22969,6 +23634,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Translat
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * xv[1];
@@ -23006,6 +23676,11 @@ impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Motor, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[2];
         let m2 = v[0] * v[1];
@@ -23175,6 +23850,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Transl
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = xv[0] * t0;
@@ -23212,6 +23892,11 @@ impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Flector, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[2];
         let m2 = v[0] * v[1];
@@ -23391,6 +24076,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Tr
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[0];
         let t1 = v[0] * v[1];
@@ -23437,6 +24127,11 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Translator<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Multivector, T, 5> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
         let m2 = v[0] * v[2];
@@ -23592,11 +24287,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Motor<(
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -23609,30 +24316,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Moto
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -23640,7 +24356,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>> for Scalar<(
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Motor {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -23650,16 +24366,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -23799,12 +24515,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Motor<(),
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = v[0].mul_add(v[3], t4);
         let t9 = (-v[1]).mul_add(v[3], t5);
         let t11 = xv[1] * t2;
@@ -23815,22 +24539,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Motor<(),
         let t17 = xv[0].mul_add(t7, t16);
         let t19 = (-t12).mul_add(T::from_i64(2), t13);
         let t20 = (-xv[1]).mul_add(t9, t14);
-        let t22 = t20.mul_add(T::from_i64(2), xv[2]);
-            return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t22]) };
+        let t22 = t0 + t1;
+        let t23 = xv[2] * t22;
+        let t24 = t20.mul_add(T::from_i64(2), t23);
+            return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t24]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
         let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
+        let m14 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2]).0] }
+        Line { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m14)).0] }
     }
 }
 
@@ -23843,41 +24571,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Line<S, T>> for gx::Unit<Motor<
 }
 
 impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Line, T, 5>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Line, T, 6>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Line, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Line, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
         let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
-        gx::Prepared::from_entries([m7, m8, m9, m11, m13])
+        let m14 = m0 + m2;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Prepared<gx::Unit<Motor>, Line, T, 5> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Prepared<gx::Unit<Motor>, Line, T, 6> {
     type Output = Line<S, T>;
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2]).0] }
+        Line { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Line, T, 5>> for Line<(Line,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Line, T, 6>> for Line<(Line,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Line, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Line, T, 6>) -> Self {
         let m = p.m;
-        Line { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [m[3], m[4], T::from_i64(1)]] }
+        Line { c: [[m[0], m[1], T::zero()], [m[2], m[0], T::zero()], [m[3], m[4], m[5]]] }
     }
 }
 
@@ -23885,7 +24622,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Line, T, 5>> for Line<(Line
 impl gx::batch::SandwichKernel<Line, gx::batch::Certified> for Motor {
     type Y = Line;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Line, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Line, T, 6>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -23895,16 +24632,16 @@ impl gx::batch::SandwichKernel<Line, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Line, T, 5> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Line, T, 6> {
         gx::Prepare::<Line>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Line, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Line, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Line, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Line, W, 6> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Line, T, 5>, x: Line<(), T>) -> Line<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Line, T, 6>, x: Line<(), T>) -> Line<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24043,12 +24780,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[3];
         let t6 = v[1] * v[3];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = (-v[1]).mul_add(v[2], t3);
         let t9 = v[0].mul_add(v[2], t6);
         let t11 = xv[1] * t2;
@@ -24059,21 +24804,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Motor<()
         let t19 = (-xv[0]).mul_add(t2, t15);
         let t20 = t19 * T::from_i64(2);
         let t21 = xv[1].mul_add(t7, t20);
-            return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, xv[2]]) };
+        let t22 = t0 + t1;
+        let t23 = xv[2] * t22;
+            return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, t23]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
         let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
+        let m14 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m10)).0, (x[0].scale(m11) + x[1].scale(m7) + x[2].scale(m13)).0, (x[2]).0] }
+        Point { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m10)).0, (x[0].scale(m11) + x[1].scale(m7) + x[2].scale(m13)).0, (x[2].scale(m14)).0] }
     }
 }
 
@@ -24086,41 +24835,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Point<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Point, T, 5>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Point, T, 6>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Point, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Point, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = (-v[0]).mul_add(v[3], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m8;
         let m12 = v[0].mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
-        gx::Prepared::from_entries([m7, m8, m10, m11, m13])
+        let m14 = m0 + m2;
+        gx::Prepared::from_entries([m7, m8, m10, m11, m13, m14])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Motor>, Point, T, 5> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Prepared<gx::Unit<Motor>, Point, T, 6> {
     type Output = Point<S, T>;
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[0]) + x[2].scale(m[4])).0, (x[2]).0] }
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[0]) + x[2].scale(m[4])).0, (x[2].scale(m[5])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 5>> for Point<(Point,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 6>> for Point<(Point,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Point, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Point, T, 6>) -> Self {
         let m = p.m;
-        Point { c: [[m[0], m[1], m[2]], [m[3], m[0], m[4]], [T::zero(), T::zero(), T::from_i64(1)]] }
+        Point { c: [[m[0], m[1], m[2]], [m[3], m[0], m[4]], [T::zero(), T::zero(), m[5]]] }
     }
 }
 
@@ -24128,7 +24886,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Point, T, 5>> for Point<(Po
 impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Motor {
     type Y = Point;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Point, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Point, T, 6>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24138,16 +24896,16 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Point, T, 5> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Point, T, 6> {
         gx::Prepare::<Point>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Point, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Point, W, 6> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 5>, x: Point<(), T>) -> Point<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Point, T, 6>, x: Point<(), T>) -> Point<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24249,11 +25007,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<M
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -24266,30 +25036,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -24297,7 +25076,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>> for Ps
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Motor {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24307,16 +25086,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24439,6 +25218,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[1];
@@ -24448,7 +25234,11 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Motor<()
         let t7 = t6 * T::from_i64(2);
         let t8 = v[2].mul_add(t0, t5);
         let t9 = t8 * T::from_i64(2);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t7, t9]) };
+        let t11 = v[1] * v[1];
+        let t12 = v[0].mul_add(v[0], t11);
+        let t13 = xv[0] * t12;
+        let t14 = xv[1] * t12;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t13, t14, t7, t9]) };
         }
         let m1 = v[1] * v[2];
         let m3 = v[1] * v[3];
@@ -24456,8 +25246,10 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Motor<()
         let m5 = m4 * T::from_i64(2);
         let m6 = v[0].mul_add(v[2], m3);
         let m7 = m6 * T::from_i64(2);
+        let m9 = v[1] * v[1];
+        let m10 = v[0].mul_add(v[0], m9);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[1].scale(m5)).0, (x[1].scale(m7)).0] }
+        Motor { c: [(x[0].scale(m10)).0, (x[1].scale(m10)).0, (x[1].scale(m5)).0, (x[1].scale(m7)).0] }
     }
 }
 
@@ -24470,36 +25262,45 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 2> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 3> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m1 = v[1] * v[2];
         let m3 = v[1] * v[3];
         let m4 = (-v[0]).mul_add(v[3], m1);
         let m5 = m4 * T::from_i64(2);
         let m6 = v[0].mul_add(v[2], m3);
         let m7 = m6 * T::from_i64(2);
-        gx::Prepared::from_entries([m5, m7])
+        let m9 = v[1] * v[1];
+        let m10 = v[0].mul_add(v[0], m9);
+        gx::Prepared::from_entries([m10, m5, m7])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Motor>, Rotor, T, 2> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Motor>, Rotor, T, 3> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[1].scale(m[0])).0, (x[1].scale(m[1])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero()], [T::zero(), T::from_i64(1)], [T::zero(), m[0]], [T::zero(), m[1]]] }
+        Motor { c: [[m[0], T::zero()], [T::zero(), m[0]], [T::zero(), m[1]], [T::zero(), m[2]]] }
     }
 }
 
@@ -24507,7 +25308,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>> for Motor<(Ro
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Motor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24517,16 +25318,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 2> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Rotor, T, 3> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Rotor, W, 2> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Rotor, W, 3> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 2>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Rotor, T, 3>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24647,25 +25448,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Mot
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t7 = xv[2] * t3;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[1].mul_add(t3, t8);
         let t11 = (-t6).mul_add(T::from_i64(2), t7);
-            return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
+        let t12 = t0 + t1;
+        let t13 = xv[0] * t12;
+            return Translator { c: gx::slots::from_values::<S, T, 3>([t13, t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m5) + x[2].scale(m3)).0] }
+        Translator { c: [(x[0].scale(m6)).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m5) + x[2].scale(m3)).0] }
     }
 }
 
@@ -24678,35 +25491,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Translator, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Translator, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m4;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Motor>, Translator, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Motor>, Translator, T, 4> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[0])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[1])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 3>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 4>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 4>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero()], [T::zero(), m[0], m[1]], [T::zero(), m[2], m[0]]] }
+        Translator { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2]], [T::zero(), m[3], m[1]]] }
     }
 }
 
@@ -24714,7 +25536,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Translator, T, 3>> for Tran
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Motor {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Translator, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Translator, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24724,16 +25546,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Translator, T, 4> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Translator, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Translator, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 3>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Translator, T, 4>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -24873,13 +25695,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Motor<()
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[3];
         let t2 = v[0] * v[0];
+        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
         let t6 = v[1] * v[3];
         let t7 = (-v[1]).mul_add(v[2], t0);
-        let t8 = (-v[1]).mul_add(v[1], t2);
+        let t8 = t2 - t3;
         let t9 = v[0].mul_add(v[2], t6);
         let t12 = xv[3] * t4;
         let t13 = xv[1] * t9;
@@ -24889,21 +25719,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Motor<()
         let t19 = (-xv[2]).mul_add(t4, t13);
         let t20 = t19 * T::from_i64(2);
         let t21 = xv[3].mul_add(t8, t20);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], xv[1], t18, t21]) };
+        let t22 = t2 + t3;
+        let t23 = xv[0] * t22;
+        let t24 = xv[1] * t22;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t23, t24, t18, t21]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = (-v[0]).mul_add(v[3], m4);
         let m9 = m8 * T::from_i64(2);
         let m10 = m1 * T::from_i64(2);
         let m11 = v[0].mul_add(v[2], m6);
         let m12 = m11 * T::from_i64(2);
         let m13 = -m10;
+        let m14 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[1].scale(m9) + x[2].scale(m7) + x[3].scale(m10)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m7)).0] }
+        Motor { c: [(x[0].scale(m14)).0, (x[1].scale(m14)).0, (x[1].scale(m9) + x[2].scale(m7) + x[3].scale(m10)).0, (x[1].scale(m12) + x[2].scale(m13) + x[3].scale(m7)).0] }
     }
 }
 
@@ -24916,41 +25751,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Motor
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Motor, T, 5>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Motor, T, 6>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = (-v[0]).mul_add(v[3], m4);
         let m9 = m8 * T::from_i64(2);
         let m10 = m1 * T::from_i64(2);
         let m11 = v[0].mul_add(v[2], m6);
         let m12 = m11 * T::from_i64(2);
         let m13 = -m10;
-        gx::Prepared::from_entries([m9, m7, m10, m12, m13])
+        let m14 = m0 + m2;
+        gx::Prepared::from_entries([m14, m9, m7, m10, m12, m13])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Motor>, Motor, T, 5> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Motor>, Motor, T, 6> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[1].scale(m[3]) + x[2].scale(m[4]) + x[3].scale(m[1])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[5]) + x[3].scale(m[2])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 5>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 6>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 6>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[1]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[5], m[2]]] }
     }
 }
 
@@ -24958,7 +25802,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Motor, T, 5>> for Motor<(Mo
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Motor {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Motor, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Motor, T, 6>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -24968,16 +25812,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 5> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Motor, T, 6> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Motor, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Motor, W, 6> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 5>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Motor, T, 6>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25118,12 +25962,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Motor<
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t4 = v[1] * v[2];
         let t5 = v[0] * v[2];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = v[0].mul_add(v[3], t4);
         let t9 = (-v[1]).mul_add(v[3], t5);
         let t11 = xv[1] * t2;
@@ -25134,22 +25986,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Motor<
         let t17 = xv[0].mul_add(t7, t16);
         let t19 = (-t12).mul_add(T::from_i64(2), t13);
         let t20 = (-xv[1]).mul_add(t9, t14);
-        let t22 = t20.mul_add(T::from_i64(2), xv[2]);
-            return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t22, xv[3]]) };
+        let t22 = t0 + t1;
+        let t23 = xv[2] * t22;
+        let t24 = t20.mul_add(T::from_i64(2), t23);
+        let t25 = xv[3] * t22;
+            return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t24, t25]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
         let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
+        let m14 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2]).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m9) + x[1].scale(m7)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m14)).0, (x[3].scale(m14)).0] }
     }
 }
 
@@ -25162,41 +26019,50 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Mot
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Flector, T, 5>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Flector, T, 6>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 5> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m4 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m1 * T::from_i64(2);
         let m9 = -m8;
         let m10 = v[0].mul_add(v[3], m4);
         let m11 = m10 * T::from_i64(2);
         let m12 = (-v[0]).mul_add(v[2], m6);
         let m13 = m12 * T::from_i64(2);
-        gx::Prepared::from_entries([m7, m8, m9, m11, m13])
+        let m14 = m0 + m2;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Motor>, Flector, T, 5> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Motor>, Flector, T, 6> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2]).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[2]) + x[1].scale(m[0])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3].scale(m[5])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 5>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 6>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 5>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 6>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[2], m[0], T::zero(), T::zero()], [m[3], m[4], T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[2], m[0], T::zero(), T::zero()], [m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), m[5]]] }
     }
 }
 
@@ -25204,7 +26070,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Flector, T, 5>> for Flector
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Motor {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Flector, T, 5>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Flector, T, 6>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25214,16 +26080,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 5> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Flector, T, 6> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 5>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Flector, W, 5> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Flector, W, 6> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 5>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Flector, T, 6>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25390,16 +26256,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Mo
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[2];
         let t1 = v[0] * v[3];
         let t2 = v[1] * v[2];
         let t3 = v[1] * v[3];
         let t4 = v[0] * v[0];
+        let t5 = v[1] * v[1];
         let t6 = v[0] * v[1];
         let t7 = t1 + t2;
         let t8 = t0 - t3;
-        let t9 = (-v[1]).mul_add(v[1], t4);
+        let t9 = t4 - t5;
         let t10 = t0 + t3;
         let t11 = t1 - t2;
         let t12 = xv[2] * t7;
@@ -25409,25 +26283,31 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Mo
         let t20 = xv[6] * t10;
         let t21 = xv[4] * t6;
         let t24 = (-xv[3]).mul_add(t8, t12);
-        let t26 = t24.mul_add(T::from_i64(2), xv[1]);
-        let t27 = t15 * T::from_i64(2);
-        let t28 = xv[2].mul_add(t9, t27);
-        let t30 = (-t16).mul_add(T::from_i64(2), t17);
-        let t31 = (-xv[5]).mul_add(t6, t20);
-        let t32 = t31 * T::from_i64(2);
-        let t33 = xv[4].mul_add(t9, t32);
-        let t34 = (-xv[6]).mul_add(t11, t21);
-        let t35 = t34 * T::from_i64(2);
-        let t36 = xv[5].mul_add(t9, t35);
-            return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t26, t28, t30, t33, t36, xv[6], xv[7]]) };
+        let t26 = t4 + t5;
+        let t27 = xv[1] * t26;
+        let t28 = t24.mul_add(T::from_i64(2), t27);
+        let t29 = t15 * T::from_i64(2);
+        let t30 = xv[2].mul_add(t9, t29);
+        let t32 = (-t16).mul_add(T::from_i64(2), t17);
+        let t33 = (-xv[5]).mul_add(t6, t20);
+        let t34 = t33 * T::from_i64(2);
+        let t35 = xv[4].mul_add(t9, t34);
+        let t36 = (-xv[6]).mul_add(t11, t21);
+        let t37 = t36 * T::from_i64(2);
+        let t38 = xv[5].mul_add(t9, t37);
+        let t39 = xv[0] * t26;
+        let t40 = xv[6] * t26;
+        let t41 = xv[7] * t26;
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t39, t28, t30, t32, t35, t38, t40, t41]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m4 + m5;
         let m9 = m8 * T::from_i64(2);
         let m10 = m6 - m3;
@@ -25438,8 +26318,9 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Mo
         let m15 = m14 * T::from_i64(2);
         let m16 = m5 - m4;
         let m17 = m16 * T::from_i64(2);
+        let m18 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m9) + x[3].scale(m11)).0, (x[2].scale(m7) + x[3].scale(m12)).0, (x[2].scale(m13) + x[3].scale(m7)).0, (x[4].scale(m7) + x[5].scale(m13) + x[6].scale(m15)).0, (x[4].scale(m12) + x[5].scale(m7) + x[6].scale(m17)).0, (x[6]).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m18)).0, (x[1].scale(m18) + x[2].scale(m9) + x[3].scale(m11)).0, (x[2].scale(m7) + x[3].scale(m12)).0, (x[2].scale(m13) + x[3].scale(m7)).0, (x[4].scale(m7) + x[5].scale(m13) + x[6].scale(m15)).0, (x[4].scale(m12) + x[5].scale(m7) + x[6].scale(m17)).0, (x[6].scale(m18)).0, (x[7].scale(m18)).0] }
     }
 }
 
@@ -25452,17 +26333,25 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Motor<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>;
+    type Output = gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 7> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 8> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
+        let m2 = v[1] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
+        let m7 = m0 - m2;
         let m8 = m4 + m5;
         let m9 = m8 * T::from_i64(2);
         let m10 = m6 - m3;
@@ -25473,26 +26362,27 @@ impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Motor<(), T>> {
         let m15 = m14 * T::from_i64(2);
         let m16 = m5 - m4;
         let m17 = m16 * T::from_i64(2);
-        gx::Prepared::from_entries([m9, m11, m7, m12, m13, m15, m17])
+        let m18 = m0 + m2;
+        gx::Prepared::from_entries([m18, m9, m11, m7, m12, m13, m15, m17])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Motor>, Multivector, T, 7> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Motor>, Multivector, T, 8> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1] + x[2].scale(m[0]) + x[3].scale(m[1])).0, (x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[2])).0, (x[4].scale(m[2]) + x[5].scale(m[4]) + x[6].scale(m[5])).0, (x[4].scale(m[3]) + x[5].scale(m[2]) + x[6].scale(m[6])).0, (x[6]).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[2].scale(m[5]) + x[3].scale(m[3])).0, (x[4].scale(m[3]) + x[5].scale(m[5]) + x[6].scale(m[6])).0, (x[4].scale(m[4]) + x[5].scale(m[3]) + x[6].scale(m[7])).0, (x[6].scale(m[0])).0, (x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::from_i64(1), m[0], m[1], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[2], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[3], m[5], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[3], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -25500,7 +26390,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>> for Mul
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Motor {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Motor<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Motor<(), T>) -> gx::Unit<Motor<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25510,16 +26400,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Motor {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 7> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Motor<(), T>>) -> gx::Prepared<gx::Unit<Motor>, Multivector, T, 8> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Multivector, W, 7> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Motor>, Multivector, W, 8> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 7>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Motor>, Multivector, T, 8>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25621,11 +26511,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Flector
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Scalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Scalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -25638,30 +26540,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Scalar<S, T>> for gx::Unit<Flec
 }
 
 impl<T: gx::Coef> gx::Prepare<Scalar> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
     type Output = Scalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Scalar<S, T>) -> Scalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Scalar { c: [(x[0]).0] }
+        Scalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>> for Scalar<(Scalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>> for Scalar<(Scalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>) -> Self {
         let m = p.m;
-        Scalar { c: [[T::from_i64(1)]] }
+        Scalar { c: [[m[0]]] }
     }
 }
 
@@ -25669,7 +26580,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>> for Scalar
 impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Flector {
     type Y = Scalar;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -25679,16 +26590,16 @@ impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Scalar, T, 1> {
         gx::Prepare::<Scalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Scalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Scalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -25830,12 +26741,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Flector<(
     #[inline(always)]
     fn transform(self, x: Line<S, T>) -> Line<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t6 = v[1] * v[2];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = (-v[1]).mul_add(v[3], t3);
         let t9 = v[0].mul_add(v[3], t6);
         let t11 = xv[1] * t2;
@@ -25846,23 +26765,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Line<S, T>> for gx::Unit<Flector<(
         let t18 = t12 * T::from_i64(2);
         let t19 = (-xv[1]).mul_add(t7, t18);
         let t20 = xv[0].mul_add(t8, t15);
-        let t22 = t20.mul_add(T::from_i64(2), -xv[2]);
-            return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t22]) };
+        let t21 = t20 * T::from_i64(2);
+        let t22 = t0 + t1;
+        let t24 = (-xv[2]).mul_add(t22, t21);
+            return Line { c: gx::slots::from_values::<S, T, 3>([t17, t19, t24]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
+        let m7 = m0 - m1;
+        let m8 = m2 * T::from_i64(2);
         let m9 = -m7;
         let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
         let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
+        let m14 = m0 + m1;
+        let m15 = -m14;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Line { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m8) + x[1].scale(m9)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m14)).0] }
+        Line { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m8) + x[1].scale(m9)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m15)).0] }
     }
 }
 
@@ -25879,19 +26802,28 @@ impl<T: gx::Coef> gx::Prepare<Line> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Line, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
+        let m7 = m0 - m1;
+        let m8 = m2 * T::from_i64(2);
         let m9 = -m7;
         let m10 = (-v[1]).mul_add(v[3], m3);
         let m11 = m10 * T::from_i64(2);
         let m12 = v[0].mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
-        gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
+        let m14 = m0 + m1;
+        let m15 = -m14;
+        gx::Prepared::from_entries([m7, m8, m9, m11, m13, m15])
     }
 }
 
@@ -26079,12 +27011,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Point<S, T>) -> Point<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t4 = v[1] * v[3];
         let t5 = v[0] * v[3];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = v[0].mul_add(v[2], t4);
         let t9 = (-v[1]).mul_add(v[2], t5);
         let t12 = xv[2] * t8;
@@ -26096,22 +27036,26 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Point<S, T>> for gx::Unit<Flector<
         let t20 = t19 * T::from_i64(2);
         let t21 = (-xv[1]).mul_add(t7, t20);
         let t22 = -xv[2];
-            return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, t22]) };
+        let t23 = t0 + t1;
+        let t24 = t22 * t23;
+            return Point { c: gx::slots::from_values::<S, T, 3>([t18, t21, t24]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m4 = v[1] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
+        let m7 = m0 - m1;
+        let m8 = m2 * T::from_i64(2);
         let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
         let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
+        let m14 = m0 + m1;
+        let m15 = -m14;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Point { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m10)).0, (x[0].scale(m8) + x[1].scale(m11) + x[2].scale(m13)).0, (x[2].scale(m14)).0] }
+        Point { c: [(x[0].scale(m7) + x[1].scale(m8) + x[2].scale(m10)).0, (x[0].scale(m8) + x[1].scale(m11) + x[2].scale(m13)).0, (x[2].scale(m15)).0] }
     }
 }
 
@@ -26128,19 +27072,28 @@ impl<T: gx::Coef> gx::Prepare<Point> for gx::Unit<Flector<(), T>> {
     #[inline]
     fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Point, T, 6> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m4 = v[1] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
+        let m7 = m0 - m1;
+        let m8 = m2 * T::from_i64(2);
         let m9 = v[0].mul_add(v[2], m4);
         let m10 = m9 * T::from_i64(2);
         let m11 = -m7;
         let m12 = (-v[0]).mul_add(v[3], m6);
         let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
-        gx::Prepared::from_entries([m7, m8, m10, m11, m13, m14])
+        let m14 = m0 + m1;
+        let m15 = -m14;
+        gx::Prepared::from_entries([m7, m8, m10, m11, m13, m15])
     }
 }
 
@@ -26288,11 +27241,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<F
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let v = self.into_inner().c;
-        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
-            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([xv[0]]) };
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
         }
+        if let Some(xv) = gx::slots::values::<S, T, 1>(&x.c) {
+        let t1 = v[1] * v[1];
+        let t2 = v[0].mul_add(v[0], t1);
+        let t3 = xv[0] * t2;
+            return Pseudoscalar { c: gx::slots::from_values::<S, T, 1>([t3]) };
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m2)).0] }
     }
 }
 
@@ -26305,30 +27270,39 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Pseudoscalar<S, T>> for gx::Uni
 }
 
 impl<T: gx::Coef> gx::Prepare<Pseudoscalar> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1> {
         let v = self.into_inner().c;
-        gx::Prepared::from_entries([])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m2 = v[0].mul_add(v[0], m1);
+        gx::Prepared::from_entries([m2])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
     fn transform(self, x: Pseudoscalar<S, T>) -> Pseudoscalar<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Pseudoscalar { c: [(x[0]).0] }
+        Pseudoscalar { c: [(x[0].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>> for Pseudoscalar<(Pseudoscalar,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>> for Pseudoscalar<(Pseudoscalar,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>) -> Self {
         let m = p.m;
-        Pseudoscalar { c: [[T::from_i64(1)]] }
+        Pseudoscalar { c: [[m[0]]] }
     }
 }
 
@@ -26336,7 +27310,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>> for 
 impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Flector {
     type Y = Pseudoscalar;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26346,16 +27320,16 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1> {
         gx::Prepare::<Pseudoscalar>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, W, 0> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Pseudoscalar, W, 1> {
         let m = p.m;
-        gx::Prepared::from_entries([])
+        gx::Prepared::from_entries([f(m[0])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26481,6 +27455,13 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
         let t0 = v[0] * xv[1];
         let t1 = v[1] * xv[1];
@@ -26491,17 +27472,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Flector<
         let t8 = t7 * T::from_i64(2);
         let t9 = (-v[3]).mul_add(t0, t5);
         let t10 = t9 * T::from_i64(2);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t6, t8, t10]) };
+        let t12 = v[1] * v[1];
+        let t13 = v[0].mul_add(v[0], t12);
+        let t14 = xv[0] * t13;
+        let t15 = t6 * t13;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t14, t15, t8, t10]) };
         }
-        let m1 = v[1] * v[3];
-        let m3 = v[1] * v[2];
-        let m4 = -T::from_i64(1);
-        let m5 = v[0].mul_add(v[2], m1);
-        let m6 = m5 * T::from_i64(2);
-        let m7 = (-v[0]).mul_add(v[3], m3);
-        let m8 = m7 * T::from_i64(2);
+        let m1 = v[1] * v[1];
+        let m3 = v[1] * v[3];
+        let m5 = v[1] * v[2];
+        let m6 = v[0].mul_add(v[0], m1);
+        let m7 = -m6;
+        let m8 = v[0].mul_add(v[2], m3);
+        let m9 = m8 * T::from_i64(2);
+        let m10 = (-v[0]).mul_add(v[3], m5);
+        let m11 = m10 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m4)).0, (x[1].scale(m6)).0, (x[1].scale(m8)).0] }
+        Motor { c: [(x[0].scale(m6)).0, (x[1].scale(m7)).0, (x[1].scale(m9)).0, (x[1].scale(m11)).0] }
     }
 }
 
@@ -26514,37 +27501,46 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Rotor<S, T>> for gx::Unit<Flect
 }
 
 impl<T: gx::Coef> gx::Prepare<Rotor> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 4> {
         let v = self.into_inner().c;
-        let m1 = v[1] * v[3];
-        let m3 = v[1] * v[2];
-        let m4 = -T::from_i64(1);
-        let m5 = v[0].mul_add(v[2], m1);
-        let m6 = m5 * T::from_i64(2);
-        let m7 = (-v[0]).mul_add(v[3], m3);
-        let m8 = m7 * T::from_i64(2);
-        gx::Prepared::from_entries([m4, m6, m8])
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
+        let m1 = v[1] * v[1];
+        let m3 = v[1] * v[3];
+        let m5 = v[1] * v[2];
+        let m6 = v[0].mul_add(v[0], m1);
+        let m7 = -m6;
+        let m8 = v[0].mul_add(v[2], m3);
+        let m9 = m8 * T::from_i64(2);
+        let m10 = (-v[0]).mul_add(v[3], m5);
+        let m11 = m10 * T::from_i64(2);
+        gx::Prepared::from_entries([m6, m7, m9, m11])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Flector>, Rotor, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Prepared<gx::Unit<Flector>, Rotor, T, 4> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Rotor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2])).0, (x[1].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>> for Motor<(Rotor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>> for Motor<(Rotor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero()], [T::zero(), m[0]], [T::zero(), m[1]], [T::zero(), m[2]]] }
+        Motor { c: [[m[0], T::zero()], [T::zero(), m[1]], [T::zero(), m[2]], [T::zero(), m[3]]] }
     }
 }
 
@@ -26552,7 +27548,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>> for Motor<(
 impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Flector {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26562,16 +27558,16 @@ impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Rotor, T, 4> {
         gx::Prepare::<Rotor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Rotor, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Rotor, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 3>, x: Rotor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Rotor, T, 4>, x: Rotor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26692,25 +27688,37 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Unit<Fle
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
-        let t3 = (-v[1]).mul_add(v[1], t0);
+        let t3 = t0 - t1;
         let t5 = xv[2] * t2;
         let t6 = xv[1] * t2;
         let t8 = t5 * T::from_i64(2);
         let t9 = xv[1].mul_add(t3, t8);
         let t10 = t6 * T::from_i64(2);
         let t11 = (-xv[2]).mul_add(t3, t10);
-            return Translator { c: gx::slots::from_values::<S, T, 3>([xv[0], t9, t11]) };
+        let t12 = t0 + t1;
+        let t13 = xv[0] * t12;
+            return Translator { c: gx::slots::from_values::<S, T, 3>([t13, t9, t11]) };
         }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
+        let m6 = m0 + m2;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m4) + x[2].scale(m5)).0] }
+        Translator { c: [(x[0].scale(m6)).0, (x[1].scale(m3) + x[2].scale(m4)).0, (x[1].scale(m4) + x[2].scale(m5)).0] }
     }
 }
 
@@ -26723,35 +27731,44 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Translator<S, T>> for gx::Unit<
 }
 
 impl<T: gx::Coef> gx::Prepare<Translator> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Translator, T, 3>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Translator, T, 4>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 3> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 4> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
         let m1 = v[0] * v[1];
-        let m3 = (-v[1]).mul_add(v[1], m0);
+        let m2 = v[1] * v[1];
+        let m3 = m0 - m2;
         let m4 = m1 * T::from_i64(2);
         let m5 = -m3;
-        gx::Prepared::from_entries([m3, m4, m5])
+        let m6 = m0 + m2;
+        gx::Prepared::from_entries([m6, m3, m4, m5])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Flector>, Translator, T, 3> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Translator<S, T>> for gx::Prepared<gx::Unit<Flector>, Translator, T, 4> {
     type Output = Translator<S, T>;
     #[inline(always)]
     fn transform(self, x: Translator<S, T>) -> Translator<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Translator { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0] }
+        Translator { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[1].scale(m[2]) + x[2].scale(m[3])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 3>> for Translator<(Translator,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 4>> for Translator<(Translator,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 3>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 4>) -> Self {
         let m = p.m;
-        Translator { c: [[T::from_i64(1), T::zero(), T::zero()], [T::zero(), m[0], m[1]], [T::zero(), m[1], m[2]]] }
+        Translator { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2]], [T::zero(), m[2], m[3]]] }
     }
 }
 
@@ -26759,7 +27776,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Translator, T, 3>> for Tr
 impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Flector {
     type Y = Translator;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Translator, T, 3>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Translator, T, 4>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -26769,16 +27786,16 @@ impl gx::batch::SandwichKernel<Translator, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 3> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Translator, T, 4> {
         gx::Prepare::<Translator>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 3>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Translator, W, 3> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 4>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Translator, W, 4> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 3>, x: Translator<(), T>) -> Translator<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Translator, T, 4>, x: Translator<(), T>) -> Translator<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -26921,13 +27938,21 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Flector<
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t1 = v[1] * v[3];
         let t2 = v[0] * v[0];
+        let t3 = v[1] * v[1];
         let t4 = v[0] * v[1];
         let t5 = v[0] * v[3];
         let t7 = v[0].mul_add(v[2], t1);
-        let t8 = (-v[1]).mul_add(v[1], t2);
+        let t8 = t2 - t3;
         let t9 = (-v[1]).mul_add(v[2], t5);
         let t12 = xv[3] * t4;
         let t14 = xv[2] * t4;
@@ -26938,22 +27963,27 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Unit<Flector<
         let t20 = (-xv[1]).mul_add(t9, t14);
         let t21 = t20 * T::from_i64(2);
         let t22 = (-xv[3]).mul_add(t8, t21);
-            return Motor { c: gx::slots::from_values::<S, T, 4>([xv[0], t16, t19, t22]) };
+        let t23 = t2 + t3;
+        let t24 = xv[0] * t23;
+        let t25 = t16 * t23;
+            return Motor { c: gx::slots::from_values::<S, T, 4>([t24, t25, t19, t22]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m4 = v[1] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = -T::from_i64(1);
-        let m9 = v[0].mul_add(v[2], m4);
-        let m10 = m9 * T::from_i64(2);
-        let m11 = m1 * T::from_i64(2);
-        let m12 = (-v[0]).mul_add(v[3], m6);
-        let m13 = m12 * T::from_i64(2);
-        let m14 = -m7;
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = -m8;
+        let m10 = v[0].mul_add(v[2], m4);
+        let m11 = m10 * T::from_i64(2);
+        let m12 = m2 * T::from_i64(2);
+        let m13 = (-v[0]).mul_add(v[3], m6);
+        let m14 = m13 * T::from_i64(2);
+        let m15 = -m7;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m8)).0, (x[1].scale(m10) + x[2].scale(m7) + x[3].scale(m11)).0, (x[1].scale(m13) + x[2].scale(m11) + x[3].scale(m14)).0] }
+        Motor { c: [(x[0].scale(m8)).0, (x[1].scale(m9)).0, (x[1].scale(m11) + x[2].scale(m7) + x[3].scale(m12)).0, (x[1].scale(m14) + x[2].scale(m12) + x[3].scale(m15)).0] }
     }
 }
 
@@ -26966,42 +27996,51 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Motor<S, T>> for gx::Unit<Flect
 }
 
 impl<T: gx::Coef> gx::Prepare<Motor> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Motor, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Motor, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m4 = v[1] * v[3];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = -T::from_i64(1);
-        let m9 = v[0].mul_add(v[2], m4);
-        let m10 = m9 * T::from_i64(2);
-        let m11 = m1 * T::from_i64(2);
-        let m12 = (-v[0]).mul_add(v[3], m6);
-        let m13 = m12 * T::from_i64(2);
-        let m14 = -m7;
-        gx::Prepared::from_entries([m8, m10, m7, m11, m13, m14])
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = -m8;
+        let m10 = v[0].mul_add(v[2], m4);
+        let m11 = m10 * T::from_i64(2);
+        let m12 = m2 * T::from_i64(2);
+        let m13 = (-v[0]).mul_add(v[3], m6);
+        let m14 = m13 * T::from_i64(2);
+        let m15 = -m7;
+        gx::Prepared::from_entries([m8, m9, m11, m7, m12, m14, m15])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Flector>, Motor, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Motor<S, T>> for gx::Prepared<gx::Unit<Flector>, Motor, T, 7> {
     type Output = Motor<S, T>;
     #[inline(always)]
     fn transform(self, x: Motor<S, T>) -> Motor<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Motor { c: [(x[0]).0, (x[1].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[4]) + x[2].scale(m[3]) + x[3].scale(m[5])).0] }
+        Motor { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1])).0, (x[1].scale(m[2]) + x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[1].scale(m[5]) + x[2].scale(m[4]) + x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 6>> for Motor<(Motor,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 7>> for Motor<(Motor,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 7>) -> Self {
         let m = p.m;
-        Motor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[4], m[3], m[5]]] }
+        Motor { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], T::zero(), T::zero()], [T::zero(), m[2], m[3], m[4]], [T::zero(), m[5], m[4], m[6]]] }
     }
 }
 
@@ -27009,7 +28048,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Motor, T, 6>> for Motor<(
 impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Flector {
     type Y = Motor;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Motor, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Motor, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27019,16 +28058,16 @@ impl gx::batch::SandwichKernel<Motor, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Motor, T, 7> {
         gx::Prepare::<Motor>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Motor, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Motor, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 6>, x: Motor<(), T>) -> Motor<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Motor, T, 7>, x: Motor<(), T>) -> Motor<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -27171,12 +28210,20 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
         let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
         let t2 = v[0] * v[1];
         let t3 = v[0] * v[2];
         let t6 = v[1] * v[2];
-        let t7 = (-v[1]).mul_add(v[1], t0);
+        let t7 = t0 - t1;
         let t8 = (-v[1]).mul_add(v[3], t3);
         let t9 = v[0].mul_add(v[3], t6);
         let t11 = xv[1] * t2;
@@ -27187,23 +28234,28 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Unit<Flecto
         let t18 = t12 * T::from_i64(2);
         let t19 = (-xv[1]).mul_add(t7, t18);
         let t20 = xv[0].mul_add(t8, t15);
-        let t22 = t20.mul_add(T::from_i64(2), -xv[2]);
-            return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t22, xv[3]]) };
+        let t21 = t20 * T::from_i64(2);
+        let t22 = t0 + t1;
+        let t24 = (-xv[2]).mul_add(t22, t21);
+        let t25 = xv[3] * t22;
+            return Flector { c: gx::slots::from_values::<S, T, 4>([t17, t19, t24, t25]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
-        let m9 = -m7;
-        let m10 = (-v[1]).mul_add(v[3], m3);
-        let m11 = m10 * T::from_i64(2);
-        let m12 = v[0].mul_add(v[3], m6);
-        let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = m2 * T::from_i64(2);
+        let m10 = -m7;
+        let m11 = (-v[1]).mul_add(v[3], m3);
+        let m12 = m11 * T::from_i64(2);
+        let m13 = v[0].mul_add(v[3], m6);
+        let m14 = m13 * T::from_i64(2);
+        let m15 = -m8;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m7) + x[1].scale(m8)).0, (x[0].scale(m8) + x[1].scale(m9)).0, (x[0].scale(m11) + x[1].scale(m13) + x[2].scale(m14)).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m7) + x[1].scale(m9)).0, (x[0].scale(m9) + x[1].scale(m10)).0, (x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m15)).0, (x[3].scale(m8)).0] }
     }
 }
 
@@ -27216,42 +28268,51 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Flector<S, T>> for gx::Unit<Fle
 }
 
 impl<T: gx::Coef> gx::Prepare<Flector> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Flector, T, 6>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Flector, T, 7>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 6> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 7> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m6 = v[1] * v[2];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = m1 * T::from_i64(2);
-        let m9 = -m7;
-        let m10 = (-v[1]).mul_add(v[3], m3);
-        let m11 = m10 * T::from_i64(2);
-        let m12 = v[0].mul_add(v[3], m6);
-        let m13 = m12 * T::from_i64(2);
-        let m14 = -T::from_i64(1);
-        gx::Prepared::from_entries([m7, m8, m9, m11, m13, m14])
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = m2 * T::from_i64(2);
+        let m10 = -m7;
+        let m11 = (-v[1]).mul_add(v[3], m3);
+        let m12 = m11 * T::from_i64(2);
+        let m13 = v[0].mul_add(v[3], m6);
+        let m14 = m13 * T::from_i64(2);
+        let m15 = -m8;
+        gx::Prepared::from_entries([m7, m9, m10, m12, m14, m15, m8])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Flector>, Flector, T, 6> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Flector<S, T>> for gx::Prepared<gx::Unit<Flector>, Flector, T, 7> {
     type Output = Flector<S, T>;
     #[inline(always)]
     fn transform(self, x: Flector<S, T>) -> Flector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3]).0] }
+        Flector { c: [(x[0].scale(m[0]) + x[1].scale(m[1])).0, (x[0].scale(m[1]) + x[1].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[3].scale(m[6])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 6>> for Flector<(Flector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 7>> for Flector<(Flector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 6>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 7>) -> Self {
         let m = p.m;
-        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[1], m[2], T::zero(), T::zero()], [m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Flector { c: [[m[0], m[1], T::zero(), T::zero()], [m[1], m[2], T::zero(), T::zero()], [m[3], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), m[6]]] }
     }
 }
 
@@ -27259,7 +28320,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Flector, T, 6>> for Flect
 impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Flector {
     type Y = Flector;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Flector, T, 6>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Flector, T, 7>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27269,16 +28330,16 @@ impl gx::batch::SandwichKernel<Flector, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 6> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Flector, T, 7> {
         gx::Prepare::<Flector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Flector, W, 6> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Flector, W, 7> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 6>, x: Flector<(), T>) -> Flector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Flector, T, 7>, x: Flector<(), T>) -> Flector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]
@@ -27448,16 +28509,24 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Fl
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         if let Some(xv) = gx::slots::values::<S, T, 8>(&x.c) {
         let t0 = v[0] * v[2];
         let t1 = v[0] * v[3];
         let t2 = v[1] * v[2];
         let t3 = v[1] * v[3];
         let t4 = v[0] * v[0];
+        let t5 = v[1] * v[1];
         let t6 = v[0] * v[1];
         let t7 = t0 - t3;
         let t8 = t1 + t2;
-        let t9 = (-v[1]).mul_add(v[1], t4);
+        let t9 = t4 - t5;
         let t10 = t1 - t2;
         let t11 = t0 + t3;
         let t13 = xv[3] * t8;
@@ -27466,40 +28535,47 @@ impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Fl
         let t19 = xv[5] * t6;
         let t23 = xv[6] * t11;
         let t24 = xv[2].mul_add(t7, t13);
-        let t26 = t24.mul_add(T::from_i64(2), -xv[1]);
-        let t27 = t15 * T::from_i64(2);
-        let t28 = xv[2].mul_add(t9, t27);
-        let t29 = t16 * T::from_i64(2);
-        let t30 = (-xv[3]).mul_add(t9, t29);
-        let t31 = (-xv[6]).mul_add(t10, t19);
-        let t32 = t31 * T::from_i64(2);
-        let t33 = (-xv[4]).mul_add(t9, t32);
-        let t34 = xv[4].mul_add(t6, t23);
-        let t35 = t34 * T::from_i64(2);
-        let t36 = xv[5].mul_add(t9, t35);
-        let t37 = -xv[6];
-            return Multivector { c: gx::slots::from_values::<S, T, 8>([xv[0], t26, t28, t30, t33, t36, t37, xv[7]]) };
+        let t25 = t24 * T::from_i64(2);
+        let t26 = t4 + t5;
+        let t28 = (-xv[1]).mul_add(t26, t25);
+        let t29 = t15 * T::from_i64(2);
+        let t30 = xv[2].mul_add(t9, t29);
+        let t31 = t16 * T::from_i64(2);
+        let t32 = (-xv[3]).mul_add(t9, t31);
+        let t33 = (-xv[6]).mul_add(t10, t19);
+        let t34 = t33 * T::from_i64(2);
+        let t35 = (-xv[4]).mul_add(t9, t34);
+        let t36 = xv[4].mul_add(t6, t23);
+        let t37 = t36 * T::from_i64(2);
+        let t38 = xv[5].mul_add(t9, t37);
+        let t39 = -xv[6];
+        let t40 = xv[0] * t26;
+        let t41 = t26 * t39;
+        let t42 = xv[7] * t26;
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t40, t28, t30, t32, t35, t38, t41, t42]) };
         }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = -T::from_i64(1);
-        let m9 = m3 - m6;
-        let m10 = m9 * T::from_i64(2);
-        let m11 = m4 + m5;
-        let m12 = m11 * T::from_i64(2);
-        let m13 = m1 * T::from_i64(2);
-        let m14 = -m7;
-        let m15 = m5 - m4;
-        let m16 = m15 * T::from_i64(2);
-        let m17 = m3 + m6;
-        let m18 = m17 * T::from_i64(2);
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = -m8;
+        let m10 = m3 - m6;
+        let m11 = m10 * T::from_i64(2);
+        let m12 = m4 + m5;
+        let m13 = m12 * T::from_i64(2);
+        let m14 = m2 * T::from_i64(2);
+        let m15 = -m7;
+        let m16 = m5 - m4;
+        let m17 = m16 * T::from_i64(2);
+        let m18 = m3 + m6;
+        let m19 = m18 * T::from_i64(2);
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m8) + x[2].scale(m10) + x[3].scale(m12)).0, (x[2].scale(m7) + x[3].scale(m13)).0, (x[2].scale(m13) + x[3].scale(m14)).0, (x[4].scale(m14) + x[5].scale(m13) + x[6].scale(m16)).0, (x[4].scale(m13) + x[5].scale(m7) + x[6].scale(m18)).0, (x[6].scale(m8)).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m11) + x[3].scale(m13)).0, (x[2].scale(m7) + x[3].scale(m14)).0, (x[2].scale(m14) + x[3].scale(m15)).0, (x[4].scale(m15) + x[5].scale(m14) + x[6].scale(m17)).0, (x[4].scale(m14) + x[5].scale(m7) + x[6].scale(m19)).0, (x[6].scale(m9)).0, (x[7].scale(m8)).0] }
     }
 }
 
@@ -27512,48 +28588,57 @@ impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Multivector<S, T>> for gx::Unit
 }
 
 impl<T: gx::Coef> gx::Prepare<Multivector> for gx::Unit<Flector<(), T>> {
-    type Output = gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>;
+    type Output = gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>;
     #[inline]
-    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 8> {
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 9> {
         let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u2 = v[0].mul_add(v[0], u1);
+        let u3 = u2 - T::from_i64(1);
+            T::check_unit(&[u3]);
+        }
         let m0 = v[0] * v[0];
-        let m1 = v[0] * v[1];
+        let m1 = v[1] * v[1];
+        let m2 = v[0] * v[1];
         let m3 = v[0] * v[2];
         let m4 = v[0] * v[3];
         let m5 = v[1] * v[2];
         let m6 = v[1] * v[3];
-        let m7 = (-v[1]).mul_add(v[1], m0);
-        let m8 = -T::from_i64(1);
-        let m9 = m3 - m6;
-        let m10 = m9 * T::from_i64(2);
-        let m11 = m4 + m5;
-        let m12 = m11 * T::from_i64(2);
-        let m13 = m1 * T::from_i64(2);
-        let m14 = -m7;
-        let m15 = m5 - m4;
-        let m16 = m15 * T::from_i64(2);
-        let m17 = m3 + m6;
-        let m18 = m17 * T::from_i64(2);
-        gx::Prepared::from_entries([m8, m10, m12, m7, m13, m14, m16, m18])
+        let m7 = m0 - m1;
+        let m8 = m0 + m1;
+        let m9 = -m8;
+        let m10 = m3 - m6;
+        let m11 = m10 * T::from_i64(2);
+        let m12 = m4 + m5;
+        let m13 = m12 * T::from_i64(2);
+        let m14 = m2 * T::from_i64(2);
+        let m15 = -m7;
+        let m16 = m5 - m4;
+        let m17 = m16 * T::from_i64(2);
+        let m18 = m3 + m6;
+        let m19 = m18 * T::from_i64(2);
+        gx::Prepared::from_entries([m8, m9, m11, m13, m7, m14, m15, m17, m19])
     }
 }
 
-impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Flector>, Multivector, T, 8> {
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Prepared<gx::Unit<Flector>, Multivector, T, 9> {
     type Output = Multivector<S, T>;
     #[inline(always)]
     fn transform(self, x: Multivector<S, T>) -> Multivector<S, T> {
         let m = self.m;
         let x = x.c.map(gx::SlotArr::<S, T>);
-        Multivector { c: [(x[0]).0, (x[1].scale(m[0]) + x[2].scale(m[1]) + x[3].scale(m[2])).0, (x[2].scale(m[3]) + x[3].scale(m[4])).0, (x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[4].scale(m[5]) + x[5].scale(m[4]) + x[6].scale(m[6])).0, (x[4].scale(m[4]) + x[5].scale(m[3]) + x[6].scale(m[7])).0, (x[6].scale(m[0])).0, (x[7]).0] }
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[2].scale(m[5]) + x[3].scale(m[6])).0, (x[4].scale(m[6]) + x[5].scale(m[5]) + x[6].scale(m[7])).0, (x[4].scale(m[5]) + x[5].scale(m[4]) + x[6].scale(m[8])).0, (x[6].scale(m[1])).0, (x[7].scale(m[0])).0] }
     }
 }
 
-impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>> for Multivector<(Multivector,), T> {
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>> for Multivector<(Multivector,), T> {
     /// The dense map of the prepared action.
     #[inline]
-    fn from(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>) -> Self {
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>) -> Self {
         let m = p.m;
-        Multivector { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[3], m[4], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[6], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[4], m[3], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[4], m[5], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), m[5], m[6], T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[6], m[5], m[7], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), m[5], m[4], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[1], T::zero()], [T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), m[0]]] }
     }
 }
 
@@ -27561,7 +28646,7 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>> for M
 impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Flector {
     type Y = Multivector;
     type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
-    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>;
     #[inline(always)]
     fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
         gx::Unit::new_unchecked(v)
@@ -27571,16 +28656,16 @@ impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Flector {
         v.into_inner()
     }
     #[inline(always)]
-    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 8> {
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Multivector, T, 9> {
         gx::Prepare::<Multivector>::prepare(v)
     }
     #[inline(always)]
-    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Multivector, W, 8> {
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Multivector, W, 9> {
         let m = p.m;
-        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7])])
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
     }
     #[inline(always)]
-    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 8>, x: Multivector<(), T>) -> Multivector<(), T> {
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Multivector, T, 9>, x: Multivector<(), T>) -> Multivector<(), T> {
         gx::Transform::transform(p, x)
     }
     #[inline(always)]

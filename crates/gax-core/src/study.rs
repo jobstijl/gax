@@ -320,12 +320,16 @@ pub fn log_factor<T: Real, N: Channel<T>>(c: N, u: N) -> N {
     let s = u.sqrt();
     let opc = one + c;
     let t = s / opc;
-    // atanh(t) / t, with a series near t = 0.
+    // atanh(t) / t. The direct form loses about ε/|t| (the log of a number near 1), so the
+    // series Σ t^{2k}/(2k+1), k = 0..=7, covers |t²| < 1/100 (the next term is below 10⁻¹⁷).
     let direct = (((one + t) / (one - t)).ln() * half) / t;
     let t2 = t * t;
     let k = |v: f64| N::real(T::from_f64(v));
-    let series = one + t2 * k(1.0 / 3.0) + t2 * t2 * k(1.0 / 5.0) + t2 * t2 * t2 * k(1.0 / 7.0);
-    let ratio = t2.select_small(T::from_f64(1e-6), series, direct);
+    let mut series = N::real(T::zero());
+    for j in (0..8).rev() {
+        series = series * t2 + k(1.0 / (2.0 * f64::from(j) + 1.0));
+    }
+    let ratio = t2.select_small(T::from_f64(1e-4), series, direct); // |t²|² < 10⁻⁴
     ratio * N::real(T::from_i64(2)) / opc
 }
 
@@ -491,7 +495,7 @@ fn acosh_sq<T: Real, N: Channel<T>>(y: N) -> N {
     let one = N::real(T::one());
     let t = y - one;
     let direct = {
-        let w = (y + (y * y - one).sqrt()).ln();
+        let w = (y + ((y - one) * (y + one)).sqrt()).ln();
         w * w
     };
     let k = |v: f64| N::real(T::from_f64(v));
@@ -516,35 +520,62 @@ pub fn log_coeffs_q<T: Real>(c0: T, qc: T) -> [T; 2] {
 /// Fast path of [`exp_coeffs`] for rotations: `B² = lambda + mu I` with `lambda <= 0` and
 /// `I² = 0` (or `mu = 0`), as for every bivector of plane-based PGA. With `a = √(-λ)`:
 /// `C = cos a`, `S = sin a / a`, `C' = S / 2`, `S' = (S - C) / (2 a²)`, and the `I` parts are
-/// `μ C'` and `μ S'`. Series are used near `a = 0`.
+/// `μ C'` and `μ S'`.
+///
+/// `S` is evaluated directly except within `a² < 10⁻⁴` of `0`, where a series is used. `S'`
+/// cancels (`S - C ≈ a²/3`), so its series, `Σ (-1)^k (k+1)/(2k+3)! a^{2k}`, covers `a² < 1/4`,
+/// where the direct form loses under 30 ulps; both branches are then accurate to a few ulps at
+/// the boundary (docs/numerics.md).
 #[inline(always)]
 pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
+    // Horner in a²: coefficients (-1)^k (k+1) / (2k+3)!, k = 0..=7 (the next term is below
+    // 10⁻²¹ at a² = 1/4).
+    const DS: [f64; 8] = [
+        1.0 / 6.0,
+        -2.0 / 120.0,
+        3.0 / 5040.0,
+        -4.0 / 362_880.0,
+        5.0 / 39_916_800.0,
+        -6.0 / 6_227_020_800.0,
+        7.0 / 1_307_674_368_000.0,
+        -8.0 / 355_687_428_096_000.0,
+    ];
     let a2 = (-lambda).max(T::zero());
     let a = a2.sqrt();
     let (sin, cos) = a.sin_cos();
     let k = |v: f64| T::from_f64(v);
-    let small = k(1e-4);
     // One reciprocal serves both quotients (it is infinite at a = 0, where the series is used).
     let inv = a.recip();
     let s = T::select_lt(
         a2,
-        small,
-        T::one() - a2 * k(1.0 / 6.0) + a2 * a2 * k(1.0 / 120.0),
+        k(1e-4),
+        T::one() + a2 * (k(-1.0 / 6.0) + a2 * (k(1.0 / 120.0) + a2 * k(-1.0 / 5040.0))),
         sin * inv,
     );
-    let ds = T::select_lt(
-        a2,
-        small,
-        k(1.0 / 6.0) - a2 * k(1.0 / 60.0),
-        (s - cos) * inv * inv * k(0.5),
-    );
+    // Horner for S' in a².
+    let mut series = T::zero();
+    for c in DS.iter().rev() {
+        series = series * a2 + k(*c);
+    }
+    let ds = T::select_lt(a2, k(0.25), series, (s - cos) * inv * inv * k(0.5));
     [cos, mu * s * k(0.5), s, mu * ds]
 }
 
 /// Fast path of [`log_coeffs`] for rotations: `R = c + P` with `P² = u0 + u1 I`, `u0 <= 0`
 /// and `I² = 0` (or no `I` part). With `s = √(-u0)` and `θ = atan2(s, c0)`: `h0 = θ / s`, and
 /// the `I` part is `c1 ∂h/∂c + u1 ∂h/∂u` with `∂h/∂c = -1/(c0² + s²)` and
-/// `∂h/∂u = (θ - c0 s/(c0² + s²)) / (2 s³)`. Series are used near `s = 0`.
+/// `∂h/∂u = (θ - c0 s/(c0² + s²)) / (2 s³)`.
+///
+/// **Branch.** `θ ∈ [0, π]`: the rotation part of the result has half-angle `θ`, so
+/// `exp(log R) = R` and a versor with `c0 < 0` gets the long way round (a rotation by more than
+/// a half turn); negate `R` first for the shortest motion. Where the Euclidean part of `P`
+/// vanishes and `c0 < 0` (`R = −T` for a translation `T`, including `R = −1`), no unique
+/// logarithm exists and the result is `log(−R)`, the same motion, with `exp(log R) = −R`.
+/// Near there the axis is ill-conditioned: it is the direction of a tiny `P`.
+///
+/// Series in `t² = s²/c0²` (for `c0 > 0`, or `s = 0`): `h0 = (1/c0) Σ (-1)^k t^{2k}/(2k+1)` for
+/// `t² < 10⁻⁶`, and `∂h/∂u = (1/c0³) Σ (-1)^k (k+1)/(2k+3) t^{2k}` for `t² < 1/25`, where the
+/// direct form cancels (`θ − c0 s/n ≈ ⅔ t³`).
 #[inline(always)]
 pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
     let s2 = (-u.0).max(T::zero());
@@ -552,12 +583,24 @@ pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
     let theta = s.atan2(c.0);
     let n = c.0 * c.0 + s2;
     let k = |v: f64| T::from_f64(v);
-    let small = k(1e-6);
-    let h0 = T::select_lt(s2, small, (T::one() + s2 * k(1.0 / 6.0)) / c.0, theta / s);
+    let (zero, one) = (T::zero(), T::one());
+    let ic = c.0.recip();
+    let t2 = s2 * ic * ic;
+    // The series applies for c0 > 0, and at s = 0 whatever the sign of c0 (the log of −R).
+    let key = T::select_lt(zero, c.0, t2, T::select_lt(zero, s2, one, zero));
+    let h_series = ic * (one + t2 * (k(-1.0 / 3.0) + t2 * (k(1.0 / 5.0) + t2 * k(-1.0 / 7.0))));
+    let h0 = T::select_lt(key, k(1e-6), h_series, theta / s);
+    // Horner in t²: (-1)^j (j+1)/(2j+3), j = 0..=11 (the next term is below 10⁻¹⁶ at t² = 1/25).
+    let mut g_series = zero;
+    for j in (0..12u8).rev() {
+        let (j, sign) = (f64::from(j), if j % 2 == 0 { 1.0 } else { -1.0 });
+        let c = sign * (j + 1.0) / (2.0 * j + 3.0);
+        g_series = g_series * t2 + k(c);
+    }
     let g = T::select_lt(
-        s2,
-        small,
-        k(1.0 / 3.0) + s2 * k(1.0 / 10.0),
+        key,
+        k(1.0 / 25.0),
+        g_series * ic * ic * ic,
         (theta - c.0 * s / n) / (s2 * s * k(2.0)),
     );
     [h0, -c.1 / n + u.1 * g]

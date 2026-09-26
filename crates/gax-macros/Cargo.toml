@@ -13,6 +13,8 @@ proc-macro = true
 [features]
 ## Emit the batch kernels (enabled by `gax/batch`).
 batch = []
+## Emit the `check-units` assertions (enabled by `gax/check-units`).
+check-units = []
 
 [dependencies]
 gax-gen = { workspace = true }

@@ -39,6 +39,12 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 * [Guide](docs/guide.md): extensors as a composition language, in plain terms.
 * [Batch kernels](docs/batch.md): SIMD over slices, with the CPU's best instruction set chosen at
   run time (feature `batch`).
+* [Laws](docs/laws.md): the algebraic laws the library satisfies, each proved by a test on
+  symbolic coefficients.
+* [Numerics](docs/numerics.md): floating-point guarantees per tier, drift and renormalization,
+  the edges of exp and log, solvers. Two opt-in features belong here: `deterministic` (the same
+  bits on every target and SIMD level) and `check-units` (assert that certified kernels get unit
+  versors).
 * [Design record](docs/design.md): architecture decisions, and the verdict on each design
   hypothesis.
 * [Research log](docs/research.md): prior art, and what was taken from it.

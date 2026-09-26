@@ -20,12 +20,14 @@ fn single_grade(k: &KindSpec) -> Option<u32> {
     (g.len() == 1).then(|| *g.iter().next().expect("one"))
 }
 
-/// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds.
+/// Emit `Outermorphism<B>` impls for maps on the grade-1 and grade-(n-1) kinds, and list
+/// them as `(base kind, extended kind, whether the extended kind is the top)`.
 #[allow(clippy::too_many_lines)]
-pub fn outermorphisms(spec: &AlgebraSpec) -> String {
+pub fn outermorphisms(spec: &AlgebraSpec) -> (String, Vec<(String, String, bool)>) {
     let alg = &spec.algebra;
     let n = alg.dim() as u32;
     let mut out = String::new();
+    let mut pairs = Vec::new();
     for v in &spec.kinds {
         let Some(gv) = single_grade(v) else { continue };
         // Only kinds holding *all* blades of their grade can be the base of an outermorphism.
@@ -142,6 +144,7 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> String {
                 })
                 .collect();
             let (vn, bn) = (&v.name, &b.name);
+            pairs.push((vn.clone(), bn.clone(), k == n));
             let how = if wedge { "∧" } else { "∨" };
             let _ = write!(
                 out,
@@ -150,5 +153,5 @@ pub fn outermorphisms(spec: &AlgebraSpec) -> String {
             );
         }
     }
-    out
+    (out, pairs)
 }
