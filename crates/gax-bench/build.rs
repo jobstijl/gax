@@ -20,6 +20,12 @@ fn main() {
          moments: [Sym; 3]| { kernels::rigid_step(m, b, f, dt, mass, moments) },
     );
     t.kernel(
+        "rigid_rate_fused",
+        |b: Line<(), Sym>, f: Line<(), Sym>, dt: Sym, mass: Sym, moments: [Sym; 3]| {
+            kernels::rigid_rate(b, f, dt, mass, moments)
+        },
+    );
+    t.kernel(
         "rigid_step_fixed_fused",
         |m: Motor<(), Sym>, b: Line<(), Sym>, f: Line<(), Sym>| kernels::rigid_step_fixed(m, b, f),
     );

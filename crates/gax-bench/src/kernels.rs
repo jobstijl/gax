@@ -61,3 +61,17 @@ pub fn rigid_step_fixed<T: Real>(
     let k = T::from_f64;
     rigid_step(m, b, f, k(1.0 / 60.0), k(2.0), [k(0.5), k(0.75), k(1.0)])
 }
+
+/// The rate half of [`rigid_step`]: `B + dt I⁻¹[B × I[B] + F]` (Euler's equations for the
+/// body-frame velocity), one kind in and out, so it has a struct-of-arrays batch form.
+#[inline(always)]
+pub fn rigid_rate<T: Real>(
+    b: Line<(), T>,
+    f: Line<(), T>,
+    dt: T,
+    mass: T,
+    moments: [T; 3],
+) -> Line<(), T> {
+    let db = inertia_inv(b.commutator(inertia(b, mass, moments)) + f, mass, moments);
+    b + db.gp(dt)
+}

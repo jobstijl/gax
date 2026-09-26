@@ -93,6 +93,39 @@ fn batch_forms_match_the_fused_kernels() {
 }
 
 #[test]
+fn soa_forms_match_the_fused_kernels() {
+    use gax::batch::Soa;
+    let mut rng = Rng(8);
+    for level in batch::levels() {
+        batch::with_level(level, || {
+            for &n in LENS {
+                let ms: Vec<Unit<Motor>> = (0..n).map(|_| rng.motor()).collect();
+                let ps: Vec<Point> = (0..n).map(|_| rng.point()).collect();
+                let bs: Vec<Line> = (0..n).map(|_| rng.line()).collect();
+                let msoa: Soa<Motor> = ms.iter().map(|m| m.into_inner()).collect();
+                let psoa: Soa<Point> = ps.iter().copied().collect();
+                let bsoa: Soa<Line> = bs.iter().copied().collect();
+                let light: Soa<Point> = [rng.point()].into_iter().collect();
+                let ground: Soa<Plane> = [Plane::new(0.1, 0.2, 1.0, -0.3)].into_iter().collect();
+                let mut out: Soa<Point> = Soa::new();
+
+                // Per-element motors and points, broadcast light and ground.
+                shadow_of_moved_fused_batch_soa(&msoa, &light, &ground, &psoa, &mut out);
+                let want: Vec<Point> = (0..n)
+                    .map(|i| shadow_of_moved_fused(ms[i], light.get(0), ground.get(0), ps[i]))
+                    .collect();
+                assert_close(&out.to_vec(), &want, &format!("shadow_of_moved soa n={n}"));
+
+                screw_apply_fused_batch_soa(&bsoa, &psoa, &mut out);
+                let want: Vec<Point> = (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
+                assert_close(&out.to_vec(), &want, &format!("screw_apply soa n={n}"));
+                assert_eq!(out.len(), n);
+            }
+        });
+    }
+}
+
+#[test]
 #[should_panic(expected = "argument lengths")]
 fn mismatched_lengths_panic() {
     let ps = [Point::<(), f32>::zero(); 3];

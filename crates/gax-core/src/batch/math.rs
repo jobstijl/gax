@@ -235,15 +235,21 @@ mod tests {
             (1.0, 0.0),
             (-1.0, -0.0),
         ] {
-            assert_eq!(
-                atan2(y, x).to_bits(),
-                y.atan2(x).to_bits(),
-                "atan2({y}, {x})"
+            // The sign conventions exactly; the value within an ulp (Apple's libm returns the
+            // float just below π for atan2(0, -0), glibc the nearest one).
+            let (got, want) = (atan2(y, x), y.atan2(x));
+            assert!(
+                got.is_sign_negative() == want.is_sign_negative() && ulps(got, want) <= 1,
+                "atan2({y}, {x}): {got} vs {want}"
             );
         }
-        assert_eq!(
+        close(
             atan2(f32::INFINITY, f32::INFINITY),
-            f32::INFINITY.atan2(f32::INFINITY)
+            f32::INFINITY.atan2(f32::INFINITY),
+            1,
+            0.0,
+            "atan2(inf, inf)",
+            f32::INFINITY,
         );
     }
 

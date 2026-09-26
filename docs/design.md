@@ -474,9 +474,10 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Sandwiches.** `SandwichKernel<X, Plain | Certified>` is implemented per pair on the versor's kind
   marker by generated code (the orphan rule rules out a shared marker type). `BatchTransform`
   builds the uniform (prepared once) and per-element forms on it, for both layouts.
-* **Traced kernels.** `Tracer::batch(true)` emits `name_batch(&a0, ..., &mut out)`, which gathers
-  lanes, calls the fused `name::<L>` and scatters the results, with broadcasting of length-1
-  arguments. Tracing now supports `select_lt` as a data-flow stage, so `exp` can be traced.
+* **Traced kernels.** `Tracer::batch(true)` emits two forms. `name_batch(&a0, ..., &mut out)`
+  gathers lanes, calls the fused `name::<L>` and scatters the results. `name_batch_soa` loads
+  arguments of one kind from `Soa` storage, for kernels whose result is a value of one kind. Both
+  broadcast length-1 arguments. Tracing now supports `select_lt` as a data-flow stage, so `exp` can be traced.
 * **Elementary functions.** `f32` lanes have vectorized sin, cos, sinh, cosh, atan2 and ln (Cephes
   polynomials, Cody–Waite reduction). They match the scalar `batch::math` versions bit for bit,
   and those are within 2 to 3 ulp of `std`. `f64` lanes evaluate them per lane.

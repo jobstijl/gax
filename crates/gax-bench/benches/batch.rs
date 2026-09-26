@@ -307,5 +307,58 @@ fn rigid_body(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, uniform, pairwise, exp, rigid_body);
+fn rigid_rate(c: &mut Criterion) {
+    use gax_bench::fused::{rigid_rate_fused, rigid_rate_fused_batch, rigid_rate_fused_batch_soa};
+    let n = N;
+    let bs = twists(n);
+    let fs: Vec<Line> = twists(n).iter().map(|b| b.gp(0.1)).collect();
+    let (dt, mass, moments) = (0.01f32, 2.0f32, [1.0f32, 2.0, 3.0]);
+    let mut out = vec![Line::zero(); n];
+    let (pb, pf) = (pack(&bs), pack(&fs));
+    let mut packed_out = vec![Line::<(), f32x8>::zero(); pb.len()];
+    let (dt8, mass8, mom8) = (
+        f32x8::splat(dt),
+        f32x8::splat(mass),
+        moments.map(f32x8::splat),
+    );
+    let (bsoa, fsoa): (Soa<Line>, Soa<Line>) =
+        (bs.iter().copied().collect(), fs.iter().copied().collect());
+    let mut soa_out: Soa<Line> = Soa::new();
+
+    let mut g = c.benchmark_group("batch: rigid body rate (traced), 1024 bodies");
+    g.bench_function("scalar fused loop", |b| {
+        b.iter(|| {
+            for (o, (bb, f)) in out.iter_mut().zip(bs.iter().zip(&fs)) {
+                *o = rigid_rate_fused(*bb, *f, black_box(dt), mass, moments);
+            }
+            black_box(&out);
+        })
+    });
+    g.bench_function("wide f32x8 SoA fused", |b| {
+        b.iter(|| {
+            for (o, (bb, f)) in packed_out.iter_mut().zip(pb.iter().zip(&pf)) {
+                *o = rigid_rate_fused(*bb, *f, black_box(dt8), mass8, mom8);
+            }
+            black_box(&packed_out);
+        })
+    });
+    per_level(&mut g, "batch AoS", || {
+        rigid_rate_fused_batch(&bs, &fs, &[black_box(dt)], &[mass], &[moments], &mut out);
+        black_box(&out);
+    });
+    per_level(&mut g, "batch SoA", || {
+        rigid_rate_fused_batch_soa(
+            &bsoa,
+            &fsoa,
+            &[black_box(dt)],
+            &[mass],
+            &[moments],
+            &mut soa_out,
+        );
+        black_box(&soa_out);
+    });
+    g.finish();
+}
+
+criterion_group!(benches, uniform, pairwise, exp, rigid_body, rigid_rate);
 criterion_main!(benches);

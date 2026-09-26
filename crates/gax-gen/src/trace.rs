@@ -79,9 +79,11 @@ type Constructor = Box<dyn Fn(&[String]) -> String>;
 
 /// How to write a traceable type's code at any coefficient type: its type, the expression of
 /// a value's coefficient array, and a constructor from coefficient expressions.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct Shape {
     len: usize,
+    /// The kind's path and whether it is a `Unit`, for values of one kind.
+    kind: Option<(String, bool)>,
     ty: fn(&str) -> String,
     coeffs: fn(&str) -> String,
     construct: fn(&[String]) -> String,
@@ -89,8 +91,11 @@ struct Shape {
 
 impl Shape {
     fn of<A: Traceable>() -> Shape {
+        let mut path = String::new();
+        let kind = A::write_kind(&mut path).map(|unit| (path, unit));
         Shape {
             len: A::LEN,
+            kind,
             ty: result_type::<A>,
             coeffs: |name| {
                 let mut s = String::new();
@@ -335,6 +340,9 @@ impl Tracer {
         let _ = writeln!(s, "    {}\n}}\n", (traced.construct)(&outs));
         if self.batch {
             batch_form(s, name, &traced.shapes.0, &traced.shapes.1);
+            if traced.shapes.1.kind.is_some() {
+                batch_form_soa(s, name, &traced.shapes.0, &traced.shapes.1);
+            }
         }
         self.reports.push(KernelReport {
             name: name.to_string(),
@@ -500,6 +508,112 @@ fn batch_form(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
         s,
         "    assert!({}, \"{name}_batch: argument lengths\");\n    ::gax::batch::run(K({}, out));\n}}\n",
         checks.join(" && "),
+        names.join(", ")
+    );
+}
+
+/// Emit `{name}_batch_soa`: the kernel with arguments of one kind in [`Soa`] storage (loaded
+/// without transposes) and the others in slices, writing a `Soa` of the result's kind.
+///
+/// [`Soa`]: gax_core::batch::Soa
+#[allow(clippy::too_many_lines)]
+fn batch_form_soa(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
+    let (rkind, runit) = result.kind.clone().expect("a kind result");
+    let n = args.len();
+    let arg_ty = |k: usize| match &args[k].kind {
+        Some((path, _)) => format!("::gax::batch::Soa<{path}, E>"),
+        None => format!("[{}]", (args[k].ty)("E")),
+    };
+    let params: Vec<String> = (0..n).map(|k| format!("a{k}: &'a {}", arg_ty(k))).collect();
+    let fields: Vec<String> = (0..n).map(|k| format!("&'a {}", arg_ty(k))).collect();
+    let names: Vec<String> = (0..n).map(|k| format!("a{k}")).collect();
+    let out_ty = format!("::gax::batch::Soa<{rkind}, E>");
+    let _ = writeln!(
+        s,
+        "/// Batch form of [`{name}`] on struct-of-arrays storage: arguments of one kind come as\n\
+         /// `Soa`, others as slices, and `out` (resized to the common length) is a `Soa`. An argument\n\
+         /// of length 1 is broadcast.\n///\n/// # Panics\n/// If argument lengths other than 1 differ.\n\
+         #[inline]\n#[allow(clippy::all, clippy::pedantic, unused_variables, unused_parens, non_snake_case, non_camel_case_types)]\n\
+         pub fn {name}_batch_soa<'a, E: ::gax::batch::LaneElem>({}, out: &'a mut {out_ty}) {{",
+        params.join(", ")
+    );
+    let _ = writeln!(
+        s,
+        "    struct K<'a, E: ::gax::batch::LaneElem>({}, &'a mut {out_ty});",
+        fields.join(", ")
+    );
+    let _ = writeln!(
+        s,
+        "    impl<'a, E: ::gax::batch::LaneElem> ::gax::batch::Kernel<E> for K<'a, E> {{\n        type Output = ();\n        #[inline(always)]\n        fn run<L: ::gax::batch::Batch<Elem = E>>(self) {{\n            let K({}, out) = self;\n            let n = out.len();",
+        names.join(", ")
+    );
+    for (k, a) in args.iter().enumerate() {
+        let (splat, zero) = if let Some((path, unit)) = &a.kind {
+            let wrap = |e: String| {
+                if *unit {
+                    format!("::gax::Unit::new_unchecked({e})")
+                } else {
+                    e
+                }
+            };
+            (
+                wrap(format!("::gax::batch::splat::<{path}, L>(a{k}.get(0))")),
+                wrap(format!("<{path} as ::gax::Kind>::Mv::<(), L>::zero()")),
+            )
+        } else {
+            let parts: Vec<String> = (0..a.len)
+                .map(|j| format!("L::splat(({})[{j}])", (a.coeffs)(&format!("a{k}[0]"))))
+                .collect();
+            (
+                (a.construct)(&parts),
+                (a.construct)(&vec!["L::zero()".to_string(); a.len]),
+            )
+        };
+        let _ = writeln!(
+            s,
+            "            let b{k} = a{k}.len() == 1;\n            let s{k}: {} = if b{k} {{ {splat} }} else {{ {zero} }};",
+            (a.ty)("L")
+        );
+    }
+    let _ = writeln!(
+        s,
+        "            let mut i = 0;\n            while i < n {{\n                let m = (n - i).min(L::LANES);"
+    );
+    for (k, a) in args.iter().enumerate() {
+        let load = match &a.kind {
+            Some((_, true)) => format!("::gax::Unit::new_unchecked(a{k}.load::<L>(i))"),
+            Some((_, false)) => format!("a{k}.load::<L>(i)"),
+            None => {
+                let parts: Vec<String> = (0..a.len)
+                    .map(|j| {
+                        format!(
+                            "::gax::batch::column::<L>(m, #[inline(always)] |l| ({})[{j}])",
+                            (a.coeffs)(&format!("a{k}[i + l]"))
+                        )
+                    })
+                    .collect();
+                (a.construct)(&parts)
+            }
+        };
+        let _ = writeln!(
+            s,
+            "                let x{k}: {} = if b{k} {{ s{k} }} else {{ {load} }};",
+            (a.ty)("L")
+        );
+    }
+    let xs: Vec<String> = (0..n).map(|k| format!("x{k}")).collect();
+    let store = if runit { "y.into_inner()" } else { "y" };
+    let _ = writeln!(
+        s,
+        "                let y: {} = {name}::<L>({});\n                out.store::<L>(i, &{store});\n                i += L::LANES;\n            }}\n        }}\n    }}",
+        (result.ty)("L"),
+        xs.join(", ")
+    );
+    let lens: Vec<String> = names.iter().map(|a| format!("{a}.len()")).collect();
+    let _ = writeln!(
+        s,
+        "    let lens = [{}];\n    let n = lens.iter().copied().filter(|&l| l != 1).max().unwrap_or(1);\n    assert!(lens.iter().all(|&l| l == 1 || l == n), \"{name}_batch_soa: argument lengths\");\n    out.resize(n);\n    ::gax::batch::run(K({}, out));\n}}\n",
+        lens.join(", "),
         names.join(", ")
     );
 }

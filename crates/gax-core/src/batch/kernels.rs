@@ -67,6 +67,16 @@ where
     }
 }
 
+/// Every lane set to the value `v`.
+#[inline(always)]
+pub fn splat<K: Kind, L: Batch>(v: Mv<K, L::Elem>) -> Mv<K, L> {
+    Extensor::from_coeffs(K::arr_map(
+        v.coeffs(),
+        #[inline(always)]
+        |x| L::splat(*x),
+    ))
+}
+
 /// Lanes `f(0), ..., f(m - 1)`, with the last value repeated in the lanes past `m` (so
 /// padding lanes compute on valid inputs). The values go through a buffer and one vector
 /// load, which is faster than inserting them one by one.

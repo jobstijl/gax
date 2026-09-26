@@ -43,6 +43,11 @@ pub trait Traceable: Sized {
     /// Visit the polynomial conditions (each must vanish) that the value is certified to
     /// satisfy, such as the coefficients of `x ~x - 1` for a unit versor.
     fn for_each_condition(&self, _f: &mut dyn FnMut(Self::Coef)) {}
+    /// For a value of one kind (or a `Unit` of one): write the kind's path and return whether
+    /// it is a `Unit`. `None` for everything else (scalars, tuples, arrays).
+    fn write_kind(_w: &mut dyn Write) -> Option<bool> {
+        None
+    }
 }
 
 /// The path of a kind in code outside its own crate: `::gax::pga3d::Point` for the standard
@@ -99,6 +104,10 @@ impl<M: Extensor<Slots = ()>> Traceable for M {
         write_array(w, parts)?;
         w.write_str(")")
     }
+    fn write_kind(w: &mut dyn Write) -> Option<bool> {
+        write_kind_path::<M::Kind>(w).ok()?;
+        Some(false)
+    }
 }
 
 impl<M> Traceable for Unit<M>
@@ -130,6 +139,10 @@ where
         w.write_str("::from_coeffs(")?;
         write_array(w, parts)?;
         w.write_str("))")
+    }
+    fn write_kind(w: &mut dyn Write) -> Option<bool> {
+        write_kind_path::<M::Kind>(w).ok()?;
+        Some(true)
     }
     fn for_each_condition(&self, f: &mut dyn FnMut(M::Coef)) {
         let m = **self;

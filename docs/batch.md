@@ -89,8 +89,14 @@ methods `#[inline(always)]`: a function body is compiled for the detected level 
 is inlined into the dispatcher.
 
 Kernels traced at build time get batch forms too. Call `Tracer::batch(true)` in `build.rs`,
-and every traced `name` gets a `name_batch(&a0, &a1, ..., &mut out)`. An argument slice of
-length 1 is broadcast to every element (see `examples/traced`).
+and every traced `name` gets:
+
+* `name_batch(&a0, &a1, ..., &mut out)` on slices;
+* `name_batch_soa`, when the result is a value of one kind. It takes `Soa` storage for the
+  arguments of one kind and slices for the others (scalars, arrays), and writes a `Soa`.
+
+In both forms an argument of length 1 is broadcast to every element. `examples/traced` shows
+them.
 
 ## Levels
 

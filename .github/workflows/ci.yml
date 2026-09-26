@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
