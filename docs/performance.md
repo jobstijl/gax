@@ -78,10 +78,10 @@ otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA d
 | transform a point by a rigid motion (f32) | **6.3 ns** | `geometric_algebra` 0.3 `Motor::transformation`: 10.9 ns; nalgebra `Isometry3 * Point3`: 13.5 ns |
 | eight points at once (SoA `f32x8`) | 8.4 ns (rotation and translation) | ultraviolet `Rotor3x8 * Vec3x8` (rotation only): 8.0 ns |
 | compose a chain of 5 rigid motions | 43 ns | glam `Affine3A`: 13 ns; nalgebra `Isometry3`: 26 ns |
-| 6x6 map inverse (f64) | 458 ns | nalgebra `Matrix6::try_inverse`: 301–334 ns |
-| 6x6 solve | 179 ns | nalgebra LU solve: 182–193 ns |
-| 6x6 generalized eigenproblem (vibration modes) | **1.5 µs** | nalgebra Cholesky + `SymmetricEigen`: 2.1 µs |
-| 4x4 SVD | **0.72 µs** | nalgebra `Matrix4::svd`: 1.35 µs |
+| 6x6 map inverse (f64) | **118 ns** | nalgebra `Matrix6::try_inverse`: 202 ns |
+| 6x6 solve | **109 ns** | nalgebra LU solve: 149 ns |
+| 6x6 generalized eigenproblem (vibration modes) | **1.18 µs** | nalgebra Cholesky + `SymmetricEigen`: 1.30 µs |
+| 4x4 SVD | **0.62 µs** | nalgebra `Matrix4::svd`: 0.91 µs |
 | CGA3D `Unit<Motor> >> point` (f32) | 6.96 ns | — |
 | CGA3D general even versor `>> point` | 38.7 ns | — |
 | CGA3D `Twist::exp` | 15.2 ns | — |
@@ -95,7 +95,13 @@ lane-wide exits, `Real::all_lt`, keep them competitive for single matrices:
 * **LU skips work** it does not need: pivot swaps when no lane needs one, and the permutation gather
   when it is the identity in every lane.
 
-The inverse still trails nalgebra by 1.4x: it runs one solve per column.
+* **Scalars pivot with branches.** `Real::SCALAR` tells the LU that it has a single number, which
+  then swaps rows the ordinary way instead of with lane-wise selects. The inverse also shares the
+  pivot reciprocals across its columns, so its only divisions are those `n` reciprocals. Together
+  these took the 6x6 inverse from 458 ns (1.4x nalgebra) to 118 ns (0.6x).
+
+(The solver rows were measured again for this change: the earlier eigh and SVD numbers were 1.5 µs
+and 0.72 µs against nalgebra's 2.1 µs and 1.35 µs, on a busier machine.)
 
 **A motor chain costs more than an `Affine3A` chain.** A motor product is 48 scalar mul and 40 add,
 while glam's affine product is a SIMD 3x3 product plus a translation.
@@ -170,6 +176,44 @@ coefficients are zeros.
 Most GA products have more terms than that, so the generator emits straight-line code instead
 (ADR-006).
 
+## Batch kernels (`benches/batch.rs`)
+
+1024 elements, f32, Ryzen 7 5800X. The default build targets baseline x86-64, and
+`batch::run` dispatches to AVX2 at run time. The native build adds `-C target-cpu=native`, which
+gives `wide`, glam and scalar gax AVX2 and FMA too. "wide" is the same generic kernel on
+`wide::f32x8` lanes, with the inputs packed beforehand, so it pays no transposes.
+
+| operation | build | scalar gax | wide f32x8 (SoA) | glam | batch AoS | batch SoA |
+|---|---|---|---|---|---|---|
+| one motor, 1024 points | default | 1.20 µs | 0.54 µs | 0.74 µs | 0.91 µs | **0.27 µs** |
+| | native | 1.09 µs | 0.26 µs | 0.69 µs | 0.95 µs | **0.26 µs** |
+| 1024 motor-point pairs | default | 2.80 µs | 1.11 µs | 0.79 µs¹ | 1.98 µs | **0.54 µs** |
+| | native | 2.24 µs | **0.46 µs** | 0.82 µs¹ | 1.94 µs | 0.49 µs |
+| exp of 1024 twists | default | 29.8 µs | 4.03 µs | 26.3 µs² | 3.64 µs | **1.58 µs** |
+| | native | 13.5 µs | 1.83 µs | 7.15 µs² | 3.75 µs | **1.63 µs** |
+| rigid-body step, traced (1024 bodies) | default | 17.3 µs | 7.24 µs | — | 7.59 µs | — |
+| | native | 15.0 µs | **2.63 µs** | — | 7.21 µs | — |
+
+¹ `Affine3A::transform_point3a` per pair, with the affines built beforehand (9 multiply-adds,
+against the motor sandwich's 24 multiplies and 14 adds per point).
+² `Quat::from_scaled_axis`: rotations only, where the motor exponential includes translations.
+
+Per level, in the default build, SoA with one motor takes 0.47 µs portable, 0.50 µs on SSE2 and
+SSE4.2, and 0.27 µs on AVX2.
+
+* **In a default build, the dispatched kernels are the fastest option.** They use AVX2 and FMA,
+  which statically compiled code cannot assume.
+* **With `target-cpu=native`, `wide` catches up** on the same generic kernels, and it wins where
+  the batch form works on arrays of structs. The traced rigid step is batched only in AoS form,
+  and five transposes per batch cost more than the kernel.
+* **The vectorized elementary functions are fast.** `exp` on SoA is 19x faster than scalar gax and
+  2.5x faster than `wide` in the default build, and it still beats `wide` natively.
+* **Arrays of structs cost transposes.** The AoS forms beat scalar loops but not glam's
+  single-point affine transform, whose data layout is its SIMD layout. Keep hot data in `Soa`.
+
+How the kernels stay vectorized (inlining, `Coef::vectorize`, the block layout) is in ADR-023 of
+the [design record](design.md).
+
 ## Compile time and code size
 
 These are debug builds of the library alone; generic code is compiled only when used.
@@ -182,9 +226,12 @@ These are debug builds of the library alone; generic code is compiled only when 
 | STA | 24k | 470 | 48 | 3.7 s |
 | PGA3D | 35k | 733 | 140 | 4.8 s |
 | CGA3D | 73k | 739 | 80 | 14.4 s |
+| STAP | 58k | 571 | 54 | 7.0 s |
+| CSTA | 111k | 1044 | 48 | 31.7 s |
 
-A release build with all six algebras takes 27 s. Regenerating all standard algebras takes 47 s in
-release, most of it spent simplifying CGA3D's 16-component versors.
+A release build with the first six algebras takes 27 s. Regenerating all eight takes about two
+minutes in release. Most of it goes to CSTA (100 s) and to simplifying CGA3D's 16-component
+versors. The line counts above predate the batch kernels (about 5% more per algebra now).
 
 * **Why generated code costs nothing unused.** Every generated function is either generic (over slots
   and coefficients) or `#[inline]`, so machine code exists only for what a program uses.

@@ -82,7 +82,8 @@ let mut motors = vec![Motor::zero(); twists.len()];
 batch::map(&Exp, &twists, &mut motors);
 ```
 
-For any other shape, implement `Kernel` and call `batch::run`. The `chunks`, `gather`,
+`batch::map_soa` does the same on `Soa` storage, without transposes. For any other shape,
+implement `Kernel` and call `batch::run`. The `chunks`, `gather`,
 `scatter`, `column` and `to_array` helpers do the array-of-structs plumbing. Mark kernel
 methods `#[inline(always)]`: a function body is compiled for the detected level only when it
 is inlined into the dispatcher.
@@ -135,10 +136,12 @@ in the last bits.
 
 ## Performance
 
-The numbers are in [performance.md](performance.md#batch-kernels). In short, with 1024
-elements on AVX2:
+The numbers are in [performance.md](performance.md) (section "Batch kernels"). With 1024 elements
+in a default build (no `target-cpu`), where the dispatcher picks AVX2:
 
-* SoA is 3 to 4 times faster than glam for one motor on many points, and 4 to 6 times faster
-  than scalar gax.
-* The AoS forms pay for transposes but still beat scalar loops.
-* `exp` of twists (vectorized `sin` and `cos`) runs 8 times faster than scalar code.
+* One motor on many points in SoA form takes 0.27 µs, about 3x faster than glam's
+  `Affine3A` loop and 4x faster than scalar gax.
+* `exp` of twists in SoA form is 19x faster than scalar code, thanks to the vectorized `sin` and
+  `cos`.
+* The array-of-structs forms pay for transposes: they beat scalar loops but not glam's
+  single-point transform.

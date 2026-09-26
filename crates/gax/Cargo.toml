@@ -58,3 +58,15 @@ required-features = ["pga2d"]
 [[example]]
 name = "cga_sta"
 required-features = ["cga3d", "sta"]
+
+[[example]]
+name = "spacetime"
+required-features = ["stap", "csta"]
+
+[[example]]
+name = "ik_chain"
+required-features = ["pga3d"]
+
+[[example]]
+name = "batch_particles"
+required-features = ["pga3d", "batch"]

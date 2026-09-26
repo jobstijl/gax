@@ -357,12 +357,17 @@ files in `gax/src/algebras/`, behind cargo features.
 * **exp/log:** closed forms for PGA2D/3D (De Keninck & Roelfs 2022), and the invariant decomposition
   elsewhere.
 
+* **Scalars may branch (added later).** `Real::SCALAR` is `true` for `f32` and `f64`, and the LU
+  then pivots with ordinary row swaps instead of lane-wise selects. That and shared pivot
+  reciprocals make the 6x6 inverse 1.7x faster than nalgebra's (it was 1.4x slower).
+
 ## ADR-018: Batching through SIMD coefficient types
 *Status: accepted, implemented. See [performance.md](performance.md).*
 
 * **Lanes are coefficients:** `wide::f32x8` and `f64x4` implement `Coef` and `Real` (feature `wide`), so
   `Point<(), f32x8>` is eight points in SoA form. Every kernel, including solvers, runs unchanged.
 * **Slices:** helpers convert between `&[Point<(), f32>]` and lane chunks.
+* **Runtime dispatch** of the same kernels, independent of `wide`, is ADR-023.
 
 ## ADR-019: Exponentials, logarithms, inverses and normalization through Study numbers
 *Status: accepted, implemented (`gax-core/src/study.rs`, `gax-gen/src/emit_values.rs`).*
@@ -387,7 +392,7 @@ files in `gax/src/algebras/`, behind cargo features.
 
   exp is `c₀ + c₁Q + (s₀ + s₁Q)B`. log recovers `B² = acosh(C)²` from the versor's scalar-plus-4-vector
   part and divides out `S(B²)`. Both are tested as round trips: CGA3D `Bivector ↔ Even` and
-  `Twist ↔ Motor`, and STAP through `algebra!`.
+  `Twist ↔ Motor`, and STAP.
 * **Rotation fast paths.** When the generator proves the scalar part of `B²` is non-positive (minus a
   sum of squares), it emits real-trigonometric closed forms instead. See performance.md.
 * **6D and up (CSTA).** A bivector there splits into three commuting parts, so no closed form is
@@ -430,6 +435,72 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Build time.** The generator runs inside the proc macro. Unoptimized it is slow, so the workspace sets
   `[profile.dev.build-override] opt-level = 3`, and the macro documents the same setting for users.
   Re-expanding STAP (5D) and CSTA (6D) then takes about 6 s.
+
+## ADR-023: Runtime-dispatched batch kernels (`batch`)
+*Status: accepted, implemented (`gax-core/src/batch`). See [batch.md](batch.md).*
+
+* **Goal.** One binary that uses AVX2 and FMA where the CPU has them, without
+  `-C target-cpu=native`, for the kernels gax already generates.
+* **Dispatch.** `fearless_simd` 1.0 detects the level and compiles each kernel once per level: SSE2,
+  SSE4.2, AVX2 or AVX-512 on x86, NEON on Arm, SIMD128 on WebAssembly, and portable code otherwise.
+  `batch::run` takes a `Kernel`, whose `run<L>` method is generic over the lane type, and calls it
+  inside `Simd::vectorize` for the detected level.
+* **Lane types are coefficients.** The generated kernels are generic over `T: Coef`, so nothing
+  is generated twice:
+  * on detected levels, the lanes are `fearless_simd` vectors (`f32x8`, `f64x4`);
+  * the portable lanes are plain arrays.
+* **Soundness.** A `fearless_simd` vector needs its level's token, and `Coef::zero()` has no
+  argument to take one from. The lane types therefore carry a proof type, `Proof<S>`, that is
+  private to gax-core. Only the dispatcher instantiates it, after detection. User code can reach
+  the lane types only as the parameter `L` of `Kernel::run`, so a lane value cannot exist before
+  the level has been detected in the process. Their constructors then assume the token.
+* **Inlining is the whole game.** A function that is not inlined into the dispatched function is
+  compiled for the baseline, and every vector operation in it becomes a call. So:
+  * everything on the hot path is `#[inline(always)]`;
+  * generated code avoids `core::array::from_fn` and `map` there, spelling the arrays out, and uses
+    loops in `slots::values`;
+  * large functions (exp, log, the solvers) wrap their bodies in `Coef::vectorize`, which re-enters
+    the level's target features when the compiler keeps them out of line (`fearless_simd`'s own
+    remedy).
+
+  Before these changes, batched `exp` on AVX2 was 8× slower than on SSE2.
+* **Layouts.**
+  * `Soa<K>` stores blocks of 16 values, coefficient-major within a block (AoSoA), so loads sit at
+    offsets known at compile time with no bounds checks. Plain columns were 2× slower on SSE.
+  * The array-of-structs forms transpose through small buffers: scalar moves plus one vector load
+    per coefficient. Chains of lane inserts were slower than scalar code.
+  * Remainders go through padded buffers, so the kernel body is inlined once and always sees full
+    batches.
+* **Sandwiches.** `SandwichKernel<X, Plain | Certified>` is implemented per pair on the versor's kind
+  marker by generated code (the orphan rule rules out a shared marker type). `BatchTransform`
+  builds the uniform (prepared once) and per-element forms on it, for both layouts.
+* **Traced kernels.** `Tracer::batch(true)` emits `name_batch(&a0, ..., &mut out)`, which gathers
+  lanes, calls the fused `name::<L>` and scatters the results, with broadcasting of length-1
+  arguments. Tracing now supports `select_lt` as a data-flow stage, so `exp` can be traced.
+* **Elementary functions.** `f32` lanes have vectorized sin, cos, sinh, cosh, atan2 and ln (Cephes
+  polynomials, Cody–Waite reduction). They match the scalar `batch::math` versions bit for bit,
+  and those are within 2 to 3 ulp of `std`. `f64` lanes evaluate them per lane.
+* **Verification.** Every level the CPU runs, and the portable path, is checked against the scalar
+  kernels lane for lane with lengths that leave remainders: `gax/tests/batch.rs` and
+  `examples/traced/tests/batch.rs`.
+
+## ADR-024: STAP and CSTA are pre-generated, behind their own features
+*Status: accepted.*
+
+* **Signatures.** Both follow the signatures as stated, `R(3,1,1)` and `R(4,2)`: space `e1, e2, e3`
+  squares to `+1` and time `e4` to `−1`. The STA module keeps its own `(+,−,−,−)` convention with
+  `e0` as time.
+  * STAP adds the degenerate `e0`: vectors are hyperplanes and quadvectors are events, as in PGA.
+    `Motor` is the even subalgebra (Poincaré motions).
+  * CSTA uses the null basis `eo`, `ei` with `eo · ei = −1`, as `cga3d` does. `Motor` is the
+    16-component Poincaré subgroup, and `Twist` its bivectors.
+* **Size.** With 32 blades, STAP generates 2.5 MB of code in 13 s. CSTA has 64 blades. With `Even`
+  and `Odd` declared as versors it produced 14.7 MB in 15 minutes, almost all of it fused sandwiches
+  of the 32-component versors. As plain kinds (products only; `Motor` and `Vector` keep fused
+  sandwiches) it is 6.7 MB in 100 s. Neither algebra is in the default feature set.
+* **Tests.** The generated oracle tests found that random unit Poincaré motors cannot be sampled by
+  normalizing random elements. The harness now also builds them as products of simple factors
+  `1 + c B`.
 
 ---
 

@@ -60,6 +60,9 @@ pub trait Coef:
 /// assert_eq!(midpoint(Point::xyz(0.0f32, 0.0, 0.0), Point::xyz(2.0, 0.0, 0.0)).to_euclidean(), [1.0, 0.0, 0.0]);
 /// ```
 pub trait Real: Coef + Div<Output = Self> {
+    /// Whether this is a single number (`f32`, `f64`) rather than a batch of lanes. Solvers
+    /// branch on scalars where lane types must select.
+    const SCALAR: bool = false;
     /// Square root.
     fn sqrt(self) -> Self;
     /// Reciprocal `1 / self`.
@@ -135,6 +138,7 @@ macro_rules! float_impl {
             }
         }
         impl Real for $t {
+            const SCALAR: bool = true;
             #[inline(always)]
             fn sqrt(self) -> Self {
                 libm_shim::$t::sqrt(self)

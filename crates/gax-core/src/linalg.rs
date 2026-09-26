@@ -143,6 +143,36 @@ pub fn lu<T: Real, M: SquareArr<T>>(a: &M) -> Lu<M, M::Vector> {
             let mut sign = M::zero_vector();
             sign[0] = T::one();
             for k in 0..n {
+                if T::SCALAR {
+                    // One number: pick the pivot row and swap rows with branches.
+                    let (mut p, mut best) = (k, m[k][k].abs());
+                    for r in k + 1..n {
+                        let v = m[r][k].abs();
+                        if T::all_lt(best, v) {
+                            (p, best) = (r, v);
+                        }
+                    }
+                    if p != k {
+                        for j in 0..n {
+                            let t = m[k][j];
+                            m[k][j] = m[p][j];
+                            m[p][j] = t;
+                        }
+                        let t = perm[k];
+                        perm[k] = perm[p];
+                        perm[p] = t;
+                        sign[0] = -sign[0];
+                    }
+                    let inv = m[k][k].recip();
+                    for r in k + 1..n {
+                        let f = m[r][k] * inv;
+                        m[r][k] = f;
+                        for j in k + 1..n {
+                            m[r][j] = m[r][j] - f * m[k][j];
+                        }
+                    }
+                    continue;
+                }
                 // Find the pivot row lane-wise: the largest |m[r][k]| for r >= k.
                 let mut best = m[k][k].abs();
                 let mut best_row = T::from_i64(k as i64);
@@ -248,19 +278,48 @@ pub fn det<T: Real, M: SquareArr<T>>(a: &M) -> T {
 }
 
 /// Inverse, by LU factorization.
+///
+/// The `n` columns share the factorization and the reciprocals of the pivots, so the only
+/// divisions are those `n` reciprocals.
 #[inline]
 pub fn inverse<T: Real, M: SquareArr<T>>(a: &M) -> M {
     T::vectorize(
         #[inline(always)]
         || {
+            let n = M::N;
             let f = lu(a);
+            let mut rdiag = M::zero_vector();
+            for i in 0..n {
+                rdiag[i] = f.lu[i][i].recip();
+            }
+            let half = T::from_f64(0.5);
             let mut inv = M::zero();
-            for j in 0..M::N {
-                let mut e = M::zero_vector();
-                e[j] = T::one();
-                let col = lu_solve(&f, &e);
-                for i in 0..M::N {
-                    inv[i][j] = col[i];
+            for j in 0..n {
+                // P e_j: y[i] = 1 where perm[i] == j (lane-wise for SIMD lanes).
+                let mut y = M::zero_vector();
+                let jj = T::from_i64(j as i64);
+                for i in 0..n {
+                    y[i] = T::select_lt(
+                        f.perm[i],
+                        jj + half,
+                        T::select_lt(jj - half, f.perm[i], T::one(), T::zero()),
+                        T::zero(),
+                    );
+                }
+                // Forward substitution with unit L, then back substitution with U.
+                for i in 0..n {
+                    for k in 0..i {
+                        y[i] = y[i] - f.lu[i][k] * y[k];
+                    }
+                }
+                for i in (0..n).rev() {
+                    for k in i + 1..n {
+                        y[i] = y[i] - f.lu[i][k] * y[k];
+                    }
+                    y[i] = y[i] * rdiag[i];
+                }
+                for i in 0..n {
+                    inv[i][j] = y[i];
                 }
             }
             inv

@@ -237,6 +237,12 @@ fn exp(c: &mut Criterion) {
             black_box(&qout);
         })
     });
+    let soa: Soa<Line> = bs.iter().copied().collect();
+    let mut soa_out: Soa<Motor> = Soa::new();
+    per_level(&mut g, "batch map_soa exp", || {
+        batch::map_soa(&Exp, black_box(&soa), &mut soa_out);
+        black_box(&soa_out);
+    });
     per_level(&mut g, "batch map exp", || {
         batch::map(&Exp, black_box(&bs), &mut out);
         black_box(&out);

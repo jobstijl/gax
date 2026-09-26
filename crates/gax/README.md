@@ -42,7 +42,8 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Algebras of any signature** `Cl(p,q,r)`, including degenerate metrics (plane-based PGA) and
   non-diagonal ones (the CGA null basis `eo`, `ei`), declared with the [`algebra!`] macro.
 * **Standard algebras, pre-generated behind cargo features**, so using them compiles no proc macro:
-  `pga2d`, `pga3d` (default), `vga2d`, `vga3d`, `sta`, `cga3d`.
+  `pga2d`, `pga3d` (default), `vga2d`, `vga3d`, `sta`, `cga3d`, and the larger `stap` (projective
+  spacetime, `R(3,1,1)`) and `csta` (conformal spacetime, `R(4,2)`).
 * **Products for values, maps and forms alike**, each with the slot bookkeeping done by the type
   system: `*`, `^`, `&`, `|`, versor transport `>>` and `<<`, contractions and commutators.
 * **Binding and composition:**
@@ -60,6 +61,9 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
   * operations are generated as straight-line code with exact integer tables, and the sandwich kernels
     are simplified symbolically;
   * SIMD lanes (`f32x8`, feature `wide`) batch any kernel in struct-of-arrays form;
+  * [batch kernels](https://github.com/jobstijl/gax/blob/main/docs/batch.md) (feature `batch`) run
+    sandwiches, your own generic functions and traced kernels over slices, on the best SIMD level
+    the CPU has, chosen at run time;
   * [build-time tracing](https://github.com/jobstijl/gax/blob/main/docs/guide.md#build-time-tracing) fuses your
     own generic functions.
 * **No macros in user code** except `algebra!`. Stable Rust (MSRV 1.89), `no_std`.
@@ -71,7 +75,11 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * Examples:
   * `scene_graph`: a robot arm and a camera, composed into one map per part;
   * `rigid_body_modes`: vibration modes that come out as twists;
-  * `cga_sta`: conformal and spacetime algebra.
+  * `cga_sta`: conformal and spacetime algebra;
+  * `spacetime`: boosts and light cones in STAP and CSTA;
+  * `ik_chain`: inverse kinematics of a robot arm with motors;
+  * `batch_particles`: a particle swarm, scalar against the batch kernels;
+  * a small windowed game, [`examples/asteroids`](https://github.com/jobstijl/gax/tree/main/examples/asteroids).
 * The [design record](https://github.com/jobstijl/gax/blob/main/docs/design.md) and
   [performance notes](https://github.com/jobstijl/gax/blob/main/docs/performance.md).
 

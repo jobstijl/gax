@@ -25,17 +25,20 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 
 | crate | what |
 |---|---|
-| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA3D) behind features, `algebra!`, tracing |
+| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels |
 | [`crates/gax-core`](crates/gax-core) | slot lists, kinds, coefficient traits, binding, solvers, Study-number functions (`no_std`) |
 | [`crates/gax-gen`](crates/gax-gen) | generator: exact tables, symbolic polynomials, simplifier, emitter, `gax-regen` |
 | [`crates/gax-macros`](crates/gax-macros) | the `algebra!` proc macro |
 | [`crates/gax-bench`](crates/gax-bench) | benchmarks against glam, ultraviolet, nalgebra (not published) |
-| [`examples/traced`](examples/traced) | build-time traced kernels, end to end |
+| [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
+| [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
 | [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
 
 ## Documentation
 
 * [Guide](docs/guide.md): extensors as a composition language, in plain terms.
+* [Batch kernels](docs/batch.md): SIMD over slices, with the CPU's best instruction set chosen at
+  run time (feature `batch`).
 * [Design record](docs/design.md): architecture decisions, and the verdict on each design
   hypothesis.
 * [Research log](docs/research.md): prior art, and what was taken from it.
@@ -46,10 +49,11 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 
 ```sh
 cargo test --workspace                                         # tests (default algebras)
-cargo test -p gax --features all-algebras,wide                 # every algebra, SIMD lanes
+cargo test -p gax --features all-algebras,wide,batch           # every algebra, SIMD lanes, batch kernels
 cargo run --release -p gax-gen --bin gax-regen                 # regenerate the standard algebras
 cargo run --release -p gax-gen --bin gax-regen -- --check      # CI: are they up to date?
 RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench      # benchmarks
+cd examples/asteroids && cargo run --release                    # the game
 ```
 
 The minimum supported Rust version is 1.89. The crates are not yet published on crates.io.

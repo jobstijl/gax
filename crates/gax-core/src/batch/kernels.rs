@@ -26,15 +26,13 @@ where
     M::Coef: LaneElem,
 {
     let xs = &xs[..L::LANES];
-    // Column by column through a buffer: scalar moves and one vector load per coefficient.
     Extensor::from_coeffs(<M::Kind as Kind>::arr_from_fn(
         #[inline(always)]
         |i| {
-            let mut col = [M::Coef::zero(); MAX_LANES];
-            for (c, x) in col.iter_mut().zip(xs) {
-                *c = x.coeffs().as_ref()[i];
-            }
-            L::load(&col)
+            L::from_fn(
+                #[inline(always)]
+                |l| xs[l].coeffs().as_ref()[i],
+            )
         },
     ))
 }
@@ -217,6 +215,28 @@ pub fn map<F: Map, E: LaneElem>(f: &F, xs: &[Mv<F::X, E>], out: &mut [Mv<F::Y, E
         }
     }
     assert_eq!(xs.len(), out.len(), "batch::map: lengths differ");
+    run(Run(f, xs, out));
+}
+
+/// `out[i] = f(xs[i])` on struct-of-arrays storage (no transposes); `out` is resized to
+/// `xs.len()`.
+#[inline]
+pub fn map_soa<F: Map, E: LaneElem>(f: &F, xs: &Soa<F::X, E>, out: &mut Soa<F::Y, E>) {
+    struct Run<'a, F: Map, E: LaneElem>(&'a F, &'a Soa<F::X, E>, &'a mut Soa<F::Y, E>);
+    impl<F: Map, E: LaneElem> Kernel<E> for Run<'_, F, E> {
+        type Output = ();
+        #[inline(always)]
+        fn run<L: Batch<Elem = E>>(self) {
+            let Run(f, xs, out) = self;
+            soa_map::<F::X, F::Y, L>(
+                xs,
+                out,
+                #[inline(always)]
+                |x| f.call(x),
+            );
+        }
+    }
+    out.resize(xs.len());
     run(Run(f, xs, out));
 }
 

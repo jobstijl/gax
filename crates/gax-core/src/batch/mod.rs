@@ -29,7 +29,7 @@
 //! functions are evaluated lane by lane with the scalar implementation.
 //!
 //! Your own kernels run batched by implementing [`Map`] (one input kind) and calling
-//! [`map`], or, for any shape, by implementing [`Kernel`] and calling [`run`] (with
+//! [`map`] or [`map_soa`], or, for any shape, by implementing [`Kernel`] and calling [`run`] (with
 //! [`chunks`], [`gather`] and [`scatter`] for the array-of-structs plumbing).
 
 mod kernels;
@@ -43,7 +43,7 @@ pub use fearless_simd;
 pub use fearless_simd::Level;
 pub use kernels::{
     BatchTransform, Certified, MAX_LANES, Map, OutOf, OutputOf, Plain, SandwichKernel, VersorType,
-    chunks, chunks2, column, gather, map, scatter, to_array,
+    chunks, chunks2, column, gather, map, map_soa, scatter, to_array,
 };
 pub use lanes::{Lanes, Portable};
 use simd_lanes::Proof;
