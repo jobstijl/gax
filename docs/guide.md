@@ -212,6 +212,11 @@ eight points in struct-of-arrays form, and every kernel runs on all eight at onc
 array-of-structs form are slower than glam's hand-tuned SIMD; [performance.md](performance.md) says
 where and why.
 
+The `batch` feature does the same without choosing an instruction set at compile time.
+`m.transform_slice(&points, &mut out)` and `m.transform_soa(&soa, &mut out)` run on the best
+SIMD level the CPU has, detected at run time, and so do your own generic functions (`batch::map`)
+and traced kernels (`name_batch`). See [batch.md](batch.md).
+
 ## 8. Build-time tracing
 
 `gax` can run your generic function on *symbolic* coefficients at build time, simplify the result,
