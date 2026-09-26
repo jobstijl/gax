@@ -42,8 +42,8 @@ mod soa;
 pub use fearless_simd;
 pub use fearless_simd::Level;
 pub use kernels::{
-    BatchTransform, Certified, MAX_LANES, Map, OutOf, OutputOf, Plain, SandwichKernel, VersorType, chunks,
-    chunks2, column, gather, map, scatter, to_array,
+    BatchTransform, Certified, MAX_LANES, Map, OutOf, OutputOf, Plain, SandwichKernel, VersorType,
+    chunks, chunks2, column, gather, map, scatter, to_array,
 };
 pub use lanes::{Lanes, Portable};
 use simd_lanes::Proof;

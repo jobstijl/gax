@@ -247,7 +247,9 @@ pub fn soa_map2<A: Kind, B: Kind, Y: Kind, L: Batch>(
     out: &mut Soa<Y, L::Elem>,
     mut f: impl FnMut(Mv<A, L>, Mv<B, L>) -> Mv<Y, L>,
 ) {
-    assert!(BLOCK.is_multiple_of(L::LANES) && a.blocks() == b.blocks() && out.blocks() >= a.blocks());
+    assert!(
+        BLOCK.is_multiple_of(L::LANES) && a.blocks() == b.blocks() && out.blocks() >= a.blocks()
+    );
     let blocks = a
         .data
         .chunks_exact(A::N * BLOCK)

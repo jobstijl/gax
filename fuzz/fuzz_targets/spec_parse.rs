@@ -9,7 +9,13 @@ fuzz_target!(|data: &[u8]| {
         if let Ok(spec) = gax_gen::spec::AlgebraSpec::parse(src) {
             // Keep emission cheap for the fuzzer: only small algebras.
             if spec.algebra.dim() <= 3 && spec.kinds.len() <= 6 {
-                let _ = gax_gen::emit::emit(&spec, &gax_gen::emit::Config { core: "::gax".into() });
+                let _ = gax_gen::emit::emit(
+                    &spec,
+                    &gax_gen::emit::Config {
+                        core: "::gax".into(),
+                        batch: Some(String::new()),
+                    },
+                );
             }
         }
     }

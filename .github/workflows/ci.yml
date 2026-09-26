@@ -32,6 +32,24 @@ jobs:
       - name: no_std build of the core
         run: cargo build -p gax-core --no-default-features
 
+  asteroids:
+    name: example game (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/asteroids
+      - run: cargo test
+        working-directory: examples/asteroids
+      - run: cargo build --release
+        working-directory: examples/asteroids
+
   generated:
     name: generated algebras are up to date
     runs-on: ubuntu-latest

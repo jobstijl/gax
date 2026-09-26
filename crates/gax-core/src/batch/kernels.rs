@@ -274,8 +274,7 @@ impl<M: Extensor<Slots = ()>> VersorType for crate::unit::Unit<M> {
 pub type OutOf<V, X> = <<V as VersorType>::Kind as SandwichKernel<X, <V as VersorType>::Cert>>::Y;
 
 /// The result type of versor type `V` acting on a value of type `M`.
-pub type OutputOf<V, M> =
-    Mv<OutOf<V, <M as Extensor>::Kind>, <M as Extensor>::Coef>;
+pub type OutputOf<V, M> = Mv<OutOf<V, <M as Extensor>::Kind>, <M as Extensor>::Coef>;
 
 /// Batch sandwiches: `v x ~v` for many `x`, or for many pairs, on SIMD lanes.
 ///
