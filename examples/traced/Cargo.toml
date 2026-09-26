@@ -8,7 +8,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-gax = { path = "../../crates/gax" }
+gax = { path = "../../crates/gax", features = ["batch"] }
 
 [build-dependencies]
 gax = { path = "../../crates/gax", features = ["trace"] }

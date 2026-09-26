@@ -38,6 +38,8 @@ pub fn algebra(input: TokenStream) -> TokenStream {
         &spec,
         &gax_gen::emit::Config {
             core: "::gax".into(),
+            // Enabled by gax's `batch` feature, which turns this crate's on.
+            batch: cfg!(feature = "batch").then(String::new),
         },
     );
     let doc = if spec.doc.is_empty() {

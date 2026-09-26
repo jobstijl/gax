@@ -210,6 +210,8 @@ pub enum StageOp {
     Call(crate::slp::Func),
     /// `atan2(args[0], args[1])`.
     Atan2,
+    /// `if args[0] < args[1] { args[2] } else { args[3] }`.
+    Select,
     /// `args[0] + args[1]`
     Add,
     /// `args[0] - args[1]`
@@ -247,6 +249,7 @@ pub fn compile_staged(
         let r = match st.op {
             StageOp::Call(f) => b.emit(Instr::Call(f, ops[0])),
             StageOp::Atan2 => b.emit(Instr::Atan2(ops[0], ops[1])),
+            StageOp::Select => b.emit(Instr::Select(ops[0], ops[1], ops[2], ops[3])),
             StageOp::Add => b.emit(Instr::Add(ops[0], ops[1])),
             StageOp::Sub => b.emit(Instr::Sub(ops[0], ops[1])),
             StageOp::Mul => b.mul(ops[0], ops[1]),

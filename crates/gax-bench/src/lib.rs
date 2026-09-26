@@ -119,3 +119,53 @@ pub fn probe_rigid_fused(
 ) -> (Motor, gax::pga3d::Line) {
     fused::rigid_step_fixed_fused(m, b, f)
 }
+
+/// Batch SoA transform (for inspecting the dispatched kernels).
+#[inline(never)]
+pub fn probe_batch_soa(
+    m: Unit<Motor>,
+    xs: &gax::batch::Soa<Point>,
+    out: &mut gax::batch::Soa<Point>,
+) {
+    use gax::batch::BatchTransform;
+    m.transform_soa(xs, out);
+}
+
+/// One lane multiply-add at the AVX2 level, portable level.
+#[inline(never)]
+pub fn probe_lanes_fma(
+    a: gax::batch::Lanes<f32, 8>,
+    b: gax::batch::Lanes<f32, 8>,
+    c: gax::batch::Lanes<f32, 8>,
+) -> gax::batch::Lanes<f32, 8> {
+    a * b + c
+}
+
+/// Batch AoS transform (for inspecting the transposes).
+#[inline(never)]
+pub fn probe_batch_aos(m: Unit<Motor>, xs: &[Point], out: &mut [Point]) {
+    use gax::batch::BatchTransform;
+    m.transform_slice(xs, out);
+}
+
+/// Batch pairwise sandwiches (for inspecting the dispatched kernel).
+#[inline(never)]
+pub fn probe_batch_each(ms: &[Unit<Motor>], xs: &[Point], out: &mut [Point]) {
+    use gax::batch::BatchTransform;
+    Unit::transform_each(ms, xs, out);
+}
+
+/// Batch exp of twists (for inspecting the dispatched kernel).
+#[inline(never)]
+pub fn probe_batch_exp(bs: &[gax::pga3d::Line], out: &mut [Motor]) {
+    struct Exp;
+    impl gax::batch::Map for Exp {
+        type X = gax::pga3d::Line;
+        type Y = Motor;
+        #[inline(always)]
+        fn call<T: gax::Real>(&self, b: gax::pga3d::Line<(), T>) -> Motor<(), T> {
+            b.exp().into_inner()
+        }
+    }
+    gax::batch::map(&Exp, bs, out);
+}

@@ -42,3 +42,8 @@ pub fn shadow_on_floor<S: Slots, T: Real>(
     let floor = Plane::new(T::zero(), T::zero(), T::one(), T::zero());
     shadow_of_moved(m, light, floor, p)
 }
+
+/// Move a point along the screw motion `exp(b)` (sines and cosines inside).
+pub fn screw_apply<T: Real>(b: Line<(), T>, p: Point<(), T>) -> Point<(), T> {
+    b.exp() >> p
+}

@@ -1,0 +1,21 @@
+// Projective spacetime algebra, R(3,1,1): the spacetime of special relativity with signature
+// (+ + + -) and a degenerate e0, the way PGA extends Euclidean space. e1, e2, e3 are space,
+// e4 is time. Vectors are hyperplanes and quadvectors are events (points), as in PGA.
+algebra stap "Projective spacetime algebra `R(3,1,1)`: space `e1, e2, e3` (square `+1`), time `e4` (square `-1`) and the degenerate `e0`. Vectors are hyperplanes, quadvectors are events.";
+basis e0 = 0, e1 = 1, e2 = 1, e3 = 1, e4 = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e0, e1, e2, e3, e4] "A hyperplane `a e1 + b e2 + c e3 + d e4 + δ e0`. As a versor it is a reflection.";
+kind Bivector = [e01, e02, e03, e04, e23, e31, e12, e41, e42, e43] "A bivector: the generator of a Poincaré motion. `e01, e02, e03, e04` are the translations, `e23, e31, e12` the rotations and `e41, e42, e43` the boosts.";
+kind Trivector = [e023, e031, e012, e014, e024, e034, e123, e234, e314, e124] "A trivector: a line (the meet of three hyperplanes).";
+kind Quadvector = [e0324, e0134, e0214, e0123, e1234] "An event `x e0324 + y e0134 + z e0214 + t e0123 + e1234` (the meet of four hyperplanes).";
+kind Pseudoscalar = [e01234] "The pseudoscalar `e01234`.";
+versor Motor = [1, e01, e02, e03, e04, e23, e31, e12, e41, e42, e43, e0324, e0134, e0214, e0123, e1234] "A Poincaré motion: a Lorentz transformation and a translation (the even subalgebra).";
+versor Odd = [e0, e1, e2, e3, e4, e023, e031, e012, e014, e024, e034, e123, e234, e314, e124, e01234] "The odd subalgebra: reflections composed with motions.";
+kind Multivector = [1, e0, e1, e2, e3, e4, e01, e02, e03, e04, e23, e31, e12, e41, e42, e43, e023, e031, e012, e014, e024, e034, e123, e234, e314, e124, e0324, e0134, e0214, e0123, e1234, e01234] "A general multivector.";
+
+alias Hyperplane = Vector;
+alias Line = Trivector;
+alias Event = Quadvector;
+alias Point = Quadvector;
+alias Even = Motor;

@@ -283,7 +283,7 @@ impl<T: Real, N: Channel<T>> Channel<T> for Dual<N> {
 
 /// `C(x) = cosh(√x)` and `S(x) = sinh(√x)/√x`, the even and odd parts of the exponential of an
 /// element whose square is `x`: `exp(B) = C(B²) + S(B²) B`.
-#[inline]
+#[inline(always)]
 pub fn exp_parts<T: Real, N: Channel<T>>(x: N) -> (N, N) {
     let one = N::real(T::one());
     let r = x.sqrt();
@@ -313,7 +313,7 @@ pub fn exp_parts<T: Real, N: Channel<T>>(x: N) -> (N, N) {
 /// `H = w / sinh(w)` with `cosh w = c`, evaluated as `2 atanh(t) / (t (1 + c))`,
 /// `t = √u / (1 + c) = tanh(w / 2)`, which is stable near the identity (`u → 0`) and for
 /// rotations up to (but not including) a half turn.
-#[inline]
+#[inline(always)]
 pub fn log_factor<T: Real, N: Channel<T>>(c: N, u: N) -> N {
     let one = N::real(T::one());
     let half = N::real(T::from_f64(0.5));
@@ -331,7 +331,7 @@ pub fn log_factor<T: Real, N: Channel<T>>(c: N, u: N) -> N {
 
 /// Evaluate a function of one Study number `a + b I` (with `I² = isq`) through its channels,
 /// returning the Study number `f0 + f1 I`.
-#[inline]
+#[inline(always)]
 pub fn study1<T: Real>(isq: i8, a: T, b: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
     let zero = T::zero();
     match isq {
@@ -363,7 +363,7 @@ pub fn study1<T: Real>(isq: i8, a: T, b: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T
 }
 
 /// Like [`study1`], for a function of two Study numbers with the same `I`.
-#[inline]
+#[inline(always)]
 pub fn study2<T: Real>(
     isq: i8,
     x: (T, T),
@@ -416,7 +416,7 @@ pub fn study2<T: Real>(
 /// let [c0, _, s0, _] = gax_core::study::exp_coeffs(-1, -th * th, 0.0);
 /// assert!((c0 - th.cos()).abs() < 1e-15 && (s0 - th.sin() / th).abs() < 1e-15);
 /// ```
-#[inline]
+#[inline(always)]
 pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
     let (c0, c1) = study1(isq, lambda, mu, |x| exp_parts(x).0);
     let (s0, s1) = study1(isq, lambda, mu, |x| exp_parts(x).1);
@@ -425,14 +425,14 @@ pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
 
 /// `(h0, h1)` with `log(R) = (h0 + h1 I) ⟨R⟩₂` for a unit versor `R` whose scalar and
 /// pseudoscalar parts are `c = c0 + c1 I` and whose bivector part squares to `u0 + u1 I`.
-#[inline]
+#[inline(always)]
 pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
     let (h0, h1) = study2(isq, c, u, log_factor);
     [h0, h1]
 }
 
 /// `(a + b I)^(-1/2)` as a Study number `[r0, r1]`.
-#[inline]
+#[inline(always)]
 pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     let (r0, r1) = study1(isq, a, b, |z| {
         Dual {
@@ -450,7 +450,7 @@ pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
 /// the square of a bivector is a scalar plus a 4-vector whose square is a scalar. With
 /// `w = √q` (a complex root), `f0 = (f(a+w) + f(a−w))/2` and `f1 = (f(a+w) − f(a−w))/(2w)`;
 /// near `q = 0` the derivative is used instead, `f1 = f'(a)`.
-#[inline]
+#[inline(always)]
 pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
     let zero = T::zero();
     let w = Cx::real(q).sqrt(); // real for q > 0, imaginary for q < 0
@@ -477,7 +477,7 @@ pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (
 }
 
 /// [`exp_coeffs`] for `B² = lambda + Q` with `Q² = q`: `exp(B) = c0 + c1 Q + (s0 + s1 Q) B`.
-#[inline]
+#[inline(always)]
 pub fn exp_coeffs_q<T: Real>(lambda: T, q: T) -> [T; 4] {
     let (c0, c1) = study_q(lambda, q, |x| exp_parts(x).0);
     let (s0, s1) = study_q(lambda, q, |x| exp_parts(x).1);
@@ -486,7 +486,7 @@ pub fn exp_coeffs_q<T: Real>(lambda: T, q: T) -> [T; 4] {
 
 /// `acosh(y)²`, the square of the bivector whose exponential has scalar part `y`, analytic
 /// at `y = 1` (series there).
-#[inline]
+#[inline(always)]
 fn acosh_sq<T: Real, N: Channel<T>>(y: N) -> N {
     let one = N::real(T::one());
     let t = y - one;
@@ -503,7 +503,7 @@ fn acosh_sq<T: Real, N: Channel<T>>(y: N) -> N {
 /// `C = c0 + C4` with `C4² = qc`: `log R = h0 P + h1 C4 P`.
 ///
 /// `B² = acosh(C)²` is found from `C` alone, and `B = S(B²)⁻¹ P`.
-#[inline]
+#[inline(always)]
 pub fn log_coeffs_q<T: Real>(c0: T, qc: T) -> [T; 2] {
     let (g0, g1) = study_q(c0, qc, acosh_sq);
     let qx = g1 * g1 * qc;
@@ -517,7 +517,7 @@ pub fn log_coeffs_q<T: Real>(c0: T, qc: T) -> [T; 2] {
 /// `I² = 0` (or `mu = 0`), as for every bivector of plane-based PGA. With `a = √(-λ)`:
 /// `C = cos a`, `S = sin a / a`, `C' = S / 2`, `S' = (S - C) / (2 a²)`, and the `I` parts are
 /// `μ C'` and `μ S'`. Series are used near `a = 0`.
-#[inline]
+#[inline(always)]
 pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
     let a2 = (-lambda).max(T::zero());
     let a = a2.sqrt();
@@ -545,7 +545,7 @@ pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
 /// and `I² = 0` (or no `I` part). With `s = √(-u0)` and `θ = atan2(s, c0)`: `h0 = θ / s`, and
 /// the `I` part is `c1 ∂h/∂c + u1 ∂h/∂u` with `∂h/∂c = -1/(c0² + s²)` and
 /// `∂h/∂u = (θ - c0 s/(c0² + s²)) / (2 s³)`. Series are used near `s = 0`.
-#[inline]
+#[inline(always)]
 pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
     let s2 = (-u.0).max(T::zero());
     let s = s2.sqrt();
@@ -564,7 +564,7 @@ pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
 }
 
 /// Fast path of [`rsqrt`] for `I² = 0`: `(a + b I)^(-1/2) = a^(-1/2) - (b/2) a^(-3/2) I`.
-#[inline]
+#[inline(always)]
 pub fn rsqrt_nil<T: Real>(a: T, b: T) -> [T; 2] {
     let r = a.sqrt().recip();
     [r, -(b * r * r * r) * T::from_f64(0.5)]

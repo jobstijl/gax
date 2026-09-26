@@ -337,13 +337,21 @@ impl<S: Slots, R: Slots, T: Coef> Mul<SlotArr<R, T>> for SlotArr<S, T> {
 #[inline(always)]
 pub fn values<S: Slots, T: Coef, const N: usize>(c: &[S::Arr<T>; N]) -> Option<[T; N]> {
     S::as_value(&c[0])?;
-    Some(core::array::from_fn(|i| {
-        S::as_value(&c[i]).expect("value slots")
-    }))
+    // Loops rather than `array::from_fn`/`map`, which batch kernels need inlined.
+    let mut out = [T::zero(); N];
+    for (o, x) in out.iter_mut().zip(c) {
+        *o = S::as_value(x).expect("value slots");
+    }
+    Some(out)
 }
 
 /// The inverse of [`values`]. Only called on the value path, where it cannot fail.
 #[inline(always)]
 pub fn from_values<S: Slots, T: Coef, const N: usize>(v: [T; N]) -> [S::Arr<T>; N] {
-    v.map(|x| S::from_value(x).expect("from_values called with open slots"))
+    let open = "from_values called with open slots";
+    let mut out = [S::from_value(T::zero()).expect(open); N];
+    for (o, x) in out.iter_mut().zip(v) {
+        *o = S::from_value(x).expect(open);
+    }
+    out
 }

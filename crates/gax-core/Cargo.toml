@@ -12,10 +12,13 @@ default = ["std"]
 std = []
 ## SIMD lane coefficients (`f32x8`, `f64x4`, ...) from the `wide` crate.
 wide = ["dep:wide"]
+## Runtime-dispatched SIMD batch kernels (`gax::batch`), built on `fearless_simd`.
+batch = ["std", "dep:fearless_simd"]
 
 [dependencies]
 libm = "0.2"
 wide = { version = "1.7", optional = true, default-features = false }
+fearless_simd = { version = "1.0", optional = true, default-features = false, features = ["std"] }
 
 [dev-dependencies]
 proptest = "1"

@@ -1,0 +1,21 @@
+// Conformal spacetime algebra, R(4,2): spacetime with signature (+ + + -) (e1, e2, e3 space,
+// e4 time) and a null pair eo (origin), ei (infinity) with eo . ei = -1, as in cga3d.
+algebra csta "Conformal spacetime algebra `R(4,2)`: space `e1, e2, e3` (square `+1`), time `e4` (square `-1`) and the null basis `eo` (origin), `ei` (infinity) with `eo . ei = -1`.";
+basis e1 = 1, e2 = 1, e3 = 1, e4 = -1, eo = 0, ei = 0;
+metric eo ei = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2, e3, e4, eo, ei] "A vector: an event `x + ½x² ei + eo` (with the Minkowski square `x²`), a hyperboloid or a hyperplane (dual). As a versor it is a reflection or an inversion.";
+kind Twist = [e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i] "The bivectors of Poincaré motions: rotations `e23, e31, e12`, boosts `e41, e42, e43` and translations `e1i, e2i, e3i, e4i`.";
+kind Bivector = [e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi] "A bivector: the generator of a conformal transformation.";
+kind Trivector = [e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi] "A trivector.";
+kind Quadvector = [e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi] "A quadvector.";
+kind Quintvector = [e234oi, e314oi, e124oi, e123oi, e1234o, e1234i] "A quintvector (dual to a vector).";
+kind Pseudoscalar = [e1234oi] "The pseudoscalar `e1234oi`.";
+versor Motor = [1, e23, e31, e12, e41, e42, e43, e1i, e2i, e3i, e4i, e234i, e314i, e124i, e123i, e1234] "A Poincaré motion: a Lorentz transformation and a translation.";
+kind Even = [1, e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi, e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi, e1234oi] "The even subalgebra: all conformal versors of even grade (their sandwiches go through the general product; `Motor` has fused kernels).";
+kind Odd = [e1, e2, e3, e4, eo, ei, e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi, e234oi, e314oi, e124oi, e123oi, e1234o, e1234i] "The odd subalgebra.";
+kind Multivector = [1, e1, e2, e3, e4, eo, ei, e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi, e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi, e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi, e234oi, e314oi, e124oi, e123oi, e1234o, e1234i, e1234oi] "A general multivector.";
+
+alias Point = Vector;
+alias Event = Vector;

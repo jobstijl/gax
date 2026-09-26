@@ -131,119 +131,141 @@ pub struct Lu<M, V> {
 /// downstream, as for the scalar algorithm.
 #[inline]
 pub fn lu<T: Real, M: SquareArr<T>>(a: &M) -> Lu<M, M::Vector> {
-    let n = M::N;
-    let mut m = *a;
-    let mut perm = M::zero_vector();
-    for i in 0..n {
-        perm[i] = T::from_i64(i as i64);
-    }
-    let mut sign = M::zero_vector();
-    sign[0] = T::one();
-    for k in 0..n {
-        // Find the pivot row lane-wise: the largest |m[r][k]| for r >= k.
-        let mut best = m[k][k].abs();
-        let mut best_row = T::from_i64(k as i64);
-        for r in k + 1..n {
-            let v = m[r][k].abs();
-            best_row = T::select_lt(best, v, T::from_i64(r as i64), best_row);
-            best = best.max(v);
-        }
-        // Swap row k with the pivot row, lane-wise; skipped when no lane needs a swap.
-        let half = T::from_f64(0.5);
-        let no_swap = T::all_lt((best_row - T::from_i64(k as i64)).abs(), half);
-        for r in (k + 1..n).filter(|_| !no_swap) {
-            let rr = T::from_i64(r as i64);
-            // is_pivot: best_row == r, as a select on (best_row < r+0.5) and (r-0.5 < best_row).
-            let lo = rr - half;
-            let hi = rr + half;
-            let sel = |x: T, y: T| T::select_lt(best_row, hi, T::select_lt(lo, best_row, x, y), y);
-            for j in 0..n {
-                let (a_k, a_r) = (m[k][j], m[r][j]);
-                m[k][j] = sel(a_r, a_k);
-                m[r][j] = sel(a_k, a_r);
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            let mut m = *a;
+            let mut perm = M::zero_vector();
+            for i in 0..n {
+                perm[i] = T::from_i64(i as i64);
             }
-            let (p_k, p_r) = (perm[k], perm[r]);
-            perm[k] = sel(p_r, p_k);
-            perm[r] = sel(p_k, p_r);
-            sign[0] = sel(-sign[0], sign[0]);
-        }
-        let inv = m[k][k].recip();
-        for r in k + 1..n {
-            let f = m[r][k] * inv;
-            m[r][k] = f;
-            for j in k + 1..n {
-                m[r][j] = m[r][j] - f * m[k][j];
+            let mut sign = M::zero_vector();
+            sign[0] = T::one();
+            for k in 0..n {
+                // Find the pivot row lane-wise: the largest |m[r][k]| for r >= k.
+                let mut best = m[k][k].abs();
+                let mut best_row = T::from_i64(k as i64);
+                for r in k + 1..n {
+                    let v = m[r][k].abs();
+                    best_row = T::select_lt(best, v, T::from_i64(r as i64), best_row);
+                    best = best.max(v);
+                }
+                // Swap row k with the pivot row, lane-wise; skipped when no lane needs a swap.
+                let half = T::from_f64(0.5);
+                let no_swap = T::all_lt((best_row - T::from_i64(k as i64)).abs(), half);
+                for r in (k + 1..n).filter(|_| !no_swap) {
+                    let rr = T::from_i64(r as i64);
+                    // is_pivot: best_row == r, as a select on (best_row < r+0.5) and (r-0.5 < best_row).
+                    let lo = rr - half;
+                    let hi = rr + half;
+                    let sel = |x: T, y: T| {
+                        T::select_lt(best_row, hi, T::select_lt(lo, best_row, x, y), y)
+                    };
+                    for j in 0..n {
+                        let (a_k, a_r) = (m[k][j], m[r][j]);
+                        m[k][j] = sel(a_r, a_k);
+                        m[r][j] = sel(a_k, a_r);
+                    }
+                    let (p_k, p_r) = (perm[k], perm[r]);
+                    perm[k] = sel(p_r, p_k);
+                    perm[r] = sel(p_k, p_r);
+                    sign[0] = sel(-sign[0], sign[0]);
+                }
+                let inv = m[k][k].recip();
+                for r in k + 1..n {
+                    let f = m[r][k] * inv;
+                    m[r][k] = f;
+                    for j in k + 1..n {
+                        m[r][j] = m[r][j] - f * m[k][j];
+                    }
+                }
             }
-        }
-    }
-    Lu { lu: m, perm, sign }
+            Lu { lu: m, perm, sign }
+        },
+    )
 }
 
 /// Solve `A x = b` given the LU factorization of `A`.
 #[inline]
 pub fn lu_solve<T: Real, M: SquareArr<T>>(f: &Lu<M, M::Vector>, b: &M::Vector) -> M::Vector {
-    let n = M::N;
-    // Apply the permutation lane-wise: pb[i] = b[perm[i]]; skipped when it is the identity in
-    // every lane.
-    let half = T::from_f64(0.5);
-    let mut displaced = T::zero();
-    for i in 0..n {
-        displaced = displaced + (f.perm[i] - T::from_i64(i as i64)).abs();
-    }
-    let mut pb = *b;
-    if !T::all_lt(displaced, half) {
-        for i in 0..n {
-            let mut v = b[0];
-            for r in 1..n {
-                let rr = T::from_i64(r as i64);
-                v = T::select_lt(rr - half, f.perm[i], b[r], v);
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            // Apply the permutation lane-wise: pb[i] = b[perm[i]]; skipped when it is the identity in
+            // every lane.
+            let half = T::from_f64(0.5);
+            let mut displaced = T::zero();
+            for i in 0..n {
+                displaced = displaced + (f.perm[i] - T::from_i64(i as i64)).abs();
             }
-            pb[i] = v;
-        }
-    }
-    // Forward substitution with unit L.
-    let mut y = pb;
-    for i in 0..n {
-        for k in 0..i {
-            y[i] = y[i] - f.lu[i][k] * y[k];
-        }
-    }
-    // Back substitution with U.
-    let mut x = y;
-    for i in (0..n).rev() {
-        for k in i + 1..n {
-            x[i] = x[i] - f.lu[i][k] * x[k];
-        }
-        x[i] = x[i] / f.lu[i][i];
-    }
-    x
+            let mut pb = *b;
+            if !T::all_lt(displaced, half) {
+                for i in 0..n {
+                    let mut v = b[0];
+                    for r in 1..n {
+                        let rr = T::from_i64(r as i64);
+                        v = T::select_lt(rr - half, f.perm[i], b[r], v);
+                    }
+                    pb[i] = v;
+                }
+            }
+            // Forward substitution with unit L.
+            let mut y = pb;
+            for i in 0..n {
+                for k in 0..i {
+                    y[i] = y[i] - f.lu[i][k] * y[k];
+                }
+            }
+            // Back substitution with U.
+            let mut x = y;
+            for i in (0..n).rev() {
+                for k in i + 1..n {
+                    x[i] = x[i] - f.lu[i][k] * x[k];
+                }
+                x[i] = x[i] / f.lu[i][i];
+            }
+            x
+        },
+    )
 }
 
 /// Determinant.
 #[inline]
 pub fn det<T: Real, M: SquareArr<T>>(a: &M) -> T {
-    let f = lu(a);
-    let mut d = f.sign[0];
-    for i in 0..M::N {
-        d = d * f.lu[i][i];
-    }
-    d
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let f = lu(a);
+            let mut d = f.sign[0];
+            for i in 0..M::N {
+                d = d * f.lu[i][i];
+            }
+            d
+        },
+    )
 }
 
 /// Inverse, by LU factorization.
 #[inline]
 pub fn inverse<T: Real, M: SquareArr<T>>(a: &M) -> M {
-    let f = lu(a);
-    let mut inv = M::zero();
-    for j in 0..M::N {
-        let mut e = M::zero_vector();
-        e[j] = T::one();
-        let col = lu_solve(&f, &e);
-        for i in 0..M::N {
-            inv[i][j] = col[i];
-        }
-    }
-    inv
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let f = lu(a);
+            let mut inv = M::zero();
+            for j in 0..M::N {
+                let mut e = M::zero_vector();
+                e[j] = T::one();
+                let col = lu_solve(&f, &e);
+                for i in 0..M::N {
+                    inv[i][j] = col[i];
+                }
+            }
+            inv
+        },
+    )
 }
 
 /// Cholesky factorization `A = L Lᵀ` of a symmetric positive definite matrix (lower `L`).
@@ -252,25 +274,30 @@ pub fn inverse<T: Real, M: SquareArr<T>>(a: &M) -> M {
 /// NaN in `L` (the square root of a negative number).
 #[inline]
 pub fn cholesky<T: Real, M: SquareArr<T>>(a: &M) -> M {
-    let n = M::N;
-    let mut l = M::zero();
-    for j in 0..n {
-        let mut d = a[j][j];
-        for k in 0..j {
-            d = d - l[j][k] * l[j][k];
-        }
-        let ljj = d.sqrt();
-        l[j][j] = ljj;
-        let inv = ljj.recip();
-        for i in j + 1..n {
-            let mut s = a[i][j];
-            for k in 0..j {
-                s = s - l[i][k] * l[j][k];
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            let mut l = M::zero();
+            for j in 0..n {
+                let mut d = a[j][j];
+                for k in 0..j {
+                    d = d - l[j][k] * l[j][k];
+                }
+                let ljj = d.sqrt();
+                l[j][j] = ljj;
+                let inv = ljj.recip();
+                for i in j + 1..n {
+                    let mut s = a[i][j];
+                    for k in 0..j {
+                        s = s - l[i][k] * l[j][k];
+                    }
+                    l[i][j] = s * inv;
+                }
             }
-            l[i][j] = s * inv;
-        }
-    }
-    l
+            l
+        },
+    )
 }
 
 /// Solve `L y = b` for lower triangular `L`.
@@ -302,7 +329,10 @@ pub fn solve_lower_transposed<T: Real, M: SquareArr<T>>(l: &M, y: &M::Vector) ->
 /// Solve `A x = b` with `A = L Lᵀ` given by [`cholesky`].
 #[inline]
 pub fn cholesky_solve<T: Real, M: SquareArr<T>>(l: &M, b: &M::Vector) -> M::Vector {
-    solve_lower_transposed(l, &solve_lower(l, b))
+    T::vectorize(
+        #[inline(always)]
+        || solve_lower_transposed(l, &solve_lower(l, b)),
+    )
 }
 
 /// The Jacobi rotation `(c, s)` that annihilates `a[p][q]` of a symmetric 2×2 block
@@ -334,51 +364,56 @@ fn jacobi_rotation<T: Real>(app: T, aqq: T, apq: T) -> (T, T) {
 /// default for `N ≤ 8`, 12 for `N ≤ 32`.
 #[inline]
 pub fn eigh<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M::Vector, M) {
-    let n = M::N;
-    let mut a = *a;
-    let mut v: M = identity();
-    // Converged when the off-diagonal part is negligible against the diagonal, in every lane.
-    let tol = T::epsilon() * T::epsilon();
-    for _ in 0..sweeps {
-        let mut off = T::zero();
-        let mut diag = T::zero();
-        for p in 0..n {
-            diag = diag + a[p][p] * a[p][p];
-            for q in p + 1..n {
-                off = off + a[p][q] * a[p][q];
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            let mut a = *a;
+            let mut v: M = identity();
+            // Converged when the off-diagonal part is negligible against the diagonal, in every lane.
+            let tol = T::epsilon() * T::epsilon();
+            for _ in 0..sweeps {
+                let mut off = T::zero();
+                let mut diag = T::zero();
+                for p in 0..n {
+                    diag = diag + a[p][p] * a[p][p];
+                    for q in p + 1..n {
+                        off = off + a[p][q] * a[p][q];
+                    }
+                }
+                if T::all_lt(off, tol * diag) {
+                    break;
+                }
+                for p in 0..n {
+                    for q in p + 1..n {
+                        let (c, s) = jacobi_rotation(a[p][p], a[q][q], a[p][q]);
+                        // A <- Jᵀ A J on rows/columns p, q.
+                        for k in 0..n {
+                            let (akp, akq) = (a[k][p], a[k][q]);
+                            a[k][p] = c * akp - s * akq;
+                            a[k][q] = s * akp + c * akq;
+                        }
+                        for k in 0..n {
+                            let (apk, aqk) = (a[p][k], a[q][k]);
+                            a[p][k] = c * apk - s * aqk;
+                            a[q][k] = s * apk + c * aqk;
+                        }
+                        // Accumulate V <- V J (stored transposed: rows are eigenvectors).
+                        for k in 0..n {
+                            let (vpk, vqk) = (v[p][k], v[q][k]);
+                            v[p][k] = c * vpk - s * vqk;
+                            v[q][k] = s * vpk + c * vqk;
+                        }
+                    }
+                }
             }
-        }
-        if T::all_lt(off, tol * diag) {
-            break;
-        }
-        for p in 0..n {
-            for q in p + 1..n {
-                let (c, s) = jacobi_rotation(a[p][p], a[q][q], a[p][q]);
-                // A <- Jᵀ A J on rows/columns p, q.
-                for k in 0..n {
-                    let (akp, akq) = (a[k][p], a[k][q]);
-                    a[k][p] = c * akp - s * akq;
-                    a[k][q] = s * akp + c * akq;
-                }
-                for k in 0..n {
-                    let (apk, aqk) = (a[p][k], a[q][k]);
-                    a[p][k] = c * apk - s * aqk;
-                    a[q][k] = s * apk + c * aqk;
-                }
-                // Accumulate V <- V J (stored transposed: rows are eigenvectors).
-                for k in 0..n {
-                    let (vpk, vqk) = (v[p][k], v[q][k]);
-                    v[p][k] = c * vpk - s * vqk;
-                    v[q][k] = s * vpk + c * vqk;
-                }
+            let mut values = M::zero_vector();
+            for i in 0..n {
+                values[i] = a[i][i];
             }
-        }
-    }
-    let mut values = M::zero_vector();
-    for i in 0..n {
-        values[i] = a[i][i];
-    }
-    (values, v)
+            (values, v)
+        },
+    )
 }
 
 /// Sort eigenpairs (or singular pairs) by ascending value. Branch free (a sorting network of
@@ -408,39 +443,44 @@ pub fn sort_pairs<T: Real, M: SquareArr<T>>(values: &mut M::Vector, vectors: &mu
 /// (`xᵢᵀ B xⱼ = δᵢⱼ`) and returned as rows, sorted by ascending eigenvalue.
 #[inline]
 pub fn eigh_generalized<T: Real, M: SquareArr<T>>(a: &M, b: &M, sweeps: usize) -> (M::Vector, M) {
-    let n = M::N;
-    let l = cholesky(b);
-    // C = L⁻¹ A L⁻ᵀ: first W = L⁻¹ A (column by column), then C = L⁻¹ Wᵀ (W symmetric-ish).
-    let mut w = M::zero();
-    for j in 0..n {
-        let mut col = M::zero_vector();
-        for i in 0..n {
-            col[i] = a[i][j];
-        }
-        let y = solve_lower(&l, &col);
-        for i in 0..n {
-            w[i][j] = y[i];
-        }
-    }
-    let mut c = M::zero();
-    for i in 0..n {
-        let mut row = M::zero_vector();
-        for j in 0..n {
-            row[j] = w[i][j];
-        }
-        let y = solve_lower(&l, &row);
-        for j in 0..n {
-            c[i][j] = y[j];
-        }
-    }
-    let (mut values, ys) = eigh(&c, sweeps);
-    let mut xs = M::zero();
-    for k in 0..n {
-        let x = solve_lower_transposed(&l, &ys[k]);
-        xs[k] = x;
-    }
-    sort_pairs(&mut values, &mut xs);
-    (values, xs)
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            let l = cholesky(b);
+            // C = L⁻¹ A L⁻ᵀ: first W = L⁻¹ A (column by column), then C = L⁻¹ Wᵀ (W symmetric-ish).
+            let mut w = M::zero();
+            for j in 0..n {
+                let mut col = M::zero_vector();
+                for i in 0..n {
+                    col[i] = a[i][j];
+                }
+                let y = solve_lower(&l, &col);
+                for i in 0..n {
+                    w[i][j] = y[i];
+                }
+            }
+            let mut c = M::zero();
+            for i in 0..n {
+                let mut row = M::zero_vector();
+                for j in 0..n {
+                    row[j] = w[i][j];
+                }
+                let y = solve_lower(&l, &row);
+                for j in 0..n {
+                    c[i][j] = y[j];
+                }
+            }
+            let (mut values, ys) = eigh(&c, sweeps);
+            let mut xs = M::zero();
+            for k in 0..n {
+                let x = solve_lower_transposed(&l, &ys[k]);
+                xs[k] = x;
+            }
+            sort_pairs(&mut values, &mut xs);
+            (values, xs)
+        },
+    )
 }
 
 /// Singular value decomposition `A = U diag(σ) Vᵀ` by one-sided (Hestenes) Jacobi.
@@ -450,81 +490,86 @@ pub fn eigh_generalized<T: Real, M: SquareArr<T>>(a: &M, b: &M, sweeps: usize) -
 /// corresponding `u` row is zero.
 #[inline]
 pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) {
-    let n = M::N;
-    // Work on the columns of A: orthogonalize them pairwise with right rotations.
-    let mut u = transpose(a); // rows of u = columns of A
-    let mut v: M = identity(); // rows of v accumulate the right rotations
-    let tol = T::epsilon() * T::epsilon();
-    for _ in 0..sweeps {
-        // Converged when every pair of columns is orthogonal to working precision, in every lane.
-        let mut worst = T::zero();
-        for p in 0..n {
-            for q in p + 1..n {
-                let mut alpha = u[p][0] * u[p][0];
-                let mut beta = u[q][0] * u[q][0];
-                let mut gamma = u[p][0] * u[q][0];
-                for k in 1..n {
-                    alpha = alpha + u[p][k] * u[p][k];
-                    beta = beta + u[q][k] * u[q][k];
-                    gamma = gamma + u[p][k] * u[q][k];
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            // Work on the columns of A: orthogonalize them pairwise with right rotations.
+            let mut u = transpose(a); // rows of u = columns of A
+            let mut v: M = identity(); // rows of v accumulate the right rotations
+            let tol = T::epsilon() * T::epsilon();
+            for _ in 0..sweeps {
+                // Converged when every pair of columns is orthogonal to working precision, in every lane.
+                let mut worst = T::zero();
+                for p in 0..n {
+                    for q in p + 1..n {
+                        let mut alpha = u[p][0] * u[p][0];
+                        let mut beta = u[q][0] * u[q][0];
+                        let mut gamma = u[p][0] * u[q][0];
+                        for k in 1..n {
+                            alpha = alpha + u[p][k] * u[p][k];
+                            beta = beta + u[q][k] * u[q][k];
+                            gamma = gamma + u[p][k] * u[q][k];
+                        }
+                        // gamma² / (alpha beta), guarded against zero columns
+                        let r = gamma * gamma - tol * alpha * beta;
+                        worst = worst.max(r);
+                    }
                 }
-                // gamma² / (alpha beta), guarded against zero columns
-                let r = gamma * gamma - tol * alpha * beta;
-                worst = worst.max(r);
+                if T::all_lt(worst, T::epsilon() * T::epsilon() * T::epsilon()) {
+                    break;
+                }
+                for p in 0..n {
+                    for q in p + 1..n {
+                        let mut alpha = u[p][0] * u[p][0];
+                        let mut beta = u[q][0] * u[q][0];
+                        let mut gamma = u[p][0] * u[q][0];
+                        for k in 1..n {
+                            alpha = alpha + u[p][k] * u[p][k];
+                            beta = beta + u[q][k] * u[q][k];
+                            gamma = gamma + u[p][k] * u[q][k];
+                        }
+                        let (c, s) = jacobi_rotation(alpha, beta, gamma);
+                        for k in 0..n {
+                            let (x, y) = (u[p][k], u[q][k]);
+                            u[p][k] = c * x - s * y;
+                            u[q][k] = s * x + c * y;
+                            let (x, y) = (v[p][k], v[q][k]);
+                            v[p][k] = c * x - s * y;
+                            v[q][k] = s * x + c * y;
+                        }
+                    }
+                }
             }
-        }
-        if T::all_lt(worst, T::epsilon() * T::epsilon() * T::epsilon()) {
-            break;
-        }
-        for p in 0..n {
-            for q in p + 1..n {
-                let mut alpha = u[p][0] * u[p][0];
-                let mut beta = u[q][0] * u[q][0];
-                let mut gamma = u[p][0] * u[q][0];
+            let mut sigma = M::zero_vector();
+            for i in 0..n {
+                let mut s = u[i][0] * u[i][0];
                 for k in 1..n {
-                    alpha = alpha + u[p][k] * u[p][k];
-                    beta = beta + u[q][k] * u[q][k];
-                    gamma = gamma + u[p][k] * u[q][k];
+                    s = s + u[i][k] * u[i][k];
                 }
-                let (c, s) = jacobi_rotation(alpha, beta, gamma);
+                let norm = s.sqrt();
+                sigma[i] = norm;
+                let inv = T::select_lt(T::zero(), norm, norm.recip(), T::zero());
                 for k in 0..n {
-                    let (x, y) = (u[p][k], u[q][k]);
-                    u[p][k] = c * x - s * y;
-                    u[q][k] = s * x + c * y;
-                    let (x, y) = (v[p][k], v[q][k]);
-                    v[p][k] = c * x - s * y;
-                    v[q][k] = s * x + c * y;
+                    u[i][k] = u[i][k] * inv;
                 }
             }
-        }
-    }
-    let mut sigma = M::zero_vector();
-    for i in 0..n {
-        let mut s = u[i][0] * u[i][0];
-        for k in 1..n {
-            s = s + u[i][k] * u[i][k];
-        }
-        let norm = s.sqrt();
-        sigma[i] = norm;
-        let inv = T::select_lt(T::zero(), norm, norm.recip(), T::zero());
-        for k in 0..n {
-            u[i][k] = u[i][k] * inv;
-        }
-    }
-    // Sort descending: sort ascending on -sigma, permuting u and v together.
-    let mut neg = M::zero_vector();
-    for i in 0..n {
-        neg[i] = -sigma[i];
-    }
-    let mut uv_sort_u = u;
-    let mut neg_u = neg;
-    sort_pairs(&mut neg_u, &mut uv_sort_u);
-    let mut vv = v;
-    sort_pairs(&mut neg, &mut vv);
-    for i in 0..n {
-        sigma[i] = -neg[i];
-    }
-    (uv_sort_u, sigma, vv)
+            // Sort descending: sort ascending on -sigma, permuting u and v together.
+            let mut neg = M::zero_vector();
+            for i in 0..n {
+                neg[i] = -sigma[i];
+            }
+            let mut uv_sort_u = u;
+            let mut neg_u = neg;
+            sort_pairs(&mut neg_u, &mut uv_sort_u);
+            let mut vv = v;
+            sort_pairs(&mut neg, &mut vv);
+            for i in 0..n {
+                sigma[i] = -neg[i];
+            }
+            (uv_sort_u, sigma, vv)
+        },
+    )
 }
 
 #[cfg(test)]

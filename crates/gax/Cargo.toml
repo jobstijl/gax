@@ -13,7 +13,7 @@ readme = "README.md"
 [features]
 default = ["std", "macros", "pga2d", "pga3d"]
 ## Every standard algebra.
-all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga3d"]
+all-algebras = ["pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga3d", "stap", "csta"]
 std = ["gax-core/std"]
 pga2d = []
 pga3d = []
@@ -21,8 +21,14 @@ vga2d = []
 vga3d = []
 sta = []
 cga3d = []
+## Projective spacetime algebra R(3,1,1) (not in the default set: larger to compile).
+stap = []
+## Conformal spacetime algebra R(4,2) (not in the default set: much larger to compile).
+csta = []
 ## SIMD lane coefficients for batches in struct-of-arrays form.
 wide = ["gax-core/wide"]
+## Runtime-dispatched SIMD batch kernels (`gax::batch`) built on `fearless_simd`.
+batch = ["std", "gax-core/batch", "gax-macros?/batch"]
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
 trace = ["dep:gax-gen"]
 ## The `algebra!` macro for declaring algebras of any signature.

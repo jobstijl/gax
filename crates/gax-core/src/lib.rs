@@ -26,6 +26,8 @@
 //! ```
 #![no_std]
 
+#[cfg(feature = "batch")]
+pub mod batch;
 pub mod bind;
 pub mod coef;
 pub mod extensor;

@@ -197,6 +197,31 @@ impl Oracle {
                 return Some(self.from_dense(&n));
             }
         }
+        // Products of simple unit factors `1 + c B` with `B` a blade of `V` (their norms are
+        // Study numbers), for groups such as the Poincaré motors of CSTA.
+        let blades: Vec<u32> = <V::Kind as Kind>::BLADES
+            .iter()
+            .map(|b| self.alg.parse_blade(b).unwrap().0)
+            .collect();
+        if !blades.contains(&0) || blades.len() < 2 {
+            return None;
+        }
+        for _ in 0..8 {
+            let mut d = vec![0.0; self.alg.blade_count()];
+            d[0] = 1.0;
+            for _ in 0..4 {
+                let pick = 1 + ((rng.next_f64().abs() * 1e6) as usize) % (blades.len() - 1);
+                let mut f = vec![0.0; self.alg.blade_count()];
+                f[0] = 1.0;
+                f[blades[pick] as usize] = rng.next_f64();
+                if let Some(u) = self.normalize(&f) {
+                    d = self.binop(BinOp::Gp, &d, &u);
+                }
+            }
+            if fits(&d) && self.normalize(&d).is_some() {
+                return Some(self.from_dense(&d));
+            }
+        }
         None
     }
 }

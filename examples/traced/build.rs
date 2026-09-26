@@ -3,11 +3,13 @@
 mod kernels;
 
 use gax::Unit;
-use gax::pga3d::{Motor, Plane, Point};
+use gax::pga3d::{Line, Motor, Plane, Point};
 use gax::trace::{Sym, Tracer};
 
 fn main() {
     let mut t = Tracer::new();
+    // Also emit `*_batch` forms that run the kernels on SIMD lanes.
+    t.batch(true);
     t.kernel(
         "shadow_of_moved_fused",
         |m: Unit<Motor<(), Sym>>, l: Point<(), Sym>, g: Plane<(), Sym>, p: Point<(), Sym>| {
@@ -27,6 +29,10 @@ fn main() {
         },
     );
     t.kernel("euclidean_fused", |p: Point<(), Sym>| kernels::euclidean(p));
+    t.kernel(
+        "screw_apply_fused",
+        |b: Line<(), Sym>, p: Point<(), Sym>| kernels::screw_apply(b, p),
+    );
     t.write_out_dir("fused.rs");
     for r in t.reports() {
         println!(

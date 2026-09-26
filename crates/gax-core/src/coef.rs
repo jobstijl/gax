@@ -33,6 +33,14 @@ pub trait Coef:
     fn mul_add(self, a: Self, b: Self) -> Self {
         self * a + b
     }
+    /// Run `f` where operations on this type compile to its SIMD instructions: for the lanes
+    /// of a detected level (`gax::batch`), inside a function compiled for that level; for
+    /// every other type, just `f()`. Large generic functions wrap their bodies in it, so that
+    /// they stay vectorized when the compiler does not inline them into a batch kernel.
+    #[inline(always)]
+    fn vectorize<R>(f: impl FnOnce() -> R) -> R {
+        f()
+    }
 }
 
 /// A real field with the elementary functions used by norms, inverses, solvers and exp/log.

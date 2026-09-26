@@ -27,8 +27,8 @@ jobs:
       # Compile-fail messages are pinned for the current stable compiler only.
       - name: test (default features)
         run: cargo test --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
-      - name: test (all algebras, SIMD)
-        run: cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
+      - name: test (all algebras, SIMD, batch kernels on every level)
+        run: cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
       - name: no_std build of the core
         run: cargo build -p gax-core --no-default-features
 
@@ -50,8 +50,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide
-      - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace
+      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch
+      - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace,gax/batch
         env:
           RUSTDOCFLAGS: -D warnings
 

@@ -9,6 +9,7 @@ use gax::trace::{Sym, Tracer};
 
 fn main() {
     let mut t = Tracer::new();
+    t.batch(true);
     t.kernel(
         "rigid_step_fused",
         |m: Motor<(), Sym>,

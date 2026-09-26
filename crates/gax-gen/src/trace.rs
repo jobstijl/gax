@@ -77,6 +77,31 @@ pub trait TraceFn<Args> {
 /// Builds the Rust expression of a kernel's result from its output expressions.
 type Constructor = Box<dyn Fn(&[String]) -> String>;
 
+/// How to write a traceable type's code at any coefficient type: its type, the expression of
+/// a value's coefficient array, and a constructor from coefficient expressions.
+#[derive(Clone, Copy)]
+struct Shape {
+    len: usize,
+    ty: fn(&str) -> String,
+    coeffs: fn(&str) -> String,
+    construct: fn(&[String]) -> String,
+}
+
+impl Shape {
+    fn of<A: Traceable>() -> Shape {
+        Shape {
+            len: A::LEN,
+            ty: result_type::<A>,
+            coeffs: |name| {
+                let mut s = String::new();
+                A::write_coeffs(&mut s, name).expect("write to string");
+                s
+            },
+            construct: construct::<A>,
+        }
+    }
+}
+
 /// The outcome of running a closure on symbolic arguments.
 pub struct Traced {
     /// `(argument type, coefficient-array expression template)` per argument.
@@ -89,6 +114,8 @@ pub struct Traced {
     result_type: String,
     /// Constructor of the result from output expressions.
     construct: Constructor,
+    /// The shapes of the arguments and of the result, for the batch form.
+    shapes: (Vec<Shape>, Shape),
 }
 
 fn arg_info<A: Traceable<Coef = Sym>>(k: usize) -> (A, (String, usize, String), Vec<Poly>) {
@@ -118,10 +145,12 @@ macro_rules! trace_fn {
             fn run(&self) -> Traced {
                 let mut args = Vec::new();
                 let mut conditions = Vec::new();
+                let mut shapes = Vec::new();
                 $(
                     let ($a, info, conds) = arg_info::<$A>($k);
                     args.push(info);
                     conditions.extend(conds);
+                    shapes.push(Shape::of::<$A>());
                 )+
                 let result = self($($a),+);
                 Traced {
@@ -130,6 +159,7 @@ macro_rules! trace_fn {
                     outputs: { let mut v = Vec::new(); result.for_each(&mut |c| v.push(c)); v },
                     result_type: result_type::<R>("T"),
                     construct: Box::new(|outs| construct::<R>(outs)),
+                    shapes: (shapes, Shape::of::<R>()),
                 }
             }
         }
@@ -164,6 +194,7 @@ pub struct KernelReport {
 pub struct Tracer {
     source: String,
     reports: Vec<KernelReport>,
+    batch: bool,
 }
 
 impl Tracer {
@@ -172,12 +203,20 @@ impl Tracer {
         Tracer::default()
     }
 
+    /// Also emit a batch form `{name}_batch` of every kernel (it needs `gax`'s `batch`
+    /// feature in the crate that includes the kernels): the kernel applied elementwise to
+    /// slices of arguments, on the SIMD lanes of the level `gax::batch` detects.
+    pub fn batch(&mut self, on: bool) -> &mut Tracer {
+        self.batch = on;
+        self
+    }
+
     /// Trace `f` and add a fused kernel named `name`.
     ///
     /// # Panics
     /// If `f` branches on a coefficient, or if the simplifier fails its own exactness check
     /// (a bug).
-    #[allow(clippy::needless_pass_by_value)] // a closure literal is the natural argument
+    #[allow(clippy::needless_pass_by_value, clippy::too_many_lines)] // a closure literal is the natural argument
     pub fn kernel<Args, F: TraceFn<Args>>(&mut self, name: &str, f: F) -> &mut Tracer {
         // Trace under several expansion limits and keep the cheapest verified program. A
         // limit of 0 records the computation as written (each product and sum a node, with
@@ -188,6 +227,7 @@ impl Tracer {
         // A strategy whose polynomials grow too large is skipped, and one that overflows the
         // exact rational arithmetic (which panics rather than wrap) is dropped: the limit-0
         // trace, the computation as written, always succeeds.
+        let mut failure: Option<String> = None;
         let quiet = std::panic::take_hook();
         std::panic::set_hook(Box::new(|_| {}));
         for limit in [Some(0), Some(1), Some(8), Some(32), Some(128), None] {
@@ -211,6 +251,12 @@ impl Tracer {
                 let defs: Vec<VarDef> = (0..Sym::var_count() as Var).map(Sym::var_def).collect();
                 Some((prog, traced, defs))
             }));
+            if let Err(e) = &attempt {
+                failure = e
+                    .downcast_ref::<String>()
+                    .cloned()
+                    .or_else(|| e.downcast_ref::<&str>().map(|s| (*s).to_string()));
+            }
             if let Ok(Some((prog, traced, defs))) = attempt
                 && best
                     .as_ref()
@@ -220,7 +266,12 @@ impl Tracer {
             }
         }
         std::panic::set_hook(quiet);
-        let (prog, traced, defs) = best.expect("at least one limit");
+        let Some((prog, traced, defs)) = best else {
+            panic!(
+                "gax::trace: could not trace `{name}`: {}",
+                failure.unwrap_or_else(|| "no strategy succeeded".into())
+            );
+        };
         // The cost of the generic code as it runs: every operation, nothing folded.
         let naive = {
             Sym::reset_runtime_model();
@@ -235,7 +286,10 @@ impl Tracer {
             VarDef::Input { arg, index } => format!("a{arg}[{index}]"),
             VarDef::Constant(ConstKind::Float(x)) => format!("T::from_f64({x:?})"),
             VarDef::Constant(ConstKind::Epsilon) => "T::epsilon()".to_string(),
-            VarDef::Atom { .. } | VarDef::Atan2 { .. } | VarDef::Node { .. } => {
+            VarDef::Atom { .. }
+            | VarDef::Atan2 { .. }
+            | VarDef::Select { .. }
+            | VarDef::Node { .. } => {
                 unreachable!("atoms and nodes are bound to temporaries")
             }
         };
@@ -279,6 +333,9 @@ impl Tracer {
             .map(|o: &Operand| render(o, &var_name, "t"))
             .collect();
         let _ = writeln!(s, "    {}\n}}\n", (traced.construct)(&outs));
+        if self.batch {
+            batch_form(s, name, &traced.shapes.0, &traced.shapes.1);
+        }
         self.reports.push(KernelReport {
             name: name.to_string(),
             cost,
@@ -319,6 +376,10 @@ fn stages_of_arena() -> Vec<Stage> {
         let (op, args) = match Sym::var_def(v) {
             VarDef::Atom { func, arg } => (StageOp::Call(func), vec![arg.poly()]),
             VarDef::Atan2 { y, x } => (StageOp::Atan2, vec![y.poly(), x.poly()]),
+            VarDef::Select { a, b, x, y } => (
+                StageOp::Select,
+                vec![a.poly(), b.poly(), x.poly(), y.poly()],
+            ),
             VarDef::Node { op, a, b } => (
                 match op {
                     NodeOp::Add => StageOp::Add,
@@ -349,4 +410,96 @@ pub fn symbolic<A: Traceable<Coef = Sym>>(arg: usize) -> A {
 /// Zero, as a `Sym`.
 pub fn zero() -> Sym {
     Sym::zero()
+}
+
+/// Emit `{name}_batch`: the kernel on slices, gathering lanes, running the fused function on
+/// them and scattering the results.
+fn batch_form(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
+    let n = args.len();
+    let slices: Vec<String> = (0..n)
+        .map(|k| format!("a{k}: &'a [{}]", (args[k].ty)("E")))
+        .collect();
+    let fields: Vec<String> = (0..n)
+        .map(|k| format!("&'a [{}]", (args[k].ty)("E")))
+        .collect();
+    let out_e = (result.ty)("E");
+    let names: Vec<String> = (0..n).map(|k| format!("a{k}")).collect();
+    let _ = writeln!(
+        s,
+        "/// Batch form of [`{name}`]: `out[i] = {name}(a0[i], ...)` for every `i`, on the SIMD\n\
+         /// lanes of the level `gax::batch` detects. An argument slice of length 1 is broadcast.\n\
+         ///\n/// # Panics\n/// If an argument slice has neither length 1 nor `out.len()`.\n\
+         #[inline]\n#[allow(clippy::all, clippy::pedantic, unused_variables, unused_parens, non_snake_case, non_camel_case_types)]\n\
+         pub fn {name}_batch<'a, E: ::gax::batch::LaneElem>({}, out: &'a mut [{out_e}]) {{",
+        slices.join(", ")
+    );
+    let _ = writeln!(
+        s,
+        "    struct K<'a, E: ::gax::batch::LaneElem>({}, &'a mut [{out_e}]);",
+        fields.join(", ")
+    );
+    let _ = writeln!(
+        s,
+        "    impl<'a, E: ::gax::batch::LaneElem> ::gax::batch::Kernel<E> for K<'a, E> {{\n        type Output = ();\n        #[inline(always)]\n        fn run<L: ::gax::batch::Batch<Elem = E>>(self) {{\n            let K({}, out) = self;\n            let n = out.len();",
+        names.join(", ")
+    );
+    for (k, a) in args.iter().enumerate() {
+        let parts: Vec<String> = (0..a.len)
+            .map(|j| format!("L::splat(({})[{j}])", (a.coeffs)(&format!("a{k}[0]"))))
+            .collect();
+        let _ = writeln!(
+            s,
+            "            let b{k} = a{k}.len() == 1;\n            let s{k}: {} = if b{k} {{ {} }} else {{ {} }};",
+            (a.ty)("L"),
+            (a.construct)(&parts),
+            (a.construct)(&vec!["L::zero()".to_string(); a.len])
+        );
+    }
+    let _ = writeln!(
+        s,
+        "            let mut i = 0;\n            while i < n {{\n                let m = (n - i).min(L::LANES);"
+    );
+    for (k, a) in args.iter().enumerate() {
+        let parts: Vec<String> = (0..a.len)
+            .map(|j| {
+                format!(
+                    "::gax::batch::column::<L>(m, #[inline(always)] |l| ({})[{j}])",
+                    (a.coeffs)(&format!("a{k}[i + l]"))
+                )
+            })
+            .collect();
+        let _ = writeln!(
+            s,
+            "                let x{k}: {} = if b{k} {{ s{k} }} else {{ {} }};",
+            (a.ty)("L"),
+            (a.construct)(&parts)
+        );
+    }
+    let xs: Vec<String> = (0..n).map(|k| format!("x{k}")).collect();
+    let _ = writeln!(
+        s,
+        "                let y: {} = {name}::<L>({});\n                let yc = {};",
+        (result.ty)("L"),
+        xs.join(", "),
+        (result.coeffs)("y")
+    );
+    let cols: Vec<String> = (0..result.len)
+        .map(|j| format!("::gax::batch::to_array(yc[{j}])"))
+        .collect();
+    let parts: Vec<String> = (0..result.len).map(|j| format!("cols[{j}][l]")).collect();
+    let _ = writeln!(
+        s,
+        "                let cols = [{}];\n                for l in 0..m {{\n                    out[i + l] = {};\n                }}\n                i += L::LANES;\n            }}\n        }}\n    }}",
+        cols.join(", "),
+        (result.construct)(&parts)
+    );
+    let checks: Vec<String> = (0..n)
+        .map(|k| format!("a{k}.len() == 1 || a{k}.len() == out.len()"))
+        .collect();
+    let _ = writeln!(
+        s,
+        "    assert!({}, \"{name}_batch: argument lengths\");\n    ::gax::batch::run(K({}, out));\n}}\n",
+        checks.join(" && "),
+        names.join(", ")
+    );
 }

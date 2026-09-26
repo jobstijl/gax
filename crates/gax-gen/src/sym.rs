@@ -46,6 +46,17 @@ pub enum VarDef {
         /// `x`
         x: Sym,
     },
+    /// `if a < b { x } else { y }`, lane by lane.
+    Select {
+        /// Compared value.
+        a: Sym,
+        /// Compared against.
+        b: Sym,
+        /// Result when `a < b`.
+        x: Sym,
+        /// Result otherwise.
+        y: Sym,
+    },
     /// A constant that is not an exact dyadic rational, such as `0.1` or `T::epsilon()`.
     Constant(ConstKind),
     /// An operation whose expanded result exceeded the expansion limit, kept as a node.
@@ -86,6 +97,7 @@ struct Arena {
     vars: Vec<VarDef>,
     atom_index: HashMap<(Func, Sym), Var>,
     atan2_index: HashMap<(Sym, Sym), Var>,
+    select_index: HashMap<(Sym, Sym, Sym, Sym), Var>,
     /// Relations `p = 0` implied by atom definitions (`s² - x`, `r x - 1`).
     relations: Vec<Poly>,
     node_index: HashMap<(NodeOp, Sym, Sym), Var>,
@@ -420,11 +432,24 @@ impl Real for Sym {
     fn ln(self) -> Sym {
         Sym::atom(Func::Ln, self)
     }
-    fn select_lt(_: Sym, _: Sym, _: Sym, _: Sym) -> Sym {
-        panic!(
-            "gax tracing: a traced kernel branched on a coefficient value (select_lt). \
-             Build-time tracing needs branch-free code; keep such code out of traced kernels."
-        )
+    /// A select is data flow, not a branch: it becomes a `T::select_lt` in the kernel (and
+    /// folds when both compared values are constants).
+    fn select_lt(a: Sym, b: Sym, x: Sym, y: Sym) -> Sym {
+        if x == y {
+            return x;
+        }
+        if let (Some(p), Some(q)) = (a.poly().as_constant(), b.poly().as_constant()) {
+            return if p < q { x } else { y };
+        }
+        let v = with(|arena| {
+            if let Some(&v) = arena.select_index.get(&(a, b, x, y)) {
+                return v;
+            }
+            let v = arena.new_var(VarDef::Select { a, b, x, y });
+            arena.select_index.insert((a, b, x, y), v);
+            v
+        });
+        Sym::from_poly(Poly::var(v))
     }
     fn all_lt(_: Sym, _: Sym) -> bool {
         panic!(

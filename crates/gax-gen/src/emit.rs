@@ -18,6 +18,9 @@ use std::fmt::Write as _;
 pub struct Config {
     /// Path of the `gax-core` crate as seen from the generated module, e.g. `::gax::core`.
     pub core: String,
+    /// Emit the batch kernels (`gax::batch`), prefixed by this attribute (e.g.
+    /// `#[cfg(feature = "batch")]`, or empty for unconditional); `None` omits them.
+    pub batch: Option<String>,
 }
 
 /// Summary statistics of an emitted algebra.
@@ -84,6 +87,19 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             e.out,
             "/// Alias of [`{kind}`].\npub type {alias}<S = (), T = f32> = {kind}<S, T>;\n"
         );
+    }
+    if let Some(gate) = &cfg.batch {
+        let names = spec
+            .kinds
+            .iter()
+            .map(|k| (&k.name, &k.name))
+            .chain(spec.aliases.iter().map(|(a, k)| (a, k)));
+        for (name, kind) in names {
+            let _ = writeln!(
+                e.out,
+                "{gate}\n/// [`{kind}`] values in struct-of-arrays form, for the batch kernels.\npub type {name}Soa<E = f32> = gx::batch::Soa<{kind}, E>;\n"
+            );
+        }
     }
     (qualify(&e.out), e.stats)
 }
@@ -213,6 +229,12 @@ impl Emitter<'_> {
             k.doc.clone()
         };
         let blade_doc = k.blades.join(", ");
+        // Spelled out rather than `core::array::from_fn`: batch kernels need these inlined
+        // (see `gax::batch`), and the core helpers are not always.
+        let each = |f: &dyn Fn(usize) -> String| (0..n).map(f).collect::<Vec<_>>().join(", ");
+        let arr_ff = each(&|i| format!("f({i})"));
+        let arr_fm = each(&|i| format!("f(&a[{i}])"));
+        let arr_fz = each(&|i| format!("f(&a[{i}], &b[{i}])"));
         let s = format!(
             r#"#[doc = {doc:?}]
 ///
@@ -260,12 +282,12 @@ impl Kind for {name} {{
     type Mv<S: Slots, T: Coef> = {name}<S, T>;
     type Scalar = {scalar};
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; {n}] {{
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; {n}] {{
+        [{arr_ff}]
     }}
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; {n}], f: impl FnMut(&X) -> Y) -> [Y; {n}] {{
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; {n}], mut f: impl FnMut(&X) -> Y) -> [Y; {n}] {{
+        [{arr_fm}]
     }}
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -273,7 +295,7 @@ impl Kind for {name} {{
         b: &[Y; {n}],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; {n}] {{
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [{arr_fz}]
     }}
 }}
 
@@ -940,6 +962,22 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             "impl<T: Coef> From<{prep_ty}> for {on}<({xn},), T> {{\n    /// The dense map of the prepared action.\n    #[inline]\n    fn from(p: {prep_ty}) -> Self {{\n        let m = p.m;\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
             rows.join(", ")
         );
+        if let Some(gate) = &self.cfg.batch {
+            let mapped = (0..nst)
+                .map(|i| format!("f(m[{i}])"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let fparam = if nst == 0 { "_f" } else { "mut f" };
+            let (wrap, unwrap, cert) = if unit {
+                ("gx::Unit::new_unchecked(v)", "v.into_inner()", "Certified")
+            } else {
+                ("v", "v", "Plain")
+            };
+            let _ = write!(
+                s,
+                "{gate}\nimpl gx::batch::SandwichKernel<{xn}, gx::batch::{cert}> for {vn} {{\n    type Y = {on};\n    type Versor<T: gx::Coef> = {self_ty};\n    type Prepared<T: gx::Coef> = {prep_ty};\n    #[inline(always)]\n    fn wrap<T: gx::Coef>(v: {vn}<(), T>) -> {self_ty} {{\n        {wrap}\n    }}\n    #[inline(always)]\n    fn unwrap<T: gx::Coef>(v: {self_ty}) -> {vn}<(), T> {{\n        {unwrap}\n    }}\n    #[inline(always)]\n    fn prepare<T: gx::Coef>(v: {self_ty}) -> {prep_ty} {{\n        gx::Prepare::<{xn}>::prepare(v)\n    }}\n    #[inline(always)]\n    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: {prep_ty}, {fparam}: impl FnMut(T) -> W) -> gx::Prepared<{vkind}, {xn}, W, {nst}> {{\n        let m = p.m;\n        gx::Prepared::from_entries([{mapped}])\n    }}\n    #[inline(always)]\n    fn apply_prepared<T: gx::Coef>(p: {prep_ty}, x: {xn}<(), T>) -> {on}<(), T> {{\n        gx::Transform::transform(p, x)\n    }}\n    #[inline(always)]\n    fn apply<T: gx::Coef>(v: {self_ty}, x: {xn}<(), T>) -> {on}<(), T> {{\n        gx::Transform::transform(v, x)\n    }}\n}}\n\n"
+            );
+        }
         self.w(&s);
         self.stats.sandwich_impls += 1;
         self.stats

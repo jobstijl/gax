@@ -34,6 +34,7 @@ fn main() -> ExitCode {
             &spec,
             &Config {
                 core: "crate".into(),
+                batch: Some("#[cfg(feature = \"batch\")]".into()),
             },
         );
         let tests = emit_tests(

@@ -164,8 +164,17 @@ macro_rules! tuple_traceable {
                 $( $A::write_type(w, coef)?; w.write_str(", ")?; )+
                 w.write_str(")")
             }
-            fn write_coeffs(_w: &mut dyn Write, _name: &str) -> fmt::Result {
-                unimplemented!("tuples are results, not kernel arguments")
+            fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result {
+                // `{ let t = x; let c = ({ let v = t.0; coeffs of v }, ...); [c.0[0], ...] }`
+                write!(w, "{{ let t = {name}; let c = (")?;
+                $(
+                    write!(w, "{{ let v = t.{}; ", $i)?;
+                    $A::write_coeffs(w, "v")?;
+                    w.write_str(" }, ")?;
+                )+
+                w.write_str("); [")?;
+                $( for j in 0..$A::LEN { write!(w, "c.{}[{j}], ", $i)?; } )+
+                w.write_str("] }")
             }
             fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
                 let mut start = 0;
@@ -212,8 +221,20 @@ impl<A: Traceable, const N: usize> Traceable for [A; N] {
         write!(w, "; {N}]")
     }
     fn write_coeffs(w: &mut dyn Write, name: &str) -> fmt::Result {
-        // Only arrays of scalars (LEN 1 each) are supported as kernel arguments.
-        write!(w, "{name}")
+        // `{ let t = x; let c = [{ let v = t[0]; coeffs of v }, ...]; [c[0][0], ...] }`
+        write!(w, "{{ let t = {name}; let c = [")?;
+        for i in 0..N {
+            write!(w, "{{ let v = t[{i}]; ")?;
+            A::write_coeffs(w, "v")?;
+            w.write_str(" }, ")?;
+        }
+        w.write_str("]; [")?;
+        for i in 0..N {
+            for j in 0..A::LEN {
+                write!(w, "c[{i}][{j}], ")?;
+            }
+        }
+        w.write_str("] }")
     }
     fn write_construct(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
         w.write_str("[")?;

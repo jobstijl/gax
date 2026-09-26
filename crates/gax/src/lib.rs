@@ -75,7 +75,35 @@ pub mod cga3d {
     include!("algebras/cga3d.rs");
 }
 
+/// Projective spacetime algebra `R(3,1,1)`: space `e1, e2, e3`, time `e4` (square `-1`) and
+/// the degenerate `e0`. Vectors are hyperplanes, quadvectors are events, and `Motor` is a
+/// Poincaré motion (feature `stap`).
+///
+/// The types, products and methods are generated from `specs/stap.gax` by `gax-regen`.
+#[cfg(feature = "stap")]
+#[allow(missing_docs, unused_variables, unused_parens, clippy::all, clippy::pedantic)]
+#[rustfmt::skip]
+pub mod stap {
+    include!("algebras/stap.rs");
+}
+
+/// Conformal spacetime algebra `R(4,2)`: space `e1, e2, e3`, time `e4` (square `-1`) and the
+/// null basis `eo`, `ei` (feature `csta`).
+///
+/// The types, products and methods are generated from `specs/csta.gax` by `gax-regen`.
+#[cfg(feature = "csta")]
+#[allow(missing_docs, unused_variables, unused_parens, clippy::all, clippy::pedantic)]
+#[rustfmt::skip]
+pub mod csta {
+    include!("algebras/csta.rs");
+}
+
 /// The code blocks of `docs/guide.md` and the README, compiled and run as doctests.
 #[cfg(all(doctest, feature = "pga3d"))]
 #[doc = include_str!("../../../docs/guide.md")]
 pub struct GuideDoctests;
+
+/// The code blocks of `docs/batch.md`, compiled and run as doctests.
+#[cfg(all(doctest, feature = "batch", feature = "pga3d"))]
+#[doc = include_str!("../../../docs/batch.md")]
+pub struct BatchDoctests;

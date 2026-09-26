@@ -52,12 +52,12 @@ impl gx::Kind for Scalar {
     type Mv<S: gx::Slots, T: gx::Coef> = Scalar<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 1] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 1] {
+        [f(0)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 1], f: impl FnMut(&X) -> Y) -> [Y; 1] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 1], mut f: impl FnMut(&X) -> Y) -> [Y; 1] {
+        [f(&a[0])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -65,7 +65,7 @@ impl gx::Kind for Scalar {
         b: &[Y; 1],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 1] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0])]
     }
 }
 
@@ -539,7 +539,7 @@ where
 
 impl<T: gx::Real> Scalar<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -547,13 +547,13 @@ impl<T: gx::Real> Scalar<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (4 mul, 0 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Scalar<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -565,7 +565,7 @@ impl<T: gx::Real> Scalar<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[0];
@@ -575,7 +575,7 @@ impl<T: gx::Real> Scalar<(), T> {
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
-    #[inline]
+    #[inline(always)]
     pub fn sqrt(self) -> gx::Unit<Self> {
         let mut c = self.c;
         c[0] = c[0] + T::one();
@@ -630,12 +630,12 @@ impl gx::Kind for Vector {
     type Mv<S: gx::Slots, T: gx::Coef> = Vector<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 3] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 3] {
+        [f(0), f(1), f(2)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 3], f: impl FnMut(&X) -> Y) -> [Y; 3] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 3], mut f: impl FnMut(&X) -> Y) -> [Y; 3] {
+        [f(&a[0]), f(&a[1]), f(&a[2])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -643,7 +643,7 @@ impl gx::Kind for Vector {
         b: &[Y; 3],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 3] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2])]
     }
 }
 
@@ -1129,7 +1129,7 @@ where
 
 impl<T: gx::Real> Vector<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t1 = x[1] * x[1];
@@ -1139,13 +1139,13 @@ impl<T: gx::Real> Vector<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (16 mul, 7 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Vector<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -1169,7 +1169,7 @@ impl<T: gx::Real> Vector<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
@@ -1230,12 +1230,12 @@ impl gx::Kind for Bivector {
     type Mv<S: gx::Slots, T: gx::Coef> = Bivector<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 3] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 3] {
+        [f(0), f(1), f(2)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 3], f: impl FnMut(&X) -> Y) -> [Y; 3] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 3], mut f: impl FnMut(&X) -> Y) -> [Y; 3] {
+        [f(&a[0]), f(&a[1]), f(&a[2])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -1243,7 +1243,7 @@ impl gx::Kind for Bivector {
         b: &[Y; 3],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 3] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2])]
     }
 }
 
@@ -1729,7 +1729,7 @@ where
 
 impl<T: gx::Real> Bivector<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t1 = x[1] * x[1];
@@ -1739,13 +1739,13 @@ impl<T: gx::Real> Bivector<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (16 mul, 7 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Bivector<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -1772,7 +1772,7 @@ impl<T: gx::Real> Bivector<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
@@ -1789,6 +1789,7 @@ impl<T: gx::Real> Bivector<(), T> {
     #[inline]
     #[allow(unused_variables)]
     pub fn exp(self) -> gx::Unit<Rotor<(), T>> {
+        T::vectorize(#[inline(always)] move || {
         let x = self.c;
         let p1 = x[1] * x[1];
         let p3 = x[0].mul_add(x[0], p1);
@@ -1799,6 +1800,7 @@ impl<T: gx::Real> Bivector<(), T> {
         let t1 = x[1] * s0;
         let t2 = x[2] * s0;
         gx::Unit::new_unchecked(Rotor::from_coeffs([c0, t0, t1, t2]))
+        })
     }
 
 }
@@ -1849,12 +1851,12 @@ impl gx::Kind for Pseudoscalar {
     type Mv<S: gx::Slots, T: gx::Coef> = Pseudoscalar<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 1] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 1] {
+        [f(0)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 1], f: impl FnMut(&X) -> Y) -> [Y; 1] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 1], mut f: impl FnMut(&X) -> Y) -> [Y; 1] {
+        [f(&a[0])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -1862,7 +1864,7 @@ impl gx::Kind for Pseudoscalar {
         b: &[Y; 1],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 1] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0])]
     }
 }
 
@@ -2336,7 +2338,7 @@ where
 
 impl<T: gx::Real> Pseudoscalar<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -2344,13 +2346,13 @@ impl<T: gx::Real> Pseudoscalar<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (4 mul, 0 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Pseudoscalar<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -2363,7 +2365,7 @@ impl<T: gx::Real> Pseudoscalar<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p0 = x[0] * x[0];
@@ -2420,12 +2422,12 @@ impl gx::Kind for Rotor {
     type Mv<S: gx::Slots, T: gx::Coef> = Rotor<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 4] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 4] {
+        [f(0), f(1), f(2), f(3)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 4], f: impl FnMut(&X) -> Y) -> [Y; 4] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 4], mut f: impl FnMut(&X) -> Y) -> [Y; 4] {
+        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -2433,7 +2435,7 @@ impl gx::Kind for Rotor {
         b: &[Y; 4],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 4] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3])]
     }
 }
 
@@ -2925,7 +2927,7 @@ where
 
 impl<T: gx::Real> Rotor<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t1 = x[1] * x[1];
@@ -2937,13 +2939,13 @@ impl<T: gx::Real> Rotor<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (23 mul, 12 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Rotor<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -2980,7 +2982,7 @@ impl<T: gx::Real> Rotor<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
@@ -2997,7 +2999,7 @@ impl<T: gx::Real> Rotor<(), T> {
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
-    #[inline]
+    #[inline(always)]
     pub fn sqrt(self) -> gx::Unit<Self> {
         let mut c = self.c;
         c[0] = c[0] + T::one();
@@ -3011,6 +3013,7 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Rotor<(), T>> {
     #[inline]
     #[allow(unused_variables)]
     fn log(self) -> Bivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
         let x = self.into_inner().c;
         let p1 = x[2] * x[2];
         let p3 = x[1].mul_add(x[1], p1);
@@ -3021,6 +3024,7 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Rotor<(), T>> {
         let t1 = x[2] * h0;
         let t2 = x[3] * h0;
         Bivector::from_coeffs([t0, t1, t2])
+        })
     }
 }
 
@@ -3070,12 +3074,12 @@ impl gx::Kind for Odd {
     type Mv<S: gx::Slots, T: gx::Coef> = Odd<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 4] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 4] {
+        [f(0), f(1), f(2), f(3)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 4], f: impl FnMut(&X) -> Y) -> [Y; 4] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 4], mut f: impl FnMut(&X) -> Y) -> [Y; 4] {
+        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -3083,7 +3087,7 @@ impl gx::Kind for Odd {
         b: &[Y; 4],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 4] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3])]
     }
 }
 
@@ -3575,7 +3579,7 @@ where
 
 impl<T: gx::Real> Odd<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t1 = x[1] * x[1];
@@ -3587,13 +3591,13 @@ impl<T: gx::Real> Odd<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (23 mul, 12 add, 1 div).
-    #[inline]
+    #[inline(always)]
     pub fn inverse(self) -> Odd<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
@@ -3628,7 +3632,7 @@ impl<T: gx::Real> Odd<(), T> {
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
-    #[inline]
+    #[inline(always)]
     pub fn normalized(self) -> gx::Unit<Self> {
         let x = self.c;
         let p1 = x[1] * x[1];
@@ -3692,12 +3696,12 @@ impl gx::Kind for Multivector {
     type Mv<S: gx::Slots, T: gx::Coef> = Multivector<S, T>;
     type Scalar = Scalar;
     #[inline(always)]
-    fn arr_from_fn<X: gx::Elem>(f: impl FnMut(usize) -> X) -> [X; 8] {
-        core::array::from_fn(f)
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 8] {
+        [f(0), f(1), f(2), f(3), f(4), f(5), f(6), f(7)]
     }
     #[inline(always)]
-    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 8], f: impl FnMut(&X) -> Y) -> [Y; 8] {
-        a.each_ref().map(f)
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 8], mut f: impl FnMut(&X) -> Y) -> [Y; 8] {
+        [f(&a[0]), f(&a[1]), f(&a[2]), f(&a[3]), f(&a[4]), f(&a[5]), f(&a[6]), f(&a[7])]
     }
     #[inline(always)]
     fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
@@ -3705,7 +3709,7 @@ impl gx::Kind for Multivector {
         b: &[Y; 8],
         mut f: impl FnMut(&X, &Y) -> Z,
     ) -> [Z; 8] {
-        core::array::from_fn(|i| f(&a[i], &b[i]))
+        [f(&a[0], &b[0]), f(&a[1], &b[1]), f(&a[2], &b[2]), f(&a[3], &b[3]), f(&a[4], &b[4]), f(&a[5], &b[5]), f(&a[6], &b[6]), f(&a[7], &b[7])]
     }
 }
 
@@ -4221,7 +4225,7 @@ where
 
 impl<T: gx::Real> Multivector<(), T> {
     /// The squared norm: the scalar part of `x ~x`.
-    #[inline]
+    #[inline(always)]
     pub fn norm_squared(self) -> T {
         let x = self.c;
         let t1 = x[1] * x[1];
@@ -4239,7 +4243,7 @@ impl<T: gx::Real> Multivector<(), T> {
     }
 
     /// The norm, `sqrt(|norm_squared|)`.
-    #[inline]
+    #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
     }
@@ -11002,6 +11006,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Scalar, T, 1>> for Scalar<(Scalar,),
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Plain> for Vector {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Scalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Scalar, T, 1> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Scalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Scalar<S, T>;
     #[inline(always)]
@@ -11048,6 +11084,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>> for Scalar<
     fn from(p: gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>) -> Self {
         let m = p.m;
         Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Vector {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Scalar, T, 0> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Scalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -11153,6 +11221,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Vector, T, 6>> for Vector<(Vector,),
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Plain> for Vector {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Vector, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Vector, T, 6> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Vector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Vector, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Vector, T, 6>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Vector<S, T>;
     #[inline(always)]
@@ -11238,6 +11338,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Vector, T, 6>> for Vector<
     fn from(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 6>) -> Self {
         let m = p.m;
         Vector { c: [[m[0], m[1], m[2]], [m[1], m[3], m[4]], [m[2], m[4], m[5]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Certified> for Vector {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Vector, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Vector, T, 6> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Vector, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Vector, T, 6>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -11343,6 +11475,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Bivector, T, 6>> for Bivector<(Bivec
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Plain> for Vector {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Bivector, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Bivector, T, 6> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Bivector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Bivector, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Bivector, T, 6>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Bivector<S, T>;
     #[inline(always)]
@@ -11431,6 +11595,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>> for Bivec
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Certified> for Vector {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Bivector, T, 6> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Bivector, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Bivector, T, 6>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Vector<(), T> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -11490,6 +11686,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Pseudoscalar, T, 1>> for Pseudoscala
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Plain> for Vector {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Pseudoscalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Pseudoscalar, T, 1> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Pseudoscalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -11536,6 +11764,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>> for P
     fn from(p: gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>) -> Self {
         let m = p.m;
         Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Vector {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Pseudoscalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -11645,6 +11905,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Rotor, T, 7>> for Rotor<(Rotor,), T>
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Plain> for Vector {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Rotor, T, 7>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Rotor, T, 7> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Rotor, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Rotor, W, 7> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Rotor, T, 7>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Rotor<S, T>;
     #[inline(always)]
@@ -11730,6 +12022,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>> for Rotor<(R
     fn from(p: gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>) -> Self {
         let m = p.m;
         Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[1], m[3], m[4]], [T::zero(), m[2], m[4], m[5]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Vector {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Rotor, T, 6> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Rotor, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Rotor, T, 6>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -11839,6 +12163,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Odd, T, 7>> for Odd<(Odd,), T> {
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Plain> for Vector {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Odd, T, 7>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Odd, T, 7> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Odd, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Odd, W, 7> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Odd, T, 7>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Odd<S, T>;
     #[inline(always)]
@@ -11924,6 +12280,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Odd, T, 6>> for Odd<(Odd,)
     fn from(p: gx::Prepared<gx::Unit<Vector>, Odd, T, 6>) -> Self {
         let m = p.m;
         Odd { c: [[m[0], m[1], m[2], T::zero()], [m[1], m[3], m[4], T::zero()], [m[2], m[4], m[5], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Certified> for Vector {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Odd, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Odd, T, 6> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Odd, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Odd, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Odd, T, 6>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -12048,6 +12436,38 @@ impl<T: gx::Coef> From<gx::Prepared<Vector, Multivector, T, 7>> for Multivector<
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Plain> for Vector {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Multivector, T, 7>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Multivector, T, 7> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Multivector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Multivector, W, 7> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Multivector, T, 7>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Vector<(), T>> {
     type Output = Multivector<S, T>;
     #[inline(always)]
@@ -12147,6 +12567,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>> for Mu
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Vector {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Multivector, T, 6> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Multivector, W, 6> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Multivector, T, 6>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Rotor<(), T> {
     type Output = Scalar<S, T>;
     #[inline(always)]
@@ -12212,6 +12664,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Scalar, T, 1>> for Scalar<(Scalar,), 
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Plain> for Rotor {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Scalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Scalar, T, 1> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Scalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Scalar<S, T>;
     #[inline(always)]
@@ -12258,6 +12742,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>> for Scalar<(
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>) -> Self {
         let m = p.m;
         Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Rotor {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Scalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -12403,6 +12919,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Vector, T, 9>> for Vector<(Vector,), 
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Plain> for Rotor {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Vector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Vector, T, 9> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Vector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Vector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Vector, T, 9>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Vector<S, T>;
     #[inline(always)]
@@ -12525,6 +13073,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>> for Vector<(
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>) -> Self {
         let m = p.m;
         Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Certified> for Rotor {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Vector, T, 9> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Vector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Vector, T, 9>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -12670,6 +13250,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Bivector, T, 9>> for Bivector<(Bivect
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Plain> for Rotor {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Bivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Bivector, T, 9> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Bivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Bivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Bivector, T, 9>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Bivector<S, T>;
     #[inline(always)]
@@ -12795,6 +13407,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>> for Bivect
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Certified> for Rotor {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Bivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Bivector, T, 9>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Rotor<(), T> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -12860,6 +13504,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Pseudoscalar, T, 1>> for Pseudoscalar
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Plain> for Rotor {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Pseudoscalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Pseudoscalar, T, 1> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Pseudoscalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -12906,6 +13582,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>> for Ps
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>) -> Self {
         let m = p.m;
         Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Rotor {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -13055,6 +13763,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Rotor, T, 10>> for Rotor<(Rotor,), T>
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Plain> for Rotor {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Rotor, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Rotor, T, 10> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Rotor, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Rotor, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Rotor, T, 10>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Rotor<S, T>;
     #[inline(always)]
@@ -13177,6 +13917,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>> for Rotor<(Ro
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>) -> Self {
         let m = p.m;
         Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Rotor {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Rotor, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Rotor, T, 9>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -13326,6 +14098,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Odd, T, 10>> for Odd<(Odd,), T> {
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Plain> for Rotor {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Odd, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Odd, T, 10> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Odd, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Odd, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Odd, T, 10>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Odd<S, T>;
     #[inline(always)]
@@ -13448,6 +14252,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>> for Odd<(Odd,),
     fn from(p: gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>) -> Self {
         let m = p.m;
         Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Certified> for Rotor {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Odd, T, 9> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Odd, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Odd, T, 9>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -13616,6 +14452,38 @@ impl<T: gx::Coef> From<gx::Prepared<Rotor, Multivector, T, 10>> for Multivector<
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Plain> for Rotor {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = Rotor<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Rotor, Multivector, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Rotor<(), T>) -> Rotor<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Rotor<(), T>) -> gx::Prepared<Rotor, Multivector, T, 10> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Rotor, Multivector, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Rotor, Multivector, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Rotor, Multivector, T, 10>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Rotor<(), T>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Rotor<(), T>> {
     type Output = Multivector<S, T>;
     #[inline(always)]
@@ -13774,6 +14642,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>> for Mul
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Rotor {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = gx::Unit<Rotor<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Rotor<(), T>) -> gx::Unit<Rotor<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> Rotor<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>) -> gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Rotor>, Multivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Rotor>, Multivector, T, 9>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Rotor<(), T>>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for Odd<(), T> {
     type Output = Scalar<S, T>;
     #[inline(always)]
@@ -13839,6 +14739,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Scalar, T, 1>> for Scalar<(Scalar,), T>
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Plain> for Odd {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Scalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Scalar, T, 1> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Scalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Scalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Scalar, T, 1>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Scalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Scalar<S, T>;
     #[inline(always)]
@@ -13885,6 +14817,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>> for Scalar<(Sc
     fn from(p: gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>) -> Self {
         let m = p.m;
         Scalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Scalar, gx::batch::Certified> for Odd {
+    type Y = Scalar;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Scalar, T, 0> {
+        gx::Prepare::<Scalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Scalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Scalar, T, 0>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Scalar<(), T>) -> Scalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -14032,6 +14996,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Vector, T, 9>> for Vector<(Vector,), T>
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Plain> for Odd {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Vector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Vector, T, 9> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Vector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Vector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Vector, T, 9>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Vector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Vector<S, T>;
     #[inline(always)]
@@ -14156,6 +15152,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Vector, T, 9>> for Vector<(Ve
     fn from(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 9>) -> Self {
         let m = p.m;
         Vector { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Vector, gx::batch::Certified> for Odd {
+    type Y = Vector;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Vector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Vector, T, 9> {
+        gx::Prepare::<Vector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Vector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Vector, T, 9>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Vector<(), T>) -> Vector<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -14303,6 +15331,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Bivector, T, 9>> for Bivector<(Bivector
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Plain> for Odd {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Bivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Bivector, T, 9> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Bivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Bivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Bivector, T, 9>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Bivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Bivector<S, T>;
     #[inline(always)]
@@ -14430,6 +15490,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>> for Bivector
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Bivector, gx::batch::Certified> for Odd {
+    type Y = Bivector;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Bivector, T, 9> {
+        gx::Prepare::<Bivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Bivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Bivector, T, 9>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Bivector<(), T>) -> Bivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Odd<(), T> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -14495,6 +15587,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Pseudoscalar, T, 1>> for Pseudoscalar<(
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Plain> for Odd {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Pseudoscalar, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Pseudoscalar, T, 1> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Pseudoscalar, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Pseudoscalar, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Pseudoscalar, T, 1>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]
@@ -14541,6 +15665,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>> for Pseu
     fn from(p: gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>) -> Self {
         let m = p.m;
         Pseudoscalar { c: [[T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Odd {
+    type Y = Pseudoscalar;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0> {
+        gx::Prepare::<Pseudoscalar>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>, _f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Pseudoscalar, W, 0> {
+        let m = p.m;
+        gx::Prepared::from_entries([])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Pseudoscalar, T, 0>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Pseudoscalar<(), T>) -> Pseudoscalar<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -14692,6 +15848,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Rotor, T, 10>> for Rotor<(Rotor,), T> {
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Plain> for Odd {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Rotor, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Rotor, T, 10> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Rotor, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Rotor, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Rotor, T, 10>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Rotor<S, T>;
     #[inline(always)]
@@ -14816,6 +16004,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>> for Rotor<(Roto
     fn from(p: gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>) -> Self {
         let m = p.m;
         Rotor { c: [[T::from_i64(1), T::zero(), T::zero(), T::zero()], [T::zero(), m[0], m[1], m[2]], [T::zero(), m[3], m[4], m[5]], [T::zero(), m[6], m[7], m[8]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Rotor, gx::batch::Certified> for Odd {
+    type Y = Rotor;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Rotor, T, 9> {
+        gx::Prepare::<Rotor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Rotor, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Rotor, T, 9>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Rotor<(), T>) -> Rotor<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -14967,6 +16187,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Odd, T, 10>> for Odd<(Odd,), T> {
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Plain> for Odd {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Odd, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Odd, T, 10> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Odd, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Odd, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Odd, T, 10>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Odd<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Odd<S, T>;
     #[inline(always)]
@@ -15091,6 +16343,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Odd, T, 9>> for Odd<(Odd,), T
     fn from(p: gx::Prepared<gx::Unit<Odd>, Odd, T, 9>) -> Self {
         let m = p.m;
         Odd { c: [[m[0], m[1], m[2], T::zero()], [m[3], m[4], m[5], T::zero()], [m[6], m[7], m[8], T::zero()], [T::zero(), T::zero(), T::zero(), T::from_i64(1)]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Odd, gx::batch::Certified> for Odd {
+    type Y = Odd;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Odd, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Odd, T, 9> {
+        gx::Prepare::<Odd>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Odd, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Odd, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Odd, T, 9>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Odd<(), T>) -> Odd<(), T> {
+        gx::Transform::transform(v, x)
     }
 }
 
@@ -15259,6 +16543,38 @@ impl<T: gx::Coef> From<gx::Prepared<Odd, Multivector, T, 10>> for Multivector<(M
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Plain> for Odd {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = Odd<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Odd, Multivector, T, 10>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Odd<(), T>) -> Odd<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Odd<(), T>) -> gx::Prepared<Odd, Multivector, T, 10> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Odd, Multivector, T, 10>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Odd, Multivector, W, 10> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8]), f(m[9])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Odd, Multivector, T, 10>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Odd<(), T>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Multivector<S, T>> for gx::Unit<Odd<(), T>> {
     type Output = Multivector<S, T>;
     #[inline(always)]
@@ -15417,6 +16733,38 @@ impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>> for Multi
     }
 }
 
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Multivector, gx::batch::Certified> for Odd {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = gx::Unit<Odd<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Odd<(), T>) -> gx::Unit<Odd<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> Odd<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Odd<(), T>>) -> gx::Prepared<gx::Unit<Odd>, Multivector, T, 9> {
+        gx::Prepare::<Multivector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Odd>, Multivector, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Odd>, Multivector, T, 9>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Odd<(), T>>, x: Multivector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<T: gx::Coef> gx::Outermorphism<Bivector> for Vector<(Vector,), T> {
     type Output = Bivector<(Bivector,), T>;
     /// The extension of a map on `Vector` to `Bivector`, factor by factor with `â§`.
@@ -15521,4 +16869,36 @@ impl<T: gx::Coef> gx::Outermorphism<Vector> for Bivector<(Bivector,), T> {
 
 /// Alias of [`Rotor`].
 pub type Even<S = (), T = f32> = Rotor<S, T>;
+
+#[cfg(feature = "batch")]
+/// [`Scalar`] values in struct-of-arrays form, for the batch kernels.
+pub type ScalarSoa<E = f32> = gx::batch::Soa<Scalar, E>;
+
+#[cfg(feature = "batch")]
+/// [`Vector`] values in struct-of-arrays form, for the batch kernels.
+pub type VectorSoa<E = f32> = gx::batch::Soa<Vector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Bivector`] values in struct-of-arrays form, for the batch kernels.
+pub type BivectorSoa<E = f32> = gx::batch::Soa<Bivector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Pseudoscalar`] values in struct-of-arrays form, for the batch kernels.
+pub type PseudoscalarSoa<E = f32> = gx::batch::Soa<Pseudoscalar, E>;
+
+#[cfg(feature = "batch")]
+/// [`Rotor`] values in struct-of-arrays form, for the batch kernels.
+pub type RotorSoa<E = f32> = gx::batch::Soa<Rotor, E>;
+
+#[cfg(feature = "batch")]
+/// [`Odd`] values in struct-of-arrays form, for the batch kernels.
+pub type OddSoa<E = f32> = gx::batch::Soa<Odd, E>;
+
+#[cfg(feature = "batch")]
+/// [`Multivector`] values in struct-of-arrays form, for the batch kernels.
+pub type MultivectorSoa<E = f32> = gx::batch::Soa<Multivector, E>;
+
+#[cfg(feature = "batch")]
+/// [`Rotor`] values in struct-of-arrays form, for the batch kernels.
+pub type EvenSoa<E = f32> = gx::batch::Soa<Rotor, E>;
 

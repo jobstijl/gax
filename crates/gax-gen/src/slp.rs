@@ -70,6 +70,8 @@ pub enum Instr {
     Div(Operand, Operand),
     /// `atan2(a, b)`
     Atan2(Operand, Operand),
+    /// `if a < b { x } else { y }`
+    Select(Operand, Operand, Operand, Operand),
     /// `f(a)`
     Call(Func, Operand),
 }
@@ -150,7 +152,7 @@ impl Program {
                 }
                 Instr::Neg(_) => c.negs += 1,
                 Instr::Div(..) | Instr::Call(Func::Recip, _) => c.divs += 1,
-                Instr::Call(..) | Instr::Atan2(..) => c.calls += 1,
+                Instr::Call(..) | Instr::Atan2(..) | Instr::Select(..) => c.calls += 1,
             }
         }
         c
@@ -239,7 +241,7 @@ impl Program {
                         .expect("division by a non-constant in to_polys");
                     get(a, &vals).scale(d.recip())
                 }
-                Instr::Atan2(..) | Instr::Call(..) => {
+                Instr::Atan2(..) | Instr::Call(..) | Instr::Select(..) => {
                     panic!("to_polys: non-polynomial instruction")
                 }
             };
@@ -264,6 +266,13 @@ impl Program {
                 Instr::Neg(a) => -get(a, &vals),
                 Instr::Div(a, b) => get(a, &vals) / get(b, &vals),
                 Instr::Atan2(a, b) => get(a, &vals).atan2(get(b, &vals)),
+                Instr::Select(a, b, x, y) => {
+                    if get(a, &vals) < get(b, &vals) {
+                        get(x, &vals)
+                    } else {
+                        get(y, &vals)
+                    }
+                }
                 Instr::Call(f, a) => {
                     let x = get(a, &vals);
                     match f {
@@ -358,6 +367,9 @@ impl Program {
                 (None, Instr::Neg(a)) => format!("-{}", r(a)),
                 (None, Instr::Div(a, b)) => format!("{} / {}", r(a), r(b)),
                 (None, Instr::Atan2(a, b)) => format!("{}.atan2({})", r(a), r(b)),
+                (None, Instr::Select(a, b, x, y)) => {
+                    format!("T::select_lt({}, {}, {}, {})", r(a), r(b), r(x), r(y))
+                }
                 (None, Instr::Call(f, a)) => format!("{}.{}()", r(a), f.method()),
             };
             let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
@@ -390,6 +402,7 @@ fn operands(i: &Instr) -> Vec<Operand> {
             vec![*a, *b]
         }
         Instr::Neg(a) | Instr::Call(_, a) => vec![*a],
+        Instr::Select(a, b, x, y) => vec![*a, *b, *x, *y],
     }
 }
 
@@ -405,6 +418,7 @@ fn remap(i: &Instr, map: &[usize]) -> Instr {
         Instr::Neg(a) => Instr::Neg(m(a)),
         Instr::Div(a, b) => Instr::Div(m(a), m(b)),
         Instr::Atan2(a, b) => Instr::Atan2(m(a), m(b)),
+        Instr::Select(a, b, x, y) => Instr::Select(m(a), m(b), m(x), m(y)),
         Instr::Call(f, a) => Instr::Call(*f, m(a)),
     }
 }

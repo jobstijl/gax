@@ -125,7 +125,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         prog.emit_lets(&xvar, "t", &mut lets);
         let _ = write!(
             body,
-            "    /// The squared norm: the scalar part of `x ~x`.\n    #[inline]\n    pub fn norm_squared(self) -> T {{\n        let x = self.c;\n{lets}        {}\n    }}\n\n    /// The norm, `sqrt(|norm_squared|)`.\n    #[inline]\n    pub fn norm(self) -> T {{\n        self.norm_squared().abs().sqrt()\n    }}\n\n",
+            "    /// The squared norm: the scalar part of `x ~x`.\n    #[inline(always)]\n    pub fn norm_squared(self) -> T {{\n        let x = self.c;\n{lets}        {}\n    }}\n\n    /// The norm, `sqrt(|norm_squared|)`.\n    #[inline(always)]\n    pub fn norm(self) -> T {{\n        self.norm_squared().abs().sqrt()\n    }}\n\n",
             render(&prog.outputs[0], &xvar, "t")
         );
     }
@@ -192,7 +192,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 meta.exp = Some(on.clone());
                 let _ = write!(
                     body,
-                    "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n    }}\n\n",
+                    "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B` with `B²` a Study number.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
                     outs.join(", ")
                 );
             }
@@ -220,7 +220,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.sqrt = true;
         let _ = write!(
             body,
-            "    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).\n    #[inline]\n    pub fn sqrt(self) -> gx::Unit<Self> {{\n        let mut c = self.c;\n        c[{si}] = c[{si}] {} T::one();\n        {name}::from_coeffs(c).normalized()\n    }}\n\n",
+            "    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).\n    #[inline(always)]\n    pub fn sqrt(self) -> gx::Unit<Self> {{\n        let mut c = self.c;\n        c[{si}] = c[{si}] {} T::one();\n        {name}::from_coeffs(c).normalized()\n    }}\n\n",
             if ss > 0 { "+" } else { "-" }
         );
     }
@@ -277,7 +277,7 @@ fn emit_inverse(
     let on = &out_kind.name;
     let _ = write!(
         body,
-        "    /// The inverse under the geometric product, `~x (x ~x)⁻¹` ({}).\n    #[inline]\n    pub fn inverse(self) -> {on}<(), T> {{\n        let x = self.c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n\n",
+        "    /// The inverse under the geometric product, `~x (x ~x)⁻¹` ({}).\n    #[inline(always)]\n    pub fn inverse(self) -> {on}<(), T> {{\n        let x = self.c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n\n",
         prog.cost(),
         outs.join(", ")
     );
@@ -343,7 +343,7 @@ fn emit_normalized(
     let name = &k.name;
     let _ = write!(
         body,
-        "    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`±1` when the norm is negative).\n    #[inline]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({name}::from_coeffs([{}]))\n    }}\n\n",
+        "    /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`±1` when the norm is negative).\n    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({name}::from_coeffs([{}]))\n    }}\n\n",
         outs.join(", ")
     );
     true
@@ -441,7 +441,7 @@ fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) ->
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n}}\n\n",
+        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
         outs.join(", ")
     );
     Some(on.clone())
@@ -513,7 +513,7 @@ fn emit_exp_general(
     let on = &out_kind.name;
     let _ = write!(
         body,
-        "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n    }}\n\n",
+        "    /// The exponential, a unit versor: `exp(B) = C(B²) + S(B²) B`, with `B² = λ + Q` and `Q² = q` a scalar.\n    #[inline]\n    #[allow(unused_variables)]\n    pub fn exp(self) -> gx::Unit<{on}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({on}::from_coeffs([{}]))\n        }})\n    }}\n\n",
         outs.join(", ")
     );
     Some(on.clone())
@@ -592,7 +592,7 @@ fn emit_log_general(
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n    }}\n}}\n\n",
+        "impl<T: gx::Real> gx::Log<{on}<(), T>> for gx::Unit<{name}<(), T>> {{\n    /// The logarithm of a unit versor: the bivector `B` with `B.exp() == self`.\n    #[inline]\n    #[allow(unused_variables)]\n    fn log(self) -> {on}<(), T> {{\n        T::vectorize(#[inline(always)] move || {{\n        let x = self.into_inner().c;\n{lets}        {on}::from_coeffs([{}])\n        }})\n    }}\n}}\n\n",
         outs.join(", ")
     );
     Some(on.clone())
@@ -636,7 +636,7 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
     };
     let _ = write!(
         body,
-        "    /// The exponential, a unit versor, by scaling and squaring: a Taylor series of `B / 256` in\n    /// `{en}`, then eight squarings. (No closed form is generated for `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        let h = T::from_f64(1.0 / 256.0);\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/8))))\n        let mut r = one;\n        for k in (1..=8).rev() {{\n            r = one + (x * r).gp(T::from_f64(1.0 / f64::from(k)));\n        }}\n        for _ in 0..8 {{\n            r = r * r;\n        }}\n        gx::Unit::new_unchecked(r)\n    }}\n\n"
+        "    /// The exponential, a unit versor, by scaling and squaring: a Taylor series of `B / 256` in\n    /// `{en}`, then eight squarings. (No closed form is generated for `{name}` in this algebra.)\n    #[inline]\n    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{\n        T::vectorize(#[inline(always)] move || {{\n        let h = T::from_f64(1.0 / 256.0);\n        let mut x = {en}::<(), T>::zero();\n{embed}        let mut one = {en}::<(), T>::zero();\n        one.c[{one_pos}] = {one};\n        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/8))))\n        let mut r = one;\n        for k in (1..=8).rev() {{\n            r = one + (x * r).gp(T::from_f64(1.0 / f64::from(k)));\n        }}\n        for _ in 0..8 {{\n            r = r * r;\n        }}\n        gx::Unit::new_unchecked(r)\n        }})\n    }}\n\n"
     );
     Some(en.clone())
 }

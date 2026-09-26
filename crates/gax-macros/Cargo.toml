@@ -10,6 +10,10 @@ repository.workspace = true
 [lib]
 proc-macro = true
 
+[features]
+## Emit the batch kernels (enabled by `gax/batch`).
+batch = []
+
 [dependencies]
 gax-gen = { workspace = true }
 
