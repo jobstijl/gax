@@ -191,6 +191,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "miri perturbs std's float functions by a few ulp on purpose"
+    )]
     fn sin_cos_match_std() {
         for x in sweep(-100.0, 100.0, 200_000) {
             let (s, c) = sin_cos(x);
@@ -202,6 +206,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "miri perturbs std's float functions by a few ulp on purpose"
+    )]
     fn exp_ln_match_std() {
         for x in sweep(-103.0, 88.7, 200_000) {
             close(exp(x), x.exp(), 2, 0.0, "exp", x);
@@ -222,6 +230,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "miri perturbs std's float functions by a few ulp on purpose"
+    )]
     fn atan2_matches_std() {
         for y in sweep(-3.0, 3.0, 300) {
             for x in sweep(-3.0, 3.0, 301) {
@@ -255,6 +267,10 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "miri perturbs std's float functions by a few ulp on purpose"
+    )]
     fn sinh_cosh_match_std() {
         for x in sweep(-80.0, 80.0, 100_000) {
             close(sinh(x), x.sinh(), 3, 1e-7, "sinh", x);
