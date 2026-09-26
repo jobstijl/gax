@@ -25,10 +25,24 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
       # Compile-fail messages are pinned for the current stable compiler only.
+      # On failure, the panic and error lines are repeated as annotations, which the GitHub API
+      # shows without access to the logs.
       - name: test (default features)
-        run: cargo test --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+            grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
       - name: test (all algebras, SIMD, batch kernels on every level)
-        run: cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+            grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
       - name: no_std build of the core
         run: cargo build -p gax-core --no-default-features
 
