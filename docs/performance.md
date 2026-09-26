@@ -230,9 +230,12 @@ These are debug builds of the library alone; generic code is compiled only when 
 | PGA2D | 20k | 602 | 108 | 2.2 s |
 | STA | 24k | 470 | 48 | 3.7 s |
 | PGA3D | 35k | 733 | 140 | 4.8 s |
+| CGA2D | 40k | 739 | 80 | 5.9 s¹ |
 | CGA3D | 73k | 739 | 80 | 14.4 s |
 | STAP | 58k | 571 | 54 | 7.0 s |
 | CSTA | 111k | 1044 | 48 | 31.7 s |
+
+¹ Measured on a busy machine, where CGA3D took 18 s instead of 14.4 s.
 
 A release build with the first six algebras takes 27 s. Regenerating all eight takes about two
 minutes in release. Most of it goes to CSTA (100 s) and to simplifying CGA3D's 16-component

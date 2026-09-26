@@ -42,7 +42,7 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Algebras of any signature** `Cl(p,q,r)`, including degenerate metrics (plane-based PGA) and
   non-diagonal ones (the CGA null basis `eo`, `ei`), declared with the [`algebra!`] macro.
 * **Standard algebras, pre-generated behind cargo features**, so using them compiles no proc macro:
-  `pga2d`, `pga3d` (default), `vga2d`, `vga3d`, `sta`, `cga3d`, and the larger `stap` (projective
+  `pga2d`, `pga3d` (default), `vga2d`, `vga3d`, `sta`, `cga2d`, `cga3d`, and the larger `stap` (projective
   spacetime, `R(3,1,1)`) and `csta` (conformal spacetime, `R(4,2)`).
 * **Products for values, maps and forms alike**, each with the slot bookkeeping done by the type
   system: `*`, `^`, `&`, `|`, versor transport `>>` and `<<`, contractions and commutators.

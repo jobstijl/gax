@@ -25,7 +25,7 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 
 | crate | what |
 |---|---|
-| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels |
+| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA2D/3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels |
 | [`crates/gax-core`](crates/gax-core) | slot lists, kinds, coefficient traits, binding, solvers, Study-number functions (`no_std`) |
 | [`crates/gax-gen`](crates/gax-gen) | generator: exact tables, symbolic polynomials, simplifier, emitter, `gax-regen` |
 | [`crates/gax-macros`](crates/gax-macros) | the `algebra!` proc macro |

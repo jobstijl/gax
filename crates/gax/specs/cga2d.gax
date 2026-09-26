@@ -1,0 +1,19 @@
+// Conformal geometric algebra of the Euclidean plane, R(3,1,0), in the null basis eo (origin)
+// and ei (infinity) with eo . ei = -1, as in cga3d.
+algebra cga2d "Conformal geometric algebra of the Euclidean plane, `R(3,1,0)`, in the null basis `eo` (origin), `ei` (infinity) with `eo . ei = -1`.";
+basis e1 = 1, e2 = 1, eo = 0, ei = 0;
+metric eo ei = -1;
+
+kind Scalar = [1] "A scalar.";
+versor Vector = [e1, e2, eo, ei] "A vector: a point `x + ½x² ei + eo`, a circle or a line (dual representation). As a versor it is a reflection in a line or an inversion in a circle.";
+kind Twist = [e12, e1i, e2i] "The bivectors of rigid motions (the Lie algebra of motors): the rotation `e12` and the translations `e1i, e2i`.";
+kind Bivector = [e12, e1o, e2o, e1i, e2i, eoi] "A bivector: a point pair (dual), or the generator of a conformal transformation.";
+kind Trivector = [e12o, e12i, e1oi, e2oi] "A trivector: a circle or a line through three points (direct representation).";
+kind Pseudoscalar = [e12oi] "The pseudoscalar `e12oi`.";
+versor Motor = [1, e12, e1i, e2i] "A rigid motion of the plane: rotation and translation.";
+versor Even = [1, e12, e1o, e2o, e1i, e2i, eoi, e12oi] "The even subalgebra: all conformal versors of even grade (rotors, translators, dilators, transversions).";
+versor Odd = [e1, e2, eo, ei, e12o, e12i, e1oi, e2oi] "The odd subalgebra.";
+kind Multivector = [1, e1, e2, eo, ei, e12, e1o, e2o, e1i, e2i, eoi, e12o, e12i, e1oi, e2oi, e12oi] "A general multivector.";
+
+alias Point = Vector;
+alias Circle = Trivector;

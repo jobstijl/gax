@@ -65,6 +65,17 @@ pub mod sta {
     include!("algebras/sta.rs");
 }
 
+/// Conformal geometric algebra of the Euclidean plane, `R(3,1,0)`, in the null basis `eo`, `ei`:
+/// points, circles and lines of the plane, and their conformal transformations.
+///
+/// The types, products and methods are generated from `specs/cga2d.gax` by `gax-regen`.
+#[cfg(feature = "cga2d")]
+#[allow(missing_docs, unused_variables, unused_parens, clippy::all, clippy::pedantic)]
+#[rustfmt::skip]
+pub mod cga2d {
+    include!("algebras/cga2d.rs");
+}
+
 /// Conformal geometric algebra of Euclidean space, `R(4,1,0)`, in the null basis `eo`, `ei`.
 ///
 /// The types, products and methods are generated from `specs/cga3d.gax` by `gax-regen`.

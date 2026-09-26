@@ -19,7 +19,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] First benchmark against glam
 
 ## Phase 2: broaden
-- [x] PGA3D, VGA2D, VGA3D, STA, CGA3D pre-generated; STAP and CSTA behind their own features
+- [x] PGA3D, VGA2D, VGA3D, STA, CGA3D pre-generated; STAP and CSTA behind their own features; CGA2D
 - [x] `Sym`, the tracer with bounded expansion, `examples/traced` (build.rs)
 - [x] SIMD lanes (`wide`), SoA benchmark
 - [x] Solvers (LU, Cholesky, Jacobi eigh, generalized eigh, SVD), property-tested, branch free
