@@ -10,7 +10,7 @@
 //! combining an `S`-slotted value with a plain value on either side has slots `S`.
 
 use crate::coef::{Coef, Elem};
-use crate::kind::Kind;
+use crate::kind::{Extensor, Kind, Retype};
 use core::ops::{Add, Mul, Neg, Sub};
 
 /// Concatenation of slot lists. Implemented for every [`Slots`] type.
@@ -72,6 +72,49 @@ pub trait Slots: HasCat<Cat<()> = Self> + Copy + 'static {
     fn as_value<X: Elem>(a: &Self::Arr<X>) -> Option<X>;
     /// `Some` for the empty list. Folds at compile time.
     fn from_value<X: Elem>(x: X) -> Option<Self::Arr<X>>;
+
+    /// Associativity witness: an array over `Cat<Cat<Self, B>, C>` as an array over
+    /// `Cat<Self, Cat<B, C>>`. The two lists are the same slots in the same order, so this is
+    /// the identity on the coefficients; it exists because the compiler cannot prove the two
+    /// types equal for generic lists. See [`reassoc`](crate::slots::reassoc).
+    #[inline(always)]
+    fn reassoc<B: Slots, C: Slots, X: Elem>(
+        a: &<Cat<Cat<Self, B>, C> as Slots>::Arr<X>,
+    ) -> <Cat<Self, Cat<B, C>> as Slots>::Arr<X> {
+        <Cat<Self, Cat<B, C>> as Slots>::from_flat(
+            &mut |i| <Cat<Cat<Self, B>, C> as Slots>::get_flat(a, i),
+            0,
+        )
+    }
+}
+
+/// Rebracket the slots of `m` from `Cat<Cat<A, B>, C>` to `Cat<A, Cat<B, C>>`: the identity on
+/// the coefficients, for generic code whose signature brackets differently from the
+/// expression that computes it.
+///
+/// ```
+/// use gax::pga3d::Point;
+/// use gax::{Cat, Slots};
+///
+/// // `(a * b) * c` has slots `Cat<Cat<A, B>, C>`; the signature says `Cat<A, Cat<B, C>>`.
+/// fn triple<A: Slots, B: Slots, C: Slots>(
+///     a: Point<A, f64>,
+///     b: Point<B, f64>,
+///     c: Point<C, f64>,
+/// ) -> Point<Cat<A, Cat<B, C>>, f64> {
+///     gax::slots::reassoc::<A, B, C, _>((a * b) * c)
+/// }
+/// let (p, q, r) = (Point::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 1.0, 0.0), Point::xyz(0.0, 0.0, 1.0));
+/// assert_eq!(triple(p, q, r), (p * q) * r);
+/// ```
+#[inline(always)]
+pub fn reassoc<A: Slots, B: Slots, C: Slots, M>(m: M) -> Retype<M, Cat<A, Cat<B, C>>, M::Coef>
+where
+    M: Extensor<Slots = Cat<Cat<A, B>, C>>,
+{
+    Extensor::from_coeffs(<M::Kind as Kind>::arr_map(m.coeffs(), |c| {
+        A::reassoc::<B, C, M::Coef>(c)
+    }))
 }
 
 impl HasCat for () {
