@@ -593,26 +593,23 @@ fn batch_form_soa(s: &mut String, name: &str, args: &[Shape], result: &Shape) {
         "                let blko = out.block_mut(blk);\n                let mut j = 0;\n                while j < ::gax::batch::BLOCK {{\n                    let i = blk * ::gax::batch::BLOCK + j;\n                    if i >= n {{\n                        break;\n                    }}\n                    let m = (n - i).min(L::LANES);"
     );
     for (k, a) in args.iter().enumerate() {
-        let load = match &a.kind {
-            Some((path, unit)) => {
-                let l = format!("::gax::batch::load_block::<{path}, L>(blk{k}, j)");
-                if *unit {
-                    format!("::gax::Unit::new_unchecked({l})")
-                } else {
-                    l
-                }
+        let load = if let Some((path, unit)) = &a.kind {
+            let l = format!("::gax::batch::load_block::<{path}, L>(blk{k}, j)");
+            if *unit {
+                format!("::gax::Unit::new_unchecked({l})")
+            } else {
+                l
             }
-            None => {
-                let parts: Vec<String> = (0..a.len)
-                    .map(|j| {
-                        format!(
-                            "::gax::batch::column::<L>(m, #[inline(always)] |l| ({})[{j}])",
-                            (a.coeffs)(&format!("a{k}[i + l]"))
-                        )
-                    })
-                    .collect();
-                (a.construct)(&parts)
-            }
+        } else {
+            let parts: Vec<String> = (0..a.len)
+                .map(|j| {
+                    format!(
+                        "::gax::batch::column::<L>(m, #[inline(always)] |l| ({})[{j}])",
+                        (a.coeffs)(&format!("a{k}[i + l]"))
+                    )
+                })
+                .collect();
+            (a.construct)(&parts)
         };
         let _ = writeln!(
             s,
