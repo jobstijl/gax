@@ -10,6 +10,8 @@ fn main() {
     let mut t = Tracer::new();
     // Also emit `*_batch` forms that run the kernels on SIMD lanes.
     t.batch(true);
+    // Also emit WGSL forms of the kernels (`fused.wesl`, `FUSED_WESL`).
+    t.wgsl(true);
     t.kernel(
         "shadow_of_moved_fused",
         |m: Unit<Motor<(), Sym>>, l: Point<(), Sym>, g: Plane<(), Sym>, p: Point<(), Sym>| {

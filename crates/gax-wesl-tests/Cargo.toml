@@ -1,0 +1,19 @@
+[package]
+name = "gax-wesl-tests"
+description = "WESL tests of gax's generated shader modules: imports, stripping, CPU evaluation"
+version = "0.0.0"
+edition.workspace = true
+# The `wesl` crate needs a newer Rust than gax's MSRV; this crate is only tested, never used.
+rust-version = "1.97.1"
+license.workspace = true
+publish = false
+
+[dev-dependencies]
+gax = { path = "../gax", features = ["wgsl", "bytemuck", "all-algebras"] }
+gax-gen = { workspace = true }
+gax-example-traced = { path = "../../examples/traced" }
+naga = { version = "30", features = ["wgsl-in"] }
+wesl = { version = "0.5", features = ["eval"] }
+
+[lints]
+workspace = true

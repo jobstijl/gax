@@ -32,6 +32,7 @@ pub mod bind;
 pub mod coef;
 pub mod extensor;
 pub mod fill;
+pub mod gpu;
 pub mod kind;
 pub mod linalg;
 pub mod math;
@@ -49,6 +50,7 @@ pub use bind::Of;
 pub use coef::{Coef, Elem, Real};
 pub use extensor::{Endomorphism, Form, Pairing, SquareMap, TraceFirst};
 pub use fill::{False, FillList, KindEq, SplitLast, True};
+pub use gpu::GpuMat;
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Outermorphism, Rc,
@@ -59,3 +61,6 @@ pub use prepared::{Prepare, Prepared};
 pub use slots::{Cat, HasCat, SlotArr, Slots, SplitFirst};
 pub use trace::Traceable;
 pub use unit::{NewtonStep, Unit};
+
+#[cfg(feature = "bytemuck")]
+pub use bytemuck;

@@ -1,0 +1,28 @@
+[package]
+name = "gax-wgpu-example"
+description = "PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel, shared with the CPU"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate, so that wgpu and winit stay out of gax's workspace.
+[workspace]
+
+[dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "bytemuck", "batch"] }
+bytemuck = { version = "1.25", features = ["derive"] }
+pollster = "1"
+wgpu = "30"
+winit = "0.30"
+
+[build-dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "trace", "wgsl"] }
+# Links the shaders against gax's WGSL modules at build time; the program ships plain WGSL.
+wesl = "0.5"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

@@ -48,6 +48,64 @@ pub trait Traceable: Sized {
     fn write_kind(_w: &mut dyn Write) -> Option<bool> {
         None
     }
+    /// WGSL: write the type. A kind of a standard algebra is a WESL path (`gax::pga3d::Point`),
+    /// a scalar is `f32`, an array `array<T, N>`, and a tuple a struct named `hint`, declared
+    /// in `decls`. Types without a WGSL form (kinds of `algebra!` algebras) return an error.
+    ///
+    /// # Errors
+    /// For types without a WGSL form, and the formatter's errors.
+    fn write_wgsl_type(_w: &mut dyn Write, _decls: &mut dyn Write, _hint: &str) -> fmt::Result {
+        Err(fmt::Error)
+    }
+    /// WGSL: write the expression of coefficient `i` of the value named `name`.
+    ///
+    /// # Errors
+    /// For types without a WGSL form, and the formatter's errors.
+    fn write_wgsl_coeff(_w: &mut dyn Write, _name: &str, _i: usize) -> fmt::Result {
+        Err(fmt::Error)
+    }
+    /// WGSL: write an expression constructing the value from `LEN` coefficient expressions
+    /// (`hint` as for [`Traceable::write_wgsl_type`]).
+    ///
+    /// # Errors
+    /// For types without a WGSL form, and the formatter's errors.
+    fn write_wgsl_construct(_w: &mut dyn Write, _hint: &str, _parts: &[&str]) -> fmt::Result {
+        Err(fmt::Error)
+    }
+}
+
+/// The WESL path of a kind of a standard algebra, `gax::pga3d::Point`; an error for other
+/// algebras (which have no generated WGSL module).
+fn write_wgsl_kind<K: Kind>(w: &mut dyn Write) -> fmt::Result {
+    let module = K::MODULE;
+    let (first, rest) = module.split_once("::").unwrap_or((module, ""));
+    if first != "gax" || rest.is_empty() {
+        return Err(fmt::Error);
+    }
+    write!(w, "gax::{rest}::{}", K::NAME)
+}
+
+fn write_wgsl_kind_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {
+    write!(w, "{name}.c{}.{}", i / 4, ["x", "y", "z", "w"][i % 4])
+}
+
+fn write_wgsl_kind_construct<K: Kind>(w: &mut dyn Write, parts: &[&str]) -> fmt::Result {
+    write_wgsl_kind::<K>(w)?;
+    w.write_str("(")?;
+    for (f, chunk) in parts.chunks(4).enumerate() {
+        if f > 0 {
+            w.write_str(", ")?;
+        }
+        w.write_str("vec4<f32>(")?;
+        for j in 0..4 {
+            if j > 0 {
+                w.write_str(", ")?;
+            }
+            w.write_str(chunk.get(j).copied().unwrap_or("0.0"))?;
+        }
+        w.write_str(")")?;
+    }
+    w.write_str(")")
 }
 
 /// The path of a kind in code outside its own crate: `::gax::pga3d::Point` for the standard
@@ -108,6 +166,15 @@ impl<M: Extensor<Slots = ()>> Traceable for M {
         write_kind_path::<M::Kind>(w).ok()?;
         Some(false)
     }
+    fn write_wgsl_type(w: &mut dyn Write, _decls: &mut dyn Write, _hint: &str) -> fmt::Result {
+        write_wgsl_kind::<M::Kind>(w)
+    }
+    fn write_wgsl_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {
+        write_wgsl_kind_coeff(w, name, i)
+    }
+    fn write_wgsl_construct(w: &mut dyn Write, _hint: &str, parts: &[&str]) -> fmt::Result {
+        write_wgsl_kind_construct::<M::Kind>(w, parts)
+    }
 }
 
 impl<M> Traceable for Unit<M>
@@ -143,6 +210,15 @@ where
     fn write_kind(w: &mut dyn Write) -> Option<bool> {
         write_kind_path::<M::Kind>(w).ok()?;
         Some(true)
+    }
+    fn write_wgsl_type(w: &mut dyn Write, _decls: &mut dyn Write, _hint: &str) -> fmt::Result {
+        write_wgsl_kind::<M::Kind>(w)
+    }
+    fn write_wgsl_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {
+        write_wgsl_kind_coeff(w, name, i)
+    }
+    fn write_wgsl_construct(w: &mut dyn Write, _hint: &str, parts: &[&str]) -> fmt::Result {
+        write_wgsl_kind_construct::<M::Kind>(w, parts)
     }
     fn for_each_condition(&self, f: &mut dyn FnMut(M::Coef)) {
         let m = **self;
@@ -203,8 +279,92 @@ macro_rules! tuple_traceable {
             fn for_each_condition(&self, f: &mut dyn FnMut(C)) {
                 $( self.$i.for_each_condition(f); )+
             }
+            fn write_wgsl_type(w: &mut dyn Write, decls: &mut dyn Write, hint: &str) -> fmt::Result {
+                // Field types first (they may declare structs of their own).
+                let mut fields = [$({ let _ = $i; FieldBuf::new() },)+];
+                $( $A::write_wgsl_type(&mut fields[$i], decls, &FieldBuf::hint(hint, $i))?; )+
+                write!(decls, "struct {hint} {{\n")?;
+                for (k, t) in fields.iter().enumerate() {
+                    write!(decls, "    f{k}: {},\n", t.as_str())?;
+                }
+                decls.write_str("}\n\n")?;
+                w.write_str(hint)
+            }
+            fn write_wgsl_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {
+                let mut start = 0;
+                $(
+                    if i >= start && i < start + $A::LEN {
+                        return $A::write_wgsl_coeff(w, &FieldBuf::field(name, $i), i - start);
+                    }
+                    start += $A::LEN;
+                )+
+                let _ = start;
+                Err(fmt::Error)
+            }
+            fn write_wgsl_construct(w: &mut dyn Write, hint: &str, parts: &[&str]) -> fmt::Result {
+                let mut start = 0;
+                write!(w, "{hint}(")?;
+                $(
+                    if $i > 0 {
+                        w.write_str(", ")?;
+                    }
+                    $A::write_wgsl_construct(w, &FieldBuf::hint(hint, $i), &parts[start..start + $A::LEN])?;
+                    start += $A::LEN;
+                )+
+                let _ = start;
+                w.write_str(")")
+            }
         }
     };
+}
+
+/// A small fixed-capacity string for generated WGSL names (no allocation in `no_std`).
+struct FieldBuf {
+    buf: [u8; 128],
+    len: usize,
+}
+
+impl FieldBuf {
+    fn new() -> FieldBuf {
+        FieldBuf {
+            buf: [0; 128],
+            len: 0,
+        }
+    }
+    fn as_str(&self) -> &str {
+        core::str::from_utf8(&self.buf[..self.len]).unwrap_or("")
+    }
+    /// `{hint}_{k}`.
+    fn hint(hint: &str, k: usize) -> FieldBuf {
+        let mut b = FieldBuf::new();
+        let _ = write!(b, "{hint}_{k}");
+        b
+    }
+    /// `{name}.f{k}`.
+    fn field(name: &str, k: usize) -> FieldBuf {
+        let mut b = FieldBuf::new();
+        let _ = write!(b, "{name}.f{k}");
+        b
+    }
+}
+
+impl core::ops::Deref for FieldBuf {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Write for FieldBuf {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let end = self.len + s.len();
+        if end > self.buf.len() {
+            return Err(fmt::Error);
+        }
+        self.buf[self.len..end].copy_from_slice(s.as_bytes());
+        self.len = end;
+        Ok(())
+    }
 }
 
 tuple_traceable!(A0 0, A1 1);
@@ -263,5 +423,26 @@ impl<A: Traceable, const N: usize> Traceable for [A; N] {
         for a in self {
             a.for_each_condition(f);
         }
+    }
+    fn write_wgsl_type(w: &mut dyn Write, decls: &mut dyn Write, hint: &str) -> fmt::Result {
+        w.write_str("array<")?;
+        A::write_wgsl_type(w, decls, &FieldBuf::hint(hint, 0))?;
+        write!(w, ", {N}>")
+    }
+    fn write_wgsl_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {
+        let mut elem = FieldBuf::new();
+        write!(elem, "{name}[{}]", i / A::LEN)?;
+        A::write_wgsl_coeff(w, &elem, i % A::LEN)
+    }
+    fn write_wgsl_construct(w: &mut dyn Write, hint: &str, parts: &[&str]) -> fmt::Result {
+        let inner = FieldBuf::hint(hint, 0);
+        w.write_str("array(")?;
+        for i in 0..N {
+            if i > 0 {
+                w.write_str(", ")?;
+            }
+            A::write_wgsl_construct(w, &inner, &parts[i * A::LEN..(i + 1) * A::LEN])?;
+        }
+        w.write_str(")")
     }
 }

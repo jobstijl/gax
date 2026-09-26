@@ -31,15 +31,16 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo test --no-fail-fast --workspace --exclude gax-bench -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          # gax-wesl-tests needs the `wesl` crate, whose MSRV is above gax's.
+          cargo test --no-fail-fast --workspace --exclude gax-bench ${{ matrix.rust == 'stable' && '' || '--exclude gax-wesl-tests' }} -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
-      - name: test (all algebras, SIMD, batch kernels on every level)
+      - name: test (all algebras, SIMD, batch kernels on every level, WGSL modules)
         shell: bash
         run: |
           set -o pipefail
-          cargo test --no-fail-fast -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
+          cargo test --no-fail-fast -p gax -p gax-core --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck -- ${{ matrix.rust == 'stable' && '' || '--skip compile_fail' }} 2>&1 | tee test.log || {
             grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
             exit 1
           }
@@ -96,6 +97,38 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --release -p gax-gen --bin gax-regen -- --check
 
+  gpu:
+    name: WGSL kernels on a GPU (lavapipe)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/gax-gpu-tests
+      - name: Mesa's software Vulkan driver
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers libvulkan1
+      - name: every kernel, matrix orientation, layouts, traced kernels
+        shell: bash
+        working-directory: crates/gax-gpu-tests
+        env:
+          GAX_REQUIRE_GPU: "1"
+          WGPU_BACKEND: vulkan
+        run: |
+          set -o pipefail
+          cargo test -- --nocapture --test-threads 1 2>&1 | tee test.log || {
+            grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/wgpu
+      - name: the wgpu example, headless (GPU particles against their CPU twins)
+        working-directory: examples/wgpu
+        env:
+          WGPU_BACKEND: vulkan
+        run: cargo run --release -- --check
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -105,8 +138,8 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch
-      - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace,gax/batch
+      - run: cargo clippy --workspace --all-targets --features gax/all-algebras,gax/wide,gax/batch,gax/wgsl,gax/bytemuck
+      - run: cargo doc --workspace --no-deps --features gax/all-algebras,gax/wide,gax/trace,gax/batch,gax/wgsl,gax/bytemuck
         env:
           RUSTDOCFLAGS: -D warnings
 

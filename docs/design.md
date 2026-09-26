@@ -647,6 +647,84 @@ files in `gax/src/algebras/`, behind cargo features.
   * the bits of NaN payloads;
   * `f64` transcendental functions from the standard library when the feature is off.
 
+## ADR-028: WGSL modules by text emission, with plain GPU layouts
+*Status: accepted, implemented. See [shaders.md](shaders.md).*
+
+* **Printing, not a second implementation.** Every fused kernel is a `gax_gen::slp::Program`,
+  verified exactly before any text is written (ADR-011). A WGSL printer
+  (`Target::Wgsl`) renders the same programs:
+  * `mul_add` becomes `fma`;
+  * `select_lt(a, b, x, y)` becomes `select(y, x, a < b)`, since WGSL takes the false value
+    first;
+  * exact constants become abstract-float expressions such as `(1.0 / 3.0)`, which the shader
+    compiler rounds to `f32` once.
+
+  The emitters record each kernel's programs, and the Study-number helper between them, in a
+  language-neutral form (`gax_gen::kernel::Kernel`). The WGSL module only renders those. The
+  Rust output is unchanged, byte for byte.
+* **Text only, no runtime dependencies.**
+  * The modules are `&'static str` in `gax::wgsl` (feature `wgsl`), each with its module path
+    (`gax::pga3d`).
+  * gax depends on neither `wesl` nor `naga` nor `encase`. So no version conflict with an
+    engine is possible: Bevy pins `wesl` 0.4 while 0.5 is current.
+  * `wesl` and `naga` are dev-dependencies, used for validation only.
+* **Plain WGSL, valid WESL.** Each module is self-contained: the Study helpers it uses are
+  included, prefixed `study_`. It is plain WGSL, which can be prepended to a shader, and a WESL
+  module, which can be imported with stripping.
+  * WESL 0.5 added visibility, and imports across packages need `public` declarations, which
+    older parsers reject. The source has none; `Module::wesl_public()` adds them.
+* **The layout.**
+  * A kind of N coefficients is a struct of `ceil(N/4)` `vec4<f32>` fields `c0, c1, …`, in the
+    Rust blade order, zero-padded. It works in uniform, storage and vertex buffers (one
+    location per field) without special cases. Only PGA3D `Line` (6 → 8 floats) wastes much.
+  * The Rust side is a generated `{Kind}Gpu`: `#[repr(C, align(16))]` with
+    `[[f32; 4]; ceil(N/4)]`, lossless `From` conversions both ways, and `bytemuck::Pod`
+    (feature `bytemuck`).
+  * The generator writes both sides, so it also writes `const` assertions of size, alignment
+    and field offset (the idea of `const_shader_layout`, without the dependency). A test compares
+    naga's layout of every struct with the Rust types.
+* **Maps.**
+  * WGSL matrices are column-major, and gax maps are stored output first. So a map between
+    kinds of 3 or 4 coefficients converts to `GpuMat<C>` by transposing: column `i` is the
+    image of input coefficient `i`.
+  * Shaders apply it as `m * x`, and the generated `{v}_matrix_{x}` functions return it in the
+    same orientation.
+* **What is emitted, and its names.** WGSL has no overloading, and the full product set is
+  large, so each algebra gets a curated set of functions for kinds of at most 16 coefficients:
+  * `motor_new` and `motor_from_rotor` (embeddings between versor kinds);
+  * `motor_reverse`, and `motor_mul_point` (geometric products of versor kinds);
+  * `motor_sandwich_point` and `unit_motor_sandwich_point`;
+  * `motor_matrix_point` and `unit_motor_matrix_point`;
+  * `motor_normalized`, `motor_renormalize_fast` and `motor_norm_squared`;
+  * `line_exp` and `unit_motor_log`, on the real-trigonometric paths only.
+
+  Solvers stay on the CPU.
+* **Traced kernels.** `Tracer::wgsl(true)` writes `{stem}.wesl` next to the Rust kernels, from
+  the same program, and adds a `{STEM}_WESL` constant. One traced function then drives CPU
+  gameplay and GPU work, and the two cannot drift apart (the argument of ADR-016, extended).
+  Kinds are written as WESL paths (`gax::pga3d::Point`).
+* **Numerics.**
+  * WGSL is `f32` only.
+  * Its elementary functions may be less accurate than a CPU's, and whether `fma` fuses is up to
+    the implementation.
+  * Cross-GPU determinism is out of scope.
+  * The drift-tolerant `Unit` kernels and `renormalize_fast` matter more here: renormalize
+    motors integrated on the GPU every frame.
+* **Testing, in layers.**
+  1. Golden strings from the printer.
+  2. naga validates every module with no GPU, and `wesl` compiles cross-package imports with
+     stripping.
+  3. naga's layouts are checked against Rust's.
+  4. `wesl`'s evaluator runs every kernel on the CPU, compared with the exact value within the
+     kernel's computed error bound.
+  5. A wgpu harness runs every kernel on a GPU (lavapipe in CI), and checks the matrix
+     orientation, a layout round trip and a traced kernel.
+* **Not included, yet.**
+  * Kinds over 16 coefficients.
+  * The 5D Study functions and the scaling-and-squaring `exp`.
+  * `f16`.
+  * Modules for algebras declared with `algebra!`.
+
 ---
 
 ## Hypotheses

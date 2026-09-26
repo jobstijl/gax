@@ -15,6 +15,7 @@ fuzz_target!(|data: &[u8]| {
                         core: "::gax".into(),
                         batch: Some(String::new()),
                     check_units: Some(String::new()),
+                    gpu: Some(String::new()),
                     },
                 );
             }

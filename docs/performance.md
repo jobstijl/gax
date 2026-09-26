@@ -237,6 +237,42 @@ SSE4.2, and 0.27 µs on AVX2.
 How the kernels stay vectorized (inlining, `Coef::vectorize`, the block layout) is in ADR-023 of
 the [design record](design.md).
 
+## GPU (`examples/wgpu -- --bench`)
+
+These were measured on an AMD RX 6900 XT (RADV, Vulkan), with `2²⁰` instances or particles. The
+CPU columns ran while other jobs loaded the machine (load average about 35 on 16 cores), so they
+are pessimistic. See [shaders.md](shaders.md).
+
+**Instancing: a motor per instance against a matrix per instance.** `2²⁰` PGA2D triangles are
+drawn into a 1920x1080 target, each placed either by a unit motor (the vertex shader runs
+`unit_motor_sandwich_point`) or by the motor's matrix `m >> Point::slot()` (a `mat3x3`,
+computed on the CPU). Times are per frame:
+
+| per instance | bytes (with colour) | CPU preparation | upload + draw | draw only |
+|---|---|---|---|---|
+| unit motor | 32 | 4.6 ms | 7.5 ms | 5.7 ms |
+| matrix | 64 | 12.3 ms | 13.6 ms | 5.8 ms |
+
+* The draw costs the same either way; the sandwich in the vertex shader is free here, since
+  the frame is bound by rasterization.
+* The motor saves half the upload and most of the CPU work: the matrix has to be built from
+  the motor for every instance.
+* A PGA2D motor is one `vec4`; a 2D affine matrix needs three in WGSL's layout.
+
+**The particle step on the GPU and on the CPU.** One step of `particle_step` (`m exp(dt B)`
+followed by a Newton renormalization, traced from `src/kernels.rs`) for `2²⁰` particles:
+
+| where | per step |
+|---|---|
+| CPU, the fused kernel in a scalar loop | 9.2 ms |
+| CPU, its batch form (SIMD, one thread) | 6.4 ms |
+| GPU, the same kernel in a compute shader (pipelined) | 0.15 ms |
+| GPU, submit and wait | 0.20 ms |
+
+It is the same program on both sides, so moving an effect to the GPU changes nothing in what
+it computes. `--check` compares GPU particles with their CPU twins after up to two seconds of
+flight: they agree to `7·10⁻⁶`.
+
 ## Law-based rewrites in the tracer
 
 The laws license rewrites (docs/laws.md §4), such as folding a versor chain

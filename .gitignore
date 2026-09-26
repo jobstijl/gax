@@ -4,3 +4,5 @@
 /fuzz/corpus
 /fuzz/artifacts
 /examples/asteroids/target
+/examples/wgpu/target
+/crates/gax-gpu-tests/target

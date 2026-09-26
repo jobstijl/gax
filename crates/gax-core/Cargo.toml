@@ -17,9 +17,12 @@ batch = ["std", "dep:fearless_simd"]
 ## The same results on every target and SIMD level: no fused multiply-add anywhere, and the
 ## elementary functions from pure Rust (`gax::math` for `f32`, `libm` for `f64`).
 deterministic = []
+## `bytemuck::Pod` for the GPU layouts (`GpuMat`, and the generated `{Kind}Gpu` types).
+bytemuck = ["dep:bytemuck"]
 
 [dependencies]
 libm = "0.2"
+bytemuck = { version = "1.25", optional = true, default-features = false }
 wide = { version = "1.7", optional = true, default-features = false }
 fearless_simd = { version = "1.0", optional = true, default-features = false, features = ["std"] }
 

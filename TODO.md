@@ -86,5 +86,17 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series
 - [ ] Solver agreement on the native SIMD lane types (the tests use the portable lanes)
 
+## Phase 6: shaders (WGSL/WESL)
+- [x] WGSL target for the straight-line-program printer (`fma`, reversed `select`, abstract-float constants), golden tests
+- [x] Language-neutral kernel records (`gax_gen::kernel`); WGSL modules per algebra (`gax::wgsl`, feature `wgsl`), plain WGSL and valid WESL; `wesl_public()` for `wesl` 0.5 visibility
+- [x] GPU layouts: `{Kind}Gpu` and `GpuMat` with `bytemuck::Pod` (feature `bytemuck`), generated `const` layout assertions, naga layout test
+- [x] `Tracer::wgsl`: traced kernels as WGSL (`FUSED_WESL`); `Traceable` WGSL spellings (kinds, units, scalars, arrays, tuples)
+- [x] Tests: naga validation, WESL imports with stripping, CPU evaluation within error bounds, wgpu execution (lavapipe in CI)
+- [x] `examples/wgpu`: instanced motors, traced particle kernel, GPU/CPU cross-check, benchmarks; ADR-028, docs/shaders.md, guide section
+- [ ] Kernels for kinds over 16 coefficients; the 5D Study functions and the scaling-and-squaring `exp` in WGSL
+- [ ] WGSL modules for `algebra!` algebras (and WGSL forms of their traced kernels)
+- [ ] `f16` variants
+- [ ] Re-measure the CPU columns of the GPU benchmark on an idle machine
+
 ## Decisions for the project owner
 - Publishing to crates.io (later).

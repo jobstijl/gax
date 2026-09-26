@@ -25,12 +25,15 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 
 | crate | what |
 |---|---|
-| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA2D/3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels |
+| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA2D/3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels, WGSL modules |
 | [`crates/gax-core`](crates/gax-core) | slot lists, kinds, coefficient traits, binding, solvers, Study-number functions (`no_std`) |
 | [`crates/gax-gen`](crates/gax-gen) | generator: exact tables, symbolic polynomials, simplifier, emitter, `gax-regen` |
 | [`crates/gax-macros`](crates/gax-macros) | the `algebra!` proc macro |
 | [`crates/gax-bench`](crates/gax-bench) | benchmarks against glam, ultraviolet, nalgebra (not published) |
+| [`crates/gax-wesl-tests`](crates/gax-wesl-tests) | the WGSL modules through the `wesl` crate: imports, stripping, CPU evaluation of every kernel (not published) |
+| [`crates/gax-gpu-tests`](crates/gax-gpu-tests) | every WGSL kernel on a GPU through wgpu (its own crate; lavapipe in CI) |
 | [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
+| [`examples/wgpu`](examples/wgpu) | PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel shared with the CPU (its own crate) |
 | [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
 | [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
 
@@ -45,6 +48,8 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
   the edges of exp and log, solvers. Two opt-in features belong here: `deterministic` (the same
   bits on every target and SIMD level) and `check-units` (assert that certified kernels get unit
   versors).
+* [Shaders](docs/shaders.md): WGSL modules of the standard algebras (feature `wgsl`), GPU
+  layouts (feature `bytemuck`), and traced kernels on the GPU.
 * [Design record](docs/design.md): architecture decisions, and the verdict on each design
   hypothesis.
 * [Research log](docs/research.md): prior art, and what was taken from it.

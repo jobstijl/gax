@@ -325,7 +325,37 @@ Every rule below is proved exactly for every standard algebra, on symbolic coeff
 * **`fill` is the diagonal.** `form.fill(x)` binds `x` into every slot of its kind, so it is a
   quadratic (or higher) form in `x`.
 
-## 11. Conventions and pitfalls
+## 11. On the GPU
+
+gax ships a WGSL module per algebra (feature `wgsl`) and matching Rust types (feature
+`bytemuck`). A motor on the GPU is the same 8 numbers as on the CPU, in `ceil(N/4)` `vec4`s. The
+shader functions are printed from the same verified programs as the Rust kernels:
+
+```rust,ignore
+use gax::pga3d::{Line, MotorGpu, Point};
+
+let m = Line::<(), f32>::new(0.1, 0.2, 0.3, 1.0, 0.0, 0.0).exp();
+let gpu: MotorGpu = m.into(); // 32 bytes, bytemuck::Pod
+let matrix: gax::GpuMat<4> = (m >> Point::slot()).into(); // a WGSL mat4x4, applied as M * x
+```
+
+```wgsl
+import gax::pga3d::{Motor, Point, unit_motor_sandwich_point};
+
+fn place(m: Motor, p: Point) -> Point {
+    return unit_motor_sandwich_point(m, p);
+}
+```
+
+Register `gax::wgsl::PGA3D.source` under its path, `gax::pga3d`, with your WESL resolver, or
+prepend it to a plain WGSL shader. Traced kernels get a WGSL form too, with
+`Tracer::wgsl(true)`: the same kernel then runs on the CPU and the GPU.
+
+See [shaders.md](shaders.md) for the list of functions, the layout, how everything is tested,
+and GPU numerics. `examples/wgpu` puts it together: instanced motors and a traced particle
+kernel, with plain wgpu.
+
+## 12. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

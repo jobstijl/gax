@@ -42,6 +42,7 @@ pub fn algebra(input: TokenStream) -> TokenStream {
             batch: cfg!(feature = "batch").then(String::new),
             // Enabled by gax's `check-units` feature.
             check_units: cfg!(feature = "check-units").then(String::new),
+            gpu: cfg!(feature = "bytemuck").then(String::new),
         },
     );
     let doc = if spec.doc.is_empty() {

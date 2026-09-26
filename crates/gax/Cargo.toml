@@ -36,6 +36,11 @@ check-units = ["gax-macros?/check-units"]
 ## The same bits on every target and SIMD level (docs/numerics.md): no fused multiply-add, and
 ## the elementary functions from pure Rust.
 deterministic = ["gax-core/deterministic"]
+## Plain GPU layouts: a `{Kind}Gpu` type per kind (the layout of the WGSL modules) and
+## `GpuMat`, all `bytemuck::Pod` (ADR-028).
+bytemuck = ["gax-core/bytemuck", "gax-macros?/bytemuck"]
+## The WGSL modules of the standard algebras as source strings (`gax::wgsl`, ADR-028).
+wgsl = []
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
 trace = ["dep:gax-gen"]
 ## The `algebra!` macro for declaring algebras of any signature.
@@ -48,6 +53,8 @@ gax-macros = { workspace = true, optional = true }
 
 [dev-dependencies]
 gax-gen = { workspace = true }
+# Validates the generated WGSL modules (tests/wgsl.rs); never a runtime dependency.
+naga = { version = "30", features = ["wgsl-in"] }
 proptest = "1"
 trybuild = "1"
 

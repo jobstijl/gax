@@ -40,6 +40,15 @@ pub enum Func {
 }
 
 impl Func {
+    /// The WGSL expression of the function applied to the expression `a`.
+    pub fn wgsl(self, a: &str) -> String {
+        match self {
+            Func::Recip => format!("(1.0 / {a})"),
+            Func::Ln => format!("log({a})"),
+            f => format!("{}({a})", f.method()),
+        }
+    }
+
     /// Name of the `Real` method.
     pub fn method(self) -> &'static str {
         match self {
@@ -398,6 +407,22 @@ impl Program {
     ///
     /// `var` renders an input variable, and temporaries are named `{prefix}{k}`.
     pub fn emit_lets(&self, var: &impl Fn(Var) -> String, prefix: &str, out: &mut String) {
+        self.emit_lets_to(Target::Rust, var, prefix, out);
+    }
+
+    /// Emit the instructions as `let` statements in the language `target`.
+    ///
+    /// Single-use products feeding a sum are fused into a multiply-add: `a.mul_add(b, c)` in
+    /// Rust, `fma(a, b, c)` in WGSL (unless the target disables it). Rust statements are
+    /// indented for a method body (8 spaces), WGSL statements for a function body (4).
+    #[allow(clippy::too_many_lines)]
+    pub fn emit_lets_to(
+        &self,
+        target: Target,
+        var: &impl Fn(Var) -> String,
+        prefix: &str,
+        out: &mut String,
+    ) {
         let live = self.live();
         // Uses of each temporary (outputs count), to fuse single-use products into their sum.
         let mut uses = vec![0usize; self.instrs.len()];
@@ -429,24 +454,38 @@ impl Program {
         // Decide the fusions first, so the fused products are not emitted.
         let mut fused = vec![false; self.instrs.len()];
         let mut plan: Vec<Option<String>> = vec![None; self.instrs.len()];
-        let r = |o: &Operand| render(o, var, prefix);
+        let r = |o: &Operand| render_to(target, o, var, prefix);
+        let fuse = match target {
+            Target::Rust => true,
+            Target::Wgsl { fma } => fma,
+        };
+        // `x * y + z`, with the negations `nx` (of `x`) and `nz` (of `z`).
+        let mul_add = |x: &Operand, y: &Operand, z: &Operand, nx: bool, nz: bool| {
+            let n = |neg: bool, e: String| if neg { format!("-{e}") } else { e };
+            match target {
+                Target::Rust => {
+                    let x = if nx { format!("(-{})", r(x)) } else { r(x) };
+                    format!("{x}.mul_add({}, {})", r(y), n(nz, r(z)))
+                }
+                Target::Wgsl { .. } => {
+                    format!("fma({}, {}, {})", n(nx, r(x)), r(y), n(nz, r(z)))
+                }
+            }
+        };
         for (k, i) in self.instrs.iter().enumerate() {
-            if !live[k] {
+            if !live[k] || !fuse {
                 continue;
             }
             let fma = match i {
                 Instr::Add(a, b) => single_mul(a)
-                    .map(|(j, x, y)| (j, format!("{}.mul_add({}, {})", r(&x), r(&y), r(b))))
+                    .map(|(j, x, y)| (j, mul_add(&x, &y, b, false, false)))
                     .or_else(|| {
-                        single_mul(b)
-                            .map(|(j, x, y)| (j, format!("{}.mul_add({}, {})", r(&x), r(&y), r(a))))
+                        single_mul(b).map(|(j, x, y)| (j, mul_add(&x, &y, a, false, false)))
                     }),
                 Instr::Sub(a, b) => single_mul(b)
-                    .map(|(j, x, y)| (j, format!("(-{}).mul_add({}, {})", r(&x), r(&y), r(a))))
+                    .map(|(j, x, y)| (j, mul_add(&x, &y, a, true, false)))
                     .or_else(|| {
-                        single_mul(a).map(|(j, x, y)| {
-                            (j, format!("{}.mul_add({}, -{})", r(&x), r(&y), r(b)))
-                        })
+                        single_mul(a).map(|(j, x, y)| (j, mul_add(&x, &y, b, false, true)))
                     }),
                 _ => None,
             };
@@ -468,14 +507,74 @@ impl Program {
                 (None, Instr::Mul(a, b)) => format!("{} * {}", r(a), r(b)),
                 (None, Instr::Neg(a)) => format!("-{}", r(a)),
                 (None, Instr::Div(a, b)) => format!("{} / {}", r(a), r(b)),
-                (None, Instr::Atan2(a, b)) => format!("{}.atan2({})", r(a), r(b)),
-                (None, Instr::Select(a, b, x, y)) => {
-                    format!("T::select_lt({}, {}, {}, {})", r(a), r(b), r(x), r(y))
-                }
-                (None, Instr::Call(f, a)) => format!("{}.{}()", r(a), f.method()),
+                (None, Instr::Atan2(a, b)) => match target {
+                    Target::Rust => format!("{}.atan2({})", r(a), r(b)),
+                    Target::Wgsl { .. } => format!("atan2({}, {})", r(a), r(b)),
+                },
+                (None, Instr::Select(a, b, x, y)) => match target {
+                    Target::Rust => {
+                        format!("T::select_lt({}, {}, {}, {})", r(a), r(b), r(x), r(y))
+                    }
+                    // WGSL's select takes the false value first.
+                    Target::Wgsl { .. } => {
+                        format!("select({}, {}, {} < {})", r(y), r(x), r(a), r(b))
+                    }
+                },
+                (None, Instr::Call(f, a)) => match target {
+                    Target::Rust => format!("{}.{}()", r(a), f.method()),
+                    Target::Wgsl { .. } => f.wgsl(&r(a)),
+                },
             };
-            let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
+            match target {
+                Target::Rust => {
+                    let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
+                }
+                Target::Wgsl { .. } => {
+                    let _ = writeln!(out, "    let {prefix}{k} = {rhs};");
+                }
+            }
         }
+    }
+}
+
+/// The language of emitted code.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Target {
+    /// Rust, generic over a coefficient type `T: Real`.
+    Rust,
+    /// WGSL, in `f32`. With `fma`, single-use products feeding a sum become `fma(a, b, c)`;
+    /// without it they stay `a * b + c`.
+    Wgsl {
+        /// Fuse multiply-adds.
+        fma: bool,
+    },
+}
+
+/// Render an operand as an expression in the language `target`.
+pub fn render_to(
+    target: Target,
+    o: &Operand,
+    var: &impl Fn(Var) -> String,
+    prefix: &str,
+) -> String {
+    match (target, o) {
+        (Target::Wgsl { .. }, Operand::Const(c)) => wgsl_const(*c),
+        _ => render(o, var, prefix),
+    }
+}
+
+/// An exact constant as a WGSL abstract-float expression, so that the shader compiler rounds
+/// it to `f32` once: `2.0`, `(-2.0)`, `(1.0 / 3.0)`.
+pub fn wgsl_const(c: Rational) -> String {
+    let lit = |n: i128| format!("{n}.0");
+    if c.is_integer() {
+        if c.num() < 0 {
+            format!("({})", lit(c.num()))
+        } else {
+            lit(c.num())
+        }
+    } else {
+        format!("({} / {})", lit(c.num()), lit(c.den()))
     }
 }
 
@@ -525,5 +624,107 @@ fn remap(i: &Instr, map: &[usize]) -> Instr {
         Instr::Atan2(a, b) => Instr::Atan2(m(a), m(b)),
         Instr::Select(a, b, x, y) => Instr::Select(m(a), m(b), m(x), m(y)),
         Instr::Call(f, a) => Instr::Call(*f, m(a)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn v(k: Var) -> Operand {
+        Operand::Var(k)
+    }
+    fn c(n: i128, d: i128) -> Operand {
+        Operand::Const(Rational::new(n, d))
+    }
+
+    /// One of every instruction, the fusions both ways, and the constant forms.
+    fn sample() -> Program {
+        let mut p = Program::default();
+        let t0 = p.push(Instr::Mul(v(0), v(1)));
+        let t1 = p.push(Instr::Add(t0, v(2))); // fused: x0 x1 + x2
+        let t2 = p.push(Instr::Mul(v(1), v(2)));
+        let t3 = p.push(Instr::Sub(t1, t2)); // fused: -(x1) x2 + t1
+        let t4 = p.push(Instr::Neg(t3));
+        let t5 = p.push(Instr::Div(t4, c(1, 3)));
+        let t6 = p.push(Instr::Atan2(t5, v(0)));
+        let t7 = p.push(Instr::Select(v(0), v(1), t6, c(-2, 1)));
+        let t8 = p.push(Instr::Call(Func::Recip, t7));
+        let t9 = p.push(Instr::Call(Func::Ln, t8));
+        let t10 = p.push(Instr::Call(Func::Sqrt, t9));
+        let t11 = p.push(Instr::Mul(t10, c(-5, 7)));
+        p.outputs = vec![t11, t4];
+        p
+    }
+
+    fn lets(target: Target) -> String {
+        let mut s = String::new();
+        sample().emit_lets_to(target, &|k| format!("x{k}"), "t", &mut s);
+        s
+    }
+
+    #[test]
+    fn wgsl_golden() {
+        assert_eq!(
+            lets(Target::Wgsl { fma: true }),
+            "    let t1 = fma(x0, x1, x2);
+    let t3 = fma(-x1, x2, t1);
+    let t4 = -t3;
+    let t5 = t4 / (1.0 / 3.0);
+    let t6 = atan2(t5, x0);
+    let t7 = select((-2.0), t6, x0 < x1);
+    let t8 = (1.0 / t7);
+    let t9 = log(t8);
+    let t10 = sqrt(t9);
+    let t11 = t10 * (-5.0 / 7.0);
+"
+        );
+    }
+
+    #[test]
+    fn wgsl_golden_without_fma() {
+        assert_eq!(
+            lets(Target::Wgsl { fma: false }),
+            "    let t0 = x0 * x1;
+    let t1 = t0 + x2;
+    let t2 = x1 * x2;
+    let t3 = t1 - t2;
+    let t4 = -t3;
+    let t5 = t4 / (1.0 / 3.0);
+    let t6 = atan2(t5, x0);
+    let t7 = select((-2.0), t6, x0 < x1);
+    let t8 = (1.0 / t7);
+    let t9 = log(t8);
+    let t10 = sqrt(t9);
+    let t11 = t10 * (-5.0 / 7.0);
+"
+        );
+    }
+
+    /// The Rust form is what `emit_lets` has always written.
+    #[test]
+    fn rust_golden() {
+        assert_eq!(
+            lets(Target::Rust),
+            "        let t1 = x0.mul_add(x1, x2);
+        let t3 = (-x1).mul_add(x2, t1);
+        let t4 = -t3;
+        let t5 = t4 / T::from_ratio(1, 3);
+        let t6 = t5.atan2(x0);
+        let t7 = T::select_lt(x0, x1, t6, T::from_i64(-2));
+        let t8 = t7.recip();
+        let t9 = t8.ln();
+        let t10 = t9.sqrt();
+        let t11 = t10 * T::from_ratio(-5, 7);
+"
+        );
+    }
+
+    #[test]
+    fn wgsl_constants() {
+        assert_eq!(wgsl_const(Rational::new(3, 1)), "3.0");
+        assert_eq!(wgsl_const(Rational::new(-3, 1)), "(-3.0)");
+        assert_eq!(wgsl_const(Rational::new(-1, 2)), "(-1.0 / 2.0)");
+        assert_eq!(wgsl_const(Rational::new(0, 1)), "0.0");
     }
 }

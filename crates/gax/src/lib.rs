@@ -6,6 +6,12 @@ pub use gax_core::*;
 
 mod extras;
 
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "wgsl")]
+pub mod wgsl;
+
 /// Declare a geometric algebra of any signature (see the crate documentation).
 #[cfg(feature = "macros")]
 pub use gax_macros::algebra;

@@ -53,6 +53,7 @@ fn main() -> ExitCode {
                 core: "::gax".into(),
                 batch: None,
                 check_units: None,
+                gpu: None,
             },
         );
         let l = laws(&spec, &stats);
@@ -80,6 +81,7 @@ fn main() -> ExitCode {
                 core: "crate".into(),
                 batch: Some("#[cfg(feature = \"batch\")]".into()),
                 check_units: Some("#[cfg(feature = \"check-units\")]".into()),
+                gpu: Some("#[cfg(feature = \"bytemuck\")]".into()),
             },
         );
         let tests = emit_tests(
@@ -105,6 +107,9 @@ fn main() -> ExitCode {
         tables.push_str(&factor_table(&spec, &l));
         let target = root.join("src/algebras").join(format!("{}.rs", spec.name));
         stale |= write_or_check(&target, &code, check);
+        let wgsl = gax_gen::emit_wgsl::module(&spec, &stats, true);
+        let wgsl_target = root.join("src/wgsl").join(format!("{}.wgsl", spec.name));
+        stale |= write_or_check(&wgsl_target, &wgsl, check);
         eprintln!(
             "{}: {} lines, {} product impls, {} sandwich kernels",
             spec.name,
@@ -135,6 +140,9 @@ fn write_or_check(target: &Path, content: &str, check: bool) -> bool {
         eprintln!("{} is out of date", target.display());
         true
     } else {
+        if let Some(dir) = target.parent() {
+            std::fs::create_dir_all(dir).expect("create the output directory");
+        }
         std::fs::write(target, content).expect("write generated file");
         false
     }

@@ -1,0 +1,22 @@
+[package]
+name = "gax-gpu-tests"
+description = "gax's generated WGSL kernels executed on a GPU through wgpu, against their exact values"
+version = "0.0.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate, so that wgpu's compile time stays out of gax's workspace tests.
+[workspace]
+
+[dependencies]
+gax = { path = "../gax", default-features = false, features = ["std", "wgsl", "bytemuck", "pga2d", "pga3d", "vga3d", "sta", "cga2d"] }
+gax-gen = { path = "../gax-gen" }
+gax-example-traced = { path = "../../examples/traced" }
+bytemuck = "1.25"
+pollster = "1"
+wesl = "0.5"
+wgpu = "30"
+
+[profile.dev.package."*"]
+opt-level = 3

@@ -24,6 +24,9 @@ pub struct Config {
     /// Emit the `check-units` assertions in the `Unit` kernels, prefixed by this attribute
     /// (e.g. `#[cfg(feature = "check-units")]`, or empty for unconditional); `None` omits them.
     pub check_units: Option<String>,
+    /// Emit the GPU layout types (`{Kind}Gpu`, conversions to `GpuMat`, `bytemuck::Pod`),
+    /// prefixed by this attribute (e.g. `#[cfg(feature = "bytemuck")]`); `None` omits them.
+    pub gpu: Option<String>,
 }
 
 /// Summary statistics of an emitted algebra.
@@ -47,7 +50,13 @@ pub struct Stats {
     pub outermorphisms: Vec<(String, String, bool)>,
     /// The value methods emitted per kind.
     pub values: Vec<crate::emit_values::ValueMethods>,
+    /// The sandwich kernels (value and matrix paths) in language-neutral form, for the WGSL
+    /// modules (see [`crate::kernel`]).
+    pub kernels: Vec<crate::kernel::Kernel>,
 }
+
+/// The largest kind (in coefficients) that the WGSL modules have kernels for.
+pub const WGSL_MAX: usize = 16;
 
 /// Emit the module source for an algebra.
 pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
@@ -113,6 +122,9 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
                 "{gate}\n/// [`{kind}`] values in struct-of-arrays form, for the batch kernels.\npub type {name}Soa<E = f32> = gx::batch::Soa<{kind}, E>;\n"
             );
         }
+    }
+    if let Some(gate) = &cfg.gpu {
+        e.gpu_types(gate);
     }
     (qualify(&e.out), e.stats)
 }
@@ -851,6 +863,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         };
 
         let (vn, xn, on) = (&vk.name, &xk.name, &out.name);
+        self.record_sandwich(vk, xk, &out, unit, &direct, &matrix, &entries);
         // check-units: the parts of v ~v - 1, handed to Coef::check_unit.
         let check = match (&self.cfg.check_units, unit) {
             (Some(gate), true) => {
@@ -1061,6 +1074,211 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
 /// `0..nv`: each monomial of lower degree than the highest is multiplied by a power of `norm`,
 /// the scalar part of `v ~v`, which is 1 modulo the unit relations. The result is equal to the
 /// program modulo the relations, and a uniform drift of the versor scales it uniformly.
+impl Emitter<'_> {
+    /// `{Kind}Gpu` per kind: the layout of the WGSL modules, `ceil(N/4)` `vec4<f32>`, with
+    /// conversions, `bytemuck::Pod`, and compile-time layout assertions; and `GpuMat`
+    /// conversions for maps between kinds of 3 or 4 coefficients (ADR-028).
+    #[allow(clippy::too_many_lines)]
+    fn gpu_types(&mut self, gate: &str) {
+        let spec = self.spec;
+        for k in &spec.kinds {
+            let (name, n) = (&k.name, k.layout.len());
+            let m = n.div_ceil(4);
+            let _ = write!(
+                self.out,
+                "{gate}
+/// [`{name}`] in the GPU layout of the `gax::wgsl` modules: its {n} coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `{name}`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct {name}Gpu {{
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; {m}],
+}}
+
+// The WGSL layout of `struct {name} {{ c0: vec4<f32>, ... }}`: size 16 per field, align 16.
+{gate}
+const _: () = {{
+    assert!(core::mem::size_of::<{name}Gpu>() == {size});
+    assert!(core::mem::align_of::<{name}Gpu>() == 16);
+    assert!(core::mem::offset_of!({name}Gpu, c) == 0);
+}};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; {m}]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+{gate}
+unsafe impl gx::bytemuck::Zeroable for {name}Gpu {{}}
+// SAFETY: as above.
+{gate}
+unsafe impl gx::bytemuck::Pod for {name}Gpu {{}}
+
+{gate}
+impl From<{name}<(), f32>> for {name}Gpu {{
+    #[inline]
+    fn from(x: {name}<(), f32>) -> Self {{
+        let mut c = [[0.0; 4]; {m}];
+        for (i, v) in x.c.iter().enumerate() {{
+            c[i / 4][i % 4] = *v;
+        }}
+        {name}Gpu {{ c }}
+    }}
+}}
+
+{gate}
+impl From<gx::Unit<{name}<(), f32>>> for {name}Gpu {{
+    #[inline]
+    fn from(x: gx::Unit<{name}<(), f32>>) -> Self {{
+        x.into_inner().into()
+    }}
+}}
+
+{gate}
+impl From<{name}Gpu> for {name}<(), f32> {{
+    #[inline]
+    fn from(g: {name}Gpu) -> Self {{
+        {name}::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }}
+}}
+
+",
+                size = 16 * m
+            );
+        }
+        for (alias, kind) in &spec.aliases {
+            let _ = writeln!(
+                self.out,
+                "{gate}
+/// Alias of [`{kind}Gpu`].
+pub type {alias}Gpu = {kind}Gpu;
+"
+            );
+        }
+        let rows: Vec<String> = spec
+            .kinds
+            .iter()
+            .map(|k| {
+                let t = format!("{}Gpu", k.name);
+                format!(
+                    "    (\"{}\", core::mem::size_of::<{t}>(), core::mem::align_of::<{t}>(), core::mem::offset_of!({t}, c), core::mem::size_of::<[f32; 4]>()),",
+                    k.name
+                )
+            })
+            .collect();
+        let _ = writeln!(
+            self.out,
+            "{gate}\n/// The Rust layout of each `{{Kind}}Gpu`: `(kind, size, align, offset of c, stride of c)`,\n/// to check against a shader compiler's layout of the WGSL structs.\npub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[\n{}\n];\n",
+            rows.join("\n")
+        );
+        let small: Vec<&KindSpec> = spec
+            .kinds
+            .iter()
+            .filter(|k| (3..=4).contains(&k.layout.len()))
+            .collect();
+        for x in &small {
+            for y in &small {
+                let (xn, yn, c) = (&x.name, &y.name, y.layout.len());
+                let _ = write!(
+                    self.out,
+                    "{gate}
+/// The map as a WGSL `mat{c}x{r}<f32>` (columns are inputs; transposes the output-first layout).
+impl From<{xn}<({yn},), f32>> for gx::GpuMat<{c}> {{
+    #[inline]
+    fn from(m: {xn}<({yn},), f32>) -> Self {{
+        let mut cols = [[0.0; 4]; {c}];
+        for (o, row) in m.c.iter().enumerate() {{
+            for (i, col) in cols.iter_mut().enumerate() {{
+                col[o] = <({yn},) as gx::Slots>::get_flat(row, i);
+            }}
+        }}
+        gx::GpuMat {{ cols }}
+    }}
+}}
+
+{gate}
+impl From<gx::GpuMat<{c}>> for {xn}<({yn},), f32> {{
+    #[inline]
+    fn from(g: gx::GpuMat<{c}>) -> Self {{
+        {xn}::from_coeffs(core::array::from_fn(|o| {{
+            <({yn},) as gx::Slots>::from_flat(&mut |i| g.cols[i][o], 0)
+        }}))
+    }}
+}}
+
+",
+                    r = x.layout.len()
+                );
+            }
+        }
+    }
+
+    /// Record the value and matrix paths of a sandwich for the WGSL modules.
+    #[allow(clippy::too_many_arguments)]
+    fn record_sandwich(
+        &mut self,
+        vk: &KindSpec,
+        xk: &KindSpec,
+        out: &KindSpec,
+        unit: bool,
+        direct: &Program,
+        matrix: &Program,
+        entries: &[(usize, usize, Poly)],
+    ) {
+        use crate::kernel::{Kernel, Source, Step, Ty, snake};
+        let (nv, nx, nout) = (vk.layout.len(), xk.layout.len(), out.layout.len());
+        if nv.max(nx).max(nout) > WGSL_MAX {
+            return;
+        }
+        let u = if unit { "unit_" } else { "" };
+        let unit_doc = if unit { "a unit " } else { "" };
+        let arg = |param, index| Source::Arg { param, index };
+        let vars: Vec<(Var, Source)> = (0..nv + nx)
+            .map(|i| {
+                let v = i as Var;
+                (v, if i < nv { arg(0, i) } else { arg(1, i - nv) })
+            })
+            .collect();
+        let (vs, xs) = (snake(&vk.name), snake(&xk.name));
+        self.stats.kernels.push(Kernel {
+            name: format!("{u}{vs}_sandwich_{xs}"),
+            doc: format!(
+                "`v x ~v` for {unit_doc}`{}` v and `{}` x (`v >> x`).",
+                vk.name, xk.name
+            ),
+            params: vec![
+                ("v".into(), Ty::Kind(vk.name.clone())),
+                ("x".into(), Ty::Kind(xk.name.clone())),
+            ],
+            result: Ty::Kind(out.name.clone()),
+            steps: vec![Step::Lets {
+                prog: direct.clone(),
+                prefix: "t".into(),
+                vars,
+            }],
+            entries: None,
+        });
+        if (3..=4).contains(&nx) && (3..=4).contains(&nout) {
+            self.stats.kernels.push(Kernel {
+                name: format!("{u}{vs}_matrix_{xs}"),
+                doc: format!(
+                    "The matrix of `x -> v x ~v` on `{}` for {unit_doc}`{}` v (`v >> {}::slot()`); apply it as `m * x`.",
+                    xk.name, vk.name, xk.name
+                ),
+                params: vec![("v".into(), Ty::Kind(vk.name.clone()))],
+                result: Ty::Mat {
+                    cols: nx,
+                    rows: nout,
+                },
+                steps: vec![Step::Lets {
+                    prog: matrix.clone(),
+                    prefix: "m".into(),
+                    vars: (0..nv).map(|i| (i as Var, arg(0, i))).collect(),
+                }],
+                entries: Some(entries.iter().map(|e| (e.0, e.1)).collect()),
+            });
+        }
+    }
+}
+
 fn homogeneous(prog: &Program, nv: Var, norm: &Poly, passengers: &BTreeSet<Var>) -> Program {
     let recompiled = homogeneous_recompiled(prog, nv, norm, passengers);
     match cse::repair_degree(prog, nv, norm, 2) {

@@ -9,6 +9,7 @@
 
 use crate::algebra::Algebra;
 use crate::cse::{self, Stage, StageOp};
+use crate::kernel::{Kernel, Source, Step, StudyFn, Ty, snake};
 use crate::poly::{Poly, Rational, Var};
 use crate::slp::{Func, render};
 use crate::spec::{AlgebraSpec, KindSpec};
@@ -95,6 +96,33 @@ pub struct ValueMethods {
     pub log: Option<String>,
     /// `sqrt`.
     pub sqrt: bool,
+    /// The methods that have a WGSL form, in language-neutral form (see [`crate::kernel`]).
+    pub kernels: Vec<Kernel>,
+}
+
+/// The sources of a kind parameter's coefficients `0..n` as program variables `0..n`.
+fn arg_vars(n: usize) -> Vec<(Var, Source)> {
+    (0..n)
+        .map(|i| (i as Var, Source::Arg { param: 0, index: i }))
+        .collect()
+}
+
+/// A one-parameter kernel on kind `k`, or `None` when it is too large for the WGSL modules.
+fn value_kernel(
+    k: &KindSpec,
+    name: &str,
+    doc: &str,
+    result: Ty,
+    steps: Vec<Step>,
+) -> Option<Kernel> {
+    (k.layout.len() <= crate::emit::WGSL_MAX).then(|| Kernel {
+        name: name.to_string(),
+        doc: doc.to_string(),
+        params: vec![("x".into(), Ty::Kind(k.name.clone()))],
+        result,
+        steps,
+        entries: None,
+    })
 }
 
 /// Emit the value methods of kind `k`, returning the code of an inherent impl block (and
@@ -119,8 +147,20 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     // norm_squared / norm: the scalar part of x ~x.
     let n0 = coef(&norm, 0);
     meta.norm = !n0.is_zero();
+    let ks = snake(name);
     if !n0.is_zero() {
         let prog = cse::compile_best(std::slice::from_ref(&n0), &BTreeSet::new(), &[]);
+        meta.kernels.extend(value_kernel(
+            k,
+            &format!("{ks}_norm_squared"),
+            "The squared norm: the scalar part of `x ~x`.",
+            Ty::Scalar,
+            vec![Step::Lets {
+                prog: prog.clone(),
+                prefix: "t".into(),
+                vars: arg_vars(n),
+            }],
+        ));
         let mut lets = String::new();
         prog.emit_lets(&xvar, "t", &mut lets);
         let _ = write!(
@@ -134,8 +174,8 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         && !n0.is_zero()
     {
         meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
-        meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body);
-        emit_newton_step(spec, k, &x, &norm, &mut traits);
+        meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body, &mut meta.kernels);
+        emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
     }
 
     // exp: for kinds made of bivectors, when B² is a Study number.
@@ -176,6 +216,38 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                         lets,
                         "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation({lam_e}, {mu_e});"
                     );
+                    let mut post_vars = arg_vars(n);
+                    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
+                        post_vars.push((nv + i as Var, Source::Local((*l).into())));
+                    }
+                    if out_kind.layout.len() <= crate::emit::WGSL_MAX {
+                        meta.kernels.extend(value_kernel(
+                            k,
+                            &format!("{ks}_exp"),
+                            &format!(
+                                "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B`.",
+                                out_kind.name
+                            ),
+                            Ty::Kind(out_kind.name.clone()),
+                            vec![
+                                Step::Lets {
+                                    prog: pre.clone(),
+                                    prefix: "p".into(),
+                                    vars: arg_vars(n),
+                                },
+                                Step::Study {
+                                    func: StudyFn::ExpRotation,
+                                    args: vec![(0, 0), (0, 1)],
+                                    outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
+                                },
+                                Step::Lets {
+                                    prog: prog.clone(),
+                                    prefix: "t".into(),
+                                    vars: post_vars,
+                                },
+                            ],
+                        ));
+                    }
                 } else {
                     let _ = writeln!(
                         lets,
@@ -210,7 +282,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     }
 
     // log: for unit versors whose parts are a Study number and a bivector.
-    meta.log = emit_log(spec, k, &x, &mut traits);
+    meta.log = emit_log(spec, k, &x, &mut traits, &mut meta.kernels);
     if meta.log.is_none() {
         meta.log = emit_log_general(spec, k, &x, &mut traits);
     }
@@ -292,6 +364,7 @@ fn emit_normalized(
     norm: &SymMv,
     study: &Study,
     body: &mut String,
+    kernels: &mut Vec<Kernel>,
 ) -> bool {
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
@@ -318,6 +391,41 @@ fn emit_normalized(
     let mut lets = String::new();
     pre.emit_lets(&xvar, "p", &mut lets);
     let a = render(&pre.outputs[0], &xvar, "p");
+    let func = match (study.blade, study.isq) {
+        (None, _) => StudyFn::RsqrtAbs,
+        (Some(_), 0) => StudyFn::RsqrtNil,
+        (Some(_), isq) => StudyFn::Rsqrt(isq),
+    };
+    let (args, outs) = if study.blade.is_some() {
+        (
+            vec![(0, 0), (0, 1)],
+            vec!["s0".to_string(), "s1".to_string()],
+        )
+    } else {
+        (vec![(0, 0)], vec!["s0".to_string()])
+    };
+    let mut post_vars = arg_vars(nv as usize);
+    post_vars.push((s0, Source::Local("s0".into())));
+    post_vars.push((s1, Source::Local("s1".into())));
+    kernels.extend(value_kernel(
+        k,
+        &format!("{}_normalized", snake(&k.name)),
+        "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.",
+        Ty::Kind(k.name.clone()),
+        vec![
+            Step::Lets {
+                prog: pre.clone(),
+                prefix: "p".into(),
+                vars: arg_vars(nv as usize),
+            },
+            Step::Study { func, args, outs },
+            Step::Lets {
+                prog: prog.clone(),
+                prefix: "t".into(),
+                vars: post_vars,
+            },
+        ],
+    ));
     if study.blade.is_some() {
         let b = render(&pre.outputs[1], &xvar, "p");
         if study.isq == 0 {
@@ -358,6 +466,7 @@ fn emit_newton_step(
     x: &SymMv,
     norm: &SymMv,
     traits: &mut String,
+    kernels: &mut Vec<Kernel>,
 ) {
     let alg = &spec.algebra;
     let half = Rational::new(1, 2);
@@ -370,6 +479,17 @@ fn emit_newton_step(
         return;
     };
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    kernels.extend(value_kernel(
+        k,
+        &format!("{}_renormalize_fast", snake(&k.name)),
+        "One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.",
+        Ty::Kind(k.name.clone()),
+        vec![Step::Lets {
+            prog: prog.clone(),
+            prefix: "t".into(),
+            vars: arg_vars(k.layout.len()),
+        }],
+    ));
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "t", &mut lets);
@@ -382,7 +502,14 @@ fn emit_newton_step(
     );
 }
 
-fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) -> Option<String> {
+#[allow(clippy::too_many_lines)]
+fn emit_log(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    x: &SymMv,
+    traits: &mut String,
+    kernels: &mut Vec<Kernel>,
+) -> Option<String> {
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
     // Parts: scalar, bivector P, and at most one grade-4 blade.
@@ -458,6 +585,29 @@ fn emit_log(spec: &AlgebraSpec, k: &KindSpec, x: &SymMv, traits: &mut String) ->
             "        let [h0, h1] = gx::study::log_coeffs_rotation(({}, {}), ({}, {}));",
             r[0], r[1], r[2], r[3]
         );
+        let mut post_vars = arg_vars(nv as usize);
+        post_vars.push((h0, Source::Local("h0".into())));
+        post_vars.push((h1, Source::Local("h1".into())));
+        if out_kind.layout.len() <= crate::emit::WGSL_MAX {
+            kernels.extend(value_kernel(
+                k,
+                &format!("unit_{}_log", snake(&k.name)),
+                &format!(
+                    "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x` (rotation half-angle in [0, pi]).",
+                    k.name, out_kind.name
+                ),
+                Ty::Kind(out_kind.name.clone()),
+                vec![
+                    Step::Lets { prog: pre.clone(), prefix: "p".into(), vars: arg_vars(nv as usize) },
+                    Step::Study {
+                        func: StudyFn::LogRotation,
+                        args: vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+                        outs: vec!["h0".into(), "h1".into()],
+                    },
+                    Step::Lets { prog: prog.clone(), prefix: "t".into(), vars: post_vars },
+                ],
+            ));
+        }
     } else {
         let _ = writeln!(
             lets,
