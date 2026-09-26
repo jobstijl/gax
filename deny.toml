@@ -3,8 +3,10 @@
 [graph]
 all-features = true
 # The benchmark crate is not published; it depends on nalgebra and ultraviolet only to compare
-# against them (which bring an unmaintained `paste` and an older `wide`).
-exclude = ["gax-bench", "gax-example-traced"]
+# against them (which bring an unmaintained `paste` and an older `wide`). `gax-wesl-tests` is not
+# published either; it tests the WGSL modules with the `wesl` crate (which brings the unmaintained
+# `proc-macro-error2`). gax itself has no dependency on `wesl`.
+exclude = ["gax-bench", "gax-example-traced", "gax-wesl-tests"]
 
 [advisories]
 version = 2
