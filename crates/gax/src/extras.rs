@@ -37,6 +37,21 @@ mod pga3d_extras {
             [self.e032() * r, self.e013() * r, self.e021() * r]
         }
 
+        /// The same point with weight exactly `+1` (unitized): divided by its signed weight.
+        /// A meet or a reflection can return a point with any weight, even a negative one, and
+        /// `normalized()` keeps the sign; differences of unitized points are directions. Not
+        /// for directions (weight 0).
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// let p = Point::<(), f64>::new(2.0, 4.0, 6.0, -2.0);
+        /// assert_eq!(p.unitized().c, [-1.0, -2.0, -3.0, 1.0]);
+        /// ```
+        #[inline]
+        pub fn unitized(self) -> Self {
+            self.gp(self.e123().recip())
+        }
+
         /// The ideal norm `sqrt(x² + y² + z²)`: the length of a direction (a velocity, a
         /// displacement). `norm()` is the weight, which is 0 for directions.
         ///
@@ -211,11 +226,13 @@ mod pga3d_extras {
         }
 
         /// The shortest rotation (about an axis through the origin) that turns the direction
-        /// `from` into the direction `to`: `normalize(1 + B A)`, with `A` and `B` the planes
-        /// through the origin orthogonal to them. Opposite directions get a half turn about an
-        /// axis perpendicular to both. Near opposite directions `1 + B A` is small and the
-        /// result loses precision (about the square root of the rounding error); measure a
-        /// precise angle from a nearer reference direction.
+        /// `from` into the direction `to`. With `A` and `B` the planes through the origin
+        /// orthogonal to them, the axis is their meet `A ^ B` and the angle is
+        /// `atan2(|A ^ B|, A | B)`: the meet's weight and the inner product are the sine and
+        /// cosine, scaled alike, so no normalization is needed and the angle is well conditioned
+        /// everywhere, a half turn included (a formula like `normalize(1 + B A)` loses the small
+        /// scalar part to cancellation there). Opposite directions get a half turn about an
+        /// axis perpendicular to both.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
@@ -226,23 +243,22 @@ mod pga3d_extras {
         /// ```
         pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
             let (o, zero) = (T::one(), T::zero());
-            let a = Plane::orthogonal_to(from).normalized().into_inner();
-            let b = Plane::orthogonal_to(to).normalized().into_inner();
-            let one = Self::translation(zero, zero, zero).into_inner();
-            let r = one + b * a;
-            // Opposite directions (`r` vanishes): a half turn about the meet of `A` with a
-            // plane orthogonal to it, `e` less its part along `a` (planes through the origin
-            // act as their normals). Branch-free, so that it traces.
-            let far = T::select_lt(a.e1().abs(), T::from_f64(0.9), o, zero);
+            let a = Plane::orthogonal_to(from);
+            let b = Plane::orthogonal_to(to);
+            let meet = a ^ b;
+            let angle = meet.norm().atan2((a | b).s());
+            // Nearly parallel or opposite, the meet vanishes: turn about an axis orthogonal to
+            // `A` instead (the meet of `A` with a plane orthogonal to it, `e` less its part
+            // along `A`). The angle is right either way; branch-free, so that it traces.
+            let an = a.normalized().into_inner();
+            let far = T::select_lt(an.e1().abs(), T::from_f64(0.9), o, zero);
             let e = Plane::new(far, o - far, zero, zero);
-            let c = e - a.gp((e | a).s());
-            let half = c.normalized().into_inner() * a;
-            let (r, half) = (r.normalized().into_inner(), half.normalized().into_inner());
-            let n = (one + b * a).norm();
-            let eps = T::from_f64(1e-6);
-            Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
-                T::select_lt(n, eps, half.c[i], r.c[i])
-            })))
+            let other = an ^ (e - an.gp((e | an).s()));
+            let small = meet.norm() * (a.norm() * b.norm()).recip();
+            let axis = Line::from_coeffs(core::array::from_fn(|i| {
+                T::select_lt(small, T::from_f64(1e-6), other.c[i], meet.c[i])
+            }));
+            Self::rotation(axis, angle)
         }
 
         /// The motor of a camera (or any frame) at `eye` whose forward axis `+z` points at
@@ -331,6 +347,22 @@ mod pga2d_extras {
             [self.e20() * r, self.e01() * r]
         }
 
+        /// The same point with weight exactly `+1` (unitized): divided by its signed weight.
+        /// A meet or a reflection can return a point with any weight, even a negative one (the
+        /// sandwich of a line with a point comes out negated in PGA2D), and `normalized()`
+        /// keeps the sign; differences of unitized points are directions. Not for directions
+        /// (weight 0).
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let p = Point::<(), f64>::new(2.0, 4.0, -2.0);
+        /// assert_eq!(p.unitized().c, [-1.0, -2.0, 1.0]);
+        /// ```
+        #[inline]
+        pub fn unitized(self) -> Self {
+            self.gp(self.e12().recip())
+        }
+
         /// The ideal norm `sqrt(x² + y²)`: the length of a direction (a velocity, a
         /// displacement). `norm()` is the weight, which is 0 for directions.
         ///
@@ -405,11 +437,11 @@ mod pga2d_extras {
         }
 
         /// The shortest rotation about the origin that turns the direction `from` into the
-        /// direction `to`: `normalize(1 + B A)`, with `A` and `B` the lines through the origin
-        /// orthogonal to them. Opposite directions get a half turn. Its angle, the signed angle
-        /// from `from` to `to` in `[-π, π]`, is [`Motor::angle`]. Near opposite directions
-        /// `1 + B A` is small and the result loses precision (about the square root of the
-        /// rounding error); measure a precise angle from a nearer reference direction.
+        /// direction `to`. With `A` and `B` the lines through the origin orthogonal to them,
+        /// the angle is `atan2` of the weight of their meet (the origin) and their inner
+        /// product: the sine and cosine, scaled alike, so no normalization is needed and the
+        /// angle is well conditioned everywhere, a half turn included. Its angle, the signed
+        /// angle from `from` to `to` in `[-π, π]`, is [`Motor::angle`].
         ///
         /// ```
         /// use gax::pga2d::{Motor, Point};
@@ -418,20 +450,11 @@ mod pga2d_extras {
         /// ```
         pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
             let zero = T::zero();
-            let a = Line::new(from.e20(), from.e01(), zero)
-                .normalized()
-                .into_inner();
-            let b = Line::new(to.e20(), to.e01(), zero)
-                .normalized()
-                .into_inner();
-            let one = Self::translation(zero, zero).into_inner();
-            let r = one + b * a;
-            let n = r.norm();
-            let r = r.normalized().into_inner();
-            let half = Self::rotation(Point::xy(zero, zero), T::from_f64(core::f64::consts::PI));
-            Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
-                T::select_lt(n, T::from_f64(1e-6), half.c[i], r.c[i])
-            })))
+            let a = Line::new(from.e20(), from.e01(), zero);
+            let b = Line::new(to.e20(), to.e01(), zero);
+            let sine = (a ^ b).e12();
+            let angle = sine.atan2((a | b).s());
+            Self::rotation(Point::xy(zero, zero), angle)
         }
     }
 
@@ -486,6 +509,38 @@ mod tests {
                 .map(|x: f64| (x * 1e12).round()),
             b.c.map(|x| (x * 1e12).round())
         );
+    }
+
+    /// Near a half turn the rotation between directions stays precise in `f32`: right to a
+    /// few ulps however close to opposite the directions are (`normalize(1 + B A)` was off by
+    /// up to `1e-4` there, the error of the normalization over the distance from a half turn).
+    #[cfg(all(feature = "pga2d", feature = "pga3d"))]
+    #[test]
+    fn rotations_between_nearly_opposite_directions_are_precise() {
+        for k in 1..=12 {
+            let delta = 10f64.powi(-k / 2) * 0.3;
+            let theta = core::f64::consts::PI - delta;
+            // 2D: the angle, from the logarithm.
+            let a = crate::pga2d::Point::<(), f32>::direction(1.0, 0.0);
+            let b = crate::pga2d::Point::direction(theta.cos() as f32, theta.sin() as f32);
+            let r = crate::pga2d::Motor::rotation_between(a, b);
+            // Against the exact angle of the rounded input.
+            let exact = f64::from(b.e01()).atan2(f64::from(b.e20()));
+            let err = (f64::from(r.angle()) - exact).abs();
+            assert!(err < 4e-7, "2D, {delta:e} from a half turn: off by {err:e}");
+            // 3D: the image of `from` is `to`.
+            let a = crate::pga3d::Point::<(), f32>::direction(1.0, 0.0, 0.0);
+            let (c, s) = (theta.cos() as f32, theta.sin() as f32);
+            let b = crate::pga3d::Point::direction(c, s * 0.6, s * 0.8);
+            let d = crate::pga3d::Motor::rotation_between(a, b) >> a;
+            let err =
+                (d.e032() - c).abs() + (d.e013() - s * 0.6).abs() + (d.e021() - s * 0.8).abs();
+            // A few ulps per coordinate: the rounding of the sandwich itself.
+            assert!(
+                err < 1.5e-6,
+                "3D, {delta:e} from a half turn: off by {err:e}"
+            );
+        }
     }
 
     #[cfg(feature = "pga2d")]

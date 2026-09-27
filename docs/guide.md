@@ -107,6 +107,7 @@ let moved = open.fill(m); // the same as m >> p, as a flector whose plane part i
 | operator | method | meaning in PGA |
 |---|---|---|
 | `a * b` | `gp` | geometric product: composes motors, reflections |
+| `a * t`, `t * a`, `a / t` | `gp` with a coefficient | scaling: the geometric product with a scalar (`v * dt`) |
 | `a ^ b` | `wedge` | outer product: *meet* (intersection) of planes and lines |
 | `a & b` | `vee` | regressive product: *join* of points and lines, and the plane–point pairing |
 | `a \| b` | `dot` | inner product (metric) |
