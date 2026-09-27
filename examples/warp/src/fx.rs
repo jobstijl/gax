@@ -37,6 +37,8 @@ pub struct Fx {
     pub shake_scale: f32,
     /// The grid's sources per simulation tick this frame.
     pub grid_steps: Vec<Vec<[f32; 4]>>,
+    /// Floating texts: `(position, text, age, colour)`.
+    pub popups: Vec<([f32; 2], String, f32, [f32; 4])>,
     /// The view's half height and aspect ratio (for the camera's bounds).
     pub half_height: f32,
     /// Width over height of the view.
@@ -57,6 +59,7 @@ impl Fx {
             flash: 0.0,
             shake_scale: 1.0,
             grid_steps: Vec::new(),
+            popups: Vec::new(),
             half_height: 14.0,
             aspect: 16.0 / 9.0,
         }
@@ -122,7 +125,10 @@ impl Fx {
                     }
                 }
                 Event::Hit { pos, kind } => {
-                    self.burst(pos, scene::color(kind), 10, (4.0, 12.0), (0.15, 0.4), 0.3);
+                    // Sparks in the enemy's colour; a singularity's stay violet (it takes many hits).
+                    let hot = if kind == Kind::Singularity { 0.0 } else { 0.3 };
+                    let n = if kind == Kind::Singularity { 4 } else { 10 };
+                    self.burst(pos, scene::color(kind), n, (4.0, 12.0), (0.15, 0.4), hot);
                     if kind == Kind::Singularity {
                         self.blast(pos, 30.0, 2.0, 0.06);
                     }
@@ -132,7 +138,12 @@ impl Fx {
                     kind,
                     size,
                     scored,
+                    points,
                 } => {
+                    if points >= 250 {
+                        self.popups
+                            .push((pos, points.to_string(), 0.0, scene::color(kind)));
+                    }
                     let n = (70.0 * size) as usize + if scored { 20 } else { 0 };
                     self.burst(
                         pos,
@@ -191,7 +202,11 @@ impl Fx {
                         self.blast(pos, 300.0, 6.0, 0.4);
                     }
                 }
-                Event::Pickup { pos, .. } => {
+                Event::Pickup { pos, mult } => {
+                    if mult % 10 == 0 {
+                        self.popups
+                            .push((pos, format!("X{mult}"), 0.0, palette::SHARD));
+                    }
                     self.burst(pos, palette::SHARD, 6, (2.0, 6.0), (0.2, 0.45), 0.3);
                 }
                 Event::Death { pos } => {
@@ -236,7 +251,7 @@ impl Fx {
         }
         self.blasts.retain(|b| b.life > 0.0);
         for (p, strength) in w.wells() {
-            s.push([p[0], p[1], strength * 4.0, 3.0]);
+            s.push([p[0], p[1], strength * 3.0, 12.0]);
         }
         // The ship's wake: a light push where it flies.
         if w.phase == crate::sim::Phase::Playing {
@@ -251,7 +266,7 @@ impl Fx {
 
     /// The wells as particle attractors.
     pub fn particle_wells(w: &World) -> Vec<[f32; 4]> {
-        w.wells().map(|(p, s)| [p[0], p[1], s * 5.0, 1.2]).collect()
+        w.wells().map(|(p, s)| [p[0], p[1], s * 1.2, 4.0]).collect()
     }
 
     /// Advance the camera by a frame of `dt`: towards a point between the arena's centre and
@@ -271,6 +286,10 @@ impl Fx {
         let err: Point<(), f32> = (target * self.cam.reverse()).log();
         self.cam_vel = self.cam_vel + (err.gp(omega * omega) - self.cam_vel.gp(2.0 * omega)).gp(dt);
         self.cam = (self.cam_vel.gp(dt).exp() * self.cam).renormalize_fast();
+        for p in &mut self.popups {
+            p.2 += dt;
+        }
+        self.popups.retain(|p| p.2 < 1.1);
         self.shake = (self.shake - dt * 2.2).max(0.0);
         self.flash = (self.flash - dt * 2.5).max(0.0);
         if let Some((p, t)) = &mut self.shock {

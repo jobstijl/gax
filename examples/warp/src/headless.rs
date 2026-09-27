@@ -122,6 +122,23 @@ pub fn shots(args: &[String]) {
     }
     save(&renderer, &target, &Path::new(dir).join("title.png"));
 
+    // `WARP_SCENE=singularity`: one still singularity in the middle (for looking at it).
+    if std::env::var("WARP_SCENE").as_deref() == Ok("singularity") {
+        g.start();
+        g.sim = sim::World::new(7);
+        g.sim.director.enabled = false;
+        g.sim.ship.body.shift(-20.0, -10.0);
+        g.sim.spawn(sim::Kind::Singularity, [0.0, 0.0]);
+        g.sim.enemies[0].body.vel = Point::direction(0.0, 0.0);
+        for _ in 0..120 {
+            g.time += dt;
+            advance(&mut g, sim::Input::default(), none, dt, aspect, &mut sound);
+            g.sim.enemies[0].body.vel = Point::direction(0.0, 0.0);
+            render_game(&mut g, &mut renderer, &view, SIZE);
+        }
+        save(&renderer, &target, &Path::new(dir).join("singularity.png"));
+        return;
+    }
     // A run.
     g.start();
     g.sim = sim::World::new(7);

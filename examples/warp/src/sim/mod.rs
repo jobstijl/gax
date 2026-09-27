@@ -177,6 +177,8 @@ pub enum Event {
         kind: Kind,
         size: f32,
         scored: bool,
+        /// Points gained (with the multiplier).
+        points: u64,
     },
     /// A bullet hit a wall.
     Wall { pos: [f32; 2] },
@@ -564,6 +566,7 @@ impl World {
             Kind::Mote => 0.5,
             _ => 1.0,
         };
+        let mut points = 0;
         if scored {
             let value = e.kind.value()
                 + if e.kind == Kind::Singularity {
@@ -571,7 +574,8 @@ impl World {
                 } else {
                     0
                 };
-            self.score += value * u64::from(self.mult);
+            points = value * u64::from(self.mult);
+            self.score += points;
             let shards = match e.kind {
                 Kind::Singularity => 8 + e.mass as usize,
                 Kind::Mote => usize::from(self.rng.chance(0.3)),
@@ -594,6 +598,7 @@ impl World {
             kind: e.kind,
             size,
             scored,
+            points,
         });
     }
 

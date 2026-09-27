@@ -996,21 +996,28 @@ impl Renderer {
                 timestamp_writes: self.ts(2, 3),
                 ..Default::default()
             });
-            pass.set_pipeline(&self.stars);
-            pass.set_bind_group(0, &self.stars_group, &[]);
-            pass.draw(0..3, 0..1);
+            // `WARP_SKIP=grid,particles,lines,stars` leaves passes out (for looking at one alone).
+            let skip = std::env::var("WARP_SKIP").unwrap_or_default();
+            let on = |name: &str| !skip.split(',').any(|s| s == name);
+            if on("stars") {
+                pass.set_pipeline(&self.stars);
+                pass.set_bind_group(0, &self.stars_group, &[]);
+                pass.draw(0..3, 0..1);
+            }
             let edges = (g.cols - 1) * g.rows + g.cols * (g.rows - 1);
-            pass.set_pipeline(&self.grid_draw);
-            pass.set_bind_group(0, &self.grid_draw_groups[self.grid_parity], &[]);
-            pass.draw(0..4, 0..edges);
-            if self.particle_count > 0 {
+            if on("grid") {
+                pass.set_pipeline(&self.grid_draw);
+                pass.set_bind_group(0, &self.grid_draw_groups[self.grid_parity], &[]);
+                pass.draw(0..4, 0..edges);
+            }
+            if self.particle_count > 0 && on("particles") {
                 pass.set_pipeline(&self.particle_draw);
                 pass.set_bind_group(0, &self.particle_draw_group, &[]);
                 pass.draw(0..4, 0..self.particle_count as u32);
             }
             pass.set_pipeline(&self.lines);
             pass.set_vertex_buffer(0, self.instances.slice(..));
-            if nworld > 0 {
+            if nworld > 0 && on("lines") {
                 pass.set_bind_group(0, &self.lines_world, &[]);
                 pass.draw(0..4, 0..nworld);
             }

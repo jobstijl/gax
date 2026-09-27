@@ -377,6 +377,20 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let camera = scene::camera(game.cam, game.half_height, size, game.time);
     let hud_cam = scene::camera(sim::body::pose_at(0.0, 0.0, 0.0), 18.0, size, game.time);
     scene::world_lines(&game.sim, game.alpha, game.time, &mut game.world_lines);
+    for (p, text, age, color) in &game.fx.popups {
+        // Rising and fading.
+        let fade = (1.0 - age / 1.1).max(0.0);
+        let c = [color[0], color[1], color[2], color[3] * fade];
+        scene::text(
+            &mut game.world_lines,
+            text,
+            p[0],
+            p[1] + 0.8 + age * 1.5,
+            0.9,
+            c,
+            Align::Center,
+        );
+    }
     hud(game, size, renderer.timings());
     let wells = Fx::particle_wells(&game.sim);
     let post = game.fx.post(&camera);
@@ -483,7 +497,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 0.0,
                 3.0,
                 6.5,
-                [0.6, 0.75, 1.0, 3.2],
+                [0.55, 0.7, 1.0, 1.7],
                 Align::Center,
             );
             scene::text(

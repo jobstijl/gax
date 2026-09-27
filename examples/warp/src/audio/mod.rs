@@ -420,6 +420,7 @@ impl Sound {
                     kind,
                     size,
                     scored,
+                    ..
                 } => {
                     let gain = if scored { 1.0 } else { 0.6 };
                     match kind {

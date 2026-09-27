@@ -49,8 +49,8 @@ fn vs_main(@builtin(vertex_index) k: u32, @builtin(instance_index) e: u32) -> Li
     let energy = clamp((length(nodes[i0].v.c0.xy) + length(nodes[i1].v.c0.xy)) * 0.012, 0.0, 1.0);
     let hot = max(stretch, energy);
     let base = look.color.rgb * look.color.a * select(0.35, 1.0, major);
-    let color = vec4<f32>(mix(base, vec3<f32>(0.55, 0.45, 1.0) * look.color.a * 2.5, hot), 1.0);
-    let style = vec4<f32>(look.style.x * select(0.6, 1.0, major), look.style.y, look.style.z * (1.0 + 1.5 * hot), 0.0);
+    let color = vec4<f32>(mix(base, vec3<f32>(0.55, 0.45, 1.0) * look.color.a * 1.6, hot), 1.0);
+    let style = vec4<f32>(look.style.x * select(0.6, 1.0, major), look.style.y, look.style.z * (1.0 + 0.6 * hot), 0.0);
     return line_vertex(cam, k, a, b, color, style);
 }
 

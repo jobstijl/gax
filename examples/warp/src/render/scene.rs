@@ -20,7 +20,7 @@ pub mod palette {
     /// Motes: violet-pink.
     pub const MOTE: [f32; 4] = [0.85, 0.35, 1.0, 2.6];
     /// Singularities: deep violet.
-    pub const SINGULARITY: [f32; 4] = [0.55, 0.3, 1.0, 2.8];
+    pub const SINGULARITY: [f32; 4] = [0.55, 0.3, 1.0, 1.9];
     /// Shards: lime.
     pub const SHARD: [f32; 4] = [0.45, 1.0, 0.3, 2.6];
     /// The arena's border.
@@ -117,7 +117,15 @@ pub fn draw_enemy(
     t: f32,
     fade: f32,
 ) {
-    let c = scale_color(mix_white(color(kind), flash), fade);
+    // A hit flashes towards white, briefly and partly: under fire the colour must stay. A
+    // singularity (under fire for seconds) swells instead.
+    let swell = flash;
+    let flash = if kind == Kind::Singularity {
+        0.0
+    } else {
+        flash
+    };
+    let c = scale_color(mix_white(color(kind), 0.45 * flash), fade);
     match kind {
         Kind::Drifter => {
             polygon(
@@ -171,8 +179,8 @@ pub fn draw_enemy(
             );
         }
         Kind::Singularity => {
-            let pulse = 1.0 + 0.08 * (t * 5.0).sin() + 0.02 * mass;
-            let style = [0.04, 0.5, 0.35, 0.0];
+            let pulse = 1.0 + 0.08 * (t * 5.0).sin() + 0.02 * mass + 0.06 * swell;
+            let style = [0.04, 0.3, 0.3, 0.0];
             circle(out, radius * pulse, 40, t, c, style, m);
             circle(
                 out,
@@ -204,8 +212,8 @@ pub fn draw_enemy(
             // A white-hot core.
             out.push(seg(
                 [-0.05, 0.0, 0.05, 0.0],
-                [1.0, 0.95, 1.0, 5.0 * fade],
-                [0.12, 0.6, 0.8, 0.0],
+                [1.0, 0.9, 1.0, 2.2 * fade],
+                [0.1, 0.35, 0.5, 0.0],
                 m,
             ));
         }
@@ -382,7 +390,8 @@ pub fn text(
     color: [f32; 4],
     align: Align,
 ) {
-    let style = [0.045 * size / 1.2, 0.35 * size / 1.2, 0.3, 0.0];
+    // Stroke width grows with the glyph; the glow does not, beyond a point.
+    let style = [0.045 * size / 1.2, (0.3 * size / 1.2).min(0.45), 0.3, 0.0];
     for ab in font::segments(s, x, y, size, align) {
         out.push(seg(ab, color, style, identity()));
     }
