@@ -61,7 +61,8 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
         .any(|e| e.flight == crate::tunnel::Flight::Dive && (crate::tunnel::arc(e.pos) - s) < 8.0);
     let input = sim::Input {
         movement: crate::sim::body::heading(t * 0.6, 0.55),
-        fire: true,
+        // In bursts, so that formations live long enough to be seen.
+        fire: crate::signal::wave(t * 1.3) > 0.2,
         ..sim::Input::default()
     };
     let flight = input::Flight {

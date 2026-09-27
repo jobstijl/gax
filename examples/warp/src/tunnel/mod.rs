@@ -623,11 +623,14 @@ impl World {
             // A ring of drones, which will hold in the band ahead.
             let n = 6 + (i * 6.0) as usize;
             let a0 = r.angle();
-            let ring = r.range(2.8, 4.6);
-            let depth = r.range(16.0, 24.0);
+            // Close and wide: the ring spreads across the screen, not at the vanishing point.
+            let ring = r.range(4.0, 5.3);
+            let depth = r.range(6.0, 10.0);
             for k in 0..n {
                 let a = a0 + k as f32 * core::f32::consts::TAU / n as f32;
-                spawn.push(pend(Foe::Drone, around(ring, a, s), a, ring, depth));
+                // Nearer than the rest, and quick to come in: a ring is a close-range fight.
+                let at = s - SPAWN_AHEAD * 0.45;
+                spawn.push(pend(Foe::Drone, around(ring, a, at), a, ring, depth));
             }
         }
         for p in spawn {
@@ -691,7 +694,7 @@ impl World {
                 .max_by(|a, b| a.age.total_cmp(&b.age));
             if let Some(e) = holding {
                 e.flight = Flight::Dive;
-                e.timer = 0.55;
+                e.timer = 0.7;
                 self.events.push(Event::Dive { pos: e.pos });
                 self.dive_cooldown = 1.6 - 0.8 * self.intensity;
             }
@@ -713,7 +716,7 @@ impl World {
                             // capped so that a ring glides in.
                             let to = (place - e.pos) * 2.5;
                             let n = to.ideal_norm();
-                            let to = if n > 14.0 { to * (14.0 / n) } else { to };
+                            let to = if n > 26.0 { to * (26.0 / n) } else { to };
                             if e.flight == Flight::Approach && (place & e.pos).norm() < 1.5 {
                                 e.flight = Flight::Hold;
                             }
@@ -728,7 +731,7 @@ impl World {
                             } else {
                                 // At the ship, at a speed you can dodge.
                                 let to = ship - e.pos;
-                                to * (16.0 / to.ideal_norm().max(1e-3)) + with_ship * 0.6
+                                to * (10.0 / to.ideal_norm().max(1e-3)) + with_ship * 0.7
                             }
                         }
                     };
@@ -1070,7 +1073,7 @@ mod tests {
             held |= w
                 .enemies
                 .iter()
-                .any(|e| e.flight == Flight::Hold && (10.0..30.0).contains(&(arc(e.pos) - s)));
+                .any(|e| e.flight == Flight::Hold && (4.0..14.0).contains(&(arc(e.pos) - s)));
             for e in &w.events {
                 if let Event::Dive { .. } = e {
                     dives.push(t);
