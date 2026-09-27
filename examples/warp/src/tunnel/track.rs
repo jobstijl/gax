@@ -25,7 +25,7 @@ const MAX_ROLL: f32 = 0.025;
 /// `a exp(t log(~a b))`: the screw motion from `a` to `b`, at `t`.
 pub fn interpolate(a: Frame, b: Frame, t: f32) -> Frame {
     let rel = (a.reverse() * b).log();
-    (a * rel.gp(t).exp()).renormalize_fast()
+    (a * (rel * t).exp()).renormalize_fast()
 }
 
 /// The procedurally generated track, extended ahead on demand.
@@ -78,7 +78,7 @@ impl Track {
         let across = Point::direction(ux, uy, 0.0).ideal_norm().max(1e-3);
         let o = Point::xyz(0.0, 0.0, 0.0);
         let level = Line::rotation_twist(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
-        let step = (Track::twist(pitch, yaw, roll) + level).gp(SEG).exp();
+        let step = ((Track::twist(pitch, yaw, roll) + level) * SEG).exp();
         self.keys.push((last * step).renormalize_fast());
     }
 
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn a_body_twist_rotates_about_the_frames_own_axes() {
         // Yaw only: the path curves in the frame's x-z plane and the y axis stays up.
-        let m = Track::twist(0.0, 0.1, 0.0).gp(5.0).exp();
+        let m = (Track::twist(0.0, 0.1, 0.0) * 5.0).exp();
         let up = (m >> Point::direction(0.0, 1.0, 0.0)).e013();
         assert!((up - 1.0).abs() < 1e-5);
         let p = (m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();

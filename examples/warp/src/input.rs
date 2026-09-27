@@ -71,7 +71,7 @@ fn deadzone(x: f32, y: f32, dz: f32) -> Point<(), f32> {
     if l < dz {
         return Point::direction(0.0, 0.0);
     }
-    v.gp(((l - dz) / (1.0 - dz)).min(1.0) / l)
+    v * (((l - dz) / (1.0 - dz)).min(1.0) / l)
 }
 
 /// Read this frame's input: the simulation's (in gax types) and the menu buttons.
@@ -150,7 +150,7 @@ pub fn read(
     // A diagonal is no faster: at most unit length.
     let l = movement.ideal_norm();
     if l > 1.0 {
-        movement = movement.gp(1.0 / l);
+        movement = movement * (1.0 / l);
     }
     let mut flight = Flight {
         cursor: None,

@@ -102,7 +102,7 @@ fn bot(g: &Game, t: f32) -> sim::Input {
         input.bomb = crowd.count() >= 5;
     }
     // Stay off the walls: pulled back towards the middle.
-    let home = (sim::at(0.0, 0.0) - p).gp(0.6 / 32.0);
+    let home = (sim::at(0.0, 0.0) - p) * (0.6 / 32.0);
     let m = go + home;
     input.movement = if m.ideal_norm() > 1.0 {
         with_length(m, 1.0)

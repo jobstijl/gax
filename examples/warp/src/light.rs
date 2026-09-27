@@ -65,7 +65,7 @@ pub fn desaturate(l: Light, t: f32) -> Light {
     let axis = grey_axis();
     let foot = (l | axis) ^ axis;
     // The same weight as `l`, so that the mix keeps the intensity.
-    let foot = foot.gp(l.e123() / foot.e123());
+    let foot = foot * (l.e123() / foot.e123());
     mix(l, foot, t)
 }
 

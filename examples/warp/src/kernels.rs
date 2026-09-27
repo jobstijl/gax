@@ -29,14 +29,14 @@ pub fn grid_node<T: Real>(
 ) -> (Point<(), T>, Point<(), T>) {
     let [spring, len, anchor, damping, dt] = k;
     let eps = T::from_f64(1e-4);
-    let mut acc = force + (rest - p).gp(anchor);
+    let mut acc = force + (rest - p) * anchor;
     for q in n {
         // Hooke along each spring: the join's norm is the distance.
         let dist = (p & q).norm();
-        acc += (q - p).gp(spring * (dist - len) / (dist + eps));
+        acc += (q - p) * (spring * (dist - len) / (dist + eps));
     }
-    let v = (v + acc.gp(dt)).gp(T::one() - damping * dt);
-    (p + v.gp(dt), v)
+    let v = (v + acc * dt) * (T::one() - damping * dt);
+    (p + v * dt, v)
 }
 
 /// The acceleration a source at `s` gives a body at `p`: `strength (s - p) / (|s - p|² + r²)`,
@@ -45,7 +45,7 @@ pub fn grid_node<T: Real>(
 pub fn source_force<T: Real>(p: Point<(), T>, s: Point<(), T>, k: [T; 2]) -> Point<(), T> {
     let [strength, r2] = k;
     let d2 = (p & s).norm_squared();
-    (s - p).gp(strength / (d2 + r2))
+    (s - p) * (strength / (d2 + r2))
 }
 
 /// One step of a particle: velocity from the external acceleration, drag, then motion.
@@ -57,8 +57,8 @@ pub fn particle_step<T: Real>(
     k: [T; 2],
 ) -> (Point<(), T>, Point<(), T>) {
     let [drag, dt] = k;
-    let v = (v + force.gp(dt)).gp(T::one() - drag * dt);
-    (p + v.gp(dt), v)
+    let v = (v + force * dt) * (T::one() - drag * dt);
+    (p + v * dt, v)
 }
 
 /// `if a < b { x } else { y }`, coefficient-wise on points (branch-free, so it traces).
@@ -79,7 +79,7 @@ pub fn segment_corner<T: Real>(a: Point<(), T>, b: Point<(), T>, k: [T; 3]) -> P
         len,
         T::from_f64(1e-6),
         Point::direction(one, zero),
-        d.gp(one / (len + T::from_f64(1e-30))),
+        d * (one / (len + T::from_f64(1e-30))),
     );
     let quarter = gax::pga2d::Motor::rotation(
         Point::xy(zero, zero),
@@ -87,7 +87,7 @@ pub fn segment_corner<T: Real>(a: Point<(), T>, b: Point<(), T>, k: [T; 3]) -> P
     );
     let n = quarter >> u;
     let reach = T::select_lt(along, zero, -extent, len + extent);
-    a + u.gp(reach) + n.gp(side * extent)
+    a + u * reach + n * (side * extent)
 }
 
 /// The distance from `p` to the segment `a → b`, all with joins: inside the strip between
@@ -126,7 +126,7 @@ pub type Light<T> = gax::pga3d::Point<(), T>;
 
 /// The additive mix `(1 - t) a + t b`.
 pub fn light_mix<T: Real>(a: Light<T>, b: Light<T>, t: T) -> Light<T> {
-    a.gp(T::one() - t) + b.gp(t)
+    a * (T::one() - t) + b * t
 }
 
 /// `l` whitened by `t` at the same intensity: mixed with white light of its own weight.
@@ -137,12 +137,12 @@ pub fn light_whiten<T: Real>(l: Light<T>, t: T) -> Light<T> {
 
 /// `l` at `k` times the intensity: the same point, a different weight.
 pub fn light_fade<T: Real>(l: Light<T>, k: T) -> Light<T> {
-    l.gp(k)
+    l * k
 }
 
 /// The tail of a streak: where a point moving at `v` was `dt` ago.
 pub fn streak_tail<T: Real>(p: Point<(), T>, v: Point<(), T>, dt: T) -> Point<(), T> {
-    p - v.gp(dt)
+    p - v * dt
 }
 
 /// The luminance of a light: its pairing with the plane of Rec. 709's weights (`plane & light`,
@@ -220,12 +220,12 @@ pub fn ripple<T: Real>(p: Point<(), T>, centre: Point<(), T>, k: [T; 2]) -> Poin
     let r = d.ideal_norm();
     let off = (r - radius) * T::from_f64(18.0);
     let ring = (-off * off).exp();
-    p - d.gp(ring * strength / r.max(T::from_f64(1e-4)))
+    p - d * (ring * strength / r.max(T::from_f64(1e-4)))
 }
 
 /// `p` scaled by `k` about `centre` (a homothety): the screen's edge effects.
 pub fn scale_about<T: Real>(p: Point<(), T>, centre: Point<(), T>, k: T) -> Point<(), T> {
-    centre + (p - centre).gp(k)
+    centre + (p - centre) * k
 }
 
 /// The distance between two points: the norm of their join.

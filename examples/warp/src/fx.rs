@@ -132,10 +132,10 @@ impl Fx {
         for e in events {
             match *e {
                 Event::Fire { pos, dir } => {
-                    let muzzle = pos + dir.gp(0.6);
+                    let muzzle = pos + dir * 0.6;
                     for _ in 0..2 {
                         let d = turned(dir, self.rng.range(-0.4, 0.4));
-                        let v = d.gp(self.rng.range(6.0, 14.0));
+                        let v = d * self.rng.range(6.0, 14.0);
                         self.particle(muzzle, v, palette::BULLET, [0.0, 0.12, 6.0, 0.02]);
                     }
                 }
@@ -196,7 +196,7 @@ impl Fx {
                     let c = light::fade(scene::color(kind), 0.6);
                     for _ in 0..24 {
                         let out = heading(self.rng.angle(), self.rng.range(1.5, 3.0));
-                        self.particle(pos + out, out.gp(-2.5), c, [0.0, 0.4, 0.5, 0.03]);
+                        self.particle(pos + out, out * -2.5, c, [0.0, 0.4, 0.5, 0.03]);
                     }
                 }
                 Event::Spawn { pos, kind } => {
@@ -229,7 +229,7 @@ impl Fx {
                         Motor::rotation(Point::xy(0.0, 0.0), core::f32::consts::TAU / 2400.0);
                     let mut dir = Point::direction(1.0, 0.0);
                     for _ in 0..2400 {
-                        let v = dir.gp(self.rng.range(28.0, 42.0));
+                        let v = dir * self.rng.range(28.0, 42.0);
                         let life = [0.0, self.rng.range(0.8, 1.3), 1.2, 0.03];
                         self.particle(p, v, c, life);
                         dir = step >> dir;
@@ -299,8 +299,8 @@ impl Fx {
         // Critically damped spring on the twist error log(target ~cam).
         let omega = 5.0;
         let err: P = (target * self.cam.reverse()).log();
-        self.cam_vel += (err.gp(omega * omega) - self.cam_vel.gp(2.0 * omega)).gp(dt);
-        self.cam = (self.cam_vel.gp(dt).exp() * self.cam).renormalize_fast();
+        self.cam_vel += (err * (omega * omega) - self.cam_vel * (2.0 * omega)) * dt;
+        self.cam = ((self.cam_vel * dt).exp() * self.cam).renormalize_fast();
         for p in &mut self.popups {
             p.2 += dt;
         }

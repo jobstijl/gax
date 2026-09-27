@@ -67,10 +67,10 @@ pub fn rest(j: usize, s: f32) -> Point<(), f32> {
 /// One node's step: the spring forces as PGA3D direction arithmetic.
 #[inline]
 fn node(d: Dir, v: Dir, n: [Dir; 4], f: Dir, dt: f32) -> (Dir, Dir) {
-    let lap = n[0] + n[1] + n[2] + n[3] - d.gp(4.0);
-    let a = lap.gp(SPRING) - d.gp(ANCHOR) - v.gp(DAMPING) + f;
-    let v = v + a.gp(dt);
-    (d + v.gp(dt), v)
+    let lap = n[0] + n[1] + n[2] + n[3] - d * 4.0;
+    let a = lap * SPRING - d * ANCHOR - v * DAMPING + f;
+    let v = v + a * dt;
+    (d + v * dt, v)
 }
 
 impl Lattice {
@@ -118,7 +118,7 @@ impl Lattice {
                     // Away from the source, softened: `strength (p - s) / (|p - s|² + r²)`.
                     let away = at - src.pos;
                     let n = away.ideal_norm();
-                    f += away.gp(src.strength / (n * n + src.r2));
+                    f += away * (src.strength / (n * n + src.r2));
                 }
                 let around = |jj: usize| self.d[r * AROUND + jj % AROUND];
                 // Along the track, the end rings see themselves (a free edge).

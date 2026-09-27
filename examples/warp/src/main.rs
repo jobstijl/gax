@@ -676,7 +676,7 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
     let movement = run.view.across(&run.world, input.movement);
     // The reticle: the cursor, or the right stick pushing it out from the ship on screen.
     let reticle = match (flight.stick, flight.cursor) {
-        (Some([x, y]), _) => run.view.ship_on_screen(&run.world) + Point2::direction(x, y).gp(9.0),
+        (Some([x, y]), _) => run.view.ship_on_screen(&run.world) + Point2::direction(x, y) * 9.0,
         (None, Some([x, y])) => Point2::xy(x, y),
         (None, None) => run.view.ship_on_screen(&run.world) + Point2::direction(0.0, 4.0),
     };

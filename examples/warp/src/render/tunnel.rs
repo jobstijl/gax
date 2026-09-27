@@ -35,6 +35,8 @@ const FOG: f32 = 90.0;
 /// from, and must not glare there.
 const WALL_FOG: f32 = 58.0;
 const NEAR: f32 = 0.25;
+/// The camera's image plane, through its eye, facing along its view (`z = 0` in its frame).
+const IMAGE_PLANE: Plane<(), f32> = Plane::new(0.0, 0.0, 1.0, 0.0);
 
 /// A particle in straightened coordinates.
 #[derive(Clone, Copy, Debug)]
@@ -74,7 +76,7 @@ pub struct View {
 
 /// `a` to `b` by `t` (points of weight 1, or directions).
 fn lerp(a: P, b: P, t: f32) -> P {
-    a + (b - a).gp(t)
+    a + (b - a) * t
 }
 
 /// Bolts: hot pink, the colour of danger.
@@ -123,8 +125,8 @@ impl View {
     fn target(&self, w: &World, alpha: f32) -> Frame {
         let ship = lerp(w.ship.prev, w.ship.pos, alpha);
         let (axis_point, across) = (foot(ship), ship - foot(ship));
-        let eye = axis_point + across.gp(0.3) + dir(0.0, 0.9, -7.5);
-        let look = axis_point + across.gp(0.1) + dir(0.0, 0.0, 20.0);
+        let eye = axis_point + across * 0.3 + dir(0.0, 0.9, -7.5);
+        let look = axis_point + across * 0.1 + dir(0.0, 0.0, 20.0);
         let up = if self.follow_roll {
             w.track.frame(arc(eye)) >> dir(0.0, 1.0, 0.0)
         } else {
@@ -145,8 +147,8 @@ impl View {
         self.shake = (self.shake - dt * 2.2).max(0.0);
         self.flash = (self.flash - dt * 2.5).max(0.0);
         for p in &mut self.sparks {
-            p.pos += p.vel.gp(dt);
-            p.vel = p.vel.gp(1.0 - 1.8 * dt);
+            p.pos += p.vel * dt;
+            p.vel = p.vel * (1.0 - 1.8 * dt);
             p.life -= dt;
         }
         self.sparks.retain(|p| p.life > 0.0);
@@ -311,7 +313,7 @@ impl View {
         let ray = p.ray(at);
         let section = w.track.frame(s) >> Plane::from_normal([0.0, 0.0, 1.0], 0.0);
         let hit = ray ^ section;
-        w.track.straighten(hit.gp(1.0 / hit.e123()), s)
+        w.track.straighten(hit.unitized(), s)
     }
 
     /// A direction on screen (movement, length up to 1) as a direction across the tunnel at
@@ -331,7 +333,7 @@ impl View {
         if n < 1e-6 {
             dir(0.0, 0.0, 0.0)
         } else {
-            d.gp(v.ideal_norm().min(1.0) / n)
+            d * (v.ideal_norm().min(1.0) / n)
         }
     }
 
@@ -468,7 +470,7 @@ impl View {
             let q = lerp(b.prev, b.pos, alpha);
             p.line(
                 out,
-                place(q - b.vel.gp(0.018)),
+                place(q - b.vel * 0.018),
                 place(q),
                 palette::BULLET,
                 0.07,
@@ -481,7 +483,7 @@ impl View {
             let c = light::fade(sp.light, sp.life / sp.total);
             p.line(
                 out,
-                place(sp.pos - sp.vel.gp(0.03)),
+                place(sp.pos - sp.vel * 0.03),
                 place(sp.pos),
                 c,
                 0.03,
@@ -510,14 +512,14 @@ impl View {
             let r = off_axis(q);
             if r > 0.3 {
                 let base = foot(q);
-                let wall_point = base + (q - base).gp(RADIUS / r);
+                let wall_point = base + (q - base) * (RADIUS / r);
                 let radial = base & q;
                 let wall = wall_point | radial;
                 let light_at = base - dir(0.0, 0.0, 2.0);
                 let hit = (light_at & q) ^ wall;
-                let hit = hit.gp(1.0 / hit.e123());
+                let hit = hit.unitized();
                 // A small cross on the wall: along the track and around it.
-                let around = (q - base).gp(0.5 / r);
+                let around = (q - base) * (0.5 / r);
                 let around = about_axis(core::f32::consts::FRAC_PI_2) >> around;
                 let along = dir(0.0, 0.0, 0.7);
                 let shade = light::light(0.6, 0.75, 1.0, 1.2);
@@ -607,7 +609,7 @@ impl View {
         let ship = w.ship.pos;
         let closing = (w.ship.speed + 60.0 - e.vel.e021()).max(10.0);
         let t = (arc(e.pos) - arc(ship)) / closing;
-        if let Some(lc) = p.camera(w.track.place(e.pos + e.vel.gp(t))) {
+        if let Some(lc) = p.camera(w.track.place(e.pos + e.vel * t)) {
             let d = p.screen(lc);
             let (a, b) = (
                 d - Point2::direction(0.12, 0.0),
@@ -711,9 +713,10 @@ impl Proj {
         (self.depth(c) > NEAR).then_some(c)
     }
 
-    /// The depth of a camera-frame point.
+    /// The depth of a camera-frame point (of weight 1): its signed distance from the camera's
+    /// image plane, `plane & point`.
     fn depth(&self, c: P) -> f32 {
-        c.e021() / c.e123()
+        (IMAGE_PLANE & c).s()
     }
 
     /// The screen point of a camera-frame point: the PGA2D point with the depth as its
@@ -721,7 +724,7 @@ impl Proj {
     /// `+y` up, so its `+x` is on the left.
     fn screen(&self, c: P) -> Point2<(), f32> {
         let h = Point2::new(-self.focal * c.e032(), self.focal * c.e013(), c.e021());
-        h.gp(1.0 / h.e12())
+        h.unitized()
     }
 
     /// The world ray from the eye through a screen point: the camera-frame direction whose
@@ -786,7 +789,7 @@ impl Proj {
         let near = Plane::from_normal([0.0, 0.0, 1.0], NEAR);
         let cut = || {
             let m = (ca & cb) ^ near;
-            m.gp(1.0 / m.e123())
+            m.unitized()
         };
         let (ca, cb) = match (fa, fb) {
             (true, true) => (ca, cb),
@@ -811,7 +814,7 @@ impl Proj {
         color: Light,
     ) {
         for &(a, b) in edges {
-            let (a, b) = (q + (turn >> a).gp(size), q + (turn >> b).gp(size));
+            let (a, b) = (q + (turn >> a) * size, q + (turn >> b) * size);
             self.line(out, place(a), place(b), color, 0.05, Fog::Objects);
         }
     }
@@ -936,9 +939,9 @@ mod tests {
         let q = at(3.0, 1.0, 10.0);
         let base = foot(q);
         let r = off_axis(q);
-        let wall = (base + (q - base).gp(RADIUS / r)) | (base & q);
+        let wall = (base + (q - base) * (RADIUS / r)) | (base & q);
         let hit = ((base - dir(0.0, 0.0, 2.0)) & q) ^ wall;
-        let hit = hit.gp(1.0 / hit.e123());
+        let hit = hit.unitized();
         assert!(
             (off_axis(hit) - RADIUS).abs() < 1e-3,
             "{:?}",

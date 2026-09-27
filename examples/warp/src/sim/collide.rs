@@ -32,7 +32,7 @@ pub fn segment_hits_circle(
     if len < 1e-6 {
         return false;
     }
-    let l = path.gp(1.0 / len);
+    let l = path * (1.0 / len);
     if signed_distance(l, c).abs() > r {
         return false;
     }
@@ -88,7 +88,7 @@ impl SpatialHash {
     /// The cell of a point displaced by `(dx, dy)`: its offset from the grid's origin, in
     /// cells.
     fn index(&self, p: Point<(), f32>, dx: f32, dy: f32) -> (usize, usize) {
-        let d = super::body::unit_weight(p) - self.origin + Point::direction(dx, dy);
+        let d = p.unitized() - self.origin + Point::direction(dx, dy);
         let c = (d.e20() / self.cell)
             .floor()
             .clamp(0.0, (self.cols - 1) as f32) as usize;

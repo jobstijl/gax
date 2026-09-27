@@ -66,7 +66,7 @@ pub fn arc(p: P) -> f32 {
 pub fn foot(p: P) -> P {
     let a = axis();
     let f = (p | a) ^ a;
-    f.gp(1.0 / f.e123())
+    f.unitized()
 }
 
 /// The distance of `p` from the axis: the norm of their join (the axis is a unit line).
@@ -478,11 +478,11 @@ impl World {
         ship.invulnerable = (ship.invulnerable - DT).max(0.0);
         ship.roll_cool = (ship.roll_cool - DT).max(0.0);
         let across = if alive {
-            input.movement.gp(12.0)
+            input.movement * 12.0
         } else {
             dir(0.0, 0.0, 0.0)
         };
-        let mut pos = ship.pos + (across + dir(0.0, 0.0, ship.speed)).gp(DT);
+        let mut pos = ship.pos + (across + dir(0.0, 0.0, ship.speed)) * DT;
         // A barrel roll: a rotation about the tunnel's axis, spread over its duration.
         if alive && input.roll != 0 && ship.roll.is_none() && ship.roll_cool <= 0.0 {
             let d = f32::from(input.roll.signum());
@@ -508,7 +508,7 @@ impl World {
         let r = off_axis(pos);
         if r > SHIP_RADIUS {
             let f = foot(pos);
-            pos = f + (pos - f).gp(SHIP_RADIUS / r);
+            pos = f + (pos - f) * (SHIP_RADIUS / r);
         }
         ship.pos = pos;
     }
@@ -541,14 +541,14 @@ impl World {
                 let e = &self.enemies[i];
                 let closing = (forward - e.vel.e021()).max(10.0);
                 let t = (arc(e.pos) - arc(muzzle)) / closing;
-                e.pos + e.vel.gp(t)
+                e.pos + e.vel * t
             }
             None => input.aim,
         };
         // Along the line to the target, at the shots' speed along the track.
         let to = target - muzzle;
         let ahead = to.e021().max(4.0);
-        let vel = dir(to.e032(), to.e013(), ahead).gp(forward / ahead);
+        let vel = dir(to.e032(), to.e013(), ahead) * (forward / ahead);
         self.shots.push(Shot {
             pos: muzzle,
             prev: muzzle,
@@ -711,9 +711,9 @@ impl World {
                         Flight::Approach | Flight::Hold => {
                             // Towards its place, moving along with the ship; the approach is
                             // capped so that a ring glides in.
-                            let to = (place - e.pos).gp(2.5);
+                            let to = (place - e.pos) * 2.5;
                             let n = to.ideal_norm();
-                            let to = if n > 14.0 { to.gp(14.0 / n) } else { to };
+                            let to = if n > 14.0 { to * (14.0 / n) } else { to };
                             if e.flight == Flight::Approach && (place & e.pos).norm() < 1.5 {
                                 e.flight = Flight::Hold;
                             }
@@ -724,11 +724,11 @@ impl World {
                             if e.timer > 0.0 {
                                 // The warning: it flashes in place.
                                 e.flash = e.flash.max(0.6);
-                                (place - e.pos).gp(2.5) + with_ship
+                                (place - e.pos) * 2.5 + with_ship
                             } else {
                                 // At the ship, at a speed you can dodge.
                                 let to = ship - e.pos;
-                                to.gp(16.0 / to.ideal_norm().max(1e-3)) + with_ship.gp(0.6)
+                                to * (16.0 / to.ideal_norm().max(1e-3)) + with_ship * 0.6
                             }
                         }
                     };
@@ -736,7 +736,7 @@ impl World {
                 Foe::Mine => {
                     // Drift, bouncing off the tunnel's inner radius: a reflection in the plane
                     // tangent to it there.
-                    let outward = off_axis(e.pos + e.vel.gp(DT)) > off_axis(e.pos);
+                    let outward = off_axis(e.pos + e.vel * DT) > off_axis(e.pos);
                     if off_axis(e.pos) > SHIP_RADIUS + 0.3 && outward {
                         let tangent = Plane::orthogonal_to(e.pos - foot(e.pos));
                         e.vel = tangent.reflect(e.vel);
@@ -751,12 +751,12 @@ impl World {
                             // its growth and its colour.
                             let t = ahead / (speed + BOLT_SPEED);
                             let there = ship + dir(0.0, 0.0, speed * t);
-                            fired.push((e.pos, (there - e.pos).gp(1.0 / t)));
+                            fired.push((e.pos, (there - e.pos) * (1.0 / t)));
                         }
                     }
                 }
             }
-            e.pos += e.vel.gp(DT);
+            e.pos += e.vel * DT;
         }
         for (pos, vel) in fired {
             self.bolts.push(Shot {
@@ -776,7 +776,7 @@ impl World {
         let mut walls = Vec::new();
         for (k, b) in self.shots.iter_mut().enumerate() {
             b.prev = b.pos;
-            b.pos += b.vel.gp(DT);
+            b.pos += b.vel * DT;
             b.life -= DT;
             let reach = |e: &Enemy| e.foe.radius() + HIT_MARGIN;
             if let Some(i) = self
@@ -844,7 +844,7 @@ impl World {
         let s = self.ship.s();
         for b in &mut self.bolts {
             b.prev = b.pos;
-            b.pos += b.vel.gp(DT);
+            b.pos += b.vel * DT;
             b.life -= DT;
         }
         self.bolts.retain(|b| b.life > 0.0 && arc(b.pos) > s - 4.0);
@@ -860,7 +860,7 @@ impl World {
             let d = to.ideal_norm();
             // Magnetic within reach.
             if alive && d < 16.0 {
-                sh.pos += to.gp(30.0 / d.max(0.5) * DT);
+                sh.pos += to * (30.0 / d.max(0.5) * DT);
             }
             if alive && d < 1.4 {
                 got += 1;
@@ -1018,7 +1018,7 @@ mod tests {
         });
         let b = w.shots[0];
         let t = (arc(aim) - arc(b.prev)) / b.vel.e021();
-        assert!(close(b.prev + b.vel.gp(t), aim));
+        assert!(close(b.prev + b.vel * t, aim));
     }
 
     /// Locked, shots lead a moving enemy and hit it.

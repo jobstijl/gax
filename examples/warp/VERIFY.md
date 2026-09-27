@@ -23,7 +23,7 @@ The only exception is a test that checks a phasor against `sin`.
 | `Unit<Motor>` poses, `exp` of twists, `renormalize_fast` every tick | `sim/body.rs`: every body, `pose ← exp(dt B) pose` | Over a 10-minute integration, `m ~m` stays within `1e-5` (a test); in play, the worst drift per session is below `4e-7` (F3 shows it) |
 | Twists add: translation plus rotation | `Body::twist` | Works as intended, once the twist constructors existed (friction 1) |
 | Motor interpolation, `a exp(t log(~a b))` | drawing between ticks (`Body::lerp`); serpent segments following the one ahead | Every entity, every frame; the serpent keeps its spacing through turns (a test) |
-| The rotation between two directions, and its angle | `body::turn`: steering (chasers, wardens, the ship's nose), `body::angle_of` for the replays' aim | Replaces every `atan2` and angle wrap: the rotation is the relative angle, already in `[-π, π]` (friction 12 on precision near a half turn) |
+| The rotation between two directions, and its angle | `body::turn`: steering (chasers, wardens, the ship's nose), `body::angle_of` for the replays' aim | Replaces every `atan2` and angle wrap: the rotation is the relative angle, already in `[-π, π]`, precise to a few ulps even near a half turn (friction 12) |
 | Rotation motors on directions | `body::heading`, `turned`: spawns, particle bursts, rings of motes, the barrels' offset | Every `cos`/`sin` pair became a turn |
 | Walls as lines | `collide::walls`: the arena's four edges, inside on the positive side | Bounces reflect position and velocity in the wall (`Line::reflect`); the ship stops at its foot `(l \| p) ^ l` and keeps the mean of its velocity and the reflection, the motion along the wall; a shot's wall hit is the meet of its path with the wall |
 | Joins and perpendiculars | `collide`: swept bullets (`a & b`, `l & c`, `l \| c`); `body::distance` | Catches tunnelling (a test) |
@@ -56,7 +56,7 @@ The only exception is a test that checks a phasor against `sin`.
 | Joins in 3D | `tunnel::segment_hits_sphere`: the distance to a segment's line is the weight of `a & b & c` over that of `a & b`; the ends by the planes `l \| a`, `l \| b` | Right the first time (a test) |
 | Reflection in a plane | mines bounce off the lane's edge (`Plane::reflect`) | |
 | Meets | the ship's shadow (the light-to-ship line meets the wall's tangent plane, `wall point \| radial line`); near-plane clipping; the reticle's ray meeting the tunnel's cross-section | On the wall, ahead of the ship (a test) |
-| A camera as a motor | `Motor::look_at` (fixed in gax, friction 8); `cam << p` into its frame; the projection is homogeneous (the depth is the 2D point's weight) | The level camera does not roll (a test); the cross-section fills the screen (a test) |
+| A camera as a motor | `Motor::look_at` (fixed in gax, friction 8); `cam << p` into its frame; the depth is the pairing with the image plane (`plane & point`), and the projection is homogeneous (the depth is the 2D point's weight) | The level camera does not roll (a test); the cross-section fills the screen (a test) |
 | Aiming through the camera, backwards | `View::aim`, `View::across`: a screen point's ray (`eye & direction`) meets the cross-section, straightened back | A screen direction moves the ship that way on screen, and a ray comes back as the point it was cast through (tests); the reticle locks the enemy under it (a test) |
 | Rotation about a line | the barrel roll: `Motor::rotation(axis, θ) >> ship`, eased over 0.4 s | Keeps the radius exactly (a test) |
 | PGA3D motor interpolation | `track::interpolate`: `M(s)` between keyframes, and the camera's spring | For a screw between keyframes the interpolation is the screw itself |
@@ -118,9 +118,10 @@ The only exception is a test that checks a phasor against `sin`.
    pitfalls; annotate `Point::<(), f64>`. It came up again in the new doctests.
 4. **An "ideal norm" of a direction was missing.** `norm()` of a point is its weight, which is
    0 for a direction. **Fixed in gax:** `Point::ideal_norm` in PGA2D and PGA3D.
-5. **Scalar multiplication is `gp`.** `v.gp(dt)` reads oddly next to `+`. `Mul<T>` for
-   coefficients would be friendlier, and might conflict with `*` meaning the geometric product
-   (open question).
+5. **Scaling by a coefficient.** I wrote `v.gp(dt)` everywhere, thinking `*` with a
+   coefficient was missing. It was not: gax implements `v * t`, `t * v` and `v / t` as the
+   geometric product with a scalar, consistent with `*` meaning the geometric product. The game
+   now uses them (108 places), and the guide's table of products lists them.
 6. **The WGSL modules are large.** PGA2D is 120 KB of source. `wesl`'s stripping keeps only
    what the shaders use, so it costs nothing at run time, but build scripts parse all of it.
    They also have no addition or scaling functions, so anything compound (a light's mix, a
@@ -149,14 +150,17 @@ The only exception is a test that checks a phasor against `sin`.
     reduction rewrote a square root's own argument with its relation `s² = x`, compiling
     `sqrt(s s)`. The verifier could not see it, because it reads temporaries as their variables.
     **Fixed:** a reduced stage argument that uses anything not yet defined is kept as written.
-12. **`rotation_between` loses precision near a half turn.** `1 + B A` is small there, so the
-    result carries about the square root of the rounding error. Steering does not mind; the
-    replays' aim quantization did, off by one bin near 180°. The game measures the angle from
-    the nearest axis direction instead (`body::angle_of`); gax documents the limit.
+12. **`rotation_between` lost precision near a half turn.** `normalize(1 + B A)` is small
+    there: the error of normalizing the inputs, divided by the distance from a half turn, came
+    through (up to `1e-4` in `f32`), and the replays' aim quantization was off by one bin near
+    180°. The bisector form `normalize((A + B) A)` did not help, for the same reason. **Fixed in
+    gax:** the axis is the meet `A ^ B` and the angle `atan2(|A ^ B|, A | B)`, the sine and
+    cosine scaled alike, so nothing is normalized and the angle is well conditioned everywhere
+    (a test down to `3e-7` from a half turn, in `f32`). The game's quadrant workaround is gone.
 13. **Meets and reflections return points of any weight, even negative.** `normalized()` keeps
-    the sign, so `p − q` of a reflected point and a normal one is not a direction. The game
-    divides by the weight (`body::unit_weight`). A gax method for "the same point with weight 1"
-    would remove the trap (open).
+    the sign, so `p − q` of a reflected point and a normal one is not a direction. **Fixed in
+    gax:** `Point::unitized()` (PGA2D and PGA3D) divides by the signed weight; the game's six
+    hand-written divisions use it.
 14. **`Real` had no `exp`.** The shaders' tonemapper and ripple need it. Writing it as
     `sinh x + cosh x` is wrong in both directions: `inf − inf = NaN` for large arguments (the
     ripple's ring would have blanked the screen whenever a shock played), and catastrophic

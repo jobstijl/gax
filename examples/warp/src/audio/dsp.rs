@@ -116,7 +116,7 @@ impl Osc {
         // Rounding slowly changes its length: back to the unit circle now and then.
         self.samples = self.samples.wrapping_add(1);
         if self.samples.is_multiple_of(1024) {
-            self.turning = self.turning.gp(1.0 / self.turning.ideal_norm());
+            self.turning = self.turning * (1.0 / self.turning.ideal_norm());
         }
         self.advance(inc);
         y

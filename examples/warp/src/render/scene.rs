@@ -455,8 +455,8 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
     }
     for b in &w.bullets {
         // A short streak behind the shot, along its velocity.
-        let p = b.prev + (b.pos - b.prev).gp(alpha);
-        let tail = p - b.vel.gp(0.03);
+        let p = b.prev + (b.pos - b.prev) * alpha;
+        let tail = p - b.vel * 0.03;
         let style = [0.035, 0.28, 0.35, 0.0];
         out.push(seg(tail, p, palette::BULLET, style, identity()));
     }

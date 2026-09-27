@@ -68,7 +68,7 @@ impl Body {
     /// Advance by `dt`: `pose ← exp(dt B) pose`, then one Newton step towards `m ~m = 1`.
     pub fn step(&mut self, dt: f32) {
         self.prev = self.pose;
-        self.pose = (self.twist().gp(dt).exp() * self.pose).renormalize_fast();
+        self.pose = ((self.twist() * dt).exp() * self.pose).renormalize_fast();
     }
 
     /// Move by `(dx, dy)` in world coordinates (a wall bounce, a respawn).
@@ -78,7 +78,7 @@ impl Body {
 
     /// Move its position to the point `p`, keeping its orientation.
     pub fn move_to(&mut self, p: Point<(), f32>) {
-        let d = unit_weight(p) - self.pos();
+        let d = p.unitized() - self.pos();
         self.shift(d.e20(), d.e01());
     }
 
@@ -92,7 +92,7 @@ impl Body {
 pub fn interpolate(a: Pose, b: Pose, t: f32) -> Pose {
     let rel = a.reverse() * b;
     let log: Point<(), f32> = rel.log();
-    a * log.gp(t).exp()
+    a * (log * t).exp()
 }
 
 /// `|m ~m - 1|`: how far a pose has drifted from a unit motor (logged per session).
@@ -108,12 +108,6 @@ pub fn drift(m: Pose) -> f32 {
 
 /// The origin.
 pub const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
-
-/// The same point with weight 1 (a meet or a reflection can return it with another weight,
-/// even a negative one).
-pub fn unit_weight(p: Point<(), f32>) -> Point<(), f32> {
-    p.gp(1.0 / p.e12())
-}
 
 /// The direction of length `speed` at `angle` from the x axis: `(speed, 0)` turned by a
 /// rotation motor.
@@ -132,28 +126,14 @@ pub fn turn(a: Point<(), f32>, b: Point<(), f32>) -> f32 {
     Motor::rotation_between(a, b).angle()
 }
 
-/// The angle of a direction from the x axis, in `(-π, π]`: the nearest of the four axis
-/// directions, plus the (at most eighth-turn, so precise) rotation from it to `d`.
+/// The angle of a direction from the x axis, in `(-π, π]`: of the rotation from `(1, 0)` to it.
 pub fn angle_of(d: Point<(), f32>) -> f32 {
-    use core::f32::consts::{FRAC_PI_2, PI};
-    let (x, y) = (d.e20(), d.e01());
-    let (axis, base) = if x.abs() >= y.abs() {
-        if x >= 0.0 {
-            (Point::direction(1.0, 0.0), 0.0)
-        } else {
-            (Point::direction(-1.0, 0.0), PI)
-        }
-    } else if y >= 0.0 {
-        (Point::direction(0.0, 1.0), FRAC_PI_2)
-    } else {
-        (Point::direction(0.0, -1.0), -FRAC_PI_2)
-    };
-    base + turn(axis, d)
+    turn(Point::direction(1.0, 0.0), d)
 }
 
 /// `d` scaled to length `len` (a zero direction stays zero).
 pub fn with_length(d: Point<(), f32>, len: f32) -> Point<(), f32> {
-    d.gp(len / d.ideal_norm().max(1e-9))
+    d * (len / d.ideal_norm().max(1e-9))
 }
 
 /// The pose at the point `p`, turned by `angle`.
