@@ -22,10 +22,10 @@ impl Rng {
     }
 }
 
-/// A rate `B` with `exp(dt B)` moving forward at `speed` and turning at `spin` (radians per
-/// second): `B = (speed e20 + spin e12) / 2` in PGA2D (see `Motor::translation`).
+/// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
+/// at `spin` radians per second: twists add.
 pub fn rate(speed: f32, spin: f32) -> Point<(), f32> {
-    Point::from_coeffs([speed * 0.5, 0.0, spin * 0.5])
+    Point::translation_twist(speed, 0.0) + Point::rotation_twist(Point::xy(0.0, 0.0), spin)
 }
 
 struct Ship {
@@ -72,7 +72,8 @@ impl Scene {
                 let hue = k as f32 / ships as f32;
                 let start = Motor::translation(rng.range(-8.0, 8.0), rng.range(-5.0, 5.0))
                     .into_inner()
-                    * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU)).into_inner();
+                    * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU))
+                        .into_inner();
                 let c = hsv(hue);
                 Ship {
                     motor: start,
@@ -141,8 +142,11 @@ impl Scene {
         let (origin, hue) = (self.ships[ship].motor, self.ships[ship].hue);
         let ps: Vec<Particle> = (0..self.burst)
             .map(|_| {
-                let turn =
-                    Motor::rotation(Point::xy(0.0, 0.0), self.rng.range(0.0, std::f32::consts::TAU)).into_inner();
+                let turn = Motor::rotation(
+                    Point::xy(0.0, 0.0),
+                    self.rng.range(0.0, std::f32::consts::TAU),
+                )
+                .into_inner();
                 Particle {
                     motor: (origin * turn).into(),
                     rate: rate(self.rng.range(0.5, 6.0), self.rng.range(-6.0, 6.0)).into(),

@@ -129,6 +129,43 @@ jobs:
           WGPU_BACKEND: vulkan
         run: cargo run --release -- --check
 
+  warp:
+    name: warp, the game (dependency contract, tests on lavapipe, smoke runs)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/warp
+      - name: system libraries, Mesa's software Vulkan, Xvfb
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev mesa-vulkan-drivers libvulkan1 xvfb
+      - name: dependency contract (Bevy is plumbing only)
+        working-directory: examples/warp
+        run: ./scripts/check-deps.sh
+      - name: clippy (all math through gax)
+        working-directory: examples/warp
+        run: cargo clippy --release --all-targets -- -D warnings
+      - name: tests (simulation, audio, CPU against GPU kernels)
+        working-directory: examples/warp
+        env:
+          GAX_REQUIRE_GPU: "1"
+          WGPU_BACKEND: vulkan
+        run: cargo test --release
+      - name: renderer smoke test (offscreen, wgpu validation on)
+        working-directory: examples/warp
+        env:
+          WGPU_BACKEND: vulkan
+        run: cargo run --release -- --shot shots 1
+      - name: the app starts (Xvfb, no audio device)
+        working-directory: examples/warp
+        env:
+          WGPU_BACKEND: vulkan
+          WARP_NO_AUDIO: "1"
+        run: xvfb-run -a cargo run --release -- --smoke
+
   lint:
     runs-on: ubuntu-latest
     steps:

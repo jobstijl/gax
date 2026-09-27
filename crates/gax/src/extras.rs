@@ -177,6 +177,25 @@ mod pga3d_extras {
             Self::rotation(axis, angle)
         }
     }
+
+    impl<T: Real> Line<(), T> {
+        /// The twist (a bivector: a line) of a translation at velocity `(vx, vy, vz)`:
+        /// `(B * t).exp()` is `Motor::translation(t vx, t vy, t vz)`. Twists add.
+        #[inline]
+        pub fn translation_twist(vx: T, vy: T, vz: T) -> Self {
+            let h = T::from_f64(-0.5);
+            let z = T::zero();
+            Line::new(z, z, z, vx * h, vy * h, vz * h)
+        }
+
+        /// The twist of a rotation at `omega` radians per unit time about the line `axis`
+        /// (right-handed, as [`Motor::rotation`]): `(B * t).exp()` is
+        /// `Motor::rotation(axis, t omega)`.
+        #[inline]
+        pub fn rotation_twist(axis: Line<(), T>, omega: T) -> Self {
+            axis.normalized().into_inner().gp(omega * T::from_f64(-0.5))
+        }
+    }
 }
 
 #[cfg(feature = "pga2d")]
@@ -202,6 +221,32 @@ mod pga2d_extras {
         pub fn to_euclidean(self) -> [T; 2] {
             let r = self.e12().recip();
             [self.e20() * r, self.e01() * r]
+        }
+
+        /// The twist (a bivector: in PGA2D, a point) of a translation at velocity `(vx, vy)`:
+        /// `(B * t).exp()` is `Motor::translation(t vx, t vy)`. Twists add, so a moving,
+        /// turning body's twist is the sum of a translation and a rotation twist.
+        ///
+        /// ```
+        /// use gax::pga2d::{Motor, Point};
+        /// let b = Point::<(), f64>::translation_twist(3.0, -1.0);
+        /// let p = (b.gp(2.0).exp() >> Point::xy(0.0, 0.0)).to_euclidean();
+        /// assert!((p[0] - 6.0).abs() < 1e-12 && (p[1] + 2.0).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn translation_twist(vx: T, vy: T) -> Self {
+            let h = T::from_f64(0.5);
+            Point::new(vy * h, -vx * h, T::zero())
+        }
+
+        /// The twist of a rotation at `omega` radians per unit time, counterclockwise, about
+        /// `center`: `(B * t).exp()` is `Motor::rotation(center, t omega)`.
+        #[inline]
+        pub fn rotation_twist(center: Point<(), T>, omega: T) -> Self {
+            center
+                .normalized()
+                .into_inner()
+                .gp(omega * T::from_f64(-0.5))
         }
     }
 
@@ -304,5 +349,49 @@ mod tests {
             (r2 >> Point::xy(0.0, 0.0)).to_euclidean(),
             [2.0, 0.0]
         ));
+        // Twists: exp(t B) is the motor of the motion for time t.
+        let c = Point::xy(0.5, -1.5);
+        for t in [0.3, 1.0, 2.5] {
+            let tr = Point::translation_twist(3.0, -1.0).gp(t).exp().into_inner();
+            let want = Motor::translation(3.0 * t, -t).into_inner();
+            assert!(
+                tr.c.iter()
+                    .zip(want.c)
+                    .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
+            );
+            let ro = Point::rotation_twist(c, 0.7).gp(t).exp().into_inner();
+            let want = Motor::rotation(c, 0.7 * t).into_inner();
+            assert!(
+                ro.c.iter()
+                    .zip(want.c)
+                    .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
+            );
+        }
+    }
+
+    #[cfg(feature = "pga3d")]
+    #[test]
+    fn pga3d_twists() {
+        use crate::pga3d::{Line, Motor, Point};
+        let axis = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.5, 2.0);
+        for t in [0.3, 1.0, 2.5] {
+            let tr = Line::translation_twist(3.0, -1.0, 0.5)
+                .gp(t)
+                .exp()
+                .into_inner();
+            let want = Motor::translation(3.0 * t, -t, 0.5 * t).into_inner();
+            assert!(
+                tr.c.iter()
+                    .zip(want.c)
+                    .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
+            );
+            let ro = Line::rotation_twist(axis, 0.7).gp(t).exp().into_inner();
+            let want = Motor::rotation(axis, 0.7 * t).into_inner();
+            assert!(
+                ro.c.iter()
+                    .zip(want.c)
+                    .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
+            );
+        }
     }
 }

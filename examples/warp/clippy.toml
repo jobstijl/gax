@@ -1,0 +1,26 @@
+# The game's math goes through gax. glam, bevy_math and Bevy's transforms exist in the
+# dependency tree (through input and seedling) but must not be used, except in `input.rs`,
+# the boundary that turns stick and cursor vectors into gax types right away.
+disallowed-types = [
+    { path = "glam::Vec2", reason = "use gax types (input.rs is the only boundary)" },
+    { path = "glam::Vec3", reason = "use gax types" },
+    { path = "glam::Vec4", reason = "use gax types" },
+    { path = "glam::Quat", reason = "use gax motors" },
+    { path = "glam::Mat3", reason = "use gax maps" },
+    { path = "glam::Mat4", reason = "use gax maps" },
+    { path = "glam::Affine2", reason = "use gax motors" },
+    { path = "glam::Affine3A", reason = "use gax motors" },
+    { path = "bevy::transform::components::Transform", reason = "poses are gax motors" },
+    { path = "bevy::transform::components::GlobalTransform", reason = "poses are gax motors" },
+    { path = "bevy_seedling::spatial::SpatialBasicNode", reason = "positional audio is computed with gax" },
+    { path = "bevy_seedling::spatial::SpatialListener2D", reason = "positional audio is computed with gax" },
+    { path = "bevy_seedling::spatial::SpatialListener3D", reason = "positional audio is computed with gax" },
+    { path = "bevy_seedling::spatial::SpatialScale", reason = "positional audio is computed with gax" },
+]
+disallowed-methods = [
+    { path = "bevy::window::Window::cursor_position", reason = "hands out a glam Vec2: read it in input.rs only" },
+    { path = "bevy::window::Window::physical_cursor_position", reason = "hands out a glam Vec2: read it in input.rs only" },
+    { path = "bevy::input::gamepad::Gamepad::left_stick", reason = "hands out a glam Vec2: read it in input.rs only" },
+    { path = "bevy::input::gamepad::Gamepad::right_stick", reason = "hands out a glam Vec2: read it in input.rs only" },
+    { path = "bevy::input::gamepad::Gamepad::dpad", reason = "hands out a glam Vec2: read it in input.rs only" },
+]

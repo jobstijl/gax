@@ -23,7 +23,8 @@ pub fn run(gfx: &mut Gfx) {
     let motors: Vec<Motor<(), f32>> = (0..n)
         .map(|_| {
             (Motor::translation(rng.range(-10.0, 10.0), rng.range(-6.0, 6.0)).into_inner()
-                * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU)).into_inner())
+                * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU))
+                    .into_inner())
             .normalized()
             .into_inner()
         })

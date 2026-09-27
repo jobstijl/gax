@@ -1,0 +1,46 @@
+[package]
+name = "warp"
+description = "A neon twin-stick shooter on warping space: a real-load test of gax (PGA motors on CPU and GPU)"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate, so that the game's dependencies stay out of gax's workspace.
+[workspace]
+
+[dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "pga3d", "bytemuck", "batch"] }
+# Bevy is plumbing only: app, ECS, states, time, logging, windows, input, gamepads.
+# No rendering, audio, UI or math crates (see scripts/check-deps.sh and clippy.toml).
+bevy = { version = "=0.19.1", default-features = false, features = [
+    "std",
+    "multi_threaded",
+    "bevy_winit",
+    "bevy_window",
+    "bevy_state",
+    "bevy_log",
+    "bevy_gilrs",
+    "bevy_asset",
+    "x11",
+    "wayland",
+] }
+# Audio on the Firewheel graph; the game's own synthesizer nodes. No spatial or HRTF nodes.
+bevy_seedling = { version = "=0.8.0", default-features = false, features = ["cpal", "effects"] }
+bytemuck = { version = "1.25", features = ["derive"] }
+pollster = "1"
+wgpu = "30"
+
+[build-dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "pga3d", "trace", "wgsl"] }
+# Links the game's WESL shaders against gax's generated modules at build time.
+wesl = "0.5"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+debug = 1
