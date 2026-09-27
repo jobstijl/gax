@@ -213,7 +213,9 @@ mod pga3d_extras {
         /// The shortest rotation (about an axis through the origin) that turns the direction
         /// `from` into the direction `to`: `normalize(1 + B A)`, with `A` and `B` the planes
         /// through the origin orthogonal to them. Opposite directions get a half turn about an
-        /// axis perpendicular to both.
+        /// axis perpendicular to both. Near opposite directions `1 + B A` is small and the
+        /// result loses precision (about the square root of the rounding error); measure a
+        /// precise angle from a nearer reference direction.
         ///
         /// ```
         /// use gax::pga3d::{Motor, Point};
@@ -401,6 +403,51 @@ mod pga2d_extras {
             let c = center.normalized().into_inner();
             c.gp(angle * T::from_f64(-0.5)).exp()
         }
+
+        /// The shortest rotation about the origin that turns the direction `from` into the
+        /// direction `to`: `normalize(1 + B A)`, with `A` and `B` the lines through the origin
+        /// orthogonal to them. Opposite directions get a half turn. Its angle, the signed angle
+        /// from `from` to `to` in `[-π, π]`, is [`Motor::angle`]. Near opposite directions
+        /// `1 + B A` is small and the result loses precision (about the square root of the
+        /// rounding error); measure a precise angle from a nearer reference direction.
+        ///
+        /// ```
+        /// use gax::pga2d::{Motor, Point};
+        /// let r = Motor::rotation_between(Point::<(), f64>::direction(1.0, 0.0), Point::direction(0.0, 2.0));
+        /// assert!((r.angle() - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+        /// ```
+        pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
+            let zero = T::zero();
+            let a = Line::new(from.e20(), from.e01(), zero)
+                .normalized()
+                .into_inner();
+            let b = Line::new(to.e20(), to.e01(), zero)
+                .normalized()
+                .into_inner();
+            let one = Self::translation(zero, zero).into_inner();
+            let r = one + b * a;
+            let n = r.norm();
+            let r = r.normalized().into_inner();
+            let half = Self::rotation(Point::xy(zero, zero), T::from_f64(core::f64::consts::PI));
+            Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
+                T::select_lt(n, T::from_f64(1e-6), half.c[i], r.c[i])
+            })))
+        }
+    }
+
+    impl<T: Real> Motor<(), T> {
+        /// The angle of a rotation (a unit motor), counterclockwise, in `[-π, π]`: from its
+        /// logarithm, whose point part is `-angle/2` times the (unit) centre.
+        ///
+        /// ```
+        /// use gax::pga2d::{Motor, Point};
+        /// let r = Motor::rotation(Point::<(), f64>::xy(3.0, 1.0), -0.4);
+        /// assert!((r.angle() + 0.4).abs() < 1e-12);
+        /// ```
+        pub fn angle(self) -> T {
+            let log: Point<(), T> = Unit::new_unchecked(self).log();
+            log.e12() * T::from_f64(-2.0)
+        }
     }
 }
 
@@ -439,6 +486,33 @@ mod tests {
                 .map(|x: f64| (x * 1e12).round()),
             b.c.map(|x| (x * 1e12).round())
         );
+    }
+
+    #[cfg(feature = "pga2d")]
+    #[test]
+    fn plane_rotations_between_directions() {
+        use crate::pga2d::{Motor, Point};
+        type Case = ((f64, f64), (f64, f64), f64);
+        let cases: [Case; 4] = [
+            ((1.0, 0.0), (0.0, 3.0), core::f64::consts::FRAC_PI_2),
+            ((0.0, 1.0), (1.0, 0.0), -core::f64::consts::FRAC_PI_2),
+            ((1.0, 1.0), (-1.0, 1.0), core::f64::consts::FRAC_PI_2),
+            ((2.0, -1.0), (2.0, -1.0), 0.0),
+        ];
+        for (a, b, want) in cases {
+            let r = Motor::rotation_between(Point::direction(a.0, a.1), Point::direction(b.0, b.1));
+            assert!(
+                (r.angle() - want).abs() < 1e-9,
+                "{a:?} {b:?}: {}",
+                r.angle()
+            );
+            let d = r >> Point::direction(a.0, a.1);
+            let n = (a.0 * a.0 + a.1 * a.1).sqrt() / (b.0 * b.0 + b.1 * b.1).sqrt();
+            assert!((d.e20() - b.0 * n).abs() < 1e-9 && (d.e01() - b.1 * n).abs() < 1e-9);
+        }
+        // Opposite: a half turn.
+        let r = Motor::rotation_between(Point::direction(1.0f64, 0.0), Point::direction(-1.0, 0.0));
+        assert!((r.angle().abs() - core::f64::consts::PI).abs() < 1e-9);
     }
 
     #[cfg(feature = "pga3d")]
