@@ -22,10 +22,10 @@ const MAX_BEND: f32 = 0.036;
 /// The largest roll rate.
 const MAX_ROLL: f32 = 0.025;
 
-/// `a exp(t log(~a b))`: the screw motion from `a` to `b`, at `t`.
+/// `a exp(t log(~a b))`: the screw motion from `a` to `b`, at `t`, the shorter way (`m` and
+/// `-m` are the same motion; see `Motor::interpolate`).
 pub fn interpolate(a: Frame, b: Frame, t: f32) -> Frame {
-    let rel = (a.reverse() * b).log();
-    (a * (rel * t).exp()).renormalize_fast()
+    Motor::interpolate(a, b, t).renormalize_fast()
 }
 
 /// The procedurally generated track, extended ahead on demand.

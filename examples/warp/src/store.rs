@@ -2,7 +2,7 @@
 //! the runs on it. Plain text files (and the replays' own format) in the user's data
 //! directory, or `$WARP_DATA`.
 
-use crate::sim::replay::Replay;
+use crate::sim::replay::{Record, Replay};
 use std::path::{Path, PathBuf};
 
 /// The number of entries in the high-score table.
@@ -64,6 +64,8 @@ pub struct Settings {
     pub shake: u8,
     /// Fewer and softer full-screen flashes.
     pub reduced_flashes: bool,
+    /// Less motion: no screen shake, shock ripples or lensing.
+    pub reduced_motion: bool,
     /// The colour scheme.
     pub scheme: Scheme,
     /// Volumes, `0..=10`.
@@ -78,6 +80,8 @@ pub struct Settings {
     pub fov: u8,
     /// The Tunnel's camera rolls with the track (off: it stays level).
     pub camera_roll: bool,
+    /// How generously the Tunnel's reticle locks on: 0 off, 1 low, 2 high.
+    pub aim_assist: u8,
     /// Full screen.
     pub fullscreen: bool,
 }
@@ -87,6 +91,7 @@ impl Default for Settings {
         Settings {
             shake: 4,
             reduced_flashes: false,
+            reduced_motion: false,
             scheme: Scheme::Standard,
             master: 8,
             music: 8,
@@ -94,6 +99,7 @@ impl Default for Settings {
             on_beat: false,
             fov: 85,
             camera_roll: false,
+            aim_assist: 1,
             fullscreen: false,
         }
     }
@@ -101,9 +107,10 @@ impl Default for Settings {
 
 impl Settings {
     /// The rows of the settings menu (their labels), in order.
-    pub const ROWS: [&'static str; 10] = [
+    pub const ROWS: [&'static str; 12] = [
         "SCREEN SHAKE",
         "FLASHES",
+        "MOTION",
         "COLOURS",
         "MASTER VOLUME",
         "MUSIC",
@@ -111,12 +118,18 @@ impl Settings {
         "EFFECTS ON THE BEAT",
         "TUNNEL FIELD OF VIEW",
         "TUNNEL CAMERA ROLL",
+        "TUNNEL AIM ASSIST",
         "FULL SCREEN",
     ];
 
-    /// Rows that toggle (Enter flips them too).
+    /// Rows that toggle or cycle (Enter steps them too).
     pub fn toggles(row: usize) -> bool {
-        matches!(row, 1 | 2 | 6 | 8 | 9)
+        matches!(row, 1 | 2 | 3 | 7 | 9 | 10 | 11)
+    }
+
+    /// The Tunnel's lock-on margin (screen units beyond an enemy's apparent size).
+    pub fn aim_reach(&self) -> f32 {
+        [0.25, 1.1, 2.2][usize::from(self.aim_assist.min(2))]
     }
 
     /// A row's value as the menu shows it; volumes are `(level, 10)` bars instead.
@@ -132,13 +145,20 @@ impl Settings {
                 "FULL"
             }
             .into()),
-            2 => Ok(self.scheme.name().into()),
-            3 => Err(self.master),
-            4 => Err(self.music),
-            5 => Err(self.sfx),
-            6 => Ok(if self.on_beat { "ON" } else { "OFF" }.into()),
-            7 => Ok(format!("{}", self.fov)),
-            8 => Ok(if self.camera_roll { "FOLLOW" } else { "LEVEL" }.into()),
+            2 => Ok(if self.reduced_motion {
+                "REDUCED"
+            } else {
+                "FULL"
+            }
+            .into()),
+            3 => Ok(self.scheme.name().into()),
+            4 => Err(self.master),
+            5 => Err(self.music),
+            6 => Err(self.sfx),
+            7 => Ok(if self.on_beat { "ON" } else { "OFF" }.into()),
+            8 => Ok(format!("{}", self.fov)),
+            9 => Ok(if self.camera_roll { "FOLLOW" } else { "LEVEL" }.into()),
+            10 => Ok(["OFF", "LOW", "HIGH"][usize::from(self.aim_assist.min(2))].into()),
             _ => Ok(if self.fullscreen { "ON" } else { "OFF" }.into()),
         }
     }
@@ -149,14 +169,16 @@ impl Settings {
         match row {
             0 => self.shake = (i32::from(self.shake) + by).clamp(0, 4) as u8,
             1 => self.reduced_flashes = !self.reduced_flashes,
-            2 => self.scheme = self.scheme.step(by),
-            3 => vol(&mut self.master),
-            4 => vol(&mut self.music),
-            5 => vol(&mut self.sfx),
-            6 => self.on_beat = !self.on_beat,
-            7 => self.fov = (i32::from(self.fov) + 5 * by).clamp(60, 110) as u8,
-            8 => self.camera_roll = !self.camera_roll,
-            9 => self.fullscreen = !self.fullscreen,
+            2 => self.reduced_motion = !self.reduced_motion,
+            3 => self.scheme = self.scheme.step(by),
+            4 => vol(&mut self.master),
+            5 => vol(&mut self.music),
+            6 => vol(&mut self.sfx),
+            7 => self.on_beat = !self.on_beat,
+            8 => self.fov = (i32::from(self.fov) + 5 * by).clamp(60, 110) as u8,
+            9 => self.camera_roll = !self.camera_roll,
+            10 => self.aim_assist = (i32::from(self.aim_assist) + by).rem_euclid(3) as u8,
+            11 => self.fullscreen = !self.fullscreen,
             _ => {}
         }
     }
@@ -170,9 +192,10 @@ impl Settings {
     /// The text form.
     pub fn to_text(self) -> String {
         format!(
-            "shake = {}\nreduced_flashes = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfov = {}\ncamera_roll = {}\nfullscreen = {}\n",
+            "shake = {}\nreduced_flashes = {}\nreduced_motion = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfov = {}\ncamera_roll = {}\naim_assist = {}\nfullscreen = {}\n",
             self.shake,
             self.reduced_flashes,
+            self.reduced_motion,
             self.scheme.name(),
             self.master,
             self.music,
@@ -180,6 +203,7 @@ impl Settings {
             self.on_beat,
             self.fov,
             self.camera_roll,
+            self.aim_assist,
             self.fullscreen
         )
     }
@@ -196,6 +220,8 @@ impl Settings {
             match k {
                 "shake" => s.shake = v.parse::<u8>().map_or(s.shake, |x| x.min(4)),
                 "reduced_flashes" => s.reduced_flashes = v == "true",
+                "reduced_motion" => s.reduced_motion = v == "true",
+                "aim_assist" => s.aim_assist = v.parse::<u8>().map_or(s.aim_assist, |x| x.min(2)),
                 "scheme" => {
                     s.scheme = Scheme::ALL
                         .into_iter()
@@ -331,21 +357,21 @@ impl Store {
         self.write("settings.txt", s.to_text().as_bytes());
     }
 
-    /// The high-score table.
-    pub fn scores(&self) -> Scores {
-        self.read("scores.txt")
+    /// The high-score table of the game whose replays are `I`.
+    pub fn scores<I: Record>(&self) -> Scores {
+        self.read(I::TABLE)
             .map(|t| Scores::from_text(&t))
             .unwrap_or_default()
     }
 
-    /// Record a finished run: always as `replays/last.warp`; if it makes the table, as an
+    /// Record a finished run: always as `replays/last.<ext>`; if it makes the table, as an
     /// entry named `name` with its own replay. Returns its rank.
-    pub fn finish(&self, replay: &Replay, name: Option<&str>) -> Option<usize> {
+    pub fn finish<I: Record>(&self, replay: &Replay<I>, name: Option<&str>) -> Option<usize> {
         let bytes = replay.encode();
-        self.write("replays/last.warp", &bytes);
+        self.write(&format!("replays/last.{}", I::EXT), &bytes);
         let name = name?;
-        let mut scores = self.scores();
-        let file = format!("{}-{}.warp", replay.score, replay.seed);
+        let mut scores = self.scores::<I>();
+        let file = format!("{}-{}.{}", replay.score, replay.seed, I::EXT);
         let (rank, dropped) = scores.insert(Entry {
             score: replay.score,
             name: name.to_string(),
@@ -359,19 +385,19 @@ impl Store {
         {
             let _ = std::fs::remove_file(dir.join("replays").join(&d.replay));
         }
-        self.write("scores.txt", scores.to_text().as_bytes());
+        self.write(I::TABLE, scores.to_text().as_bytes());
         Some(rank)
     }
 
     /// Load a replay by its file name in `replays/`.
-    pub fn replay(&self, file: &str) -> Option<Replay> {
+    pub fn replay<I: Record>(&self, file: &str) -> Option<Replay<I>> {
         let dir = self.dir.as_ref()?;
         load_replay(&dir.join("replays").join(file)).ok()
     }
 }
 
 /// Load a replay file.
-pub fn load_replay(path: &Path) -> Result<Replay, String> {
+pub fn load_replay<I: Record>(path: &Path) -> Result<Replay<I>, String> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     Replay::decode(&bytes).map_err(|e| format!("{}: {e}", path.display()))
 }
@@ -379,6 +405,7 @@ pub fn load_replay(path: &Path) -> Result<Replay, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sim::replay::Packed;
 
     fn temp(name: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("warp-test-{name}-{}", std::process::id()));
@@ -391,6 +418,7 @@ mod tests {
         let s = Settings {
             shake: 1,
             reduced_flashes: true,
+            reduced_motion: true,
             scheme: Scheme::BlueYellow,
             master: 3,
             music: 0,
@@ -398,6 +426,7 @@ mod tests {
             on_beat: true,
             fov: 95,
             camera_roll: true,
+            aim_assist: 2,
             fullscreen: true,
         };
         assert_eq!(Settings::from_text(&s.to_text()), s);
@@ -412,12 +441,12 @@ mod tests {
         let dir = temp("scores");
         let store = Store::new(Some(dir.clone()));
         for k in 0..14u64 {
-            let mut r = Replay::new(k);
+            let mut r: Replay = Replay::new(k);
             r.score = 1000 * (k % 7 + 1) + k;
             let rank = store.finish(&r, Some("ABC"));
             assert!(rank.is_some() || k >= 10, "{k}");
         }
-        let scores = store.scores();
+        let scores = store.scores::<Packed>();
         assert_eq!(scores.entries.len(), TABLE);
         assert!(scores.entries.windows(2).all(|w| w[0].score >= w[1].score));
         // Every entry's replay is on disk, and nothing else but `last`.
@@ -427,8 +456,17 @@ mod tests {
             .collect();
         assert_eq!(files.len(), TABLE + 1, "{files:?}");
         for e in &scores.entries {
-            assert_eq!(store.replay(&e.replay).unwrap().score, e.score);
+            assert_eq!(store.replay::<Packed>(&e.replay).unwrap().score, e.score);
         }
+        // The Tunnel keeps its own table.
+        let mut t: Replay<crate::tunnel::replay::Packed> = Replay::new(5);
+        t.score = 777;
+        assert_eq!(store.finish(&t, Some("TUN")), Some(0));
+        assert_eq!(
+            store.scores::<crate::tunnel::replay::Packed>().entries[0].score,
+            777
+        );
+        assert_eq!(store.scores::<Packed>().entries.len(), TABLE);
         assert_eq!(scores.rank(1), None);
         assert_eq!(scores.rank(1_000_000), Some(0));
         let _ = std::fs::remove_dir_all(&dir);
@@ -438,7 +476,7 @@ mod tests {
     fn nothing_persists_without_a_directory() {
         let store = Store::new(None);
         store.save_settings(&Settings::default());
-        assert_eq!(store.finish(&Replay::new(1), Some("AAA")), None);
-        assert!(store.scores().entries.is_empty());
+        assert_eq!(store.finish(&Replay::<Packed>::new(1), Some("AAA")), None);
+        assert!(store.scores::<Packed>().entries.is_empty());
     }
 }

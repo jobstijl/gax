@@ -159,6 +159,8 @@ struct Voice {
 /// The sound-effect engine.
 pub struct Sfx {
     sr: f32,
+    /// The music's tempo (its grid).
+    tempo: f32,
     voices: [Voice; 48],
     noise: Noise,
     /// With "on the beat": samples into the current 32nd of the music's grid.
@@ -183,6 +185,7 @@ impl Sfx {
     pub fn new(sr: f32) -> Sfx {
         Sfx {
             sr,
+            tempo: super::music::TEMPO,
             voices: [Voice::default(); 48],
             noise: Noise(0x1234_5678),
             grid: None,
@@ -202,8 +205,9 @@ impl Sfx {
         }
     }
 
-    /// The music starts its bar now: align the grid with it.
-    pub fn sync(&mut self) {
+    /// The music starts its bar now, at `tempo`: align the grid with it.
+    pub fn sync(&mut self, tempo: f32) {
+        self.tempo = tempo;
         if self.grid.is_some() {
             self.grid = Some(0.0);
         }
@@ -507,7 +511,7 @@ impl Sfx {
         let Some(mut pos) = self.grid else {
             return self.render_voices(l, r);
         };
-        let len = super::music::sixteenth(self.sr) / 2.0;
+        let len = super::music::sixteenth(self.sr, self.tempo) / 2.0;
         let (mut start, n) = (0, l.len());
         let mut any = self.held.iter().any(Option::is_some);
         while start < n {
@@ -630,10 +634,10 @@ mod tests {
     #[test]
     fn on_the_beat_holds_musical_sounds_until_the_grid() {
         let sr = 48000.0;
-        let len = crate::audio::music::sixteenth(sr) / 2.0;
+        let len = crate::audio::music::sixteenth(sr, crate::audio::music::TEMPO) / 2.0;
         let mut sfx = Sfx::new(sr);
         sfx.set_on_beat(true);
-        sfx.sync();
+        sfx.sync(crate::audio::music::TEMPO);
         let (mut l, mut r) = (vec![0.0f32; 4096], vec![0.0f32; 4096]);
         sfx.render(&mut l[..100], &mut r[..100]);
         let shot = Trigger {

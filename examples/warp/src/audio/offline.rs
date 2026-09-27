@@ -263,7 +263,7 @@ mod tests {
             sfx.render(&mut l, &mut r);
         }
         if block_music_reseed() {
-            music.reseed(9);
+            music.reseed(9, crate::audio::music::TEMPO);
             music.render(&mut l, &mut r);
         }
         let after = ALLOCATIONS.load(Ordering::Relaxed);

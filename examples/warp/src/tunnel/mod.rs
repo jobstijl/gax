@@ -9,9 +9,20 @@
 //! line. The distance from the axis is a join with it, the pull back inside moves towards a
 //! point's foot on the axis (`(p | axis) ^ axis`), turns about the axis are motors (rings,
 //! barrel rolls, wall placements), mines bounce by reflection in a plane, and collisions are
-//! swept segments against spheres with joins.
+//! swept segments against spheres with joins. More:
+//!
+//! * A serpent swims a screw motion about the axis: its head is turned by `exp(DT T)` every
+//!   tick, and each body segment is the head moved back along the screw by its own fixed
+//!   motor `exp(-lag T)`, so the body is always the helix the head has just swum.
+//! * A gate is a ring in a cross-section; the ship flies through it when the line of its
+//!   last step meets the gate's plane inside the ring. A slalom of gates lies on a screw
+//!   motion too, each gate the last one moved by the same motor.
+//! * A singularity pulls (an inverse square, softened), pinches the tunnel's wall towards the
+//!   axis around it, bends shots (a shot bent far enough before it kills is a slingshot), eats
+//!   mines and grows, and bursts when overfed.
 
 pub mod lattice;
+pub mod replay;
 pub mod track;
 
 use crate::sim::rng::Rng;
@@ -37,6 +48,19 @@ const FIRE_INTERVAL: f32 = 1.0 / 14.0;
 const BOLT_SPEED: f32 = 13.0;
 const ROLL_TIME: f32 = 0.4;
 const ROLL_ANGLE: f32 = 1.3;
+/// A serpent's segments, and the seconds between them along its screw.
+const SEGMENTS: usize = 14;
+const SEGMENT_LAG: f32 = 0.11;
+/// Gates in a slalom, their spacing along the track, and their radius.
+const GATES: usize = 6;
+const GATE_GAP: f32 = 17.0;
+pub const GATE_RADIUS: f32 = 1.7;
+/// A singularity's pull (per unit of strength) and how long it holds ahead of the ship.
+const WELL_HOLD: f32 = 9.0;
+/// A singularity bursts at this mass.
+const WELL_BURST: f32 = 5.0;
+/// A shot bent by more than this (radians) before it kills is a slingshot.
+const SLINGSHOT: f32 = 0.3;
 /// The ship's hit sphere (shots are more generous: `HIT_MARGIN`).
 const SHIP_SIZE: f32 = 0.38;
 const HIT_MARGIN: f32 = 0.35;
@@ -125,6 +149,10 @@ pub enum Foe {
     Mine,
     /// Turrets on the wall that fire bolts you must read in depth.
     Turret,
+    /// A serpent's head (its body is its segments), swimming a helix down the tunnel.
+    Serpent,
+    /// A singularity: pulls, pinches the tunnel, bends shots, eats mines.
+    Singularity,
 }
 
 impl Foe {
@@ -134,6 +162,8 @@ impl Foe {
             Foe::Drone => Kind::Drifter,
             Foe::Mine => Kind::Splitter,
             Foe::Turret => Kind::Warden,
+            Foe::Serpent => Kind::Serpent,
+            Foe::Singularity => Kind::Singularity,
         }
     }
 
@@ -143,6 +173,8 @@ impl Foe {
             Foe::Drone => 0.75,
             Foe::Mine => 0.9,
             Foe::Turret => 1.0,
+            Foe::Serpent => 0.9,
+            Foe::Singularity => 1.1,
         }
     }
 
@@ -151,6 +183,8 @@ impl Foe {
             Foe::Drone => 1.0,
             Foe::Mine => 2.0,
             Foe::Turret => 4.0,
+            Foe::Serpent => 8.0,
+            Foe::Singularity => 24.0,
         }
     }
 
@@ -159,19 +193,35 @@ impl Foe {
             Foe::Drone => 100,
             Foe::Mine => 150,
             Foe::Turret => 400,
+            Foe::Serpent => 800,
+            Foe::Singularity => 2000,
         }
     }
 }
 
-/// What a drone is doing.
+/// What a drone (or a singularity) is doing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Flight {
-    /// Coming in to its place in the ring ahead of the ship.
+    /// Coming in to its place ahead of the ship.
     Approach,
-    /// Holding its place, circling with the ring.
+    /// Holding its place (drones circle with the ring).
     Hold,
-    /// About to dive (a warning flash), then diving at the ship.
+    /// Drones: about to dive (a warning flash), then diving at the ship. Singularities: let
+    /// go, staying where they are in the track while the ship passes.
     Dive,
+}
+
+/// A serpent's body segment.
+#[derive(Clone, Copy, Debug)]
+pub struct Segment {
+    /// Where.
+    pub pos: P,
+    /// Where last tick.
+    pub prev: P,
+    /// Seconds behind the head along the screw.
+    pub lag: f32,
+    /// Hit points.
+    pub hp: f32,
 }
 
 /// An enemy.
@@ -202,8 +252,27 @@ pub struct Enemy {
     /// Seconds to the next action (turrets: firing, the last 0.35 s a charge-up; drones: the
     /// dive's warning).
     pub timer: f32,
-    /// A drone's flight.
+    /// A drone's (or singularity's) flight.
     pub flight: Flight,
+    /// A singularity's mass: what it has eaten.
+    pub mass: f32,
+    /// A serpent's screw (its twist: `exp(t T)` is `t` seconds of swimming) and its body.
+    pub twist: Line<(), f32>,
+    pub body: Vec<Segment>,
+    /// The singularity a drone escorts (its ring turns about the singularity).
+    pub anchor: Option<u32>,
+}
+
+impl Enemy {
+    /// Its hit radius: a singularity grows as it eats.
+    pub fn radius(&self) -> f32 {
+        self.foe.radius() + 0.12 * self.mass
+    }
+
+    /// A singularity's pull strength.
+    pub fn strength(&self) -> f32 {
+        1.0 + 0.35 * self.mass
+    }
 }
 
 /// A shot (the player's) or a bolt (an enemy's).
@@ -215,8 +284,57 @@ pub struct Shot {
     pub prev: P,
     /// Velocity.
     pub vel: P,
+    /// The velocity it left with (a singularity bends it away from that).
+    pub from: P,
     /// Seconds left.
     pub life: f32,
+}
+
+impl Shot {
+    fn new(pos: P, vel: P, life: f32) -> Shot {
+        Shot {
+            pos,
+            prev: pos,
+            vel,
+            from: vel,
+            life,
+        }
+    }
+
+    /// How far it has been bent: the angle of the rotation from the velocity it left with to
+    /// the one it has (twice its logarithm's norm).
+    pub fn bend(&self) -> f32 {
+        2.0 * Motor::rotation_between(self.from, self.vel).log().norm()
+    }
+}
+
+/// What became of a gate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GateState {
+    /// Waiting.
+    Open,
+    /// Flown through.
+    Passed,
+    /// Flown past.
+    Missed,
+}
+
+/// A bonus gate: a ring across the tunnel.
+#[derive(Clone, Copy, Debug)]
+pub struct Gate {
+    /// Its centre (its arc length is where its plane is).
+    pub pos: P,
+    /// What became of it.
+    pub state: GateState,
+    /// Seconds since it was passed or missed.
+    pub t: f32,
+}
+
+impl Gate {
+    /// Its plane: the cross-section at its arc length, `z = s`.
+    pub fn plane(&self) -> Plane<(), f32> {
+        Plane::from_normal([0.0, 0.0, 1.0], arc(self.pos))
+    }
 }
 
 /// A shard: collect it for the multiplier.
@@ -286,6 +404,16 @@ pub enum Event {
     Pickup { pos: P, mult: u32 },
     /// A barrel roll.
     Roll { dir: f32 },
+    /// Flown through a gate: the chain it extends, and the points.
+    Gate { pos: P, chain: u32, points: u64 },
+    /// Flown past a gate: the chain is broken.
+    GateMiss { pos: P },
+    /// A singularity ate something.
+    Absorb { pos: P, mass: f32 },
+    /// An overfed singularity burst.
+    Burst { pos: P },
+    /// A shot bent round a singularity killed: double points.
+    Slingshot { pos: P },
     /// The ship was destroyed.
     Death { pos: P },
     /// The ship reappeared.
@@ -313,6 +441,8 @@ pub struct Pending {
     pub ring: f32,
     /// The ring's depth ahead of the ship (drones).
     pub depth: f32,
+    /// Drones: escorting the singularity that lands with them.
+    pub escort: bool,
 }
 
 /// The tunnel's whole state.
@@ -338,6 +468,10 @@ pub struct World {
     pub bolts: Vec<Shot>,
     /// Shards.
     pub shards: Vec<Shard>,
+    /// Bonus gates.
+    pub gates: Vec<Gate>,
+    /// Gates flown through in a row.
+    pub chain: u32,
     /// Spawns on their way.
     pub pending: Vec<Pending>,
     /// Score.
@@ -359,6 +493,8 @@ pub struct World {
     clock: f32,
     cooldown: f32,
     dive_cooldown: f32,
+    gate_timer: f32,
+    well_cooldown: f32,
     next_id: u32,
     next_life: u64,
     next_bomb: u64,
@@ -380,6 +516,35 @@ pub fn segment_hits_sphere(a: P, b: P, c: P, r: f32) -> bool {
     }
     let between = ((l | a) & c).s() * ((l | b) & c).s() < 0.0;
     between && (l & c).norm() / len < r
+}
+
+/// How strongly a singularity pulls the wall in (a lattice source per unit of strength), and
+/// how far along the tunnel (the squared reach).
+pub const PINCH: f32 = 480.0;
+pub const PINCH_REACH2: f32 = 49.0;
+
+/// The singularities for a tick: where each is and how strong.
+pub struct Field {
+    wells: Vec<(P, f32)>,
+}
+
+impl Field {
+    /// The pull at `p`, `k s d / (|d|² + 1)^(3/2)` towards each singularity: an inverse
+    /// square with a softened core.
+    pub fn pull(&self, p: P, k: f32) -> P {
+        let mut acc = dir(0.0, 0.0, 0.0);
+        for &(w, strength) in &self.wells {
+            let d = w - p;
+            let soft = d.ideal_norm() * d.ideal_norm() + 1.0;
+            acc += d * (k * strength / soft.powf(1.5));
+        }
+        acc
+    }
+
+    /// Whether there are any.
+    pub fn is_empty(&self) -> bool {
+        self.wells.is_empty()
+    }
 }
 
 impl World {
@@ -409,6 +574,8 @@ impl World {
             shots: Vec::new(),
             bolts: Vec::new(),
             shards: Vec::new(),
+            gates: Vec::new(),
+            chain: 0,
             pending: Vec::new(),
             score: 0,
             mult: 1,
@@ -421,6 +588,8 @@ impl World {
             clock: 0.0,
             cooldown: 2.0,
             dive_cooldown: 2.0,
+            gate_timer: 12.0,
+            well_cooldown: 0.0,
             next_id: 1,
             next_life: 100_000,
             next_bomb: 150_000,
@@ -430,6 +599,35 @@ impl World {
     /// The speed bonus on scores: faster is worth more.
     pub fn speed_bonus(&self) -> f32 {
         (self.ship.speed / CRUISE).max(1.0)
+    }
+
+    /// The singularities' field this tick.
+    pub fn field(&self) -> Field {
+        Field {
+            wells: self.wells().collect(),
+        }
+    }
+
+    /// The singularities: where, and how strong.
+    pub fn wells(&self) -> impl Iterator<Item = (P, f32)> + '_ {
+        self.enemies
+            .iter()
+            .filter(|e| e.foe == Foe::Singularity)
+            .map(|e| (e.pos, e.strength()))
+    }
+
+    /// How far from the axis the ship may fly at arc length `s`: inside the wall, which a
+    /// singularity pinches in.
+    pub fn ship_radius(&self, s: f32) -> f32 {
+        SHIP_RADIUS.min(self.lattice.radius(s) - 1.3).max(1.0)
+    }
+
+    /// How near the ship is to a singularity, `0..1` (the music darkens and bends with it).
+    pub fn darkness(&self) -> f32 {
+        let ship = self.ship.pos;
+        self.wells()
+            .map(|(w, strength)| (1.0 - (w & ship).norm() / (22.0 + 8.0 * strength)).max(0.0))
+            .fold(0.0, f32::max)
     }
 
     /// One tick.
@@ -456,9 +654,11 @@ impl World {
             self.direct();
             self.land();
         }
-        self.step_enemies();
-        self.step_shots();
-        self.step_bolts();
+        let field = self.field();
+        self.step_enemies(&field);
+        self.step_gates();
+        self.step_shots(&field);
+        self.step_bolts(&field);
         self.step_shards();
         if self.phase == Phase::Playing {
             self.collide_ship();
@@ -470,6 +670,13 @@ impl World {
     }
 
     fn fly(&mut self, input: &Input, alive: bool) {
+        // A singularity pulls the ship across the tunnel (not along it), capped so that it can
+        // always be flown out of; and where it pinches the wall, the ship must stay further in.
+        let pull = self.field().pull(self.ship.pos, 30.0);
+        let pull = dir(pull.e032(), pull.e013(), 0.0);
+        let n = pull.ideal_norm();
+        let pull = if n > 7.0 { pull * (7.0 / n) } else { pull };
+        let limit = self.ship_radius(self.ship.s() + self.ship.speed * DT);
         let ship = &mut self.ship;
         ship.prev = ship.pos;
         let target = CRUISE * (1.0 + 0.45 * input.throttle.clamp(-1.0, 1.0));
@@ -478,7 +685,7 @@ impl World {
         ship.invulnerable = (ship.invulnerable - DT).max(0.0);
         ship.roll_cool = (ship.roll_cool - DT).max(0.0);
         let across = if alive {
-            input.movement * 12.0
+            input.movement * 12.0 + pull
         } else {
             dir(0.0, 0.0, 0.0)
         };
@@ -506,9 +713,9 @@ impl World {
         }
         // Keep inside the tunnel: pulled back towards the foot on the axis.
         let r = off_axis(pos);
-        if r > SHIP_RADIUS {
+        if r > limit {
             let f = foot(pos);
-            pos = f + (pos - f) * (SHIP_RADIUS / r);
+            pos = f + (pos - f) * (limit / r);
         }
         ship.pos = pos;
     }
@@ -549,12 +756,7 @@ impl World {
         let to = target - muzzle;
         let ahead = to.e021().max(4.0);
         let vel = dir(to.e032(), to.e013(), ahead) * (forward / ahead);
-        self.shots.push(Shot {
-            pos: muzzle,
-            prev: muzzle,
-            vel,
-            life: 1.6,
-        });
+        self.shots.push(Shot::new(muzzle, vel, 1.6));
         self.events.push(Event::Fire { pos: muzzle });
     }
 
@@ -566,7 +768,7 @@ impl World {
         let s = self.ship.s();
         for i in (0..self.enemies.len()).rev() {
             if arc(self.enemies[i].pos) - s < 70.0 {
-                self.kill(i, false);
+                self.kill(i, false, false);
             }
         }
         self.bolts.clear();
@@ -579,14 +781,33 @@ impl World {
     }
 
     fn blast(&mut self, pos: P, strength: f32, r2: f32, time: f32) {
-        self.blasts.push((Source { pos, strength, r2 }, time));
+        self.blasts.push((
+            Source {
+                pos,
+                strength,
+                r2,
+                reach2: 0.0,
+            },
+            time,
+        ));
     }
 
-    /// The director: an intensity curve over the run, and formations ahead in the fog.
+    /// The director: an intensity curve over the run, formations ahead in the fog, and now
+    /// and then a slalom of gates.
     fn direct(&mut self) {
         self.clock += DT;
         self.intensity = crate::sim::director::Director::curve(self.clock * 1.3);
         self.cooldown -= DT;
+        self.gate_timer -= DT;
+        self.well_cooldown -= DT;
+        let has_well = self.enemies.iter().any(|e| e.foe == Foe::Singularity)
+            || self.pending.iter().any(|p| p.foe == Foe::Singularity);
+        if self.gate_timer <= 0.0 && !has_well {
+            if self.gates.iter().all(|g| g.state != GateState::Open) {
+                self.slalom();
+            }
+            self.gate_timer = self.rng.range(22.0, 30.0);
+        }
         if self.cooldown > 0.0 || self.enemies.len() + self.pending.len() > 40 {
             return;
         }
@@ -602,8 +823,34 @@ impl World {
             angle,
             ring,
             depth,
+            escort: false,
         };
-        if self.clock > 25.0 && roll < 0.25 + 0.15 * i {
+        // Bands of one roll: each kind once it has been introduced, drones otherwise.
+        let well_band = roll < 0.16;
+        let turret_band = (0.16..0.36 + 0.12 * i).contains(&roll);
+        let serpent_band = (0.48..0.64).contains(&roll);
+        let mine_band = (0.64..0.82).contains(&roll);
+        if well_band && self.clock > 40.0 && !has_well && self.well_cooldown <= 0.0 {
+            // A singularity, holding ahead, with a ring of drones orbiting it.
+            let a0 = r.angle();
+            let depth = r.range(24.0, 30.0);
+            let off = r.range(1.0, 2.0);
+            spawn.push(pend(Foe::Singularity, around(off, a0, s), a0, off, depth));
+            let n = 6 + (i * 4.0) as usize;
+            for k in 0..n {
+                let a = k as f32 * core::f32::consts::TAU / n as f32;
+                let mut p = pend(
+                    Foe::Drone,
+                    around(off, a0, s) + (around(3.4, a, 0.0) - at(0.0, 0.0, 0.0)),
+                    a,
+                    3.4,
+                    depth,
+                );
+                p.escort = true;
+                spawn.push(p);
+            }
+            self.well_cooldown = 45.0;
+        } else if turret_band && self.clock > 25.0 {
             // Turrets on the wall, spaced along the track and around it.
             let n = 1 + (i * 3.0) as usize;
             let a0 = r.angle();
@@ -612,7 +859,12 @@ impl World {
                 let p = around(RADIUS - 0.5, a, s + k as f32 * 7.0);
                 spawn.push(pend(Foe::Turret, p, a, 0.0, 0.0));
             }
-        } else if self.clock > 10.0 && roll < 0.55 {
+        } else if serpent_band && self.clock > 30.0 {
+            // A serpent, coming out of the fog on its helix.
+            let a = r.angle();
+            let ring = r.range(3.2, 4.4);
+            spawn.push(pend(Foe::Serpent, around(ring, a, s), a, ring, 0.0));
+        } else if (turret_band || mine_band) && self.clock > 10.0 {
             // Mines scattered in the lane.
             let n = 3 + (i * 6.0) as usize;
             for k in 0..n {
@@ -643,6 +895,28 @@ impl World {
         self.cooldown = 1.8 + 3.0 * (1.0 - i) + self.rng.range(0.0, 1.0);
     }
 
+    /// A slalom of gates ahead, on a screw motion about the axis: each gate is the last one
+    /// turned about the axis and moved along it by the same motor.
+    fn slalom(&mut self) {
+        let i = self.intensity;
+        let r = &mut self.rng;
+        let s0 = self.ship.s() + SPAWN_AHEAD * 0.8;
+        let off = r.range(1.4, 2.4 + 1.2 * i);
+        let side = if r.unit() < 0.5 { -1.0 } else { 1.0 };
+        let turn = side * r.range(0.5, 0.9 + 0.5 * i);
+        let screw = about_axis(turn) * Motor::translation(0.0, 0.0, GATE_GAP);
+        let mut c = around(off, r.angle(), s0);
+        self.gates.retain(|g| g.state == GateState::Open);
+        for _ in 0..GATES {
+            self.gates.push(Gate {
+                pos: c,
+                state: GateState::Open,
+                t: 0.0,
+            });
+            c = screw >> c;
+        }
+    }
+
     fn land(&mut self) {
         let mut landed = Vec::new();
         self.pending.retain_mut(|p| {
@@ -653,6 +927,8 @@ impl World {
             landed.push(*p);
             false
         });
+        // A singularity lands before its escorts (it was announced first).
+        let mut well = None;
         for p in landed {
             let id = self.next_id;
             self.next_id += 1;
@@ -660,6 +936,19 @@ impl World {
                 about_axis(self.rng.angle()) >> dir(0.7, 0.0, 0.0)
             } else {
                 dir(0.0, 0.0, 0.0)
+            };
+            let (twist, body) = if p.foe == Foe::Serpent {
+                self.serpent(p.pos)
+            } else {
+                (Line::translation_twist(0.0, 0.0, 0.0), Vec::new())
+            };
+            if p.foe == Foe::Singularity {
+                well = Some(id);
+            }
+            let timer = if p.foe == Foe::Singularity {
+                WELL_HOLD
+            } else {
+                self.rng.range(0.6, 1.8)
             };
             self.enemies.push(Enemy {
                 id,
@@ -673,24 +962,51 @@ impl World {
                 angle: p.angle,
                 ring: p.ring,
                 depth: p.depth,
-                timer: self.rng.range(0.6, 1.8),
+                timer,
                 flight: Flight::Approach,
+                mass: 0.0,
+                twist,
+                body,
+                anchor: if p.escort { well } else { None },
             });
         }
     }
 
-    fn step_enemies(&mut self) {
+    /// A serpent's screw (a turn about the axis and a swim along it, per second) and its body
+    /// behind a head at `head`: segment `k` is the head moved back along the screw by
+    /// `k SEGMENT_LAG` seconds, `exp(-lag T)`.
+    fn serpent(&mut self, head: P) -> (Line<(), f32>, Vec<Segment>) {
+        let side = if self.rng.unit() < 0.5 { -1.0 } else { 1.0 };
+        let twist = Line::rotation_twist(axis(), side * self.rng.range(1.3, 1.8))
+            + Line::translation_twist(0.0, 0.0, 0.55 * CRUISE);
+        let body = (1..=SEGMENTS)
+            .map(|k| {
+                let lag = k as f32 * SEGMENT_LAG;
+                let pos = (twist * -lag).exp() >> head;
+                Segment {
+                    pos,
+                    prev: pos,
+                    lag,
+                    hp: 2.0,
+                }
+            })
+            .collect();
+        (twist, body)
+    }
+
+    fn step_enemies(&mut self, field: &Field) {
         let ship = self.ship.pos;
         let (s_ship, speed) = (self.ship.s(), self.ship.speed);
         let alive = self.phase == Phase::Playing;
         let mut fired = Vec::new();
-        // One drone dives at a time: the one that has held longest.
+        // One drone dives at a time: the one that has held longest (escorts stay with their
+        // singularity).
         self.dive_cooldown -= DT;
         if alive && self.dive_cooldown <= 0.0 {
             let holding = self
                 .enemies
                 .iter_mut()
-                .filter(|e| e.foe == Foe::Drone && e.flight == Flight::Hold)
+                .filter(|e| e.foe == Foe::Drone && e.flight == Flight::Hold && e.anchor.is_none())
                 .max_by(|a, b| a.age.total_cmp(&b.age));
             if let Some(e) = holding {
                 e.flight = Flight::Dive;
@@ -699,6 +1015,21 @@ impl World {
                 self.dive_cooldown = 1.6 - 0.8 * self.intensity;
             }
         }
+        // The singularities, where they are and how they move (their escorts' rings move with
+        // them).
+        let wells: Vec<(u32, P, P)> = self
+            .enemies
+            .iter()
+            .filter(|e| e.foe == Foe::Singularity)
+            .map(|e| (e.id, e.pos, e.vel))
+            .collect();
+        let with_ship = dir(0.0, 0.0, speed);
+        // Towards `place`, moving along with the ship; capped so that it glides in.
+        let glide = |from: P, place: P, cap: f32| {
+            let to = (place - from) * 2.5;
+            let n = to.ideal_norm();
+            if n > cap { to * (cap / n) } else { to }
+        };
         for e in &mut self.enemies {
             e.prev = e.pos;
             e.age += DT;
@@ -706,28 +1037,36 @@ impl World {
             let ahead = arc(e.pos) - s_ship;
             match e.foe {
                 Foe::Drone => {
-                    // Its place in the ring, which turns and holds `depth` ahead of the ship.
                     e.angle += DT * 0.9;
-                    let place = around(e.ring, e.angle, s_ship + e.depth);
-                    let with_ship = dir(0.0, 0.0, speed);
+                    // An escort's ring turns about its singularity; a lost escort joins the
+                    // ship's band.
+                    let well = e.anchor.and_then(|id| wells.iter().find(|w| w.0 == id));
+                    if e.anchor.is_some() && well.is_none() {
+                        e.anchor = None;
+                        e.ring = 4.6;
+                        e.depth = 8.0;
+                        e.flight = Flight::Approach;
+                    }
+                    let (place, place_vel) = match well {
+                        Some(&(_, w, v)) => {
+                            (w + (around(e.ring, e.angle, 0.0) - at(0.0, 0.0, 0.0)), v)
+                        }
+                        // Its place in the ring, which turns and holds `depth` ahead of the ship.
+                        None => (around(e.ring, e.angle, s_ship + e.depth), with_ship),
+                    };
                     e.vel = match e.flight {
                         Flight::Approach | Flight::Hold => {
-                            // Towards its place, moving along with the ship; the approach is
-                            // capped so that a ring glides in.
-                            let to = (place - e.pos) * 2.5;
-                            let n = to.ideal_norm();
-                            let to = if n > 26.0 { to * (26.0 / n) } else { to };
                             if e.flight == Flight::Approach && (place & e.pos).norm() < 1.5 {
                                 e.flight = Flight::Hold;
                             }
-                            to + with_ship
+                            glide(e.pos, place, 26.0) + place_vel
                         }
                         Flight::Dive => {
                             e.timer -= DT;
                             if e.timer > 0.0 {
                                 // The warning: it flashes in place.
                                 e.flash = e.flash.max(0.6);
-                                (place - e.pos) * 2.5 + with_ship
+                                (place - e.pos) * 2.5 + place_vel
                             } else {
                                 // At the ship, at a speed you can dodge.
                                 let to = ship - e.pos;
@@ -738,12 +1077,13 @@ impl World {
                 }
                 Foe::Mine => {
                     // Drift, bouncing off the tunnel's inner radius: a reflection in the plane
-                    // tangent to it there.
+                    // tangent to it there. Singularities pull.
                     let outward = off_axis(e.pos + e.vel * DT) > off_axis(e.pos);
                     if off_axis(e.pos) > SHIP_RADIUS + 0.3 && outward {
                         let tangent = Plane::orthogonal_to(e.pos - foot(e.pos));
                         e.vel = tangent.reflect(e.vel);
                     }
+                    e.vel += field.pull(e.pos, 20.0) * DT;
                 }
                 Foe::Turret => {
                     e.timer -= DT;
@@ -758,38 +1098,192 @@ impl World {
                         }
                     }
                 }
+                Foe::Serpent => {
+                    // Swim: the head along its screw, and each segment the head moved back by
+                    // its own lag.
+                    let next = (e.twist * DT).exp() >> e.pos;
+                    e.vel = (next - e.pos) * (1.0 / DT);
+                    for seg in &mut e.body {
+                        seg.prev = seg.pos;
+                        seg.pos = (e.twist * -seg.lag).exp() >> next;
+                    }
+                }
+                Foe::Singularity => {
+                    // Holding ahead of the ship, turning slowly about the axis; then let go, so
+                    // that the ship must fly past it.
+                    e.angle += DT * 0.3;
+                    let place = around(e.ring, e.angle, s_ship + e.depth);
+                    e.vel = match e.flight {
+                        Flight::Approach => {
+                            if (place & e.pos).norm() < 1.5 {
+                                e.flight = Flight::Hold;
+                            }
+                            glide(e.pos, place, 26.0) + with_ship
+                        }
+                        Flight::Hold => {
+                            e.timer -= DT;
+                            if e.timer <= 0.0 {
+                                e.flight = Flight::Dive;
+                            }
+                            glide(e.pos, place, 26.0) + with_ship
+                        }
+                        Flight::Dive => dir(0.0, 0.0, 0.0),
+                    };
+                }
             }
             e.pos += e.vel * DT;
         }
         for (pos, vel) in fired {
-            self.bolts.push(Shot {
-                pos,
-                prev: pos,
-                vel,
-                life: 8.0,
-            });
+            self.bolts.push(Shot::new(pos, vel, 8.0));
             self.events.push(Event::Bolt { pos });
         }
+        self.feed();
         // Behind the ship: gone.
         self.enemies.retain(|e| arc(e.pos) > s_ship - 6.0);
     }
 
-    fn step_shots(&mut self) {
-        let mut hits: Vec<(usize, usize)> = Vec::new();
+    /// Singularities eat the mines and loose drones that fall in, and burst when overfed.
+    fn feed(&mut self) {
+        let mut eaten: Vec<(usize, usize)> = Vec::new();
+        for (wi, w) in self.enemies.iter().enumerate() {
+            if w.foe != Foe::Singularity {
+                continue;
+            }
+            for (i, e) in self.enemies.iter().enumerate() {
+                let food = e.foe == Foe::Mine || (e.foe == Foe::Drone && e.anchor.is_none());
+                if food && e.age > 0.3 && (e.pos & w.pos).norm() < w.radius() {
+                    eaten.push((wi, i));
+                }
+            }
+        }
+        let mut gone: Vec<usize> = Vec::new();
+        for (wi, i) in eaten {
+            if gone.contains(&i) {
+                continue;
+            }
+            gone.push(i);
+            let w = &mut self.enemies[wi];
+            w.mass += 1.0;
+            w.hp += 3.0;
+            w.flash = 1.0;
+            let (pos, mass) = (w.pos, w.mass);
+            self.events.push(Event::Absorb { pos, mass });
+        }
+        gone.sort_unstable();
+        for &i in gone.iter().rev() {
+            self.enemies.swap_remove(i);
+        }
+        let Some(i) = self
+            .enemies
+            .iter()
+            .position(|e| e.foe == Foe::Singularity && e.mass >= WELL_BURST)
+        else {
+            return;
+        };
+        // Overfed: it bursts into a ring of drones.
+        let w = self.enemies.swap_remove(i);
+        self.events.push(Event::Burst { pos: w.pos });
+        self.blast(w.pos, 1800.0, 6.0, 0.25);
+        for k in 0..8 {
+            let a = k as f32 * core::f32::consts::TAU / 8.0;
+            let pos = w.pos + (around(1.0, a, 0.0) - at(0.0, 0.0, 0.0));
+            let id = self.next_id;
+            self.next_id += 1;
+            self.enemies.push(Enemy {
+                id,
+                foe: Foe::Drone,
+                pos,
+                prev: pos,
+                vel: dir(0.0, 0.0, 0.0),
+                hp: 1.0,
+                age: 0.0,
+                flash: 1.0,
+                angle: a,
+                ring: 4.8,
+                depth: 9.0,
+                timer: 1.0,
+                flight: Flight::Approach,
+                mass: 0.0,
+                twist: Line::translation_twist(0.0, 0.0, 0.0),
+                body: Vec::new(),
+                anchor: None,
+            });
+        }
+    }
+
+    /// Gates: flown through when the line of the ship's last step meets a gate's plane inside
+    /// its ring.
+    fn step_gates(&mut self) {
+        let (a, b) = (self.ship.prev, self.ship.pos);
+        let alive = self.phase == Phase::Playing;
+        let bonus = self.speed_bonus();
+        let mut passed = Vec::new();
+        for g in &mut self.gates {
+            if g.state != GateState::Open {
+                g.t += DT;
+                continue;
+            }
+            if arc(b) < arc(g.pos) {
+                continue;
+            }
+            let meet = ((a & b) ^ g.plane()).unitized();
+            let through = alive && (meet & g.pos).norm() < GATE_RADIUS;
+            g.state = if through {
+                GateState::Passed
+            } else {
+                GateState::Missed
+            };
+            passed.push((g.pos, through));
+        }
+        for (pos, through) in passed {
+            if through {
+                self.chain += 1;
+                self.mult += 1;
+                let points = (250.0 * self.chain as f32 * bonus).round() as u64;
+                self.score += points;
+                self.events.push(Event::Gate {
+                    pos,
+                    chain: self.chain,
+                    points,
+                });
+                self.blast(pos, 160.0, 4.0, 0.1);
+            } else {
+                if alive && self.chain > 0 {
+                    self.events.push(Event::GateMiss { pos });
+                }
+                self.chain = 0;
+            }
+        }
+        let s = self.ship.s();
+        self.gates.retain(|g| arc(g.pos) > s - 20.0);
+    }
+
+    fn step_shots(&mut self, field: &Field) {
+        // Hits: (shot, enemy, segment of a serpent's body or its head).
+        let mut hits: Vec<(usize, usize, Option<usize>, bool)> = Vec::new();
         let mut walls = Vec::new();
+        let lattice = &self.lattice;
         for (k, b) in self.shots.iter_mut().enumerate() {
             b.prev = b.pos;
+            if !field.is_empty() {
+                b.vel += field.pull(b.pos, 900.0) * DT;
+            }
             b.pos += b.vel * DT;
             b.life -= DT;
-            let reach = |e: &Enemy| e.foe.radius() + HIT_MARGIN;
-            if let Some(i) = self
-                .enemies
-                .iter()
-                .position(|e| segment_hits_sphere(b.prev, b.pos, e.pos, reach(e)))
-            {
-                hits.push((k, i));
+            let bent = b.bend() > SLINGSHOT;
+            let hit = self.enemies.iter().enumerate().find_map(|(i, e)| {
+                if segment_hits_sphere(b.prev, b.pos, e.pos, e.radius() + HIT_MARGIN) {
+                    return Some((i, None));
+                }
+                e.body
+                    .iter()
+                    .position(|seg| segment_hits_sphere(b.prev, b.pos, seg.pos, 0.6 + HIT_MARGIN))
+                    .map(|j| (i, Some(j)))
+            });
+            if let Some((i, seg)) = hit {
+                hits.push((k, i, seg, bent));
                 b.life = -1.0;
-            } else if off_axis(b.pos) > RADIUS {
+            } else if off_axis(b.pos) > lattice.radius(arc(b.pos)) {
                 walls.push(b.pos);
                 b.life = -1.0;
             }
@@ -798,32 +1292,64 @@ impl World {
             self.events.push(Event::Wall { pos });
         }
         self.shots.retain(|b| b.life > 0.0);
-        let mut dead = Vec::new();
-        for (_, i) in hits {
+        let mut dead: Vec<(usize, bool)> = Vec::new();
+        let mut segments: Vec<(usize, usize)> = Vec::new();
+        for (_, i, seg, bent) in hits {
             let e = &mut self.enemies[i];
-            e.hp -= 1.0;
-            e.flash = 1.0;
-            if e.hp <= 0.0 {
-                if !dead.contains(&i) {
-                    dead.push(i);
+            match seg {
+                Some(j) => {
+                    let s = &mut e.body[j];
+                    s.hp -= 1.0;
+                    if s.hp <= 0.0 && !segments.contains(&(i, j)) {
+                        segments.push((i, j));
+                    } else {
+                        self.events.push(Event::Hit {
+                            pos: s.pos,
+                            foe: e.foe,
+                        });
+                    }
                 }
-            } else {
-                self.events.push(Event::Hit {
-                    pos: e.pos,
-                    foe: e.foe,
-                });
+                None => {
+                    e.hp -= if bent { 2.0 } else { 1.0 };
+                    e.flash = 1.0;
+                    if e.hp <= 0.0 {
+                        if !dead.iter().any(|d| d.0 == i) {
+                            dead.push((i, bent));
+                        }
+                    } else {
+                        self.events.push(Event::Hit {
+                            pos: e.pos,
+                            foe: e.foe,
+                        });
+                    }
+                }
             }
         }
+        // Body segments shot away (highest first, so the indices hold).
+        segments.sort_unstable();
+        for &(i, j) in segments.iter().rev() {
+            let s = self.enemies[i].body.remove(j);
+            let points = (50.0 * self.mult as f32 * self.speed_bonus()).round() as u64;
+            self.score += points;
+            self.events.push(Event::Kill {
+                pos: s.pos,
+                foe: Foe::Serpent,
+                points,
+            });
+            self.blast(s.pos, 160.0, 3.0, 0.08);
+        }
         dead.sort_unstable();
-        for i in dead.into_iter().rev() {
-            self.kill(i, true);
+        for (i, bent) in dead.into_iter().rev() {
+            self.kill(i, true, bent);
         }
     }
 
-    fn kill(&mut self, i: usize, scored: bool) {
+    fn kill(&mut self, i: usize, scored: bool, bent: bool) {
         let e = self.enemies.swap_remove(i);
+        let sling = if bent { 2.0 } else { 1.0 };
         let points = if scored {
-            (e.foe.points() as f32 * self.mult as f32 * self.speed_bonus()).round() as u64
+            (e.foe.points() as f32 * (1.0 + e.mass) * self.mult as f32 * self.speed_bonus() * sling)
+                .round() as u64
         } else {
             0
         };
@@ -833,20 +1359,65 @@ impl World {
             foe: e.foe,
             points,
         });
-        let size = if e.foe == Foe::Turret { 700.0 } else { 260.0 };
+        if bent && scored {
+            self.events.push(Event::Slingshot { pos: e.pos });
+        }
+        let size = match e.foe {
+            Foe::Turret | Foe::Serpent => 700.0,
+            Foe::Singularity => 2600.0,
+            _ => 260.0,
+        };
         self.blast(e.pos, size, 3.0, 0.12);
+        match e.foe {
+            // The head gone, the body goes up segment by segment.
+            Foe::Serpent => {
+                for s in &e.body {
+                    self.events.push(Event::Kill {
+                        pos: s.pos,
+                        foe: Foe::Serpent,
+                        points: 0,
+                    });
+                    self.blast(s.pos, 200.0, 3.0, 0.1);
+                }
+            }
+            // The collapse: the wall let go all round, a ring of shock along the tunnel.
+            Foe::Singularity => {
+                let s = arc(e.pos);
+                for k in 0..12 {
+                    let a = k as f32 * core::f32::consts::TAU / 12.0;
+                    self.blast(around(RADIUS - 1.0, a, s), 1400.0, 6.0, 0.3);
+                }
+            }
+            _ => {}
+        }
         if scored {
-            self.shards.push(Shard {
-                pos: e.pos,
-                life: 6.0,
-            });
+            let n = match e.foe {
+                Foe::Serpent => 3,
+                Foe::Singularity => 4 + e.mass as usize,
+                _ => 1,
+            };
+            for k in 0..n {
+                let off = if n > 1 {
+                    around(1.2, k as f32 * core::f32::consts::TAU / n as f32, 0.0)
+                        - at(0.0, 0.0, 0.0)
+                } else {
+                    dir(0.0, 0.0, 0.0)
+                };
+                self.shards.push(Shard {
+                    pos: e.pos + off,
+                    life: 6.0,
+                });
+            }
         }
     }
 
-    fn step_bolts(&mut self) {
+    fn step_bolts(&mut self, field: &Field) {
         let s = self.ship.s();
         for b in &mut self.bolts {
             b.prev = b.pos;
+            if !field.is_empty() {
+                b.vel += field.pull(b.pos, 300.0) * DT;
+            }
             b.pos += b.vel * DT;
             b.life -= DT;
         }
@@ -885,10 +1456,12 @@ impl World {
             return;
         }
         let (p, prev) = (self.ship.pos, self.ship.prev);
-        let hit_enemy = self
-            .enemies
-            .iter()
-            .any(|e| segment_hits_sphere(prev, p, e.pos, e.foe.radius() + SHIP_SIZE));
+        let hit_enemy = self.enemies.iter().any(|e| {
+            segment_hits_sphere(prev, p, e.pos, e.radius() + SHIP_SIZE)
+                || e.body
+                    .iter()
+                    .any(|s| segment_hits_sphere(prev, p, s.pos, 0.6 + SHIP_SIZE))
+        });
         let hit_bolt = self
             .bolts
             .iter()
@@ -903,6 +1476,7 @@ impl World {
         self.events.push(Event::Death { pos });
         self.blast(pos, 2500.0, 10.0, 0.3);
         self.mult = 1;
+        self.chain = 0;
         self.lives = self.lives.saturating_sub(1);
         self.ship.roll = None;
         self.shots.clear();
@@ -928,18 +1502,28 @@ impl World {
     fn step_lattice(&mut self) {
         let s = self.ship.s();
         self.lattice.follow(s);
-        let mut sources: Vec<Source> = Vec::with_capacity(self.blasts.len() + 1);
+        let mut sources: Vec<Source> = Vec::with_capacity(self.blasts.len() + 2);
         self.blasts.retain_mut(|(src, t)| {
             sources.push(*src);
             *t -= DT;
             *t > 0.0
         });
+        // Singularities pinch the wall in around them.
+        for (pos, strength) in self.wells() {
+            sources.push(Source {
+                pos,
+                strength: -PINCH * strength,
+                r2: 8.0,
+                reach2: PINCH_REACH2,
+            });
+        }
         // The ship's wake: a gentle push on the wall nearest to it.
         if self.phase == Phase::Playing {
             sources.push(Source {
                 pos: self.ship.pos + dir(0.0, 0.0, 1.0),
                 strength: 6.0 * self.ship.speed / CRUISE,
                 r2: 1.5,
+                reach2: 0.0,
             });
         }
         self.lattice.step(DT, &sources);
@@ -1043,6 +1627,10 @@ mod tests {
             depth: 0.0,
             timer: 9.0,
             flight: Flight::Hold,
+            mass: 0.0,
+            twist: Line::translation_twist(0.0, 0.0, 0.0),
+            body: Vec::new(),
+            anchor: None,
         });
         let mut hit = false;
         for _ in 0..60 {
@@ -1124,5 +1712,196 @@ mod tests {
         assert!(kills > 20, "{kills} kills");
         assert!(w.ship.s() > 60.0 * CRUISE * 0.9);
         assert!(w.score > 0);
+    }
+
+    fn enemy(w: &mut World, foe: Foe, pos: P) -> usize {
+        let id = w.next_id;
+        w.next_id += 1;
+        let (twist, body) = if foe == Foe::Serpent {
+            w.serpent(pos)
+        } else {
+            (Line::translation_twist(0.0, 0.0, 0.0), Vec::new())
+        };
+        w.enemies.push(Enemy {
+            id,
+            foe,
+            pos,
+            prev: pos,
+            vel: dir(0.0, 0.0, 0.0),
+            hp: foe.hp(),
+            age: 1.0,
+            flash: 0.0,
+            angle: 0.0,
+            ring: off_axis(pos),
+            depth: arc(pos) - w.ship.s(),
+            timer: WELL_HOLD,
+            flight: Flight::Hold,
+            mass: 0.0,
+            twist,
+            body,
+            anchor: None,
+        });
+        w.enemies.len() - 1
+    }
+
+    /// A serpent's body is the helix its head has swum: every segment stays at the head's
+    /// distance from the axis, behind it along the track, and where the head was `lag`
+    /// seconds ago.
+    #[test]
+    fn a_serpent_swims_a_screw() {
+        let mut w = World::new(2);
+        w.cooldown = 1e9;
+        w.gate_timer = 1e9;
+        let i = enemy(&mut w, Foe::Serpent, around(4.0, 0.3, 60.0));
+        let mut trail = vec![w.enemies[i].pos];
+        for _ in 0..240 {
+            w.tick(&Input::default());
+            trail.push(w.enemies[0].pos);
+        }
+        let e = &w.enemies[0];
+        assert_eq!(e.body.len(), SEGMENTS);
+        for seg in &e.body {
+            assert!(
+                (off_axis(seg.pos) - 4.0).abs() < 1e-2,
+                "{}",
+                off_axis(seg.pos)
+            );
+            assert!(arc(seg.pos) < arc(e.pos));
+            // Where the head was `lag` seconds ago.
+            let ticks = (seg.lag / DT).round() as usize;
+            let then = trail[trail.len() - 1 - ticks];
+            assert!(
+                (then & seg.pos).norm() < 0.05,
+                "{}",
+                (then & seg.pos).norm()
+            );
+        }
+    }
+
+    /// Through a gate: the chain grows and scores; past one: the chain breaks.
+    #[test]
+    fn gates_are_flown_through_or_missed() {
+        let mut w = World::new(4);
+        w.cooldown = 1e9;
+        w.gate_timer = 1e9;
+        w.ship.invulnerable = 1e9;
+        let s = w.ship.s();
+        for (k, x) in [0.0f32, 0.0, 4.0].into_iter().enumerate() {
+            w.gates.push(Gate {
+                pos: at(x, -2.0, s + 10.0 + 10.0 * k as f32),
+                state: GateState::Open,
+                t: 0.0,
+            });
+        }
+        let mut chains = Vec::new();
+        for _ in 0..240 {
+            w.tick(&Input::default());
+            for e in &w.events {
+                match *e {
+                    Event::Gate { chain, points, .. } => chains.push((chain, points > 0)),
+                    Event::GateMiss { .. } => chains.push((0, false)),
+                    _ => {}
+                }
+            }
+        }
+        assert_eq!(chains, [(1, true), (2, true), (0, false)]);
+        assert_eq!(w.chain, 0);
+        assert_eq!(w.mult, 3);
+    }
+
+    /// A singularity pinches the wall in around it, so the ship must fly further in there;
+    /// it bends shots that pass it; it eats mines that fall in, and bursts when overfed.
+    #[test]
+    fn a_singularity_pinches_bends_eats_and_bursts() {
+        let mut w = World::new(6);
+        w.cooldown = 1e9;
+        w.gate_timer = 1e9;
+        w.ship.invulnerable = 1e9;
+        let i = enemy(&mut w, Foe::Singularity, at(0.0, 0.0, 30.0));
+        // Let go: it stays where it is in the track while the ship comes.
+        w.enemies[i].flight = Flight::Dive;
+        for _ in 0..120 {
+            w.tick(&Input::default());
+        }
+        let well = w.enemies[0].pos;
+        let pinched = w.lattice.radius(arc(well));
+        assert!(pinched < RADIUS - 1.5, "{pinched}");
+        assert!(w.ship_radius(arc(well)) < SHIP_RADIUS - 1.0);
+        // A shot fired past it bends towards it.
+        let from = at(2.0, 0.0, arc(well) - 12.0);
+        let mut shot = Shot::new(from, dir(0.0, 0.0, 70.0), 1.0);
+        let field = w.field();
+        for _ in 0..40 {
+            shot.vel += field.pull(shot.pos, 900.0) * DT;
+            shot.pos += shot.vel * DT;
+        }
+        assert!(shot.bend() > 0.1, "{}", shot.bend());
+        assert!(
+            shot.pos.e032() / shot.pos.e123() < 2.0,
+            "bent the wrong way"
+        );
+        // Mines dropped into it are eaten, and it bursts.
+        let mut absorbed = 0;
+        let mut burst = false;
+        for k in 0..6 {
+            let w0 = w
+                .enemies
+                .iter()
+                .find(|e| e.foe == Foe::Singularity)
+                .map(|e| e.pos);
+            let Some(p) = w0 else { break };
+            let m = enemy(&mut w, Foe::Mine, p + dir(0.3 * k as f32 * 0.1, 0.2, 0.0));
+            w.enemies[m].age = 1.0;
+            w.tick(&Input::default());
+            for e in &w.events {
+                match e {
+                    Event::Absorb { .. } => absorbed += 1,
+                    Event::Burst { .. } => burst = true,
+                    _ => {}
+                }
+            }
+        }
+        assert!(absorbed >= 5 && burst, "{absorbed} {burst}");
+        assert!(w.enemies.iter().all(|e| e.foe != Foe::Singularity));
+        assert!(w.enemies.iter().filter(|e| e.foe == Foe::Drone).count() >= 8);
+    }
+
+    /// Over a long run the director brings everything: drones, mines, turrets, serpents, a
+    /// singularity with its escort, and slaloms of gates.
+    #[test]
+    fn the_director_brings_everything() {
+        let mut w = World::new(12);
+        w.ship.invulnerable = 1e9;
+        let mut seen = std::collections::HashSet::new();
+        let mut escorts = false;
+        let mut gates = false;
+        let mut warned = std::collections::HashMap::new();
+        for _ in 0..120 * 150 {
+            // Shoot at the nearest enemy ahead, so that the tunnel keeps room for more.
+            let s = w.ship.s();
+            let aim = w
+                .enemies
+                .iter()
+                .filter(|e| arc(e.pos) > s + 5.0)
+                .min_by(|a, b| arc(a.pos).total_cmp(&arc(b.pos)))
+                .map_or(at(0.0, 0.0, s + AIM_DEPTH), |e| e.pos);
+            w.tick(&Input {
+                aim,
+                fire: true,
+                ..Input::default()
+            });
+            for e in &w.events {
+                if let Event::Warn { foe, .. } = e {
+                    *warned.entry(format!("{foe:?}")).or_insert(0) += 1;
+                }
+            }
+            for e in &w.enemies {
+                seen.insert(format!("{:?}", e.foe));
+                escorts |= e.anchor.is_some();
+            }
+            gates |= !w.gates.is_empty();
+        }
+        assert_eq!(seen.len(), 5, "{seen:?} {warned:?} {}", w.clock);
+        assert!(escorts && gates);
     }
 }

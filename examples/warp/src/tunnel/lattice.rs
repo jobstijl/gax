@@ -36,6 +36,9 @@ pub struct Source {
     pub strength: f32,
     /// The squared softening radius.
     pub r2: f32,
+    /// The squared reach (`0`: unlimited): beyond it the force falls off faster, by
+    /// `reach² / (d² + reach²)`.
+    pub reach2: f32,
 }
 
 /// The lattice.
@@ -48,6 +51,8 @@ pub struct Lattice {
     pub d: Vec<Dir>,
     v: Vec<Dir>,
     scratch: Vec<Dir>,
+    /// Each ring's mean distance from the axis (the wall where a singularity pinches it).
+    radii: Vec<f32>,
 }
 
 fn zero() -> Dir {
@@ -82,6 +87,7 @@ impl Lattice {
             d: vec![zero(); RINGS * AROUND],
             v: vec![zero(); RINGS * AROUND],
             scratch: vec![zero(); RINGS * AROUND],
+            radii: vec![RADIUS; RINGS],
         }
     }
 
@@ -103,6 +109,8 @@ impl Lattice {
         let len = self.d.len();
         self.d[len - n..].fill(zero());
         self.v[len - n..].fill(zero());
+        self.radii.rotate_left(shift);
+        self.radii[RINGS - shift..].fill(RADIUS);
         self.first = want;
     }
 
@@ -117,8 +125,13 @@ impl Lattice {
                 for src in sources {
                     // Away from the source, softened: `strength (p - s) / (|p - s|² + r²)`.
                     let away = at - src.pos;
-                    let n = away.ideal_norm();
-                    f += away * (src.strength / (n * n + src.r2));
+                    let n2 = away.ideal_norm() * away.ideal_norm();
+                    let reach = if src.reach2 > 0.0 {
+                        src.reach2 / (n2 + src.reach2)
+                    } else {
+                        1.0
+                    };
+                    f += away * (src.strength * reach / (n2 + src.r2));
                 }
                 let around = |jj: usize| self.d[r * AROUND + jj % AROUND];
                 // Along the track, the end rings see themselves (a free edge).
@@ -135,6 +148,23 @@ impl Lattice {
             }
         }
         std::mem::swap(&mut self.d, &mut self.scratch);
+        for r in 0..RINGS {
+            let sum: f32 = (0..AROUND)
+                .map(|j| crate::tunnel::off_axis(self.node(r, j)))
+                .sum();
+            self.radii[r] = sum / AROUND as f32;
+        }
+    }
+
+    /// The wall's radius at arc length `s`: the mean distance of the rings' nodes from the
+    /// axis, between the two rings around `s` (at rest, `RADIUS`; less where it is pinched).
+    pub fn radius(&self, s: f32) -> f32 {
+        let u = s / GAP - self.first as f32;
+        if u <= 0.0 || u >= (RINGS - 1) as f32 {
+            return RADIUS;
+        }
+        let (i, t) = (u.floor() as usize, u.fract());
+        self.radii[i] + (self.radii[i + 1] - self.radii[i]) * t
     }
 
     /// The displaced node `j` of ring `r`, in straightened coordinates.
@@ -161,6 +191,7 @@ mod tests {
             pos: Point::xyz(RADIUS - 1.0, 0.0, 20.0),
             strength: 400.0,
             r2: 2.0,
+            reach2: 0.0,
         }];
         for _ in 0..12 {
             l.step(1.0 / 120.0, &blast);
@@ -185,6 +216,24 @@ mod tests {
             .map(|i| l.strain(i / AROUND, i % AROUND))
             .fold(0.0f32, f32::max);
         assert!(worst < 1e-3, "{worst}");
+    }
+
+    /// A source that pulls pinches the wall in around it, and the wall's radius says so.
+    #[test]
+    fn a_pull_pinches_the_wall() {
+        let mut l = Lattice::new(0.0);
+        let well = [Source {
+            pos: Point::xyz(1.0, 0.0, 30.0),
+            strength: -crate::tunnel::PINCH,
+            r2: 8.0,
+            reach2: crate::tunnel::PINCH_REACH2,
+        }];
+        for _ in 0..240 {
+            l.step(1.0 / 120.0, &well);
+        }
+        let pinched = l.radius(30.0);
+        assert!(pinched < RADIUS - 1.5, "{pinched}");
+        assert!((l.radius(80.0) - RADIUS).abs() < 0.05);
     }
 
     #[test]

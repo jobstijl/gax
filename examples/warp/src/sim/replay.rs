@@ -2,7 +2,9 @@
 //!
 //! Inputs are quantized before the simulation sees them (`quantize`), in play as in playback, so
 //! a replay reproduces its run bit for bit on the same build. A hash of the world every second
-//! of simulation catches any divergence at the second it happens.
+//! of simulation catches any divergence at the second it happens. The container is the same
+//! for both games; each has its own input record (`Record`): the Plane's here, the Tunnel's in
+//! `tunnel::replay`.
 
 use super::{Input, Phase, World};
 use gax::pga2d::Point;
@@ -10,7 +12,43 @@ use gax::pga2d::Point;
 /// Ticks between state hashes (one second).
 pub const HASH_EVERY: u64 = 120;
 
-const MAGIC: &[u8; 8] = b"WARPRPL1";
+/// A replay's input record: one tick's input as a replay keeps it.
+pub trait Record: Copy + Default + PartialEq + core::fmt::Debug {
+    /// The file's magic: which game.
+    const MAGIC: &'static [u8; 8];
+    /// The high-score table's file, and the replays' extension.
+    const TABLE: &'static str;
+    const EXT: &'static str;
+    /// Bytes per record.
+    const SIZE: usize;
+    /// Append the bytes.
+    fn write(&self, out: &mut Vec<u8>);
+    /// Read `SIZE` bytes.
+    fn read(b: &[u8]) -> Self;
+}
+
+impl Record for Packed {
+    const MAGIC: &'static [u8; 8] = b"WARPRPL1";
+    const TABLE: &'static str = "scores.txt";
+    const EXT: &'static str = "warp";
+    const SIZE: usize = 5;
+
+    fn write(&self, out: &mut Vec<u8>) {
+        out.push(self.mx as u8);
+        out.push(self.my as u8);
+        out.extend_from_slice(&self.aim.to_le_bytes());
+        out.push(self.flags);
+    }
+
+    fn read(b: &[u8]) -> Packed {
+        Packed {
+            mx: b[0] as i8,
+            my: b[1] as i8,
+            aim: u16::from_le_bytes([b[2], b[3]]),
+            flags: b[4],
+        }
+    }
+}
 
 /// The build a replay was recorded on: the game's version and a hash of the simulation's
 /// sources (set by `build.rs`). Replays from another build may diverge.
@@ -140,7 +178,7 @@ impl Fnv {
 
 /// A recorded run.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Replay {
+pub struct Replay<I: Record = Packed> {
     /// The build it was recorded on (`build_id`).
     pub build: String,
     /// The world's seed.
@@ -148,7 +186,7 @@ pub struct Replay {
     /// The final score.
     pub score: u64,
     /// Every tick's input.
-    pub inputs: Vec<Packed>,
+    pub inputs: Vec<I>,
     /// The world's hash after every `HASH_EVERY` ticks.
     pub hashes: Vec<u64>,
 }
@@ -162,43 +200,16 @@ pub enum Desync {
     Score { recorded: u64, replayed: u64 },
 }
 
-impl Replay {
-    /// An empty recording of a run from `seed`.
-    pub fn new(seed: u64) -> Replay {
-        Replay {
-            build: build_id(),
-            seed,
-            score: 0,
-            inputs: Vec::new(),
-            hashes: Vec::new(),
-        }
-    }
-
-    /// Record a tick: call with the packed input just before `World::tick`, then `after`.
-    pub fn record(&mut self, input: Packed) {
-        self.inputs.push(input);
-    }
-
+impl Replay<Packed> {
     /// After a recorded tick: keep a hash every second, and the score.
     pub fn after(&mut self, w: &World) {
-        if w.tick.is_multiple_of(HASH_EVERY) {
-            self.hashes.push(hash(w));
-        }
-        self.score = w.score;
+        self.keep(w.tick, w.score, || hash(w));
     }
 
     /// Check a world being played back from this replay against the recorded hash, if one
     /// falls on its current tick.
     pub fn check(&self, w: &World) -> Result<(), Desync> {
-        if w.tick > 0 && w.tick.is_multiple_of(HASH_EVERY) {
-            let k = (w.tick / HASH_EVERY - 1) as usize;
-            if let Some(&h) = self.hashes.get(k)
-                && h != hash(w)
-            {
-                return Err(Desync::Hash(w.tick));
-            }
-        }
-        Ok(())
+        self.compare(w.tick, || hash(w))
     }
 
     /// Play the whole replay headless, checking every hash; returns the final world.
@@ -208,13 +219,59 @@ impl Replay {
             w.tick(&i.unpack());
             self.check(&w)?;
         }
-        if w.score != self.score {
-            return Err(Desync::Score {
-                recorded: self.score,
-                replayed: w.score,
-            });
-        }
+        self.final_score(w.score)?;
         Ok(w)
+    }
+}
+
+impl<I: Record> Replay<I> {
+    /// An empty recording of a run from `seed`.
+    pub fn new(seed: u64) -> Replay<I> {
+        Replay {
+            build: build_id(),
+            seed,
+            score: 0,
+            inputs: Vec::new(),
+            hashes: Vec::new(),
+        }
+    }
+
+    /// Record a tick: call with the packed input just before the world's tick, then `after`.
+    pub fn record(&mut self, input: I) {
+        self.inputs.push(input);
+    }
+
+    /// After tick `tick`: keep the world's hash every second, and the score.
+    pub fn keep(&mut self, tick: u64, score: u64, hash: impl FnOnce() -> u64) {
+        if tick.is_multiple_of(HASH_EVERY) {
+            self.hashes.push(hash());
+        }
+        self.score = score;
+    }
+
+    /// Compare the world's hash at `tick` with the recorded one, if one falls on it.
+    pub fn compare(&self, tick: u64, hash: impl FnOnce() -> u64) -> Result<(), Desync> {
+        if tick > 0 && tick.is_multiple_of(HASH_EVERY) {
+            let k = (tick / HASH_EVERY - 1) as usize;
+            if let Some(&h) = self.hashes.get(k)
+                && h != hash()
+            {
+                return Err(Desync::Hash(tick));
+            }
+        }
+        Ok(())
+    }
+
+    /// The end of a playback: the score must match.
+    pub fn final_score(&self, replayed: u64) -> Result<(), Desync> {
+        if replayed == self.score {
+            Ok(())
+        } else {
+            Err(Desync::Score {
+                recorded: self.score,
+                replayed,
+            })
+        }
     }
 
     /// Seconds of simulation.
@@ -225,13 +282,13 @@ impl Replay {
     /// The file form: a header, run-length coded inputs, and the hashes.
     pub fn encode(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(64 + self.inputs.len() / 4 + self.hashes.len() * 8);
-        out.extend_from_slice(MAGIC);
+        out.extend_from_slice(I::MAGIC);
         let build = self.build.as_bytes();
         out.extend_from_slice(&(build.len() as u16).to_le_bytes());
         out.extend_from_slice(build);
         out.extend_from_slice(&self.seed.to_le_bytes());
         out.extend_from_slice(&self.score.to_le_bytes());
-        let mut runs: Vec<(u16, Packed)> = Vec::new();
+        let mut runs: Vec<(u16, I)> = Vec::new();
         for &i in &self.inputs {
             match runs.last_mut() {
                 Some((n, last)) if *last == i && *n < u16::MAX => *n += 1,
@@ -241,10 +298,7 @@ impl Replay {
         out.extend_from_slice(&(runs.len() as u32).to_le_bytes());
         for (n, p) in runs {
             out.extend_from_slice(&n.to_le_bytes());
-            out.push(p.mx as u8);
-            out.push(p.my as u8);
-            out.extend_from_slice(&p.aim.to_le_bytes());
-            out.push(p.flags);
+            p.write(&mut out);
         }
         out.extend_from_slice(&(self.hashes.len() as u32).to_le_bytes());
         for h in &self.hashes {
@@ -254,10 +308,10 @@ impl Replay {
     }
 
     /// Read the file form.
-    pub fn decode(bytes: &[u8]) -> Result<Replay, String> {
+    pub fn decode(bytes: &[u8]) -> Result<Replay<I>, String> {
         let mut r = Reader(bytes);
-        if r.take(8)? != MAGIC {
-            return Err("not a warp replay".into());
+        if r.take(8)? != I::MAGIC {
+            return Err("not a replay of this game".into());
         }
         let n = r.u16()? as usize;
         let build = String::from_utf8(r.take(n)?.to_vec()).map_err(|e| e.to_string())?;
@@ -267,13 +321,7 @@ impl Replay {
         let mut inputs = Vec::new();
         for _ in 0..runs {
             let n = r.u16()?;
-            let b = r.take(5)?;
-            let p = Packed {
-                mx: b[0] as i8,
-                my: b[1] as i8,
-                aim: u16::from_le_bytes([b[2], b[3]]),
-                flags: b[4],
-            };
+            let p = I::read(r.take(I::SIZE)?);
             inputs.extend(std::iter::repeat_n(p, usize::from(n)));
         }
         let n = r.u32()?;
@@ -330,7 +378,7 @@ mod tests {
 
     fn record(seed: u64, ticks: u64) -> (Replay, World) {
         let mut w = World::new(seed);
-        let mut rec = Replay::new(seed);
+        let mut rec: Replay = Replay::new(seed);
         for t in 0..ticks {
             let p = Packed::pack(&wander(t));
             rec.record(p);
@@ -392,7 +440,7 @@ mod tests {
     /// Held inputs cost one run each.
     #[test]
     fn still_stretches_are_run_length_coded() {
-        let mut rec = Replay::new(1);
+        let mut rec: Replay = Replay::new(1);
         for t in 0..1200 {
             rec.record(Packed::pack(&Input {
                 fire: t >= 600,
@@ -404,9 +452,9 @@ mod tests {
 
     #[test]
     fn garbage_is_rejected() {
-        assert!(Replay::decode(b"nope").is_err());
+        assert!(Replay::<Packed>::decode(b"nope").is_err());
         let (rec, _) = record(3, 300);
         let bytes = rec.encode();
-        assert!(Replay::decode(&bytes[..bytes.len() - 3]).is_err());
+        assert!(Replay::<Packed>::decode(&bytes[..bytes.len() - 3]).is_err());
     }
 }

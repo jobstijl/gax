@@ -2,7 +2,7 @@
 
 The game's second purpose is to validate gax under real load. This file lists every gax feature
 it uses, where, and what was found. It covers milestones M2 (the Plane vertical slice), M3 (the
-Plane complete) and M4 (the Tunnel slice), and grows with the game. The **friction log** at the
+Plane complete), M4 (the Tunnel slice) and M5 (the Tunnel complete), and grows with the game. The **friction log** at the
 end is the most valuable part: each entry is a gax issue or fix.
 
 **The contract.** All of the game's geometry is gax, and the build enforces it. `clippy.toml`
@@ -37,7 +37,7 @@ The only exception is a test that checks a phasor against `sin`.
 |---|---|---|
 | Points as shapes, weights as scale | `render/scene.rs`: every shape is constant PGA2D points; `(x, y, 1/s)` is the point scaled by `s` | No coordinate arithmetic to draw at a size |
 | Light as homogeneous points (Grassmann) | `light.rs`: a colour is a PGA3D point in RGB space with its intensity as the weight | Adding is additive mixing (a test); fading scales the weight; whitening moves towards white; the shaders emit the first three coordinates, which are radiance |
-| Rotation about a line, projection onto a line | `light::hue_shift` (the grey axis), `light::desaturate` (towards `(l \| axis) ^ axis`) | The Plane's lattice turns violet with the intensity; menus desaturate the world behind them |
+| Perceptual colour (OkLab) as geometry | `light.rs`: a light's *tint* is its OkLab position with its intensity as the weight: a gax map to cone responses, a cube root per coordinate, a gax map to `(L, a, b)`. Hue is a rotation about the lightness axis (`light::hue_shift`), desaturation moves towards the foot on it, `(t \| axis) ^ axis`, a gradient is an affine combination of tints (`light::blend`), and gravitational redshift is a turn of hue towards red plus a fade | Adding light stays in linear RGB, where it is physics; judging it moves to OkLab, where equal steps look equal (tests against OkLab's reference values and round trips). A hue turn can leave the display's gamut; the way back clips at zero, since negative light would subtract where lines add |
 | Traced kernels, CPU and GPU (`Tracer::wgsl`) | the lattice (`grid_node`, `source_force`), particles (`particle_step`), the line renderer (`segment_corner`, `segment_distance`), the lattice's heat (`edge_heat`), streaks, light mixing, whitening, fading | The shaders do no geometry by hand; each kernel is tested against its source |
 | Post-processing as kernels | `post.wesl`: luminance is a light's pairing with a plane of Rec. 709 weights; AgX's inset and outset are gax maps on light points and its look moves away from the grey of the same luminance; the shock ripple pushes points along their radial direction; chromatic aberration scales about the screen's centre point; the vignette is a radial distance. `stars.wesl`: the distance to a star is the norm of a join, the twinkle a phasor | The frames match the hand-written shaders to within one level of 255 (a pixel comparison of two scenes) |
 | Distance to a segment by joins | `kernels::segment_distance`, per fragment | Inside the strip between the perpendiculars at the ends (`l \| a`, `l \| b`) it is the distance to `l`, outside to the nearer end; 35 mul, 3 sqrt |
@@ -59,20 +59,29 @@ The only exception is a test that checks a phasor against `sin`.
 | A camera as a motor | `Motor::look_at` (fixed in gax, friction 8); `cam << p` into its frame; the depth is the pairing with the image plane (`plane & point`), and the projection is homogeneous (the depth is the 2D point's weight) | The level camera does not roll (a test); the cross-section fills the screen (a test) |
 | Aiming through the camera, backwards | `View::aim`, `View::across`: a screen point's ray (`eye & direction`) meets the cross-section, straightened back | A screen direction moves the ship that way on screen, and a ray comes back as the point it was cast through (tests); the reticle locks the enemy under it (a test) |
 | Rotation about a line | the barrel roll: `Motor::rotation(axis, θ) >> ship`, eased over 0.4 s | Keeps the radius exactly (a test) |
-| PGA3D motor interpolation | `track::interpolate`: `M(s)` between keyframes, and the camera's spring | For a screw between keyframes the interpolation is the screw itself |
+| PGA3D motor interpolation | `track::interpolate`: `M(s)` between keyframes, and the camera's spring | For a screw between keyframes the interpolation is the screw itself. `Motor::interpolate` takes the shorter way (friction 15): the camera no longer whips round when its target's motor changes sign (a test over 10 minutes of flight) |
+| Screw motions as creatures | serpents: the head is turned by `exp(DT T)` each tick, and each body segment is the head moved back by its own motor `exp(-lag T)` | The body is exactly the helix the head has swum (a test compares every segment with the head's own trail) |
+| Line–plane meets | gates: the ship flies through when the line of its last step meets the gate's cross-section plane inside the ring; a slalom's gates lie on a screw, each the last one moved by the same motor | Through, through, past: chain 1, 2, broken (a test) |
+| A field, and its effect on the wall | singularities: an inverse-square pull with a softened core, on the ship (across only, capped), shots, bolts and mines; a lattice source that pinches the wall, and the ship's room is the lattice's own radius there (the mean distance of each ring's nodes from the axis, a join) | What you see is what you hit: the pinch is the wall's real displacement (tests) |
+| Rotation between directions, 3D | how far a shot has been bent: twice the norm of the log of `rotation_between(v₀, v)`; a kill with a shot bent more than 0.3 rad is a slingshot, worth double | |
+| Gravitational lensing | the view: a singularity is a lens; a point behind it at `β` from it on screen is seen at the outer root of `θ² − βθ − θ_E² = 0`, a scaling about the lens (the traced `scale_about`), with the hypotenuse `\|(β, 2θ_E)\|` a norm. The accretion disc's far half is lensed over the shadow; each piece of the disc is beamed by the inner product of the planes orthogonal to its orbital velocity and the line of sight | An Einstein ring round a dark shadow, for free, out of the lines already drawn |
 
 ### Sound
 
 | gax feature | where | found |
 |---|---|---|
-| Phasors | `audio/dsp.rs`: a sine is the height of a unit direction turned by a rotation motor every sample; phase modulation turns it further; the filter's `tan θ` is a phasor's height over its width; equal-power pan is `(1, 0)` turned by up to a quarter | Stays on the sine over a minute of samples (a test: `2e-3`, renormalized every 1024 samples); four one-minute offline renders take 4.6 s |
-| Positional audio | Plane: `cam << p` in 2D; Tunnel: the camera motor in 3D | Pan from across, distance from the offset's ideal norm |
+| Phasors | `audio/dsp.rs`: a sine is the height of a unit direction turned by a rotation motor every sample; phase modulation turns it further | Stays on the sine over a minute of samples (a test: `2e-3`, renormalized every 1024 samples); four one-minute offline renders take 4.6 s |
+| Rotors and their half angle | the state-variable filter: undamped, its trapezoidal step is the Cayley transform of a rotation, a turn by `2 atan g`; prewarped, `g = tan(θ/2)` is the rotor of the cutoff's turn, its bivector part over its scalar part | An impulse rings at the cutoff, to within 2 Hz in 1 kHz (a test) |
+| Damped rotations | `dsp::Resonator` (Mathews and Smith's phasor filter): the state is turned by the centre frequency's rotor and shrunk every sample; the music's "air" layer rings in two | Peaks at its centre with about unit gain (a test) |
+| Equal-power pan as a rotor | `dsp::toward`: the rotor that turns "left" towards the source is `cos(β/2) + sin(β/2) e12`, and its two coefficients are the gains; `Sound::push` takes the azimuth from the listener's frame, with the ears above the plane of play | The squares sum to one (a test) |
+| Positional audio | Plane: `cam << p` in 2D; Tunnel: the camera motor in 3D | Pan by azimuth, distance from the offset's ideal norm; a singularity near the ship darkens the music and bends its pitch down |
 
 ### Replays
 
 | gax feature | where | found |
 |---|---|---|
 | The deterministic mode | not used: replays promise same-build determinism | A state hash every second over all poses, velocities and the generator; runs of 75 s on three seeds replay bit for bit, also through the game loop with hit-stops and uneven frames (tests). The build id includes a hash of gax's sources, since any change in gax's arithmetic may change a run |
+| Tunnel replays | the same container with the Tunnel's record: the aim point is kept relative to the ship's arc length, so it unpacks to the same point in play and in playback | A 70 s flight with rolls, throttle and a bomb replays bit for bit, also through the game loop, the table and the watch screen (tests); the attract mode plays the best run of each game |
 
 ## Numbers
 
@@ -168,3 +177,12 @@ The only exception is a test that checks a phasor against `sin`.
     `Real::exp`, direct for `f32` and `f64` (gax's own `exp` in the deterministic mode), traced
     as WGSL `exp`. Its default, used by the SIMD lanes, uses the sum for `x ≥ 0` and the
     reciprocal of the sum at `−x` below, which never cancels (a test across ±120).
+15. **Motor interpolation took the long way after a sign flip.** `m` and `-m` are the same
+    motion, and `Motor::look_at` returns one or the other as its input moves: whenever the
+    Tunnel's track heads back through the world's `-z`, its turn passes the antipode. The
+    camera's spring, `a exp(t log(~a b))`, then took the log of a relative motor with a
+    negative scalar part, the long way round, and the view whipped through nearly a full turn
+    in a frame (the owner saw it as a camera jump). Over five minutes of flight the target's
+    motor flipped 2 to 16 times per seed. **Fixed in gax:** `Motor::interpolate` (PGA2D and
+    PGA3D) takes the relative motor with its scalar part non-negative, branch-free so that it
+    traces; tests in gax (a sweep through looking backwards) and in the game.

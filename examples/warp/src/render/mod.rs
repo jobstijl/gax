@@ -57,7 +57,8 @@ pub struct LineInstance {
 }
 
 impl LineInstance {
-    /// Step back behind a menu: towards grey (the light's foot on the grey axis) and dimmer.
+    /// Step back behind a menu: towards grey (its tint's foot on OkLab's lightness axis) and
+    /// dimmer.
     pub fn recede(&mut self, k: f32) {
         let l = crate::light::desaturate(self.color.into(), 0.75);
         self.color = crate::light::fade(l, k).into();
@@ -233,6 +234,7 @@ pub struct Renderer {
     cam_world: wgpu::Buffer,
     cam_hud: wgpu::Buffer,
     lines: wgpu::RenderPipeline,
+    lines_overlay: wgpu::RenderPipeline,
     lines_world: wgpu::BindGroup,
     lines_hud: wgpu::BindGroup,
     instances: wgpu::Buffer,
@@ -397,7 +399,26 @@ impl Renderer {
             true,
         );
         let lines_world = group(&lines.get_bind_group_layout(0), &[entry(0, &cam_world)]);
-        let lines_hud = group(&lines.get_bind_group_layout(0), &[entry(0, &cam_hud)]);
+        // The HUD: the same lines, drawn after the composite straight onto the output, so that
+        // text is never bloomed, tonemapped or fringed with the scene.
+        let lines_overlay = render(
+            "lines overlay",
+            &lines_module,
+            "vs_main",
+            "fs_overlay",
+            &[Some(wgpu::VertexBufferLayout {
+                array_stride: size_of::<LineInstance>() as u64,
+                step_mode: wgpu::VertexStepMode::Instance,
+                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4],
+            })],
+            strip,
+            format,
+            true,
+        );
+        let lines_hud = group(
+            &lines_overlay.get_bind_group_layout(0),
+            &[entry(0, &cam_hud)],
+        );
         let instances = d.create_buffer(&wgpu::BufferDescriptor {
             label: Some("line instances"),
             size: 1 << 20,
@@ -617,6 +638,7 @@ impl Renderer {
             cam_world,
             cam_hud,
             lines,
+            lines_overlay,
             lines_world,
             lines_hud,
             instances,
@@ -1037,10 +1059,6 @@ impl Renderer {
                 pass.set_bind_group(0, &self.lines_world, &[]);
                 pass.draw(0..4, 0..nworld);
             }
-            if nhud > 0 {
-                pass.set_bind_group(0, &self.lines_hud, &[]);
-                pass.draw(0..4, nworld..nworld + nhud);
-            }
         }
         // Bloom: down the chain, then back up, adding.
         for k in 0..BLOOM_MIPS {
@@ -1099,6 +1117,25 @@ impl Renderer {
             pass.set_pipeline(&self.post_composite);
             pass.set_bind_group(0, &self.targets.composite, &[]);
             pass.draw(0..3, 0..1);
+        }
+        if nhud > 0 {
+            let mut pass = enc.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("hud"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                ..Default::default()
+            });
+            pass.set_pipeline(&self.lines_overlay);
+            pass.set_vertex_buffer(0, self.instances.slice(..));
+            pass.set_bind_group(0, &self.lines_hud, &[]);
+            pass.draw(0..4, nworld..nworld + nhud);
         }
         let mut map_timer = false;
         if let Some(t) = self.timer.as_mut()

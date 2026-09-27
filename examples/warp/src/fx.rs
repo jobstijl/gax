@@ -42,6 +42,8 @@ pub struct Fx {
     /// Flash scale: 1, or less for the reduced-flashes setting (full-screen flashes, big
     /// bursts and the shock ripple).
     pub flash_scale: f32,
+    /// Less motion (a setting): no shock ripple.
+    pub reduced_motion: bool,
     /// The grid's sources per simulation tick this frame: `[x, y, strength, r²]`, the layout
     /// of the traced `source_force` kernel on the GPU.
     pub grid_steps: Vec<Vec<[f32; 4]>>,
@@ -67,6 +69,7 @@ impl Fx {
             flash: 0.0,
             shake_scale: 1.0,
             flash_scale: 1.0,
+            reduced_motion: false,
             grid_steps: Vec::new(),
             popups: Vec::new(),
             half_height: 14.0,
@@ -331,7 +334,7 @@ impl Fx {
     /// Post settings for the frame: the shock ripple placed where the blast was, through the
     /// view map.
     pub fn post(&self, view: &Point<(Point,), f32>) -> PostSettings {
-        let shock = self.shock.map(|(p, t)| {
+        let shock = self.shock.filter(|_| !self.reduced_motion).map(|(p, t)| {
             let uv = scene::to_uv(view, p);
             let strength = 0.035 * (1.0 - t / 0.8) * (0.4 + 0.6 * self.flash_scale);
             (uv, t * 0.9, strength)

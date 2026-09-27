@@ -109,7 +109,10 @@ impl AudioNodeProcessor for SfxProcessor {
     fn events(&mut self, _: &ProcInfo, events: &mut ProcEvents, _: &mut ProcExtra) {
         for e in events.drain() {
             match e {
-                NodeEventType::CustomBytes(b) if b[0] == SFX_SYNC => self.engine.sync(),
+                NodeEventType::CustomBytes(b) if b[0] == SFX_SYNC => {
+                    self.engine
+                        .sync(f32::from_le_bytes([b[4], b[5], b[6], b[7]]));
+                }
                 NodeEventType::CustomBytes(b) => {
                     if let Some(t) = Trigger::from_bytes(&b) {
                         self.engine.submit(&t);
@@ -186,8 +189,9 @@ impl AudioNodeProcessor for MusicProcessor {
                     MUSIC_SEED => {
                         let seed =
                             u64::from_le_bytes([b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11]]);
+                        let tempo = f32::from_le_bytes([b[12], b[13], b[14], b[15]]);
                         // In place, keeping the echo's buffers: no allocation here.
-                        self.engine.reseed(seed);
+                        self.engine.reseed(seed, tempo);
                     }
                     _ => {}
                 },
@@ -426,9 +430,18 @@ impl Sound {
         gain: f32,
         variant: f32,
     ) {
-        // Into the camera's frame with gax: across gives the pan, the distance the gain.
+        // Into the listener's frame with gax: `x` across, `y` ahead. The ears sit `EAR` above
+        // the plane of play, so a source is heard in the direction `(x, |(y, EAR)|)`, and its
+        // pan is that direction's angle from the left (a rotation between directions), from
+        // `-1` at the left through `0` ahead to `1` at the right.
+        const EAR: f32 = 12.0;
         let off = (cam << p) - Point::xy(0.0, 0.0);
-        let pan = (off.e20() / 30.0).clamp(-1.0, 1.0) * 0.8;
+        let ahead = Point::direction(off.e01(), EAR).ideal_norm();
+        let from_left = gax::pga2d::Motor::rotation_between(
+            Point::direction(-1.0, 0.0),
+            Point::direction(off.e20(), ahead),
+        );
+        let pan = from_left.angle().abs() / core::f32::consts::FRAC_PI_2 - 1.0;
         let d = off.ideal_norm();
         let fall = 1.0 / (1.0 + d * d / 1600.0);
         let detune = self.rng.next() * 0.08;
@@ -561,22 +574,32 @@ impl Sound {
             .fold(0.0f32, f32::max);
         let alive = w.phase == Phase::Playing;
         let intensity = w.director.intensity * if alive { 1.0 } else { 0.5 };
-        self.steer(w.seed, intensity, darkness, w.mult, playing);
+        self.steer(w.seed, music::TEMPO, intensity, darkness, w.mult, playing);
     }
 
-    /// Steer the music directly (the Tunnel): a run's seed, intensity, a singularity's
-    /// darkness, the multiplier, and whether a run is being played.
-    pub fn steer(&mut self, seed: u64, intensity: f32, darkness: f32, mult: u32, playing: bool) {
+    /// Steer the music directly (the Tunnel): a run's seed and tempo, intensity, a
+    /// singularity's darkness, the multiplier, and whether a run is being played.
+    pub fn steer(
+        &mut self,
+        seed: u64,
+        tempo: f32,
+        intensity: f32,
+        darkness: f32,
+        mult: u32,
+        playing: bool,
+    ) {
         if playing && seed != self.seed {
             self.seed = seed;
             self.scale = Scale::from_seed(seed);
             let mut b = [0u8; 36];
             b[0] = MUSIC_SEED;
             b[4..12].copy_from_slice(&seed.to_le_bytes());
+            b[12..16].copy_from_slice(&tempo.to_le_bytes());
             self.music_events.push(b);
             // The effects' beat grid starts with the music's first bar.
             let mut sync = [0u8; 36];
             sync[0] = SFX_SYNC;
+            sync[4..8].copy_from_slice(&tempo.to_le_bytes());
             self.sfx_events.push(sync);
         }
         self.controls = Controls {

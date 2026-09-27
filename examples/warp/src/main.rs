@@ -32,6 +32,7 @@ use sim::replay::{Packed, Replay};
 use sim::{ARENA, DT, Phase, World as Sim};
 use std::time::Instant;
 use store::{Scores, Settings, Store};
+use tunnel::replay::Packed as TunnelPacked;
 
 /// Where the game is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -44,9 +45,14 @@ enum Screen {
     /// Entering initials for the high-score table.
     Initials,
     Over,
-    /// Watching a replay.
+    /// Watching a replay (or a demo, in the attract mode).
     Watch,
 }
+
+/// Seconds on the title before the attract mode starts a demo.
+const ATTRACT_AFTER: f32 = 20.0;
+/// A demo plays this long at most.
+const DEMO_LENGTH: f32 = 75.0;
 
 const TITLE_ITEMS: [&str; 5] = ["PLANE", "TUNNEL", "HIGH SCORES", "SETTINGS", "QUIT"];
 
@@ -57,17 +63,34 @@ enum Mode {
     Tunnel,
 }
 
-/// A Tunnel run: the simulation, its view, and the input waiting for the next tick.
+/// A Tunnel run: the simulation, its view, the input waiting for the next tick, and its
+/// recording.
 struct TunnelRun {
     world: tunnel::World,
     view: render::tunnel::View,
     input: tunnel::Input,
+    rec: Replay<TunnelPacked>,
 }
 const PAUSE_ITEMS: [&str; 2] = ["RESUME", "END RUN"];
 
+/// A recording of either game.
+enum Watched {
+    Plane(Replay),
+    Tunnel(Replay<TunnelPacked>),
+}
+
+impl Watched {
+    fn seconds(&self) -> f32 {
+        match self {
+            Watched::Plane(r) => r.seconds(),
+            Watched::Tunnel(r) => r.seconds(),
+        }
+    }
+}
+
 /// A replay being watched.
 struct Watch {
-    replay: Replay,
+    replay: Watched,
     next: usize,
     /// Set when the playback ended or diverged.
     end: Option<String>,
@@ -75,6 +98,8 @@ struct Watch {
     speed: u32,
     /// Recorded on another build (it may diverge).
     other_build: bool,
+    /// Part of the attract mode: any input goes back to the title.
+    demo: bool,
 }
 
 /// The game: the simulation, effects, and what the HUD shows.
@@ -93,6 +118,8 @@ struct Game {
     time: f32,
     debug: bool,
     best: u64,
+    /// The Tunnel's best.
+    tunnel_best: u64,
     sim_ms: f32,
     fps: f32,
     over_timer: f32,
@@ -101,6 +128,14 @@ struct Game {
     store: Store,
     settings: Settings,
     scores: Scores,
+    tunnel_scores: Scores,
+    /// Which table the scores screen shows.
+    table: Mode,
+    /// Seconds on the title without input (the attract mode's clock).
+    idle: f32,
+    /// A demo is playing (the attract mode); which game the next one plays.
+    demo: bool,
+    demo_turn: Mode,
     /// The menu cursor.
     sel: usize,
     /// The run being recorded.
@@ -122,7 +157,8 @@ struct Game {
 impl Game {
     fn new(store: Store) -> Game {
         let settings = store.settings();
-        let scores = store.scores();
+        let scores = store.scores::<Packed>();
+        let tunnel_scores = store.scores::<TunnelPacked>();
         let mut g = Game {
             sim: Sim::new(1),
             fx: Fx::new(),
@@ -137,6 +173,7 @@ impl Game {
             time: 0.0,
             debug: false,
             best: scores.entries.first().map_or(0, |e| e.score),
+            tunnel_best: tunnel_scores.entries.first().map_or(0, |e| e.score),
             sim_ms: 0.0,
             fps: 60.0,
             over_timer: 0.0,
@@ -144,6 +181,11 @@ impl Game {
             store,
             settings,
             scores,
+            tunnel_scores,
+            table: Mode::Plane,
+            idle: 0.0,
+            demo: false,
+            demo_turn: Mode::Tunnel,
             sel: 0,
             rec: Replay::new(1),
             watch: None,
@@ -192,24 +234,94 @@ impl Game {
 
     /// Start a Tunnel run from `seed`.
     fn start_tunnel_seeded(&mut self, seed: u64) {
-        let mut view = render::tunnel::View::new(f32::from(self.settings.fov));
-        view.follow_roll = self.settings.camera_roll;
-        self.tunnel = Some(Box::new(TunnelRun {
-            world: tunnel::World::new(seed),
-            view,
-            input: tunnel::Input::default(),
-        }));
+        self.tunnel = Some(Box::new(self.tunnel_run(seed)));
         self.mode = Mode::Tunnel;
         self.screen = Screen::Playing;
         self.acc = 0.0;
+        self.highlight = None;
+    }
+
+    /// A fresh Tunnel run from `seed`, its view set up by the settings.
+    fn tunnel_run(&self, seed: u64) -> TunnelRun {
+        let mut view = render::tunnel::View::new(f32::from(self.settings.fov));
+        view.follow_roll = self.settings.camera_roll;
+        TunnelRun {
+            world: tunnel::World::new(seed),
+            view,
+            input: tunnel::Input::default(),
+            rec: Replay::new(seed),
+        }
     }
 
     /// Back to the title (from either mode).
     fn back_to_title(&mut self) {
         self.mode = Mode::Plane;
         self.tunnel = None;
+        self.watch = None;
+        self.demo = false;
+        self.bot = false;
+        self.idle = 0.0;
         self.screen = Screen::Title;
         self.attract();
+    }
+
+    /// The attract mode: the best run of one game or the other, replayed; or, with no table
+    /// yet, the bot playing.
+    fn start_demo(&mut self) {
+        let mode = self.demo_turn;
+        self.demo_turn = if mode == Mode::Plane {
+            Mode::Tunnel
+        } else {
+            Mode::Plane
+        };
+        self.demo = true;
+        self.idle = 0.0;
+        let best = |s: &Scores| s.entries.first().map(|e| e.replay.clone());
+        match mode {
+            Mode::Plane => {
+                if let Some(r) = best(&self.scores).and_then(|f| self.store.replay::<Packed>(&f)) {
+                    self.watch_plane(r);
+                } else {
+                    self.start_seeded(0xde70);
+                    self.bot = true;
+                }
+            }
+            Mode::Tunnel => {
+                if let Some(r) =
+                    best(&self.tunnel_scores).and_then(|f| self.store.replay::<TunnelPacked>(&f))
+                {
+                    self.watch_tunnel(r);
+                } else {
+                    self.start_tunnel_seeded(0xde71);
+                    self.bot = true;
+                }
+            }
+        }
+        if let Some(w) = self.watch.as_mut() {
+            w.demo = true;
+        }
+    }
+
+    /// The Tunnel run is over (lost, or ended from the pause menu): keep its replay, and ask
+    /// for initials if it makes the Tunnel's table.
+    fn end_tunnel_run(&mut self) {
+        let Some(run) = self.tunnel.as_mut() else {
+            return;
+        };
+        run.world.phase = Phase::Over;
+        run.rec.score = run.world.score;
+        let score = run.world.score;
+        self.tunnel_best = self.tunnel_best.max(score);
+        self.over_timer = 0.0;
+        if self.demo {
+            self.back_to_title();
+        } else if !self.bot && self.tunnel_scores.rank(score).is_some() {
+            self.screen = Screen::Initials;
+            self.cursor = 0;
+        } else {
+            self.store.finish(&run.rec, None);
+            self.screen = Screen::Over;
+        }
     }
 
     /// Start a run from `seed`.
@@ -229,7 +341,9 @@ impl Game {
         self.best = self.best.max(self.sim.score);
         self.sim.phase = Phase::Over;
         self.over_timer = 0.0;
-        if !self.bot && self.scores.rank(self.sim.score).is_some() {
+        if self.demo {
+            self.back_to_title();
+        } else if !self.bot && self.scores.rank(self.sim.score).is_some() {
             self.screen = Screen::Initials;
             self.cursor = 0;
         } else {
@@ -238,15 +352,34 @@ impl Game {
         }
     }
 
-    /// Watch a replay.
-    fn watch(&mut self, replay: Replay) {
+    /// Watch a Plane replay.
+    fn watch_plane(&mut self, replay: Replay) {
+        self.mode = Mode::Plane;
+        self.tunnel = None;
         self.sim = Sim::new(replay.seed);
         self.watch = Some(Watch {
             end: None,
             other_build: replay.build != sim::replay::build_id(),
-            replay,
+            replay: Watched::Plane(replay),
             next: 0,
             speed: 1,
+            demo: false,
+        });
+        self.screen = Screen::Watch;
+        self.acc = 0.0;
+    }
+
+    /// Watch a Tunnel replay.
+    fn watch_tunnel(&mut self, replay: Replay<TunnelPacked>) {
+        self.tunnel = Some(Box::new(self.tunnel_run(replay.seed)));
+        self.mode = Mode::Tunnel;
+        self.watch = Some(Watch {
+            end: None,
+            other_build: replay.build != sim::replay::build_id(),
+            replay: Watched::Tunnel(replay),
+            next: 0,
+            speed: 1,
+            demo: false,
         });
         self.screen = Screen::Watch;
         self.acc = 0.0;
@@ -258,11 +391,21 @@ impl Game {
         self.fx.shake_scale = f32::from(s.shake) / 4.0;
         self.fx.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
         scene::set_scheme(s.scheme);
+        if s.reduced_motion {
+            self.fx.shake_scale = 0.0;
+        }
+        self.fx.reduced_motion = s.reduced_motion;
         if let Some(run) = self.tunnel.as_mut() {
-            run.view.shake_scale = f32::from(s.shake) / 4.0;
+            run.view.shake_scale = if s.reduced_motion {
+                0.0
+            } else {
+                f32::from(s.shake) / 4.0
+            };
             run.view.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
             run.view.focal = render::tunnel::View::focal_for(f32::from(s.fov));
             run.view.follow_roll = s.camera_roll;
+            run.view.assist = s.aim_reach();
+            run.view.lensing = !s.reduced_motion;
         }
         sound.gains = s.gains();
         sound.on_beat = s.on_beat;
@@ -311,24 +454,23 @@ fn main() {
             eprintln!("warp: --verify FILE");
             std::process::exit(2);
         };
-        let r = store::load_replay(std::path::Path::new(path)).unwrap_or_else(|e| {
-            eprintln!("warp: {e}");
-            std::process::exit(2);
-        });
-        if r.build != sim::replay::build_id() {
+        let r = load_any(path);
+        let (build, seconds, hashes) = match &r {
+            Watched::Plane(r) => (r.build.clone(), r.seconds(), r.hashes.len()),
+            Watched::Tunnel(r) => (r.build.clone(), r.seconds(), r.hashes.len()),
+        };
+        if build != sim::replay::build_id() {
             eprintln!(
-                "note: recorded on build {}, this is {}",
-                r.build,
+                "note: recorded on build {build}, this is {}",
                 sim::replay::build_id()
             );
         }
-        match r.verify() {
-            Ok(w) => println!(
-                "ok: {:.0} s, score {}, {} hashes matched",
-                r.seconds(),
-                w.score,
-                r.hashes.len()
-            ),
+        let result = match &r {
+            Watched::Plane(r) => r.verify().map(|w| w.score),
+            Watched::Tunnel(r) => r.verify().map(|w| w.score),
+        };
+        match result {
+            Ok(score) => println!("ok: {seconds:.0} s, score {score}, {hashes} hashes matched"),
             Err(d) => {
                 println!("diverged: {d:?}");
                 std::process::exit(1);
@@ -342,12 +484,7 @@ fn main() {
                 eprintln!("warp: --replay FILE");
                 std::process::exit(2);
             };
-            Some(
-                store::load_replay(std::path::Path::new(path)).unwrap_or_else(|e| {
-                    eprintln!("warp: {e}");
-                    std::process::exit(2);
-                }),
-            )
+            Some(load_any(path))
         }
         None => None,
     };
@@ -383,8 +520,10 @@ fn main() {
         Store::open()
     });
     let fullscreen = game.settings.fullscreen;
-    if let Some(r) = watch {
-        game.watch(r);
+    match watch {
+        Some(Watched::Plane(r)) => game.watch_plane(r),
+        Some(Watched::Tunnel(r)) => game.watch_tunnel(r),
+        None => {}
     }
     app.insert_resource(game)
         .add_systems(Update, (update, draw).chain());
@@ -401,6 +540,21 @@ fn main() {
             .add_systems(Update, smoke_test.before(update));
     }
     app.run();
+}
+
+/// A replay file of either game (told apart by its magic), or exit.
+fn load_any(path: &str) -> Watched {
+    let path = std::path::Path::new(path);
+    if let Ok(r) = store::load_replay::<Packed>(path) {
+        return Watched::Plane(r);
+    }
+    match store::load_replay::<TunnelPacked>(path) {
+        Ok(r) => Watched::Tunnel(r),
+        Err(e) => {
+            eprintln!("warp: {e}");
+            std::process::exit(2);
+        }
+    }
 }
 
 /// Frames left in a `--smoke` run.
@@ -454,7 +608,13 @@ fn update(
     );
     g.flight = flight;
     if g.bot {
-        input = headless::bot_input(g, g.time);
+        if g.mode == Mode::Tunnel && g.tunnel.is_some() {
+            let (i, f) = headless::tunnel_bot(g, g.time);
+            input = i;
+            g.flight = f;
+        } else {
+            input = headless::bot_input(g, g.time);
+        }
     }
     if menu.debug {
         g.debug = !g.debug;
@@ -494,11 +654,14 @@ fn tick(g: &mut Game) {
         }
         Screen::Watch => {
             let w = g.watch.as_mut().expect("watching");
-            match w.replay.inputs.get(w.next) {
+            let Watched::Plane(replay) = &w.replay else {
+                return;
+            };
+            match replay.inputs.get(w.next) {
                 Some(p) if w.end.is_none() => {
                     w.next += 1;
                     g.sim.tick(&p.unpack());
-                    if let Err(d) = w.replay.check(&g.sim) {
+                    if let Err(d) = replay.check(&g.sim) {
                         let t = match d {
                             sim::replay::Desync::Hash(t) => t,
                             sim::replay::Desync::Score { .. } => g.sim.tick,
@@ -528,8 +691,24 @@ fn clock(seconds: f32) -> String {
 
 /// Menus: moving between screens, settings, initials.
 fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
+    let any = menu.start || menu.back || menu.up || menu.down || menu.left || menu.right;
+    if g.demo {
+        // The attract mode: any input, the end of the demo, or its time, and back to the title.
+        g.idle += dt;
+        let ended = g.watch.as_ref().is_some_and(|w| w.end.is_some())
+            || matches!(g.screen, Screen::Over | Screen::Title);
+        if any || ended || g.idle > DEMO_LENGTH {
+            g.back_to_title();
+        }
+        return;
+    }
     match g.screen {
         Screen::Title => {
+            g.idle = if any { 0.0 } else { g.idle + dt };
+            if g.idle > ATTRACT_AFTER {
+                g.start_demo();
+                return;
+            }
             g.sel = nav(g.sel, TITLE_ITEMS.len(), &menu);
             if menu.start {
                 match g.sel {
@@ -566,12 +745,37 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
             }
         }
         Screen::Scores => {
-            g.sel = nav(g.sel, g.scores.entries.len(), &menu);
+            if menu.left || menu.right {
+                g.table = if g.table == Mode::Plane {
+                    Mode::Tunnel
+                } else {
+                    Mode::Plane
+                };
+                g.sel = 0;
+                g.highlight = None;
+            }
+            let table = if g.table == Mode::Plane {
+                &g.scores
+            } else {
+                &g.tunnel_scores
+            };
+            g.sel = nav(g.sel, table.entries.len(), &menu);
+            let file = table.entries.get(g.sel).map(|e| e.replay.clone());
             if menu.start
-                && let Some(e) = g.scores.entries.get(g.sel)
-                && let Some(r) = g.store.replay(&e.replay)
+                && let Some(f) = file
             {
-                g.watch(r);
+                match g.table {
+                    Mode::Plane => {
+                        if let Some(r) = g.store.replay::<Packed>(&f) {
+                            g.watch_plane(r);
+                        }
+                    }
+                    Mode::Tunnel => {
+                        if let Some(r) = g.store.replay::<TunnelPacked>(&f) {
+                            g.watch_tunnel(r);
+                        }
+                    }
+                }
             } else if menu.back {
                 g.screen = Screen::Title;
                 g.sel = 2;
@@ -587,12 +791,7 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
                 g.screen = Screen::Playing;
             } else if menu.start {
                 if g.mode == Mode::Tunnel {
-                    // The Tunnel keeps no table or replays yet (M5).
-                    g.screen = Screen::Over;
-                    g.over_timer = 0.0;
-                    if let Some(run) = g.tunnel.as_mut() {
-                        run.world.phase = Phase::Over;
-                    }
+                    g.end_tunnel_run();
                 } else {
                     g.end_run();
                 }
@@ -623,13 +822,23 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
                     g.cursor += 1;
                 } else {
                     let name = String::from_utf8_lossy(&g.initials).into_owned();
-                    g.highlight = g.store.finish(&g.rec, Some(&name));
-                    g.scores = g.store.scores();
-                    g.best = g
-                        .scores
-                        .entries
-                        .first()
-                        .map_or(g.best, |e| e.score.max(g.best));
+                    g.table = g.mode;
+                    match (g.mode, g.tunnel.take()) {
+                        (Mode::Tunnel, Some(run)) => {
+                            g.highlight = g.store.finish(&run.rec, Some(&name));
+                            g.tunnel_scores = g.store.scores::<TunnelPacked>();
+                        }
+                        _ => {
+                            g.highlight = g.store.finish(&g.rec, Some(&name));
+                            g.scores = g.store.scores::<Packed>();
+                            g.best = g
+                                .scores
+                                .entries
+                                .first()
+                                .map_or(g.best, |e| e.score.max(g.best));
+                        }
+                    }
+                    g.mode = Mode::Plane;
                     g.sel = g.highlight.unwrap_or(0);
                     g.screen = Screen::Scores;
                     g.attract();
@@ -648,6 +857,9 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
             let ended = g.watch.as_ref().is_some_and(|w| w.end.is_some());
             if menu.back || (ended && menu.start) {
                 g.watch = None;
+                g.table = g.mode;
+                g.mode = Mode::Plane;
+                g.tunnel = None;
                 g.screen = Screen::Scores;
                 g.attract();
             } else if (menu.right || menu.left)
@@ -665,55 +877,93 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
     }
 }
 
-/// One frame of the Tunnel: controls through the camera, the fixed-step simulation, its view,
-/// and sound.
+/// One frame of the Tunnel: controls through the camera, the fixed-step simulation (recorded,
+/// or played back from a replay), its view, and sound.
 fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::Sound) {
     use gax::pga2d::Point as Point2;
-    let playing = g.screen == Screen::Playing;
     let flight = g.flight;
     let run = g.tunnel.as_mut().expect("a tunnel run");
-    // Screen directions become directions across the tunnel, through the camera.
-    let movement = run.view.across(&run.world, input.movement);
-    // The reticle: the cursor, or the right stick pushing it out from the ship on screen.
-    let reticle = match (flight.stick, flight.cursor) {
-        (Some([x, y]), _) => run.view.ship_on_screen(&run.world) + Point2::direction(x, y) * 9.0,
-        (None, Some([x, y])) => Point2::xy(x, y),
-        (None, None) => run.view.ship_on_screen(&run.world) + Point2::direction(0.0, 4.0),
-    };
-    let aim = run.view.aim(&run.world, reticle);
-    // Edges wait for the tick that consumes them.
-    run.input = tunnel::Input {
-        movement,
-        aim,
-        fire: input.fire,
-        bomb: run.input.bomb || flight.bomb,
-        roll: if run.input.roll != 0 {
-            run.input.roll
-        } else {
-            flight.roll
-        },
-        throttle: flight.throttle,
-    };
+    if g.screen == Screen::Watch {
+        // The replay aims: show where.
+        run.view.follow(&run.world, run.input.aim);
+    } else {
+        // Screen directions become directions across the tunnel, through the camera.
+        let movement = run.view.across(&run.world, input.movement);
+        // The reticle: the cursor, or the right stick pushing it out from the ship on screen.
+        let reticle = match (flight.stick, flight.cursor) {
+            (Some([x, y]), _) => {
+                run.view.ship_on_screen(&run.world) + Point2::direction(x, y) * 9.0
+            }
+            (None, Some([x, y])) => Point2::xy(x, y),
+            (None, None) => run.view.ship_on_screen(&run.world) + Point2::direction(0.0, 4.0),
+        };
+        let aim = run.view.aim(&run.world, reticle);
+        // Edges wait for the tick that consumes them.
+        run.input = tunnel::Input {
+            movement,
+            aim,
+            fire: input.fire,
+            bomb: run.input.bomb || flight.bomb,
+            roll: if run.input.roll != 0 {
+                run.input.roll
+            } else {
+                flight.roll
+            },
+            throttle: flight.throttle,
+        };
+    }
+    let mut over = false;
     if g.screen != Screen::Paused {
-        g.acc += dt;
+        let speed = g.watch.as_ref().map_or(1, |w| w.speed);
+        g.acc += dt * speed as f32;
         while g.acc >= DT {
             g.acc -= DT;
-            let i = if playing {
-                run.input
-            } else {
-                tunnel::Input::default()
-            };
-            run.world.tick(&i);
-            run.input.bomb = false;
-            run.input.roll = 0;
+            match g.screen {
+                Screen::Playing => {
+                    // The world sees the packed input, exactly what the replay keeps.
+                    let i = run.rec.take(&run.input, &run.world);
+                    run.world.tick(&i);
+                    run.rec.after(&run.world);
+                    run.input.bomb = false;
+                    run.input.roll = 0;
+                }
+                Screen::Watch => {
+                    let w = g.watch.as_mut().expect("watching");
+                    let Watched::Tunnel(replay) = &w.replay else {
+                        break;
+                    };
+                    match replay.inputs.get(w.next) {
+                        Some(p) if w.end.is_none() => {
+                            w.next += 1;
+                            run.input = p.unpack(run.world.ship.s());
+                            run.world.tick(&run.input);
+                            if let Err(d) = replay.check(&run.world) {
+                                let t = match d {
+                                    sim::replay::Desync::Hash(t) => t,
+                                    sim::replay::Desync::Score { .. } => run.world.tick,
+                                };
+                                w.end = Some(format!("DIVERGED AT {}", clock(t as f32 * DT)));
+                                w.speed = 1;
+                            }
+                        }
+                        _ => {
+                            if w.end.is_none() {
+                                w.end = Some("END OF REPLAY".into());
+                                w.speed = 1;
+                            }
+                            run.world.tick(&tunnel::Input::default());
+                        }
+                    }
+                }
+                _ => run.world.tick(&tunnel::Input::default()),
+            }
             run.view.on_events(&run.world.events);
             let heard = tunnel_sounds(&run.world, &run.view);
             let origin = sim::at(0.0, 0.0);
             sound.play(&heard, run.world.mult, origin, sim::body::identity());
-            if playing && run.world.events.contains(&tunnel::Event::GameOver) {
-                g.best = g.best.max(run.world.score);
-                g.screen = Screen::Over;
-                g.over_timer = 0.0;
+            if g.screen == Screen::Playing && run.world.events.contains(&tunnel::Event::GameOver) {
+                over = true;
+                break;
             }
         }
         g.alpha = g.acc / DT;
@@ -723,11 +973,15 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
     let intensity = run.world.intensity * if alive { 1.0 } else { 0.5 };
     sound.steer(
         run.world.seed,
+        audio::music::TUNNEL_TEMPO,
         intensity,
-        0.0,
+        run.world.darkness(),
         run.world.mult,
-        g.screen == Screen::Playing,
+        matches!(g.screen, Screen::Playing | Screen::Watch),
     );
+    if over {
+        g.end_tunnel_run();
+    }
 }
 
 /// The Tunnel's events as the sound hears them: each position taken into the camera's frame
@@ -750,7 +1004,11 @@ fn tunnel_sounds(w: &tunnel::World, view: &render::tunnel::View) -> Vec<sim::Eve
                 T::Kill { pos, foe, points } => sim::Event::Kill {
                     pos: at(pos),
                     kind: foe.kind(),
-                    size: if foe == tunnel::Foe::Turret { 2.0 } else { 1.0 },
+                    size: match foe {
+                        tunnel::Foe::Turret | tunnel::Foe::Serpent => 2.0,
+                        tunnel::Foe::Singularity => 3.0,
+                        _ => 1.0,
+                    },
                     scored: points > 0,
                     points,
                 },
@@ -773,6 +1031,14 @@ fn tunnel_sounds(w: &tunnel::World, view: &render::tunnel::View) -> Vec<sim::Eve
                     pos: at(pos),
                     kind: tunnel::Foe::Drone.kind(),
                 },
+                T::Gate { pos, chain, .. } => sim::Event::Pickup {
+                    pos: at(pos),
+                    mult: chain * 2,
+                },
+                T::GateMiss { pos } => sim::Event::Wall { pos: at(pos) },
+                T::Absorb { pos, mass } => sim::Event::Absorb { pos: at(pos), mass },
+                T::Burst { pos } => sim::Event::Burst { pos: at(pos) },
+                T::Slingshot { .. } => sim::Event::Extra { life: false },
                 T::Roll { .. } => return None,
             })
         })
@@ -914,7 +1180,9 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
                 l.recede(0.2);
             }
         }
-        let post = run.view.post();
+        let post = run
+            .view
+            .post(&run.world, size[0] as f32 / size[1].max(1) as f32);
         hud(game, size, renderer.timings());
         let f = render::Frame {
             camera: hud_cam,
@@ -962,8 +1230,8 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
         0.3
     };
     let dim = if backdrop { 0.5 } else { 1.0 };
-    // The lattice warms towards violet as the intensity rises: its hue turned about the grey
-    // axis.
+    // The lattice warms towards violet as the intensity rises: its hue turned about OkLab's
+    // lightness axis.
     let grid_color = light::fade(
         light::hue_shift(palette::GRID, 0.5 * intensity),
         (0.85 + 0.5 * intensity) * dim,
@@ -1088,23 +1356,20 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 "MOVE WASD / LEFT STICK    AIM + FIRE MOUSE / RIGHT STICK    BOMB SPACE / TRIGGER"
             };
             scene::text(out, controls, 0.0, -13.0, 0.7, dim, Align::Center);
-            if g.best > 0 {
-                scene::text(
-                    out,
-                    &format!("BEST {}", scene::grouped(g.best)),
-                    0.0,
-                    -15.0,
-                    0.9,
-                    dim,
-                    Align::Center,
-                );
-            }
+            let best = match (g.best, g.tunnel_best) {
+                (0, 0) => String::new(),
+                (p, 0) => format!("BEST {}", scene::grouped(p)),
+                (0, t) => format!("TUNNEL BEST {}", scene::grouped(t)),
+                (p, t) => format!("BEST {}    TUNNEL {}", scene::grouped(p), scene::grouped(t)),
+            };
+            scene::text(out, &best, 0.0, -15.0, 0.9, dim, Align::Center);
         }
         Screen::Settings => {
-            scene::text(out, "SETTINGS", 0.0, 11.0, 3.0, hud, Align::Center);
+            scene::text(out, "SETTINGS", 0.0, 13.0, 3.0, hud, Align::Center);
             let (lx, rx) = (-15.0, 15.0);
+            let row_y = |row: usize| 8.5 - row as f32 * 1.75;
             for (row, label) in Settings::ROWS.iter().enumerate() {
-                let y = 6.5 - row as f32 * 2.1;
+                let y = row_y(row);
                 let on = row == g.sel;
                 let c = if on { hot } else { faint };
                 if on {
@@ -1134,7 +1399,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 }
             }
             let back = Settings::ROWS.len();
-            let y = 6.5 - back as f32 * 2.1 - 0.6;
+            let y = row_y(back) - 0.5;
             let c = if g.sel == back { hot } else { faint };
             if g.sel == back {
                 scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
@@ -1144,19 +1409,25 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 out,
                 "LEFT / RIGHT TO CHANGE    ESC / B TO GO BACK",
                 0.0,
-                -14.5,
+                -16.2,
                 0.7,
                 dim,
                 Align::Center,
             );
         }
         Screen::Scores => {
-            scene::text(out, "HIGH SCORES", 0.0, 11.0, 3.0, hud, Align::Center);
-            if g.scores.entries.is_empty() {
+            scene::text(out, "HIGH SCORES", 0.0, 12.0, 3.0, hud, Align::Center);
+            let (table, name) = if g.table == Mode::Plane {
+                (&g.scores, "< PLANE >")
+            } else {
+                (&g.tunnel_scores, "< TUNNEL >")
+            };
+            scene::text(out, name, 0.0, 9.0, 1.2, hot, Align::Center);
+            if table.entries.is_empty() {
                 scene::text(out, "NO RUNS YET", 0.0, 2.0, 1.4, dim, Align::Center);
             }
-            for (r, e) in g.scores.entries.iter().enumerate() {
-                let y = 6.5 - r as f32 * 1.75;
+            for (r, e) in table.entries.iter().enumerate() {
+                let y = 6.0 - r as f32 * 1.75;
                 let new = g.highlight == Some(r);
                 let c = if new {
                     scene::shard()
@@ -1175,7 +1446,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             }
             scene::text(
                 out,
-                "ENTER / A TO WATCH THE REPLAY    ESC / B TO GO BACK",
+                "ENTER / A TO WATCH    LEFT / RIGHT FOR THE OTHER GAME    ESC / B TO GO BACK",
                 0.0,
                 -14.5,
                 0.7,
@@ -1203,13 +1474,24 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 scene::shard(),
                 Align::Left,
             );
+            if s.chain > 0 {
+                scene::text(
+                    out,
+                    &format!("GATES X{}", s.chain),
+                    left,
+                    top - 5.2,
+                    0.7,
+                    render::tunnel::GATE_LIGHT,
+                    Align::Left,
+                );
+            }
             if let Some(speed) = s.speed {
-                // The speed bonus: boost for more points.
-                let c = light::light(
-                    1.0,
-                    0.7 + 0.3 * (2.0 - speed),
-                    0.4,
-                    1.2 + (speed - 1.0) * 3.0,
+                // The speed bonus: boost for more points; pale gold turning to hot orange (a
+                // perceptual gradient).
+                let c = light::blend(
+                    light::light(1.0, 0.95, 0.55, 1.2),
+                    light::light(1.0, 0.45, 0.15, 2.4),
+                    ((speed - 1.0) / 0.45).clamp(0.0, 1.0),
                 );
                 scene::text(
                     out,
@@ -1287,7 +1569,12 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 };
                 scene::text(out, msg, 0.0, -6.5, 0.8, dim, Align::Center);
             }
-            if g.screen == Screen::Watch
+            if g.demo {
+                scene::text(out, "DEMO", 0.0, top - 0.2, 1.2, hud, Align::Center);
+                if blink {
+                    scene::text(out, "PRESS ENTER", 0.0, -15.5, 1.0, dim, Align::Center);
+                }
+            } else if g.screen == Screen::Watch
                 && let Some(w) = &g.watch
             {
                 let t = clock(w.next as f32 * DT);
@@ -1376,6 +1663,12 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             }
         }
     }
+    // The HUD is drawn over the finished image (never bloomed): a tight glow keeps its text
+    // sharp.
+    for l in out.iter_mut() {
+        l.style[1] = (l.style[1] * 0.45).max(0.06);
+        l.style[2] *= 0.6;
+    }
     if g.debug {
         let s = &g.sim;
         let mut lines = vec![
@@ -1420,6 +1713,8 @@ struct Stats {
     phase: Phase,
     /// The Tunnel's speed bonus.
     speed: Option<f32>,
+    /// The Tunnel's gate chain.
+    chain: u32,
 }
 
 impl Stats {
@@ -1434,6 +1729,7 @@ impl Stats {
                     bombs: w.bombs,
                     phase: w.phase,
                     speed: Some(w.speed_bonus()),
+                    chain: w.chain,
                 }
             }
             _ => Stats {
@@ -1443,6 +1739,7 @@ impl Stats {
                 bombs: g.sim.bombs,
                 phase: g.sim.phase,
                 speed: None,
+                chain: 0,
             },
         }
     }

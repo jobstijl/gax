@@ -26,3 +26,14 @@ fn vs_main(
 fn fs_main(v: LineVarying) -> @location(0) vec4<f32> {
     return line_shade(v, cam.viewport.z);
 }
+
+// The HUD, drawn after the composite straight onto the display: never bloomed, tonemapped or
+// fringed with the scene. A light too bright for the display is faded as a whole (its weight
+// scaled by its brightest channel, a hue-keeping compression), so text keeps its colour
+// instead of clipping to white.
+@fragment
+fn fs_overlay(v: LineVarying) -> @location(0) vec4<f32> {
+    let c = line_shade(v, cam.viewport.z).xyz;
+    let m = max(max(c.x, c.y), max(c.z, 1e-4));
+    return vec4<f32>(c * ((1.0 - exp(-1.5 * m)) / m), 1.0);
+}

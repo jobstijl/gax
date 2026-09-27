@@ -17,17 +17,19 @@
 //!   8 bars), a bomb (a filter sweep and a duck), a nearby singularity (pitch drifts down, the
 //!   tone darkens). The tempo never changes.
 
-use super::dsp::{Env, Noise, Osc, Smooth, Svf, db, mtof, soft};
+use super::dsp::{Env, Noise, Osc, Resonator, Smooth, Svf, db, mtof, soft};
 use super::sfx::Scale;
 
 const PAD_VOICES: usize = 5;
 
-/// The tempo, in beats per minute (fixed: the effects' beat grid uses it too).
+/// The Plane's tempo, in beats per minute (fixed for a run: the effects' beat grid uses it too).
 pub const TEMPO: f32 = 124.0;
+/// The Tunnel's: a little faster.
+pub const TUNNEL_TEMPO: f32 = 132.0;
 
-/// Samples in one sixteenth at `sr`.
-pub fn sixteenth(sr: f32) -> f32 {
-    sr * 60.0 / TEMPO / 4.0
+/// Samples in one sixteenth at `sr` and `tempo`.
+pub fn sixteenth(sr: f32, tempo: f32) -> f32 {
+    sr * 60.0 / tempo / 4.0
 }
 
 const BELLS: usize = 4;
@@ -167,7 +169,7 @@ pub struct Music {
     frag_gain: Smooth,
     tex_gain: Smooth,
     octave_gain: Smooth,
-    air: [Svf; 2],
+    air: [Resonator; 2],
     air_lfo: Osc,
     sparkle: Bell,
     echo: Option<Box<Echo>>,
@@ -186,9 +188,10 @@ impl Music {
     }
 
     /// Start over from another seed, in place and without allocating (the audio thread).
-    pub fn reseed(&mut self, seed: u64) {
+    pub fn reseed(&mut self, seed: u64, tempo: f32) {
         let echo = self.echo.take();
         *self = Music::build(seed, self.sr, echo);
+        self.tempo = tempo;
     }
 
     fn build(seed: u64, sr: f32, echo: Option<Box<Echo>>) -> Music {
@@ -247,7 +250,7 @@ impl Music {
             frag_gain: Smooth::default(),
             tex_gain: Smooth::default(),
             octave_gain: Smooth::default(),
-            air: [Svf::default(); 2],
+            air: [Resonator::default(); 2],
             air_lfo: Osc::default(),
             sparkle: Bell::default(),
             echo: Some(echo),
@@ -484,7 +487,7 @@ impl Music {
     pub fn render(&mut self, l: &mut [f32], r: &mut [f32]) {
         let sr = self.sr;
         let inv = 1.0 / sr;
-        let samples_per_step = sr * 60.0 / self.tempo / 4.0;
+        let samples_per_step = sixteenth(sr, self.tempo);
         let k_slow = 1.0 - (-1.0 / (0.8 * sr)).exp();
         let k_glide = 1.0 - (-1.0 / (1.2 * sr)).exp();
         let playing = self.controls.playing;
@@ -600,13 +603,14 @@ impl Music {
                     el += y * gl * tg * 0.6;
                     er += y * gr * tg * 0.6;
                 }
-                // Air: two noises through drifting band-passes.
+                // Air: two noises ringing in drifting resonances (damped rotations).
                 let drift = self.air_lfo.sine(0.07 * inv);
                 let fc = 1800.0 * (1.0 + 0.8 * drift) * (1.0 - 0.4 * dark);
                 let nl = self.layer_rng.next();
                 let nr = self.layer_rng.next();
-                let al = self.air[0].tick(nl, fc, 5.0, sr).bp;
-                let ar = self.air[1].tick(nr, fc * 1.25, 5.0, sr).bp;
+                // The band-pass's peak was `q`: the same level.
+                let al = self.air[0].tick(nl, fc, 5.0, sr) * 5.0;
+                let ar = self.air[1].tick(nr, fc * 1.25, 5.0, sr) * 5.0;
                 mix_l += al * tg * db(-33.0);
                 mix_r += ar * tg * db(-33.0);
             }

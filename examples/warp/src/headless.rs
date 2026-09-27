@@ -190,11 +190,18 @@ pub fn shots(args: &[String]) {
                 let w = &g.tunnel.as_ref().expect("tunnel").world;
                 let name = format!("tunnel-{:03}s.png", times[next].round() as u32);
                 save(&renderer, &target, &Path::new(dir).join(&name));
+                let count = |f: crate::tunnel::Foe| w.enemies.iter().filter(|e| e.foe == f).count();
                 println!(
-                    "{name}: score {}, x{}, {} enemies, {} bolts, s {:.0}",
+                    "{name}: score {}, x{}, {} enemies ({} serpents, {} wells), {} gates, {} bolts, s {:.0}",
                     w.score,
                     w.mult,
                     w.enemies.len(),
+                    count(crate::tunnel::Foe::Serpent),
+                    count(crate::tunnel::Foe::Singularity),
+                    w.gates
+                        .iter()
+                        .filter(|g| g.state == crate::tunnel::GateState::Open)
+                        .count(),
                     w.bolts.len(),
                     w.ship.s()
                 );
@@ -209,7 +216,7 @@ pub fn shots(args: &[String]) {
         let _ = std::fs::remove_dir_all(&data);
         let store = crate::store::Store::new(Some(data.clone()));
         for (k, name) in ["NEO", "ARC", "VEX", "IO", "ZED"].iter().enumerate() {
-            let mut r = sim::replay::Replay::new(k as u64);
+            let mut r: sim::replay::Replay = sim::replay::Replay::new(k as u64);
             r.score = 480_000 / (k as u64 + 1) + 1234;
             r.inputs = vec![Default::default(); 120 * (300 - 40 * k)];
             store.finish(&r, Some(name));
@@ -529,26 +536,26 @@ mod tests {
     }
 
     /// The Tunnel through the game loop: chosen from the title, flown by the bot at uneven
-    /// frame rates, ended from the pause menu, and back to the title.
+    /// frame rates, ended from the pause menu, entered on the Tunnel's table, and watched
+    /// back, which must reach the end with the same score; then back to the title.
     #[test]
     fn a_tunnel_run_through_the_loop() {
         use crate::input::Menu;
-        let mut g = Game::new(crate::store::Store::new(None));
+        let dir = std::env::temp_dir().join(format!("warp-test-tunnel-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut g = Game::new(crate::store::Store::new(Some(dir.clone())));
         let mut sound = audio::Sound::silent();
         let none = Menu::default();
         let aspect = 16.0 / 9.0;
         let step = |g: &mut Game, sound: &mut audio::Sound, m: Menu| {
             advance(g, sim::Input::default(), m, 0.016, aspect, sound);
         };
+        let start = Menu {
+            start: true,
+            ..none
+        };
         step(&mut g, &mut sound, Menu { down: true, ..none });
-        step(
-            &mut g,
-            &mut sound,
-            Menu {
-                start: true,
-                ..none
-            },
-        );
+        step(&mut g, &mut sound, start);
         assert_eq!((g.mode, g.screen), (crate::Mode::Tunnel, Screen::Playing));
         let mut t = 0.0;
         let mut frame = 0u32;
@@ -561,38 +568,106 @@ mod tests {
             advance(&mut g, input, none, dt, aspect, &mut sound);
         }
         let w = &g.tunnel.as_ref().unwrap().world;
-        assert!(
-            w.score > 0 && w.ship.s() > 300.0,
-            "{} at {}",
-            w.score,
-            w.ship.s()
-        );
+        let score = w.score;
+        assert!(score > 0 && w.ship.s() > 300.0, "{score} at {}", w.ship.s());
         if g.screen == Screen::Playing {
             step(&mut g, &mut sound, Menu { back: true, ..none });
             step(&mut g, &mut sound, Menu { down: true, ..none });
-            step(
+            step(&mut g, &mut sound, start);
+        }
+        assert_eq!(g.screen, Screen::Initials);
+        for c in ['T', 'U', 'N'] {
+            let m = Menu {
+                letter: Some(c),
+                ..none
+            };
+            step(&mut g, &mut sound, m);
+        }
+        step(&mut g, &mut sound, start);
+        assert_eq!((g.screen, g.table), (Screen::Scores, crate::Mode::Tunnel));
+        assert_eq!(g.tunnel_scores.entries[0].score, score);
+        assert!(g.scores.entries.is_empty(), "the Plane's table is separate");
+        // Watch it, fast: the same score at the end, no divergence.
+        step(&mut g, &mut sound, start);
+        assert_eq!((g.mode, g.screen), (crate::Mode::Tunnel, Screen::Watch));
+        g.watch.as_mut().unwrap().speed = 8;
+        while g.watch.as_ref().unwrap().end.is_none() {
+            advance(
                 &mut g,
+                sim::Input::default(),
+                none,
+                0.05,
+                aspect,
                 &mut sound,
+            );
+        }
+        assert_eq!(
+            g.watch.as_ref().unwrap().end.as_deref(),
+            Some("END OF REPLAY")
+        );
+        assert_eq!(g.tunnel.as_ref().unwrap().world.score, score);
+        step(&mut g, &mut sound, Menu { back: true, ..none });
+        assert_eq!((g.mode, g.screen), (crate::Mode::Plane, Screen::Scores));
+        assert!(g.tunnel.is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// The attract mode: idle on the title, a demo starts (the bot, with no table yet), any
+    /// input ends it; the next demo plays the other game.
+    #[test]
+    fn the_attract_mode_plays_demos() {
+        use crate::input::Menu;
+        let mut g = Game::new(crate::store::Store::new(None));
+        let mut sound = audio::Sound::silent();
+        let none = Menu::default();
+        let aspect = 16.0 / 9.0;
+        let mut modes = Vec::new();
+        for _ in 0..2 {
+            let mut t = 0.0;
+            while !g.demo && t < 30.0 {
+                t += 0.05;
+                advance(
+                    &mut g,
+                    sim::Input::default(),
+                    none,
+                    0.05,
+                    aspect,
+                    &mut sound,
+                );
+            }
+            assert!(g.demo, "no demo after {t} s");
+            modes.push(g.mode);
+            for _ in 0..500 {
+                g.time += 0.02;
+                let input = if g.mode == crate::Mode::Tunnel {
+                    let (i, f) = tunnel_bot(&g, g.time);
+                    g.flight = f;
+                    i
+                } else {
+                    bot_input(&g, g.time)
+                };
+                advance(&mut g, input, none, 0.02, aspect, &mut sound);
+            }
+            let score = match g.mode {
+                crate::Mode::Tunnel => g.tunnel.as_ref().map_or(0, |r| r.world.score),
+                crate::Mode::Plane => g.sim.score,
+            };
+            assert!(g.demo && score > 0, "the demo does not play");
+            advance(
+                &mut g,
+                sim::Input::default(),
                 Menu {
                     start: true,
                     ..none
                 },
+                0.02,
+                aspect,
+                &mut sound,
             );
+            assert_eq!(g.screen, Screen::Title);
+            assert!(!g.demo);
         }
-        assert_eq!(g.screen, Screen::Over);
-        for _ in 0..120 {
-            step(&mut g, &mut sound, none);
-        }
-        step(
-            &mut g,
-            &mut sound,
-            Menu {
-                start: true,
-                ..none
-            },
-        );
-        assert_eq!((g.mode, g.screen), (crate::Mode::Plane, Screen::Title));
-        assert!(g.tunnel.is_none());
+        assert_eq!(modes, [crate::Mode::Tunnel, crate::Mode::Plane]);
     }
 
     fn gpu() -> Option<(wgpu::Device, wgpu::Queue)> {

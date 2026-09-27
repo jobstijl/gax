@@ -39,10 +39,15 @@ Menus take arrows, WASD, the D-pad or a flick of the left stick. F3 toggles the 
 (frame rate, simulation time, GPU time per pass, pose drift), and F11 toggles full screen.
 
 **Settings** (from the title): screen shake in steps down to off, reduced flashes (softer
-full-screen flashes, bursts and shock ripples), colour schemes that are safe for red–green and
-for blue–yellow colour blindness (every enemy also has its own shape), volumes for the master,
-music and effects, effects on the beat (shots, hits, kills and pickups wait for the music's
-next 32nd, sample-accurately), and full screen.
+full-screen flashes, bursts and shock ripples), reduced motion (no shake, shock ripples or
+gravitational lensing), colour schemes that are safe for red–green and for blue–yellow colour
+blindness (every enemy also has its own shape), volumes for the master, music and effects,
+effects on the beat (shots, hits, kills and pickups wait for the music's next 32nd,
+sample-accurately), the Tunnel's field of view, camera roll and aim assist (how generously the
+reticle locks on: off, low or high), and full screen.
+
+**Attract mode.** Left on the title for 20 seconds, the game plays a demo: the best run on
+either table, replayed, or the bot when there is none yet. Any key goes back.
 
 **The music** is generated live from the run's seed: a pad with voice-led chords, bass and soft
 percussion that follow the intensity, and layers the multiplier unlocks. Melodic fragments
@@ -50,11 +55,12 @@ percussion that follow the intensity, and layers the multiplier unlocks. Melodic
 in from x4, texture (drifting air and high sparkles) from x10, and the fragments double an
 octave up from x25. A replay plays its run's music again.
 
-**High scores and replays.** Every run is recorded (its seed and every tick's input, about
-0.8 KB a second). A run that makes the top ten asks for three initials and keeps its replay,
-which the high-score table plays back (left and right change the speed). Settings, scores and
+**High scores and replays.** Every run of either game is recorded (its seed and every tick's
+input, about 0.8 KB a second). A run that makes its game's top ten asks for three initials and
+keeps its replay, which the high-score table plays back (left and right switch between the
+Plane's table and the Tunnel's; while watching, they change the speed). Settings, scores and
 replays live in `~/.local/share/warp` (or the platform's equivalent, or `$WARP_DATA`); the last
-run is always `replays/last.warp`.
+runs are always `replays/last.warp` and `replays/last.tunnel`.
 
 **Rules.**
 * Kills drop green shards. Collecting them raises the multiplier, which applies to every kill;
@@ -63,8 +69,7 @@ run is always `replays/last.warp`.
 * A bomb clears the screen.
 * Every spawn is announced by a warp-in, and never lands close to you.
 
-**Tunnel** (the second mode, a first slice): fly into the screen down a twisting tunnel of
-warped space. The mouse (or right stick) places a reticle down the tunnel and the shots
+**Tunnel** (the second mode): fly into the screen down a twisting tunnel of warped space. The mouse (or right stick) places a reticle down the tunnel and the shots
 converge on it; Q and E (or the bumpers) barrel-roll you around the tunnel with a moment of
 invulnerability; Shift and Ctrl (or the triggers) boost and brake, and faster is worth more
 points. Rings of drones close in around you (fly through their middle), mines drift in the
@@ -72,6 +77,17 @@ lane, and turrets on the wall fire bolts that grow and glow as they come. Your s
 wall shows where you are. The reticle locks onto the enemy under it, at any depth, and your
 shots lead it; the lead dot shows where they will cross its depth. Drone rings hold in a band
 ahead of you and dive one at a time, after a warning flash.
+* **Serpents** (green) swim a helix down the tunnel; the body shields the head, and shooting
+  the head sets off the whole body.
+* **Gates** (gold) come in slaloms: fly through them for points that grow with the chain, and a
+  multiplier each; miss one and the chain breaks.
+* **Singularities** (violet) hold ahead of you with a ring of drones orbiting them, then let
+  you pass. They pull you and your shots (a kill with a shot bent round one is a slingshot,
+  worth double), pinch the tunnel's wall in around them so there is less room to get by, eat
+  mines and loose drones, and burst into a ring of drones when overfed. They bend light too:
+  what lies behind one is lensed into a ring round its shadow, its accretion disc glows bluer
+  on the side that comes at you, light near it is redshifted, and the music darkens and sinks
+  as you come close. Destroyed, it collapses in a shock ripple.
 
 **The enemies** (Plane):
 * **drifters** (cyan) wander;

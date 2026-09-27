@@ -2,11 +2,14 @@
 //! a state-variable filter, noise and a small reverb. Nothing here allocates while processing.
 //!
 //! Oscillation is rotation: a sine is the height of a phasor, a unit direction that a rotation
-//! motor turns a little every sample (phase modulation turns it further); the filter's
-//! prewarped coefficient `tan θ` is a phasor's height over its width; an equal-power pan is
-//! `(1, 0)` turned between none and a quarter turn.
+//! motor turns a little every sample (phase modulation turns it further). A resonance is a
+//! damped rotation: the phasor turned and shrunk every sample, with the input added
+//! (`Resonator`). The state-variable filter's undamped core is a rotation too, in its
+//! trapezoidal (Cayley) form, and its coefficient is read off the rotor of its turn. An
+//! equal-power pan is the rotor that turns "left" towards the source: its two coefficients,
+//! the cosine and sine of half the angle, are the two gains.
 
-use core::f32::consts::{PI, TAU};
+use core::f32::consts::TAU;
 use gax::Unit;
 use gax::pga2d::{Motor, Point};
 
@@ -159,6 +162,12 @@ impl Osc {
 }
 
 /// A state-variable filter (Simper's trapezoidal form): stable under fast modulation.
+///
+/// Undamped (`k = 0`), its state turns: trapezoidal integration of a harmonic oscillator is the
+/// Cayley transform `(1 + gJ)/(1 - gJ)` of its generator, a rotation by `2 atan g` per sample.
+/// Prewarping makes that exactly the cutoff's turn `θ = 2π fc / sr`, so `g = tan(θ/2)`: the
+/// ratio of the bivector and scalar parts of the rotor that turns by `θ`, which is where the
+/// filter takes it from. The damping `k` shrinks one axis of the turn.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Svf {
     ic1: f32,
@@ -180,9 +189,10 @@ impl Svf {
     /// Filter one sample at cutoff `fc` (Hz) and resonance `q` (0.5 soft .. 10 sharp).
     #[inline]
     pub fn tick(&mut self, x: f32, fc: f32, q: f32, sr: f32) -> SvfOut {
-        // The prewarped gain `tan(π fc / sr)`: the phasor's height over its width.
-        let d = phasor(PI * (fc / sr).clamp(1e-5, 0.49));
-        let g = d.e01() / d.e20();
+        // The prewarped gain: the rotor of the turn per sample, `cos(θ/2) - sin(θ/2) e12`, its
+        // bivector part over its scalar part.
+        let rotor = Motor::rotation(ORIGIN, TAU * (fc / sr).clamp(1e-5, 0.49)).into_inner();
+        let g = -rotor.e12() / rotor.s();
         let k = 1.0 / q.max(0.05);
         let a1 = 1.0 / (1.0 + g * (g + k));
         let a2 = g * a1;
@@ -203,6 +213,43 @@ impl Svf {
     #[allow(dead_code)] // for the fragment and texture layers (M3)
     pub fn reset(&mut self) {
         *self = Svf::default();
+    }
+}
+
+/// A resonance as a damped rotation (Mathews and Smith's phasor filter): every sample the state,
+/// a direction, is turned by the centre frequency's rotation and shrunk by `r`, and the input
+/// is added along `x`. It rings at the turn's frequency and dies away at the shrink's rate, so
+/// the turn is the pitch and the shrink the bandwidth, `r = exp(-π bw / sr)`. The output is
+/// the state's height, scaled to a peak gain of about one.
+#[derive(Clone, Copy, Debug)]
+pub struct Resonator {
+    state: Point<(), f32>,
+    step: Unit<Motor<(), f32>>,
+    step_fc: f32,
+}
+
+impl Default for Resonator {
+    fn default() -> Resonator {
+        Resonator {
+            state: Point::direction(0.0, 0.0),
+            step: Motor::rotation(ORIGIN, 0.0),
+            step_fc: 0.0,
+        }
+    }
+}
+
+impl Resonator {
+    /// Ring `x` at centre `fc` (Hz) with quality `q` (the centre over the bandwidth).
+    #[inline]
+    pub fn tick(&mut self, x: f32, fc: f32, q: f32, sr: f32) -> f32 {
+        if fc != self.step_fc {
+            self.step = Motor::rotation(ORIGIN, TAU * (fc / sr).clamp(1e-5, 0.49));
+            self.step_fc = fc;
+        }
+        let r = (-core::f32::consts::PI * fc / (q.max(0.1) * sr)).exp();
+        // A real input is half on the turning side: `2 (1 - r)` gives the peak a gain of one.
+        self.state = (self.step >> self.state) * r + Point::direction(x * 2.0 * (1.0 - r), 0.0);
+        self.state.e01()
     }
 }
 
@@ -363,12 +410,25 @@ impl Reverb {
     }
 }
 
-/// Equal-power pan gains for `pan` in `[-1, 1]`: `(1, 0)` turned from none (left) to a
-/// quarter turn (right); the gains are its coordinates, so their squares always sum to one.
+/// Equal-power pan gains for `pan` in `[-1, 1]`, hard left to hard right: the source's
+/// direction at that fraction of the half turn from left (through ahead) to right, as `toward`
+/// hears it.
 #[inline]
 pub fn pan(pan: f32) -> (f32, f32) {
-    let d = phasor((pan.clamp(-1.0, 1.0) + 1.0) * core::f32::consts::FRAC_PI_4);
-    (d.e20(), d.e01())
+    toward(phasor(
+        (1.0 - pan.clamp(-1.0, 1.0)) * core::f32::consts::FRAC_PI_2,
+    ))
+}
+
+/// Equal-power gains for a source in direction `d` from the listener (`x` to the right, `y`
+/// ahead): the rotor that turns "left" towards `d` is `cos(β/2) + sin(β/2) e12`, and its two
+/// coefficients are the gains. Left is `(1, 0)`, ahead the even split, right `(0, 1)`; their
+/// squares always sum to one. A source behind is heard as its mirror in front.
+#[inline]
+pub fn toward(d: Point<(), f32>) -> (f32, f32) {
+    let ahead = Point::direction(d.e20(), d.e01().abs());
+    let rotor = Motor::rotation_between(Point::direction(-1.0, 0.0), ahead).into_inner();
+    (rotor.s().abs(), rotor.e12().abs())
 }
 
 #[cfg(test)]
@@ -402,6 +462,56 @@ mod tests {
             assert!((l * l + r * r - 1.0).abs() < 1e-5);
         }
         let (l, r) = pan(-1.0);
-        assert!((l - 1.0).abs() < 1e-6 && r.abs() < 1e-6);
+        assert!((l - 1.0).abs() < 1e-6 && r.abs() < 1e-6, "{l} {r}");
+        let (l, r) = pan(1.0);
+        assert!(l.abs() < 1e-6 && (r - 1.0).abs() < 1e-6, "{l} {r}");
+        let (l, r) = pan(0.0);
+        assert!((l - r).abs() < 1e-6);
+        // By direction: right, ahead-right, and behind-right heard as ahead-right.
+        let (l, r) = toward(Point::direction(5.0, 0.0));
+        assert!(l.abs() < 1e-6 && (r - 1.0).abs() < 1e-6);
+        let (a, b) = toward(Point::direction(1.0, 1.0));
+        let (c, d) = toward(Point::direction(1.0, -1.0));
+        assert!(b > a && (a - c).abs() < 1e-6 && (b - d).abs() < 1e-6);
+    }
+
+    /// The undamped filter's state turns by the cutoff's angle per sample: an impulse into it
+    /// rings at the cutoff.
+    #[test]
+    fn the_filter_core_is_a_rotation_at_the_cutoff() {
+        let sr = 48000.0;
+        let fc = 1000.0;
+        let mut f = Svf::default();
+        // `q` large: nearly undamped. Count the zero crossings of the ringing.
+        let mut last = f.tick(1.0, fc, 1e4, sr).bp;
+        let mut crossings = 0;
+        for _ in 0..48000 {
+            let y = f.tick(0.0, fc, 1e4, sr).bp;
+            crossings += usize::from((y > 0.0) != (last > 0.0));
+            last = y;
+        }
+        assert!((crossings as f32 / 2.0 - fc).abs() < 2.0, "{crossings}");
+    }
+
+    /// A damped rotation rings at its turn's frequency: its response peaks there, with about
+    /// unit gain, and falls away off the centre.
+    #[test]
+    fn a_damped_rotation_resonates() {
+        let sr = 48000.0;
+        let gain = |f: f32| {
+            let mut r = Resonator::default();
+            let mut o = Osc::default();
+            let mut peak = 0.0f32;
+            for n in 0..48000 {
+                let y = r.tick(o.sine(f / sr), 2000.0, 8.0, sr);
+                if n > 24000 {
+                    peak = peak.max(y.abs());
+                }
+            }
+            peak
+        };
+        let centre = gain(2000.0);
+        assert!((0.5..2.0).contains(&centre), "{centre}");
+        assert!(gain(1000.0) < 0.3 * centre && gain(4000.0) < 0.3 * centre);
     }
 }
