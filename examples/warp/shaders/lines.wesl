@@ -14,12 +14,12 @@ fn place(m: Motor, p: vec2<f32>) -> vec2<f32> {
 fn vs_main(
     @builtin(vertex_index) k: u32,
     @location(0) ab: vec4<f32>,
-    @location(1) color: vec4<f32>,
+    @location(1) light: vec4<f32>,
     @location(2) style: vec4<f32>,
     @location(3) motor: vec4<f32>,
 ) -> LineVarying {
     let m = Motor(motor);
-    return line_vertex(cam, k, place(m, ab.xy), place(m, ab.zw), color, style);
+    return line_vertex(cam, k, place(m, ab.xy), place(m, ab.zw), light, style);
 }
 
 @fragment

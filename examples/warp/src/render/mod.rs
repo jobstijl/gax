@@ -14,6 +14,7 @@ pub mod tunnel;
 
 use bytemuck::{Pod, Zeroable};
 use gax::pga2d::{MotorGpu, PointGpu};
+use gax::pga3d::PointGpu as Light3Gpu;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use wgpu::util::DeviceExt;
@@ -39,19 +40,28 @@ pub const MAX_SOURCES: usize = 64;
 pub const MAX_WELLS: usize = 16;
 const BLOOM_MIPS: usize = 6;
 
-/// A line segment: endpoints in the local frame of `motor` (`[ax, ay, bx, by]`), an HDR colour
-/// (rgb, intensity), a style (half width, glow radius, glow strength, 0) in world units.
+/// A line segment: endpoints in the local frame of `motor` (`[ax, ay, bx, by]`), a light (a
+/// PGA3D point in RGB space, `light.rs`), a style (half width, glow radius, glow strength, 0)
+/// in world units.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct LineInstance {
     /// Endpoints.
     pub ab: [f32; 4],
-    /// Colour and intensity.
-    pub color: [f32; 4],
+    /// The light: the WGSL `gax::pga3d::Point`.
+    pub color: Light3Gpu,
     /// Half width, glow radius, glow strength, unused.
     pub style: [f32; 4],
     /// Where the segment's frame is: a unit PGA2D motor, the WGSL `Motor`.
     pub motor: MotorGpu,
+}
+
+impl LineInstance {
+    /// Step back behind a menu: towards grey (the light's foot on the grey axis) and dimmer.
+    pub fn recede(&mut self, k: f32) {
+        let l = crate::light::desaturate(self.color.into(), 0.75);
+        self.color = crate::light::fade(l, k).into();
+    }
 }
 
 /// The camera uniform: the WGSL `Camera`.
@@ -82,8 +92,8 @@ pub struct Particle {
     pub p: PointGpu,
     /// Velocity.
     pub v: PointGpu,
-    /// Colour and intensity.
-    pub color: [f32; 4],
+    /// The light.
+    pub color: Light3Gpu,
     /// Age, lifetime, drag, streak length (seconds of velocity).
     pub life: [f32; 4],
 }
@@ -100,7 +110,7 @@ struct GridUniform {
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct GridLook {
     dims: [u32; 4],
-    color: [f32; 4],
+    color: Light3Gpu,
     style: [f32; 4],
 }
 
@@ -172,7 +182,7 @@ pub struct Frame<'a> {
     /// Particles to add before stepping.
     pub spawn: &'a [Particle],
     /// Grid colour (rgb, intensity).
-    pub grid_color: [f32; 4],
+    pub grid_color: crate::light::Light,
     /// Post-processing.
     pub post: PostSettings,
     /// The Plane's layers (stars, lattice, particles); the Tunnel draws everything as lines.
@@ -902,7 +912,7 @@ impl Renderer {
             0,
             bytemuck::bytes_of(&GridLook {
                 dims: [g.cols, g.rows, 0, 0],
-                color: f.grid_color,
+                color: f.grid_color.into(),
                 style: [0.014, 0.1, 0.12, g.spacing],
             }),
         );

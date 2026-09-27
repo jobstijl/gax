@@ -30,8 +30,8 @@ const DAMPING: f32 = 4.0;
 /// them in, with a softening radius.
 #[derive(Clone, Copy, Debug)]
 pub struct Source {
-    /// Where, `(x, y, s)`.
-    pub pos: [f32; 3],
+    /// Where.
+    pub pos: Point<(), f32>,
     /// Strength (negative pulls).
     pub strength: f32,
     /// The squared softening radius.
@@ -42,6 +42,8 @@ pub struct Source {
 pub struct Lattice {
     /// The absolute index of the first ring kept (ring `k` is at `s = k GAP`).
     pub first: i64,
+    /// The rest positions around a ring at arc length 0.
+    ring: [Point<(), f32>; AROUND],
     /// Displacements, ring-major (`ring * AROUND + j`), for rings `first..first + RINGS`.
     pub d: Vec<Dir>,
     v: Vec<Dir>,
@@ -57,10 +59,9 @@ pub fn angle(j: usize) -> f32 {
     j as f32 * core::f32::consts::TAU / AROUND as f32
 }
 
-/// A node's rest position across the tunnel.
-pub fn rest(j: usize) -> [f32; 2] {
-    let a = angle(j);
-    [RADIUS * a.cos(), RADIUS * a.sin()]
+/// Node `j`'s rest position on the ring at arc length `s`: on the wall, turned about the axis.
+pub fn rest(j: usize, s: f32) -> Point<(), f32> {
+    crate::tunnel::around(RADIUS, angle(j), s)
 }
 
 /// One node's step: the spring forces as PGA3D direction arithmetic.
@@ -77,6 +78,7 @@ impl Lattice {
     pub fn new(s: f32) -> Lattice {
         Lattice {
             first: ((s - BEHIND) / GAP).floor() as i64,
+            ring: core::array::from_fn(|j| rest(j, 0.0)),
             d: vec![zero(); RINGS * AROUND],
             v: vec![zero(); RINGS * AROUND],
             scratch: vec![zero(); RINGS * AROUND],
@@ -107,15 +109,16 @@ impl Lattice {
     /// One step of `dt` with the given sources.
     pub fn step(&mut self, dt: f32, sources: &[Source]) {
         for r in 0..RINGS {
-            let s = self.ring_s(r);
+            let along = Point::direction(0.0, 0.0, self.ring_s(r));
             for j in 0..AROUND {
                 let i = r * AROUND + j;
-                let [x, y] = rest(j);
+                let at = self.ring[j] + along;
                 let mut f = zero();
                 for src in sources {
-                    let (dx, dy, ds) = (x - src.pos[0], y - src.pos[1], s - src.pos[2]);
-                    let k = src.strength / (dx * dx + dy * dy + ds * ds + src.r2);
-                    f += Point::direction(dx * k, dy * k, ds * k);
+                    // Away from the source, softened: `strength (p - s) / (|p - s|² + r²)`.
+                    let away = at - src.pos;
+                    let n = away.ideal_norm();
+                    f += away.gp(src.strength / (n * n + src.r2));
                 }
                 let around = |jj: usize| self.d[r * AROUND + jj % AROUND];
                 // Along the track, the end rings see themselves (a free edge).
@@ -135,16 +138,13 @@ impl Lattice {
     }
 
     /// The displaced node `j` of ring `r`, in straightened coordinates.
-    pub fn node(&self, r: usize, j: usize) -> [f32; 3] {
-        let [x, y] = rest(j);
-        let d = self.d[r * AROUND + j];
-        [x + d.e032(), y + d.e013(), self.ring_s(r) + d.e021()]
+    pub fn node(&self, r: usize, j: usize) -> Point<(), f32> {
+        self.ring[j] + Point::direction(0.0, 0.0, self.ring_s(r)) + self.d[r * AROUND + j]
     }
 
     /// How far node `j` of ring `r` is displaced (for its glow).
     pub fn strain(&self, r: usize, j: usize) -> f32 {
-        let d = self.d[r * AROUND + j];
-        (d.e032() * d.e032() + d.e013() * d.e013() + d.e021() * d.e021()).sqrt()
+        self.d[r * AROUND + j].ideal_norm()
     }
 }
 
@@ -158,7 +158,7 @@ mod tests {
     fn a_blast_ripples_and_settles() {
         let mut l = Lattice::new(0.0);
         let blast = [Source {
-            pos: [RADIUS - 1.0, 0.0, 20.0],
+            pos: Point::xyz(RADIUS - 1.0, 0.0, 20.0),
             strength: 400.0,
             r2: 2.0,
         }];
@@ -169,7 +169,7 @@ mod tests {
             .min_by_key(|&r| ((l.ring_s(r) - 20.0).abs() * 100.0) as i32)
             .unwrap();
         let bulge = l.node(near, 0);
-        assert!(bulge[0] > RADIUS + 0.05, "{bulge:?}");
+        assert!(crate::tunnel::off_axis(bulge) > RADIUS + 0.05);
         let far_before = l.strain(near + 12, 0);
         for _ in 0..60 {
             l.step(1.0 / 120.0, &[]);
@@ -196,7 +196,7 @@ mod tests {
         let r = (0..RINGS)
             .find(|&r| (l.ring_s(r) - s).abs() < 1e-3)
             .unwrap();
-        assert!((l.node(r, 0)[0] - (RADIUS + 0.5)).abs() < 1e-5);
+        assert!((crate::tunnel::off_axis(l.node(r, 0)) - (RADIUS + 0.5)).abs() < 1e-5);
         assert!(l.ring_s(0) <= 7.5 - BEHIND + GAP);
     }
 }

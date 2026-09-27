@@ -46,14 +46,19 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
     let target = w
         .enemies
         .iter()
-        .filter(|e| e.pos.e021() > s + 6.0)
-        .min_by(|a, b| a.pos.e021().total_cmp(&b.pos.e021()))
-        .map(|e| [e.pos.e032(), e.pos.e013(), e.pos.e021()]);
-    let cursor = target.and_then(|q| crate::render::tunnel::track_to_screen(&run.view, w, q));
+        .filter(|e| crate::tunnel::arc(e.pos) > s + 6.0)
+        .min_by(|a, b| crate::tunnel::arc(a.pos).total_cmp(&crate::tunnel::arc(b.pos)))
+        .map(|e| e.pos);
+    let cursor = target
+        .and_then(|q| run.view.on_screen(w, q))
+        .map(|p| p.to_euclidean());
     let danger = w.bolts.iter().any(|b| {
-        let d = b.pos.e021() - s;
+        let d = crate::tunnel::arc(b.pos) - s;
         d > 0.0 && d < 6.0
-    });
+    }) || w
+        .enemies
+        .iter()
+        .any(|e| e.flight == crate::tunnel::Flight::Dive && (crate::tunnel::arc(e.pos) - s) < 8.0);
     let input = sim::Input {
         movement: gax::pga2d::Point::direction((t * 0.7).cos() * 0.6, (t * 0.45).sin() * 0.5),
         fire: true,
@@ -617,8 +622,12 @@ mod tests {
             grid_steps: steps,
             wells,
             spawn,
-            grid_color: [0.1, 0.1, 0.5, 0.2],
-            post: crate::fx::Fx::new().post(&cam),
+            grid_color: crate::light::light(0.1, 0.1, 0.5, 0.2),
+            post: crate::fx::Fx::new().post(&crate::render::scene::view_map(
+                sim::body::pose_at(0.0, 0.0, 0.0),
+                20.0,
+                [64, 64],
+            )),
             plane: true,
         }
     }
@@ -710,7 +719,7 @@ mod tests {
             .map(|_| Particle {
                 p: Point::xy(rng.range(-20.0, 20.0), rng.range(-10.0, 10.0)).into(),
                 v: Point::direction(rng.range(-9.0, 9.0), rng.range(-9.0, 9.0)).into(),
-                color: [1.0, 1.0, 1.0, 1.0],
+                color: crate::light::light(1.0, 1.0, 1.0, 1.0).into(),
                 life: [0.0, 100.0, rng.range(0.5, 3.0), 0.03],
             })
             .collect();
@@ -770,6 +779,51 @@ mod tests {
             for (x, y) in a.c.iter().zip(&b.c) {
                 assert!((x - y).abs() <= 1e-4 * (1.0 + y.abs()));
             }
+            // The line renderer's geometry, the lattice's heat, and the light kernels.
+            let close = |x: f32, y: f32| (x - y).abs() <= 1e-4 * (1.0 + y.abs());
+            let k = [1.0, -1.0, 0.3];
+            let (a, b) = (
+                crate::segment_corner(p, rest, k),
+                crate::kernels::segment_corner(p, rest, k),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            assert!(close(
+                crate::segment_distance(p, rest, s),
+                crate::kernels::segment_distance(p, rest, s)
+            ));
+            let k = [0.5, 1.2, 0.012];
+            assert!(close(
+                crate::edge_heat(p, rest, v, f, k),
+                crate::kernels::edge_heat(p, rest, v, f, k)
+            ));
+            let (a, b) = (
+                crate::streak_tail(p, v, 0.03),
+                crate::kernels::streak_tail(p, v, 0.03),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            let l1 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 2.0);
+            let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5);
+            let t = rng.unit();
+            let pairs = [
+                (crate::light_mix(l1, l2, t), crate::kernels::light_mix(l1, l2, t)),
+                (crate::light_whiten(l1, t), crate::kernels::light_whiten(l1, t)),
+                (crate::light_fade(l1, t), crate::kernels::light_fade(l1, t)),
+            ];
+            for (a, b) in pairs {
+                assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            }
         }
+    }
+
+    /// The traced segment distance is the Euclidean distance to the segment.
+    #[test]
+    fn segment_distance_by_joins_is_the_distance() {
+        let (a, b) = (Point::xy(0.0f32, 0.0), Point::xy(4.0, 0.0));
+        let d = |x: f32, y: f32| crate::segment_distance(a, b, Point::xy(x, y));
+        assert!((d(2.0, 1.5) - 1.5).abs() < 1e-5);
+        assert!((d(-3.0, 4.0) - 5.0).abs() < 1e-5);
+        assert!((d(7.0, -4.0) - 5.0).abs() < 1e-5);
+        // A degenerate segment is a point.
+        assert!((crate::segment_distance(a, a, Point::xy(3.0, 4.0)) - 5.0).abs() < 1e-5);
     }
 }

@@ -25,6 +25,7 @@ const SHADERS: [(&str, bool); 8] = [
 ];
 
 type P = Point<(), Sym>;
+type L = gax::pga3d::Point<(), Sym>;
 
 fn main() {
     let mut t = Tracer::new();
@@ -40,6 +41,23 @@ fn main() {
     t.kernel("particle_step", |p: P, v: P, f: P, k: [Sym; 2]| {
         kernels::particle_step(p, v, f, k)
     });
+    t.kernel("segment_corner", |a: P, b: P, k: [Sym; 3]| {
+        kernels::segment_corner(a, b, k)
+    });
+    t.kernel("segment_distance", |a: P, b: P, p: P| {
+        kernels::segment_distance(a, b, p)
+    });
+    t.kernel("edge_heat", |a: P, b: P, va: P, vb: P, k: [Sym; 3]| {
+        kernels::edge_heat(a, b, va, vb, k)
+    });
+    t.kernel("streak_tail", |p: P, v: P, dt: Sym| {
+        kernels::streak_tail(p, v, dt)
+    });
+    t.kernel("light_mix", |a: L, b: L, t: Sym| {
+        kernels::light_mix(a, b, t)
+    });
+    t.kernel("light_whiten", |l: L, t: Sym| kernels::light_whiten(l, t));
+    t.kernel("light_fade", |l: L, k: Sym| kernels::light_fade(l, k));
     t.write_out_dir("fused.rs");
     for r in t.reports() {
         println!(

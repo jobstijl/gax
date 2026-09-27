@@ -1,27 +1,36 @@
-//! Drawing the Tunnel: a camera motor in 3D, perspective by hand, and everything as projected
-//! lines in the HUD's screen units (the line renderer is 2D).
+//! Drawing the Tunnel: a camera motor in 3D, a projective projection, and everything as lines
+//! in the HUD's screen units (the line renderer is 2D).
 //!
-//! * The camera is a PGA3D motor: `cam << p` takes a world point into its frame. It follows
-//!   the ship on a motor spring (interpolation towards the target), and by default does not
-//!   roll with the tunnel (a comfort setting), which is why it is built from a heading and a
-//!   pitch rather than taken from the track's frame.
-//! * Depth reads through fog that fades into the dark, line widths and glows that scale with
-//!   `1/z`, bolts that glow brighter as they come close, the ship's shadow on the wall (a meet
-//!   of the light-to-ship line with the wall's tangent plane), and the reticle's lock and lead.
+//! * The camera is `Motor::look_at` from just behind the ship, near the axis, down the track;
+//!   by default its up is the world's (it does not roll with the tunnel, a comfort setting).
+//!   It follows on a motor spring (screw interpolation towards the target).
+//! * `cam << p` takes a world point into the camera's frame. The projection to the screen is
+//!   projective geometry: the camera-space point becomes the PGA2D point with the depth as its
+//!   weight, and `to_euclidean` is the perspective divide. Segments crossing the near plane
+//!   are cut by their meet with it.
+//! * Depth reads through fog, widths and glows that scale with `1/z`, bolts that glow brighter
+//!   as they come close, the ship's shadow on the wall (the meet of the light-to-ship line with
+//!   the wall's tangent plane, which is `wall point | radial line`), and the reticle's lock and
+//!   lead.
+//! * The reticle aims through the same camera, backwards: a screen point is a ray from the eye,
+//!   which meets the tunnel's cross-section at the aim depth; `Track::straighten` takes the
+//!   meet back into the simulation's coordinates.
 
 use super::LineInstance;
 use super::font::Align;
 use super::scene::{self, palette};
+use crate::light::{self, Light};
 use crate::sim::body::identity;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Phase};
 use crate::tunnel::lattice::{AROUND, RADIUS, RINGS};
 use crate::tunnel::track::{Frame, interpolate};
-use crate::tunnel::{AIM_DEPTH, Event, Foe, World};
+use crate::tunnel::{AIM_DEPTH, Event, Foe, P, World, about_axis, arc, dir, foot, off_axis};
+use gax::pga2d::Point as Point2;
 use gax::pga3d::{Motor, Plane, Point};
 
-/// How far the fog lets you see.
-const FOG: f32 = 78.0;
+/// How far the fog lets objects be seen.
+const FOG: f32 = 90.0;
 /// The wall fades sooner: its lines crowd towards the vanishing point, where enemies come
 /// from, and must not glare there.
 const WALL_FOG: f32 = 58.0;
@@ -30,14 +39,14 @@ const NEAR: f32 = 0.25;
 /// A particle in straightened coordinates.
 #[derive(Clone, Copy, Debug)]
 struct Spark {
-    pos: [f32; 3],
-    vel: [f32; 3],
-    color: [f32; 4],
+    pos: P,
+    vel: P,
+    light: Light,
     life: f32,
     total: f32,
 }
 
-/// The Tunnel's view: camera, effects, and the projection.
+/// The Tunnel's view: camera, effects, the reticle, and the projection.
 pub struct View {
     /// The camera's pose in the world.
     pub cam: Frame,
@@ -52,20 +61,24 @@ pub struct View {
     shake: f32,
     /// A full-screen flash, decaying.
     pub flash: f32,
+    /// The reticle on screen (HUD units).
+    pub reticle: Point2<(), f32>,
+    /// The enemy the reticle has locked onto.
+    pub lock: Option<u32>,
     sparks: Vec<Spark>,
-    dust: Vec<[f32; 3]>,
-    popups: Vec<([f32; 3], String, f32, [f32; 4])>,
+    dust: Vec<P>,
+    popups: Vec<(P, String, f32, Light)>,
     rng: Rng,
     started: bool,
 }
 
-fn len3(v: [f32; 3]) -> f32 {
-    (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+/// `a` to `b` by `t` (points of weight 1, or directions).
+fn lerp(a: P, b: P, t: f32) -> P {
+    a + (b - a).gp(t)
 }
 
-fn fade(c: [f32; 4], k: f32) -> [f32; 4] {
-    [c[0], c[1], c[2], c[3] * k]
-}
+/// Bolts: hot pink, the colour of danger.
+const BOLT: Light = light::light(1.0, 0.25, 0.45, 3.0);
 
 impl View {
     /// A view with a field of view in degrees.
@@ -73,9 +86,8 @@ impl View {
         let mut rng = Rng::new(0xd057);
         let dust = (0..420)
             .map(|_| {
-                let a = rng.angle();
-                let r = RADIUS * rng.unit().sqrt() * 0.95;
-                [r * a.cos(), r * a.sin(), rng.range(-5.0, FOG)]
+                let r = RADIUS * gax::Real::sqrt(rng.unit()) * 0.95;
+                crate::tunnel::around(r, rng.angle(), rng.range(-5.0, FOG))
             })
             .collect();
         View {
@@ -86,6 +98,8 @@ impl View {
             flash_scale: 1.0,
             shake: 0.0,
             flash: 0.0,
+            reticle: Point2::xy(0.0, 0.0),
+            lock: None,
             sparks: Vec::new(),
             dust,
             popups: Vec::new(),
@@ -94,31 +108,29 @@ impl View {
         }
     }
 
-    /// The focal length for a vertical field of view (the HUD is 36 units tall).
+    /// The focal length for a vertical field of view (the HUD is 36 units tall): the
+    /// screen's half height over the tangent of half the angle.
     pub fn focal_for(fov_degrees: f32) -> f32 {
-        18.0 / (fov_degrees.to_radians() * 0.5).tan()
+        let half = fov_degrees.to_radians() * 0.5;
+        // tan = sin / cos: the phasor at the half angle, height over width.
+        let d =
+            gax::pga2d::Motor::rotation(Point2::xy(0.0, 0.0), half) >> Point2::direction(1.0, 0.0);
+        18.0 * d.e20() / d.e01()
     }
 
-    /// The camera the view wants: behind and above the ship, looking down the track. Without
-    /// roll it is built from a heading and a pitch about the world's axes.
+    /// The camera the view wants: just behind the ship, a little above and close to the
+    /// axis, looking down the track.
     fn target(&self, w: &World, alpha: f32) -> Frame {
-        let ship = lerp3(xyz(w.ship.prev), xyz(w.ship.pos), alpha);
-        let [x, y, s] = ship;
-        if self.follow_roll {
-            let m = w.track.frame(s - 6.5);
-            let pitch = Motor::rotation_about(1.0, 0.0, 0.0, 0.12);
-            return m * Motor::translation(0.45 * x, 0.45 * y + 1.3, 0.0) * pitch;
-        }
-        let eye = w.track.point(0.45 * x, 0.45 * y + 1.3, s - 6.5);
-        let look = w.track.point(0.2 * x, 0.2 * y, s + 16.0);
-        let f = [look[0] - eye[0], look[1] - eye[1], look[2] - eye[2]];
-        let l = len3(f);
-        let (fx, fy, fz) = (f[0] / l, f[1] / l, f[2] / l);
-        let yaw = fx.atan2(fz);
-        let pitch = fy.clamp(-1.0, 1.0).asin();
-        Motor::translation(eye[0], eye[1], eye[2])
-            * Motor::rotation_about(0.0, 1.0, 0.0, yaw)
-            * Motor::rotation_about(1.0, 0.0, 0.0, -pitch)
+        let ship = lerp(w.ship.prev, w.ship.pos, alpha);
+        let (axis_point, across) = (foot(ship), ship - foot(ship));
+        let eye = axis_point + across.gp(0.3) + dir(0.0, 0.9, -7.5);
+        let look = axis_point + across.gp(0.1) + dir(0.0, 0.0, 20.0);
+        let up = if self.follow_roll {
+            w.track.frame(arc(eye)) >> dir(0.0, 1.0, 0.0)
+        } else {
+            dir(0.0, 1.0, 0.0)
+        };
+        Motor::look_at(w.track.place(eye), w.track.place(look), up)
     }
 
     /// Advance the camera spring and the effects by a frame of `dt`.
@@ -133,10 +145,8 @@ impl View {
         self.shake = (self.shake - dt * 2.2).max(0.0);
         self.flash = (self.flash - dt * 2.5).max(0.0);
         for p in &mut self.sparks {
-            for k in 0..3 {
-                p.pos[k] += p.vel[k] * dt;
-                p.vel[k] *= 1.0 - 1.8 * dt;
-            }
+            p.pos += p.vel.gp(dt);
+            p.vel = p.vel.gp(1.0 - 1.8 * dt);
             p.life -= dt;
         }
         self.sparks.retain(|p| p.life > 0.0);
@@ -147,9 +157,16 @@ impl View {
         // Dust behind the ship comes round again ahead.
         let s = w.ship.s();
         for d in &mut self.dust {
-            if d[2] < s - 5.0 {
-                d[2] += FOG + 5.0;
+            if arc(*d) < s - 5.0 {
+                *d += dir(0.0, 0.0, FOG + 5.0);
             }
+        }
+    }
+
+    fn proj(&self) -> Proj {
+        Proj {
+            cam: self.cam,
+            focal: self.focal,
         }
     }
 
@@ -168,17 +185,21 @@ impl View {
         self.cam * jitter
     }
 
-    fn burst(&mut self, pos: [f32; 3], color: [f32; 4], n: usize, speed: f32, life: f32) {
+    /// Sparks leaving `pos` in random directions: `(0, 0, v)` turned by a random rotation.
+    fn burst(&mut self, pos: P, light: Light, n: usize, speed: f32, life: f32) {
         for _ in 0..n {
-            let a = self.rng.angle();
-            let b = self.rng.range(-1.0, 1.0);
-            let r = (1.0 - b * b).sqrt();
-            let v = self.rng.range(0.3, 1.0) * speed;
+            let turn = Motor::rotation_about(
+                self.rng.range(-1.0, 1.0),
+                self.rng.range(-1.0, 1.0),
+                self.rng.range(-1.0, 1.0),
+                self.rng.angle(),
+            );
+            let v = turn >> dir(0.0, 0.0, self.rng.range(0.3, 1.0) * speed);
             let l = self.rng.range(0.5, 1.0) * life;
             self.sparks.push(Spark {
                 pos,
-                vel: [r * a.cos() * v, r * a.sin() * v, b * v],
-                color,
+                vel: v,
+                light,
                 life: l,
                 total: l,
             });
@@ -199,17 +220,16 @@ impl View {
                     let c = scene::color(foe.kind());
                     let big = foe == Foe::Turret;
                     self.burst(pos, c, if big { 160 } else { 70 }, 11.0, 0.9);
-                    self.burst(pos, [1.0, 1.0, 1.0, 3.0], 12, 16.0, 0.3);
+                    self.burst(pos, light::light(1.0, 1.0, 1.0, 3.0), 12, 16.0, 0.3);
                     self.shake = self.shake.max(if big { 0.5 } else { 0.15 });
                     if points >= 250 {
                         self.popups.push((pos, points.to_string(), 0.0, c));
                     }
                 }
-                Event::Wall { pos } => {
-                    self.burst(pos, palette::BULLET, 4, 4.0, 0.2);
-                }
-                Event::Bolt { pos } => {
-                    self.burst(pos, BOLT, 10, 3.0, 0.3);
+                Event::Wall { pos } => self.burst(pos, palette::BULLET, 4, 4.0, 0.2),
+                Event::Bolt { pos } => self.burst(pos, BOLT, 10, 3.0, 0.3),
+                Event::Dive { pos } => {
+                    self.burst(pos, scene::color(Foe::Drone.kind()), 14, 5.0, 0.3);
                 }
                 Event::Pickup { pos, mult } => {
                     self.burst(pos, scene::shard(), 8, 4.0, 0.3);
@@ -219,20 +239,23 @@ impl View {
                     }
                 }
                 Event::Death { pos } => {
-                    self.burst(pos, palette::SHIP, 900, 22.0, 1.8);
+                    let k = 0.35 + 0.65 * self.flash_scale;
+                    self.burst(pos, light::fade(palette::SHIP, k), 900, 22.0, 1.8);
                     self.shake = 1.6;
                     self.flash = 0.7;
                 }
                 Event::Bomb { pos } => {
-                    for k in 0..6 {
-                        let p = [0.0, 0.0, pos[2] + 6.0 + 9.0 * k as f32];
-                        self.burst(p, [0.55, 0.8, 1.0, 3.0], 220, 26.0, 1.0);
+                    let k = 0.35 + 0.65 * self.flash_scale;
+                    for step in 0..6 {
+                        let p = foot(pos) + dir(0.0, 0.0, 6.0 + 9.0 * step as f32);
+                        let c = light::light(0.55, 0.8, 1.0, 3.0 * k);
+                        self.burst(p, c, 220, 26.0, 1.0);
                     }
                     self.shake = 1.2;
                     self.flash = 0.5;
                 }
-                Event::Roll { .. } => {}
-                Event::Warn { .. }
+                Event::Roll { .. }
+                | Event::Warn { .. }
                 | Event::Fire { .. }
                 | Event::Respawn
                 | Event::Extra { .. }
@@ -254,15 +277,87 @@ impl View {
         }
     }
 
-    /// Build the frame's lines (screen units, for the HUD camera). `aim` is the reticle.
-    pub fn draw(
-        &mut self,
-        w: &World,
-        alpha: f32,
-        time: f32,
-        aim: [f32; 2],
-        out: &mut Vec<LineInstance>,
-    ) {
+    /// The reticle at a screen point: lock onto the enemy under it (the nearest on screen
+    /// within reach), or aim where the ray through it meets the cross-section at
+    /// `AIM_DEPTH`. Returns the aim point for the simulation.
+    pub fn aim(&mut self, w: &World, reticle: Point2<(), f32>) -> P {
+        self.reticle = reticle;
+        let p = self.proj();
+        let s = w.ship.s();
+        let lock = w
+            .enemies
+            .iter()
+            .filter(|e| arc(e.pos) > s + 3.0)
+            .filter_map(|e| {
+                let c = p.camera(w.track.place(e.pos))?;
+                let on_screen = p.screen(c);
+                // Within reach on screen: a margin plus the enemy's own apparent size.
+                let reach = 2.2 + e.foe.radius() * self.focal / p.depth(c);
+                let d = (on_screen & reticle).norm();
+                (d < reach).then_some((e, d))
+            })
+            .min_by(|a, b| a.1.total_cmp(&b.1));
+        self.lock = lock.map(|(e, _)| e.id);
+        match lock {
+            Some((e, _)) => e.pos,
+            None => self.through(w, reticle, s + AIM_DEPTH),
+        }
+    }
+
+    /// Where the ray from the eye through the screen point `at` meets the tunnel's
+    /// cross-section at arc length `s`, in straightened coordinates.
+    pub fn through(&self, w: &World, at: Point2<(), f32>, s: f32) -> P {
+        let p = self.proj();
+        let ray = p.ray(at);
+        let section = w.track.frame(s) >> Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+        let hit = ray ^ section;
+        w.track.straighten(hit.gp(1.0 / hit.e123()), s)
+    }
+
+    /// A direction on screen (movement, length up to 1) as a direction across the tunnel at
+    /// the ship: the ray through the ship's screen point moved by it, met with the ship's
+    /// cross-section.
+    pub fn across(&self, w: &World, v: Point2<(), f32>) -> P {
+        let p = self.proj();
+        let s = w.ship.s();
+        let Some(c) = p.camera(w.track.place(w.ship.pos)) else {
+            return dir(0.0, 0.0, 0.0);
+        };
+        let here = p.screen(c);
+        let there = self.through(w, here + v, s);
+        let d = there - self.through(w, here, s);
+        let d = dir(d.e032(), d.e013(), 0.0);
+        let n = d.ideal_norm();
+        if n < 1e-6 {
+            dir(0.0, 0.0, 0.0)
+        } else {
+            d.gp(v.ideal_norm().min(1.0) / n)
+        }
+    }
+
+    /// Where a world point is for the ears: in the camera's frame (`cam << p`), across as
+    /// the pan coordinate and the depth as the distance.
+    pub fn listen(&self, p: P) -> [f32; 2] {
+        let c = self.cam << p;
+        let [x, _, z] = c.to_euclidean();
+        [-4.0 * x, z]
+    }
+
+    /// Where a straightened point is on screen, if in front of the camera.
+    pub fn on_screen(&self, w: &World, q: P) -> Option<Point2<(), f32>> {
+        let p = self.proj();
+        p.camera(w.track.place(q)).map(|c| p.screen(c))
+    }
+
+    /// The screen point of the ship (for the pad's reticle, which sits ahead of it).
+    pub fn ship_on_screen(&self, w: &World) -> Point2<(), f32> {
+        let p = self.proj();
+        p.camera(w.track.place(w.ship.pos))
+            .map_or(Point2::xy(0.0, 0.0), |c| p.screen(c))
+    }
+
+    /// Build the frame's lines (screen units, for the HUD camera).
+    pub fn draw(&mut self, w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>) {
         out.clear();
         let cam = self.shaken();
         let p = Proj {
@@ -270,26 +365,19 @@ impl View {
             focal: self.focal,
         };
         let track = &w.track;
-        let s_ship = lerp(w.ship.prev.e021(), w.ship.pos.e021(), alpha);
-        let world = |q: [f32; 3]| track.point(q[0], q[1], q[2]);
+        let place = |q: P| track.place(q);
+        let s_ship = arc(lerp(w.ship.prev, w.ship.pos, alpha));
 
-        // The wall: every node into the world once, then the lines between neighbours.
+        // The wall: each ring placed by its frame, every node into the camera once, then the
+        // lines between neighbours.
         let lat = &w.lattice;
-        let mut nodes = vec![None; RINGS * AROUND];
+        let mut nodes: Vec<Option<(P, f32)>> = vec![None; RINGS * AROUND];
         for r in 0..RINGS {
-            let f = track.frame(lat.ring_s(r));
+            let s = lat.ring_s(r);
+            let frame = track.frame(s);
             for j in 0..AROUND {
-                let q = lat.node(r, j);
-                let pw = (f >> Point::xyz(q[0], q[1], 0.0)).to_euclidean();
-                // The along-track displacement: a small shift along the frame's forward.
-                let fw = f >> Point::direction(0.0, 0.0, 1.0);
-                let dz = q[2] - lat.ring_s(r);
-                let pw = [
-                    pw[0] + fw.e032() * dz,
-                    pw[1] + fw.e013() * dz,
-                    pw[2] + fw.e021() * dz,
-                ];
-                nodes[r * AROUND + j] = p.camera(pw).map(|c| (c, lat.strain(r, j)));
+                let local = lat.node(r, j) - dir(0.0, 0.0, s);
+                nodes[r * AROUND + j] = p.camera(frame >> local).map(|c| (c, lat.strain(r, j)));
             }
         }
         let grid = palette::GRID;
@@ -298,11 +386,11 @@ impl View {
                 let Some((a, sa)) = nodes[r * AROUND + j] else {
                     continue;
                 };
-                let mut edge = |b: Option<([f32; 3], f32)>, bright: f32| {
+                let mut edge = |b: Option<(P, f32)>, bright: f32| {
                     if let Some((b, sb)) = b {
                         let glow = 1.0 + 4.0 * (sa + sb).min(1.5);
-                        let c = [grid[0], grid[1], grid[2], grid[3] * 1.5 * bright * glow];
-                        p.segment_in(out, a, b, c, 0.03, 0.22, true);
+                        let c = light::fade(grid, 1.5 * bright * glow);
+                        p.segment(out, a, b, c, 0.03, 0.22, Fog::Wall);
                     }
                 };
                 edge(nodes[r * AROUND + (j + 1) % AROUND], 1.0);
@@ -312,314 +400,303 @@ impl View {
             }
         }
 
-        // Dust, streaked by the speed.
-        let streak = 0.012 * w.ship.speed;
-        for d in &self.dust {
-            if d[2] < s_ship - 2.0 {
+        // Dust, streaked along the track by the speed.
+        let streak = dir(0.0, 0.0, 0.012 * w.ship.speed);
+        for &d in &self.dust {
+            if arc(d) < s_ship - 2.0 {
                 continue;
             }
-            let a = p.camera(world(*d));
-            let b = p.camera(world([d[0], d[1], d[2] - streak]));
-            if let (Some(a), Some(b)) = (a, b) {
-                p.segment_in(out, a, b, [0.6, 0.7, 1.0, 0.35], 0.02, 0.08, true);
-            }
+            let dust = light::light(0.6, 0.7, 1.0, 0.35);
+            p.line(out, place(d - streak), place(d), dust, 0.02, Fog::Wall);
         }
 
         // Warp-ins: rings contracting onto where a spawn lands.
         for pd in &w.pending {
             let k = (pd.t / 0.8).clamp(0.0, 1.0);
-            let c = fade(scene::color(pd.foe.kind()), 0.8);
-            let r = 0.4 + 2.0 * k;
-            p.ring(out, &world, pd.pos, r, c, 10);
+            let c = light::fade(scene::color(pd.foe.kind()), 0.8);
+            p.ring(out, &place, pd.pos, 0.4 + 2.0 * k, c, 10);
         }
 
         // Enemies.
         for e in &w.enemies {
-            let q = lerp3(xyz(e.prev), xyz(e.pos), alpha);
+            let q = lerp(e.prev, e.pos, alpha);
             let c = scene::color(e.foe.kind());
-            let c = if e.flash > 0.0 {
-                let k = e.flash;
-                [
-                    c[0] + (1.0 - c[0]) * k,
-                    c[1] + (1.0 - c[1]) * k,
-                    c[2] + (1.0 - c[2]) * k,
-                    c[3],
-                ]
-            } else {
-                c
-            };
+            let c = light::fade(light::whiten(c, e.flash), 1.0 + e.flash);
             let spin = e.age * 2.0 + e.id as f32;
+            let tumble = Motor::rotation_about(0.0, 0.0, 1.0, spin)
+                * Motor::rotation_about(1.0, 0.0, 0.0, 0.7 * spin);
             match e.foe {
-                Foe::Drone => p.solid(out, &world, q, &OCTAHEDRON, 0.7, spin, c),
+                Foe::Drone => p.solid(out, &place, q, tumble, &OCTAHEDRON, 0.7, c),
                 Foe::Mine => {
-                    let pulse = 1.0 + 0.15 * (e.age * 7.0).sin();
-                    p.solid(out, &world, q, &SPIKES, 0.9 * pulse, spin * 0.5, c);
-                    p.solid(out, &world, q, &CUBE, 0.35, -spin, c);
+                    let pulse = 1.0 + 0.15 * crate::signal::wave(e.age * 7.0);
+                    p.solid(out, &place, q, tumble, &SPIKES, 0.9 * pulse, c);
+                    p.solid(out, &place, q, tumble.reverse(), &CUBE, 0.35, c);
                 }
                 Foe::Turret => {
-                    // A pyramid on the wall, pointing at the axis; it glows before it fires.
+                    // A pyramid on the wall pointing at the axis, turned about the axis to its
+                    // place; it glows before it fires.
                     let charge = ((0.35 - e.timer) / 0.35).clamp(0.0, 1.0);
-                    let c = fade(c, 1.0 + 2.0 * charge);
-                    let (ca, sa) = (e.angle.cos(), e.angle.sin());
-                    let base = |t: f32| {
-                        let (x, y) = (q[0] + 0.5 * ca, q[1] + 0.5 * sa);
-                        let (tx, ty) = (-sa * t, ca * t);
-                        [x + tx, y + ty]
-                    };
-                    let tip = [q[0] - 1.1 * ca, q[1] - 1.1 * sa, q[2]];
-                    let corners = [
-                        [base(0.8)[0], base(0.8)[1], q[2] - 0.8],
-                        [base(-0.8)[0], base(-0.8)[1], q[2] - 0.8],
-                        [base(-0.8)[0], base(-0.8)[1], q[2] + 0.8],
-                        [base(0.8)[0], base(0.8)[1], q[2] + 0.8],
-                    ];
-                    for k in 0..4 {
-                        p.line3(out, &world, corners[k], corners[(k + 1) % 4], c, 0.06);
-                        p.line3(out, &world, corners[k], tip, c, 0.06);
-                    }
+                    let c = light::fade(c, 1.0 + 2.0 * charge);
+                    p.solid(out, &place, q, about_axis(e.angle), &PYRAMID, 1.0, c);
                 }
             }
         }
 
         // Bolts: they grow as they come (perspective) and glow brighter when close.
         for b in &w.bolts {
-            let q = lerp3(xyz(b.prev), xyz(b.pos), alpha);
-            let near = ((22.0 - (q[2] - s_ship)) / 22.0).clamp(0.0, 1.0);
-            let c = fade(BOLT, 1.0 + 2.5 * near);
-            p.solid(out, &world, q, &OCTAHEDRON, 0.32, time * 9.0, c);
+            let q = lerp(b.prev, b.pos, alpha);
+            let near = ((22.0 - (arc(q) - s_ship)) / 22.0).clamp(0.0, 1.0);
+            let spin = Motor::rotation_about(0.0, 0.0, 1.0, time * 9.0);
+            p.solid(
+                out,
+                &place,
+                q,
+                spin,
+                &OCTAHEDRON,
+                0.32,
+                light::fade(BOLT, 1.0 + 2.5 * near),
+            );
         }
 
         // Shards.
         for sh in &w.shards {
-            let q = xyz(sh.pos);
-            p.solid(out, &world, q, &OCTAHEDRON, 0.3, time * 4.0, scene::shard());
+            let spin = Motor::rotation_about(0.0, 1.0, 0.0, time * 4.0);
+            p.solid(out, &place, sh.pos, spin, &OCTAHEDRON, 0.3, scene::shard());
         }
 
         // Shots: streaks along their flight.
         for b in &w.shots {
-            let q = lerp3(xyz(b.prev), xyz(b.pos), alpha);
-            let v = xyz(b.vel);
-            let tail = [
-                q[0] - v[0] * 0.018,
-                q[1] - v[1] * 0.018,
-                q[2] - v[2] * 0.018,
-            ];
-            p.line3(out, &world, tail, q, palette::BULLET, 0.07);
+            let q = lerp(b.prev, b.pos, alpha);
+            p.line(
+                out,
+                place(q - b.vel.gp(0.018)),
+                place(q),
+                palette::BULLET,
+                0.07,
+                Fog::Objects,
+            );
         }
 
         // Sparks: streaks along their velocity.
         for sp in &self.sparks {
-            let k = sp.life / sp.total;
-            let tail = [
-                sp.pos[0] - sp.vel[0] * 0.03,
-                sp.pos[1] - sp.vel[1] * 0.03,
-                sp.pos[2] - sp.vel[2] * 0.03,
-            ];
-            p.line3(out, &world, tail, sp.pos, fade(sp.color, k), 0.03);
+            let c = light::fade(sp.light, sp.life / sp.total);
+            p.line(
+                out,
+                place(sp.pos - sp.vel.gp(0.03)),
+                place(sp.pos),
+                c,
+                0.03,
+                Fog::Objects,
+            );
         }
 
         // The ship, its shadow on the wall, and the reticle.
         if w.phase == Phase::Playing {
-            let q = lerp3(xyz(w.ship.prev), xyz(w.ship.pos), alpha);
+            let q = lerp(w.ship.prev, w.ship.pos, alpha);
             let blink = w.ship.invulnerable > 0.0
                 && w.ship.roll.is_none()
-                && (w.ship.invulnerable * 14.0).sin() < 0.0;
-            let c = fade(palette::SHIP, if blink { 0.35 } else { 1.0 });
+                && crate::signal::wave(w.ship.invulnerable * 14.0) < 0.0;
+            // Close to the camera, the ship needs less light than on the Plane.
+            let c = light::fade(palette::SHIP, if blink { 0.2 } else { 0.55 });
             let roll = w.ship.roll.map_or(0.0, |r| {
                 r.dir * core::f32::consts::TAU * (r.t / 0.4).min(1.0)
             });
-            let bank = -0.25 * (q[0] - w.ship.prev.e032()) / DT / 12.0;
-            p.ship(out, &world, q, roll + bank, c);
-            // The shadow: the line from a light on the axis just behind the ship, through
-            // the ship, meets the wall's tangent plane under it.
-            let r = (q[0] * q[0] + q[1] * q[1]).sqrt();
+            // Banking into the movement across the tunnel.
+            let sideways = (w.ship.pos - w.ship.prev).e032() / DT / 12.0;
+            let pose = Motor::rotation_about(0.0, 0.0, 1.0, roll - 0.25 * sideways);
+            p.solid(out, &place, q, pose, &SHIP, 0.7, c);
+            // The shadow: the line from a light on the axis just behind the ship, through the
+            // ship, meets the wall's tangent plane under it (the plane through the wall point
+            // orthogonal to the radial line).
+            let r = off_axis(q);
             if r > 0.3 {
-                let light = Point::xyz(0.0, 0.0, q[2] - 2.0);
-                let ray = light & Point::xyz(q[0], q[1], q[2]);
-                let wall = Plane::from_normal([q[0] / r, q[1] / r, 0.0], RADIUS);
-                let hit = (ray ^ wall).to_euclidean();
+                let base = foot(q);
+                let wall_point = base + (q - base).gp(RADIUS / r);
+                let radial = base & q;
+                let wall = wall_point | radial;
+                let light_at = base - dir(0.0, 0.0, 2.0);
+                let hit = (light_at & q) ^ wall;
+                let hit = hit.gp(1.0 / hit.e123());
                 // A small cross on the wall: along the track and around it.
-                let (tx, ty) = (-q[1] / r * 0.5, q[0] / r * 0.5);
-                let c = [0.6, 0.75, 1.0, 1.2];
-                let h = |dx: f32, dy: f32, dz: f32| [hit[0] + dx, hit[1] + dy, hit[2] + dz];
-                p.line3(out, &world, h(-tx, -ty, 0.0), h(tx, ty, 0.0), c, 0.05);
-                p.line3(out, &world, h(0.0, 0.0, -0.7), h(0.0, 0.0, 0.7), c, 0.05);
+                let around = (q - base).gp(0.5 / r);
+                let around = about_axis(core::f32::consts::FRAC_PI_2) >> around;
+                let along = dir(0.0, 0.0, 0.7);
+                let shade = light::light(0.6, 0.75, 1.0, 1.2);
+                p.line(
+                    out,
+                    place(hit - around),
+                    place(hit + around),
+                    shade,
+                    0.05,
+                    Fog::Objects,
+                );
+                p.line(
+                    out,
+                    place(hit - along),
+                    place(hit + along),
+                    shade,
+                    0.05,
+                    Fog::Objects,
+                );
             }
-            self.reticle(out, &p, w, &world, q, aim, time);
+            self.draw_reticle(out, &p, w, time);
         }
 
         // Popups, at their depth.
         for (pos, text, age, color) in &self.popups {
-            if let Some(c) = p.camera(world(*pos)) {
-                let [sx, sy] = p.screen(c);
-                let size = (p.focal / c[2]).clamp(0.4, 1.6);
+            if let Some(c) = p.camera(place(*pos)) {
+                let [sx, sy] = p.screen(c).to_euclidean();
+                let size = (self.focal / p.depth(c)).clamp(0.4, 1.6);
                 let k = (1.0 - age / 1.1).max(0.0);
+                let y = sy + 1.0 + age * 2.0;
                 scene::text(
                     out,
                     text,
                     sx,
-                    sy + 1.0 + age * 2.0,
+                    y,
                     size,
-                    fade(*color, k),
+                    light::fade(*color, k),
                     Align::Center,
                 );
             }
         }
     }
 
-    /// The reticle at the aim point, a lock bracket on the enemy nearest to it on screen, and
-    /// a lead dot where the shots will cross that enemy's depth.
-    #[allow(clippy::too_many_arguments)]
-    fn reticle(
-        &self,
-        out: &mut Vec<LineInstance>,
-        p: &Proj,
-        w: &World,
-        world: &dyn Fn([f32; 3]) -> [f32; 3],
-        ship: [f32; 3],
-        aim: [f32; 2],
-        time: f32,
-    ) {
+    /// The reticle, a lock bracket on the locked enemy, and a lead dot where the shots will
+    /// cross its depth.
+    fn draw_reticle(&self, out: &mut Vec<LineInstance>, p: &Proj, w: &World, time: f32) {
         let hud = palette::HUD;
-        let Some(c) = p.camera(world([aim[0], aim[1], ship[2] + AIM_DEPTH])) else {
+        let style = [0.05, 0.25, 0.3, 0.0];
+        // Four arms: a short segment turned a quarter at a time about the reticle.
+        let o = self.reticle;
+        let quarter = gax::pga2d::Motor::rotation(o, core::f32::consts::FRAC_PI_2);
+        let (mut a, mut b) = (
+            o + Point2::direction(0.35, 0.0),
+            o + Point2::direction(0.7, 0.0),
+        );
+        for _ in 0..4 {
+            out.push(scene::seg(a, b, hud, style, identity()));
+            (a, b) = (quarter >> a, quarter >> b);
+        }
+        let Some(e) = self
+            .lock
+            .and_then(|id| w.enemies.iter().find(|e| e.id == id))
+        else {
             return;
         };
-        let [x, y] = p.screen(c);
-        let arm = 0.7;
-        for (dx, dy) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
-            out.push(scene::seg(
-                [x + dx * 0.35, y + dy * 0.35, x + dx * arm, y + dy * arm],
-                hud,
-                [0.05, 0.25, 0.3, 0.0],
-                identity(),
-            ));
+        let Some(c) = p.camera(w.track.place(e.pos)) else {
+            return;
+        };
+        let centre = p.screen(c);
+        let r = 1.0 + 0.1 * crate::signal::wave(time * 10.0);
+        let lock = light::light(1.0, 0.9, 0.5, 2.0);
+        let st = [0.05, 0.2, 0.3, 0.0];
+        // Four corner brackets, each a turn of the first.
+        let quarter = gax::pga2d::Motor::rotation(centre, core::f32::consts::FRAC_PI_2);
+        let corner = centre + Point2::direction(r, r);
+        let (mut k, mut u, mut v) = (
+            corner,
+            corner - Point2::direction(0.4, 0.0),
+            corner - Point2::direction(0.0, 0.4),
+        );
+        for _ in 0..4 {
+            out.push(scene::seg(k, u, lock, st, identity()));
+            out.push(scene::seg(k, v, lock, st, identity()));
+            (k, u, v) = (quarter >> k, quarter >> u, quarter >> v);
         }
-        // Lock: the enemy ahead nearest the reticle on screen.
-        let mut best: Option<([f32; 2], f32, [f32; 3])> = None;
-        for e in &w.enemies {
-            let q = xyz(e.pos);
-            if q[2] < ship[2] + 3.0 {
-                continue;
-            }
-            if let Some(ec) = p.camera(world(q)) {
-                let [ex, ey] = p.screen(ec);
-                let d = ((ex - x).powi(2) + (ey - y).powi(2)).sqrt();
-                if d < 3.0 && best.is_none_or(|b| d < b.1) {
-                    best = Some(([ex, ey], d, q));
-                }
-            }
-        }
-        if let Some(([ex, ey], _, q)) = best {
-            let r = 1.0 + 0.1 * (time * 10.0).sin();
-            let c = [1.0, 0.9, 0.5, 2.0];
-            for (sx, sy) in [(1.0, 1.0), (-1.0, 1.0), (1.0, -1.0), (-1.0, -1.0)] {
-                let (cx, cy) = (ex + sx * r, ey + sy * r);
-                let st = [0.05, 0.2, 0.3, 0.0];
-                out.push(scene::seg([cx, cy, cx - sx * 0.4, cy], c, st, identity()));
-                out.push(scene::seg([cx, cy, cx, cy - sy * 0.4], c, st, identity()));
-            }
-            // Lead: where the shots cross the target's depth.
-            let t = ((q[2] - ship[2]) / AIM_DEPTH).max(0.0);
-            let lx = ship[0] + (aim[0] - ship[0]) * t;
-            let ly = ship[1] + (aim[1] - ship[1]) * t;
-            if let Some(lc) = p.camera(world([lx, ly, q[2]])) {
-                let [px, py] = p.screen(lc);
-                out.push(scene::seg(
-                    [px - 0.12, py, px + 0.12, py],
-                    c,
-                    [0.12, 0.3, 0.4, 0.0],
-                    identity(),
-                ));
-            }
+        // Lead: where the enemy will be when the shots cross its depth.
+        let ship = w.ship.pos;
+        let closing = (w.ship.speed + 60.0 - e.vel.e021()).max(10.0);
+        let t = (arc(e.pos) - arc(ship)) / closing;
+        if let Some(lc) = p.camera(w.track.place(e.pos + e.vel.gp(t))) {
+            let d = p.screen(lc);
+            let (a, b) = (
+                d - Point2::direction(0.12, 0.0),
+                d + Point2::direction(0.12, 0.0),
+            );
+            out.push(scene::seg(a, b, lock, [0.12, 0.3, 0.4, 0.0], identity()));
         }
     }
 }
 
-/// Bolt colour: hot pink, the colour of danger.
-const BOLT: [f32; 4] = [1.0, 0.25, 0.45, 3.0];
-
-const OCTAHEDRON: [[f32; 6]; 12] = {
-    const X: [f32; 3] = [1.0, 0.0, 0.0];
-    const Y: [f32; 3] = [0.0, 1.0, 0.0];
-    const Z: [f32; 3] = [0.0, 0.0, 1.0];
-    const fn e(a: [f32; 3], b: [f32; 3], sa: f32, sb: f32) -> [f32; 6] {
-        [
-            a[0] * sa,
-            a[1] * sa,
-            a[2] * sa,
-            b[0] * sb,
-            b[1] * sb,
-            b[2] * sb,
-        ]
-    }
-    [
-        e(X, Y, 1.0, 1.0),
-        e(Y, X, 1.0, -1.0),
-        e(X, Y, -1.0, -1.0),
-        e(Y, X, -1.0, 1.0),
-        e(X, Z, 1.0, 1.0),
-        e(Y, Z, 1.0, 1.0),
-        e(X, Z, -1.0, 1.0),
-        e(Y, Z, -1.0, 1.0),
-        e(X, Z, 1.0, -1.0),
-        e(Y, Z, 1.0, -1.0),
-        e(X, Z, -1.0, -1.0),
-        e(Y, Z, -1.0, -1.0),
-    ]
-};
-
-const SPIKES: [[f32; 6]; 7] = [
-    [-1.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-    [0.0, -1.0, 0.0, 0.0, 1.0, 0.0],
-    [0.0, 0.0, -1.0, 0.0, 0.0, 1.0],
-    [-0.6, -0.6, -0.6, 0.6, 0.6, 0.6],
-    [0.6, -0.6, -0.6, -0.6, 0.6, 0.6],
-    [-0.6, 0.6, -0.6, 0.6, -0.6, 0.6],
-    [0.6, 0.6, -0.6, -0.6, -0.6, 0.6],
-];
-
-const CUBE: [[f32; 6]; 12] = [
-    [-1.0, -1.0, -1.0, 1.0, -1.0, -1.0],
-    [1.0, -1.0, -1.0, 1.0, 1.0, -1.0],
-    [1.0, 1.0, -1.0, -1.0, 1.0, -1.0],
-    [-1.0, 1.0, -1.0, -1.0, -1.0, -1.0],
-    [-1.0, -1.0, 1.0, 1.0, -1.0, 1.0],
-    [1.0, -1.0, 1.0, 1.0, 1.0, 1.0],
-    [1.0, 1.0, 1.0, -1.0, 1.0, 1.0],
-    [-1.0, 1.0, 1.0, -1.0, -1.0, 1.0],
-    [-1.0, -1.0, -1.0, -1.0, -1.0, 1.0],
-    [1.0, -1.0, -1.0, 1.0, -1.0, 1.0],
-    [1.0, 1.0, -1.0, 1.0, 1.0, 1.0],
-    [-1.0, 1.0, -1.0, -1.0, 1.0, 1.0],
-];
-
-/// The ship: an arrow into the screen, wings, a fin.
-const SHIP: [[f32; 6]; 9] = [
-    [0.0, 0.0, 1.3, 0.9, 0.0, -0.6],
-    [0.0, 0.0, 1.3, -0.9, 0.0, -0.6],
-    [0.9, 0.0, -0.6, 0.3, 0.0, -0.3],
-    [-0.9, 0.0, -0.6, -0.3, 0.0, -0.3],
-    [0.3, 0.0, -0.3, -0.3, 0.0, -0.3],
-    [0.0, 0.0, 1.3, 0.0, 0.35, -0.4],
-    [0.0, 0.35, -0.4, 0.3, 0.0, -0.3],
-    [0.0, 0.35, -0.4, -0.3, 0.0, -0.3],
-    [0.9, 0.0, -0.6, 1.1, 0.1, -0.9],
-];
-
-fn xyz(p: gax::pga3d::Point<(), f32>) -> [f32; 3] {
-    [p.e032(), p.e013(), p.e021()]
+const fn v(x: f32, y: f32, z: f32) -> P {
+    Point::new(x, y, z, 0.0)
 }
 
-fn lerp(a: f32, b: f32, t: f32) -> f32 {
-    a + (b - a) * t
-}
+const OCTAHEDRON: [(P, P); 12] = [
+    (v(1.0, 0.0, 0.0), v(0.0, 1.0, 0.0)),
+    (v(0.0, 1.0, 0.0), v(-1.0, 0.0, 0.0)),
+    (v(-1.0, 0.0, 0.0), v(0.0, -1.0, 0.0)),
+    (v(0.0, -1.0, 0.0), v(1.0, 0.0, 0.0)),
+    (v(1.0, 0.0, 0.0), v(0.0, 0.0, 1.0)),
+    (v(0.0, 1.0, 0.0), v(0.0, 0.0, 1.0)),
+    (v(-1.0, 0.0, 0.0), v(0.0, 0.0, 1.0)),
+    (v(0.0, -1.0, 0.0), v(0.0, 0.0, 1.0)),
+    (v(1.0, 0.0, 0.0), v(0.0, 0.0, -1.0)),
+    (v(0.0, 1.0, 0.0), v(0.0, 0.0, -1.0)),
+    (v(-1.0, 0.0, 0.0), v(0.0, 0.0, -1.0)),
+    (v(0.0, -1.0, 0.0), v(0.0, 0.0, -1.0)),
+];
 
-fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [
-        lerp(a[0], b[0], t),
-        lerp(a[1], b[1], t),
-        lerp(a[2], b[2], t),
-    ]
+const SPIKES: [(P, P); 7] = [
+    (v(-1.0, 0.0, 0.0), v(1.0, 0.0, 0.0)),
+    (v(0.0, -1.0, 0.0), v(0.0, 1.0, 0.0)),
+    (v(0.0, 0.0, -1.0), v(0.0, 0.0, 1.0)),
+    (v(-0.6, -0.6, -0.6), v(0.6, 0.6, 0.6)),
+    (v(0.6, -0.6, -0.6), v(-0.6, 0.6, 0.6)),
+    (v(-0.6, 0.6, -0.6), v(0.6, -0.6, 0.6)),
+    (v(0.6, 0.6, -0.6), v(-0.6, -0.6, 0.6)),
+];
+
+const CUBE: [(P, P); 12] = [
+    (v(-1.0, -1.0, -1.0), v(1.0, -1.0, -1.0)),
+    (v(1.0, -1.0, -1.0), v(1.0, 1.0, -1.0)),
+    (v(1.0, 1.0, -1.0), v(-1.0, 1.0, -1.0)),
+    (v(-1.0, 1.0, -1.0), v(-1.0, -1.0, -1.0)),
+    (v(-1.0, -1.0, 1.0), v(1.0, -1.0, 1.0)),
+    (v(1.0, -1.0, 1.0), v(1.0, 1.0, 1.0)),
+    (v(1.0, 1.0, 1.0), v(-1.0, 1.0, 1.0)),
+    (v(-1.0, 1.0, 1.0), v(-1.0, -1.0, 1.0)),
+    (v(-1.0, -1.0, -1.0), v(-1.0, -1.0, 1.0)),
+    (v(1.0, -1.0, -1.0), v(1.0, -1.0, 1.0)),
+    (v(1.0, 1.0, -1.0), v(1.0, 1.0, 1.0)),
+    (v(-1.0, 1.0, -1.0), v(-1.0, 1.0, 1.0)),
+];
+
+/// A turret: a square base against the wall (local `+x` is outwards) and a tip towards the
+/// axis.
+const PYRAMID: [(P, P); 8] = [
+    (v(0.5, 0.8, -0.8), v(0.5, -0.8, -0.8)),
+    (v(0.5, -0.8, -0.8), v(0.5, -0.8, 0.8)),
+    (v(0.5, -0.8, 0.8), v(0.5, 0.8, 0.8)),
+    (v(0.5, 0.8, 0.8), v(0.5, 0.8, -0.8)),
+    (v(0.5, 0.8, -0.8), v(-1.1, 0.0, 0.0)),
+    (v(0.5, -0.8, -0.8), v(-1.1, 0.0, 0.0)),
+    (v(0.5, -0.8, 0.8), v(-1.1, 0.0, 0.0)),
+    (v(0.5, 0.8, 0.8), v(-1.1, 0.0, 0.0)),
+];
+
+/// The ship: an arrow into the screen, wings, a fin, wingtips.
+const SHIP: [(P, P); 10] = [
+    (v(0.0, 0.0, 1.3), v(0.9, 0.0, -0.6)),
+    (v(0.0, 0.0, 1.3), v(-0.9, 0.0, -0.6)),
+    (v(0.9, 0.0, -0.6), v(0.3, 0.0, -0.3)),
+    (v(-0.9, 0.0, -0.6), v(-0.3, 0.0, -0.3)),
+    (v(0.3, 0.0, -0.3), v(-0.3, 0.0, -0.3)),
+    (v(0.0, 0.0, 1.3), v(0.0, 0.35, -0.4)),
+    (v(0.0, 0.35, -0.4), v(0.3, 0.0, -0.3)),
+    (v(0.0, 0.35, -0.4), v(-0.3, 0.0, -0.3)),
+    (v(0.9, 0.0, -0.6), v(1.1, 0.1, -0.9)),
+    (v(-0.9, 0.0, -0.6), v(-1.1, 0.1, -0.9)),
+];
+
+/// Which fog a segment sees.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Fog {
+    /// The wall and the dust: short, and fading right at the camera too.
+    Wall,
+    /// Everything else: seen from further.
+    Objects,
 }
 
 /// The projection: a camera motor and a focal length.
@@ -629,298 +706,268 @@ struct Proj {
 }
 
 impl Proj {
-    /// A world point in the camera's frame (`cam << p`), or `None` behind it.
-    fn camera(&self, p: [f32; 3]) -> Option<[f32; 3]> {
-        let c = (self.cam << Point::xyz(p[0], p[1], p[2])).to_euclidean();
-        (c[2] > NEAR).then_some(c)
+    /// A world point in the camera's frame (`cam << p`), or `None` behind the near plane.
+    fn camera(&self, p: P) -> Option<P> {
+        let c = self.cam << p;
+        (self.depth(c) > NEAR).then_some(c)
     }
 
-    /// Screen units. The camera looks along `+z` with `+y` up, so its `+x` is on the left.
-    fn screen(&self, c: [f32; 3]) -> [f32; 2] {
-        [-c[0] / c[2] * self.focal, c[1] / c[2] * self.focal]
+    /// The depth of a camera-frame point.
+    fn depth(&self, c: P) -> f32 {
+        c.e021() / c.e123()
+    }
+
+    /// The screen point of a camera-frame point: the PGA2D point with the depth as its
+    /// weight (the perspective divide is normalizing it). The camera looks along `+z` with
+    /// `+y` up, so its `+x` is on the left.
+    fn screen(&self, c: P) -> Point2<(), f32> {
+        let h = Point2::new(-self.focal * c.e032(), self.focal * c.e013(), c.e021());
+        h.gp(1.0 / h.e12())
+    }
+
+    /// The world ray from the eye through a screen point: the camera-frame direction whose
+    /// projection it is, taken into the world, joined with the eye.
+    fn ray(&self, at: Point2<(), f32>) -> gax::pga3d::Line<(), f32> {
+        let [x, y] = at.to_euclidean();
+        let d = dir(-x / self.focal, y / self.focal, 1.0);
+        let eye = self.cam >> Point::xyz(0.0, 0.0, 0.0);
+        eye & (self.cam >> d)
     }
 
     /// A segment between two camera-frame points: width and glow by depth, faded by fog.
-    /// Objects see through more fog than the wall (`wall`), so they read at a distance.
     #[allow(clippy::too_many_arguments)]
-    fn segment_in(
+    fn segment(
         &self,
         out: &mut Vec<LineInstance>,
-        a: [f32; 3],
-        b: [f32; 3],
-        color: [f32; 4],
+        a: P,
+        b: P,
+        color: Light,
         width: f32,
         glow: f32,
-        wall: bool,
+        fog: Fog,
     ) {
-        let z = 0.5 * (a[2] + b[2]);
-        let fog = if wall {
-            let far = (1.0 - z / WALL_FOG).clamp(0.0, 1.0);
-            // Right at the camera the wall fades too, so it never floods the screen.
-            let near = ((z - 0.8) / 4.0).clamp(0.0, 1.0);
-            far * far * far * near
-        } else {
-            (1.0 - (z - 45.0) / (FOG + 20.0 - 45.0)).clamp(0.0, 1.0)
+        let z = 0.5 * (self.depth(a) + self.depth(b));
+        let k = match fog {
+            Fog::Wall => {
+                let far = (1.0 - z / WALL_FOG).clamp(0.0, 1.0);
+                // Right at the camera the wall fades too, so it never floods the screen.
+                let near = ((z - 0.8) / 4.0).clamp(0.0, 1.0);
+                far * far * far * near
+            }
+            Fog::Objects => (1.0 - (z - 45.0) / (FOG - 45.0)).clamp(0.0, 1.0),
         };
-        if fog <= 0.0 {
+        if k <= 0.0 {
             return;
         }
-        let k = self.focal / z;
-        let [ax, ay] = self.screen(a);
-        let [bx, by] = self.screen(b);
-        let (wmin, wmax) = if wall { (0.01, 0.1) } else { (0.035, 0.3) };
+        let scale = self.focal / z;
+        let (wmin, wmax) = if fog == Fog::Wall {
+            (0.01, 0.1)
+        } else {
+            (0.035, 0.3)
+        };
+        let style = [
+            (width * scale).clamp(wmin, wmax),
+            (glow * scale).clamp(0.08, 0.6),
+            0.3,
+            0.0,
+        ];
         out.push(scene::seg(
-            [ax, ay, bx, by],
-            fade(color, fog),
-            [
-                (width * k).clamp(wmin, wmax),
-                (glow * k).clamp(0.08, 0.6),
-                0.3,
-                0.0,
-            ],
+            self.screen(a),
+            self.screen(b),
+            light::fade(color, k),
+            style,
             identity(),
         ));
     }
 
-    fn segment(
-        &self,
-        out: &mut Vec<LineInstance>,
-        a: [f32; 3],
-        b: [f32; 3],
-        color: [f32; 4],
-        width: f32,
-        glow: f32,
-    ) {
-        self.segment_in(out, a, b, color, width, glow, false);
-    }
-
-    /// A segment between two straightened points, clipped at the near plane.
-    fn line3(
-        &self,
-        out: &mut Vec<LineInstance>,
-        world: &dyn Fn([f32; 3]) -> [f32; 3],
-        a: [f32; 3],
-        b: [f32; 3],
-        color: [f32; 4],
-        width: f32,
-    ) {
-        let ca = (self.cam << world_point(world(a))).to_euclidean();
-        let cb = (self.cam << world_point(world(b))).to_euclidean();
-        let (ca, cb) = match (ca[2] > NEAR, cb[2] > NEAR) {
+    /// A segment between two world points, cut at the near plane by its meet with it.
+    fn line(&self, out: &mut Vec<LineInstance>, a: P, b: P, color: Light, width: f32, fog: Fog) {
+        let (ca, cb) = (self.cam << a, self.cam << b);
+        let (fa, fb) = (self.depth(ca) > NEAR, self.depth(cb) > NEAR);
+        let near = Plane::from_normal([0.0, 0.0, 1.0], NEAR);
+        let cut = || {
+            let m = (ca & cb) ^ near;
+            m.gp(1.0 / m.e123())
+        };
+        let (ca, cb) = match (fa, fb) {
             (true, true) => (ca, cb),
             (false, false) => return,
-            (true, false) => (ca, clip(ca, cb)),
-            (false, true) => (clip(cb, ca), cb),
+            (true, false) => (ca, cut()),
+            (false, true) => (cut(), cb),
         };
-        self.segment(out, ca, cb, color, width, width * 5.0);
+        self.segment(out, ca, cb, color, width, width * 5.0, fog);
     }
 
-    /// A wireframe solid at `q`, in the track's frame there, spun about its local z.
+    /// A wireframe solid at `q` (straightened), turned by `turn`, scaled by `size`: each
+    /// vertex is a direction from the centre.
     #[allow(clippy::too_many_arguments)]
     fn solid(
         &self,
         out: &mut Vec<LineInstance>,
-        world: &dyn Fn([f32; 3]) -> [f32; 3],
-        q: [f32; 3],
-        edges: &[[f32; 6]],
+        place: &dyn Fn(P) -> P,
+        q: P,
+        turn: Frame,
+        edges: &[(P, P)],
         size: f32,
-        spin: f32,
-        color: [f32; 4],
+        color: Light,
     ) {
-        let (c, s) = (spin.cos(), spin.sin());
-        let (c2, s2) = ((spin * 0.7).cos(), (spin * 0.7).sin());
-        let rot = |v: [f32; 3]| {
-            // About z, then about x: a tumble.
-            let (x, y, z) = (v[0] * c - v[1] * s, v[0] * s + v[1] * c, v[2]);
-            let (y, z) = (y * c2 - z * s2, y * s2 + z * c2);
-            [q[0] + x * size, q[1] + y * size, q[2] + z * size]
-        };
-        for e in edges {
-            let a = rot([e[0], e[1], e[2]]);
-            let b = rot([e[3], e[4], e[5]]);
-            self.line3(out, world, a, b, color, 0.05);
+        for &(a, b) in edges {
+            let (a, b) = (q + (turn >> a).gp(size), q + (turn >> b).gp(size));
+            self.line(out, place(a), place(b), color, 0.05, Fog::Objects);
         }
     }
 
-    /// A ring across the tunnel (perpendicular to the track) at `q`.
+    /// A ring across the tunnel (perpendicular to the track) at `q`: chords of a radius
+    /// turned about the line through `q` along the track.
     fn ring(
         &self,
         out: &mut Vec<LineInstance>,
-        world: &dyn Fn([f32; 3]) -> [f32; 3],
-        q: [f32; 3],
+        place: &dyn Fn(P) -> P,
+        q: P,
         r: f32,
-        color: [f32; 4],
+        color: Light,
         n: usize,
     ) {
-        for k in 0..n {
-            let (a, b) = (
-                k as f32 * core::f32::consts::TAU / n as f32,
-                (k + 1) as f32 * core::f32::consts::TAU / n as f32,
-            );
-            self.line3(
-                out,
-                world,
-                [q[0] + r * a.cos(), q[1] + r * a.sin(), q[2]],
-                [q[0] + r * b.cos(), q[1] + r * b.sin(), q[2]],
-                color,
-                0.04,
-            );
+        let spin = Motor::rotation(q & dir(0.0, 0.0, 1.0), core::f32::consts::TAU / n as f32);
+        let mut a = q + dir(r, 0.0, 0.0);
+        for _ in 0..n {
+            let b = spin >> a;
+            self.line(out, place(a), place(b), color, 0.04, Fog::Objects);
+            a = b;
         }
-    }
-
-    /// The ship at `q`, rolled about its axis by `roll`.
-    fn ship(
-        &self,
-        out: &mut Vec<LineInstance>,
-        world: &dyn Fn([f32; 3]) -> [f32; 3],
-        q: [f32; 3],
-        roll: f32,
-        color: [f32; 4],
-    ) {
-        let (c, s) = (roll.cos(), roll.sin());
-        let place = |v: [f32; 3]| {
-            let (x, y) = (v[0] * c - v[1] * s, v[0] * s + v[1] * c);
-            [q[0] + x * 0.7, q[1] + y * 0.7, q[2] + v[2] * 0.7]
-        };
-        for e in &SHIP {
-            let a = place([e[0], e[1], e[2]]);
-            let b = place([e[3], e[4], e[5]]);
-            self.line3(out, world, a, b, color, 0.06);
-        }
-        // The mirrored wingtip fin.
-        let a = place([-0.9, 0.0, -0.6]);
-        let b = place([-1.1, 0.1, -0.9]);
-        self.line3(out, world, a, b, color, 0.06);
-    }
-}
-
-fn world_point(p: [f32; 3]) -> Point<(), f32> {
-    Point::xyz(p[0], p[1], p[2])
-}
-
-/// The point on `a → b` at the near plane (`a` in front, `b` behind).
-fn clip(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    let t = (a[2] - NEAR) / (a[2] - b[2]);
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, NEAR]
-}
-
-/// Map the player's screen-space input into the tunnel's cross-section at the ship: where do
-/// the tunnel's `x` and `y` axes point on screen (projected through the camera), and which
-/// combination of them is the input? Also used for the mouse reticle at the aim depth.
-pub fn screen_to_track(view: &View, w: &World, depth: f32, screen: [f32; 2]) -> [f32; 2] {
-    let p = Proj {
-        cam: view.cam,
-        focal: view.focal,
-    };
-    let s = w.ship.s() + depth;
-    let at = |x: f32, y: f32| {
-        p.camera(w.track.point(x, y, s))
-            .map(|c| p.screen(c))
-            .unwrap_or([0.0, 0.0])
-    };
-    let o = at(0.0, 0.0);
-    let ex = at(1.0, 0.0);
-    let ey = at(0.0, 1.0);
-    let (ax, ay) = (ex[0] - o[0], ex[1] - o[1]);
-    let (bx, by) = (ey[0] - o[0], ey[1] - o[1]);
-    let det = ax * by - ay * bx;
-    if det.abs() < 1e-6 {
-        return [0.0, 0.0];
-    }
-    let (dx, dy) = (screen[0] - o[0], screen[1] - o[1]);
-    [(dx * by - dy * bx) / det, (ax * dy - ay * dx) / det]
-}
-
-/// Where a point in straightened coordinates is on screen (for the bot and tests).
-pub fn track_to_screen(view: &View, w: &World, q: [f32; 3]) -> Option<[f32; 2]> {
-    let p = Proj {
-        cam: view.cam,
-        focal: view.focal,
-    };
-    p.camera(w.track.point(q[0], q[1], q[2]))
-        .map(|c| p.screen(c))
-}
-
-/// A direction on screen (movement) as a direction across the tunnel at the ship.
-pub fn screen_dir_to_track(view: &View, w: &World, v: [f32; 2]) -> [f32; 2] {
-    let base = screen_to_track(view, w, 0.0, [0.0, 0.0]);
-    let tip = screen_to_track(view, w, 0.0, [v[0], v[1]]);
-    let (x, y) = (tip[0] - base[0], tip[1] - base[1]);
-    let l = (x * x + y * y).sqrt();
-    let want = (v[0] * v[0] + v[1] * v[1]).sqrt().min(1.0);
-    if l < 1e-6 {
-        [0.0, 0.0]
-    } else {
-        [x / l * want, y / l * want]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tunnel::{Input, at};
 
-    /// The camera without roll looks where the target says, and its up stays in the world's
-    /// vertical plane (no roll).
+    fn flown(seed: u64, seconds: usize) -> World {
+        let mut w = World::new(seed);
+        w.ship.invulnerable = 1e9;
+        for _ in 0..120 * seconds {
+            w.tick(&Input::default());
+        }
+        w
+    }
+
+    /// The level camera looks down the track and its right axis is horizontal (no roll).
     #[test]
     fn the_camera_looks_ahead_without_rolling() {
-        let mut w = World::new(4);
-        for _ in 0..120 * 20 {
-            w.tick(&crate::tunnel::Input::default());
-        }
+        let w = flown(4, 20);
         let v = View::new(85.0);
         let cam = v.target(&w, 0.0);
-        let f = cam >> Point::direction(0.0, 0.0, 1.0);
-        let r = cam >> Point::direction(1.0, 0.0, 0.0);
-        // Its right axis is horizontal.
-        assert!(r.e013().abs() < 1e-4, "rolled: {}", r.e013());
-        // It looks at a point down the track, which projects near the screen's centre.
-        let s = w.ship.s();
-        let ahead = w.track.point(0.0, 0.0, s + 16.0);
+        let right = cam >> dir(1.0, 0.0, 0.0);
+        assert!(right.e013().abs() < 1e-4, "rolled: {}", right.e013());
+        // The axis ahead lands near the screen's centre.
         let p = Proj {
             cam,
             focal: v.focal,
         };
-        let c = p.camera(ahead).expect("in front");
-        let [x, y] = p.screen(c);
+        let ahead = w.track.place(at(0.0, 0.0, w.ship.s() + 16.0));
+        let [x, y] = p.screen(p.camera(ahead).expect("in front")).to_euclidean();
         assert!(x.abs() < 3.0 && y.abs() < 4.0, "{x} {y}");
-        let _ = f;
+    }
+
+    /// The ship's cross-section fills the screen: its edge is well out towards the border.
+    #[test]
+    fn the_cross_section_uses_the_screen() {
+        let w = flown(2, 5);
+        let mut v = View::new(85.0);
+        v.update(&w, 0.0, 1.0);
+        let p = v.proj();
+        let s = w.ship.s();
+        let edge = crate::tunnel::around(crate::tunnel::SHIP_RADIUS, 0.0, s);
+        let c = p.camera(w.track.place(edge)).expect("in front");
+        let centre = p.camera(w.track.place(at(0.0, 0.0, s))).expect("in front");
+        let r = (p.screen(c) & p.screen(centre)).norm();
+        assert!(r > 10.0, "the cross-section is {r} of 18 units");
     }
 
     /// Input to the right on screen moves the ship to the right on screen, however the track
-    /// has rolled.
+    /// has rolled; and the reticle's ray comes back as the point it was cast through.
     #[test]
-    fn screen_directions_map_through_the_camera() {
-        let mut w = World::new(8);
-        for _ in 0..120 * 30 {
-            w.tick(&crate::tunnel::Input::default());
-        }
+    fn screen_directions_and_rays_map_through_the_camera() {
+        let w = flown(8, 30);
         let mut v = View::new(85.0);
         v.update(&w, 0.0, 1.0);
-        let d = screen_dir_to_track(&v, &w, [1.0, 0.0]);
-        let s = w.ship.s();
-        let [x, y] = w.ship.xy();
-        let p = Proj {
-            cam: v.cam,
-            focal: v.focal,
-        };
-        let a = p.screen(p.camera(w.track.point(x, y, s)).unwrap());
-        let b = p.screen(p.camera(w.track.point(x + d[0], y + d[1], s)).unwrap());
+        let d = v.across(&w, Point2::direction(1.0, 0.0));
+        let p = v.proj();
+        let a = p.screen(p.camera(w.track.place(w.ship.pos)).unwrap());
+        let b = p.screen(p.camera(w.track.place(w.ship.pos + d)).unwrap());
+        let (a, b) = (a.to_euclidean(), b.to_euclidean());
         assert!(
-            b[0] - a[0] > 0.1 && (b[1] - a[1]).abs() < 0.05 * (b[0] - a[0]),
+            b[0] - a[0] > 0.1 && (b[1] - a[1]).abs() < 0.1 * (b[0] - a[0]),
             "{a:?} {b:?}"
         );
+        // Cast through a screen point at the aim depth, and project back: the same point.
+        let s = w.ship.s() + AIM_DEPTH;
+        let at_screen = Point2::xy(3.0, -2.0);
+        let q = v.through(&w, at_screen, s);
+        assert!((arc(q) - s).abs() < 0.05, "{} vs {s}", arc(q));
+        let back = p.screen(p.camera(w.track.place(q)).unwrap());
+        assert!(
+            (back & at_screen).norm() < 0.05,
+            "{:?}",
+            back.to_euclidean()
+        );
+    }
+
+    /// The reticle locks onto the enemy under it, at any depth, and the aim is that enemy.
+    #[test]
+    fn the_reticle_locks_what_is_under_it() {
+        let mut w = flown(6, 12);
+        w.enemies.retain(|e| e.foe == Foe::Drone);
+        let mut v = View::new(85.0);
+        v.update(&w, 0.0, 1.0);
+        let s = w.ship.s();
+        let Some(e) = w.enemies.iter().find(|e| arc(e.pos) > s + 5.0).cloned() else {
+            return;
+        };
+        let p = v.proj();
+        let on_screen = p.screen(p.camera(w.track.place(e.pos)).unwrap());
+        let aim = v.aim(&w, on_screen + Point2::direction(0.08, -0.05));
+        assert_eq!(v.lock, Some(e.id));
+        assert!((aim & e.pos).norm() < 1e-4);
     }
 
     #[test]
     fn the_shadow_falls_on_the_wall() {
-        // The meet of the light-to-ship line with the wall's tangent plane is on the wall.
-        let q = [3.0f32, 1.0, 10.0];
-        let r = (q[0] * q[0] + q[1] * q[1]).sqrt();
-        let ray = Point::xyz(0.0, 0.0, 8.0) & Point::xyz(q[0], q[1], q[2]);
-        let wall = Plane::from_normal([q[0] / r, q[1] / r, 0.0], RADIUS);
-        let h = (ray ^ wall).to_euclidean();
-        let rh = (h[0] * h[0] + h[1] * h[1]).sqrt();
-        assert!((rh - RADIUS).abs() < 1e-3, "{h:?}");
-        assert!(h[2] > q[2], "the shadow falls ahead");
+        let q = at(3.0, 1.0, 10.0);
+        let base = foot(q);
+        let r = off_axis(q);
+        let wall = (base + (q - base).gp(RADIUS / r)) | (base & q);
+        let hit = ((base - dir(0.0, 0.0, 2.0)) & q) ^ wall;
+        let hit = hit.gp(1.0 / hit.e123());
+        assert!(
+            (off_axis(hit) - RADIUS).abs() < 1e-3,
+            "{:?}",
+            hit.to_euclidean()
+        );
+        assert!(arc(hit) > arc(q), "the shadow falls ahead");
+    }
+
+    #[test]
+    fn a_projection_is_a_weight() {
+        let p = Proj {
+            cam: Motor::translation(0.0, 0.0, 0.0),
+            focal: 10.0,
+        };
+        let s = p
+            .screen(p.camera(at(2.0, 1.0, 4.0)).unwrap())
+            .to_euclidean();
+        assert!((s[0] + 5.0).abs() < 1e-5 && (s[1] - 2.5).abs() < 1e-5);
+        // A segment across the near plane is cut where it meets it.
+        let mut out = Vec::new();
+        p.line(
+            &mut out,
+            at(0.0, 0.0, -1.0),
+            at(0.0, 1.0, 3.0),
+            palette::HUD,
+            0.05,
+            Fog::Objects,
+        );
+        assert_eq!(out.len(), 1);
     }
 }

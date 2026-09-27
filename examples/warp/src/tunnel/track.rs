@@ -75,7 +75,7 @@ impl Track {
         // rotation about `forward × up` (in the frame) turns it back.
         let up = last << Point::direction(0.0, 1.0, 0.0);
         let (ux, uy, uz) = (up.e032(), up.e013(), up.e021());
-        let across = (ux * ux + uy * uy).sqrt().max(1e-3);
+        let across = Point::direction(ux, uy, 0.0).ideal_norm().max(1e-3);
         let o = Point::xyz(0.0, 0.0, 0.0);
         let level = Line::rotation_twist(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
         let step = (Track::twist(pitch, yaw, roll) + level).gp(SEG).exp();
@@ -112,9 +112,24 @@ impl Track {
         interpolate(self.keys[i], self.keys[i + 1], t)
     }
 
-    /// The world point at straightened coordinates `(x, y, s)`.
-    pub fn point(&self, x: f32, y: f32, s: f32) -> [f32; 3] {
-        (self.frame(s) >> Point::xyz(x, y, 0.0)).to_euclidean()
+    /// The world point of a straightened point `(x, y, s)`: the frame at `s` applied to
+    /// `(x, y, 0)`.
+    pub fn place(&self, p: Point<(), f32>) -> Point<(), f32> {
+        let s = crate::tunnel::arc(p);
+        self.frame(s) >> (p - Point::direction(0.0, 0.0, s))
+    }
+
+    /// The straightened point of a world point near the track, starting from arc length `s`:
+    /// in the frame at `s` (`frame(s) << p`) the point lies `z` further along; two corrections
+    /// settle it.
+    pub fn straighten(&self, p: Point<(), f32>, s: f32) -> Point<(), f32> {
+        let mut s = s;
+        let mut local = self.frame(s) << p;
+        for _ in 0..2 {
+            s += crate::tunnel::arc(local);
+            local = self.frame(s) << p;
+        }
+        local + Point::direction(0.0, 0.0, s)
     }
 }
 
@@ -122,8 +137,12 @@ impl Track {
 mod tests {
     use super::*;
 
-    fn dist(a: [f32; 3], b: [f32; 3]) -> f32 {
-        ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+    fn dist(a: Point<(), f32>, b: Point<(), f32>) -> f32 {
+        (a & b).norm()
+    }
+
+    fn on_axis(t: &Track, s: f32) -> Point<(), f32> {
+        t.place(Point::xyz(0.0, 0.0, s))
     }
 
     /// The axis is parametrized by arc length: points `ds` apart are `ds` apart in space (for
@@ -136,15 +155,15 @@ mod tests {
         let ds = 0.05;
         let mut s = 0.0;
         while s < 2000.0 {
-            let a = t.point(0.0, 0.0, s);
-            let b = t.point(0.0, 0.0, s + ds);
+            let a = on_axis(&t, s);
+            let b = on_axis(&t, s + ds);
             let d = dist(a, b);
             assert!((d - ds).abs() < 2e-3, "at {s}: {d}");
-            // The forward axis is the direction of travel.
+            // The forward axis is the direction of travel: the line from `a` towards it
+            // passes through `b`.
             let f = t.frame(s) >> Point::direction(0.0, 0.0, 1.0);
-            let dir = [(b[0] - a[0]) / d, (b[1] - a[1]) / d, (b[2] - a[2]) / d];
-            let dot = f.e032() * dir[0] + f.e013() * dir[1] + f.e021() * dir[2];
-            assert!(dot > 0.999, "at {s}: {dot}");
+            let off = ((a & f) & b).norm();
+            assert!(off < 5e-4, "at {s}: {off}");
             // Never steep: the heading's vertical part stays small.
             assert!(f.e013().abs() < 0.6, "at {s}: climbing {}", f.e013());
             s += 3.7;
@@ -165,8 +184,21 @@ mod tests {
     fn forgetting_the_past_keeps_the_future() {
         let mut t = Track::new(9);
         t.extend(500.0, 0.0);
-        let at = t.point(1.0, -2.0, 420.0);
+        let p = Point::xyz(1.0, -2.0, 420.0);
+        let at = t.place(p);
         t.extend(600.0, 400.0);
-        assert!(dist(at, t.point(1.0, -2.0, 420.0)) < 1e-4);
+        assert!(dist(at, t.place(p)) < 1e-4);
+    }
+
+    /// Straightening undoes placing, near the track.
+    #[test]
+    fn straighten_inverts_place() {
+        let mut t = Track::new(3);
+        t.extend(800.0, 0.0);
+        for k in 0..40 {
+            let p = Point::xyz(2.0, -3.0, 13.0 + 17.0 * k as f32);
+            let back = t.straighten(t.place(p), 13.0 + 17.0 * k as f32 - 2.5);
+            assert!(dist(back, p) < 2e-3, "{:?}", back.to_euclidean());
+        }
     }
 }

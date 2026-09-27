@@ -1,6 +1,8 @@
 // The lattice as glowing lines, pulled from the node buffer: instance `k` is an edge between
-// two neighbouring nodes. Stretched edges glow brighter and shift towards white.
+// two neighbouring nodes. Stretched or moving edges run hot: their light mixes towards a
+// violet-white (traced kernels: `edge_heat` by joins and ideal norms, `light_mix`).
 import package::common::{Camera, LineVarying, line_vertex, line_shade};
+import package::fused::{edge_heat, light_mix, light_fade};
 import gax::pga2d::Point;
 
 struct Node {
@@ -11,8 +13,8 @@ struct Node {
 struct GridLook {
     // Columns, rows, unused, unused.
     dims: vec4<u32>,
-    // Base colour (rgb) and intensity.
-    color: vec4<f32>,
+    // The lattice's light.
+    light: gax::pga3d::Point,
     // Half width, glow radius, glow strength, rest length.
     style: vec4<f32>,
 }
@@ -43,15 +45,15 @@ fn vs_main(@builtin(vertex_index) k: u32, @builtin(instance_index) e: u32) -> Li
         i1 = i0 + w;
         major = i % 4u == 0u;
     }
-    let a = nodes[i0].p.c0.xy;
-    let b = nodes[i1].p.c0.xy;
-    let stretch = clamp(abs(length(b - a) / look.style.w - 1.0) * 1.2, 0.0, 1.0);
-    let energy = clamp((length(nodes[i0].v.c0.xy) + length(nodes[i1].v.c0.xy)) * 0.012, 0.0, 1.0);
-    let hot = max(stretch, energy);
-    let base = look.color.rgb * look.color.a * select(0.35, 1.0, major);
-    let color = vec4<f32>(mix(base, vec3<f32>(0.55, 0.45, 1.0) * look.color.a * 1.6, hot), 1.0);
+    let a = nodes[i0];
+    let b = nodes[i1];
+    let hot = edge_heat(a.p, b.p, a.v, b.v, array<f32, 3>(look.style.w, 1.2, 0.012));
+    let base = light_fade(look.light, select(0.35, 1.0, major));
+    // Violet-white, at 1.6 times the lattice's own intensity.
+    let glare = light_fade(gax::pga3d::Point(vec4<f32>(0.55, 0.45, 1.0, 1.0)), look.light.c0.w * 1.6);
+    let light = light_mix(base, glare, hot);
     let style = vec4<f32>(look.style.x * select(0.6, 1.0, major), look.style.y, look.style.z * (1.0 + 0.6 * hot), 0.0);
-    return line_vertex(cam, k, a, b, color, style);
+    return line_vertex(cam, k, a.p.c0.xy, b.p.c0.xy, light.c0, style);
 }
 
 @fragment

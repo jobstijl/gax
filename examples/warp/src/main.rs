@@ -11,7 +11,9 @@ mod headless;
 mod input;
 #[cfg(test)]
 mod kernels;
+mod light;
 mod render;
+mod signal;
 mod sim;
 mod store;
 mod tunnel;
@@ -60,8 +62,6 @@ struct TunnelRun {
     world: tunnel::World,
     view: render::tunnel::View,
     input: tunnel::Input,
-    /// The reticle across the tunnel.
-    aim: [f32; 2],
 }
 const PAUSE_ITEMS: [&str; 2] = ["RESUME", "END RUN"];
 
@@ -199,7 +199,6 @@ impl Game {
             world: tunnel::World::new(seed),
             view,
             input: tunnel::Input::default(),
-            aim: [0.0, 0.0],
         }));
         self.mode = Mode::Tunnel;
         self.screen = Screen::Playing;
@@ -663,27 +662,19 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
 /// One frame of the Tunnel: controls through the camera, the fixed-step simulation, its view,
 /// and sound.
 fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::Sound) {
-    use render::tunnel::{screen_dir_to_track, screen_to_track};
+    use gax::pga2d::Point as Point2;
     let playing = g.screen == Screen::Playing;
     let flight = g.flight;
     let run = g.tunnel.as_mut().expect("a tunnel run");
-    // Screen directions become directions across the tunnel, whatever its roll on screen.
-    let mv = [input.movement.e20(), input.movement.e01()];
-    let movement = screen_dir_to_track(&run.view, &run.world, mv);
-    let [sx, sy] = run.world.ship.xy();
-    let mut aim = if let Some([x, y]) = flight.stick {
-        let d = screen_dir_to_track(&run.view, &run.world, [x, y]);
-        [sx + d[0] * 5.0, sy + d[1] * 5.0]
-    } else if let Some(c) = flight.cursor {
-        screen_to_track(&run.view, &run.world, tunnel::AIM_DEPTH, c)
-    } else {
-        [sx, sy]
+    // Screen directions become directions across the tunnel, through the camera.
+    let movement = run.view.across(&run.world, input.movement);
+    // The reticle: the cursor, or the right stick pushing it out from the ship on screen.
+    let reticle = match (flight.stick, flight.cursor) {
+        (Some([x, y]), _) => run.view.ship_on_screen(&run.world) + Point2::direction(x, y).gp(9.0),
+        (None, Some([x, y])) => Point2::xy(x, y),
+        (None, None) => run.view.ship_on_screen(&run.world) + Point2::direction(0.0, 4.0),
     };
-    let r = (aim[0] * aim[0] + aim[1] * aim[1]).sqrt();
-    if r > 6.5 {
-        aim = [aim[0] * 6.5 / r, aim[1] * 6.5 / r];
-    }
-    run.aim = aim;
+    let aim = run.view.aim(&run.world, reticle);
     // Edges wait for the tick that consumes them.
     run.input = tunnel::Input {
         movement,
@@ -710,7 +701,7 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
             run.input.bomb = false;
             run.input.roll = 0;
             run.view.on_events(&run.world.events);
-            let heard = tunnel_sounds(&run.world);
+            let heard = tunnel_sounds(&run.world, &run.view);
             sound.play(&heard, run.world.mult, [0.0, 0.0], sim::body::identity());
             if playing && run.world.events.contains(&tunnel::Event::GameOver) {
                 g.best = g.best.max(run.world.score);
@@ -732,12 +723,11 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
     );
 }
 
-/// The Tunnel's events as the sound hears them: across the tunnel is the pan, the depth
-/// ahead is the distance.
-fn tunnel_sounds(w: &tunnel::World) -> Vec<sim::Event> {
+/// The Tunnel's events as the sound hears them: each position taken into the camera's frame
+/// (`cam << p`, the listener), where across is the pan and the depth the distance.
+fn tunnel_sounds(w: &tunnel::World, view: &render::tunnel::View) -> Vec<sim::Event> {
     use tunnel::Event as T;
-    let s = w.ship.s();
-    let at = |p: [f32; 3]| [p[0] * 4.0, p[2] - s];
+    let at = |p: tunnel::P| view.listen(w.track.place(p));
     w.events
         .iter()
         .filter_map(|e| {
@@ -772,6 +762,10 @@ fn tunnel_sounds(w: &tunnel::World) -> Vec<sim::Event> {
                 T::Respawn => sim::Event::Respawn,
                 T::Extra { life } => sim::Event::Extra { life },
                 T::GameOver => sim::Event::GameOver,
+                T::Dive { pos } => sim::Event::Warn {
+                    pos: at(pos),
+                    kind: tunnel::Foe::Drone.kind(),
+                },
                 T::Roll { .. } => return None,
             })
         })
@@ -906,16 +900,11 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     {
         // Everything is projected by hand into screen units: the HUD's camera draws it all.
         let hud_cam = scene::camera(sim::body::pose_at(0.0, 0.0, 0.0), 18.0, size, game.time);
-        run.view.draw(
-            &run.world,
-            game.alpha,
-            game.time,
-            run.aim,
-            &mut game.world_lines,
-        );
+        run.view
+            .draw(&run.world, game.alpha, game.time, &mut game.world_lines);
         if game.screen == Screen::Paused {
             for l in &mut game.world_lines {
-                l.color[3] *= 0.12;
+                l.recede(0.2);
             }
         }
         let post = run.view.post();
@@ -929,7 +918,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
             grid_steps: &[],
             wells: &[],
             spawn: &[],
-            grid_color: [0.0; 4],
+            grid_color: light::DARK,
             post,
             plane: false,
         };
@@ -941,17 +930,9 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     scene::world_lines(&game.sim, game.alpha, game.time, &mut game.world_lines);
     for (p, text, age, color) in &game.fx.popups {
         // Rising and fading.
-        let fade = (1.0 - age / 1.1).max(0.0);
-        let c = [color[0], color[1], color[2], color[3] * fade];
-        scene::text(
-            &mut game.world_lines,
-            text,
-            p[0],
-            p[1] + 0.8 + age * 1.5,
-            0.9,
-            c,
-            Align::Center,
-        );
+        let c = light::fade(*color, (1.0 - age / 1.1).max(0.0));
+        let [x, y] = (*p + gax::pga2d::Point::direction(0.0, 0.8 + age * 1.5)).to_euclidean();
+        scene::text(&mut game.world_lines, text, x, y, 0.9, c, Align::Center);
     }
     // Menus over the world: the world steps back.
     let backdrop = matches!(
@@ -960,19 +941,26 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     );
     if backdrop {
         for l in &mut game.world_lines {
-            l.color[3] *= 0.12;
+            l.recede(0.2);
         }
     }
     hud(game, size, renderer.timings());
     let wells = Fx::particle_wells(&game.sim);
-    let post = game.fx.post(&camera);
+    let post = game
+        .fx
+        .post(&scene::view_map(game.cam, game.half_height, size));
     let intensity = if game.screen == Screen::Playing {
         game.sim.director.intensity
     } else {
         0.3
     };
-    let mut grid_color = palette::GRID;
-    grid_color[3] *= (0.85 + 0.5 * intensity) * if backdrop { 0.5 } else { 1.0 };
+    let dim = if backdrop { 0.5 } else { 1.0 };
+    // The lattice warms towards violet as the intensity rises: its hue turned about the grey
+    // axis.
+    let grid_color = light::fade(
+        light::hue_shift(palette::GRID, 0.5 * intensity),
+        (0.85 + 0.5 * intensity) * dim,
+    );
     let f = render::Frame {
         camera,
         hud: hud_cam,
@@ -1061,16 +1049,11 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
     let aspect = size[0] as f32 / size[1] as f32;
     let (left, right, top) = (-18.0 * aspect + 2.2, 18.0 * aspect - 2.2, 18.0 - 2.6);
     let hud = palette::HUD;
-    let dim = [hud[0], hud[1], hud[2], hud[3] * 0.45];
-    let blink = (g.time * 3.0).sin() > -0.3;
+    let dim = light::fade(hud, 0.45);
+    let blink = signal::wave(g.time * 3.0) > -0.3;
     // Menu rows: the selected one bright and pulsing, the others faint.
-    let hot = [
-        hud[0],
-        hud[1],
-        hud[2],
-        hud[3] * (1.1 + 0.2 * (g.time * 5.0).sin()),
-    ];
-    let faint = [hud[0], hud[1], hud[2], hud[3] * 0.3];
+    let hot = light::fade(hud, 1.1 + 0.2 * signal::wave(g.time * 5.0));
+    let faint = light::fade(hud, 0.3);
     match g.screen {
         Screen::Title => {
             scene::text(
@@ -1079,7 +1062,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 0.0,
                 7.0,
                 6.5,
-                [0.55, 0.7, 1.0, 1.7],
+                light::light(0.55, 0.7, 1.0, 1.7),
                 Align::Center,
             );
             scene::text(
@@ -1131,13 +1114,10 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                         for k in 0..10 {
                             let x = rx - 9.5 * 0.9 + k as f32 * 0.9;
                             let lit = k < level;
-                            let bc = if lit {
-                                [c[0], c[1], c[2], c[3] * 1.2]
-                            } else {
-                                [c[0], c[1], c[2], c[3] * 0.25]
-                            };
+                            let bc = light::fade(c, if lit { 1.2 } else { 0.25 });
                             out.push(scene::seg(
-                                [x, y + 0.15, x, y + 0.35 + 0.1 * k as f32],
+                                scene::pt(x, y + 0.15),
+                                scene::pt(x, y + 0.35 + 0.1 * k as f32),
                                 bc,
                                 [0.09, 0.3, 0.2, 0.0],
                                 sim::body::identity(),
@@ -1218,12 +1198,12 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             );
             if let Some(speed) = s.speed {
                 // The speed bonus: boost for more points.
-                let c = [
+                let c = light::light(
                     1.0,
                     0.7 + 0.3 * (2.0 - speed),
                     0.4,
                     1.2 + (speed - 1.0) * 3.0,
-                ];
+                );
                 scene::text(
                     out,
                     &format!("SPEED X{speed:.1}"),
@@ -1246,23 +1226,8 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             for k in 0..s.bombs.min(8) {
                 let x = right - 0.5 - k as f32 * 1.3;
                 let m = sim::body::pose_at(x, top - 1.9, 0.0);
-                for i in 0..12 {
-                    let (a, b) = (
-                        i as f32 * core::f32::consts::FRAC_PI_6,
-                        (i + 1) as f32 * core::f32::consts::FRAC_PI_6,
-                    );
-                    out.push(scene::seg(
-                        [
-                            0.45 * a.cos(),
-                            0.45 * a.sin(),
-                            0.45 * b.cos(),
-                            0.45 * b.sin(),
-                        ],
-                        [0.55, 0.8, 1.0, 2.0],
-                        [0.04, 0.2, 0.2, 0.0],
-                        m,
-                    ));
-                }
+                let ring = light::light(0.55, 0.8, 1.0, 2.0);
+                scene::circle(out, 0.45, 12, 0.0, ring, [0.04, 0.2, 0.2, 0.0], m);
             }
             if let Phase::Dead(_) = s.phase {
                 scene::text(
@@ -1375,7 +1340,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                     0.0,
                     3.0,
                     3.2,
-                    [1.0, 0.35, 0.5, 3.0],
+                    light::light(1.0, 0.35, 0.5, 3.0),
                     Align::Center,
                 );
                 scene::text(
@@ -1479,12 +1444,11 @@ impl Stats {
 /// A vertical menu, centred, with the selected item marked.
 fn menu_items(out: &mut Vec<LineInstance>, items: &[&str], sel: usize, y0: f32, time: f32) {
     let hud = palette::HUD;
-    let dim = [hud[0], hud[1], hud[2], hud[3] * 0.45];
+    let dim = light::fade(hud, 0.45);
     for (k, item) in items.iter().enumerate() {
         let y = y0 - k as f32 * 2.2;
         if k == sel {
-            let pulse = 1.0 + 0.25 * (time * 5.0).sin();
-            let c = [hud[0], hud[1], hud[2], hud[3] * pulse];
+            let c = light::fade(hud, 1.0 + 0.25 * signal::wave(time * 5.0));
             scene::text(out, &format!("> {item} <"), 0.0, y, 1.4, c, Align::Center);
         } else {
             scene::text(out, item, 0.0, y, 1.2, dim, Align::Center);

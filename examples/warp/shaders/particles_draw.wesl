@@ -1,11 +1,14 @@
-// Particles as short glowing streaks along their velocity, fading and cooling with age.
+// Particles as short glowing streaks along their velocity, fading and cooling with age: a
+// light that starts whitened and cools into its colour, dimmed as it dies (traced light
+// kernels, the same as the CPU's).
 import package::common::{Camera, LineVarying, line_vertex, line_shade};
+import package::fused::{streak_tail, light_whiten, light_fade};
 import gax::pga2d::Point;
 
 struct Particle {
     p: Point,
     v: Point,
-    color: vec4<f32>,
+    light: gax::pga3d::Point,
     life: vec4<f32>,
 }
 
@@ -17,15 +20,12 @@ fn vs_main(@builtin(vertex_index) k: u32, @builtin(instance_index) i: u32) -> Li
     let q = particles[i];
     let t = clamp(q.life.x / max(q.life.y, 1e-3), 0.0, 1.0);
     let alive = select(0.0, 1.0, q.life.x < q.life.y);
-    let b = q.p.c0.xy;
-    let v = q.v.c0.xy;
-    let a = b - v * q.life.w;
+    let tail = streak_tail(q.p, q.v, q.life.w);
     let fade = (1.0 - t) * (1.0 - t) * alive;
-    // Hot particles start whiter and cool into their colour.
-    let hot = mix(vec3<f32>(1.0, 1.0, 1.0), q.color.rgb, clamp(t * 3.0, 0.0, 1.0));
-    let color = vec4<f32>(hot, q.color.a * fade);
+    let hot = light_whiten(q.light, 1.0 - clamp(t * 3.0, 0.0, 1.0));
+    let light = light_fade(hot, fade);
     let style = vec4<f32>(0.045 * alive, 0.22 * alive, 0.35, 0.0);
-    return line_vertex(cam, k, a, b, color, style);
+    return line_vertex(cam, k, tail.c0.xy, q.p.c0.xy, light.c0, style);
 }
 
 @fragment
