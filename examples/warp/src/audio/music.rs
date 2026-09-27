@@ -684,7 +684,8 @@ mod tests {
         let (a, ca, sa) = run(0.0, false);
         let (b, cb, sb) = run(1.0, true);
         assert_eq!((ca, sa), (cb, sb));
-        let rms = |x: &[f32]| (x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32).sqrt();
+        let rms =
+            |x: &[f32]| gax::Real::sqrt(x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32);
         let d: Vec<f32> = a.iter().zip(&b).map(|(x, y)| y - x).collect();
         let db = 20.0 * (rms(&d[48000..]) / rms(&a[48000..])).log10();
         assert!((-24.0..-8.0).contains(&db), "layers at {db:.1} dB");

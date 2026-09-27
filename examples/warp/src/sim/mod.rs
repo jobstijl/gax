@@ -3,7 +3,9 @@
 //! happened as [`Event`]s for the renderer and the audio.
 //!
 //! All geometry is gax PGA2D: poses are unit motors, velocities twists, positions points,
-//! and collisions joins and signed distances.
+//! directions points at infinity, the arena's walls lines. Steering turns directions by the
+//! rotation between them, bounces reflect in the walls, and collisions are joins and signed
+//! distances.
 
 pub mod body;
 pub mod collide;
@@ -11,11 +13,17 @@ pub mod director;
 pub mod replay;
 pub mod rng;
 
-use body::{Body, Pose, angle_of, distance, interpolate, length, pose_at};
-use collide::{SpatialHash, in_front, reflect, segment_hits_circle};
+use body::{
+    Body, ORIGIN, Pose, distance, heading, interpolate, place, pose_at, turn, turned, unit_weight,
+    with_length,
+};
+use collide::{SpatialHash, in_front, segment_hits_circle, walls};
 use director::Director;
-use gax::pga2d::Point;
+use gax::pga2d::{Line, Point};
 use rng::Rng;
+
+/// A point or a direction.
+pub type P = Point<(), f32>;
 
 /// The fixed timestep.
 pub const DT: f32 = 1.0 / 120.0;
@@ -30,13 +38,23 @@ const BULLET_SPEED: f32 = 40.0;
 const FIRE_INTERVAL: f32 = 1.0 / 22.0;
 const BULLET_LIFE: f32 = 1.4;
 
+/// The point `(x, y)`.
+pub fn at(x: f32, y: f32) -> P {
+    Point::xy(x, y)
+}
+
+/// The direction `(x, y)`.
+pub fn dir(x: f32, y: f32) -> P {
+    Point::direction(x, y)
+}
+
 /// One tick's input, in gax types (see `input.rs`, the only boundary with Bevy's vectors).
 #[derive(Clone, Copy, Debug)]
 pub struct Input {
     /// Movement: a direction of length at most 1.
-    pub movement: Point<(), f32>,
+    pub movement: P,
     /// Aim: a direction (zero for none).
-    pub aim: Point<(), f32>,
+    pub aim: P,
     /// Fire held.
     pub fire: bool,
     /// Bomb pressed (edge).
@@ -46,8 +64,8 @@ pub struct Input {
 impl Default for Input {
     fn default() -> Input {
         Input {
-            movement: Point::direction(0.0, 0.0),
-            aim: Point::direction(0.0, 0.0),
+            movement: dir(0.0, 0.0),
+            aim: dir(0.0, 0.0),
             fire: false,
             bomb: false,
         }
@@ -142,7 +160,7 @@ pub struct Enemy {
     /// A per-enemy phase for wandering and animation.
     pub phase: f32,
     /// Velocity from the wells' pull, on top of the enemy's own intent; decays slowly.
-    pub pull: Point<(), f32>,
+    pub pull: P,
     /// A serpent's body, head first (empty for others).
     pub chain: Vec<Pose>,
     /// A timer for periodic actions (a carrier's launches).
@@ -153,11 +171,11 @@ pub struct Enemy {
 #[derive(Clone, Copy, Debug)]
 pub struct Bullet {
     /// Position (normalized point).
-    pub pos: Point<(), f32>,
+    pub pos: P,
     /// Position at the start of the tick.
-    pub prev: Point<(), f32>,
+    pub prev: P,
     /// Velocity (a direction).
-    pub vel: Point<(), f32>,
+    pub vel: P,
     /// Seconds left.
     pub life: f32,
 }
@@ -177,7 +195,7 @@ pub struct Pending {
     /// What comes.
     pub kind: Kind,
     /// Where.
-    pub pos: [f32; 2],
+    pub pos: P,
     /// Seconds until it lands.
     pub t: f32,
     /// Its warning time, for drawing the warp-in.
@@ -202,13 +220,13 @@ pub struct Ship {
 /// What happened in a tick, for the renderer (particles, grid impulses, shake) and the audio.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Event {
-    /// A shot left the gun.
-    Fire { pos: [f32; 2], angle: f32 },
+    /// A shot left the gun, along `dir` (a unit direction).
+    Fire { pos: P, dir: P },
     /// A bullet hit an enemy that survived.
-    Hit { pos: [f32; 2], kind: Kind },
+    Hit { pos: P, kind: Kind },
     /// An enemy died.
     Kill {
-        pos: [f32; 2],
+        pos: P,
         kind: Kind,
         size: f32,
         scored: bool,
@@ -216,25 +234,25 @@ pub enum Event {
         points: u64,
     },
     /// A bullet hit a wall.
-    Wall { pos: [f32; 2] },
+    Wall { pos: P },
     /// A shot glanced off a shield or a serpent's body.
-    Deflect { pos: [f32; 2], kind: Kind },
+    Deflect { pos: P, kind: Kind },
     /// A singularity ate an enemy.
-    Absorb { pos: [f32; 2], mass: f32 },
+    Absorb { pos: P, mass: f32 },
     /// An overfed singularity burst.
-    Burst { pos: [f32; 2] },
+    Burst { pos: P },
     /// A spawn was announced.
-    Warn { pos: [f32; 2], kind: Kind },
+    Warn { pos: P, kind: Kind },
     /// A spawn landed.
-    Spawn { pos: [f32; 2], kind: Kind },
+    Spawn { pos: P, kind: Kind },
     /// A shard was collected.
-    Pickup { pos: [f32; 2], mult: u32 },
+    Pickup { pos: P, mult: u32 },
     /// The ship was destroyed.
-    Death { pos: [f32; 2] },
+    Death { pos: P },
     /// The ship (re)appeared.
     Respawn,
     /// A bomb went off.
-    Bomb { pos: [f32; 2] },
+    Bomb { pos: P },
     /// An extra life or bomb was earned.
     Extra { life: bool },
     /// The run ended.
@@ -298,6 +316,18 @@ pub struct World {
     scratch: Vec<u32>,
 }
 
+/// The first wall that `p` is outside of, `margin` in from the arena's edge.
+fn outside(p: P, margin: f32) -> Option<Line<(), f32>> {
+    walls(ARENA[0] - margin, ARENA[1] - margin)
+        .into_iter()
+        .find(|w| (*w & p).s() < 0.0)
+}
+
+/// The foot of `p` on the line `l`: the meet of `l` with the perpendicular through `p`.
+fn foot(l: Line<(), f32>, p: P) -> P {
+    unit_weight((l | p) ^ l)
+}
+
 impl World {
     /// A new run.
     pub fn new(seed: u64) -> World {
@@ -335,32 +365,30 @@ impl World {
     }
 
     /// The gravity wells (singularities): `(position, strength)`.
-    pub fn wells(&self) -> impl Iterator<Item = ([f32; 2], f32)> + '_ {
+    pub fn wells(&self) -> impl Iterator<Item = (P, f32)> + '_ {
         self.enemies
             .iter()
             .filter(|e| e.kind == Kind::Singularity && e.age > 0.0)
-            .map(|e| (e.body.xy(), 18.0 + 6.0 * e.mass))
+            .map(|e| (e.body.pos(), 18.0 + 6.0 * e.mass))
     }
 
-    /// The acceleration the wells give a body at `p`.
-    fn gravity(&self, p: [f32; 2], scale: f32) -> Point<(), f32> {
-        let mut acc = Point::direction(0.0, 0.0);
+    /// The acceleration the wells give a body at `p`: `s d / (|d|² + r²)^(3/2)` towards each,
+    /// an inverse square with a softened core.
+    fn gravity(&self, p: P, scale: f32) -> P {
+        let mut acc = dir(0.0, 0.0);
         for (w, s) in self.wells() {
-            let (dx, dy) = (w[0] - p[0], w[1] - p[1]);
-            let d2 = dx * dx + dy * dy;
-            // s d / (|d|² + r²)^(3/2): an inverse square with a softened core.
-            let k = scale * s / (d2 + 1.5).powf(1.5);
-            acc += Point::direction(dx * k, dy * k);
+            let d = w - p;
+            let d2 = d.ideal_norm() * d.ideal_norm();
+            acc += d.gp(scale * s / (d2 + 1.5).powf(1.5));
         }
         acc
     }
 
     /// Spawn an enemy now.
-    pub fn spawn(&mut self, kind: Kind, [x, y]: [f32; 2]) -> u32 {
+    pub fn spawn(&mut self, kind: Kind, at: P) -> u32 {
         let id = self.next_id;
         self.next_id += 1;
-        let angle = self.rng.angle();
-        let mut body = Body::new(pose_at(x, y, angle));
+        let mut body = Body::new(place(at, self.rng.angle()));
         let speed = match kind {
             Kind::Drifter => 2.2,
             Kind::Mote | Kind::Fragment => 6.0,
@@ -368,8 +396,7 @@ impl World {
             Kind::Carrier => 1.4,
             _ => 0.0,
         };
-        let dir = self.rng.angle();
-        body.vel = Point::direction(dir.cos() * speed, dir.sin() * speed);
+        body.vel = heading(self.rng.angle(), speed);
         body.spin = match kind {
             Kind::Drifter => self.rng.range(-2.0, 2.0),
             Kind::Singularity => 0.6,
@@ -400,15 +427,22 @@ impl World {
             age: 0.0,
             flash: 0.0,
             phase: self.rng.range(0.0, 100.0),
-            pull: Point::direction(0.0, 0.0),
+            pull: dir(0.0, 0.0),
             chain,
             timer: 2.0,
         });
         id
     }
 
+    /// Spawn an enemy now, moving at `vel`.
+    fn spawn_moving(&mut self, kind: Kind, at: P, vel: P) {
+        self.spawn(kind, at);
+        let last = self.enemies.len() - 1;
+        self.enemies[last].body.vel = vel;
+    }
+
     /// Announce a spawn: it lands after `t` seconds, never within the safe radius.
-    pub fn announce(&mut self, kind: Kind, pos: [f32; 2], t: f32) {
+    pub fn announce(&mut self, kind: Kind, pos: P, t: f32) {
         let pos = self.safe_spot(pos);
         self.pending.push(Pending {
             kind,
@@ -419,32 +453,35 @@ impl World {
         self.events.push(Event::Warn { pos, kind });
     }
 
-    /// `pos`, clamped into the arena and pushed out of the safe radius around the ship.
-    pub fn safe_spot(&self, pos: [f32; 2]) -> [f32; 2] {
-        let clamp = |p: [f32; 2]| {
-            [
-                p[0].clamp(-ARENA[0] + 1.5, ARENA[0] - 1.5),
-                p[1].clamp(-ARENA[1] + 1.5, ARENA[1] - 1.5),
-            ]
+    /// `p` clamped into the arena (a box: its coordinates bounded), then pushed out of the safe
+    /// radius around the ship along the ray from it (or back through it, if that leaves the
+    /// arena).
+    pub fn safe_spot(&self, p: P) -> P {
+        let inside = |p: P| {
+            let [x, y] = p.to_euclidean();
+            at(
+                x.clamp(-ARENA[0] + 1.5, ARENA[0] - 1.5),
+                y.clamp(-ARENA[1] + 1.5, ARENA[1] - 1.5),
+            )
         };
-        let mut p = clamp(pos);
-        let s = self.ship.body.xy();
-        let (dx, dy) = (p[0] - s[0], p[1] - s[1]);
-        let d = (dx * dx + dy * dy).sqrt();
+        let p = inside(p);
+        let s = self.ship.body.pos();
         let need = SAFE_RADIUS + 1.0;
-        if d < need {
-            // Push out along the ray from the ship; if that leaves the arena, mirror through it.
-            let (ux, uy) = if d > 1e-3 {
-                (dx / d, dy / d)
-            } else {
-                (1.0, 0.0)
-            };
-            let out = clamp([s[0] + ux * need, s[1] + uy * need]);
-            let back = clamp([s[0] - ux * need, s[1] - uy * need]);
-            let far = |q: [f32; 2]| ((q[0] - s[0]).powi(2) + (q[1] - s[1]).powi(2)).sqrt();
-            p = if far(out) >= far(back) { out } else { back };
+        if distance(p, s) >= need {
+            return p;
         }
-        p
+        let away = p - s;
+        let u = if away.ideal_norm() > 1e-3 {
+            with_length(away, need)
+        } else {
+            dir(need, 0.0)
+        };
+        let (out, back) = (inside(s + u), inside(s - u));
+        if distance(out, s) >= distance(back, s) {
+            out
+        } else {
+            back
+        }
     }
 
     /// Advance one tick.
@@ -495,52 +532,41 @@ impl World {
         // Quick, smooth response: approach the wanted velocity exponentially.
         let k = 1.0 - (-14.0 * DT).exp();
         ship.body.vel = ship.body.vel + (want - ship.body.vel).gp(k);
-        // Turn the nose towards the motion.
-        let speed = length(ship.body.vel);
-        ship.body.spin = if speed > 0.5 {
-            let diff = wrap_angle(angle_of(ship.body.vel) - angle_of(ship.body.heading()));
-            (diff * 16.0).clamp(-24.0, 24.0)
+        // Turn the nose towards the motion: by the rotation from heading to velocity.
+        ship.body.spin = if ship.body.vel.ideal_norm() > 0.5 {
+            (turn(ship.body.heading(), ship.body.vel) * 16.0).clamp(-24.0, 24.0)
         } else {
             0.0
         };
         ship.body.step(DT);
-        // Walls: stay inside, lose the velocity into the wall.
-        let [x, y] = ship.body.xy();
-        let (hw, hh) = (ARENA[0] - SHIP_RADIUS, ARENA[1] - SHIP_RADIUS);
-        let (cx, cy) = (x.clamp(-hw, hw), y.clamp(-hh, hh));
-        if cx != x || cy != y {
-            ship.body.shift(cx - x, cy - y);
-            let (mut vx, mut vy) = (ship.body.vel.e20(), ship.body.vel.e01());
-            if cx != x {
-                vx = 0.0;
-            }
-            if cy != y {
-                vy = 0.0;
-            }
-            ship.body.vel = Point::direction(vx, vy);
+        // Walls: stop at the wall, keeping only the motion along it (the mean of the velocity
+        // and its reflection in the wall).
+        for _ in 0..2 {
+            let Some(wall) = outside(ship.body.pos(), SHIP_RADIUS) else {
+                break;
+            };
+            ship.body.move_to(foot(wall, ship.body.pos()));
+            ship.body.vel = (ship.body.vel + wall.reflect(ship.body.vel)).gp(0.5);
         }
         // Fire: two alternating barrels, along the aim.
         ship.cooldown -= DT;
-        let aim_len = length(input.aim);
-        if input.fire && aim_len > 0.2 && ship.cooldown <= 0.0 {
+        if input.fire && input.aim.ideal_norm() > 0.2 && ship.cooldown <= 0.0 {
             ship.cooldown += FIRE_INTERVAL;
-            let (ux, uy) = (input.aim.e20() / aim_len, input.aim.e01() / aim_len);
-            let [x, y] = ship.body.xy();
-            // One shot per interval, from alternating barrels.
-            let side = if ship.barrel { 1.0f32 } else { -1.0 };
-            let off = 0.14 * side;
-            let pos = Point::xy(x - uy * off + ux * 0.4, y + ux * off + uy * 0.4);
+            let u = with_length(input.aim, 1.0);
+            // One shot per interval, from alternating barrels: offset across the aim, a
+            // quarter turn of it.
+            let side = if ship.barrel { 0.14 } else { -0.14 };
+            let across = turned(u, core::f32::consts::FRAC_PI_2);
+            let o = ship.body.pos();
+            let pos = o + u.gp(0.4) + across.gp(side);
             self.bullets.push(Bullet {
                 pos,
                 prev: pos,
-                vel: Point::direction(ux * BULLET_SPEED, uy * BULLET_SPEED),
+                vel: u.gp(BULLET_SPEED),
                 life: BULLET_LIFE,
             });
             ship.barrel = !ship.barrel;
-            self.events.push(Event::Fire {
-                pos: [x, y],
-                angle: uy.atan2(ux),
-            });
+            self.events.push(Event::Fire { pos: o, dir: u });
         }
         ship.cooldown = ship.cooldown.max(-FIRE_INTERVAL);
     }
@@ -550,10 +576,9 @@ impl World {
         self.hash.clear();
         for (i, e) in self.enemies.iter().enumerate() {
             if e.age >= 0.0 {
-                self.hash.insert(i as u32, e.body.xy(), e.radius);
+                self.hash.insert(i as u32, e.body.pos(), e.radius);
                 for seg in &e.chain {
-                    let p = (*seg >> Point::xy(0.0, 0.0)).to_euclidean();
-                    self.hash.insert(i as u32, p, 0.45);
+                    self.hash.insert(i as u32, *seg >> ORIGIN, 0.45);
                 }
             }
         }
@@ -565,21 +590,16 @@ impl World {
                 return false;
             }
             // Gravity bends the shot.
-            let g = self.gravity(b.pos.to_euclidean(), 40.0);
-            b.vel += g.gp(DT);
+            b.vel += self.gravity(b.pos, 40.0).gp(DT);
             b.prev = b.pos;
             b.pos += b.vel.gp(DT);
-            let (a, p) = (b.prev.to_euclidean(), b.pos.to_euclidean());
-            if p[0].abs() > ARENA[0] || p[1].abs() > ARENA[1] {
-                self.events.push(Event::Wall {
-                    pos: [
-                        p[0].clamp(-ARENA[0], ARENA[0]),
-                        p[1].clamp(-ARENA[1], ARENA[1]),
-                    ],
-                });
+            if let Some(wall) = outside(b.pos, 0.0) {
+                // Where the path met the wall.
+                let pos = unit_weight((b.prev & b.pos) ^ wall);
+                self.events.push(Event::Wall { pos });
                 return false;
             }
-            self.hash.query(a, p, 1.5, &mut self.scratch);
+            self.hash.query(b.prev, b.pos, 1.5, &mut self.scratch);
             for &i in &self.scratch {
                 let e = &mut self.enemies[i as usize];
                 if e.hp <= 0.0 {
@@ -589,9 +609,9 @@ impl World {
                 if let Some(seg) = e
                     .chain
                     .iter()
-                    .find(|s| segment_hits_circle(b.prev, b.pos, **s >> Point::xy(0.0, 0.0), 0.42))
+                    .find(|s| segment_hits_circle(b.prev, b.pos, **s >> ORIGIN, 0.42))
                 {
-                    let pos = (*seg >> Point::xy(0.0, 0.0)).to_euclidean();
+                    let pos = *seg >> ORIGIN;
                     self.events.push(Event::Deflect { pos, kind: e.kind });
                     return false;
                 }
@@ -600,14 +620,11 @@ impl World {
                 }
                 // A warden's shield reflects shots from the front, in the shield's line.
                 if e.kind == Kind::Warden && in_front(e.body.pose, b.prev) {
-                    let (o, up) = (
-                        e.body.pose >> Point::xy(0.0, 0.0),
-                        e.body.pose >> Point::xy(0.0, 1.0),
-                    );
-                    b.vel = reflect(o & up, b.vel);
+                    let shield = (e.body.pose >> ORIGIN) & (e.body.pose >> at(0.0, 1.0));
+                    b.vel = shield.reflect(b.vel);
                     b.pos = b.prev;
                     self.events.push(Event::Deflect {
-                        pos: e.body.xy(),
+                        pos: e.body.pos(),
                         kind: e.kind,
                     });
                     return true;
@@ -622,7 +639,7 @@ impl World {
                     kills.push(i as usize);
                 } else {
                     self.events.push(Event::Hit {
-                        pos: e.body.xy(),
+                        pos: e.body.pos(),
                         kind: e.kind,
                     });
                 }
@@ -641,7 +658,7 @@ impl World {
     /// Remove enemy `i`, with score and shards when `scored`.
     fn kill(&mut self, i: usize, scored: bool) {
         let e = self.enemies.swap_remove(i);
-        let pos = e.body.xy();
+        let pos = e.body.pos();
         let size = match e.kind {
             Kind::Singularity => 2.0 + 0.3 * e.mass,
             Kind::Mote => 0.5,
@@ -664,9 +681,8 @@ impl World {
             };
             for _ in 0..shards {
                 let a = self.rng.angle();
-                let s = self.rng.range(2.0, 7.0);
-                let mut body = Body::new(pose_at(pos[0], pos[1], a));
-                body.vel = Point::direction(a.cos() * s, a.sin() * s);
+                let mut body = Body::new(place(pos, a));
+                body.vel = heading(a, self.rng.range(2.0, 7.0));
                 body.spin = self.rng.range(-5.0, 5.0);
                 self.shards.push(Shard { body, life: 7.0 });
             }
@@ -684,7 +700,7 @@ impl World {
         // A serpent's body goes with its head.
         for seg in &e.chain {
             self.events.push(Event::Kill {
-                pos: (*seg >> Point::xy(0.0, 0.0)).to_euclidean(),
+                pos: *seg >> ORIGIN,
                 kind: Kind::Serpent,
                 size: 0.4,
                 scored: false,
@@ -693,30 +709,22 @@ impl World {
         }
         if scored {
             match e.kind {
-                // Three fragments, flung apart.
+                // Three fragments, flung apart: a direction turned a third at a time.
                 Kind::Splitter => {
-                    let a0 = self.rng.angle();
-                    for k in 0..3 {
-                        let a = a0 + k as f32 * core::f32::consts::TAU / 3.0;
-                        let id = self.spawn(
-                            Kind::Fragment,
-                            [pos[0] + a.cos() * 0.5, pos[1] + a.sin() * 0.5],
-                        );
+                    let mut d = heading(self.rng.angle(), 1.0);
+                    for _ in 0..3 {
+                        self.spawn_moving(Kind::Fragment, pos + d.gp(0.5), d.gp(9.0));
                         let last = self.enemies.len() - 1;
-                        debug_assert_eq!(self.enemies[last].id, id);
-                        self.enemies[last].body.vel =
-                            Point::direction(a.cos() * 9.0, a.sin() * 9.0);
                         self.enemies[last].age = 0.25;
+                        d = turned(d, core::f32::consts::TAU / 3.0);
                     }
                 }
                 // A carrier's cargo: a ring of motes.
                 Kind::Carrier => {
-                    for k in 0..10 {
-                        let a = k as f32 * core::f32::consts::TAU / 10.0;
-                        self.spawn(Kind::Mote, [pos[0] + a.cos() * 1.5, pos[1] + a.sin() * 1.5]);
-                        let last = self.enemies.len() - 1;
-                        self.enemies[last].body.vel =
-                            Point::direction(a.cos() * 7.0, a.sin() * 7.0);
+                    let mut d = dir(1.0, 0.0);
+                    for _ in 0..10 {
+                        self.spawn_moving(Kind::Mote, pos + d.gp(1.5), d.gp(7.0));
+                        d = turned(d, core::f32::consts::TAU / 10.0);
                     }
                     self.events.push(Event::Burst { pos });
                 }
@@ -727,42 +735,37 @@ impl World {
 
     fn step_enemies(&mut self) {
         let ship = self.ship.body.pos();
-        let ship_xy = self.ship.body.xy();
         let hunting = self.phase == Phase::Playing;
-        let wells: Vec<([f32; 2], f32, u32, f32)> = self
+        let wells: Vec<(P, f32)> = self
             .enemies
             .iter()
             .filter(|e| e.kind == Kind::Singularity)
-            .map(|e| (e.body.xy(), 18.0 + 6.0 * e.mass, e.id, e.radius))
+            .map(|e| (e.body.pos(), 18.0 + 6.0 * e.mass))
             .collect();
         let time = self.time;
-        // Shots in flight, as lines, for evaders: `(line of flight, position, velocity)`.
-        let shots: Vec<_> = self
+        // Shots in flight, for evaders: `(line of flight, position, velocity)`.
+        let shots: Vec<(Line<(), f32>, P, P)> = self
             .bullets
             .iter()
             .map(|b| {
-                let l = b.pos & (b.pos + b.vel);
-                let n = l.norm().max(1e-6);
-                (l.gp(1.0 / n), b.pos.to_euclidean(), b.vel)
+                let l = (b.pos & (b.pos + b.vel)).normalized().into_inner();
+                (l, b.pos, b.vel)
             })
             .collect();
-        let mut launches: Vec<[f32; 2]> = Vec::new();
+        let mut launches: Vec<P> = Vec::new();
         for e in &mut self.enemies {
             e.age += DT;
             e.flash = (e.flash - DT * 6.0).max(0.0);
-            let p = e.body.xy();
+            let p = e.body.pos();
             // The enemy's own velocity, without the wells' pull.
             e.body.vel -= e.pull;
             match e.kind {
                 Kind::Drifter => {
-                    // Wander: the velocity's direction turns slowly with a smooth noise.
-                    let turn =
-                        ((time * 0.7 + e.phase).sin() + (time * 1.3 + e.phase * 1.7).sin()) * 0.9;
-                    let (vx, vy) = (e.body.vel.e20(), e.body.vel.e01());
-                    let (c, s) = (turn * DT).sin_cos();
-                    let v = Point::direction(vx * s - vy * c, vx * c + vy * s);
-                    let len = length(v).max(1e-3);
-                    e.body.vel = v.gp(2.2 / len);
+                    // Wander: the velocity turns slowly with a smooth noise.
+                    let wave = crate::signal::wave;
+                    let noise =
+                        (wave(time * 0.7 + e.phase) + wave(time * 1.3 + e.phase * 1.7)) * 0.9;
+                    e.body.vel = with_length(turned(e.body.vel, noise * DT), 2.2);
                 }
                 Kind::Chaser
                 | Kind::Mote
@@ -778,74 +781,76 @@ impl World {
                         Kind::Splitter => (3.0, 1.4),
                         _ => (5.2, 2.0),
                     };
+                    // Idle (no one to hunt): towards a point of its own.
                     let target = if hunting {
                         ship
                     } else {
-                        Point::xy(e.phase.sin() * 20.0, e.phase.cos() * 12.0)
+                        at(0.0, 0.0) + heading(e.phase, 1.0).gp(15.0)
                     };
-                    let to = target - e.body.pos();
-                    let want = angle_of(to);
-                    let have = if length(e.body.vel) > 0.1 {
-                        angle_of(e.body.vel)
+                    let to = target - p;
+                    let have = if e.body.vel.ideal_norm() > 0.1 {
+                        e.body.vel
                     } else {
-                        want
+                        to
                     };
                     // A serpent winds as it comes.
                     let wind = if e.kind == Kind::Serpent {
-                        (time * 2.6 + e.phase).sin() * 0.9
+                        crate::signal::wave(time * 2.6 + e.phase) * 0.9
                     } else {
                         0.0
                     };
-                    let d = wrap_angle(want + wind - have).clamp(-turn_rate * DT, turn_rate * DT);
-                    let a = have + d;
+                    // Turn towards the target at a limited rate: part of the rotation between.
+                    let limit = turn_rate * DT;
+                    let d = (turn(have, to) + wind).clamp(-limit, limit);
                     let ramp = (e.age * 1.5).min(1.0);
-                    e.body.vel = Point::direction(a.cos() * speed * ramp, a.sin() * speed * ramp);
+                    let way = with_length(turned(have, d), 1.0);
+                    e.body.vel = way.gp(speed * ramp);
                     e.body.spin = match e.kind {
                         Kind::Chaser => 3.0,
                         Kind::Splitter => 2.0,
-                        Kind::Evader => 0.0,
-                        Kind::Serpent => 0.0,
+                        Kind::Evader | Kind::Serpent => 0.0,
                         _ => 9.0,
                     };
                     if matches!(e.kind, Kind::Evader | Kind::Serpent) {
                         // Face the way it goes.
-                        e.body.spin = wrap_angle(a - angle_of(e.body.heading())) * 10.0;
+                        e.body.spin = turn(e.body.heading(), way) * 10.0;
                     }
                     if e.kind == Kind::Evader {
                         // Sidestep: for each shot coming this way whose line of flight passes
-                        // close, move away from the line (its side is the signed distance).
-                        let mut dodge = Point::direction(0.0, 0.0);
-                        for (l, bp, bv) in &shots {
-                            let (dx, dy) = (p[0] - bp[0], p[1] - bp[1]);
-                            let ahead = dx * bv.e20() + dy * bv.e01();
-                            if ahead <= 0.0 || dx * dx + dy * dy > 64.0 {
+                        // close, move away from its foot on the line.
+                        let mut dodge = dir(0.0, 0.0);
+                        for &(l, bp, bv) in &shots {
+                            // Ahead of the shot: on the side of the perpendicular through it
+                            // that the shot moves towards.
+                            let across = l | bp;
+                            let ahead = (across & p).s() * (across & (bp + bv)).s() > 0.0;
+                            if !ahead || distance(p, bp) > 8.0 {
                                 continue;
                             }
-                            let side = collide::signed_distance(*l, e.body.pos());
-                            if side.abs() < 1.8 {
-                                // The line's normal is (e1, e2); move along it, away.
-                                let k = (1.8 - side.abs()) * 9.0 * side.signum();
-                                dodge += Point::direction(l.e1() * k, l.e2() * k);
+                            let away = p - foot(l, p);
+                            let off = away.ideal_norm();
+                            if off < 1.8 {
+                                dodge += with_length(away, (1.8 - off) * 9.0);
                             }
                         }
                         let v = e.body.vel + dodge;
-                        let len = length(v);
-                        e.body.vel = if len > 11.0 { v.gp(11.0 / len) } else { v };
+                        e.body.vel = if v.ideal_norm() > 11.0 {
+                            with_length(v, 11.0)
+                        } else {
+                            v
+                        };
                     }
                 }
                 Kind::Warden => {
                     // Turn slowly to face the ship, and come on behind the shield.
-                    let to = ship - e.body.pos();
-                    let d = wrap_angle(angle_of(to) - angle_of(e.body.heading()));
+                    let d = turn(e.body.heading(), ship - p);
                     e.body.spin = d.clamp(-1.0, 1.0) * 1.3;
-                    let h = e.body.heading();
                     let ramp = (e.age * 1.5).min(1.0);
-                    e.body.vel = h.gp(2.4 * ramp);
+                    e.body.vel = e.body.heading().gp(2.4 * ramp);
                 }
                 Kind::Carrier => {
                     // Drift, and launch a pair of motes every few seconds.
-                    let v = length(e.body.vel).max(1e-3);
-                    e.body.vel = e.body.vel.gp(1.4 / v);
+                    e.body.vel = with_length(e.body.vel, 1.4);
                     e.timer -= DT;
                     if e.timer <= 0.0 && hunting {
                         e.timer = 4.5;
@@ -854,20 +859,19 @@ impl World {
                 }
                 Kind::Singularity => {
                     // Slow drift towards the ship, damped.
-                    let to = ship - e.body.pos();
-                    let d = length(to).max(1e-3);
-                    e.body.vel = (e.body.vel + to.gp(0.25 * DT / d)).gp(1.0 - 0.3 * DT);
-                    e.radius = 0.9 + 0.12 * e.mass.sqrt() * 3.0;
+                    let towards = with_length(ship - p, 0.25 * DT);
+                    e.body.vel = (e.body.vel + towards).gp(1.0 - 0.3 * DT);
+                    e.radius = 0.9 + 0.36 * gax::Real::sqrt(e.mass);
                     e.hp = e.hp.min(25.0 + 4.0 * e.mass);
                 }
             }
             // Wells pull everything but wells: the pull accumulates, and decays slowly.
             e.pull = e.pull.gp(1.0 - 0.6 * DT);
             if e.kind != Kind::Singularity {
-                for &(w, s, _, _) in &wells {
-                    let (dx, dy) = (w[0] - p[0], w[1] - p[1]);
-                    let k = 2.5 * s / (dx * dx + dy * dy + 1.5).powf(1.5);
-                    e.pull += Point::direction(dx * k * DT, dy * k * DT);
+                for &(w, s) in &wells {
+                    let d = w - p;
+                    let d2 = d.ideal_norm() * d.ideal_norm();
+                    e.pull += d.gp(2.5 * s / (d2 + 1.5).powf(1.5) * DT);
                 }
             }
             e.body.vel += e.pull;
@@ -881,34 +885,21 @@ impl World {
                 *seg = interpolate(*seg, target, k);
                 ahead = *seg;
             }
-            // Walls: bounce.
-            let [x, y] = e.body.xy();
-            let (hw, hh) = (ARENA[0] - e.radius, ARENA[1] - e.radius);
-            if x.abs() > hw || y.abs() > hh {
-                let (cx, cy) = (x.clamp(-hw, hw), y.clamp(-hh, hh));
-                e.body.shift(cx - x, cy - y);
-                let flip = |v: Point<(), f32>| {
-                    let (mut vx, mut vy) = (v.e20(), v.e01());
-                    if cx != x {
-                        vx = -vx;
-                    }
-                    if cy != y {
-                        vy = -vy;
-                    }
-                    Point::direction(vx, vy)
+            // Walls: bounce, by reflection in the wall (the position mirrored back inside, the
+            // velocity and the pull mirrored).
+            for _ in 0..2 {
+                let Some(wall) = outside(e.body.pos(), e.radius) else {
+                    break;
                 };
-                e.body.vel = flip(e.body.vel);
-                e.pull = flip(e.pull);
+                e.body.move_to(wall.reflect(e.body.pos()));
+                e.body.vel = wall.reflect(e.body.vel);
+                e.pull = wall.reflect(e.pull);
             }
-            let _ = ship_xy;
         }
         for p in launches {
-            for k in [-1.0f32, 1.0] {
-                let a = self.rng.angle();
-                self.spawn(
-                    Kind::Mote,
-                    [p[0] + a.cos() * 1.3 * k, p[1] + a.sin() * 1.3 * k],
-                );
+            for side in [-1.0f32, 1.0] {
+                let d = heading(self.rng.angle(), 1.3 * side);
+                self.spawn(Kind::Mote, p + d);
             }
             self.events.push(Event::Spawn {
                 pos: p,
@@ -939,7 +930,7 @@ impl World {
             let w = &mut self.enemies[wi];
             w.mass += 1.0;
             w.hp += 4.0;
-            let (pos, mass) = (w.body.xy(), w.mass);
+            let (pos, mass) = (w.body.pos(), w.mass);
             self.events.push(Event::Absorb { pos, mass });
         }
         gone.sort_unstable();
@@ -950,7 +941,7 @@ impl World {
         let mut bursts = Vec::new();
         self.enemies.retain(|e| {
             if e.kind == Kind::Singularity && e.mass >= 10.0 {
-                bursts.push(e.body.xy());
+                bursts.push(e.body.pos());
                 false
             } else {
                 true
@@ -959,9 +950,8 @@ impl World {
         for p in bursts {
             self.events.push(Event::Burst { pos: p });
             for _ in 0..14 {
-                let a = self.rng.angle();
-                let id = self.spawn(Kind::Mote, [p[0] + a.cos() * 1.2, p[1] + a.sin() * 1.2]);
-                let _ = id;
+                let d = heading(self.rng.angle(), 1.2);
+                self.spawn(Kind::Mote, p + d);
             }
         }
     }
@@ -976,7 +966,7 @@ impl World {
                 return false;
             }
             let to = ship - s.body.pos();
-            let d = length(to);
+            let d = to.ideal_norm();
             if alive && d < 0.9 {
                 picked += 1;
                 return false;
@@ -988,17 +978,19 @@ impl World {
             }
             s.body.vel = v;
             s.body.step(DT);
-            let [x, y] = s.body.xy();
-            let (cx, cy) = (x.clamp(-ARENA[0], ARENA[0]), y.clamp(-ARENA[1], ARENA[1]));
-            if cx != x || cy != y {
-                s.body.shift(cx - x, cy - y);
+            // Kept in the arena: onto the wall it crossed.
+            for _ in 0..2 {
+                let Some(wall) = outside(s.body.pos(), 0.0) else {
+                    break;
+                };
+                s.body.move_to(foot(wall, s.body.pos()));
             }
             true
         });
         for _ in 0..picked {
             self.mult += 1;
             self.events.push(Event::Pickup {
-                pos: self.ship.body.xy(),
+                pos: self.ship.body.pos(),
                 mult: self.mult,
             });
         }
@@ -1006,7 +998,7 @@ impl World {
 
     fn step_pending(&mut self) {
         let mut landed = Vec::new();
-        let ship = self.ship.body.xy();
+        let ship = self.ship.body.pos();
         let playing = self.phase == Phase::Playing;
         self.pending.retain_mut(|p| {
             p.t -= DT;
@@ -1014,8 +1006,7 @@ impl World {
                 return true;
             }
             // Never land inside the safe radius: wait until the player has moved away.
-            let d = ((p.pos[0] - ship[0]).powi(2) + (p.pos[1] - ship[1]).powi(2)).sqrt();
-            if playing && d < SAFE_RADIUS {
+            if playing && distance(p.pos, ship) < SAFE_RADIUS {
                 p.t = 0.1;
                 return true;
             }
@@ -1038,7 +1029,7 @@ impl World {
                 && (distance(e.body.pos(), s) < e.radius * 0.8 + SHIP_RADIUS
                     || e.chain
                         .iter()
-                        .any(|seg| distance(*seg >> Point::xy(0.0, 0.0), s) < 0.35 + SHIP_RADIUS))
+                        .any(|seg| distance(*seg >> ORIGIN, s) < 0.35 + SHIP_RADIUS))
         });
         if hit {
             self.die();
@@ -1046,7 +1037,7 @@ impl World {
     }
 
     fn die(&mut self) {
-        let pos = self.ship.body.xy();
+        let pos = self.ship.body.pos();
         self.events.push(Event::Death { pos });
         self.ship.alive = false;
         self.lives -= 1;
@@ -1079,7 +1070,7 @@ impl World {
             return;
         }
         self.bombs -= 1;
-        let pos = self.ship.body.xy();
+        let pos = self.ship.body.pos();
         self.events.push(Event::Bomb { pos });
         while !self.enemies.is_empty() {
             self.kill(self.enemies.len() - 1, false);
@@ -1103,25 +1094,13 @@ impl World {
     }
 }
 
-/// An angle in `(-π, π]`.
-pub fn wrap_angle(a: f32) -> f32 {
-    use core::f32::consts::{PI, TAU};
-    let mut a = a % TAU;
-    if a > PI {
-        a -= TAU;
-    } else if a <= -PI {
-        a += TAU;
-    }
-    a
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn aim(x: f32, y: f32) -> Input {
         Input {
-            aim: Point::direction(x, y),
+            aim: dir(x, y),
             fire: true,
             ..Input::default()
         }
@@ -1131,8 +1110,8 @@ mod tests {
     fn shots_kill_a_drifter_in_their_path() {
         let mut w = World::new(1);
         w.director.enabled = false;
-        w.spawn(Kind::Drifter, [8.0, 0.0]);
-        w.enemies[0].body.vel = Point::direction(0.0, 0.0);
+        w.spawn(Kind::Drifter, at(8.0, 0.0));
+        w.enemies[0].body.vel = dir(0.0, 0.0);
         w.enemies[0].body.spin = 0.0;
         let mut killed = false;
         for _ in 0..120 {
@@ -1158,7 +1137,7 @@ mod tests {
         let mut w = World::new(2);
         w.director.enabled = false;
         w.ship.invulnerable = 0.0;
-        w.spawn(Kind::Chaser, [12.0, 5.0]);
+        w.spawn(Kind::Chaser, at(12.0, 5.0));
         let mut died = false;
         for _ in 0..120 * 10 {
             w.tick(&Input::default());
@@ -1172,13 +1151,13 @@ mod tests {
     fn singularities_bend_shots_and_eat_enemies() {
         let mut w = World::new(3);
         w.director.enabled = false;
-        w.spawn(Kind::Singularity, [0.0, 6.0]);
-        w.enemies[0].body.vel = Point::direction(0.0, 0.0);
+        w.spawn(Kind::Singularity, at(0.0, 6.0));
+        w.enemies[0].body.vel = dir(0.0, 0.0);
         // A shot passing beside the well curves towards it.
         w.bullets.push(Bullet {
-            pos: Point::xy(-20.0, 3.5),
-            prev: Point::xy(-20.0, 3.5),
-            vel: Point::direction(40.0, 0.0),
+            pos: at(-20.0, 3.5),
+            prev: at(-20.0, 3.5),
+            vel: dir(40.0, 0.0),
             life: 2.0,
         });
         for _ in 0..58 {
@@ -1191,8 +1170,8 @@ mod tests {
         );
         // A drifter falling in is eaten.
         w.bullets.clear();
-        let s = w.enemies[0].body.xy();
-        w.spawn(Kind::Drifter, [s[0], s[1] + 1.2]);
+        let s = w.enemies[0].body.pos();
+        w.spawn(Kind::Drifter, s + dir(0.0, 1.2));
         let mut ate = false;
         for _ in 0..240 {
             w.tick(&Input::default());
@@ -1206,7 +1185,7 @@ mod tests {
         let mut w = World::new(4);
         w.director.enabled = false;
         for i in 0..10 {
-            w.spawn(Kind::Drifter, [-20.0 + 4.0 * i as f32, 10.0]);
+            w.spawn(Kind::Drifter, at(-20.0 + 4.0 * i as f32, 10.0));
         }
         w.tick(&Input {
             bomb: true,
@@ -1221,10 +1200,39 @@ mod tests {
         let mut w = World::new(5);
         w.director.enabled = false;
         let mut s = Body::new(pose_at(0.5, 0.0, 0.0));
-        s.vel = Point::direction(0.0, 0.0);
+        s.vel = dir(0.0, 0.0);
         w.shards.push(Shard { body: s, life: 5.0 });
         w.tick(&Input::default());
         assert_eq!(w.mult, 2);
+    }
+
+    /// Bodies stay in the arena: an enemy bounces off a wall by reflection (its velocity
+    /// mirrored), the ship stops at it (its motion into the wall gone).
+    #[test]
+    fn walls_reflect_enemies_and_stop_the_ship() {
+        let mut w = World::new(9);
+        w.director.enabled = false;
+        w.phase = Phase::Over;
+        w.spawn(Kind::Carrier, at(ARENA[0] - 2.0, 0.0));
+        w.enemies[0].body.vel = dir(1.4, 0.0);
+        for _ in 0..240 {
+            w.tick(&Input::default());
+        }
+        let v = w.enemies[0].body.vel;
+        assert!(v.e20() < 0.0, "did not bounce: {v:?}");
+        let [x, _] = w.enemies[0].body.pos().to_euclidean();
+        assert!(x < ARENA[0]);
+        let mut w = World::new(9);
+        w.director.enabled = false;
+        for _ in 0..600 {
+            w.tick(&Input {
+                movement: dir(1.0, 0.3),
+                ..Input::default()
+            });
+        }
+        let [x, _] = w.ship.body.pos().to_euclidean();
+        assert!((x - (ARENA[0] - SHIP_RADIUS)).abs() < 1e-3, "{x}");
+        assert!(w.ship.body.vel.e20().abs() < 1e-3);
     }
 
     #[test]
@@ -1235,13 +1243,13 @@ mod tests {
             for t in 0..120 * 60 {
                 let a = t as f32 * 0.01;
                 w.tick(&Input {
-                    movement: Point::direction(a.cos() * 0.8, (a * 1.3).sin() * 0.8),
-                    aim: Point::direction((a * 2.0).cos(), (a * 2.0).sin()),
+                    movement: heading(a, 0.8),
+                    aim: heading(a * 2.0, 1.0),
                     fire: true,
                     bomb: t % 2000 == 1999,
                 });
                 h = h.wrapping_mul(31).wrapping_add(
-                    w.score ^ w.enemies.len() as u64 ^ u64::from(w.ship.body.xy()[0].to_bits()),
+                    w.score ^ w.enemies.len() as u64 ^ u64::from(w.ship.body.pos().e20().to_bits()),
                 );
             }
             (h, w.score)
@@ -1250,11 +1258,11 @@ mod tests {
         assert_ne!(run(42).0, run(43).0);
     }
 
-    fn still(w: &mut World, kind: Kind, at: [f32; 2], angle: f32) -> usize {
-        w.spawn(kind, at);
+    fn still(w: &mut World, kind: Kind, p: P, angle: f32) -> usize {
+        w.spawn(kind, p);
         let i = w.enemies.len() - 1;
         let e = &mut w.enemies[i];
-        e.body = Body::new(pose_at(at[0], at[1], angle));
+        e.body = Body::new(place(p, angle));
         e.age = 1.0;
         i
     }
@@ -1264,11 +1272,11 @@ mod tests {
         let mut w = World::new(10);
         w.director.enabled = false;
         w.phase = Phase::Over; // no hunting: only the dodge moves it sideways
-        still(&mut w, Kind::Evader, [10.0, 0.3], 0.0);
+        still(&mut w, Kind::Evader, at(10.0, 0.3), 0.0);
         w.bullets.push(Bullet {
-            pos: Point::xy(0.0, 0.0),
-            prev: Point::xy(0.0, 0.0),
-            vel: Point::direction(40.0, 0.0),
+            pos: at(0.0, 0.0),
+            prev: at(0.0, 0.0),
+            vel: dir(40.0, 0.0),
             life: 2.0,
         });
         let mut hit = false;
@@ -1280,7 +1288,7 @@ mod tests {
                 .any(|e| matches!(e, Event::Kill { .. } | Event::Hit { .. }));
         }
         assert!(!hit, "the evader was hit");
-        let y = w.enemies.first().map(|e| e.body.xy()[1]);
+        let y = w.enemies.first().map(|e| e.body.pos().to_euclidean()[1]);
         assert!(
             y.is_some_and(|y| y > 0.7),
             "the evader stayed near the line: {y:?}"
@@ -1292,11 +1300,11 @@ mod tests {
         let mut w = World::new(11);
         w.director.enabled = false;
         // Facing -x, towards the shots from the left: they glance off.
-        still(&mut w, Kind::Warden, [8.0, 0.0], core::f32::consts::PI);
+        still(&mut w, Kind::Warden, at(8.0, 0.0), core::f32::consts::PI);
         w.ship.body = Body::new(pose_at(0.0, 0.0, 0.0));
         let mut deflected = false;
         for _ in 0..30 {
-            w.enemies[0].body.vel = Point::direction(0.0, 0.0);
+            w.enemies[0].body.vel = dir(0.0, 0.0);
             w.enemies[0].body.spin = 0.0;
             w.tick(&aim(1.0, 0.0));
             deflected |= w.events.iter().any(|e| {
@@ -1317,11 +1325,11 @@ mod tests {
         // From behind it falls.
         let mut w = World::new(12);
         w.director.enabled = false;
-        still(&mut w, Kind::Warden, [8.0, 0.0], 0.0);
+        still(&mut w, Kind::Warden, at(8.0, 0.0), 0.0);
         let mut killed = false;
         for _ in 0..60 {
             w.enemies.iter_mut().for_each(|e| {
-                e.body.vel = Point::direction(0.0, 0.0);
+                e.body.vel = dir(0.0, 0.0);
                 e.body.spin = 0.0;
             });
             w.tick(&aim(1.0, 0.0));
@@ -1346,30 +1354,25 @@ mod tests {
         // Playing (bullets fly), with the ship far away and untouchable.
         w.ship.body = Body::new(pose_at(-28.0, -15.0, 0.0));
         w.ship.invulnerable = 1e9;
-        let i = still(&mut w, Kind::Serpent, [0.0, 5.0], 0.0);
+        let i = still(&mut w, Kind::Serpent, at(0.0, 5.0), 0.0);
         // Let the body settle behind the head.
         for _ in 0..120 {
-            w.enemies[i].body.vel = Point::direction(0.0, 0.0);
+            w.enemies[i].body.vel = dir(0.0, 0.0);
             w.tick(&Input::default());
         }
-        let chain: Vec<[f32; 2]> = w.enemies[0]
-            .chain
-            .iter()
-            .map(|s| (*s >> Point::xy(0.0, 0.0)).to_euclidean())
-            .collect();
-        let head = w.enemies[0].body.xy();
-        let gap = ((chain[0][0] - head[0]).powi(2) + (chain[0][1] - head[1]).powi(2)).sqrt();
+        let chain: Vec<P> = w.enemies[0].chain.iter().map(|s| *s >> ORIGIN).collect();
+        let gap = distance(chain[0], w.enemies[0].body.pos());
         // Moving, each segment lags a little behind its spot (speed / follow rate).
         assert!(
             gap > SERPENT_GAP - 0.05 && gap < SERPENT_GAP + 0.3,
             "gap {gap}"
         );
         // A shot at the tail is blocked.
-        let tail = *chain.last().unwrap();
+        let tail = *chain.last().unwrap() - dir(0.0, 0.7);
         w.bullets.push(Bullet {
-            pos: Point::xy(tail[0], tail[1] - 0.7),
-            prev: Point::xy(tail[0], tail[1] - 0.7),
-            vel: Point::direction(0.0, 40.0),
+            pos: tail,
+            prev: tail,
+            vel: dir(0.0, 40.0),
             life: 1.0,
         });
         let mut blocked = false;
@@ -1393,9 +1396,9 @@ mod tests {
     fn splitters_split_and_carriers_unload() {
         let mut w = World::new(14);
         w.director.enabled = false;
-        let i = still(&mut w, Kind::Splitter, [0.0, 3.0], 0.0);
+        let i = still(&mut w, Kind::Splitter, at(0.0, 3.0), 0.0);
         w.enemies[i].hp = 1.0;
-        let j = still(&mut w, Kind::Carrier, [10.0, -5.0], 0.0);
+        let j = still(&mut w, Kind::Carrier, at(10.0, -5.0), 0.0);
         w.enemies[j].hp = 1.0;
         w.kill(j, true);
         w.kill(0, true);

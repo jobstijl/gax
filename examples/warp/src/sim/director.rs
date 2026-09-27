@@ -1,7 +1,8 @@
 //! The spawn director: an intensity curve over time with calm stretches between spikes, and
 //! formations that are always telegraphed and never land within the safe radius.
 
-use super::{ARENA, Kind, Phase, World};
+use super::body::{heading, turned};
+use super::{ARENA, Kind, P, Phase, World, at, dir};
 
 /// The director's state.
 pub struct Director {
@@ -40,8 +41,8 @@ impl Director {
     /// The intensity at run time `t`: a slow rise with breathing waves (calm, then a spike).
     pub fn curve(t: f32) -> f32 {
         let rise = 1.0 - (-t / 150.0).exp();
-        let breath = 0.5 + 0.5 * (t * core::f32::consts::TAU / 40.0 - 1.2).sin();
-        (0.12 + 0.55 * rise + 0.33 * rise.sqrt() * breath * breath).clamp(0.0, 1.0)
+        let breath = 0.5 + 0.5 * crate::signal::wave(t * core::f32::consts::TAU / 40.0 - 1.2);
+        (0.12 + 0.55 * rise + 0.33 * gax::Real::sqrt(rise) * breath * breath).clamp(0.0, 1.0)
     }
 
     /// Called after the ship is destroyed: a calm stretch to recover.
@@ -115,32 +116,34 @@ impl Director {
                 Kind::Drifter
             }
         };
-        let ship = w.ship.body.xy();
-        let mut spawns: Vec<(Kind, [f32; 2])> = Vec::new();
+        let ship = w.ship.body.pos();
+        // Which half of the arena the player is in.
+        let right = ship.to_euclidean()[0] > 0.0;
+        let mut spawns: Vec<(Kind, P)> = Vec::new();
         if self.clock > 35.0 && singularities < 1 + (i * 2.5) as usize && roll < 0.12 + 0.1 * i {
             // A singularity, away from the player.
-            let p = [
+            let p = at(
                 rng.range(-ARENA[0] + 6.0, ARENA[0] - 6.0),
                 rng.range(-ARENA[1] + 5.0, ARENA[1] - 5.0),
-            ];
+            );
             spawns.push((Kind::Singularity, p));
         } else if !features.is_empty() && feature_roll < 0.3 + 0.25 * i {
             // A newcomer from the roster; the newest ones are a little likelier.
-            let pick =
-                ((rng.unit().sqrt() * features.len() as f32) as usize).min(features.len() - 1);
+            let pick = ((gax::Real::sqrt(rng.unit()) * features.len() as f32) as usize)
+                .min(features.len() - 1);
             let far = |rng: &mut super::rng::Rng| {
                 // A spot on the far half of the arena from the player.
-                let sx = if ship[0] > 0.0 { -1.0 } else { 1.0 };
-                [
-                    sx * rng.range(4.0, ARENA[0] - 3.0),
+                let side = if right { -1.0 } else { 1.0 };
+                at(
+                    side * rng.range(4.0, ARENA[0] - 3.0),
                     rng.range(-ARENA[1] + 3.0, ARENA[1] - 3.0),
-                ]
+                )
             };
             match features[pick] {
                 Kind::Evader => {
                     let c = far(rng);
                     for _ in 0..2 + (i * 4.0) as usize {
-                        let p = [c[0] + rng.range(-3.0, 3.0), c[1] + rng.range(-3.0, 3.0)];
+                        let p = c + dir(rng.range(-3.0, 3.0), rng.range(-3.0, 3.0));
                         spawns.push((Kind::Evader, p));
                     }
                 }
@@ -149,10 +152,10 @@ impl Director {
                     for _ in 0..n {
                         let cx = if rng.chance(0.5) { 1.0 } else { -1.0 };
                         let cy = if rng.chance(0.5) { 1.0 } else { -1.0 };
-                        let p = [
+                        let p = at(
                             cx * (ARENA[0] - 2.0 - rng.range(0.0, 4.0)),
                             cy * (ARENA[1] - 2.0 - rng.range(0.0, 3.0)),
-                        ];
+                        );
                         spawns.push((Kind::Splitter, p));
                     }
                 }
@@ -161,8 +164,8 @@ impl Director {
                     let n = 2 + (i * 2.5) as usize;
                     let c = far(rng);
                     for k in 0..n {
-                        let y = c[1] + (k as f32 - (n - 1) as f32 / 2.0) * 2.5;
-                        spawns.push((Kind::Warden, [c[0], y]));
+                        let along = dir(0.0, (k as f32 - (n - 1) as f32 / 2.0) * 2.5);
+                        spawns.push((Kind::Warden, c + along));
                     }
                 }
                 Kind::Serpent => spawns.push((Kind::Serpent, far(rng))),
@@ -175,10 +178,10 @@ impl Director {
             for (cx, cy) in [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)] {
                 if rng.chance(0.25 + 0.5 * i) || spawns.is_empty() {
                     for _ in 0..n {
-                        let p = [
+                        let p = at(
                             cx * (ARENA[0] - 2.0) - cx * rng.range(0.0, 3.0),
                             cy * (ARENA[1] - 2.0) - cy * rng.range(0.0, 3.0),
-                        ];
+                        );
                         spawns.push((kind(rng), p));
                     }
                 }
@@ -186,11 +189,11 @@ impl Director {
         } else if roll < 0.55 && self.clock > 20.0 {
             // A ring around the player.
             let n = 6 + (i * 10.0) as usize;
-            let r = 13.0;
-            let a0 = rng.angle();
-            for k in 0..n {
-                let a = a0 + k as f32 * core::f32::consts::TAU / n as f32;
-                spawns.push((Kind::Chaser, [ship[0] + r * a.cos(), ship[1] + r * a.sin()]));
+            // A radius turned an n-th of a circle at a time.
+            let mut d = heading(rng.angle(), 13.0);
+            for _ in 0..n {
+                spawns.push((Kind::Chaser, ship + d));
+                d = turned(d, core::f32::consts::TAU / n as f32);
             }
         } else if roll < 0.75 {
             // A line of drifters along a wall.
@@ -199,19 +202,19 @@ impl Director {
             let y = if top { ARENA[1] - 2.0 } else { -ARENA[1] + 2.0 };
             for k in 0..n {
                 let x = -ARENA[0] + 3.0 + (2.0 * ARENA[0] - 6.0) * k as f32 / (n - 1).max(1) as f32;
-                spawns.push((Kind::Drifter, [x, y]));
+                spawns.push((Kind::Drifter, at(x, y)));
             }
         } else {
             // A flank: a column on the side away from the player.
             let n = 3 + (i * 7.0) as usize;
-            let x = if ship[0] > 0.0 {
+            let x = if right {
                 -ARENA[0] + 2.5
             } else {
                 ARENA[0] - 2.5
             };
             for k in 0..n {
                 let y = -ARENA[1] + 3.0 + (2.0 * ARENA[1] - 6.0) * k as f32 / (n - 1).max(1) as f32;
-                spawns.push((kind(rng), [x, y]));
+                spawns.push((kind(rng), at(x, y)));
             }
         }
         for (k, p) in spawns {
@@ -227,8 +230,8 @@ impl Director {
 
 #[cfg(test)]
 mod tests {
+    use super::super::body::{distance, heading};
     use super::super::{Event, Input, Kind, SAFE_RADIUS, World};
-    use gax::pga2d::Point;
 
     /// Over many seeded runs with a wandering player, no spawn ever lands within the safe
     /// radius of the ship, and the whole roster turns up.
@@ -242,10 +245,10 @@ mod tests {
             for t in 0..120 * 150 {
                 let a = t as f32 * 0.004 + seed as f32;
                 w.tick(&Input {
-                    movement: Point::direction(a.cos(), (a * 1.7).sin()),
+                    movement: heading(a * 1.7, 1.0),
                     ..Input::default()
                 });
-                let ship = w.ship.body.xy();
+                let ship = w.ship.body.pos();
                 for e in &w.events {
                     // Motes launched by a visible carrier are its attack, not a landing.
                     if let Event::Spawn { pos, kind } = e
@@ -253,7 +256,7 @@ mod tests {
                     {
                         spawns += 1;
                         seen.insert(*kind);
-                        let d = ((pos[0] - ship[0]).powi(2) + (pos[1] - ship[1]).powi(2)).sqrt();
+                        let d = distance(*pos, ship);
                         assert!(d >= SAFE_RADIUS, "seed {seed}: a spawn {d} from the ship");
                     }
                 }

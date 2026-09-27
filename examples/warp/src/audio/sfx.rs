@@ -471,7 +471,7 @@ impl Sfx {
                 gain: patch.gain * t.gain,
                 ..patch
             },
-            osc: Osc { phase: 0.0 },
+            osc: Osc::default(),
             mod_osc: Osc::default(),
             part: Osc::default(),
             amp: Env::default(),
@@ -552,7 +552,7 @@ impl Sfx {
                     }
                     Wave::Fm => {
                         let m = v.mod_osc.sine(inc * p.fm_ratio);
-                        v.osc.phase = (v.osc.phase + m * p.fm_index * a * inc).rem_euclid(1.0);
+                        v.osc.nudge(m * p.fm_index * a * inc);
                         v.osc.sine(inc)
                     }
                 };

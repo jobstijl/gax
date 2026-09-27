@@ -1,7 +1,23 @@
 //! DSP building blocks, independent of the audio engine: band-limited oscillators, envelopes,
 //! a state-variable filter, noise and a small reverb. Nothing here allocates while processing.
+//!
+//! Oscillation is rotation: a sine is the height of a phasor, a unit direction that a rotation
+//! motor turns a little every sample (phase modulation turns it further); the filter's
+//! prewarped coefficient `tan θ` is a phasor's height over its width; an equal-power pan is
+//! `(1, 0)` turned between none and a quarter turn.
 
 use core::f32::consts::{PI, TAU};
+use gax::Unit;
+use gax::pga2d::{Motor, Point};
+
+/// The origin, the centre of every phasor's turn.
+const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
+
+/// The unit phasor at `angle`: `(1, 0)` turned by a rotation motor.
+#[inline]
+fn phasor(angle: f32) -> Point<(), f32> {
+    Motor::rotation(ORIGIN, angle) >> Point::direction(1.0, 0.0)
+}
 
 /// MIDI note number to frequency.
 pub fn mtof(m: f32) -> f32 {
@@ -53,11 +69,29 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
     }
 }
 
-/// A phase accumulator with band-limited waveforms (PolyBLEP).
-#[derive(Clone, Copy, Debug, Default)]
+/// A phase accumulator with band-limited waveforms (PolyBLEP), and a phasor for the sine.
+#[derive(Clone, Copy, Debug)]
 pub struct Osc {
-    /// Phase in `[0, 1)`.
+    /// Phase in `[0, 1)` (saw, pulse, triangle).
     pub phase: f32,
+    /// The sine's phasor: a unit direction going round the origin.
+    turning: Point<(), f32>,
+    /// The turn per sample, for the increment it was made for.
+    step: Unit<Motor<(), f32>>,
+    step_inc: f32,
+    samples: u32,
+}
+
+impl Default for Osc {
+    fn default() -> Osc {
+        Osc {
+            phase: 0.0,
+            turning: Point::direction(1.0, 0.0),
+            step: Motor::rotation(ORIGIN, 0.0),
+            step_inc: 0.0,
+            samples: 0,
+        }
+    }
 }
 
 impl Osc {
@@ -69,12 +103,30 @@ impl Osc {
         }
     }
 
-    /// Sine, at `inc` cycles per sample.
+    /// Sine, at `inc` cycles per sample: the phasor's height, then one turn of `inc` cycles
+    /// (the motor is kept while the frequency holds).
     #[inline]
     pub fn sine(&mut self, inc: f32) -> f32 {
-        let y = (self.phase * TAU).sin();
+        let y = self.turning.e01();
+        if inc != self.step_inc {
+            self.step = Motor::rotation(ORIGIN, TAU * inc);
+            self.step_inc = inc;
+        }
+        self.turning = self.step >> self.turning;
+        // Rounding slowly changes its length: back to the unit circle now and then.
+        self.samples = self.samples.wrapping_add(1);
+        if self.samples.is_multiple_of(1024) {
+            self.turning = self.turning.gp(1.0 / self.turning.ideal_norm());
+        }
         self.advance(inc);
         y
+    }
+
+    /// Phase modulation: turn the phasor further by `turns` of a cycle.
+    #[inline]
+    pub fn nudge(&mut self, turns: f32) {
+        self.turning = Motor::rotation(ORIGIN, TAU * turns) >> self.turning;
+        self.phase = (self.phase + turns).rem_euclid(1.0);
     }
 
     /// Band-limited saw.
@@ -128,7 +180,9 @@ impl Svf {
     /// Filter one sample at cutoff `fc` (Hz) and resonance `q` (0.5 soft .. 10 sharp).
     #[inline]
     pub fn tick(&mut self, x: f32, fc: f32, q: f32, sr: f32) -> SvfOut {
-        let g = (PI * (fc / sr).clamp(1e-5, 0.49)).tan();
+        // The prewarped gain `tan(π fc / sr)`: the phasor's height over its width.
+        let d = phasor(PI * (fc / sr).clamp(1e-5, 0.49));
+        let g = d.e01() / d.e20();
         let k = 1.0 / q.max(0.05);
         let a1 = 1.0 / (1.0 + g * (g + k));
         let a2 = g * a1;
@@ -309,9 +363,45 @@ impl Reverb {
     }
 }
 
-/// Equal-power pan gains for `pan` in `[-1, 1]`.
+/// Equal-power pan gains for `pan` in `[-1, 1]`: `(1, 0)` turned from none (left) to a
+/// quarter turn (right); the gains are its coordinates, so their squares always sum to one.
 #[inline]
 pub fn pan(pan: f32) -> (f32, f32) {
-    let a = (pan.clamp(-1.0, 1.0) + 1.0) * core::f32::consts::FRAC_PI_4;
-    (a.cos(), a.sin())
+    let d = phasor((pan.clamp(-1.0, 1.0) + 1.0) * core::f32::consts::FRAC_PI_4);
+    (d.e20(), d.e01())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The phasor's height is the sine, and stays on it over a minute of samples (the turns
+    /// are exact rotations; rounding is renormalized away).
+    #[test]
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
+    fn a_turning_phasor_is_a_sine() {
+        let mut o = Osc::default();
+        let inc = 440.0 / 48000.0;
+        let mut worst = 0.0f32;
+        for n in 0..48000 * 60 {
+            let y = o.sine(inc);
+            let t = (f64::from(n) * f64::from(inc)).fract() * core::f64::consts::TAU;
+            worst = worst.max((y - t.sin() as f32).abs());
+        }
+        assert!(worst < 2e-3, "{worst}");
+        // Phase modulation by a quarter cycle turns sine into cosine.
+        let mut o = Osc::default();
+        o.nudge(0.25);
+        assert!((o.sine(0.0) - 1.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn panning_keeps_the_power() {
+        for k in 0..=20 {
+            let (l, r) = pan(k as f32 / 10.0 - 1.0);
+            assert!((l * l + r * r - 1.0).abs() < 1e-5);
+        }
+        let (l, r) = pan(-1.0);
+        assert!((l - 1.0).abs() < 1e-6 && r.abs() < 1e-6);
+    }
 }

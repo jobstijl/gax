@@ -60,7 +60,7 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
         .iter()
         .any(|e| e.flight == crate::tunnel::Flight::Dive && (crate::tunnel::arc(e.pos) - s) < 8.0);
     let input = sim::Input {
-        movement: gax::pga2d::Point::direction((t * 0.7).cos() * 0.6, (t * 0.45).sin() * 0.5),
+        movement: crate::sim::body::heading(t * 0.6, 0.55),
         fire: true,
         ..sim::Input::default()
     };
@@ -68,7 +68,7 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
         cursor: cursor.or(Some([0.0, 0.0])),
         stick: None,
         roll: if danger { 1 } else { 0 },
-        throttle: (t * 0.2).sin(),
+        throttle: crate::signal::wave(t * 0.2),
         bomb: false,
     };
     (input, flight)
@@ -79,39 +79,36 @@ pub fn bot_input(g: &Game, t: f32) -> sim::Input {
 }
 
 fn bot(g: &Game, t: f32) -> sim::Input {
+    use crate::sim::body::{distance, heading, turned, with_length};
     let s = &g.sim;
-    let p = s.ship.body.xy();
+    let p = s.ship.body.pos();
     let near = s
         .enemies
         .iter()
-        .map(|e| {
-            let q = e.body.xy();
-            ((q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2), q)
-        })
-        .min_by(|a, b| a.0.total_cmp(&b.0));
+        .map(|e| e.body.pos())
+        .min_by(|a, b| distance(*a, p).total_cmp(&distance(*b, p)));
     let mut input = sim::Input::default();
-    let (mut mx, mut my) = ((t * 0.7).cos() * 0.6, (t * 1.1).sin() * 0.6);
-    if let Some((d2, q)) = near {
-        let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
-        let d = d2.sqrt().max(1e-3);
-        input.aim = Point::direction(dx / d, dy / d);
+    // Wander: a direction turning with time.
+    let mut go = heading(t * 0.9, 0.6);
+    if let Some(q) = near {
+        let to = q - p;
+        input.aim = with_length(to, 1.0);
         input.fire = true;
-        if d < 8.0 {
-            // Away and around.
-            mx = -dx / d * 0.8 - dy / d * 0.6;
-            my = -dy / d * 0.8 + dx / d * 0.6;
+        if to.ideal_norm() < 8.0 {
+            // Away and around: the way back from it, turned a little.
+            go = with_length(turned(-to, -0.6), 1.0);
         }
-        let crowd = s.enemies.iter().filter(|e| {
-            let q = e.body.xy();
-            (q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2) < 9.0
-        });
+        let crowd = s.enemies.iter().filter(|e| distance(e.body.pos(), p) < 3.0);
         input.bomb = crowd.count() >= 5;
     }
-    // Stay off the walls.
-    mx -= p[0] / 32.0 * 0.6;
-    my -= p[1] / 18.0 * 0.6;
-    let l = (mx * mx + my * my).sqrt().max(1.0);
-    input.movement = Point::direction(mx / l, my / l);
+    // Stay off the walls: pulled back towards the middle.
+    let home = (sim::at(0.0, 0.0) - p).gp(0.6 / 32.0);
+    let m = go + home;
+    input.movement = if m.ideal_norm() > 1.0 {
+        with_length(m, 1.0)
+    } else {
+        m
+    };
     input
 }
 
@@ -164,7 +161,7 @@ pub fn shots(args: &[String]) {
         g.start_seeded(7);
         g.sim.director.enabled = false;
         g.sim.ship.body.shift(-20.0, -10.0);
-        g.sim.spawn(sim::Kind::Singularity, [0.0, 0.0]);
+        g.sim.spawn(sim::Kind::Singularity, sim::at(0.0, 0.0));
         g.sim.enemies[0].body.vel = Point::direction(0.0, 0.0);
         for _ in 0..120 {
             g.time += dt;
@@ -272,17 +269,14 @@ pub fn shots(args: &[String]) {
         for (k, kind) in kinds.iter().enumerate() {
             let x = -20.0 + k as f32 * 5.0;
             let y = if k % 2 == 0 { 3.0 } else { -1.0 };
-            g.sim.spawn(*kind, [x, y]);
+            g.sim.spawn(*kind, sim::at(x, y));
         }
         // The warden faces the ship.
         for e in &mut g.sim.enemies {
             if e.kind == Warden {
-                let [x, y] = e.body.xy();
-                e.body = crate::sim::body::Body::new(crate::sim::body::pose_at(
-                    x,
-                    y,
-                    (-9.0 - y).atan2(0.0 - x),
-                ));
+                let here = e.body.pos();
+                let facing = crate::sim::body::angle_of(sim::at(0.0, -9.0) - here);
+                e.body = crate::sim::body::Body::new(crate::sim::body::place(here, facing));
             }
         }
         // Pinned in place (the serpent's chain still winds), so every shape is seen whole.
@@ -318,7 +312,8 @@ pub fn shots(args: &[String]) {
         let input = bot(&g, t);
         // Show a singularity early in the scripted run.
         if (t - 8.0).abs() < dt * 0.5 {
-            g.sim.announce(sim::Kind::Singularity, [12.0, 6.0], 1.2);
+            g.sim
+                .announce(sim::Kind::Singularity, sim::at(12.0, 6.0), 1.2);
         }
         if g.screen == Screen::Over {
             g.start();
@@ -328,8 +323,14 @@ pub fn shots(args: &[String]) {
         if next < times.len() && t >= times[next] {
             let path = Path::new(dir).join(format!("play-{:03}s.png", times[next] as u32));
             save(&renderer, &target, &path);
+            let gpu = renderer.timings().map_or(String::new(), |t| {
+                format!(
+                    ", GPU ms: compute {:.2} scene {:.2} bloom {:.2} post {:.2}",
+                    t.compute, t.scene, t.bloom, t.composite
+                )
+            });
             println!(
-                "{}: score {}, x{}, {} enemies, {} bullets, worst drift {:.1e}",
+                "{}: score {}, x{}, {} enemies, {} bullets, worst drift {:.1e}{gpu}",
                 path.display(),
                 g.sim.score,
                 g.sim.mult,
@@ -805,8 +806,14 @@ mod tests {
             let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5);
             let t = rng.unit();
             let pairs = [
-                (crate::light_mix(l1, l2, t), crate::kernels::light_mix(l1, l2, t)),
-                (crate::light_whiten(l1, t), crate::kernels::light_whiten(l1, t)),
+                (
+                    crate::light_mix(l1, l2, t),
+                    crate::kernels::light_mix(l1, l2, t),
+                ),
+                (
+                    crate::light_whiten(l1, t),
+                    crate::kernels::light_whiten(l1, t),
+                ),
                 (crate::light_fade(l1, t), crate::kernels::light_fade(l1, t)),
             ];
             for (a, b) in pairs {

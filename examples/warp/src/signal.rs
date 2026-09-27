@@ -11,6 +11,7 @@ pub fn wave(phase: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     #[test]
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn a_phasor_traces_a_sine() {
         for k in 0..64 {
             let p = k as f32 * 0.37;

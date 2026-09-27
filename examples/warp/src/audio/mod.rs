@@ -417,12 +417,20 @@ impl Sound {
         Sound::new()
     }
 
-    fn push(&mut self, family: Family, note: f32, p: [f32; 2], cam: Pose, gain: f32, variant: f32) {
-        // Into the camera's frame with gax: its x gives the pan, its distance the gain.
-        let local = (cam << Point::xy(p[0], p[1])).to_euclidean();
-        let pan = (local[0] / 30.0).clamp(-1.0, 1.0) * 0.8;
-        let d2 = local[0] * local[0] + local[1] * local[1];
-        let fall = 1.0 / (1.0 + d2 / 1600.0);
+    fn push(
+        &mut self,
+        family: Family,
+        note: f32,
+        p: Point<(), f32>,
+        cam: Pose,
+        gain: f32,
+        variant: f32,
+    ) {
+        // Into the camera's frame with gax: across gives the pan, the distance the gain.
+        let off = (cam << p) - Point::xy(0.0, 0.0);
+        let pan = (off.e20() / 30.0).clamp(-1.0, 1.0) * 0.8;
+        let d = off.ideal_norm();
+        let fall = 1.0 / (1.0 + d * d / 1600.0);
         let detune = self.rng.next() * 0.08;
         self.pending.push(Trigger {
             family,
@@ -438,12 +446,12 @@ impl Sound {
 
     /// React to a Plane tick's events.
     pub fn on_events(&mut self, events: &[Event], w: &World, cam: Pose) {
-        self.play(events, w.mult, w.ship.body.xy(), cam);
+        self.play(events, w.mult, w.ship.body.pos(), cam);
     }
 
     /// Play events (the Tunnel maps its own onto these), with the multiplier and the ship's
     /// position, placed through the listener `cam`.
-    pub fn play(&mut self, events: &[Event], mult: u32, ship: [f32; 2], cam: Pose) {
+    pub fn play(&mut self, events: &[Event], mult: u32, ship: Point<(), f32>, cam: Pose) {
         let s = self.scale;
         // Higher multipliers lift the effects by scale degrees.
         let lift = (mult.min(40) / 5) as i32;
@@ -521,7 +529,14 @@ impl Sound {
                     self.music_event(MUSIC_BOMB);
                 }
                 Event::Extra { .. } => self.push(Family::Extra, s.note(14), ship, cam, 1.0, 0.0),
-                Event::Respawn => self.push(Family::Spawn, s.note(14), [0.0, 0.0], cam, 1.5, 0.0),
+                Event::Respawn => self.push(
+                    Family::Spawn,
+                    s.note(14),
+                    Point::xy(0.0, 0.0),
+                    cam,
+                    1.5,
+                    0.0,
+                ),
                 Event::GameOver => {}
             }
         }
@@ -536,11 +551,11 @@ impl Sound {
     /// Per frame, for the Plane: steer the music, and start a new run's music when the seed
     /// changes.
     pub fn update(&mut self, w: &World, playing: bool, _cam: Pose) {
-        let ship = w.ship.body.xy();
+        let ship = w.ship.body.pos();
         let darkness = w
             .wells()
             .map(|(p, _)| {
-                let d = ((p[0] - ship[0]).powi(2) + (p[1] - ship[1]).powi(2)).sqrt();
+                let d = crate::sim::body::distance(p, ship);
                 (1.0 - d / 14.0).clamp(0.0, 1.0)
             })
             .fold(0.0f32, f32::max);

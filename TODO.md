@@ -110,7 +110,9 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [ ] M4 gate: the owner plays it (readable and fun at speed?)
 - [ ] M5: Tunnel complete (serpents, bonus gates, singularities that pinch the tunnel, replays and a table for the Tunnel, its own tempo), polish, attract mode, accessibility
 - [ ] M6: VERIFY.md complete, performance numbers
-- [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away; a sign-correct reflection of directions by a line; a motor from a frame (look-at)
+- [x] gax friction fixed from the game: ideal norms, sign-correct reflections, rotations between directions and look-at, the tracer's constant folding and two tracer bugs (VERIFY.md 4, 7, 8-11)
+- [x] warp in gax throughout: lights as points, traced line shaders, the Tunnel and the Plane rewritten, phasor audio, a clippy ban on geometry by hand
+- [ ] gax friction open: a tracer warning when a `Unit` argument's renormalization simplifies away; a "weight 1" method for points (VERIFY.md 2, 13)
 
 ## Decisions for the project owner
 - Publishing to crates.io (later).

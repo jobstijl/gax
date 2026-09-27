@@ -173,10 +173,9 @@ impl Game {
                 4 if k > 8 => sim::Kind::Splitter,
                 _ => sim::Kind::Drifter,
             };
-            self.sim
-                .spawn(kind, [a.cos() * (10.0 + k as f32), a.sin() * 9.0]);
+            self.sim.spawn(kind, attract_spot(a, 10.0 + k as f32, 9.0));
         }
-        self.sim.spawn(sim::Kind::Singularity, [12.0, -4.0]);
+        self.sim.spawn(sim::Kind::Singularity, sim::at(12.0, -4.0));
     }
 
     /// Start a run.
@@ -268,6 +267,13 @@ impl Game {
         sound.gains = s.gains();
         sound.on_beat = s.on_beat;
     }
+}
+
+/// A spot on an ellipse around the title: the unit heading at `angle`, stretched to the
+/// half axes `rx` and `ry`.
+fn attract_spot(angle: f32, rx: f32, ry: f32) -> sim::P {
+    let h = sim::body::heading(angle, 1.0);
+    sim::at(h.e20() * rx, h.e01() * ry)
 }
 
 /// Move a menu cursor over `n` items.
@@ -442,7 +448,7 @@ fn update(
         &pads,
         g.cam,
         g.half_height,
-        g.sim.ship.body.xy(),
+        g.sim.ship.body.pos(),
         &mut g.device,
         &mut g.latch,
     );
@@ -702,7 +708,8 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
             run.input.roll = 0;
             run.view.on_events(&run.world.events);
             let heard = tunnel_sounds(&run.world, &run.view);
-            sound.play(&heard, run.world.mult, [0.0, 0.0], sim::body::identity());
+            let origin = sim::at(0.0, 0.0);
+            sound.play(&heard, run.world.mult, origin, sim::body::identity());
             if playing && run.world.events.contains(&tunnel::Event::GameOver) {
                 g.best = g.best.max(run.world.score);
                 g.screen = Screen::Over;
@@ -734,7 +741,7 @@ fn tunnel_sounds(w: &tunnel::World, view: &render::tunnel::View) -> Vec<sim::Eve
             Some(match *e {
                 T::Fire { pos } => sim::Event::Fire {
                     pos: at(pos),
-                    angle: 0.0,
+                    dir: sim::dir(0.0, 1.0),
                 },
                 T::Hit { pos, foe } => sim::Event::Hit {
                     pos: at(pos),

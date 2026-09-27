@@ -9,7 +9,7 @@
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
 use crate::render::{Particle, PostSettings};
-use crate::sim::body::{Pose, pose_at};
+use crate::sim::body::{Pose, heading, pose_at, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World};
 use gax::pga2d::{Motor, Point};
@@ -51,16 +51,6 @@ pub struct Fx {
     pub half_height: f32,
     /// Width over height of the view.
     pub aspect: f32,
-}
-
-/// The point of an event's position.
-fn at(p: [f32; 2]) -> P {
-    Point::xy(p[0], p[1])
-}
-
-/// The direction of length `speed` at `angle`: `(speed, 0)` turned by a rotation motor.
-pub fn heading(angle: f32, speed: f32) -> P {
-    Motor::rotation(Point::xy(0.0, 0.0), angle) >> Point::direction(speed, 0.0)
 }
 
 impl Fx {
@@ -141,11 +131,11 @@ impl Fx {
     pub fn on_events(&mut self, events: &[Event]) {
         for e in events {
             match *e {
-                Event::Fire { pos, angle } => {
-                    let muzzle = at(pos) + heading(angle, 0.6);
+                Event::Fire { pos, dir } => {
+                    let muzzle = pos + dir.gp(0.6);
                     for _ in 0..2 {
-                        let a = angle + self.rng.range(-0.4, 0.4);
-                        let v = heading(a, self.rng.range(6.0, 14.0));
+                        let d = turned(dir, self.rng.range(-0.4, 0.4));
+                        let v = d.gp(self.rng.range(6.0, 14.0));
                         self.particle(muzzle, v, palette::BULLET, [0.0, 0.12, 6.0, 0.02]);
                     }
                 }
@@ -154,9 +144,9 @@ impl Fx {
                     let hot = if kind == Kind::Singularity { 0.0 } else { 0.3 };
                     let n = if kind == Kind::Singularity { 4 } else { 10 };
                     let c = scene::color(kind);
-                    self.burst(at(pos), c, n, (4.0, 12.0), (0.15, 0.4), hot);
+                    self.burst(pos, c, n, (4.0, 12.0), (0.15, 0.4), hot);
                     if kind == Kind::Singularity {
-                        self.blast(at(pos), 30.0, 2.0, 0.06);
+                        self.blast(pos, 30.0, 2.0, 0.06);
                     }
                 }
                 Event::Kill {
@@ -166,7 +156,7 @@ impl Fx {
                     scored,
                     points,
                 } => {
-                    let p = at(pos);
+                    let p = pos;
                     let c = scene::color(kind);
                     if points >= 250 {
                         self.popups.push((p, points.to_string(), 0.0, c));
@@ -185,20 +175,20 @@ impl Fx {
                 }
                 Event::Deflect { pos, kind } => {
                     let c = scene::color(kind);
-                    self.burst(at(pos), c, 6, (6.0, 14.0), (0.1, 0.25), 0.5);
+                    self.burst(pos, c, 6, (6.0, 14.0), (0.1, 0.25), 0.5);
                 }
                 Event::Wall { pos } => {
-                    self.burst(at(pos), palette::BULLET, 5, (2.0, 8.0), (0.1, 0.3), 0.2);
-                    self.blast(at(pos), -25.0, 0.5, 0.05);
+                    self.burst(pos, palette::BULLET, 5, (2.0, 8.0), (0.1, 0.3), 0.2);
+                    self.blast(pos, -25.0, 0.5, 0.05);
                 }
                 Event::Absorb { pos, .. } => {
                     let c = palette::SINGULARITY;
-                    self.burst(at(pos), c, 40, (1.0, 5.0), (0.3, 0.8), 0.3);
-                    self.blast(at(pos), 90.0, 3.0, 0.15);
+                    self.burst(pos, c, 40, (1.0, 5.0), (0.3, 0.8), 0.3);
+                    self.blast(pos, 90.0, 3.0, 0.15);
                 }
                 Event::Burst { pos } => {
-                    self.burst(at(pos), palette::MOTE, 600, (6.0, 26.0), (0.6, 1.8), 0.2);
-                    self.blast(at(pos), -550.0, 9.0, 0.25);
+                    self.burst(pos, palette::MOTE, 600, (6.0, 26.0), (0.6, 1.8), 0.2);
+                    self.blast(pos, -550.0, 9.0, 0.25);
                     self.shake = self.shake.max(0.9);
                 }
                 Event::Warn { pos, kind } => {
@@ -206,25 +196,25 @@ impl Fx {
                     let c = light::fade(scene::color(kind), 0.6);
                     for _ in 0..24 {
                         let out = heading(self.rng.angle(), self.rng.range(1.5, 3.0));
-                        self.particle(at(pos) + out, out.gp(-2.5), c, [0.0, 0.4, 0.5, 0.03]);
+                        self.particle(pos + out, out.gp(-2.5), c, [0.0, 0.4, 0.5, 0.03]);
                     }
                 }
                 Event::Spawn { pos, kind } => {
                     let c = scene::color(kind);
-                    self.burst(at(pos), c, 16, (2.0, 6.0), (0.2, 0.5), 0.5);
+                    self.burst(pos, c, 16, (2.0, 6.0), (0.2, 0.5), 0.5);
                     if kind == Kind::Singularity {
-                        self.blast(at(pos), 300.0, 6.0, 0.4);
+                        self.blast(pos, 300.0, 6.0, 0.4);
                     }
                 }
                 Event::Pickup { pos, mult } => {
                     if mult % 10 == 0 {
                         self.popups
-                            .push((at(pos), format!("X{mult}"), 0.0, scene::shard()));
+                            .push((pos, format!("X{mult}"), 0.0, scene::shard()));
                     }
-                    self.burst(at(pos), scene::shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
+                    self.burst(pos, scene::shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
                 }
                 Event::Death { pos } => {
-                    let p = at(pos);
+                    let p = pos;
                     self.burst(p, palette::SHIP, 1500, (4.0, 36.0), (0.8, 2.4), 0.3);
                     self.blast(p, -1300.0, 12.0, 0.3);
                     self.shake = 1.6;
@@ -233,7 +223,7 @@ impl Fx {
                 }
                 Event::Bomb { pos } => {
                     // A ring of light: one spark every 1/2400 of a turn.
-                    let p = at(pos);
+                    let p = pos;
                     let c = light::light(0.55, 0.8, 1.0, 3.5 * (0.35 + 0.65 * self.flash_scale));
                     let step =
                         Motor::rotation(Point::xy(0.0, 0.0), core::f32::consts::TAU / 2400.0);
@@ -273,7 +263,7 @@ impl Fx {
         }
         self.blasts.retain(|b| b.life > 0.0);
         for (p, strength) in w.wells() {
-            s.push(source(at(p), strength * 3.0, 12.0));
+            s.push(source(p, strength * 3.0, 12.0));
         }
         // The ship's wake: a light push where it flies.
         if w.phase == crate::sim::Phase::Playing {
@@ -287,7 +277,12 @@ impl Fx {
 
     /// The wells as particle attractors.
     pub fn particle_wells(w: &World) -> Vec<[f32; 4]> {
-        w.wells().map(|(p, s)| [p[0], p[1], s * 1.2, 4.0]).collect()
+        w.wells()
+            .map(|(p, s)| {
+                let [x, y] = p.to_euclidean();
+                [x, y, s * 1.2, 4.0]
+            })
+            .collect()
     }
 
     /// Advance the camera by a frame of `dt`: towards a point between the arena's centre and

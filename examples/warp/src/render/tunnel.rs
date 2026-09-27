@@ -337,10 +337,9 @@ impl View {
 
     /// Where a world point is for the ears: in the camera's frame (`cam << p`), across as
     /// the pan coordinate and the depth as the distance.
-    pub fn listen(&self, p: P) -> [f32; 2] {
+    pub fn listen(&self, p: P) -> Point2<(), f32> {
         let c = self.cam << p;
-        let [x, _, z] = c.to_euclidean();
-        [-4.0 * x, z]
+        Point2::xy(-4.0 * c.e032() / c.e123(), c.e021() / c.e123())
     }
 
     /// Where a straightened point is on screen, if in front of the camera.

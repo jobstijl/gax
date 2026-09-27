@@ -65,13 +65,13 @@ pub struct Flight {
 pub struct Latch(i8, i8);
 
 /// A deadzone with a smooth rescale: `|v| < dz` is zero, and the rest maps to `0..1`.
-fn deadzone(x: f32, y: f32, dz: f32) -> (f32, f32) {
-    let l = (x * x + y * y).sqrt();
+fn deadzone(x: f32, y: f32, dz: f32) -> Point<(), f32> {
+    let v = Point::direction(x, y);
+    let l = v.ideal_norm();
     if l < dz {
-        return (0.0, 0.0);
+        return Point::direction(0.0, 0.0);
     }
-    let k = ((l - dz) / (1.0 - dz)).min(1.0) / l;
-    (x * k, y * k)
+    v.gp(((l - dz) / (1.0 - dz)).min(1.0) / l)
 }
 
 /// Read this frame's input: the simulation's (in gax types) and the menu buttons.
@@ -85,7 +85,7 @@ pub fn read(
     pads: &Query<&Gamepad>,
     camera: Pose,
     half_height: f32,
-    ship: [f32; 2],
+    ship: Point<(), f32>,
     device: &mut Device,
     latch: &mut Latch,
 ) -> (sim::Input, Menu, Flight) {
@@ -137,7 +137,7 @@ pub fn read(
     let axis = |neg: [KeyCode; 2], pos: [KeyCode; 2]| {
         f32::from(u8::from(keys.any_pressed(pos))) - f32::from(u8::from(keys.any_pressed(neg)))
     };
-    let (mut mx, mut my) = (
+    let mut movement = Point::direction(
         axis(
             [KeyCode::KeyA, KeyCode::ArrowLeft],
             [KeyCode::KeyD, KeyCode::ArrowRight],
@@ -147,10 +147,10 @@ pub fn read(
             [KeyCode::KeyW, KeyCode::ArrowUp],
         ),
     );
-    let l = (mx * mx + my * my).sqrt();
+    // A diagonal is no faster: at most unit length.
+    let l = movement.ideal_norm();
     if l > 1.0 {
-        mx /= l;
-        my /= l;
+        movement = movement.gp(1.0 / l);
     }
     let mut flight = Flight {
         cursor: None,
@@ -165,7 +165,7 @@ pub fn read(
         bomb: keys.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Right),
     };
     // Mouse aim: the cursor placed in the world through the camera motor.
-    let mut aim = (0.0, 0.0);
+    let mut aim = Point::direction(0.0, 0.0);
     if let Some(w) = window
         && let Some(c) = w.cursor_position()
     {
@@ -173,8 +173,7 @@ pub fn read(
         let (nx, ny) = (2.0 * c.x / width - 1.0, 1.0 - 2.0 * c.y / height);
         flight.cursor = Some([nx * 18.0 * width / height, ny * 18.0]);
         let local = Point::xy(nx * half_height * width / height, ny * half_height);
-        let [wx, wy] = (camera >> local).to_euclidean();
-        aim = (wx - ship[0], wy - ship[1]);
+        aim = (camera >> local) - ship;
     }
     input.fire = mouse.pressed(MouseButton::Left);
     input.bomb = mouse.just_pressed(MouseButton::Right) || keys.just_pressed(KeyCode::Space);
@@ -185,16 +184,16 @@ pub fn read(
     for pad in pads.iter() {
         let ls = pad.left_stick();
         let rs = pad.right_stick();
-        let (lx, ly) = deadzone(ls.x, ls.y, 0.15);
-        let (rx, ry) = deadzone(rs.x, rs.y, 0.25);
-        if lx != 0.0 || ly != 0.0 {
-            (mx, my) = (lx, ly);
+        let left = deadzone(ls.x, ls.y, 0.15);
+        let right = deadzone(rs.x, rs.y, 0.25);
+        if left.ideal_norm() > 0.0 {
+            movement = left;
             *device = Device::Pad;
         }
-        if rx != 0.0 || ry != 0.0 {
-            aim = (rx, ry);
+        if right.ideal_norm() > 0.0 {
+            aim = right;
             input.fire = true;
-            flight.stick = Some([rx, ry]);
+            flight.stick = Some([right.e20(), right.e01()]);
             *device = Device::Pad;
         }
         flight.roll += i8::from(pad.just_pressed(GamepadButton::RightTrigger))
@@ -238,8 +237,8 @@ pub fn read(
         }
         *latch = Latch(fx, fy);
     }
-    input.movement = Point::direction(mx, my);
-    input.aim = Point::direction(aim.0, aim.1);
+    input.movement = movement;
+    input.aim = aim;
     flight.throttle = flight.throttle.clamp(-1.0, 1.0);
     (input, menu, flight)
 }

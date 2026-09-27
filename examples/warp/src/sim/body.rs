@@ -47,7 +47,8 @@ impl Body {
         self.pose >> Point::xy(0.0, 0.0)
     }
 
-    /// Its position as `[x, y]`.
+    /// Its position as `[x, y]` (for tests).
+    #[cfg(test)]
     pub fn xy(&self) -> [f32; 2] {
         self.pos().to_euclidean()
     }
@@ -75,6 +76,12 @@ impl Body {
         self.pose = Motor::translation(dx, dy) * self.pose;
     }
 
+    /// Move its position to the point `p`, keeping its orientation.
+    pub fn move_to(&mut self, p: Point<(), f32>) {
+        let d = unit_weight(p) - self.pos();
+        self.shift(d.e20(), d.e01());
+    }
+
     /// The drawn pose between the last two ticks: `prev exp(t log(~prev pose))`.
     pub fn lerp(&self, t: f32) -> Pose {
         interpolate(self.prev, self.pose, t)
@@ -99,14 +106,60 @@ pub fn drift(m: Pose) -> f32 {
         .max(n.c[3].abs())
 }
 
-/// The angle of a direction (a point at infinity), counterclockwise from the x axis.
-pub fn angle_of(d: Point<(), f32>) -> f32 {
-    d.e01().atan2(d.e20())
+/// The origin.
+pub const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
+
+/// The same point with weight 1 (a meet or a reflection can return it with another weight,
+/// even a negative one).
+pub fn unit_weight(p: Point<(), f32>) -> Point<(), f32> {
+    p.gp(1.0 / p.e12())
 }
 
-/// The length of a direction's Euclidean part.
-pub fn length(d: Point<(), f32>) -> f32 {
-    (d.e20() * d.e20() + d.e01() * d.e01()).sqrt()
+/// The direction of length `speed` at `angle` from the x axis: `(speed, 0)` turned by a
+/// rotation motor.
+pub fn heading(angle: f32, speed: f32) -> Point<(), f32> {
+    Motor::rotation(ORIGIN, angle) >> Point::direction(speed, 0.0)
+}
+
+/// The direction `d` turned by `angle`.
+pub fn turned(d: Point<(), f32>, angle: f32) -> Point<(), f32> {
+    Motor::rotation(ORIGIN, angle) >> d
+}
+
+/// The signed angle from direction `a` to direction `b`, in `[-π, π]`: the angle of the
+/// rotation between them.
+pub fn turn(a: Point<(), f32>, b: Point<(), f32>) -> f32 {
+    Motor::rotation_between(a, b).angle()
+}
+
+/// The angle of a direction from the x axis, in `(-π, π]`: the nearest of the four axis
+/// directions, plus the (at most eighth-turn, so precise) rotation from it to `d`.
+pub fn angle_of(d: Point<(), f32>) -> f32 {
+    use core::f32::consts::{FRAC_PI_2, PI};
+    let (x, y) = (d.e20(), d.e01());
+    let (axis, base) = if x.abs() >= y.abs() {
+        if x >= 0.0 {
+            (Point::direction(1.0, 0.0), 0.0)
+        } else {
+            (Point::direction(-1.0, 0.0), PI)
+        }
+    } else if y >= 0.0 {
+        (Point::direction(0.0, 1.0), FRAC_PI_2)
+    } else {
+        (Point::direction(0.0, -1.0), -FRAC_PI_2)
+    };
+    base + turn(axis, d)
+}
+
+/// `d` scaled to length `len` (a zero direction stays zero).
+pub fn with_length(d: Point<(), f32>, len: f32) -> Point<(), f32> {
+    d.gp(len / d.ideal_norm().max(1e-9))
+}
+
+/// The pose at the point `p`, turned by `angle`.
+pub fn place(p: Point<(), f32>, angle: f32) -> Pose {
+    let [x, y] = p.to_euclidean();
+    pose_at(x, y, angle)
 }
 
 /// The Euclidean distance between two finite points, as the norm of their join.

@@ -2,15 +2,20 @@
 
 A neon twin-stick shooter on warping space, and a real-load test of gax.
 
-Everything that moves is gax:
+Everything is gax:
 * poses are unit PGA2D motors and velocities are twists;
-* the Tunnel's track is a chain of PGA3D screw motions, sampled by motor interpolation, and
-  its camera is a PGA3D motor;
-* collisions are joins and signed distances;
+* collisions are joins and signed distances, and the arena's walls are lines to reflect in;
 * the camera follows on `log`/`exp`;
-* the lattice of warped space and the particles are traced gax kernels, running in compute
-  shaders with a CPU twin of the same programs;
-* the shaders import gax's generated WGSL modules.
+* the Tunnel's track is a chain of PGA3D screw motions, sampled by motor interpolation, and
+  its camera is a PGA3D motor (`Motor::look_at`); the projection is homogeneous, and aiming
+  goes back through it as a ray that meets the tunnel;
+* colours are lights: homogeneous points in RGB space whose weight is their intensity, so
+  adding them mixes them the way glow does (Grassmann's laws);
+* the lattice of warped space, the particles, and the line renderer's geometry and light are
+  traced gax kernels, running in shaders with a CPU twin of the same programs; the shaders
+  import gax's generated WGSL modules;
+* oscillators are phasors (a direction turned by a rotation motor every sample), and panning
+  is a turn.
 
 Bevy is plumbing only (the app, windows, input and gamepads). The renderer is the game's own
 wgpu code, and the audio is its own synthesizer on the Firewheel graph through bevy_seedling.
@@ -64,8 +69,9 @@ converge on it; Q and E (or the bumpers) barrel-roll you around the tunnel with 
 invulnerability; Shift and Ctrl (or the triggers) boost and brake, and faster is worth more
 points. Rings of drones close in around you (fly through their middle), mines drift in the
 lane, and turrets on the wall fire bolts that grow and glow as they come. Your shadow on the
-wall shows where you are; the reticle locks onto the enemy nearest to it and shows where your
-shots will cross its depth.
+wall shows where you are. The reticle locks onto the enemy under it, at any depth, and your
+shots lead it; the lead dot shows where they will cross its depth. Drone rings hold in a band
+ahead of you and dive one at a time, after a warning flash.
 
 **The enemies** (Plane):
 * **drifters** (cyan) wander;
@@ -111,6 +117,8 @@ cargo test --release                             # the simulation, the audio, CP
   cursors.
 * **Math goes through gax.** `clippy.toml` disallows glam's types and the methods that hand them
   out, as well as Bevy's `Transform` and seedling's spatial audio. The exception is `src/input.rs`,
-  which turns stick and cursor vectors into gax types right away.
+  which turns stick and cursor vectors into gax types right away. It also disallows geometry by
+  hand: `sqrt`, `sin`, `cos`, `tan`, `atan2`, `asin`, `acos`, `sin_cos` and `hypot` on floats,
+  everywhere, the audio included.
 * **The audio thread does not allocate.** A test runs every synthesizer for 4000 blocks under a
   counting allocator.

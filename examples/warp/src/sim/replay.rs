@@ -44,9 +44,10 @@ impl Packed {
                 my -= my.signum();
             }
         }
-        let (ax, ay) = (i.aim.e20(), i.aim.e01());
-        let aiming = (ax * ax + ay * ay).sqrt() > 0.2;
-        let turn = ay.atan2(ax).rem_euclid(core::f32::consts::TAU) / core::f32::consts::TAU;
+        // The aim's angle: of the rotation from the x axis to it.
+        let aiming = i.aim.ideal_norm() > 0.2;
+        let angle = super::body::angle_of(i.aim);
+        let turn = (angle / core::f32::consts::TAU).rem_euclid(1.0);
         Packed {
             mx,
             my,
@@ -65,8 +66,7 @@ impl Packed {
     pub fn unpack(self) -> Input {
         let (mx, my) = (f32::from(self.mx) / 127.0, f32::from(self.my) / 127.0);
         let aim = if self.flags & AIMING != 0 {
-            let a = f32::from(self.aim) / 65536.0 * core::f32::consts::TAU;
-            Point::direction(a.cos(), a.sin())
+            super::body::heading(f32::from(self.aim) / 65536.0 * core::f32::consts::TAU, 1.0)
         } else {
             Point::direction(0.0, 0.0)
         };
@@ -116,7 +116,8 @@ pub fn hash(w: &World) -> u64 {
     }
     for p in &w.pending {
         h.u(p.kind as u64);
-        h.fs(&[p.pos[0], p.pos[1], p.t]);
+        h.fs(&p.pos.c);
+        h.fs(&[p.t]);
     }
     h.0
 }
@@ -320,8 +321,8 @@ mod tests {
     fn wander(t: u64) -> Input {
         let a = t as f32 * 0.011;
         Input {
-            movement: Point::direction(a.cos() * 0.9, (a * 1.7).sin() * 0.9),
-            aim: Point::direction((a * 3.1).cos() * 4.0, (a * 2.3).sin() * 4.0),
+            movement: super::super::body::heading(a * 1.7, 0.9),
+            aim: super::super::body::heading(a * 3.1, 4.0),
             fire: (t / 90) % 4 != 3,
             bomb: t % 2400 == 2000,
         }
@@ -354,7 +355,7 @@ mod tests {
             movement: Point::direction(1.0, 1.0),
             ..Input::default()
         });
-        assert!(crate::sim::body::length(d.movement) <= 1.0 + 1e-6);
+        assert!(d.movement.ideal_norm() <= 1.0 + 1e-6);
     }
 
     /// The same build replays a run exactly: every per-second hash and the score match, also

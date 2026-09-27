@@ -1,6 +1,11 @@
 # The game's math goes through gax. glam, bevy_math and Bevy's transforms exist in the
 # dependency tree (through input and seedling) but must not be used, except in `input.rs`,
 # the boundary that turns stick and cursor vectors into gax types right away.
+#
+# Geometry by hand is banned too: no square roots, trigonometry or hypotenuses on floats.
+# Lengths are ideal norms and joins, angles come from rotations between directions (and
+# their logarithms), turns are rotation motors, oscillations are phasors (`signal.rs`). The
+# exception is the audio DSP (`src/audio`), which allows it at its root.
 disallowed-types = [
     { path = "glam::Vec2", reason = "use gax types (input.rs is the only boundary)" },
     { path = "glam::Vec3", reason = "use gax types" },
@@ -23,4 +28,13 @@ disallowed-methods = [
     { path = "bevy::input::gamepad::Gamepad::left_stick", reason = "hands out a glam Vec2: read it in input.rs only" },
     { path = "bevy::input::gamepad::Gamepad::right_stick", reason = "hands out a glam Vec2: read it in input.rs only" },
     { path = "bevy::input::gamepad::Gamepad::dpad", reason = "hands out a glam Vec2: read it in input.rs only" },
+    { path = "f32::sqrt", reason = "lengths and distances are gax: ideal_norm, the norm of a join" },
+    { path = "f32::hypot", reason = "lengths are gax: ideal_norm" },
+    { path = "f32::sin", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
+    { path = "f32::cos", reason = "turns are rotation motors; oscillations are phasors (signal::wave)" },
+    { path = "f32::sin_cos", reason = "turns are rotation motors" },
+    { path = "f32::tan", reason = "use gax (a phasor's height over its width)" },
+    { path = "f32::atan2", reason = "angles come from rotations between directions (body::angle_of, body::turn)" },
+    { path = "f32::asin", reason = "angles come from rotations between directions" },
+    { path = "f32::acos", reason = "angles come from rotations between directions" },
 ]

@@ -420,7 +420,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
     // Warp-ins.
     for p in &w.pending {
         let f = 1.0 - (p.t / p.total).clamp(0.0, 1.0);
-        let m = Motor::translation(p.pos[0], p.pos[1]) * Motor::rotation(ORIGIN, f * 6.0);
+        let m = crate::sim::body::place(p.pos, f * 6.0);
         let c = fade(color(p.kind), 0.4 + 0.8 * f);
         let r = p.kind.radius();
         circle(out, r * (3.0 - 2.0 * f), 20, time * 4.0, c, THIN, m);
