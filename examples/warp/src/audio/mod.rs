@@ -436,11 +436,17 @@ impl Sound {
         }
     }
 
-    /// React to a tick's events.
+    /// React to a Plane tick's events.
     pub fn on_events(&mut self, events: &[Event], w: &World, cam: Pose) {
+        self.play(events, w.mult, w.ship.body.xy(), cam);
+    }
+
+    /// Play events (the Tunnel maps its own onto these), with the multiplier and the ship's
+    /// position, placed through the listener `cam`.
+    pub fn play(&mut self, events: &[Event], mult: u32, ship: [f32; 2], cam: Pose) {
         let s = self.scale;
         // Higher multipliers lift the effects by scale degrees.
-        let lift = (w.mult.min(40) / 5) as i32;
+        let lift = (mult.min(40) / 5) as i32;
         for e in events {
             match *e {
                 Event::Fire { pos, .. } => {
@@ -514,9 +520,7 @@ impl Sound {
                     self.push(Family::Bomb, s.note(0), pos, cam, 1.0, 0.0);
                     self.music_event(MUSIC_BOMB);
                 }
-                Event::Extra { .. } => {
-                    self.push(Family::Extra, s.note(14), w.ship.body.xy(), cam, 1.0, 0.0)
-                }
+                Event::Extra { .. } => self.push(Family::Extra, s.note(14), ship, cam, 1.0, 0.0),
                 Event::Respawn => self.push(Family::Spawn, s.note(14), [0.0, 0.0], cam, 1.5, 0.0),
                 Event::GameOver => {}
             }
@@ -529,20 +533,9 @@ impl Sound {
         self.music_events.push(b);
     }
 
-    /// Per frame: steer the music, and start a new run's music when the seed changes.
+    /// Per frame, for the Plane: steer the music, and start a new run's music when the seed
+    /// changes.
     pub fn update(&mut self, w: &World, playing: bool, _cam: Pose) {
-        if playing && w.seed != self.seed {
-            self.seed = w.seed;
-            self.scale = Scale::from_seed(w.seed);
-            let mut b = [0u8; 36];
-            b[0] = MUSIC_SEED;
-            b[4..12].copy_from_slice(&w.seed.to_le_bytes());
-            self.music_events.push(b);
-            // The effects' beat grid starts with the music's first bar.
-            let mut sync = [0u8; 36];
-            sync[0] = SFX_SYNC;
-            self.sfx_events.push(sync);
-        }
         let ship = w.ship.body.xy();
         let darkness = w
             .wells()
@@ -552,15 +545,30 @@ impl Sound {
             })
             .fold(0.0f32, f32::max);
         let alive = w.phase == Phase::Playing;
+        let intensity = w.director.intensity * if alive { 1.0 } else { 0.5 };
+        self.steer(w.seed, intensity, darkness, w.mult, playing);
+    }
+
+    /// Steer the music directly (the Tunnel): a run's seed, intensity, a singularity's
+    /// darkness, the multiplier, and whether a run is being played.
+    pub fn steer(&mut self, seed: u64, intensity: f32, darkness: f32, mult: u32, playing: bool) {
+        if playing && seed != self.seed {
+            self.seed = seed;
+            self.scale = Scale::from_seed(seed);
+            let mut b = [0u8; 36];
+            b[0] = MUSIC_SEED;
+            b[4..12].copy_from_slice(&seed.to_le_bytes());
+            self.music_events.push(b);
+            // The effects' beat grid starts with the music's first bar.
+            let mut sync = [0u8; 36];
+            sync[0] = SFX_SYNC;
+            self.sfx_events.push(sync);
+        }
         self.controls = Controls {
-            intensity: if alive {
-                w.director.intensity
-            } else {
-                w.director.intensity * 0.5
-            },
+            intensity,
             darkness,
             playing,
-            heat: music::heat(w.mult),
+            heat: music::heat(mult),
         };
         if self.music_events.len() > 64 {
             self.music_events.clear();

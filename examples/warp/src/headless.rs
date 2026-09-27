@@ -37,6 +37,38 @@ pub fn try_device() -> Option<(wgpu::Adapter, wgpu::Device, wgpu::Queue)> {
 }
 
 /// The bot's input: strafe around the nearest enemy, aim at it, fire; bomb when crowded.
+/// A Tunnel bot: aims the cursor at the nearest enemy ahead, weaves, fires, and rolls away
+/// from bolts that come close.
+pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
+    let run = g.tunnel.as_ref().expect("tunnel");
+    let w = &run.world;
+    let s = w.ship.s();
+    let target = w
+        .enemies
+        .iter()
+        .filter(|e| e.pos.e021() > s + 6.0)
+        .min_by(|a, b| a.pos.e021().total_cmp(&b.pos.e021()))
+        .map(|e| [e.pos.e032(), e.pos.e013(), e.pos.e021()]);
+    let cursor = target.and_then(|q| crate::render::tunnel::track_to_screen(&run.view, w, q));
+    let danger = w.bolts.iter().any(|b| {
+        let d = b.pos.e021() - s;
+        d > 0.0 && d < 6.0
+    });
+    let input = sim::Input {
+        movement: gax::pga2d::Point::direction((t * 0.7).cos() * 0.6, (t * 0.45).sin() * 0.5),
+        fire: true,
+        ..sim::Input::default()
+    };
+    let flight = input::Flight {
+        cursor: cursor.or(Some([0.0, 0.0])),
+        stick: None,
+        roll: if danger { 1 } else { 0 },
+        throttle: (t * 0.2).sin(),
+        bomb: false,
+    };
+    (input, flight)
+}
+
 pub fn bot_input(g: &Game, t: f32) -> sim::Input {
     bot(g, t)
 }
@@ -136,6 +168,36 @@ pub fn shots(args: &[String]) {
             render_game(&mut g, &mut renderer, &view, SIZE);
         }
         save(&renderer, &target, &Path::new(dir).join("singularity.png"));
+        return;
+    }
+    // `WARP_SCENE=tunnel`: a bot flies the Tunnel; snapshots at the given times.
+    if std::env::var("WARP_SCENE").as_deref() == Ok("tunnel") {
+        g.start_tunnel_seeded(11);
+        let end = times.iter().copied().fold(0.0f32, f32::max);
+        times.sort_by(f32::total_cmp);
+        let (mut t, mut next) = (0.0f32, 0);
+        while t <= end + dt {
+            g.time += dt;
+            t += dt;
+            let (input, flight) = tunnel_bot(&g, t);
+            g.flight = flight;
+            advance(&mut g, input, none, dt, aspect, &mut sound);
+            render_game(&mut g, &mut renderer, &view, SIZE);
+            if next < times.len() && t >= times[next] {
+                let w = &g.tunnel.as_ref().expect("tunnel").world;
+                let name = format!("tunnel-{:03}s.png", times[next].round() as u32);
+                save(&renderer, &target, &Path::new(dir).join(&name));
+                println!(
+                    "{name}: score {}, x{}, {} enemies, {} bolts, s {:.0}",
+                    w.score,
+                    w.mult,
+                    w.enemies.len(),
+                    w.bolts.len(),
+                    w.ship.s()
+                );
+                next += 1;
+            }
+        }
         return;
     }
     // `WARP_SCENE=menus`: the title, settings, a score table, initials and the pause menu.
@@ -459,6 +521,73 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// The Tunnel through the game loop: chosen from the title, flown by the bot at uneven
+    /// frame rates, ended from the pause menu, and back to the title.
+    #[test]
+    fn a_tunnel_run_through_the_loop() {
+        use crate::input::Menu;
+        let mut g = Game::new(crate::store::Store::new(None));
+        let mut sound = audio::Sound::silent();
+        let none = Menu::default();
+        let aspect = 16.0 / 9.0;
+        let step = |g: &mut Game, sound: &mut audio::Sound, m: Menu| {
+            advance(g, sim::Input::default(), m, 0.016, aspect, sound);
+        };
+        step(&mut g, &mut sound, Menu { down: true, ..none });
+        step(
+            &mut g,
+            &mut sound,
+            Menu {
+                start: true,
+                ..none
+            },
+        );
+        assert_eq!((g.mode, g.screen), (crate::Mode::Tunnel, Screen::Playing));
+        let mut t = 0.0;
+        let mut frame = 0u32;
+        while t < 25.0 && g.screen == Screen::Playing {
+            let dt = 0.007 + 0.013 * ((frame * 7919) % 97) as f32 / 97.0;
+            frame += 1;
+            t += dt;
+            let (input, flight) = tunnel_bot(&g, t);
+            g.flight = flight;
+            advance(&mut g, input, none, dt, aspect, &mut sound);
+        }
+        let w = &g.tunnel.as_ref().unwrap().world;
+        assert!(
+            w.score > 0 && w.ship.s() > 300.0,
+            "{} at {}",
+            w.score,
+            w.ship.s()
+        );
+        if g.screen == Screen::Playing {
+            step(&mut g, &mut sound, Menu { back: true, ..none });
+            step(&mut g, &mut sound, Menu { down: true, ..none });
+            step(
+                &mut g,
+                &mut sound,
+                Menu {
+                    start: true,
+                    ..none
+                },
+            );
+        }
+        assert_eq!(g.screen, Screen::Over);
+        for _ in 0..120 {
+            step(&mut g, &mut sound, none);
+        }
+        step(
+            &mut g,
+            &mut sound,
+            Menu {
+                start: true,
+                ..none
+            },
+        );
+        assert_eq!((g.mode, g.screen), (crate::Mode::Plane, Screen::Title));
+        assert!(g.tunnel.is_none());
+    }
+
     fn gpu() -> Option<(wgpu::Device, wgpu::Queue)> {
         match try_device() {
             Some((_, d, q)) => Some((d, q)),
@@ -490,6 +619,7 @@ mod tests {
             spawn,
             grid_color: [0.1, 0.1, 0.5, 0.2],
             post: crate::fx::Fx::new().post(&cam),
+            plane: true,
         }
     }
 

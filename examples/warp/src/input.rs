@@ -45,6 +45,21 @@ pub struct Menu {
     pub erase: bool,
 }
 
+/// The Tunnel's extra controls.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Flight {
+    /// The cursor in the HUD's screen units (`y` in `-18..18`), if it is over the window.
+    pub cursor: Option<[f32; 2]>,
+    /// The right stick, when it is held.
+    pub stick: Option<[f32; 2]>,
+    /// Barrel roll (edge): Q / E, or the bumpers.
+    pub roll: i8,
+    /// Brake to boost: Ctrl / Shift, or the triggers.
+    pub throttle: f32,
+    /// Bomb (edge): Space, the right mouse button, or Y.
+    pub bomb: bool,
+}
+
 /// The left stick's last menu direction, so that holding it moves once per flick.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Latch(i8, i8);
@@ -73,7 +88,7 @@ pub fn read(
     ship: [f32; 2],
     device: &mut Device,
     latch: &mut Latch,
-) -> (sim::Input, Menu) {
+) -> (sim::Input, Menu, Flight) {
     let mut input = sim::Input::default();
     let mut menu = Menu {
         start: keys.any_just_pressed([KeyCode::Enter, KeyCode::NumpadEnter]),
@@ -137,6 +152,18 @@ pub fn read(
         mx /= l;
         my /= l;
     }
+    let mut flight = Flight {
+        cursor: None,
+        stick: None,
+        roll: i8::from(keys.just_pressed(KeyCode::KeyE))
+            - i8::from(keys.just_pressed(KeyCode::KeyQ)),
+        throttle: f32::from(u8::from(
+            keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
+        )) - f32::from(u8::from(
+            keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]),
+        )),
+        bomb: keys.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Right),
+    };
     // Mouse aim: the cursor placed in the world through the camera motor.
     let mut aim = (0.0, 0.0);
     if let Some(w) = window
@@ -144,6 +171,7 @@ pub fn read(
     {
         let (width, height) = (w.width().max(1.0), w.height().max(1.0));
         let (nx, ny) = (2.0 * c.x / width - 1.0, 1.0 - 2.0 * c.y / height);
+        flight.cursor = Some([nx * 18.0 * width / height, ny * 18.0]);
         let local = Point::xy(nx * half_height * width / height, ny * half_height);
         let [wx, wy] = (camera >> local).to_euclidean();
         aim = (wx - ship[0], wy - ship[1]);
@@ -166,8 +194,14 @@ pub fn read(
         if rx != 0.0 || ry != 0.0 {
             aim = (rx, ry);
             input.fire = true;
+            flight.stick = Some([rx, ry]);
             *device = Device::Pad;
         }
+        flight.roll += i8::from(pad.just_pressed(GamepadButton::RightTrigger))
+            - i8::from(pad.just_pressed(GamepadButton::LeftTrigger));
+        flight.throttle += f32::from(u8::from(pad.pressed(GamepadButton::RightTrigger2)))
+            - f32::from(u8::from(pad.pressed(GamepadButton::LeftTrigger2)));
+        flight.bomb |= pad.just_pressed(GamepadButton::North);
         let bomb = [
             GamepadButton::RightTrigger,
             GamepadButton::LeftTrigger,
@@ -206,5 +240,6 @@ pub fn read(
     }
     input.movement = Point::direction(mx, my);
     input.aim = Point::direction(aim.0, aim.1);
-    (input, menu)
+    flight.throttle = flight.throttle.clamp(-1.0, 1.0);
+    (input, menu, flight)
 }

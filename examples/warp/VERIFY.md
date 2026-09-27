@@ -1,8 +1,8 @@
 # What warp verifies about gax
 
 The game's second purpose is to validate gax under real load. This file lists every gax feature
-it uses, where, and what was found. It covers milestones M2 (the Plane vertical slice) and M3 so far
-(the enemy roster), and grows with the game. The **friction log** at the end is the most valuable part: each entry is a gax
+it uses, where, and what was found. It covers milestones M2 (the Plane vertical slice), M3 (the Plane
+complete) and M4 (the Tunnel slice), and grows with the game. The **friction log** at the end is the most valuable part: each entry is a gax
 issue or fix.
 
 ## Features used
@@ -23,6 +23,13 @@ issue or fix.
 | Generated WGSL modules (`gax::wgsl`) | every shader imports `gax::pga2d` through `wesl` at build time | `unit_motor_sandwich_point` places every shape segment in the vertex shader |
 | Traced kernels, CPU and GPU (`Tracer::wgsl`) | the lattice (`grid_node`, `source_force`) and particles (`particle_step`) | See "CPU and GPU" |
 | Batch SoA path as the CPU twin | `render/cpu_grid.rs`: `grid_node_batch`, `source_force_batch` | The oracle for the GPU (a test) |
+| PGA3D screw motions | `tunnel/track.rs`: the track is `K_i exp((s - s_i) T_i)`, each `T_i` a sum of `Line` twists (forward translation, pitch, yaw, roll about the frame's own axes, so it multiplies on the right) | Arc length is exact along the axis and the frame is continuous across joins (a test over 2 km); a level-keeping term uses `K << up` to find the world's up in the frame |
+| PGA3D motor interpolation | `track::interpolate`: `M(s)` between keyframes, and the Tunnel camera's spring | For a screw between keyframes the interpolation is the screw itself |
+| PGA3D lattice | `tunnel/lattice.rs`: displacements and velocities are PGA3D directions; the same spring law as the Plane's, on rings that scroll with the ship | Ripples travel and settle (a test) |
+| Joins in 3D | `tunnel::segment_hits_sphere`: the distance from a point to a segment's line is `|a & b & c| / |a & b|` | Right the first time (a test) |
+| A meet | the ship's shadow: the light-to-ship line `^` the wall's tangent plane | On the wall, ahead of the ship (a test) |
+| Rotation about a line | the barrel roll: `Motor::rotation(axis, θ) >> ship`, eased over 0.4 s | Keeps the radius exactly (a test) |
+| A camera as a motor | `render/tunnel.rs`: `cam << p` into the camera frame, then a perspective divide by hand; screen directions map back to the tunnel's cross-section through the same projection | The level camera is built from a heading and a pitch (friction 8) |
 | The deterministic mode | not used: replays promise same-build determinism | A state hash every second over all poses, velocities and the generator; runs of 75 s on three seeds replay bit for bit, also through the game loop with hit-stops and uneven frames (tests). The build id includes a hash of gax's sources, since any change in gax's arithmetic may change a run |
 
 ## Numbers (M2)
@@ -73,3 +80,9 @@ issue or fix.
    shield's normal instead of back. The game negates (`collide::reflect`, with a test that
    `(1, 0.5)` mirrors to `(−1, 0.5)`). A gax `reflect` that applies the grade-dependent sign of
    the odd sandwich would remove the trap (open).
+8. **No motor from a frame.** The Tunnel's level camera needs "the motor whose forward is `f`
+   and whose right is horizontal" (a look-at). gax has no constructor from axes or from a
+   rotation matrix, so the game composes a yaw about the world's `y` and a pitch about `x`
+   from `atan2` and `asin`. It works because the track stays near level, but a
+   `Motor::look_at(eye, target, up)`, or a motor from an orthonormal frame, would be the
+   general answer (open).

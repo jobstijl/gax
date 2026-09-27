@@ -74,6 +74,10 @@ pub struct Settings {
     pub sfx: u8,
     /// Shots, hits, kills and pickups on the music's beat.
     pub on_beat: bool,
+    /// The Tunnel's vertical field of view, in degrees.
+    pub fov: u8,
+    /// The Tunnel's camera rolls with the track (off: it stays level).
+    pub camera_roll: bool,
     /// Full screen.
     pub fullscreen: bool,
 }
@@ -88,6 +92,8 @@ impl Default for Settings {
             music: 8,
             sfx: 8,
             on_beat: false,
+            fov: 85,
+            camera_roll: false,
             fullscreen: false,
         }
     }
@@ -95,7 +101,7 @@ impl Default for Settings {
 
 impl Settings {
     /// The rows of the settings menu (their labels), in order.
-    pub const ROWS: [&'static str; 8] = [
+    pub const ROWS: [&'static str; 10] = [
         "SCREEN SHAKE",
         "FLASHES",
         "COLOURS",
@@ -103,12 +109,14 @@ impl Settings {
         "MUSIC",
         "EFFECTS",
         "EFFECTS ON THE BEAT",
+        "TUNNEL FIELD OF VIEW",
+        "TUNNEL CAMERA ROLL",
         "FULL SCREEN",
     ];
 
     /// Rows that toggle (Enter flips them too).
     pub fn toggles(row: usize) -> bool {
-        matches!(row, 1 | 2 | 6 | 7)
+        matches!(row, 1 | 2 | 6 | 8 | 9)
     }
 
     /// A row's value as the menu shows it; volumes are `(level, 10)` bars instead.
@@ -129,6 +137,8 @@ impl Settings {
             4 => Err(self.music),
             5 => Err(self.sfx),
             6 => Ok(if self.on_beat { "ON" } else { "OFF" }.into()),
+            7 => Ok(format!("{}", self.fov)),
+            8 => Ok(if self.camera_roll { "FOLLOW" } else { "LEVEL" }.into()),
             _ => Ok(if self.fullscreen { "ON" } else { "OFF" }.into()),
         }
     }
@@ -144,7 +154,9 @@ impl Settings {
             4 => vol(&mut self.music),
             5 => vol(&mut self.sfx),
             6 => self.on_beat = !self.on_beat,
-            7 => self.fullscreen = !self.fullscreen,
+            7 => self.fov = (i32::from(self.fov) + 5 * by).clamp(60, 110) as u8,
+            8 => self.camera_roll = !self.camera_roll,
+            9 => self.fullscreen = !self.fullscreen,
             _ => {}
         }
     }
@@ -158,7 +170,7 @@ impl Settings {
     /// The text form.
     pub fn to_text(self) -> String {
         format!(
-            "shake = {}\nreduced_flashes = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfullscreen = {}\n",
+            "shake = {}\nreduced_flashes = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfov = {}\ncamera_roll = {}\nfullscreen = {}\n",
             self.shake,
             self.reduced_flashes,
             self.scheme.name(),
@@ -166,6 +178,8 @@ impl Settings {
             self.music,
             self.sfx,
             self.on_beat,
+            self.fov,
+            self.camera_roll,
             self.fullscreen
         )
     }
@@ -192,6 +206,8 @@ impl Settings {
                 "music" => s.music = vol(v, s.music),
                 "sfx" => s.sfx = vol(v, s.sfx),
                 "on_beat" => s.on_beat = v == "true",
+                "fov" => s.fov = v.parse::<u8>().map_or(s.fov, |x| x.clamp(60, 110)),
+                "camera_roll" => s.camera_roll = v == "true",
                 "fullscreen" => s.fullscreen = v == "true",
                 _ => {}
             }
@@ -380,6 +396,8 @@ mod tests {
             music: 0,
             sfx: 10,
             on_beat: true,
+            fov: 95,
+            camera_roll: true,
             fullscreen: true,
         };
         assert_eq!(Settings::from_text(&s.to_text()), s);

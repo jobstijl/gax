@@ -106,9 +106,11 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M3a: the full roster (evader, splitter, serpent, warden, carrier) with director formations
 - [x] M3b: replays (quantized inputs, per-second state hashes), high scores with initials, menus, settings (shake, flashes, colour-blind schemes, volumes, full screen)
 - [x] M3c: music layers from the multiplier (fragments, texture, octave doubling), effects on the beat
-- [ ] M4-M5: Tunnel mode, polish, attract mode, accessibility
+- [x] M4: Tunnel slice: a track of PGA3D screw motions, a PGA3D lattice on the wall, flight (reticle, barrel roll, throttle), a level camera with an FOV setting, drones, mines and turrets, shadow and lock/lead indicators
+- [ ] M4 gate: the owner plays it (readable and fun at speed?)
+- [ ] M5: Tunnel complete (serpents, bonus gates, singularities that pinch the tunnel, replays and a table for the Tunnel, its own tempo), polish, attract mode, accessibility
 - [ ] M6: VERIFY.md complete, performance numbers
-- [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away; a sign-correct reflection of directions by a line
+- [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away; a sign-correct reflection of directions by a line; a motor from a frame (look-at)
 
 ## Decisions for the project owner
 - Publishing to crates.io (later).

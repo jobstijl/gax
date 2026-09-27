@@ -4,6 +4,8 @@ A neon twin-stick shooter on warping space, and a real-load test of gax.
 
 Everything that moves is gax:
 * poses are unit PGA2D motors and velocities are twists;
+* the Tunnel's track is a chain of PGA3D screw motions, sampled by motor interpolation, and
+  its camera is a PGA3D motor;
 * collisions are joins and signed distances;
 * the camera follows on `log`/`exp`;
 * the lattice of warped space and the particles are traced gax kernels, running in compute
@@ -56,7 +58,16 @@ run is always `replays/last.warp`.
 * A bomb clears the screen.
 * Every spawn is announced by a warp-in, and never lands close to you.
 
-**The enemies:**
+**Tunnel** (the second mode, a first slice): fly into the screen down a twisting tunnel of
+warped space. The mouse (or right stick) places a reticle down the tunnel and the shots
+converge on it; Q and E (or the bumpers) barrel-roll you around the tunnel with a moment of
+invulnerability; Shift and Ctrl (or the triggers) boost and brake, and faster is worth more
+points. Rings of drones close in around you (fly through their middle), mines drift in the
+lane, and turrets on the wall fire bolts that grow and glow as they come. Your shadow on the
+wall shows where you are; the reticle locks onto the enemy nearest to it and shows where your
+shots will cross its depth.
+
+**The enemies** (Plane):
 * **drifters** (cyan) wander;
 * **chasers** (magenta) home in with a limited turn rate;
 * **singularities** (violet) are gravity wells: they bend your shots, the lattice, the
@@ -77,6 +88,7 @@ Later in a run (the director unlocks them over the first minute and a half):
 cargo run --release -- --shot DIR [SECONDS...]   # a scripted run, PNG snapshots (offscreen, wgpu validation on)
 WARP_SCENE=roster cargo run --release -- --shot DIR   # every enemy kind in one still picture
 WARP_SCENE=menus cargo run --release -- --shot DIR    # the menus
+WARP_SCENE=tunnel cargo run --release -- --shot DIR 5 20   # a bot flies the Tunnel
 cargo run --release -- --music DIR [SECONDS] [SEED]  # the music offline: low, medium, high intensity, and a run's arc, as WAV
 cargo run --release -- --smoke                   # play 8 s with a bot and quit (a startup test)
 cargo run --release -- --replay FILE             # watch a replay

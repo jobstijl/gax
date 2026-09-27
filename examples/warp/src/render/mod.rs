@@ -10,6 +10,7 @@
 pub mod cpu_grid;
 pub mod font;
 pub mod scene;
+pub mod tunnel;
 
 use bytemuck::{Pod, Zeroable};
 use gax::pga2d::{MotorGpu, PointGpu};
@@ -174,6 +175,8 @@ pub struct Frame<'a> {
     pub grid_color: [f32; 4],
     /// Post-processing.
     pub post: PostSettings,
+    /// The Plane's layers (stars, lattice, particles); the Tunnel draws everything as lines.
+    pub plane: bool,
 }
 
 /// GPU time per pass, in milliseconds (when the adapter has timestamp queries).
@@ -998,7 +1001,10 @@ impl Renderer {
             });
             // `WARP_SKIP=grid,particles,lines,stars` leaves passes out (for looking at one alone).
             let skip = std::env::var("WARP_SKIP").unwrap_or_default();
-            let on = |name: &str| !skip.split(',').any(|s| s == name);
+            let on = |name: &str| {
+                !skip.split(',').any(|s| s == name)
+                    && (f.plane || !matches!(name, "stars" | "grid" | "particles"))
+            };
             if on("stars") {
                 pass.set_pipeline(&self.stars);
                 pass.set_bind_group(0, &self.stars_group, &[]);
