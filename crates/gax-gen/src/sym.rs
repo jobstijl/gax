@@ -309,6 +309,7 @@ impl Sym {
                 Func::Sin => Some(x.sin()),
                 Func::Cos => Some(x.cos()),
                 Func::Sinh => Some(x.sinh()),
+                Func::Exp => Some(x.exp()),
                 Func::Cosh => Some(x.cosh()),
                 Func::Ln if x > 0.0 => Some(x.ln()),
                 Func::Recip if x != 0.0 => Some(1.0 / x),
@@ -506,6 +507,9 @@ impl Real for Sym {
     }
     fn ln(self) -> Sym {
         Sym::atom(Func::Ln, self)
+    }
+    fn exp(self) -> Sym {
+        Sym::atom(Func::Exp, self)
     }
     /// A select is data flow, not a branch: it becomes a `T::select_lt` in the kernel (and
     /// folds when both compared values are constants).

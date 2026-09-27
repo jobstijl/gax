@@ -149,3 +149,30 @@ lanes!(f64x2, f64);
 lanes!(f64x4, f64);
 
 pub use wide;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The lanes' `exp` is `Real`'s default, built from the hyperbolic functions without
+    /// cancellation: right across the range, overflowing to infinity and underflowing to zero
+    /// (where `sinh x + cosh x` alone gives `inf - inf` or cancels).
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn exp_from_the_hyperbolic_functions() {
+        for x in [
+            -120.0f32, -60.0, -10.0, -1.5, -1e-3, 0.0, 1e-3, 0.7, 10.0, 60.0, 120.0,
+        ] {
+            let lanes = Real::exp(f32x8::splat(x)).to_array()[0];
+            let want = x.exp();
+            if want.is_infinite() {
+                assert_eq!(lanes, f32::INFINITY);
+            } else {
+                assert!(
+                    (lanes - want).abs() <= 1e-5 * want + 1e-30,
+                    "{x}: {lanes} vs {want}"
+                );
+            }
+        }
+    }
+}

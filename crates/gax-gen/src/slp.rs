@@ -37,6 +37,8 @@ pub enum Func {
     Ln,
     /// `|x|`
     Abs,
+    /// `e^x`
+    Exp,
 }
 
 impl Func {
@@ -60,6 +62,7 @@ impl Func {
             Func::Cosh => "cosh",
             Func::Ln => "ln",
             Func::Abs => "abs",
+            Func::Exp => "exp",
         }
     }
 }
@@ -293,6 +296,7 @@ impl Program {
                         Func::Cosh => x.cosh(),
                         Func::Ln => x.ln(),
                         Func::Abs => x.abs(),
+                        Func::Exp => x.exp(),
                     }
                 }
             };
@@ -336,6 +340,7 @@ impl Program {
                         Func::Cosh => x.cosh(),
                         Func::Ln => x.ln(),
                         Func::Abs => x.abs(),
+                        Func::Exp => x.exp(),
                     }
                 }
             };

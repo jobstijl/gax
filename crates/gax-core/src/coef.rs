@@ -99,6 +99,15 @@ pub trait Real: Coef + Div<Output = Self> {
     fn atan2(self, x: Self) -> Self;
     /// Natural logarithm.
     fn ln(self) -> Self;
+    /// `e^x`. The default builds it from the hyperbolic functions without cancellation:
+    /// `sinh x + cosh x` for `x ≥ 0` (overflowing to infinity), its reciprocal at `-x` below
+    /// (underflowing to zero), so it is correct wherever those are.
+    fn exp(self) -> Self {
+        let neg = -self;
+        let up = self.sinh() + self.cosh();
+        let down = (neg.sinh() + neg.cosh()).recip();
+        Self::select_lt(self, Self::zero(), down, up)
+    }
     /// Lane-wise `if a < b { x } else { y }`.
     fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self;
     /// Whether `a < b` holds in every lane (for a scalar, whether `a < b`). Iterative solvers
@@ -194,6 +203,10 @@ macro_rules! float_impl {
                 elementary::$t::ln(self)
             }
             #[inline(always)]
+            fn exp(self) -> Self {
+                elementary::$t::exp(self)
+            }
+            #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {
                 if a < b { x } else { y }
             }
@@ -227,7 +240,7 @@ float_impl!(f64);
 pub(crate) mod elementary {
     pub mod f32 {
         #[cfg(not(feature = "deterministic"))]
-        pub use super::super::libm_shim::f32::{atan2, cos, cosh, ln, sin, sinh};
+        pub use super::super::libm_shim::f32::{atan2, cos, cosh, exp, ln, sin, sinh};
         #[cfg(feature = "deterministic")]
         mod det {
             use crate::math;
@@ -255,13 +268,17 @@ pub(crate) mod elementary {
             pub fn ln(x: f32) -> f32 {
                 math::ln(x)
             }
+            #[inline(always)]
+            pub fn exp(x: f32) -> f32 {
+                math::exp(x)
+            }
         }
         #[cfg(feature = "deterministic")]
-        pub use det::{atan2, cos, cosh, ln, sin, sinh};
+        pub use det::{atan2, cos, cosh, exp, ln, sin, sinh};
     }
     pub mod f64 {
         #[cfg(not(feature = "deterministic"))]
-        pub use super::super::libm_shim::f64::{atan2, cos, cosh, ln, sin, sinh};
+        pub use super::super::libm_shim::f64::{atan2, cos, cosh, exp, ln, sin, sinh};
         #[cfg(feature = "deterministic")]
         mod det {
             macro_rules! libm_fns {
@@ -272,10 +289,10 @@ pub(crate) mod elementary {
                     }
                 )*};
             }
-            libm_fns!(sin => sin(x), cos => cos(x), sinh => sinh(x), cosh => cosh(x), atan2 => atan2(y, x), ln => log(x));
+            libm_fns!(sin => sin(x), cos => cos(x), sinh => sinh(x), cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x));
         }
         #[cfg(feature = "deterministic")]
-        pub use det::{atan2, cos, cosh, ln, sin, sinh};
+        pub use det::{atan2, cos, cosh, exp, ln, sin, sinh};
     }
 }
 
@@ -302,7 +319,7 @@ mod libm_shim {
         };
     }
     shim!(f32, Libm, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
-        cosh => cosh(x), atan2 => atan2(y, x), ln => log(x)]);
+        cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x)]);
     shim!(f64, Libm, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
-        cosh => cosh(x), atan2 => atan2(y, x), ln => log(x)]);
+        cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x)]);
 }
