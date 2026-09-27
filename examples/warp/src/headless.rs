@@ -139,6 +139,54 @@ pub fn shots(args: &[String]) {
         save(&renderer, &target, &Path::new(dir).join("singularity.png"));
         return;
     }
+    // `WARP_SCENE=roster`: every enemy kind in a row, still, with a few shots in flight.
+    if std::env::var("WARP_SCENE").as_deref() == Ok("roster") {
+        g.start();
+        g.sim = sim::World::new(7);
+        g.sim.director.enabled = false;
+        g.sim.ship.body.shift(0.0, -9.0);
+        g.sim.ship.invulnerable = 1e9;
+        use sim::Kind::*;
+        let kinds = [
+            Drifter, Chaser, Mote, Evader, Splitter, Fragment, Warden, Serpent, Carrier,
+        ];
+        for (k, kind) in kinds.iter().enumerate() {
+            let x = -20.0 + k as f32 * 5.0;
+            let y = if k % 2 == 0 { 3.0 } else { -1.0 };
+            g.sim.spawn(*kind, [x, y]);
+        }
+        // The warden faces the ship.
+        for e in &mut g.sim.enemies {
+            if e.kind == Warden {
+                let [x, y] = e.body.xy();
+                e.body = crate::sim::body::Body::new(crate::sim::body::pose_at(
+                    x,
+                    y,
+                    (-9.0 - y).atan2(0.0 - x),
+                ));
+            }
+        }
+        // Pinned in place (the serpent's chain still winds), so every shape is seen whole.
+        let poses: Vec<_> = g.sim.enemies.iter().map(|e| (e.id, e.body.pose)).collect();
+        for f in 0..150 {
+            g.time += dt;
+            for e in &mut g.sim.enemies {
+                if let Some((_, p)) = poses.iter().find(|(id, _)| *id == e.id) {
+                    e.body = crate::sim::body::Body::new(*p);
+                }
+            }
+            // Fire at the warden's face at the end, to show the reflection.
+            let input = sim::Input {
+                aim: Point::direction(10.0, 12.0),
+                fire: f > 110,
+                ..sim::Input::default()
+            };
+            advance(&mut g, input, none, dt, aspect, &mut sound);
+            render_game(&mut g, &mut renderer, &view, SIZE);
+        }
+        save(&renderer, &target, &Path::new(dir).join("roster.png"));
+        return;
+    }
     // A run.
     g.start();
     g.sim = sim::World::new(7);

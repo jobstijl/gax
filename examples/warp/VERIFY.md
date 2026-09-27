@@ -1,8 +1,8 @@
 # What warp verifies about gax
 
 The game's second purpose is to validate gax under real load. This file lists every gax feature
-it uses, where, and what was found. It covers milestone M2 (the Plane vertical slice) and grows
-with the game. The **friction log** at the end is the most valuable part: each entry is a gax
+it uses, where, and what was found. It covers milestones M2 (the Plane vertical slice) and M3 so far
+(the enemy roster), and grows with the game. The **friction log** at the end is the most valuable part: each entry is a gax
 issue or fix.
 
 ## Features used
@@ -14,6 +14,9 @@ issue or fix.
 | Motor interpolation, `a exp(t log(~a b))` | drawing between ticks (`Body::lerp`) | Every entity, every frame; `log` of nearly-identity motors is on the series path (fixed in the numerics work) |
 | `log` for a camera spring | `fx.rs`: critically damped spring on `log(target ~cam)` | Smooth; shake is `exp(ε B) cam` |
 | Join, signed distance, perpendicular | `sim/collide.rs`: swept bullets (`a & b`, `l & c`, `l \| c`) | Catches tunnelling (a test); the sign conventions of the hull and facing tests were right the first time |
+| Lines of flight | `sim/mod.rs`: evaders take every shot as the line `p & (p + v)` and step along its normal when the signed distance is small | One join and one join-with-point per shot and evader; a test fires at an evader and it survives |
+| Reflection by a line (odd versor) | `collide::reflect`: a warden's shield is the line through its centre along its local y axis, and a shot's velocity is sandwiched by it | Needs a sign for directions (friction 7) |
+| Motor interpolation as a follow law | serpent segments: each pose moves toward the one ahead by `interpolate(a, b, k)` with `k = 1 − exp(−30 dt)` | The chain keeps its spacing within tolerance through turns (a test) |
 | Distance as the norm of a join | `body::distance`, the lattice kernel | `(p & q).norm()` |
 | Maps: `cam << Point::slot()`, `proj.of(view)`, `GpuMat` | `render/scene.rs`: the camera | The view-projection is a gax map, uploaded in the WGSL layout |
 | `{Kind}Gpu` Pod types | line instances (`MotorGpu`), lattice nodes and particles (`PointGpu`) | Layouts asserted at compile time; no hand-written byte layouts in the game |
@@ -63,3 +66,10 @@ issue or fix.
    (open question).
 6. **The WGSL modules are large.** PGA2D is 120 KB of source. `wesl`'s stripping keeps only
    what the shaders use, so it costs nothing at run time, but build scripts parse all of it.
+7. **Reflecting a direction by a line needs a sign.** The sandwich `l x l⁻¹` of an odd versor
+   (a line) applied to a point gives the reflected point up to sign. For a proper point the sign
+   is harmless, since `−p` and `p` are the same point. For a direction (a velocity), `−v` is the
+   opposite velocity: the first warden shield sent shots *through* itself, mirrored across the
+   shield's normal instead of back. The game negates (`collide::reflect`, with a test that
+   `(1, 0.5)` mirrors to `(−1, 0.5)`). A gax `reflect` that applies the grade-dependent sign of
+   the odd sandwich would remove the trap (open).

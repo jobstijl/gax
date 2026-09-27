@@ -83,15 +83,30 @@ impl Director {
         let rng = &mut w.rng;
         // Pick a formation; heavier ones as intensity rises.
         let roll = rng.unit();
-        let singularities = w
-            .enemies
-            .iter()
-            .filter(|e| e.kind == Kind::Singularity)
-            .count()
-            + w.pending
-                .iter()
-                .filter(|p| p.kind == Kind::Singularity)
-                .count();
+        let count = |k: Kind| {
+            w.enemies.iter().filter(|e| e.kind == k).count()
+                + w.pending.iter().filter(|p| p.kind == k).count()
+        };
+        let singularities = count(Kind::Singularity);
+        // The roster unlocks over the run; each newcomer is a "feature" formation.
+        let heavy = count(Kind::Serpent) + count(Kind::Carrier);
+        let mut features: Vec<Kind> = Vec::new();
+        for (kind, from) in [
+            (Kind::Evader, 20.0),
+            (Kind::Splitter, 30.0),
+            (Kind::Warden, 50.0),
+            (Kind::Serpent, 70.0),
+            (Kind::Carrier, 90.0),
+        ] {
+            let room = match kind {
+                Kind::Serpent | Kind::Carrier => heavy < 1 + (i * 2.0) as usize,
+                _ => true,
+            };
+            if self.clock > from && room {
+                features.push(kind);
+            }
+        }
+        let feature_roll = rng.unit();
         let chaser_share = (0.25 + 0.6 * i).min(0.8);
         let kind = |rng: &mut super::rng::Rng| {
             if rng.chance(chaser_share) {
@@ -109,6 +124,51 @@ impl Director {
                 rng.range(-ARENA[1] + 5.0, ARENA[1] - 5.0),
             ];
             spawns.push((Kind::Singularity, p));
+        } else if !features.is_empty() && feature_roll < 0.3 + 0.25 * i {
+            // A newcomer from the roster; the newest ones are a little likelier.
+            let pick =
+                ((rng.unit().sqrt() * features.len() as f32) as usize).min(features.len() - 1);
+            let far = |rng: &mut super::rng::Rng| {
+                // A spot on the far half of the arena from the player.
+                let sx = if ship[0] > 0.0 { -1.0 } else { 1.0 };
+                [
+                    sx * rng.range(4.0, ARENA[0] - 3.0),
+                    rng.range(-ARENA[1] + 3.0, ARENA[1] - 3.0),
+                ]
+            };
+            match features[pick] {
+                Kind::Evader => {
+                    let c = far(rng);
+                    for _ in 0..2 + (i * 4.0) as usize {
+                        let p = [c[0] + rng.range(-3.0, 3.0), c[1] + rng.range(-3.0, 3.0)];
+                        spawns.push((Kind::Evader, p));
+                    }
+                }
+                Kind::Splitter => {
+                    let n = 2 + (i * 3.0) as usize;
+                    for _ in 0..n {
+                        let cx = if rng.chance(0.5) { 1.0 } else { -1.0 };
+                        let cy = if rng.chance(0.5) { 1.0 } else { -1.0 };
+                        let p = [
+                            cx * (ARENA[0] - 2.0 - rng.range(0.0, 4.0)),
+                            cy * (ARENA[1] - 2.0 - rng.range(0.0, 3.0)),
+                        ];
+                        spawns.push((Kind::Splitter, p));
+                    }
+                }
+                Kind::Warden => {
+                    // A shield arc on the far side, facing the player.
+                    let n = 2 + (i * 2.5) as usize;
+                    let c = far(rng);
+                    for k in 0..n {
+                        let y = c[1] + (k as f32 - (n - 1) as f32 / 2.0) * 2.5;
+                        spawns.push((Kind::Warden, [c[0], y]));
+                    }
+                }
+                Kind::Serpent => spawns.push((Kind::Serpent, far(rng))),
+                Kind::Carrier => spawns.push((Kind::Carrier, far(rng))),
+                _ => {}
+            }
         } else if roll < 0.35 {
             // Corner swarms.
             let n = 2 + (i * 5.0) as usize;
@@ -155,7 +215,10 @@ impl Director {
             }
         }
         for (k, p) in spawns {
-            let t = if k == Kind::Singularity { 1.4 } else { 0.8 };
+            let t = match k {
+                Kind::Singularity | Kind::Serpent | Kind::Carrier => 1.4,
+                _ => 0.8,
+            };
             w.announce(k, p, t);
         }
         self.cooldown = 2.2 + 3.5 * (1.0 - i) + w.rng.range(0.0, 1.5);
@@ -164,18 +227,19 @@ impl Director {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Event, Input, SAFE_RADIUS, World};
+    use super::super::{Event, Input, Kind, SAFE_RADIUS, World};
     use gax::pga2d::Point;
 
     /// Over many seeded runs with a wandering player, no spawn ever lands within the safe
-    /// radius of the ship.
+    /// radius of the ship, and the whole roster turns up.
     #[test]
     fn spawns_never_land_near_the_player() {
         let mut spawns = 0;
+        let mut seen = std::collections::HashSet::new();
         for seed in 0..60 {
             let mut w = World::new(seed);
             w.ship.invulnerable = 1e9; // keep the run going
-            for t in 0..120 * 90 {
+            for t in 0..120 * 150 {
                 let a = t as f32 * 0.004 + seed as f32;
                 w.tick(&Input {
                     movement: Point::direction(a.cos(), (a * 1.7).sin()),
@@ -183,8 +247,12 @@ mod tests {
                 });
                 let ship = w.ship.body.xy();
                 for e in &w.events {
-                    if let Event::Spawn { pos, .. } = e {
+                    // Motes launched by a visible carrier are its attack, not a landing.
+                    if let Event::Spawn { pos, kind } = e
+                        && *kind != Kind::Mote
+                    {
                         spawns += 1;
+                        seen.insert(*kind);
                         let d = ((pos[0] - ship[0]).powi(2) + (pos[1] - ship[1]).powi(2)).sqrt();
                         assert!(d >= SAFE_RADIUS, "seed {seed}: a spawn {d} from the ship");
                     }
@@ -192,6 +260,18 @@ mod tests {
             }
         }
         assert!(spawns > 1000, "only {spawns} spawns");
+        for k in [
+            Kind::Drifter,
+            Kind::Chaser,
+            Kind::Singularity,
+            Kind::Evader,
+            Kind::Splitter,
+            Kind::Warden,
+            Kind::Serpent,
+            Kind::Carrier,
+        ] {
+            assert!(seen.contains(&k), "{k:?} never spawned");
+        }
     }
 
     #[test]

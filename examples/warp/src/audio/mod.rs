@@ -424,13 +424,19 @@ impl Sound {
                 } => {
                     let gain = if scored { 1.0 } else { 0.6 };
                     match kind {
-                        Kind::Singularity => {
+                        Kind::Singularity | Kind::Carrier => {
                             self.push(Family::KillBig, s.note(0), pos, cam, 1.0, size)
                         }
                         _ => {
+                            // Each family has its register (scale degrees).
                             let d = match kind {
+                                Kind::Serpent => 7,
+                                Kind::Warden => 9,
                                 Kind::Drifter => 11,
+                                Kind::Splitter => 12,
                                 Kind::Chaser => 14,
+                                Kind::Evader => 16,
+                                Kind::Fragment => 19,
                                 _ => 18,
                             } + lift;
                             self.push(Family::Kill, s.note(d), pos, cam, gain, size);
@@ -438,6 +444,9 @@ impl Sound {
                     }
                 }
                 Event::Wall { pos } => self.push(Family::Wall, s.note(28), pos, cam, 1.0, 0.0),
+                Event::Deflect { pos, .. } => {
+                    self.push(Family::Hit, s.note(25 + lift), pos, cam, 0.7, 0.0)
+                }
                 Event::Absorb { pos, .. } => {
                     self.push(Family::Absorb, s.note(7), pos, cam, 1.0, 0.0)
                 }

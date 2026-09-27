@@ -103,10 +103,11 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M1: renderer core: SDF lines placed by motors in the vertex shader, HDR, bloom mip chain, AgX tonemapping, stroke font, GPU timestamps
 - [x] M2: Plane vertical slice: ship, bullets, drifter/chaser/singularity (+ motes), warped-space lattice and particles as traced kernels on the GPU with a CPU twin, synthesized effects, drone/pulse music (plus soft percussion), offline music renders
 - [ ] M2 gate: the owner plays it (is it fun for 5 minutes?)
-- [ ] M3: the full roster (evader, splitter, serpent, warden, carrier), fragments and texture in the music, menus, settings (shake, colourblind palettes, volumes), high scores, replays
+- [x] M3a: the full roster (evader, splitter, serpent, warden, carrier) with director formations
+- [ ] M3b: fragments and texture in the music, menus, settings (shake, colourblind palettes, volumes), high scores, replays
 - [ ] M4-M5: Tunnel mode, polish, attract mode, accessibility
 - [ ] M6: VERIFY.md complete, performance numbers
-- [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away
+- [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away; a sign-correct reflection of directions by a line
 
 ## Decisions for the project owner
 - Publishing to crates.io (later).

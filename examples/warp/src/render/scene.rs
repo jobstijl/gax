@@ -12,7 +12,7 @@ pub mod palette {
     /// The ship: warm white.
     pub const SHIP: [f32; 4] = [1.0, 0.86, 0.62, 3.2];
     /// Shots.
-    pub const BULLET: [f32; 4] = [1.0, 0.62, 0.22, 3.0];
+    pub const BULLET: [f32; 4] = [1.0, 0.82, 0.5, 3.0];
     /// Drifters: cyan.
     pub const DRIFTER: [f32; 4] = [0.15, 0.85, 1.0, 2.6];
     /// Chasers: magenta.
@@ -21,6 +21,16 @@ pub mod palette {
     pub const MOTE: [f32; 4] = [0.85, 0.35, 1.0, 2.6];
     /// Singularities: deep violet.
     pub const SINGULARITY: [f32; 4] = [0.55, 0.3, 1.0, 1.9];
+    /// Evaders: yellow.
+    pub const EVADER: [f32; 4] = [1.0, 0.86, 0.1, 2.6];
+    /// Splitters and their fragments: orange.
+    pub const SPLITTER: [f32; 4] = [1.0, 0.36, 0.1, 2.7];
+    /// Serpents: teal.
+    pub const SERPENT: [f32; 4] = [0.1, 1.0, 0.72, 2.5];
+    /// Wardens: red.
+    pub const WARDEN: [f32; 4] = [1.0, 0.14, 0.18, 2.8];
+    /// Carriers: blue.
+    pub const CARRIER: [f32; 4] = [0.32, 0.48, 1.0, 2.8];
     /// Shards: lime.
     pub const SHARD: [f32; 4] = [0.45, 1.0, 0.3, 2.6];
     /// The arena's border.
@@ -38,6 +48,11 @@ pub fn color(kind: Kind) -> [f32; 4] {
         Kind::Chaser => palette::CHASER,
         Kind::Mote => palette::MOTE,
         Kind::Singularity => palette::SINGULARITY,
+        Kind::Evader => palette::EVADER,
+        Kind::Splitter | Kind::Fragment => palette::SPLITTER,
+        Kind::Serpent => palette::SERPENT,
+        Kind::Warden => palette::WARDEN,
+        Kind::Carrier => palette::CARRIER,
     }
 }
 
@@ -177,6 +192,135 @@ pub fn draw_enemy(
                 THIN,
                 m,
             );
+        }
+        Kind::Evader => {
+            // A bow tie along its heading.
+            polygon(
+                out,
+                &[[0.0, 0.0], [0.95, 0.7], [0.95, -0.7]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+            polygon(
+                out,
+                &[[0.0, 0.0], [-0.95, 0.7], [-0.95, -0.7]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+        }
+        Kind::Splitter => {
+            polygon(
+                out,
+                &[[0.85, 0.85], [-0.85, 0.85], [-0.85, -0.85], [0.85, -0.85]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+            // Its three fragments, visible inside.
+            for k in 0..3 {
+                let a = k as f32 * core::f32::consts::TAU / 3.0;
+                let r = Motor::rotation(Point::xy(0.0, 0.0), a);
+                polygon(
+                    out,
+                    &[[0.55, 0.0], [0.15, 0.22], [0.15, -0.22]],
+                    radius,
+                    scale_color(c, 0.75),
+                    THIN,
+                    m * r,
+                );
+            }
+        }
+        Kind::Fragment => {
+            polygon(
+                out,
+                &[[1.0, 0.0], [-0.7, 0.55], [-0.35, 0.0], [-0.7, -0.55]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+        }
+        Kind::Serpent => {
+            polygon(
+                out,
+                &[[1.1, 0.0], [-0.3, 0.75], [-0.1, 0.0], [-0.3, -0.75]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+            // Eyes.
+            for side in [-1.0f32, 1.0] {
+                out.push(seg(
+                    [0.25, 0.22 * side, 0.4, 0.22 * side],
+                    scale_color(c, 1.4),
+                    THIN,
+                    m,
+                ));
+            }
+        }
+        Kind::Warden => {
+            // The shield: a bright arc across the front.
+            let arc: Vec<[f32; 2]> = (0..=12)
+                .map(|k| {
+                    let a = -1.3 + 2.6 * k as f32 / 12.0;
+                    [1.05 * a.cos(), 1.05 * a.sin()]
+                })
+                .collect();
+            let shield = [0.06, 0.4, 0.4, 0.0];
+            for w in arc.windows(2) {
+                out.push(seg(
+                    [
+                        w[0][0] * radius,
+                        w[0][1] * radius,
+                        w[1][0] * radius,
+                        w[1][1] * radius,
+                    ],
+                    scale_color(c, 1.3),
+                    shield,
+                    m,
+                ));
+            }
+            polygon(
+                out,
+                &[[0.45, 0.0], [-0.6, 0.5], [-0.35, 0.0], [-0.6, -0.5]],
+                radius,
+                c,
+                THIN,
+                m,
+            );
+        }
+        Kind::Carrier => {
+            let hex = |r: f32| -> Vec<[f32; 2]> {
+                (0..6)
+                    .map(|k| {
+                        let a = k as f32 * core::f32::consts::FRAC_PI_3;
+                        [r * a.cos(), r * a.sin()]
+                    })
+                    .collect()
+            };
+            polygon(out, &hex(1.0), radius, c, THIN, m);
+            let inner = m * Motor::rotation(Point::xy(0.0, 0.0), -t * 1.3);
+            polygon(out, &hex(0.62), radius, scale_color(c, 0.7), THIN, inner);
+            // Cargo circling inside.
+            for k in 0..3 {
+                let a = t * 2.0 + k as f32 * core::f32::consts::TAU / 3.0;
+                let p = [0.35 * radius * a.cos(), 0.35 * radius * a.sin()];
+                let q = Motor::translation(p[0], p[1]);
+                polygon(
+                    out,
+                    &[[0.14, 0.0], [-0.1, 0.1], [-0.1, -0.1]],
+                    1.0,
+                    palette::MOTE,
+                    THIN,
+                    m * q,
+                );
+            }
         }
         Kind::Singularity => {
             let pulse = 1.0 + 0.08 * (t * 5.0).sin() + 0.02 * mass + 0.06 * swell;
@@ -321,6 +465,31 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         );
     }
     for e in &w.enemies {
+        // A serpent's body: shrinking diamonds on a spine.
+        if !e.chain.is_empty() {
+            let c = color(Kind::Serpent);
+            let mut prev = (e.body.lerp(alpha) >> Point::xy(0.0, 0.0)).to_euclidean();
+            for (k, seg_pose) in e.chain.iter().enumerate() {
+                let p = (*seg_pose >> Point::xy(0.0, 0.0)).to_euclidean();
+                let f = 1.0 - 0.5 * k as f32 / e.chain.len() as f32;
+                out.push(seg(
+                    [prev[0], prev[1], p[0], p[1]],
+                    scale_color(c, 0.35),
+                    THIN,
+                    identity(),
+                ));
+                let r = 0.38 * f;
+                polygon(
+                    out,
+                    &[[r, 0.0], [0.0, r], [-r, 0.0], [0.0, -r]],
+                    1.0,
+                    scale_color(c, 0.9 * f),
+                    THIN,
+                    *seg_pose,
+                );
+                prev = p;
+            }
+        }
         let m = e.body.lerp(alpha);
         let appear = (e.age * 6.0).min(1.0);
         draw_enemy(

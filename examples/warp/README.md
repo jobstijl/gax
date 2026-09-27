@@ -45,10 +45,19 @@ F11 toggles full screen.
   particles and the other enemies. They eat what falls in and grow, and when overfed they burst
   into a swarm of motes. They take many hits.
 
+Later in a run (the director unlocks them over the first minute and a half):
+* **evaders** (yellow) read your line of fire and step out of it;
+* **splitters** (orange) take two hits and break into three fast fragments;
+* **wardens** (red) carry a shield that reflects shots back; hit them from behind;
+* **serpents** (teal) wind toward you. The body blocks shots; only the head is vulnerable;
+* **carriers** (blue) are slow and tough, launch motes as they go, and unload a ring of them
+  when destroyed.
+
 ## Other modes
 
 ```sh
 cargo run --release -- --shot DIR [SECONDS...]   # a scripted run, PNG snapshots (offscreen, wgpu validation on)
+WARP_SCENE=roster cargo run --release -- --shot DIR   # every enemy kind in one still picture
 cargo run --release -- --music DIR [SECONDS] [SEED]  # the music offline: low, medium, high intensity, and a run's arc, as WAV
 cargo run --release -- --smoke                   # play 8 s with a bot and quit (a startup test)
 WARP_NO_AUDIO=1 cargo run --release              # without the audio engine

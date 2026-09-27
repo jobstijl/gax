@@ -71,7 +71,6 @@ impl Hull {
 }
 
 /// Is `p` in front of a body at `pose` (on the side its local x axis points to)?
-#[allow(dead_code)] // the Warden's shield (M3); tested below
 pub fn in_front(pose: Pose, p: Point<(), f32>) -> bool {
     let (o, up) = (pose >> Point::xy(0.0, 0.0), pose >> Point::xy(0.0, 1.0));
     // The line from the centre along the local y axis; the heading side is negative for this
@@ -215,5 +214,31 @@ mod tests {
         assert_eq!(out, vec![7]);
         h.query([-18.0, 9.0], [-18.0, 9.0], 0.1, &mut out);
         assert_eq!(out, vec![9]);
+    }
+}
+
+/// Reflect the direction `d` in the line `l` (a direction only sees the line's orientation).
+///
+/// The reflection is the twisted sandwich `-l d ~l`: gax's `>>` computes `l d ~l`, which for
+/// an odd versor (a line) on a bivector (a point) carries a sign. For a finite point the sign
+/// is harmless (`-p` is the same point), for a direction it is not (VERIFY.md, friction 7).
+pub fn reflect(l: gax::pga2d::Line<(), f32>, d: Point<(), f32>) -> Point<(), f32> {
+    let n = l.norm().max(1e-9);
+    -(gax::Unit::new_unchecked(l.gp(1.0 / n)) >> d)
+}
+
+#[cfg(test)]
+mod reflect_tests {
+    use super::*;
+
+    #[test]
+    fn reflection_in_a_line_mirrors_directions() {
+        // The vertical line x = 3: a direction (1, 0.5) becomes (-1, 0.5).
+        let l = Point::xy(3.0, 0.0) & Point::xy(3.0, 1.0);
+        let r = reflect(l, Point::direction(1.0, 0.5));
+        assert!(
+            (r.e20() + 1.0).abs() < 1e-5 && (r.e01() - 0.5).abs() < 1e-5,
+            "{r:?}"
+        );
     }
 }

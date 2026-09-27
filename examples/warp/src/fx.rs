@@ -168,6 +168,9 @@ impl Fx {
                         self.shake = self.shake.max(0.8);
                     }
                 }
+                Event::Deflect { pos, kind } => {
+                    self.burst(pos, scene::color(kind), 6, (6.0, 14.0), (0.1, 0.25), 0.5);
+                }
                 Event::Wall { pos } => {
                     self.burst(pos, palette::BULLET, 5, (2.0, 8.0), (0.1, 0.3), 0.2);
                     self.blast(pos, -25.0, 0.5, 0.05);
