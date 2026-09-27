@@ -261,6 +261,28 @@ mod pga3d_extras {
             Self::rotation(axis, angle)
         }
 
+        /// The screw motion from `a` to `b`, at `t` (`0` is `a`, `1` is `b`): `a exp(t log(~a b))`,
+        /// the shorter way. `m` and `-m` are the same motion, and constructions such as
+        /// [`Motor::look_at`] may return either as their input moves; `log` of the one with a
+        /// negative scalar part is the long way round, nearly a full turn. So the relative motor
+        /// is taken with its scalar part non-negative. Branch-free, so that it traces.
+        ///
+        /// ```
+        /// use gax::pga3d::{Motor, Point};
+        /// let a = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.1);
+        /// let b = Motor::rotation_about(0.0, 0.0, 1.0, 0.3);
+        /// // The same motion as `b`, the other sign: still halfway is 0.2 rad, not a long turn.
+        /// let b = gax::Unit::new_unchecked(b.into_inner() * -1.0);
+        /// let d = Motor::interpolate(a, b, 0.5) >> Point::direction(1.0, 0.0, 0.0);
+        /// assert!((d.e013() - 0.2f64.sin()).abs() < 1e-12);
+        /// ```
+        pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
+            let rel = (a.reverse() * b).into_inner();
+            let sign = T::select_lt(rel.s(), T::zero(), -T::one(), T::one());
+            let rel = Unit::new_unchecked(rel.gp(sign));
+            a * (rel.log().gp(t)).exp()
+        }
+
         /// The motor of a camera (or any frame) at `eye` whose forward axis `+z` points at
         /// `target` and whose `+y` axis is as close to `up` as it can be (no roll): the
         /// rotation between the axes, then a roll about the forward axis, then the translation.
@@ -456,6 +478,16 @@ mod pga2d_extras {
             let angle = sine.atan2((a | b).s());
             Self::rotation(Point::xy(zero, zero), angle)
         }
+
+        /// The rigid motion from `a` to `b`, at `t`: `a exp(t log(~a b))`, the shorter way (the
+        /// relative motor taken with its scalar part non-negative; see the 3D
+        /// `Motor::interpolate`).
+        pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
+            let rel = (a.reverse() * b).into_inner();
+            let sign = T::select_lt(rel.s(), T::zero(), -T::one(), T::one());
+            let rel = Unit::new_unchecked(rel.gp(sign));
+            a * (rel.log().gp(t)).exp()
+        }
     }
 
     impl<T: Real> Motor<(), T> {
@@ -568,6 +600,36 @@ mod tests {
         // Opposite: a half turn.
         let r = Motor::rotation_between(Point::direction(1.0f64, 0.0), Point::direction(-1.0, 0.0));
         assert!((r.angle().abs() - core::f64::consts::PI).abs() < 1e-9);
+    }
+    /// Sweeping a camera round through looking backwards: `look_at` flips the sign of its
+    /// motor on the way (the same motion), and a spring following it with `interpolate` still
+    /// moves by the small true step every frame, never the long way round.
+    #[cfg(feature = "pga3d")]
+    #[test]
+    fn interpolation_takes_the_shorter_way_through_a_sign_flip() {
+        use crate::pga3d::{Motor, Point};
+        let up = Point::direction(0.0, 1.0, 0.0);
+        let eye = Point::xyz(0.0, 0.0, 0.0);
+        let at = |k: f64| {
+            let a = k * 0.01;
+            Motor::look_at(eye, Point::xyz(a.sin(), 0.05, a.cos()), up)
+        };
+        let mut flips = 0;
+        let mut cam = at(0.0);
+        for k in 1..700 {
+            let (prev, target) = (at(f64::from(k - 1)), at(f64::from(k)));
+            flips += usize::from((prev.reverse() * target).s() < 0.0);
+            let next = Motor::interpolate(cam, target, 0.5);
+            // The camera's forward axis moves by at most the target's step (0.01 rad).
+            let (f0, f1) = (
+                cam >> Point::direction(0.0, 0.0, 1.0),
+                next >> Point::direction(0.0, 0.0, 1.0),
+            );
+            let dot = f0.e032() * f1.e032() + f0.e013() * f1.e013() + f0.e021() * f1.e021();
+            assert!(dot > 0.9999, "step {k}: the camera swung ({dot})");
+            cam = next;
+        }
+        assert!(flips > 0, "the sweep never crossed a sign flip");
     }
 
     #[cfg(feature = "pga3d")]
