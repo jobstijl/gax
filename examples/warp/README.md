@@ -34,7 +34,14 @@ Menus take arrows, WASD, the D-pad or a flick of the left stick. F3 toggles the 
 **Settings** (from the title): screen shake in steps down to off, reduced flashes (softer
 full-screen flashes, bursts and shock ripples), colour schemes that are safe for red–green and
 for blue–yellow colour blindness (every enemy also has its own shape), volumes for the master,
-music and effects, and full screen.
+music and effects, effects on the beat (shots, hits, kills and pickups wait for the music's
+next 32nd, sample-accurately), and full screen.
+
+**The music** is generated live from the run's seed: a pad with voice-led chords, bass and soft
+percussion that follow the intensity, and layers the multiplier unlocks. Melodic fragments
+(short cells on chord tones that repeat and develop, on an FM bell into a ping-pong echo) come
+in from x4, texture (drifting air and high sparkles) from x10, and the fragments double an
+octave up from x25. A replay plays its run's music again.
 
 **High scores and replays.** Every run is recorded (its seed and every tick's input, about
 0.8 KB a second). A run that makes the top ten asks for three initials and keeps its replay,

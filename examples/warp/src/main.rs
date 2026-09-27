@@ -207,6 +207,7 @@ impl Game {
         self.fx.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
         scene::set_scheme(s.scheme);
         sound.gains = s.gains();
+        sound.on_beat = s.on_beat;
     }
 }
 
@@ -485,7 +486,7 @@ fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
             let rows = Settings::ROWS.len() + 1; // and BACK
             g.sel = nav(g.sel, rows, &menu);
             let mut by = i32::from(menu.right) - i32::from(menu.left);
-            if by == 0 && menu.start && matches!(g.sel, 1 | 2 | 6) {
+            if by == 0 && menu.start && Settings::toggles(g.sel) {
                 by = 1;
             }
             if by != 0 && g.sel < Settings::ROWS.len() {
@@ -887,7 +888,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             scene::text(out, "SETTINGS", 0.0, 11.0, 3.0, hud, Align::Center);
             let (lx, rx) = (-15.0, 15.0);
             for (row, label) in Settings::ROWS.iter().enumerate() {
-                let y = 6.0 - row as f32 * 2.3;
+                let y = 6.5 - row as f32 * 2.1;
                 let on = row == g.sel;
                 let c = if on { hot } else { faint };
                 if on {
@@ -920,7 +921,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 }
             }
             let back = Settings::ROWS.len();
-            let y = 6.0 - back as f32 * 2.3 - 0.8;
+            let y = 6.5 - back as f32 * 2.1 - 0.6;
             let c = if g.sel == back { hot } else { faint };
             if g.sel == back {
                 scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);

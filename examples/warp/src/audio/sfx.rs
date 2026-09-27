@@ -161,6 +161,21 @@ pub struct Sfx {
     sr: f32,
     voices: [Voice; 48],
     noise: Noise,
+    /// With "on the beat": samples into the current 32nd of the music's grid.
+    grid: Option<f32>,
+    /// Musical triggers waiting for the next 32nd.
+    held: [Option<Trigger>; 16],
+}
+
+impl Family {
+    /// The families that snap to the beat grid (the others must answer at once: a death, a
+    /// bomb, a warning).
+    fn musical(self) -> bool {
+        matches!(
+            self,
+            Family::Shot | Family::Hit | Family::Kill | Family::Pickup
+        )
+    }
 }
 
 impl Sfx {
@@ -170,6 +185,56 @@ impl Sfx {
             sr,
             voices: [Voice::default(); 48],
             noise: Noise(0x1234_5678),
+            grid: None,
+            held: [None; 16],
+        }
+    }
+
+    /// Snap the musical families to the music's 32nds (or not).
+    pub fn set_on_beat(&mut self, on: bool) {
+        match (on, self.grid) {
+            (true, None) => self.grid = Some(0.0),
+            (false, Some(_)) => {
+                self.grid = None;
+                self.release();
+            }
+            _ => {}
+        }
+    }
+
+    /// The music starts its bar now: align the grid with it.
+    pub fn sync(&mut self) {
+        if self.grid.is_some() {
+            self.grid = Some(0.0);
+        }
+    }
+
+    /// Play `t`, at once or on the next 32nd.
+    pub fn submit(&mut self, t: &Trigger) {
+        if self.grid.is_none() || !t.family.musical() {
+            return self.trigger(t);
+        }
+        // One per family per 32nd: the loudest wins, a later note replaces an earlier one.
+        for h in self.held.iter_mut().flatten() {
+            if h.family == t.family {
+                *h = Trigger {
+                    gain: h.gain.max(t.gain),
+                    ..*t
+                };
+                return;
+            }
+        }
+        match self.held.iter_mut().find(|h| h.is_none()) {
+            Some(slot) => *slot = Some(*t),
+            None => self.trigger(t),
+        }
+    }
+
+    fn release(&mut self) {
+        for k in 0..self.held.len() {
+            if let Some(t) = self.held[k].take() {
+                self.trigger(&t);
+            }
         }
     }
 
@@ -436,8 +501,31 @@ impl Sfx {
             .count()
     }
 
-    /// Add the voices into `l` and `r`. Returns whether anything sounded.
+    /// Add the voices into `l` and `r`. Returns whether anything sounded. On the beat, the
+    /// block is split at the grid's 32nds, where held triggers start sample-accurately.
     pub fn render(&mut self, l: &mut [f32], r: &mut [f32]) -> bool {
+        let Some(mut pos) = self.grid else {
+            return self.render_voices(l, r);
+        };
+        let len = super::music::sixteenth(self.sr) / 2.0;
+        let (mut start, n) = (0, l.len());
+        let mut any = self.held.iter().any(Option::is_some);
+        while start < n {
+            let to_beat = ((len - pos).ceil() as usize).max(1);
+            let end = (start + to_beat).min(n);
+            any |= self.render_voices(&mut l[start..end], &mut r[start..end]);
+            pos += (end - start) as f32;
+            if pos >= len {
+                pos -= len;
+                self.release();
+            }
+            start = end;
+        }
+        self.grid = Some(pos);
+        any
+    }
+
+    fn render_voices(&mut self, l: &mut [f32], r: &mut [f32]) -> bool {
         let sr = self.sr;
         let inv = 1.0 / sr;
         let mut any = false;
@@ -536,6 +624,44 @@ const _: () = assert!(FAMILIES == 12);
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// On the beat, a shot waits for the next 32nd and starts exactly there; a death does not
+    /// wait.
+    #[test]
+    fn on_the_beat_holds_musical_sounds_until_the_grid() {
+        let sr = 48000.0;
+        let len = crate::audio::music::sixteenth(sr) / 2.0;
+        let mut sfx = Sfx::new(sr);
+        sfx.set_on_beat(true);
+        sfx.sync();
+        let (mut l, mut r) = (vec![0.0f32; 4096], vec![0.0f32; 4096]);
+        sfx.render(&mut l[..100], &mut r[..100]);
+        let shot = Trigger {
+            family: Family::Shot,
+            note: 72.0,
+            pan: 0.0,
+            gain: 1.0,
+            variant: 0.0,
+        };
+        sfx.submit(&shot);
+        sfx.submit(&shot);
+        assert_eq!(sfx.active(), 0);
+        l.fill(0.0);
+        r.fill(0.0);
+        sfx.render(&mut l, &mut r);
+        let first = l.iter().position(|x| x.abs() > 1e-6).unwrap();
+        assert_eq!(first, len.ceil() as usize - 100);
+        assert_eq!(
+            sfx.active_in(Family::Shot),
+            1,
+            "two shots in one 32nd merge"
+        );
+        sfx.submit(&Trigger {
+            family: Family::Death,
+            ..shot
+        });
+        assert_eq!(sfx.active_in(Family::Death), 1);
+    }
 
     #[test]
     fn triggers_round_trip_through_bytes() {

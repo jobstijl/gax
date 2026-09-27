@@ -73,15 +73,15 @@ pub fn color(kind: Kind) -> [f32; 4] {
     };
     let rgb = match (scheme(), kind) {
         (Scheme::Standard, _) => return standard,
-        // Blue, orange, yellow and purple, after Okabe and Ito; no red against green.
+        // Blue, orange, yellow, purple and white, after Okabe and Ito; no red against green.
         (Scheme::RedGreen, Kind::Drifter) => [0.35, 0.72, 1.0],
         (Scheme::RedGreen, Kind::Chaser) => [1.0, 0.62, 0.0],
         (Scheme::RedGreen, Kind::Mote) => [0.95, 0.55, 0.85],
         (Scheme::RedGreen, Kind::Singularity) => [0.45, 0.35, 1.0],
         (Scheme::RedGreen, Kind::Evader) => [1.0, 0.95, 0.25],
-        (Scheme::RedGreen, Kind::Splitter | Kind::Fragment) => [0.85, 0.3, 0.0],
+        (Scheme::RedGreen, Kind::Splitter | Kind::Fragment) => [0.75, 0.45, 1.0],
         (Scheme::RedGreen, Kind::Serpent) => [0.0, 0.8, 0.65],
-        (Scheme::RedGreen, Kind::Warden) => [1.0, 0.75, 0.9],
+        (Scheme::RedGreen, Kind::Warden) => [0.85, 0.92, 1.0],
         (Scheme::RedGreen, Kind::Carrier) => [0.15, 0.4, 1.0],
         // Reds against cyans; no blue against green or yellow against violet.
         (Scheme::BlueYellow, Kind::Drifter) => [0.1, 0.9, 1.0],
@@ -89,7 +89,7 @@ pub fn color(kind: Kind) -> [f32; 4] {
         (Scheme::BlueYellow, Kind::Mote) => [1.0, 0.55, 0.75],
         (Scheme::BlueYellow, Kind::Singularity) => [0.55, 0.3, 1.0],
         (Scheme::BlueYellow, Kind::Evader) => [1.0, 0.22, 0.15],
-        (Scheme::BlueYellow, Kind::Splitter | Kind::Fragment) => [1.0, 0.62, 0.5],
+        (Scheme::BlueYellow, Kind::Splitter | Kind::Fragment) => [0.45, 1.0, 0.3],
         (Scheme::BlueYellow, Kind::Serpent) => [0.1, 0.8, 0.8],
         (Scheme::BlueYellow, Kind::Warden) => [0.95, 0.95, 1.0],
         (Scheme::BlueYellow, Kind::Carrier) => [0.3, 0.5, 1.0],
@@ -100,8 +100,9 @@ pub fn color(kind: Kind) -> [f32; 4] {
 /// The shards' colour, in the current scheme.
 pub fn shard() -> [f32; 4] {
     match scheme() {
-        Scheme::Standard | Scheme::BlueYellow => palette::SHARD,
+        Scheme::Standard => palette::SHARD,
         Scheme::RedGreen => [0.85, 1.0, 1.0, 2.6],
+        Scheme::BlueYellow => [1.0, 0.95, 0.6, 2.6],
     }
 }
 

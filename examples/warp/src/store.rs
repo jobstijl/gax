@@ -72,6 +72,8 @@ pub struct Settings {
     pub music: u8,
     /// Effects volume.
     pub sfx: u8,
+    /// Shots, hits, kills and pickups on the music's beat.
+    pub on_beat: bool,
     /// Full screen.
     pub fullscreen: bool,
 }
@@ -85,6 +87,7 @@ impl Default for Settings {
             master: 8,
             music: 8,
             sfx: 8,
+            on_beat: false,
             fullscreen: false,
         }
     }
@@ -92,15 +95,21 @@ impl Default for Settings {
 
 impl Settings {
     /// The rows of the settings menu (their labels), in order.
-    pub const ROWS: [&'static str; 7] = [
+    pub const ROWS: [&'static str; 8] = [
         "SCREEN SHAKE",
         "FLASHES",
         "COLOURS",
         "MASTER VOLUME",
         "MUSIC",
         "EFFECTS",
+        "EFFECTS ON THE BEAT",
         "FULL SCREEN",
     ];
+
+    /// Rows that toggle (Enter flips them too).
+    pub fn toggles(row: usize) -> bool {
+        matches!(row, 1 | 2 | 6 | 7)
+    }
 
     /// A row's value as the menu shows it; volumes are `(level, 10)` bars instead.
     pub fn value(&self, row: usize) -> Result<String, u8> {
@@ -119,6 +128,7 @@ impl Settings {
             3 => Err(self.master),
             4 => Err(self.music),
             5 => Err(self.sfx),
+            6 => Ok(if self.on_beat { "ON" } else { "OFF" }.into()),
             _ => Ok(if self.fullscreen { "ON" } else { "OFF" }.into()),
         }
     }
@@ -133,7 +143,8 @@ impl Settings {
             3 => vol(&mut self.master),
             4 => vol(&mut self.music),
             5 => vol(&mut self.sfx),
-            6 => self.fullscreen = !self.fullscreen,
+            6 => self.on_beat = !self.on_beat,
+            7 => self.fullscreen = !self.fullscreen,
             _ => {}
         }
     }
@@ -147,13 +158,14 @@ impl Settings {
     /// The text form.
     pub fn to_text(self) -> String {
         format!(
-            "shake = {}\nreduced_flashes = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\nfullscreen = {}\n",
+            "shake = {}\nreduced_flashes = {}\nscheme = {}\nmaster = {}\nmusic = {}\nsfx = {}\non_beat = {}\nfullscreen = {}\n",
             self.shake,
             self.reduced_flashes,
             self.scheme.name(),
             self.master,
             self.music,
             self.sfx,
+            self.on_beat,
             self.fullscreen
         )
     }
@@ -179,6 +191,7 @@ impl Settings {
                 "master" => s.master = vol(v, s.master),
                 "music" => s.music = vol(v, s.music),
                 "sfx" => s.sfx = vol(v, s.sfx),
+                "on_beat" => s.on_beat = v == "true",
                 "fullscreen" => s.fullscreen = v == "true",
                 _ => {}
             }
@@ -366,6 +379,7 @@ mod tests {
             master: 3,
             music: 0,
             sfx: 10,
+            on_beat: true,
             fullscreen: true,
         };
         assert_eq!(Settings::from_text(&s.to_text()), s);

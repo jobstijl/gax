@@ -104,7 +104,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M2: Plane vertical slice: ship, bullets, drifter/chaser/singularity (+ motes), warped-space lattice and particles as traced kernels on the GPU with a CPU twin, synthesized effects, drone/pulse music (plus soft percussion), offline music renders
 - [ ] M2 gate: the owner plays it (is it fun for 5 minutes?)
 - [x] M3a: the full roster (evader, splitter, serpent, warden, carrier) with director formations
-- [ ] M3b: fragments and texture in the music, menus, settings (shake, colourblind palettes, volumes), high scores, replays
+- [x] M3b: replays (quantized inputs, per-second state hashes), high scores with initials, menus, settings (shake, flashes, colour-blind schemes, volumes, full screen)
+- [x] M3c: music layers from the multiplier (fragments, texture, octave doubling), effects on the beat
 - [ ] M4-M5: Tunnel mode, polish, attract mode, accessibility
 - [ ] M6: VERIFY.md complete, performance numbers
 - [ ] gax friction from the game: an ideal (Euclidean) norm for directions; a tracer warning when a `Unit` argument's renormalization simplifies away; a sign-correct reflection of directions by a line

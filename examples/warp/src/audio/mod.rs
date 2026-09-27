@@ -45,7 +45,12 @@ use sfx::{Family, Scale, Sfx, Trigger};
 pub struct SfxNode {
     /// Output gain.
     pub gain: f32,
+    /// Snap musical effects to the music's grid.
+    pub on_beat: bool,
 }
+
+/// The sfx node's sync event (`CustomBytes`, byte 0): the music starts its bar.
+const SFX_SYNC: u8 = 255;
 
 /// The music node.
 #[derive(Diff, Patch, Debug, Clone, Component)]
@@ -56,6 +61,8 @@ pub struct MusicNode {
     pub darkness: f32,
     /// A run is being played.
     pub playing: bool,
+    /// The multiplier's heat (`music::heat`).
+    pub heat: f32,
     /// Output gain.
     pub gain: f32,
 }
@@ -102,9 +109,10 @@ impl AudioNodeProcessor for SfxProcessor {
     fn events(&mut self, _: &ProcInfo, events: &mut ProcEvents, _: &mut ProcExtra) {
         for e in events.drain() {
             match e {
+                NodeEventType::CustomBytes(b) if b[0] == SFX_SYNC => self.engine.sync(),
                 NodeEventType::CustomBytes(b) => {
                     if let Some(t) = Trigger::from_bytes(&b) {
-                        self.engine.trigger(&t);
+                        self.engine.submit(&t);
                     }
                 }
                 other => {
@@ -114,6 +122,7 @@ impl AudioNodeProcessor for SfxProcessor {
                 }
             }
         }
+        self.engine.set_on_beat(self.params.on_beat);
     }
 
     fn process(
@@ -177,8 +186,8 @@ impl AudioNodeProcessor for MusicProcessor {
                     MUSIC_SEED => {
                         let seed =
                             u64::from_le_bytes([b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11]]);
-                        // Music has no heap state: rebuilding it here does not allocate.
-                        self.engine = Music::new(seed, self.sr);
+                        // In place, keeping the echo's buffers: no allocation here.
+                        self.engine.reseed(seed);
                     }
                     _ => {}
                 },
@@ -193,6 +202,7 @@ impl AudioNodeProcessor for MusicProcessor {
             intensity: self.params.intensity,
             darkness: self.params.darkness,
             playing: self.params.playing,
+            heat: self.params.heat,
         });
     }
 
@@ -270,12 +280,18 @@ fn build_graph(mut commands: Commands) {
     };
     let sfx_send = commands.spawn(send(0.22)).id();
     let music_send = commands.spawn(send(0.5)).id();
-    let sfx = commands.spawn(SfxNode { gain: 1.0 }).id();
+    let sfx = commands
+        .spawn(SfxNode {
+            gain: 1.0,
+            on_beat: false,
+        })
+        .id();
     let music = commands
         .spawn(MusicNode {
             intensity: 0.1,
             darkness: 0.0,
             playing: false,
+            heat: 0.0,
             gain: 1.0,
         })
         .id();
@@ -319,11 +335,17 @@ fn flush(
     mut music: MusicNodes,
 ) {
     if let Ok((mut node, mut ev)) = sfx.single_mut() {
+        for b in sound.sfx_events.drain(..) {
+            ev.push(NodeEventType::CustomBytes(b));
+        }
         for t in sound.pending.drain(..) {
             ev.push(NodeEventType::CustomBytes(t.to_bytes()));
         }
         if node.gain != sound.gains[0] {
             node.gain = sound.gains[0];
+        }
+        if node.on_beat != sound.on_beat {
+            node.on_beat = sound.on_beat;
         }
     }
     if let Ok((mut node, mut ev)) = music.single_mut() {
@@ -334,14 +356,19 @@ fn flush(
             ev.push(NodeEventType::CustomBytes(m));
         }
         let c = sound.controls;
-        if node.intensity != c.intensity || node.darkness != c.darkness || node.playing != c.playing
+        if node.intensity != c.intensity
+            || node.darkness != c.darkness
+            || node.playing != c.playing
+            || node.heat != c.heat
         {
             node.intensity = c.intensity;
             node.darkness = c.darkness;
             node.playing = c.playing;
+            node.heat = c.heat;
         }
     }
     sound.pending.clear();
+    sound.sfx_events.clear();
     sound.music_events.clear();
 }
 
@@ -351,7 +378,10 @@ fn flush(
 pub struct Sound {
     /// Output gains of the effects and the music (the volume settings).
     pub gains: [f32; 2],
+    /// Effects on the music's beat (a setting).
+    pub on_beat: bool,
     pending: Vec<Trigger>,
+    sfx_events: Vec<[u8; 36]>,
     music_events: Vec<[u8; 36]>,
     controls: Controls,
     scale: Scale,
@@ -365,12 +395,15 @@ impl Sound {
     pub fn new() -> Sound {
         Sound {
             gains: [1.0, 1.0],
+            on_beat: false,
             pending: Vec::new(),
+            sfx_events: Vec::new(),
             music_events: Vec::new(),
             controls: Controls {
                 intensity: 0.1,
                 darkness: 0.0,
                 playing: false,
+                heat: 0.0,
             },
             scale: Scale::from_seed(1),
             seed: 1,
@@ -505,6 +538,10 @@ impl Sound {
             b[0] = MUSIC_SEED;
             b[4..12].copy_from_slice(&w.seed.to_le_bytes());
             self.music_events.push(b);
+            // The effects' beat grid starts with the music's first bar.
+            let mut sync = [0u8; 36];
+            sync[0] = SFX_SYNC;
+            self.sfx_events.push(sync);
         }
         let ship = w.ship.body.xy();
         let darkness = w
@@ -523,6 +560,7 @@ impl Sound {
             },
             darkness,
             playing,
+            heat: music::heat(w.mult),
         };
         if self.music_events.len() > 64 {
             self.music_events.clear();

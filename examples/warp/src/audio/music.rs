@@ -7,15 +7,84 @@
 //!   moves each voice to the nearest tone of the next chord (and glides there).
 //! * A sub/pluck bass on a sparse Euclidean pattern, and soft percussion (kick, hats) whose
 //!   density follows the intensity.
+//! * Fragments: short melodic cells (three to five notes over two bars, on chord tones) played
+//!   by a soft FM bell into a ping-pong echo. A cell repeats, then develops (a note moves, a
+//!   position shifts), and follows the chords, since its degrees are relative to the chord.
+//! * Texture: drifting band-passed air and sparse high sparkles, into the same echo.
 //! * The game steers it: intensity (filter, density, layers, how much dissonance the voicing
-//!   allows), a death (everything drops to the drone, then rebuilds over 8 bars), a bomb (a
-//!   filter sweep and a duck), a nearby singularity (pitch drifts down, the tone darkens). The
-//!   tempo never changes.
+//!   allows), the multiplier (fragments come in from x4, texture from x10, the fragments'
+//!   octave doubling from x25), a death (everything drops to the drone, then rebuilds over
+//!   8 bars), a bomb (a filter sweep and a duck), a nearby singularity (pitch drifts down, the
+//!   tone darkens). The tempo never changes.
 
 use super::dsp::{Env, Noise, Osc, Smooth, Svf, db, mtof, soft};
 use super::sfx::Scale;
 
 const PAD_VOICES: usize = 5;
+
+/// The tempo, in beats per minute (fixed: the effects' beat grid uses it too).
+pub const TEMPO: f32 = 124.0;
+
+/// Samples in one sixteenth at `sr`.
+pub fn sixteenth(sr: f32) -> f32 {
+    sr * 60.0 / TEMPO / 4.0
+}
+
+const BELLS: usize = 4;
+const MOTIF: usize = 6;
+const ECHO_LEN: usize = 1 << 16;
+
+/// A stereo ping-pong echo with a damped feedback path. Its buffers are allocated once and
+/// kept across reseeds (`Music::reseed`), so the audio thread never allocates.
+pub struct Echo {
+    l: Box<[f32]>,
+    r: Box<[f32]>,
+    pos: usize,
+    damp: [f32; 2],
+}
+
+impl Echo {
+    fn new() -> Box<Echo> {
+        Box::new(Echo {
+            l: vec![0.0; ECHO_LEN].into_boxed_slice(),
+            r: vec![0.0; ECHO_LEN].into_boxed_slice(),
+            pos: 0,
+            damp: [0.0; 2],
+        })
+    }
+
+    fn clear(&mut self) {
+        self.l.fill(0.0);
+        self.r.fill(0.0);
+        self.damp = [0.0; 2];
+    }
+
+    /// One sample in, the echoes out; `delay` in samples (below `ECHO_LEN`).
+    fn tick(&mut self, xl: f32, xr: f32, delay: usize, feedback: f32) -> (f32, f32) {
+        let read = (self.pos + ECHO_LEN - delay) & (ECHO_LEN - 1);
+        let (dl, dr) = (self.l[read], self.r[read]);
+        // One-pole low-passes in the loop: each repeat is darker.
+        self.damp[0] += 0.35 * (dl - self.damp[0]);
+        self.damp[1] += 0.35 * (dr - self.damp[1]);
+        // Ping-pong: each side feeds the other.
+        self.l[self.pos] = xl + self.damp[1] * feedback;
+        self.r[self.pos] = xr + self.damp[0] * feedback;
+        self.pos = (self.pos + 1) & (ECHO_LEN - 1);
+        (dl, dr)
+    }
+}
+
+/// A two-operator FM bell.
+#[derive(Clone, Copy, Debug, Default)]
+struct Bell {
+    car: Osc,
+    modu: Osc,
+    env: Env,
+    index: Env,
+    note: f32,
+    pan: f32,
+    gain: f32,
+}
 
 #[derive(Clone, Copy, Debug, Default)]
 struct PadVoice {
@@ -35,6 +104,19 @@ pub struct Controls {
     pub darkness: f32,
     /// Whether a run is being played (off: the title's calm).
     pub playing: bool,
+    /// The multiplier, as `ln(mult) / ln(40)` clamped to `0..1` (see `heat`).
+    pub heat: f32,
+}
+
+/// The multiplier as the music hears it.
+pub fn heat(mult: u32) -> f32 {
+    ((mult.max(1) as f32).ln() / 40f32.ln()).clamp(0.0, 1.0)
+}
+
+/// `0` below `a`, `1` above `b`, smooth between.
+fn gate(x: f32, a: f32, b: f32) -> f32 {
+    let t = ((x - a) / (b - a)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 /// The music engine.
@@ -74,6 +156,21 @@ pub struct Music {
     sweep: f32,
     bass_rot: u32,
     hat_rot: u32,
+    /// The layers' own generator, so that they never change the harmony or the rhythm.
+    layer_rng: Noise,
+    bells: [Bell; BELLS],
+    next_bell: usize,
+    /// The current cell: `(position in 32 sixteenths, degree above the chord root)`.
+    motif: [(u8, i8); MOTIF],
+    motif_len: usize,
+    phrases: u32,
+    frag_gain: Smooth,
+    tex_gain: Smooth,
+    octave_gain: Smooth,
+    air: [Svf; 2],
+    air_lfo: Osc,
+    sparkle: Bell,
+    echo: Option<Box<Echo>>,
 }
 
 /// `E(k, n)`: is step `i` a hit of the Euclidean rhythm with `k` hits in `n` steps, rotated by
@@ -83,12 +180,29 @@ pub fn euclid(i: u32, k: u32, n: u32, rot: u32) -> bool {
 }
 
 impl Music {
-    /// Music for a run's seed at sample rate `sr`.
+    /// Music for a run's seed at sample rate `sr` (allocates its echo).
     pub fn new(seed: u64, sr: f32) -> Music {
+        Music::build(seed, sr, None)
+    }
+
+    /// Start over from another seed, in place and without allocating (the audio thread).
+    pub fn reseed(&mut self, seed: u64) {
+        let echo = self.echo.take();
+        *self = Music::build(seed, self.sr, echo);
+    }
+
+    fn build(seed: u64, sr: f32, echo: Option<Box<Echo>>) -> Music {
+        let echo = match echo {
+            Some(mut e) => {
+                e.clear();
+                e
+            }
+            None => Echo::new(),
+        };
         let scale = Scale::from_seed(seed);
         let mut m = Music {
             sr,
-            tempo: 124.0,
+            tempo: TEMPO,
             scale,
             rng: Noise((seed as u32) | 1),
             clock: 0.0,
@@ -115,6 +229,7 @@ impl Music {
                 intensity: 0.1,
                 darkness: 0.0,
                 playing: false,
+                heat: 0.0,
             },
             intensity: Smooth { value: 0.1 },
             darkness: Smooth::default(),
@@ -123,7 +238,21 @@ impl Music {
             sweep: 0.0,
             bass_rot: (seed % 16) as u32,
             hat_rot: ((seed / 16) % 16) as u32,
+            layer_rng: Noise((seed as u32).rotate_left(13) | 1),
+            bells: [Bell::default(); BELLS],
+            next_bell: 0,
+            motif: [(0, 0); MOTIF],
+            motif_len: 0,
+            phrases: 0,
+            frag_gain: Smooth::default(),
+            tex_gain: Smooth::default(),
+            octave_gain: Smooth::default(),
+            air: [Svf::default(); 2],
+            air_lfo: Osc::default(),
+            sparkle: Bell::default(),
+            echo: Some(echo),
         };
+        m.new_motif();
         let voicing = m.voicing(0, 0.3);
         for (v, n) in m.pad.iter_mut().zip(voicing) {
             v.note.value = n;
@@ -185,6 +314,73 @@ impl Music {
         }
     }
 
+    /// A new cell: three to five notes over two bars, mostly on eighths, walking over chord
+    /// tones (0, 2, 4, 6 and the octave above the chord root, in scale degrees).
+    fn new_motif(&mut self) {
+        let n = 3 + (self.layer_rng.unit() * 3.0) as usize;
+        let mut positions = [0u8; MOTIF];
+        let mut k = 0;
+        while k < n {
+            let eighth = self.layer_rng.unit() < 0.75;
+            let p = (self.layer_rng.unit() * 32.0) as u8 & if eighth { !1 } else { !0 };
+            if !positions[..k].contains(&p) {
+                positions[k] = p;
+                k += 1;
+            }
+        }
+        positions[..n].sort_unstable();
+        let tones = [0i8, 2, 4, 6, 7];
+        let mut i = (self.layer_rng.unit() * 3.0) as i32;
+        for (slot, &p) in self.motif.iter_mut().zip(&positions[..n]) {
+            *slot = (p, tones[i as usize]);
+            let step = if self.layer_rng.unit() < 0.5 { 1 } else { 2 };
+            i = (i + if self.layer_rng.unit() < 0.5 {
+                step
+            } else {
+                -step
+            })
+            .clamp(0, 4);
+        }
+        self.motif_len = n;
+    }
+
+    /// Develop the cell: move one note to a neighbouring chord tone, or shift its position.
+    fn develop_motif(&mut self) {
+        if self.motif_len == 0 {
+            return;
+        }
+        let k = (self.layer_rng.unit() * self.motif_len as f32) as usize % self.motif_len;
+        let (p, d) = self.motif[k];
+        if self.layer_rng.unit() < 0.6 {
+            let up = self.layer_rng.unit() < 0.5;
+            let d = match (d, up) {
+                (7, true) | (0, false) => d,
+                (6, true) => 7,
+                (7, false) => 6,
+                (_, true) => d + 2,
+                (_, false) => d - 2,
+            };
+            self.motif[k] = (p, d);
+        } else {
+            let q = (p + 2) % 32;
+            if !self.motif[..self.motif_len].iter().any(|m| m.0 == q) {
+                self.motif[k] = (q, d);
+                self.motif[..self.motif_len].sort_unstable();
+            }
+        }
+    }
+
+    fn ring_bell(&mut self, note: f32, pan: f32, gain: f32) {
+        let sr = self.sr;
+        let b = &mut self.bells[self.next_bell];
+        self.next_bell = (self.next_bell + 1) % BELLS;
+        b.note = note;
+        b.pan = pan;
+        b.gain = gain;
+        b.env.start(0.002, 1.1, sr);
+        b.index.start(0.0, 0.18, sr);
+    }
+
     fn on_step(&mut self) {
         let step = self.step;
         let i16 = (step % 16) as u32;
@@ -237,6 +433,42 @@ impl Music {
                 self.click_env.start(0.0, 0.012, self.sr);
             }
         }
+        // Fragments: the cell over two bars; it repeats, develops every other phrase, and is
+        // replaced every eight phrases.
+        if step.is_multiple_of(32) && step > 0 {
+            self.phrases += 1;
+            if self.phrases.is_multiple_of(8) {
+                self.new_motif();
+            } else if self.phrases.is_multiple_of(2) {
+                self.develop_motif();
+            }
+        }
+        if self.frag_gain.value > 1e-3 {
+            let pos = (step % 32) as u8;
+            for k in 0..self.motif_len {
+                let (p, d) = self.motif[k];
+                if p == pos {
+                    let note = self.scale.note(self.chord_root + i32::from(d) + 7) + 12.0;
+                    let pan = if k % 2 == 0 { -0.35 } else { 0.35 };
+                    let g = 0.8 + 0.2 * self.layer_rng.unit();
+                    self.ring_bell(note, pan, g);
+                    if self.octave_gain.value > 0.05 && k % 2 == 1 {
+                        self.ring_bell(note + 12.0, -pan, 0.45 * self.octave_gain.value);
+                    }
+                }
+            }
+        }
+        // Sparkles: sparse high blips on chord tones.
+        if self.tex_gain.value > 1e-3 && self.layer_rng.unit() < 0.06 + 0.12 * int {
+            let d = [0, 2, 4][(self.layer_rng.unit() * 3.0) as usize % 3];
+            let sr = self.sr;
+            let s = &mut self.sparkle;
+            s.note = self.scale.note(self.chord_root + d + 14) + 12.0;
+            s.pan = self.layer_rng.unit() * 1.4 - 0.7;
+            s.gain = 0.5 + 0.5 * self.layer_rng.unit();
+            s.env.start(0.001, 0.09, sr);
+            s.index.start(0.0, 0.03, sr);
+        }
         if bar > 0 && step.is_multiple_of(16 * 4) {
             // Every four bars, let the patterns drift a little.
             if self.rng.unit() < 0.3 {
@@ -256,6 +488,16 @@ impl Music {
         let k_slow = 1.0 - (-1.0 / (0.8 * sr)).exp();
         let k_glide = 1.0 - (-1.0 / (1.2 * sr)).exp();
         let playing = self.controls.playing;
+        let echo_delay = ((3.0 * samples_per_step) as usize).min(ECHO_LEN - 1);
+        let h = if playing { self.controls.heat } else { 0.0 };
+        // The layers the multiplier unlocks (a faint cell also plays on the title).
+        let frag_target = if playing {
+            gate(h, heat(4), heat(5)) * self.rebuild.max(0.0)
+        } else {
+            0.45
+        };
+        let tex_target = gate(h, heat(10), heat(12)) * self.rebuild;
+        let oct_target = gate(h, heat(25), heat(30));
         let target_int = if playing {
             self.controls.intensity
         } else {
@@ -327,6 +569,52 @@ impl Music {
                 mix_l += y;
                 mix_r += y;
             }
+            // Fragments and sparkles, into the echo.
+            let fg = self.frag_gain.to(frag_target, k_slow);
+            let tg = self.tex_gain.to(tex_target, k_slow);
+            self.octave_gain.to(oct_target, k_slow);
+            let (mut el, mut er) = (0.0, 0.0);
+            if fg > 1e-4 {
+                for b in &mut self.bells {
+                    let e = b.env.tick();
+                    if e < 1e-5 {
+                        continue;
+                    }
+                    let f = mtof(b.note + bend);
+                    let idx = b.index.tick() * 2.2 + 0.25;
+                    let m = b.modu.sine(2.0 * f * inv);
+                    let y = b.car.sine(f * (1.0 + idx * m * 0.5) * inv) * e * b.gain * fg;
+                    let (gl, gr) = super::dsp::pan(b.pan);
+                    el += y * gl;
+                    er += y * gr;
+                }
+            }
+            if tg > 1e-4 {
+                let s = &mut self.sparkle;
+                let e = s.env.tick();
+                if e > 1e-5 {
+                    let f = mtof(s.note);
+                    let m = s.modu.sine(3.0 * f * inv);
+                    let y = s.car.sine(f * (1.0 + 0.3 * m * s.index.tick()) * inv) * e * s.gain;
+                    let (gl, gr) = super::dsp::pan(s.pan);
+                    el += y * gl * tg * 0.6;
+                    er += y * gr * tg * 0.6;
+                }
+                // Air: two noises through drifting band-passes.
+                let drift = self.air_lfo.sine(0.07 * inv);
+                let fc = 1800.0 * (1.0 + 0.8 * drift) * (1.0 - 0.4 * dark);
+                let nl = self.layer_rng.next();
+                let nr = self.layer_rng.next();
+                let al = self.air[0].tick(nl, fc, 5.0, sr).bp;
+                let ar = self.air[1].tick(nr, fc * 1.25, 5.0, sr).bp;
+                mix_l += al * tg * db(-33.0);
+                mix_r += ar * tg * db(-33.0);
+            }
+            if let Some(echo) = self.echo.as_mut() {
+                let (dl, dr) = echo.tick(el * 0.6, er * 0.6, echo_delay, 0.42);
+                mix_l += (el + dl * 0.7) * db(-20.0);
+                mix_r += (er + dr * 0.7) * db(-20.0);
+            }
             // Hats and clicks.
             let he = self.hat_env.tick();
             let ce = self.click_env.tick();
@@ -368,6 +656,40 @@ mod tests {
         assert!(moved <= 5.0 * 4.0, "{before:?} -> {after:?}");
     }
 
+    /// The multiplier's layers come in on top: they sit well under the mix, and the rest of
+    /// the music (harmony, rhythm) is the same with or without them.
+    #[test]
+    fn layers_are_additive_and_under_the_mix() {
+        let sr = 48000.0;
+        let run = |heat: f32, layers: bool| {
+            let mut m = Music::new(7, sr);
+            m.set(Controls {
+                intensity: 0.6,
+                darkness: 0.0,
+                playing: true,
+                heat,
+            });
+            let (mut l, mut r) = (vec![0.0f32; 480], vec![0.0f32; 480]);
+            let mut out = Vec::new();
+            for _ in 0..(sr as usize * 20 / 480) {
+                m.render(&mut l, &mut r);
+                out.extend_from_slice(&l);
+            }
+            let chords = m.chord_root;
+            if !layers {
+                assert!(m.frag_gain.value < 1e-3 && m.tex_gain.value < 1e-3);
+            }
+            (out, chords, m.step)
+        };
+        let (a, ca, sa) = run(0.0, false);
+        let (b, cb, sb) = run(1.0, true);
+        assert_eq!((ca, sa), (cb, sb));
+        let rms = |x: &[f32]| (x.iter().map(|v| v * v).sum::<f32>() / x.len() as f32).sqrt();
+        let d: Vec<f32> = a.iter().zip(&b).map(|(x, y)| y - x).collect();
+        let db = 20.0 * (rms(&d[48000..]) / rms(&a[48000..])).log10();
+        assert!((-24.0..-8.0).contains(&db), "layers at {db:.1} dB");
+    }
+
     #[test]
     fn renders_finite_and_bounded() {
         let mut m = Music::new(11, 48000.0);
@@ -375,6 +697,7 @@ mod tests {
             intensity: 1.0,
             darkness: 0.5,
             playing: true,
+            heat: 1.0,
         });
         let (mut l, mut r) = (vec![0.0f32; 480], vec![0.0f32; 480]);
         let mut peak = 0.0f32;

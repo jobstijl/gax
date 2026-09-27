@@ -58,6 +58,7 @@ pub fn render(
             intensity: intensity(t),
             darkness: 0.0,
             playing: true,
+            heat: intensity(t),
         });
         music.render(&mut ml, &mut mr);
         sl.fill(0.0);
@@ -239,6 +240,7 @@ mod tests {
                 intensity: (block as f32 / 4000.0),
                 darkness: if block % 700 < 100 { 0.8 } else { 0.0 },
                 playing: true,
+                heat: block as f32 / 4000.0,
             });
             if block % 500 == 250 {
                 music.death();
@@ -261,7 +263,7 @@ mod tests {
             sfx.render(&mut l, &mut r);
         }
         if block_music_reseed() {
-            music = Music::new(9, SR);
+            music.reseed(9);
             music.render(&mut l, &mut r);
         }
         let after = ALLOCATIONS.load(Ordering::Relaxed);

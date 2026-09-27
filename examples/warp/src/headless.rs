@@ -190,6 +190,12 @@ pub fn shots(args: &[String]) {
     if std::env::var("WARP_SCENE").as_deref() == Ok("roster") {
         g.start_seeded(7);
         g.sim.director.enabled = false;
+        // `WARP_SCHEME=1` or `2`: the colour-blind schemes.
+        g.settings.scheme = match std::env::var("WARP_SCHEME").as_deref() {
+            Ok("1") => crate::store::Scheme::RedGreen,
+            Ok("2") => crate::store::Scheme::BlueYellow,
+            _ => crate::store::Scheme::Standard,
+        };
         g.sim.ship.body.shift(0.0, -9.0);
         g.sim.ship.invulnerable = 1e9;
         use sim::Kind::*;
