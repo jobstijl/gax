@@ -1,6 +1,14 @@
 // Post-processing: bloom by a mip chain (Jimenez, "Next Generation Post Processing in Call of
 // Duty"), then composite: bloom, AgX tonemapping with a saturated look for neon, and optional
 // vignette, edge chromatic aberration, grain and a shock ripple.
+//
+// The colour and the geometry are traced gax kernels (`src/kernels.rs`): a pixel's light is a
+// PGA3D point whose coordinates are its radiance; luminance is its pairing with a plane, the
+// tonemapper applies gax maps and moves away from grey; the ripple pushes points along their
+// radial direction; the edge effects scale about the screen's centre point.
+
+import package::fused::{luma, agx, ripple, scale_about, distance, light_fade};
+import gax::pga2d::point_new;
 
 struct Post {
     // 1 / width, 1 / height of the source, upsample radius, unused.
@@ -29,12 +37,13 @@ fn vs_full(@builtin(vertex_index) k: u32) -> Full {
     return Full(vec4<f32>(uv * vec2<f32>(2.0, -2.0) + vec2<f32>(-1.0, 1.0), 0.0, 1.0), uv);
 }
 
-fn luma(c: vec3<f32>) -> f32 {
-    return dot(c, vec3<f32>(0.2126, 0.7152, 0.0722));
+// A radiance as a light of weight 1.
+fn as_light(c: vec3<f32>) -> gax::pga3d::Point {
+    return gax::pga3d::Point(vec4<f32>(c, 1.0));
 }
 
 fn karis(c: vec3<f32>) -> f32 {
-    return 1.0 / (1.0 + luma(c));
+    return 1.0 / (1.0 + luma(as_light(c)));
 }
 
 fn tap(uv: vec2<f32>, o: vec2<f32>) -> vec3<f32> {
@@ -87,66 +96,44 @@ fn fs_up(f: Full) -> @location(0) vec4<f32> {
     return vec4<f32>(s / 16.0, 1.0);
 }
 
-// AgX (Troy Sobotka), in the minimal fitted form by Benjamin Wrensch.
-fn agx_contrast(x: vec3<f32>) -> vec3<f32> {
-    let x2 = x * x;
-    let x4 = x2 * x2;
-    return 15.5 * x4 * x2 - 40.14 * x4 * x + 31.96 * x4 - 6.868 * x2 * x + 0.4298 * x2 + 0.1191 * x - 0.00232;
-}
-
-fn agx(c: vec3<f32>, saturation: f32) -> vec3<f32> {
-    let inset = mat3x3<f32>(
-        vec3<f32>(0.842479062253094, 0.0423282422610123, 0.0423756549057051),
-        vec3<f32>(0.0784335999999992, 0.878468636469772, 0.0784336),
-        vec3<f32>(0.0792237451477643, 0.0791661274605434, 0.879142973793104),
-    );
-    let outset = mat3x3<f32>(
-        vec3<f32>(1.19687900512017, -0.0528968517574562, -0.0529716355144438),
-        vec3<f32>(-0.0980208811401368, 1.15190312990417, -0.0980434501171241),
-        vec3<f32>(-0.0990297440797205, -0.0989611768448433, 1.15107367264116),
-    );
-    let min_ev = -12.47393;
-    let max_ev = 4.026069;
-    var v = inset * max(c, vec3<f32>(1e-10));
-    v = clamp(log2(v), vec3<f32>(min_ev), vec3<f32>(max_ev));
-    v = (v - min_ev) / (max_ev - min_ev);
-    v = agx_contrast(v);
-    // Look: more saturation, so that neon stays neon.
-    let l = luma(v);
-    v = l + saturation * (v - l);
-    v = outset * v;
-    // To linear light (the surface encodes sRGB).
-    return pow(max(v, vec3<f32>(0.0)), vec3<f32>(2.2));
-}
-
 fn hash(p: vec2<f32>) -> f32 {
     return fract(sin(dot(p, vec2<f32>(12.9898, 78.233))) * 43758.5453);
 }
 
+// A screen point (uv) as a PGA2D point, and back.
+fn at(uv: vec2<f32>) -> gax::pga2d::Point {
+    return point_new(uv.x, uv.y, 1.0);
+}
+
+fn uv_of(p: gax::pga2d::Point) -> vec2<f32> {
+    return p.c0.xy / p.c0.z;
+}
+
 @fragment
 fn fs_composite(f: Full) -> @location(0) vec4<f32> {
-    var uv = f.uv;
+    var p = at(f.uv);
     // Shock ripple: a ring pushing the image outwards.
     if (post.shock.w > 0.0) {
-        let d = uv - post.shock.xy;
-        let r = length(d);
-        let ring = exp(-pow((r - post.shock.z) * 18.0, 2.0));
-        uv = uv - d / max(r, 1e-4) * ring * post.shock.w;
+        p = ripple(p, at(post.shock.xy), array<f32, 2>(post.shock.z, post.shock.w));
     }
-    let centre = uv - 0.5;
-    let edge = dot(centre, centre);
-    // Chromatic aberration towards the edges.
+    let mid = at(vec2<f32>(0.5, 0.5));
+    let r = distance(p, mid);
+    let edge = r * r;
+    // Chromatic aberration towards the edges: red and blue sampled a little in and out, the
+    // point scaled about the screen's centre.
     let ca = post.look.z * edge;
+    let uv = uv_of(p);
     var hdr = vec3<f32>(
-        textureSampleLevel(src, samp, uv - centre * ca, 0.0).r,
+        textureSampleLevel(src, samp, uv_of(scale_about(p, mid, 1.0 - ca)), 0.0).r,
         textureSampleLevel(src, samp, uv, 0.0).g,
-        textureSampleLevel(src, samp, uv + centre * ca, 0.0).b,
+        textureSampleLevel(src, samp, uv_of(scale_about(p, mid, 1.0 + ca)), 0.0).b,
     );
     hdr += textureSampleLevel(bloom, samp, uv, 0.0).rgb * post.k.y;
-    hdr *= post.k.z;
-    var c = agx(hdr, post.look.w);
-    c *= 1.0 - post.look.x * edge * 1.6;
-    let n = hash(f.pos.xy + vec2<f32>(post.k.w * 61.0, post.k.w * 17.0)) - 0.5;
-    c += n * post.look.y;
-    return vec4<f32>(max(c, vec3<f32>(0.0)), 1.0);
+    var c = agx(light_fade(as_light(hdr), post.k.z), post.look.w);
+    // The vignette dims the light towards the edges.
+    c = light_fade(c, 1.0 - post.look.x * edge * 1.6);
+    // Grain: a little grey light added (lights add as points).
+    let n = (hash(f.pos.xy + vec2<f32>(post.k.w * 61.0, post.k.w * 17.0)) - 0.5) * post.look.y;
+    let out = c.c0.xyz + vec3<f32>(n);
+    return vec4<f32>(max(out, vec3<f32>(0.0)), 1.0);
 }

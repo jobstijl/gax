@@ -39,6 +39,7 @@ The only exception is a test that checks a phasor against `sin`.
 | Light as homogeneous points (Grassmann) | `light.rs`: a colour is a PGA3D point in RGB space with its intensity as the weight | Adding is additive mixing (a test); fading scales the weight; whitening moves towards white; the shaders emit the first three coordinates, which are radiance |
 | Rotation about a line, projection onto a line | `light::hue_shift` (the grey axis), `light::desaturate` (towards `(l \| axis) ^ axis`) | The Plane's lattice turns violet with the intensity; menus desaturate the world behind them |
 | Traced kernels, CPU and GPU (`Tracer::wgsl`) | the lattice (`grid_node`, `source_force`), particles (`particle_step`), the line renderer (`segment_corner`, `segment_distance`), the lattice's heat (`edge_heat`), streaks, light mixing, whitening, fading | The shaders do no geometry by hand; each kernel is tested against its source |
+| Post-processing as kernels | `post.wesl`: luminance is a light's pairing with a plane of Rec. 709 weights; AgX's inset and outset are gax maps on light points and its look moves away from the grey of the same luminance; the shock ripple pushes points along their radial direction; chromatic aberration scales about the screen's centre point; the vignette is a radial distance. `stars.wesl`: the distance to a star is the norm of a join, the twinkle a phasor | The frames match the hand-written shaders to within one level of 255 (a pixel comparison of two scenes) |
 | Distance to a segment by joins | `kernels::segment_distance`, per fragment | Inside the strip between the perpendiculars at the ends (`l \| a`, `l \| b`) it is the distance to `l`, outside to the nearer end; 35 mul, 3 sqrt |
 | `{Kind}Gpu` Pod types | line instances (`MotorGpu`, lights as PGA3D `PointGpu`), lattice nodes and particles (`PointGpu`) | Layouts asserted at compile time; no hand-written byte layouts in the game |
 | Generated WGSL modules (`gax::wgsl`) | every shader imports `gax::pga2d` and `gax::pga3d` through `wesl` at build time | `unit_motor_sandwich_point` places every shape segment in the vertex shader |
@@ -89,9 +90,12 @@ The only exception is a test that checks a phasor against `sin`.
     12 calls; the quarter-turn motor folds away, friction 9);
   * `segment_distance`: 35 mul, 19 add, 1 div, 9 calls;
   * `edge_heat`: 13 mul, 7 add, 1 div, 7 calls;
-  * the light kernels: 4 to 8 mul.
-* **GPU time per frame** at 1600×900 in the Plane: compute 0.01 ms, scene 0.12 ms, bloom
-  0.08 ms, post 0.03 ms. The join-based distance per fragment costs little.
+  * the light kernels: 4 to 8 mul; `luma`: 3 mul, 2 add;
+  * `agx`: 72 mul, 41 add, 1 div, 21 calls (generic: 83 mul, 54 add); `ripple`: 9 mul, 8 add,
+    1 div, 3 calls.
+* **GPU time per frame** at 1600×900 in the Plane: compute 0.01 ms, scene 0.13 ms, bloom
+  0.08 ms, post 0.04 ms. The join-based distance per fragment and the traced tonemapper cost
+  little.
 * **Frame rate:** the startup test (`--smoke`, a bot playing for 8 s) held vsync, 60 Hz on this
   display, with a lattice of 9 417 nodes and a pool of 262 144 particles.
 
@@ -153,3 +157,10 @@ The only exception is a test that checks a phasor against `sin`.
     the sign, so `p − q` of a reflected point and a normal one is not a direction. The game
     divides by the weight (`body::unit_weight`). A gax method for "the same point with weight 1"
     would remove the trap (open).
+14. **`Real` had no `exp`.** The shaders' tonemapper and ripple need it. Writing it as
+    `sinh x + cosh x` is wrong in both directions: `inf − inf = NaN` for large arguments (the
+    ripple's ring would have blanked the screen whenever a shock played), and catastrophic
+    cancellation for negative ones (the tonemapper's gamma on dark pixels). **Fixed in gax:**
+    `Real::exp`, direct for `f32` and `f64` (gax's own `exp` in the deterministic mode), traced
+    as WGSL `exp`. Its default, used by the SIMD lanes, uses the sum for `x ≥ 0` and the
+    reciprocal of the sum at `−x` below, which never cancels (a test across ±120).

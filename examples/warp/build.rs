@@ -53,6 +53,14 @@ fn main() {
     t.kernel("streak_tail", |p: P, v: P, dt: Sym| {
         kernels::streak_tail(p, v, dt)
     });
+    t.kernel("luma", |l: L| kernels::luma(l));
+    t.kernel("agx", |l: L, s: Sym| kernels::agx(l, s));
+    t.kernel("ripple", |p: P, c: P, k: [Sym; 2]| kernels::ripple(p, c, k));
+    t.kernel("scale_about", |p: P, c: P, k: Sym| {
+        kernels::scale_about(p, c, k)
+    });
+    t.kernel("distance", |a: P, b: P| kernels::distance(a, b));
+    t.kernel("wave", |t: Sym| kernels::wave(t));
     t.kernel("light_mix", |a: L, b: L, t: Sym| {
         kernels::light_mix(a, b, t)
     });

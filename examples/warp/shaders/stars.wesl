@@ -1,6 +1,9 @@
 // A faint parallax starfield behind the arena: three layers of hashed stars, moving slower
-// than the world as the camera pans.
+// than the world as the camera pans. The distance to a star is the norm of a join, the
+// twinkle a phasor (traced gax kernels).
 import package::common::Camera;
+import package::fused::{distance, wave};
+import gax::pga2d::point_new;
 
 struct Stars {
     // Camera centre (world), unused, unused.
@@ -37,8 +40,8 @@ fn fs_main(f: Full) -> @location(0) vec4<f32> {
         let cell = floor(p);
         let h = hash2(cell + f32(layer) * 17.0);
         let star = cell + 0.15 + 0.7 * h;
-        let d = length(p - star) * scale;
-        let twinkle = 0.7 + 0.3 * sin(cam.viewport.w * (1.0 + 2.0 * h.x) + h.y * 40.0);
+        let d = distance(point_new(p.x, p.y, 1.0), point_new(star.x, star.y, 1.0)) * scale;
+        let twinkle = 0.7 + 0.3 * wave(cam.viewport.w * (1.0 + 2.0 * h.x) + h.y * 40.0);
         let bright = select(0.0, 1.0, h.x > 0.55) * (0.25 + h.y) * twinkle / (1.0 + f32(layer));
         let tint = mix(vec3<f32>(0.6, 0.7, 1.0), vec3<f32>(1.0, 0.8, 0.9), h.y);
         c += tint * bright * exp(-d * d * 0.9) * 0.08;

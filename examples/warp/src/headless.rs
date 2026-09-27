@@ -819,6 +819,26 @@ mod tests {
             for (a, b) in pairs {
                 assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
             }
+            // Post-processing: luminance, the tonemapper, the ripple, edge scaling, distance,
+            // the phasor.
+            assert!(close(crate::luma(l1), crate::kernels::luma(l1)));
+            let (a, b) = (crate::agx(l1, 1.35), crate::kernels::agx(l1, 1.35));
+            assert!(
+                a.c.iter().zip(&b.c).all(|(x, y)| (x - y).abs() < 1e-3),
+                "{a:?} {b:?}"
+            );
+            let (a, b) = (
+                crate::ripple(p, s, [0.3, 0.05]),
+                crate::kernels::ripple(p, s, [0.3, 0.05]),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            let (a, b) = (
+                crate::scale_about(p, s, 0.9),
+                crate::kernels::scale_about(p, s, 0.9),
+            );
+            assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
+            assert!(close(crate::distance(p, s), crate::kernels::distance(p, s)));
+            assert!(close(crate::wave(t * 7.0), crate::kernels::wave(t * 7.0)));
         }
     }
 

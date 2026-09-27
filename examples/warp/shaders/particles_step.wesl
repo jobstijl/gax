@@ -6,8 +6,8 @@ import gax::pga2d::{Point, point_new};
 struct Particle {
     p: Point,
     v: Point,
-    // Colour (rgb) and intensity.
-    color: vec4<f32>,
+    // The light (a PGA3D point; see particles_draw).
+    light: gax::pga3d::Point,
     // Age, lifetime, drag, length.
     life: vec4<f32>,
 }
@@ -41,6 +41,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     for (var s = 0u; s < step_params.dims.y; s++) {
         let w = wells.s[s];
         let a = source_force(q.p, point_new(w.x, w.y, 1.0), array<f32, 2>(w.z * step_params.k.y, w.w));
+        // Forces add (directions: points at infinity).
         f = Point(f.c0 + a.c0);
     }
     let r = particle_step(q.p, q.v, f, array<f32, 2>(q.life.z, step_params.k.x));
