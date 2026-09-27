@@ -28,8 +28,19 @@ cargo run --release
 | pause | Esc | Select / B |
 | start | Enter | Start / A |
 
-F3 toggles the debug overlay (frame rate, simulation time, GPU time per pass, pose drift), and
-F11 toggles full screen.
+Menus take arrows, WASD, the D-pad or a flick of the left stick. F3 toggles the debug overlay
+(frame rate, simulation time, GPU time per pass, pose drift), and F11 toggles full screen.
+
+**Settings** (from the title): screen shake in steps down to off, reduced flashes (softer
+full-screen flashes, bursts and shock ripples), colour schemes that are safe for red–green and
+for blue–yellow colour blindness (every enemy also has its own shape), volumes for the master,
+music and effects, and full screen.
+
+**High scores and replays.** Every run is recorded (its seed and every tick's input, about
+0.8 KB a second). A run that makes the top ten asks for three initials and keeps its replay,
+which the high-score table plays back (left and right change the speed). Settings, scores and
+replays live in `~/.local/share/warp` (or the platform's equivalent, or `$WARP_DATA`); the last
+run is always `replays/last.warp`.
 
 **Rules.**
 * Kills drop green shards. Collecting them raises the multiplier, which applies to every kill;
@@ -58,8 +69,11 @@ Later in a run (the director unlocks them over the first minute and a half):
 ```sh
 cargo run --release -- --shot DIR [SECONDS...]   # a scripted run, PNG snapshots (offscreen, wgpu validation on)
 WARP_SCENE=roster cargo run --release -- --shot DIR   # every enemy kind in one still picture
+WARP_SCENE=menus cargo run --release -- --shot DIR    # the menus
 cargo run --release -- --music DIR [SECONDS] [SEED]  # the music offline: low, medium, high intensity, and a run's arc, as WAV
 cargo run --release -- --smoke                   # play 8 s with a bot and quit (a startup test)
+cargo run --release -- --replay FILE             # watch a replay
+cargo run --release -- --verify FILE             # replay headless, checking every state hash
 WARP_NO_AUDIO=1 cargo run --release              # without the audio engine
 cargo test --release                             # the simulation, the audio, CPU against GPU kernels
 ./scripts/check-deps.sh                          # the dependency contract
@@ -68,7 +82,10 @@ cargo test --release                             # the simulation, the audio, CP
 ## Rules for the code
 
 * **The simulation (`src/sim`) is pure.** It has no Bevy or wgpu types, runs a fixed 120 Hz step
-  from a seed, and a run replays from its seed and inputs.
+  from a seed, and a run replays from its seed and inputs. The simulation only ever sees
+  quantized inputs (the replay's own encoding), so playback is exact on the same build; a hash
+  of the world every second catches a divergence (`sim/replay.rs`, with tests, and one that
+  plays through the whole game loop at uneven frame rates and watches the result).
 * **Bevy is plumbing only.** `scripts/check-deps.sh` fails if `bevy_render`, `bevy_audio`,
   `bevy_ui`, `bevy_text`, `bevy_sprite`, `bevy_pbr`, `bevy_camera`, `bevy_mesh` or any other
   linear-algebra crate is in the tree. `bevy_image` is allowed, since `bevy_window` needs it for

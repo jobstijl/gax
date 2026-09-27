@@ -114,7 +114,7 @@ pub fn shots(args: &[String]) {
     let none = input::Menu::default();
 
     // The title screen.
-    let mut g = Game::new();
+    let mut g = Game::new(crate::store::Store::new(None));
     for _ in 0..(3.0 / dt) as usize {
         g.time += dt;
         advance(&mut g, sim::Input::default(), none, dt, aspect, &mut sound);
@@ -124,8 +124,7 @@ pub fn shots(args: &[String]) {
 
     // `WARP_SCENE=singularity`: one still singularity in the middle (for looking at it).
     if std::env::var("WARP_SCENE").as_deref() == Ok("singularity") {
-        g.start();
-        g.sim = sim::World::new(7);
+        g.start_seeded(7);
         g.sim.director.enabled = false;
         g.sim.ship.body.shift(-20.0, -10.0);
         g.sim.spawn(sim::Kind::Singularity, [0.0, 0.0]);
@@ -139,10 +138,57 @@ pub fn shots(args: &[String]) {
         save(&renderer, &target, &Path::new(dir).join("singularity.png"));
         return;
     }
+    // `WARP_SCENE=menus`: the title, settings, a score table, initials and the pause menu.
+    if std::env::var("WARP_SCENE").as_deref() == Ok("menus") {
+        let data = std::env::temp_dir().join(format!("warp-menus-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&data);
+        let store = crate::store::Store::new(Some(data.clone()));
+        for (k, name) in ["NEO", "ARC", "VEX", "IO", "ZED"].iter().enumerate() {
+            let mut r = sim::replay::Replay::new(k as u64);
+            r.score = 480_000 / (k as u64 + 1) + 1234;
+            r.inputs = vec![Default::default(); 120 * (300 - 40 * k)];
+            store.finish(&r, Some(name));
+        }
+        let mut g = Game::new(store);
+        let mut shot = |g: &mut Game, name: &str, menu: input::Menu, frames: u32| {
+            for f in 0..frames {
+                g.time += dt;
+                let m = if f == 0 { menu } else { none };
+                advance(g, sim::Input::default(), m, dt, aspect, &mut sound);
+                render_game(g, &mut renderer, &view, SIZE);
+            }
+            save(
+                &renderer,
+                &target,
+                &Path::new(dir).join(format!("{name}.png")),
+            );
+        };
+        shot(&mut g, "menu-title", none, 60);
+        g.screen = Screen::Settings;
+        g.sel = 3;
+        g.settings.music = 6;
+        shot(&mut g, "menu-settings", none, 30);
+        g.screen = Screen::Scores;
+        g.sel = 1;
+        g.highlight = Some(2);
+        shot(&mut g, "menu-scores", none, 30);
+        g.start_seeded(3);
+        shot(&mut g, "menu-play", none, 240);
+        g.screen = Screen::Paused;
+        g.sel = 0;
+        shot(&mut g, "menu-pause", none, 20);
+        g.sim.score = 123_450;
+        g.screen = Screen::Initials;
+        g.sim.phase = sim::Phase::Over;
+        g.initials = *b"ACE";
+        g.cursor = 1;
+        shot(&mut g, "menu-initials", none, 20);
+        let _ = std::fs::remove_dir_all(&data);
+        return;
+    }
     // `WARP_SCENE=roster`: every enemy kind in a row, still, with a few shots in flight.
     if std::env::var("WARP_SCENE").as_deref() == Ok("roster") {
-        g.start();
-        g.sim = sim::World::new(7);
+        g.start_seeded(7);
         g.sim.director.enabled = false;
         g.sim.ship.body.shift(0.0, -9.0);
         g.sim.ship.invulnerable = 1e9;
@@ -188,8 +234,7 @@ pub fn shots(args: &[String]) {
         return;
     }
     // A run.
-    g.start();
-    g.sim = sim::World::new(7);
+    g.start_seeded(7);
     let end = times.iter().copied().fold(0.0f32, f32::max);
     let mut next = 0;
     times.sort_by(f32::total_cmp);
@@ -327,6 +372,86 @@ mod tests {
     use crate::render::cpu_grid::CpuGrid;
     use crate::render::{Frame, Node, Particle};
     use crate::sim::rng::Rng;
+
+    /// The whole loop without a window: a bot plays through `advance` at uneven frame rates
+    /// (with hit-stops and a death or two), ends the run from the pause menu, enters initials,
+    /// and then watches its own replay, which must reach its end without diverging.
+    #[test]
+    fn a_played_run_goes_on_the_table_and_replays_exactly() {
+        use crate::input::Menu;
+        let dir = std::env::temp_dir().join(format!("warp-test-flow-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut g = Game::new(crate::store::Store::new(Some(dir.clone())));
+        let mut sound = audio::Sound::silent();
+        let none = Menu::default();
+        let aspect = 16.0 / 9.0;
+        g.start_seeded(99);
+        let mut t = 0.0;
+        let mut frame = 0u32;
+        while g.screen == Screen::Playing && t < 70.0 {
+            // Frames of 7 to 20 ms.
+            let dt = 0.007 + 0.013 * ((frame * 7919) % 97) as f32 / 97.0;
+            frame += 1;
+            t += dt;
+            let input = bot_input(&g, t);
+            advance(&mut g, input, none, dt, aspect, &mut sound);
+        }
+        if g.screen == Screen::Playing {
+            let step = |g: &mut Game, sound: &mut audio::Sound, m: Menu| {
+                advance(g, sim::Input::default(), m, 0.016, aspect, sound);
+            };
+            step(&mut g, &mut sound, Menu { back: true, ..none });
+            assert_eq!(g.screen, Screen::Paused);
+            step(&mut g, &mut sound, Menu { down: true, ..none });
+            step(
+                &mut g,
+                &mut sound,
+                Menu {
+                    start: true,
+                    ..none
+                },
+            );
+        }
+        let score = g.sim.score;
+        assert!(score > 0);
+        assert_eq!(g.screen, Screen::Initials);
+        for c in ['W', 'R', 'P'] {
+            let m = Menu {
+                letter: Some(c),
+                ..none
+            };
+            advance(&mut g, sim::Input::default(), m, 0.016, aspect, &mut sound);
+        }
+        let m = Menu {
+            start: true,
+            ..none
+        };
+        advance(&mut g, sim::Input::default(), m, 0.016, aspect, &mut sound);
+        assert_eq!(g.screen, Screen::Scores);
+        assert_eq!(g.highlight, Some(0));
+        let e = g.scores.entries[0].clone();
+        assert_eq!((e.name.as_str(), e.score), ("WRP", score));
+        // Watch it, fast.
+        advance(&mut g, sim::Input::default(), m, 0.016, aspect, &mut sound);
+        assert_eq!(g.screen, Screen::Watch);
+        g.watch.as_mut().unwrap().speed = 8;
+        while g.watch.as_ref().unwrap().end.is_none() {
+            advance(
+                &mut g,
+                sim::Input::default(),
+                none,
+                0.05,
+                aspect,
+                &mut sound,
+            );
+        }
+        assert_eq!(
+            g.watch.as_ref().unwrap().end.as_deref(),
+            Some("END OF REPLAY")
+        );
+        assert_eq!(g.sim.score, score);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     fn gpu() -> Option<(wgpu::Device, wgpu::Queue)> {
         match try_device() {

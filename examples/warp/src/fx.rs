@@ -35,6 +35,9 @@ pub struct Fx {
     pub flash: f32,
     /// Screen shake scale (a setting).
     pub shake_scale: f32,
+    /// Flash scale: 1, or less for the reduced-flashes setting (full-screen flashes, big
+    /// bursts and the shock ripple).
+    pub flash_scale: f32,
     /// The grid's sources per simulation tick this frame.
     pub grid_steps: Vec<Vec<[f32; 4]>>,
     /// Floating texts: `(position, text, age, colour)`.
@@ -58,6 +61,7 @@ impl Fx {
             shock: None,
             flash: 0.0,
             shake_scale: 1.0,
+            flash_scale: 1.0,
             grid_steps: Vec::new(),
             popups: Vec::new(),
             half_height: 14.0,
@@ -74,6 +78,13 @@ impl Fx {
         life: (f32, f32),
         hot: f32,
     ) {
+        // Big bursts are the bright ones.
+        let (color, hot) = if n >= 200 {
+            let k = 0.35 + 0.65 * self.flash_scale;
+            ([color[0], color[1], color[2], color[3] * k], hot * k)
+        } else {
+            (color, hot)
+        };
         for _ in 0..n {
             let a = self.rng.angle();
             let s = self.rng.range(speed.0, speed.1);
@@ -208,9 +219,9 @@ impl Fx {
                 Event::Pickup { pos, mult } => {
                     if mult % 10 == 0 {
                         self.popups
-                            .push((pos, format!("X{mult}"), 0.0, palette::SHARD));
+                            .push((pos, format!("X{mult}"), 0.0, scene::shard()));
                     }
-                    self.burst(pos, palette::SHARD, 6, (2.0, 6.0), (0.2, 0.45), 0.3);
+                    self.burst(pos, scene::shard(), 6, (2.0, 6.0), (0.2, 0.45), 0.3);
                 }
                 Event::Death { pos } => {
                     self.burst(pos, palette::SHIP, 1500, (4.0, 36.0), (0.8, 2.4), 0.3);
@@ -226,7 +237,7 @@ impl Fx {
                         self.spawn.push(Particle {
                             p: Point::xy(pos[0], pos[1]).into(),
                             v: Point::direction(a.cos() * s, a.sin() * s).into(),
-                            color: [0.55, 0.8, 1.0, 3.5],
+                            color: [0.55, 0.8, 1.0, 3.5 * (0.35 + 0.65 * self.flash_scale)],
                             life: [0.0, self.rng.range(0.8, 1.3), 1.2, 0.03],
                         });
                     }
@@ -322,11 +333,15 @@ impl Fx {
     pub fn post(&self, cam: &crate::render::CameraUniform) -> PostSettings {
         let shock = self.shock.map(|(p, t)| {
             let uv = scene::to_uv(cam, p);
-            (uv, t * 0.9, 0.035 * (1.0 - t / 0.8))
+            (
+                uv,
+                t * 0.9,
+                0.035 * (1.0 - t / 0.8) * (0.4 + 0.6 * self.flash_scale),
+            )
         });
         PostSettings {
             bloom: 0.32,
-            exposure: 1.0 + self.flash * 1.5,
+            exposure: 1.0 + self.flash * 1.5 * self.flash_scale,
             vignette: 0.35,
             grain: 0.012,
             aberration: 0.006,

@@ -23,7 +23,7 @@ issue or fix.
 | Generated WGSL modules (`gax::wgsl`) | every shader imports `gax::pga2d` through `wesl` at build time | `unit_motor_sandwich_point` places every shape segment in the vertex shader |
 | Traced kernels, CPU and GPU (`Tracer::wgsl`) | the lattice (`grid_node`, `source_force`) and particles (`particle_step`) | See "CPU and GPU" |
 | Batch SoA path as the CPU twin | `render/cpu_grid.rs`: `grid_node_batch`, `source_force_batch` | The oracle for the GPU (a test) |
-| The deterministic mode | not used yet | Replays (M3) will state same-build determinism, or use `deterministic` |
+| The deterministic mode | not used: replays promise same-build determinism | A state hash every second over all poses, velocities and the generator; runs of 75 s on three seeds replay bit for bit, also through the game loop with hit-stops and uneven frames (tests). The build id includes a hash of gax's sources, since any change in gax's arithmetic may change a run |
 
 ## Numbers (M2)
 

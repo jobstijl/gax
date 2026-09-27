@@ -8,6 +8,7 @@
 pub mod body;
 pub mod collide;
 pub mod director;
+pub mod replay;
 pub mod rng;
 
 use body::{Body, Pose, angle_of, distance, interpolate, length, pose_at};

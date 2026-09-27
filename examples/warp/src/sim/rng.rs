@@ -20,6 +20,11 @@ impl Rng {
         r
     }
 
+    /// The generator's state (for state hashes).
+    pub fn state(&self) -> u64 {
+        self.state
+    }
+
     /// The next 32 random bits.
     pub fn next_u32(&mut self) -> u32 {
         let old = self.state;

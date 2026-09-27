@@ -13,6 +13,7 @@ mod input;
 mod kernels;
 mod render;
 mod sim;
+mod store;
 
 // The traced kernels (`grid_node`, `source_force`, `particle_step`), their batch forms, and
 // their WGSL (`FUSED_WESL`).
@@ -24,16 +25,39 @@ use fx::Fx;
 use render::font::Align;
 use render::scene::{self, palette};
 use render::{GridSpec, LineInstance, Renderer};
+use sim::replay::{Packed, Replay};
 use sim::{ARENA, DT, Phase, World as Sim};
 use std::time::Instant;
+use store::{Scores, Settings, Store};
 
 /// Where the game is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Screen {
     Title,
+    Settings,
+    Scores,
     Playing,
     Paused,
+    /// Entering initials for the high-score table.
+    Initials,
     Over,
+    /// Watching a replay.
+    Watch,
+}
+
+const TITLE_ITEMS: [&str; 4] = ["PLAY", "HIGH SCORES", "SETTINGS", "QUIT"];
+const PAUSE_ITEMS: [&str; 2] = ["RESUME", "END RUN"];
+
+/// A replay being watched.
+struct Watch {
+    replay: Replay,
+    next: usize,
+    /// Set when the playback ended or diverged.
+    end: Option<String>,
+    /// Ticks per tick (fast forward).
+    speed: u32,
+    /// Recorded on another build (it may diverge).
+    other_build: bool,
 }
 
 /// The game: the simulation, effects, and what the HUD shows.
@@ -46,6 +70,7 @@ struct Game {
     alpha: f32,
     input: sim::Input,
     device: input::Device,
+    latch: input::Latch,
     cam: sim::body::Pose,
     half_height: f32,
     time: f32,
@@ -56,12 +81,27 @@ struct Game {
     over_timer: f32,
     /// A bot plays (the `--smoke` run).
     bot: bool,
+    store: Store,
+    settings: Settings,
+    scores: Scores,
+    /// The menu cursor.
+    sel: usize,
+    /// The run being recorded.
+    rec: Replay,
+    watch: Option<Watch>,
+    /// Initials being entered, and the cursor in them.
+    initials: [u8; 3],
+    cursor: usize,
+    /// The table row to highlight (the run just entered).
+    highlight: Option<usize>,
     world_lines: Vec<LineInstance>,
     hud_lines: Vec<LineInstance>,
 }
 
 impl Game {
-    fn new() -> Game {
+    fn new(store: Store) -> Game {
+        let settings = store.settings();
+        let scores = store.scores();
         let mut g = Game {
             sim: Sim::new(1),
             fx: Fx::new(),
@@ -70,15 +110,25 @@ impl Game {
             alpha: 0.0,
             input: sim::Input::default(),
             device: input::Device::Mouse,
+            latch: input::Latch::default(),
             cam: sim::body::pose_at(0.0, 0.0, 0.0),
             half_height: 20.0,
             time: 0.0,
             debug: false,
-            best: 0,
+            best: scores.entries.first().map_or(0, |e| e.score),
             sim_ms: 0.0,
             fps: 60.0,
             over_timer: 0.0,
             bot: false,
+            store,
+            settings,
+            scores,
+            sel: 0,
+            rec: Replay::new(1),
+            watch: None,
+            initials: *b"AAA",
+            cursor: 0,
+            highlight: None,
             world_lines: Vec::new(),
             hud_lines: Vec::new(),
         };
@@ -93,10 +143,11 @@ impl Game {
         self.sim.director.enabled = false;
         for k in 0..14 {
             let a = k as f32 * 0.45;
-            let kind = if k % 3 == 0 {
-                sim::Kind::Chaser
-            } else {
-                sim::Kind::Drifter
+            let kind = match k % 5 {
+                0 => sim::Kind::Chaser,
+                2 => sim::Kind::Evader,
+                4 if k > 8 => sim::Kind::Splitter,
+                _ => sim::Kind::Drifter,
             };
             self.sim
                 .spawn(kind, [a.cos() * (10.0 + k as f32), a.sin() * 9.0]);
@@ -104,11 +155,70 @@ impl Game {
         self.sim.spawn(sim::Kind::Singularity, [12.0, -4.0]);
     }
 
+    /// Start a run.
     fn start(&mut self) {
         let seed = u64::from(std::process::id()) ^ (self.time.to_bits() as u64) << 20 ^ 0x5eed;
+        self.start_seeded(seed);
+    }
+
+    /// Start a run from `seed`.
+    fn start_seeded(&mut self, seed: u64) {
         self.sim = Sim::new(seed);
+        self.rec = Replay::new(seed);
         self.screen = Screen::Playing;
         self.acc = 0.0;
+        self.highlight = None;
+    }
+
+    /// The run is over (lost, or ended from the pause menu): keep its replay, and ask for
+    /// initials if it makes the table.
+    fn end_run(&mut self) {
+        self.rec.score = self.sim.score;
+        self.best = self.best.max(self.sim.score);
+        self.sim.phase = Phase::Over;
+        self.over_timer = 0.0;
+        if !self.bot && self.scores.rank(self.sim.score).is_some() {
+            self.screen = Screen::Initials;
+            self.cursor = 0;
+        } else {
+            self.store.finish(&self.rec, None);
+            self.screen = Screen::Over;
+        }
+    }
+
+    /// Watch a replay.
+    fn watch(&mut self, replay: Replay) {
+        self.sim = Sim::new(replay.seed);
+        self.watch = Some(Watch {
+            end: None,
+            other_build: replay.build != sim::replay::build_id(),
+            replay,
+            next: 0,
+            speed: 1,
+        });
+        self.screen = Screen::Watch;
+        self.acc = 0.0;
+    }
+
+    /// Apply the settings to effects, colours and sound.
+    fn apply_settings(&mut self, sound: &mut audio::Sound) {
+        let s = &self.settings;
+        self.fx.shake_scale = f32::from(s.shake) / 4.0;
+        self.fx.flash_scale = if s.reduced_flashes { 0.3 } else { 1.0 };
+        scene::set_scheme(s.scheme);
+        sound.gains = s.gains();
+    }
+}
+
+/// Move a menu cursor over `n` items.
+fn nav(sel: usize, n: usize, menu: &input::Menu) -> usize {
+    let n = n.max(1);
+    if menu.up {
+        (sel + n - 1) % n
+    } else if menu.down {
+        (sel + 1) % n
+    } else {
+        sel.min(n - 1)
     }
 }
 
@@ -129,7 +239,53 @@ fn main() {
         audio::offline::run(&args[i + 1..]);
         return;
     }
-    let known = ["--smoke", "--shot", "--music"];
+    if let Some(i) = args.iter().position(|a| a == "--verify") {
+        // Play a replay headless and check every state hash.
+        let Some(path) = args.get(i + 1) else {
+            eprintln!("warp: --verify FILE");
+            std::process::exit(2);
+        };
+        let r = store::load_replay(std::path::Path::new(path)).unwrap_or_else(|e| {
+            eprintln!("warp: {e}");
+            std::process::exit(2);
+        });
+        if r.build != sim::replay::build_id() {
+            eprintln!(
+                "note: recorded on build {}, this is {}",
+                r.build,
+                sim::replay::build_id()
+            );
+        }
+        match r.verify() {
+            Ok(w) => println!(
+                "ok: {:.0} s, score {}, {} hashes matched",
+                r.seconds(),
+                w.score,
+                r.hashes.len()
+            ),
+            Err(d) => {
+                println!("diverged: {d:?}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    let watch = match args.iter().position(|a| a == "--replay") {
+        Some(i) => {
+            let Some(path) = args.get(i + 1) else {
+                eprintln!("warp: --replay FILE");
+                std::process::exit(2);
+            };
+            Some(
+                store::load_replay(std::path::Path::new(path)).unwrap_or_else(|e| {
+                    eprintln!("warp: {e}");
+                    std::process::exit(2);
+                }),
+            )
+        }
+        None => None,
+    };
+    let known = ["--smoke", "--shot", "--music", "--replay", "--verify"];
     if let Some(bad) = args
         .iter()
         .skip(1)
@@ -154,8 +310,25 @@ fn main() {
     } else {
         app.add_plugins(audio::AudioPlugin);
     }
-    app.insert_resource(Game::new())
+    // The smoke run keeps nothing: no settings, scores or replays are read or written.
+    let mut game = Game::new(if smoke {
+        Store::new(None)
+    } else {
+        Store::open()
+    });
+    let fullscreen = game.settings.fullscreen;
+    if let Some(r) = watch {
+        game.watch(r);
+    }
+    app.insert_resource(game)
         .add_systems(Update, (update, draw).chain());
+    if fullscreen {
+        app.add_systems(Startup, |mut w: Query<&mut Window, With<PrimaryWindow>>| {
+            if let Ok(mut w) = w.single_mut() {
+                w.mode = WindowMode::BorderlessFullscreen(bevy::window::MonitorSelection::Current);
+            }
+        });
+    }
     if smoke {
         // `--smoke`: play a few seconds with the bot, then quit (a startup test).
         app.insert_resource(Smoke { frames: 0 })
@@ -211,6 +384,7 @@ fn update(
         g.half_height,
         g.sim.ship.body.xy(),
         &mut g.device,
+        &mut g.latch,
     );
     if g.bot {
         input = headless::bot_input(g, g.time);
@@ -218,21 +392,200 @@ fn update(
     if menu.debug {
         g.debug = !g.debug;
     }
-    if menu.fullscreen
-        && let Some(w) = window.as_mut()
-    {
-        w.mode = match w.mode {
-            WindowMode::Windowed => {
+    if menu.fullscreen {
+        g.settings.fullscreen = !g.settings.fullscreen;
+        g.store.save_settings(&g.settings);
+    }
+    if let Some(w) = window.as_mut() {
+        let full = !matches!(w.mode, WindowMode::Windowed);
+        if full != g.settings.fullscreen {
+            w.mode = if g.settings.fullscreen {
                 WindowMode::BorderlessFullscreen(bevy::window::MonitorSelection::Current)
-            }
-            _ => WindowMode::Windowed,
-        };
+            } else {
+                WindowMode::Windowed
+            };
+        }
     }
     let aspect = window
         .as_ref()
         .map_or(16.0 / 9.0, |w| w.width() / w.height().max(1.0));
     if advance(g, input, menu, dt, aspect, &mut sound) {
         exit.write(AppExit::Success);
+    }
+}
+
+/// One simulation tick: the player's input (recorded), a replay's, or none.
+fn tick(g: &mut Game) {
+    match g.screen {
+        Screen::Playing => {
+            // The simulation sees the quantized input, exactly what the replay stores.
+            let p = Packed::pack(&g.input);
+            g.rec.record(p);
+            g.sim.tick(&p.unpack());
+            g.rec.after(&g.sim);
+            g.input.bomb = false;
+        }
+        Screen::Watch => {
+            let w = g.watch.as_mut().expect("watching");
+            match w.replay.inputs.get(w.next) {
+                Some(p) if w.end.is_none() => {
+                    w.next += 1;
+                    g.sim.tick(&p.unpack());
+                    if let Err(d) = w.replay.check(&g.sim) {
+                        let t = match d {
+                            sim::replay::Desync::Hash(t) => t,
+                            sim::replay::Desync::Score { .. } => g.sim.tick,
+                        };
+                        w.end = Some(format!("DIVERGED AT {}", clock(t as f32 * DT)));
+                        w.speed = 1;
+                    }
+                }
+                _ => {
+                    if w.end.is_none() {
+                        w.end = Some("END OF REPLAY".into());
+                        w.speed = 1;
+                    }
+                    g.sim.tick(&sim::Input::default());
+                }
+            }
+        }
+        _ => g.sim.tick(&sim::Input::default()),
+    }
+}
+
+/// `m:ss`.
+fn clock(seconds: f32) -> String {
+    let s = seconds.max(0.0) as u32;
+    format!("{}:{:02}", s / 60, s % 60)
+}
+
+/// Menus: moving between screens, settings, initials.
+fn menu_step(g: &mut Game, menu: input::Menu, dt: f32, quit: &mut bool) {
+    match g.screen {
+        Screen::Title => {
+            g.sel = nav(g.sel, TITLE_ITEMS.len(), &menu);
+            if menu.start {
+                match g.sel {
+                    0 => g.start(),
+                    1 => {
+                        g.screen = Screen::Scores;
+                        g.sel = 0;
+                    }
+                    2 => {
+                        g.screen = Screen::Settings;
+                        g.sel = 0;
+                    }
+                    _ => *quit = true,
+                }
+            } else if menu.back {
+                *quit = true;
+            }
+        }
+        Screen::Settings => {
+            let rows = Settings::ROWS.len() + 1; // and BACK
+            g.sel = nav(g.sel, rows, &menu);
+            let mut by = i32::from(menu.right) - i32::from(menu.left);
+            if by == 0 && menu.start && matches!(g.sel, 1 | 2 | 6) {
+                by = 1;
+            }
+            if by != 0 && g.sel < Settings::ROWS.len() {
+                g.settings.adjust(g.sel, by);
+                g.store.save_settings(&g.settings);
+            }
+            if menu.back || (menu.start && g.sel == rows - 1) {
+                g.screen = Screen::Title;
+                g.sel = 2;
+            }
+        }
+        Screen::Scores => {
+            g.sel = nav(g.sel, g.scores.entries.len(), &menu);
+            if menu.start
+                && let Some(e) = g.scores.entries.get(g.sel)
+                && let Some(r) = g.store.replay(&e.replay)
+            {
+                g.watch(r);
+            } else if menu.back {
+                g.screen = Screen::Title;
+                g.sel = 1;
+            }
+        }
+        Screen::Playing if menu.back => {
+            g.screen = Screen::Paused;
+            g.sel = 0;
+        }
+        Screen::Paused => {
+            g.sel = nav(g.sel, PAUSE_ITEMS.len(), &menu);
+            if menu.back || (menu.start && g.sel == 0) {
+                g.screen = Screen::Playing;
+            } else if menu.start {
+                g.end_run();
+            }
+        }
+        Screen::Initials => {
+            // Typing letters, or choosing them with up and down (the keyboard's WASD type).
+            if let Some(c) = menu.letter {
+                if g.cursor < 3 {
+                    g.initials[g.cursor] = c as u8;
+                    g.cursor += 1;
+                }
+            } else if g.cursor < 3 && (menu.up || menu.down) {
+                let l = &mut g.initials[g.cursor];
+                let k = (*l - b'A') as i32 + if menu.up { 1 } else { -1 };
+                *l = b'A' + k.rem_euclid(26) as u8;
+            } else if menu.right {
+                g.cursor = (g.cursor + 1).min(3);
+            } else if menu.left {
+                g.cursor = g.cursor.saturating_sub(1);
+            }
+            if menu.erase {
+                g.cursor = g.cursor.saturating_sub(1);
+            }
+            if menu.start {
+                if g.cursor < 2 && menu.letter.is_none() && g.device == input::Device::Pad {
+                    // On a pad, A confirms a letter and moves on.
+                    g.cursor += 1;
+                } else {
+                    let name = String::from_utf8_lossy(&g.initials).into_owned();
+                    g.highlight = g.store.finish(&g.rec, Some(&name));
+                    g.scores = g.store.scores();
+                    g.best = g
+                        .scores
+                        .entries
+                        .first()
+                        .map_or(g.best, |e| e.score.max(g.best));
+                    g.sel = g.highlight.unwrap_or(0);
+                    g.screen = Screen::Scores;
+                    g.attract();
+                }
+            }
+        }
+        Screen::Over => {
+            g.over_timer += dt;
+            if g.over_timer > 1.5 && (menu.start || menu.back) {
+                g.over_timer = 0.0;
+                g.screen = Screen::Title;
+                g.sel = 0;
+                g.attract();
+            }
+        }
+        Screen::Watch => {
+            let ended = g.watch.as_ref().is_some_and(|w| w.end.is_some());
+            if menu.back || (ended && menu.start) {
+                g.watch = None;
+                g.screen = Screen::Scores;
+                g.attract();
+            } else if (menu.right || menu.left)
+                && let Some(w) = g.watch.as_mut()
+                && w.end.is_none()
+            {
+                w.speed = if menu.right {
+                    (w.speed * 2).min(8)
+                } else {
+                    (w.speed / 2).max(1)
+                };
+            }
+        }
+        _ => {}
     }
 }
 
@@ -247,21 +600,8 @@ fn advance(
     sound: &mut audio::Sound,
 ) -> bool {
     let mut quit = false;
-    match g.screen {
-        Screen::Title if menu.start => g.start(),
-        Screen::Title if menu.back => quit = true,
-        Screen::Playing if menu.back => g.screen = Screen::Paused,
-        Screen::Paused if menu.start || menu.back => g.screen = Screen::Playing,
-        Screen::Over => {
-            g.over_timer += dt;
-            if g.over_timer > 1.5 && (menu.start || menu.back) {
-                g.over_timer = 0.0;
-                g.screen = Screen::Title;
-                g.attract();
-            }
-        }
-        _ => {}
-    }
+    menu_step(g, menu, dt, &mut quit);
+    g.apply_settings(sound);
     // Bomb is an edge: keep it until a tick consumes it.
     g.input = sim::Input {
         bomb: g.input.bomb || input.bomb,
@@ -271,26 +611,19 @@ fn advance(
     g.fx.spawn.clear();
     let started = Instant::now();
     if g.screen != Screen::Paused {
-        g.acc += dt;
+        let speed = g.watch.as_ref().map_or(1, |w| w.speed);
+        g.acc += dt * speed as f32;
         while g.acc >= DT {
             g.acc -= DT;
             if g.sim.hitstop > 0.0 {
                 // Hit-stop: the world holds its breath; effects go on.
-                g.sim.hitstop = (g.sim.hitstop - DT).max(0.0);
+                g.sim.hitstop = (g.sim.hitstop - DT * speed as f32).max(0.0);
             } else {
-                let tick_input = if g.screen == Screen::Playing {
-                    g.input
-                } else {
-                    sim::Input::default()
-                };
-                g.sim.tick(&tick_input);
-                g.input.bomb = false;
+                tick(g);
                 g.fx.on_events(&g.sim.events);
                 sound.on_events(&g.sim.events, &g.sim, g.cam);
-                if g.sim.events.contains(&sim::Event::GameOver) {
-                    g.best = g.best.max(g.sim.score);
-                    g.screen = Screen::Over;
-                    g.over_timer = 0.0;
+                if g.screen == Screen::Playing && g.sim.events.contains(&sim::Event::GameOver) {
+                    g.end_run();
                 }
             }
             if g.fx.grid_steps.len() < 8 {
@@ -300,7 +633,8 @@ fn advance(
         g.alpha = g.acc / DT;
     }
     g.sim_ms = g.sim_ms * 0.9 + 0.1 * started.elapsed().as_secs_f32() * 1e3;
-    sound.update(&g.sim, g.screen == Screen::Playing, g.cam);
+    let run = matches!(g.screen, Screen::Playing | Screen::Watch);
+    sound.update(&g.sim, run, g.cam);
     // A view about 28 units tall (wider screens see more), moving over the arena.
     g.half_height = 14.0_f32.max(24.0 / aspect);
     g.fx.half_height = g.half_height;
@@ -391,6 +725,16 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
             Align::Center,
         );
     }
+    // Menus over the world: the world steps back.
+    let backdrop = matches!(
+        game.screen,
+        Screen::Settings | Screen::Scores | Screen::Paused | Screen::Initials
+    );
+    if backdrop {
+        for l in &mut game.world_lines {
+            l.color[3] *= 0.12;
+        }
+    }
     hud(game, size, renderer.timings());
     let wells = Fx::particle_wells(&game.sim);
     let post = game.fx.post(&camera);
@@ -400,7 +744,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
         0.3
     };
     let mut grid_color = palette::GRID;
-    grid_color[3] *= 0.85 + 0.5 * intensity;
+    grid_color[3] *= (0.85 + 0.5 * intensity) * if backdrop { 0.5 } else { 1.0 };
     let f = render::Frame {
         camera,
         hud: hud_cam,
@@ -489,13 +833,21 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
     let hud = palette::HUD;
     let dim = [hud[0], hud[1], hud[2], hud[3] * 0.45];
     let blink = (g.time * 3.0).sin() > -0.3;
+    // Menu rows: the selected one bright and pulsing, the others faint.
+    let hot = [
+        hud[0],
+        hud[1],
+        hud[2],
+        hud[3] * (1.1 + 0.2 * (g.time * 5.0).sin()),
+    ];
+    let faint = [hud[0], hud[1], hud[2], hud[3] * 0.3];
     match g.screen {
         Screen::Title => {
             scene::text(
                 out,
                 "WARP",
                 0.0,
-                3.0,
+                5.0,
                 6.5,
                 [0.55, 0.7, 1.0, 1.7],
                 Align::Center,
@@ -504,24 +856,17 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 out,
                 "A NEON SHOOTER ON WARPED SPACE",
                 0.0,
-                -0.6,
+                1.4,
                 1.0,
                 dim,
                 Align::Center,
             );
-            if blink {
-                let msg = if g.device == input::Device::Pad {
-                    "PRESS START"
-                } else {
-                    "PRESS ENTER"
-                };
-                scene::text(out, msg, 0.0, -5.5, 1.4, hud, Align::Center);
-            }
+            menu_items(out, &TITLE_ITEMS, g.sel, -3.0, g.time);
             scene::text(
                 out,
                 "MOVE WASD / LEFT STICK    AIM + FIRE MOUSE / RIGHT STICK    BOMB SPACE / TRIGGER",
                 0.0,
-                -12.0,
+                -13.0,
                 0.7,
                 dim,
                 Align::Center,
@@ -531,14 +876,100 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                     out,
                     &format!("BEST {}", scene::grouped(g.best)),
                     0.0,
-                    -14.0,
+                    -15.0,
                     0.9,
                     dim,
                     Align::Center,
                 );
             }
         }
-        Screen::Playing | Screen::Paused | Screen::Over => {
+        Screen::Settings => {
+            scene::text(out, "SETTINGS", 0.0, 11.0, 3.0, hud, Align::Center);
+            let (lx, rx) = (-15.0, 15.0);
+            for (row, label) in Settings::ROWS.iter().enumerate() {
+                let y = 6.0 - row as f32 * 2.3;
+                let on = row == g.sel;
+                let c = if on { hot } else { faint };
+                if on {
+                    scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+                }
+                scene::text(out, label, lx, y, 1.1, c, Align::Left);
+                match g.settings.value(row) {
+                    Ok(v) => {
+                        let v = if on { format!("< {v} >") } else { v };
+                        scene::text(out, &v, rx, y, 1.1, c, Align::Right);
+                    }
+                    Err(level) => {
+                        // Ten bars, lit up to the level.
+                        for k in 0..10 {
+                            let x = rx - 9.5 * 0.9 + k as f32 * 0.9;
+                            let lit = k < level;
+                            let bc = if lit {
+                                [c[0], c[1], c[2], c[3] * 1.2]
+                            } else {
+                                [c[0], c[1], c[2], c[3] * 0.25]
+                            };
+                            out.push(scene::seg(
+                                [x, y + 0.15, x, y + 0.35 + 0.1 * k as f32],
+                                bc,
+                                [0.09, 0.3, 0.2, 0.0],
+                                sim::body::identity(),
+                            ));
+                        }
+                    }
+                }
+            }
+            let back = Settings::ROWS.len();
+            let y = 6.0 - back as f32 * 2.3 - 0.8;
+            let c = if g.sel == back { hot } else { faint };
+            if g.sel == back {
+                scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+            }
+            scene::text(out, "BACK", lx, y, 1.1, c, Align::Left);
+            scene::text(
+                out,
+                "LEFT / RIGHT TO CHANGE    ESC / B TO GO BACK",
+                0.0,
+                -14.5,
+                0.7,
+                dim,
+                Align::Center,
+            );
+        }
+        Screen::Scores => {
+            scene::text(out, "HIGH SCORES", 0.0, 11.0, 3.0, hud, Align::Center);
+            if g.scores.entries.is_empty() {
+                scene::text(out, "NO RUNS YET", 0.0, 2.0, 1.4, dim, Align::Center);
+            }
+            for (r, e) in g.scores.entries.iter().enumerate() {
+                let y = 6.5 - r as f32 * 1.75;
+                let new = g.highlight == Some(r);
+                let c = if new {
+                    scene::shard()
+                } else if r == g.sel {
+                    hot
+                } else {
+                    faint
+                };
+                if r == g.sel {
+                    scene::text(out, ">", -15.0, y, 1.0, c, Align::Left);
+                }
+                scene::text(out, &format!("{:>2}", r + 1), -13.0, y, 1.0, c, Align::Left);
+                scene::text(out, &e.name, -9.0, y, 1.0, c, Align::Left);
+                scene::text(out, &scene::grouped(e.score), 7.0, y, 1.0, c, Align::Right);
+                scene::text(out, &clock(e.seconds as f32), 14.0, y, 1.0, c, Align::Right);
+            }
+            scene::text(
+                out,
+                "ENTER / A TO WATCH THE REPLAY    ESC / B TO GO BACK",
+                0.0,
+                -14.5,
+                0.7,
+                dim,
+                Align::Center,
+            );
+        }
+        Screen::Playing | Screen::Paused | Screen::Over | Screen::Initials | Screen::Watch => {
             let s = &g.sim;
             scene::text(
                 out,
@@ -555,7 +986,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 left,
                 top - 2.2,
                 0.9,
-                palette::SHARD,
+                scene::shard(),
                 Align::Left,
             );
             // Lives as small ships, bombs as rings.
@@ -600,16 +1031,97 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 );
             }
             if g.screen == Screen::Paused {
-                scene::text(out, "PAUSED", 0.0, 1.0, 3.0, hud, Align::Center);
+                scene::text(out, "PAUSED", 0.0, 4.0, 3.0, hud, Align::Center);
+                menu_items(out, &PAUSE_ITEMS, g.sel, -0.5, g.time);
+            }
+            if g.screen == Screen::Initials {
                 scene::text(
                     out,
-                    "ENTER / START TO GO ON    ESC / BACK TO GO ON",
+                    "A NEW HIGH SCORE",
                     0.0,
-                    -2.5,
-                    0.8,
+                    6.0,
+                    2.2,
+                    scene::shard(),
+                    Align::Center,
+                );
+                scene::text(
+                    out,
+                    &scene::grouped(s.score),
+                    0.0,
+                    2.5,
+                    1.6,
+                    hud,
+                    Align::Center,
+                );
+                for k in 0..3 {
+                    let x = (k as f32 - 1.0) * 3.2;
+                    let on = k == g.cursor;
+                    let c = if on { hud } else { dim };
+                    let l = (g.initials[k] as char).to_string();
+                    scene::text(out, &l, x, -2.5, 2.4, c, Align::Center);
+                    if on && blink {
+                        scene::text(out, "_", x, -2.9, 2.4, hud, Align::Center);
+                    }
+                }
+                let msg = if g.cursor >= 3 {
+                    "ENTER TO KEEP"
+                } else {
+                    "TYPE OR UP / DOWN    ENTER TO KEEP"
+                };
+                scene::text(out, msg, 0.0, -6.5, 0.8, dim, Align::Center);
+            }
+            if g.screen == Screen::Watch
+                && let Some(w) = &g.watch
+            {
+                let t = clock(w.next as f32 * DT);
+                let total = clock(w.replay.seconds());
+                scene::text(
+                    out,
+                    &format!("REPLAY {t} / {total}"),
+                    0.0,
+                    top - 0.2,
+                    0.9,
                     dim,
                     Align::Center,
                 );
+                if w.speed > 1 {
+                    scene::text(
+                        out,
+                        &format!("X{} SPEED", w.speed),
+                        0.0,
+                        top - 1.8,
+                        0.7,
+                        dim,
+                        Align::Center,
+                    );
+                }
+                if w.other_build {
+                    scene::text(
+                        out,
+                        "RECORDED ON ANOTHER BUILD",
+                        0.0,
+                        -15.0,
+                        0.7,
+                        dim,
+                        Align::Center,
+                    );
+                }
+                if let Some(end) = &w.end {
+                    scene::text(out, end, 0.0, 2.0, 2.0, hud, Align::Center);
+                    if blink {
+                        scene::text(out, "PRESS ENTER", 0.0, -1.5, 0.9, dim, Align::Center);
+                    }
+                } else {
+                    scene::text(
+                        out,
+                        "LEFT / RIGHT SPEED    ESC TO STOP",
+                        0.0,
+                        -16.5,
+                        0.6,
+                        dim,
+                        Align::Center,
+                    );
+                }
             }
             if g.screen == Screen::Over {
                 scene::text(
@@ -637,7 +1149,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                         0.0,
                         -3.2,
                         1.0,
-                        palette::SHARD,
+                        scene::shard(),
                         Align::Center,
                     );
                 }
@@ -678,6 +1190,22 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 dim,
                 Align::Left,
             );
+        }
+    }
+}
+
+/// A vertical menu, centred, with the selected item marked.
+fn menu_items(out: &mut Vec<LineInstance>, items: &[&str], sel: usize, y0: f32, time: f32) {
+    let hud = palette::HUD;
+    let dim = [hud[0], hud[1], hud[2], hud[3] * 0.45];
+    for (k, item) in items.iter().enumerate() {
+        let y = y0 - k as f32 * 2.2;
+        if k == sel {
+            let pulse = 1.0 + 0.25 * (time * 5.0).sin();
+            let c = [hud[0], hud[1], hud[2], hud[3] * pulse];
+            scene::text(out, &format!("> {item} <"), 0.0, y, 1.4, c, Align::Center);
+        } else {
+            scene::text(out, item, 0.0, y, 1.2, dim, Align::Center);
         }
     }
 }

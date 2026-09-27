@@ -31,7 +31,23 @@ pub struct Menu {
     pub debug: bool,
     /// Toggle full screen.
     pub fullscreen: bool,
+    /// Navigation: arrows, WASD, the D-pad, or a flick of the left stick.
+    pub up: bool,
+    /// Down.
+    pub down: bool,
+    /// Left.
+    pub left: bool,
+    /// Right.
+    pub right: bool,
+    /// A letter typed (for initials).
+    pub letter: Option<char>,
+    /// Backspace.
+    pub erase: bool,
 }
+
+/// The left stick's last menu direction, so that holding it moves once per flick.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Latch(i8, i8);
 
 /// A deadzone with a smooth rescale: `|v| < dz` is zero, and the rest maps to `0..1`.
 fn deadzone(x: f32, y: f32, dz: f32) -> (f32, f32) {
@@ -56,6 +72,7 @@ pub fn read(
     half_height: f32,
     ship: [f32; 2],
     device: &mut Device,
+    latch: &mut Latch,
 ) -> (sim::Input, Menu) {
     let mut input = sim::Input::default();
     let mut menu = Menu {
@@ -63,7 +80,44 @@ pub fn read(
         back: keys.just_pressed(KeyCode::Escape),
         debug: keys.just_pressed(KeyCode::F3),
         fullscreen: keys.just_pressed(KeyCode::F11),
+        up: keys.any_just_pressed([KeyCode::ArrowUp, KeyCode::KeyW]),
+        down: keys.any_just_pressed([KeyCode::ArrowDown, KeyCode::KeyS]),
+        left: keys.any_just_pressed([KeyCode::ArrowLeft, KeyCode::KeyA]),
+        right: keys.any_just_pressed([KeyCode::ArrowRight, KeyCode::KeyD]),
+        letter: None,
+        erase: keys.just_pressed(KeyCode::Backspace),
     };
+    const LETTERS: [KeyCode; 26] = [
+        KeyCode::KeyA,
+        KeyCode::KeyB,
+        KeyCode::KeyC,
+        KeyCode::KeyD,
+        KeyCode::KeyE,
+        KeyCode::KeyF,
+        KeyCode::KeyG,
+        KeyCode::KeyH,
+        KeyCode::KeyI,
+        KeyCode::KeyJ,
+        KeyCode::KeyK,
+        KeyCode::KeyL,
+        KeyCode::KeyM,
+        KeyCode::KeyN,
+        KeyCode::KeyO,
+        KeyCode::KeyP,
+        KeyCode::KeyQ,
+        KeyCode::KeyR,
+        KeyCode::KeyS,
+        KeyCode::KeyT,
+        KeyCode::KeyU,
+        KeyCode::KeyV,
+        KeyCode::KeyW,
+        KeyCode::KeyX,
+        KeyCode::KeyY,
+        KeyCode::KeyZ,
+    ];
+    if let Some(i) = LETTERS.iter().position(|k| keys.just_pressed(*k)) {
+        menu.letter = Some((b'A' + i as u8) as char);
+    }
     // Keyboard movement.
     let axis = |neg: [KeyCode; 2], pos: [KeyCode; 2]| {
         f32::from(u8::from(keys.any_pressed(pos))) - f32::from(u8::from(keys.any_pressed(neg)))
@@ -125,6 +179,30 @@ pub fn read(
             pad.just_pressed(GamepadButton::Start) || pad.just_pressed(GamepadButton::South);
         menu.back |=
             pad.just_pressed(GamepadButton::Select) || pad.just_pressed(GamepadButton::East);
+        menu.up |= pad.just_pressed(GamepadButton::DPadUp);
+        menu.down |= pad.just_pressed(GamepadButton::DPadDown);
+        menu.left |= pad.just_pressed(GamepadButton::DPadLeft);
+        menu.right |= pad.just_pressed(GamepadButton::DPadRight);
+        // A flick of the left stick: once when it passes half way, again after it returns.
+        let dir = |v: f32| {
+            if v > 0.6 {
+                1
+            } else if v < -0.6 {
+                -1
+            } else {
+                0
+            }
+        };
+        let (fx, fy) = (dir(ls.x), dir(ls.y));
+        if fx != 0 && fx != latch.0 {
+            menu.right |= fx > 0;
+            menu.left |= fx < 0;
+        }
+        if fy != 0 && fy != latch.1 {
+            menu.up |= fy > 0;
+            menu.down |= fy < 0;
+        }
+        *latch = Latch(fx, fy);
     }
     input.movement = Point::direction(mx, my);
     input.aim = Point::direction(aim.0, aim.1);

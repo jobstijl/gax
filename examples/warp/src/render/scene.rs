@@ -5,6 +5,7 @@ use super::font::{self, Align};
 use super::{CameraUniform, LineInstance};
 use crate::sim::body::{Pose, identity};
 use crate::sim::{ARENA, Kind, Phase, World};
+use crate::store::Scheme;
 use gax::pga2d::{Motor, Point};
 
 /// Colours: HDR rgb and intensity. One hue per family; the player's is used by nothing else.
@@ -41,9 +42,25 @@ pub mod palette {
     pub const HUD: [f32; 4] = [0.75, 0.85, 1.0, 1.6];
 }
 
-/// The colour of a family.
+static SCHEME: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
+
+/// Choose the colour scheme for enemies and shards (a setting).
+pub fn set_scheme(s: Scheme) {
+    SCHEME.store(s as u8, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn scheme() -> Scheme {
+    match SCHEME.load(std::sync::atomic::Ordering::Relaxed) {
+        1 => Scheme::RedGreen,
+        2 => Scheme::BlueYellow,
+        _ => Scheme::Standard,
+    }
+}
+
+/// The colour of a family, in the current scheme. Shapes carry the identity of every family;
+/// the schemes keep neighbours in the roster apart for colour-blind players.
 pub fn color(kind: Kind) -> [f32; 4] {
-    match kind {
+    let standard = match kind {
         Kind::Drifter => palette::DRIFTER,
         Kind::Chaser => palette::CHASER,
         Kind::Mote => palette::MOTE,
@@ -53,6 +70,38 @@ pub fn color(kind: Kind) -> [f32; 4] {
         Kind::Serpent => palette::SERPENT,
         Kind::Warden => palette::WARDEN,
         Kind::Carrier => palette::CARRIER,
+    };
+    let rgb = match (scheme(), kind) {
+        (Scheme::Standard, _) => return standard,
+        // Blue, orange, yellow and purple, after Okabe and Ito; no red against green.
+        (Scheme::RedGreen, Kind::Drifter) => [0.35, 0.72, 1.0],
+        (Scheme::RedGreen, Kind::Chaser) => [1.0, 0.62, 0.0],
+        (Scheme::RedGreen, Kind::Mote) => [0.95, 0.55, 0.85],
+        (Scheme::RedGreen, Kind::Singularity) => [0.45, 0.35, 1.0],
+        (Scheme::RedGreen, Kind::Evader) => [1.0, 0.95, 0.25],
+        (Scheme::RedGreen, Kind::Splitter | Kind::Fragment) => [0.85, 0.3, 0.0],
+        (Scheme::RedGreen, Kind::Serpent) => [0.0, 0.8, 0.65],
+        (Scheme::RedGreen, Kind::Warden) => [1.0, 0.75, 0.9],
+        (Scheme::RedGreen, Kind::Carrier) => [0.15, 0.4, 1.0],
+        // Reds against cyans; no blue against green or yellow against violet.
+        (Scheme::BlueYellow, Kind::Drifter) => [0.1, 0.9, 1.0],
+        (Scheme::BlueYellow, Kind::Chaser) => [1.0, 0.2, 0.62],
+        (Scheme::BlueYellow, Kind::Mote) => [1.0, 0.55, 0.75],
+        (Scheme::BlueYellow, Kind::Singularity) => [0.55, 0.3, 1.0],
+        (Scheme::BlueYellow, Kind::Evader) => [1.0, 0.22, 0.15],
+        (Scheme::BlueYellow, Kind::Splitter | Kind::Fragment) => [1.0, 0.62, 0.5],
+        (Scheme::BlueYellow, Kind::Serpent) => [0.1, 0.8, 0.8],
+        (Scheme::BlueYellow, Kind::Warden) => [0.95, 0.95, 1.0],
+        (Scheme::BlueYellow, Kind::Carrier) => [0.3, 0.5, 1.0],
+    };
+    [rgb[0], rgb[1], rgb[2], standard[3]]
+}
+
+/// The shards' colour, in the current scheme.
+pub fn shard() -> [f32; 4] {
+    match scheme() {
+        Scheme::Standard | Scheme::BlueYellow => palette::SHARD,
+        Scheme::RedGreen => [0.85, 1.0, 1.0, 2.6],
     }
 }
 
@@ -514,7 +563,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
             out,
             &[[0.22, 0.0], [0.0, 0.16], [-0.22, 0.0], [0.0, -0.16]],
             1.0,
-            scale_color(palette::SHARD, blink),
+            scale_color(shard(), blink),
             THIN,
             m,
         );

@@ -315,15 +315,21 @@ type MusicNodes<'w, 's> =
 
 fn flush(
     mut sound: ResMut<Sound>,
-    mut sfx: Query<&mut AudioEvents, With<SfxNode>>,
+    mut sfx: Query<(&mut SfxNode, &mut AudioEvents)>,
     mut music: MusicNodes,
 ) {
-    if let Ok(mut ev) = sfx.single_mut() {
+    if let Ok((mut node, mut ev)) = sfx.single_mut() {
         for t in sound.pending.drain(..) {
             ev.push(NodeEventType::CustomBytes(t.to_bytes()));
         }
+        if node.gain != sound.gains[0] {
+            node.gain = sound.gains[0];
+        }
     }
     if let Ok((mut node, mut ev)) = music.single_mut() {
+        if node.gain != sound.gains[1] {
+            node.gain = sound.gains[1];
+        }
         for m in sound.music_events.drain(..) {
             ev.push(NodeEventType::CustomBytes(m));
         }
@@ -343,6 +349,8 @@ fn flush(
 /// pitched, and steers the music.
 #[derive(Resource)]
 pub struct Sound {
+    /// Output gains of the effects and the music (the volume settings).
+    pub gains: [f32; 2],
     pending: Vec<Trigger>,
     music_events: Vec<[u8; 36]>,
     controls: Controls,
@@ -356,6 +364,7 @@ impl Sound {
     /// A new sound state.
     pub fn new() -> Sound {
         Sound {
+            gains: [1.0, 1.0],
             pending: Vec::new(),
             music_events: Vec::new(),
             controls: Controls {

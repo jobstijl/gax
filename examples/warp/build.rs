@@ -78,4 +78,36 @@ fn main() {
         std::fs::write(out.join(format!("{s}.wgsl")), res.syntax.to_string()).expect("write WGSL");
     }
     println!("cargo:rerun-if-changed=src/kernels.rs");
+    sim_hash();
+}
+
+/// A hash of everything a replay depends on: the simulation's sources and gax's. Replays
+/// record it, so a replay from another build is flagged instead of silently diverging.
+fn sim_hash() {
+    fn walk(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                walk(&p, files);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                files.push(p);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    for dir in ["src/sim", "../../crates/gax/src"] {
+        walk(std::path::Path::new(dir), &mut files);
+        println!("cargo:rerun-if-changed={dir}");
+    }
+    files.sort();
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for f in files {
+        for b in std::fs::read(&f).unwrap_or_default() {
+            h = (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3);
+        }
+    }
+    println!("cargo:rustc-env=WARP_SIM_HASH={:08x}", h >> 32);
 }
