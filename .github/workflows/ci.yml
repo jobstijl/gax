@@ -141,7 +141,7 @@ jobs:
         with:
           workspaces: examples/warp
       - name: system libraries, Mesa's software Vulkan, Xvfb
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev mesa-vulkan-drivers libvulkan1 xvfb
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev libxkbcommon-dev libxkbcommon-x11-0 mesa-vulkan-drivers libvulkan1 xvfb
       - name: dependency contract (Bevy is plumbing only)
         working-directory: examples/warp
         run: ./scripts/check-deps.sh
