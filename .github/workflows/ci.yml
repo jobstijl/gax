@@ -153,7 +153,13 @@ jobs:
         env:
           GAX_REQUIRE_GPU: "1"
           WGPU_BACKEND: vulkan
-        run: cargo test --release
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --release --no-fail-fast 2>&1 | tee test.log || {
+            grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
       - name: renderer smoke test (offscreen, wgpu validation on)
         working-directory: examples/warp
         env:
