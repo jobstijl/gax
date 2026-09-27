@@ -495,6 +495,8 @@ pub struct World {
     dive_cooldown: f32,
     gate_timer: f32,
     well_cooldown: f32,
+    /// The kinds introduced so far (bits: serpent, singularity).
+    introduced: u8,
     next_id: u32,
     next_life: u64,
     next_bomb: u64,
@@ -590,6 +592,7 @@ impl World {
             dive_cooldown: 2.0,
             gate_timer: 12.0,
             well_cooldown: 0.0,
+            introduced: 0,
             next_id: 1,
             next_life: 100_000,
             next_bomb: 150_000,
@@ -826,9 +829,13 @@ impl World {
             escort: false,
         };
         // Bands of one roll: each kind once it has been introduced, drones otherwise.
-        let well_band = roll < 0.16;
-        let turret_band = (0.16..0.36 + 0.12 * i).contains(&roll);
-        let serpent_band = (0.48..0.64).contains(&roll);
+        // Each kind is introduced by a deadline, whatever the rolls: serpents by 40 s, the first
+        // singularity by 60 s.
+        let late_serpent = self.introduced & 1 == 0 && self.clock > 40.0;
+        let late_well = self.introduced & 2 == 0 && self.clock > 60.0;
+        let well_band = roll < 0.16 || late_well;
+        let turret_band = (0.16..0.36 + 0.12 * i).contains(&roll) && !late_serpent;
+        let serpent_band = (0.48..0.64).contains(&roll) || late_serpent;
         let mine_band = (0.64..0.82).contains(&roll);
         if well_band && self.clock > 40.0 && !has_well && self.well_cooldown <= 0.0 {
             // A singularity, holding ahead, with a ring of drones orbiting it.
@@ -850,6 +857,7 @@ impl World {
                 spawn.push(p);
             }
             self.well_cooldown = 45.0;
+            self.introduced |= 2;
         } else if turret_band && self.clock > 25.0 {
             // Turrets on the wall, spaced along the track and around it.
             let n = 1 + (i * 3.0) as usize;
@@ -864,6 +872,7 @@ impl World {
             let a = r.angle();
             let ring = r.range(3.2, 4.4);
             spawn.push(pend(Foe::Serpent, around(ring, a, s), a, ring, 0.0));
+            self.introduced |= 1;
         } else if (turret_band || mine_band) && self.clock > 10.0 {
             // Mines scattered in the lane.
             let n = 3 + (i * 6.0) as usize;

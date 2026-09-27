@@ -672,7 +672,11 @@ fn tick(g: &mut Game) {
                 }
                 _ => {
                     if w.end.is_none() {
-                        w.end = Some("END OF REPLAY".into());
+                        // The run's last tick: its score must be the recorded one.
+                        w.end = Some(match replay.final_score(g.sim.score) {
+                            Ok(()) => "END OF REPLAY".into(),
+                            Err(_) => "DIVERGED AT THE END".into(),
+                        });
                         w.speed = 1;
                     }
                     g.sim.tick(&sim::Input::default());
@@ -947,11 +951,18 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
                             }
                         }
                         _ => {
+                            // The run's last tick: its score must be the recorded one. The
+                            // world then holds still (flying on, it would pass gates and
+                            // score without the player).
                             if w.end.is_none() {
-                                w.end = Some("END OF REPLAY".into());
+                                w.end = Some(match replay.final_score(run.world.score) {
+                                    Ok(()) => "END OF REPLAY".into(),
+                                    Err(_) => "DIVERGED AT THE END".into(),
+                                });
                                 w.speed = 1;
                             }
-                            run.world.tick(&tunnel::Input::default());
+                            g.acc = 0.0;
+                            break;
                         }
                     }
                 }
