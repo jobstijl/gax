@@ -164,7 +164,13 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
           WARP_NO_AUDIO: "1"
-        run: xvfb-run -a cargo run --release -- --smoke
+        shell: bash
+        run: |
+          set -o pipefail
+          xvfb-run -a cargo run --release -- --smoke 2>&1 | tee smoke.log || {
+            grep -E -A5 "panicked|ERROR|error" smoke.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
 
   lint:
     runs-on: ubuntu-latest
