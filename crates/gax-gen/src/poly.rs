@@ -10,6 +10,9 @@ use std::fmt;
 use std::ops::{Add, Mul, Neg, Sub};
 
 /// An exact rational number with `i128` numerator and positive denominator, in lowest terms.
+///
+/// `Ord` is structural (numerator, then denominator): the generator sorts terms by it, and
+/// the order of the generated sums depends on it. Compare values with [`Rational::lt`].
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Rational {
     num: i128,
@@ -78,6 +81,15 @@ impl Rational {
     /// Reciprocal. Panics on zero.
     pub fn recip(self) -> Rational {
         Rational::new(self.den, self.num)
+    }
+
+    /// Whether `self < o` by value: `a/b < c/d` iff `a d < c b` (denominators are positive).
+    /// When the cross products overflow, the nearest `f64`s decide.
+    pub fn lt(self, o: Rational) -> bool {
+        match (self.num.checked_mul(o.den), o.num.checked_mul(self.den)) {
+            (Some(l), Some(r)) => l < r,
+            _ => self.to_f64() < o.to_f64(),
+        }
     }
 
     /// Nearest `f64`.

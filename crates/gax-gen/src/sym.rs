@@ -258,7 +258,66 @@ impl Sym {
         self.poly().as_constant()
     }
 
+    /// A constant from its value: exact when it is a small dyadic rational (`0.5`, `3`),
+    /// otherwise a named float constant. Large exact dyadics (such as the nearest `f64` to
+    /// `π/4`) would overflow the exact arithmetic once multiplied a few times.
+    fn value(f: f64) -> Sym {
+        match Rational::from_f64(f) {
+            Some(r) if r.num().abs() < 1 << 40 && r.den() < 1 << 40 => {
+                Sym::from_poly(Poly::constant(r))
+            }
+            _ => Sym::constant_atom(ConstKind::Float(f)),
+        }
+    }
+
+    /// The value, if this depends on no input: an exact constant, or a polynomial in named
+    /// float constants (folded calls). Used to fold calls and selects at trace time.
+    pub fn const_value(self) -> Option<f64> {
+        if let Some(c) = self.as_constant() {
+            return Some(c.to_f64());
+        }
+        let p = self.poly();
+        with(|a| {
+            let mut sum = 0.0;
+            for (m, c) in &p.0 {
+                let mut t = c.to_f64();
+                for &v in &m.0 {
+                    match a.vars[v as usize] {
+                        VarDef::Constant(ConstKind::Float(f)) => t *= f,
+                        _ => return None,
+                    }
+                }
+                sum += t;
+            }
+            Some(sum)
+        })
+    }
+
     fn atom(func: Func, arg: Sym) -> Sym {
+        // A call on a constant is evaluated now, not in every run of the kernel: `|c|`
+        // exactly, the others in `f64` (at least as accurate as the kernel's own arithmetic).
+        // The runtime model keeps the calls, as the generic code makes them.
+        if !with(|a| a.opaque_constants)
+            && let Some(x) = arg.const_value()
+        {
+            if let (Func::Abs, Some(c)) = (func, arg.as_constant()) {
+                return Sym::from_poly(Poly::constant(c.abs()));
+            }
+            let folded = match func {
+                Func::Abs => Some(x.abs()),
+                Func::Sqrt if x >= 0.0 => Some(x.sqrt()),
+                Func::Sin => Some(x.sin()),
+                Func::Cos => Some(x.cos()),
+                Func::Sinh => Some(x.sinh()),
+                Func::Cosh => Some(x.cosh()),
+                Func::Ln if x > 0.0 => Some(x.ln()),
+                Func::Recip if x != 0.0 => Some(1.0 / x),
+                _ => None,
+            };
+            if let Some(f) = folded {
+                return Sym::value(f);
+            }
+        }
         let v = with(|a| {
             if let Some(&v) = a.atom_index.get(&(func, arg)) {
                 return v;
@@ -321,7 +380,17 @@ impl Sym {
             }
         });
         match r {
-            R::Poly(p) => Sym::from_poly(p),
+            R::Poly(p) => {
+                let s = Sym::from_poly(p);
+                // Arithmetic on named constants only is done now, not at run time.
+                if s.as_constant().is_none()
+                    && !with(|a| a.opaque_constants)
+                    && let Some(f) = s.const_value()
+                {
+                    return Sym::value(f);
+                }
+                s
+            }
             R::Node(v) => Sym::from_poly(Poly::var(v)),
         }
     }
@@ -395,10 +464,7 @@ impl Coef for Sym {
         if let Some(c) = Sym::runtime_constant(f) {
             return c;
         }
-        match Rational::from_f64(f) {
-            Some(r) => Sym::from_poly(Poly::constant(r)),
-            None => Sym::constant_atom(ConstKind::Float(f)),
-        }
+        Sym::value(f)
     }
 }
 
@@ -448,6 +514,12 @@ impl Real for Sym {
             return x;
         }
         if let (Some(p), Some(q)) = (a.poly().as_constant(), b.poly().as_constant()) {
+            // By value (the derived order is structural: it would say 1/2 < 1/3).
+            return if p.lt(q) { x } else { y };
+        }
+        if !with(|a| a.opaque_constants)
+            && let (Some(p), Some(q)) = (a.const_value(), b.const_value())
+        {
             return if p < q { x } else { y };
         }
         let v = with(|arena| {
@@ -487,5 +559,31 @@ mod tests {
         let r2 = Sym::one() / (b + a);
         assert_eq!(r1, r2, "the same denominator gives the same atom");
         assert_eq!(Sym::from_f64(0.5) * Sym::from_i64(2), Sym::one());
+    }
+
+    /// Calls on constants fold at trace time: a motor built from constant angles inside a
+    /// kernel costs nothing at run time.
+    #[test]
+    #[allow(clippy::float_cmp)] // the same f64 operations: exact
+    fn constant_calls_fold() {
+        Sym::reset();
+        let two = Sym::from_i64(2);
+        assert_eq!(Sym::from_i64(4).sqrt(), two);
+        let r2 = two.sqrt().const_value().unwrap();
+        assert_eq!(r2, 2f64.sqrt());
+        // Calls chain through named constants: sin(sqrt(2)) is a constant too.
+        assert_eq!(two.sqrt().sin().const_value(), Some(r2.sin()));
+        assert_eq!((-two).abs(), two);
+        assert_eq!(Sym::from_i64(0).cos(), Sym::one());
+        // Inexact results are named constants: the same value, the same symbol.
+        let a = Sym::from_f64(0.3);
+        assert_eq!(a.sin(), Sym::from_f64(0.3).sin());
+        let x = Sym::input(0, 0);
+        // Constants compare by value (once, (num, den) compared lexicographically: 1/2 < 1/3).
+        let (half, third) = (Sym::from_ratio(1, 2), Sym::from_ratio(1, 3));
+        assert_eq!(Sym::select_lt(half, third, x, Sym::zero()), Sym::zero());
+        assert_eq!(Sym::select_lt(third, half, x, Sym::zero()), x);
+        // Not constants: still atoms.
+        assert!(x.sqrt().as_constant().is_none());
     }
 }

@@ -278,7 +278,13 @@ The fused function is `shadow_on_floor_fused<T: Real>(m, light, p)`, with the sa
 In this example it takes 31 mul and 21 add, where the generic code takes 46 and 32.
 
 * **Unit conditions.** `Unit` arguments bring their unit condition into the simplification.
-* **Branches.** Traced code must not branch on coefficient values (`select_lt` panics during tracing).
+* **Constants fold.** Whatever does not depend on the inputs is computed at trace time, calls
+  included: a motor built from a constant angle inside a kernel (`Motor::rotation(c, π/2)`)
+  costs no `sqrt`, `sin` or `cos` at run time, only the products of applying it. Small exact
+  values stay exact; others become named constants.
+* **Branches.** `T::select_lt` is data flow, not a branch: it becomes a `select` in the kernel
+  (and folds when both compared values are constants). Traced code must not otherwise branch
+  on coefficient values, and iterative solvers (`all_lt`) cannot be traced.
 
 `examples/traced` in the repository is a complete crate.
 

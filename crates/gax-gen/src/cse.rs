@@ -262,8 +262,24 @@ pub fn compile_staged(
     };
     let mut b = Builder::default();
     let mut env: HashMap<Var, Operand> = HashMap::new();
+    let staged: std::collections::HashSet<Var> = stages.iter().map(|st| st.var).collect();
     for st in stages {
-        let args: Vec<Poly> = st.args.iter().map(reduce).collect();
+        // A stage's arguments may only use what is defined before it. Reducing them modulo
+        // the relations could bring in the stage's own variable (`sqrt x` reduced with
+        // `s² = x` becomes `sqrt(s s)`) or a later one; keep such an argument as it is.
+        let defined = |p: &Poly| {
+            p.0.keys()
+                .flat_map(|m| m.0.iter())
+                .all(|v| !staged.contains(v) || env.contains_key(v))
+        };
+        let args: Vec<Poly> = st
+            .args
+            .iter()
+            .map(|p| {
+                let r = reduce(p);
+                if defined(&r) { r } else { p.clone() }
+            })
+            .collect();
         let ops = compile_polys_env(&mut b, &args, kernels, &env);
         let r = match st.op {
             StageOp::Call(f) => b.emit(Instr::Call(f, ops[0])),

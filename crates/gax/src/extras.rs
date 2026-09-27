@@ -36,6 +36,19 @@ mod pga3d_extras {
             let r = self.e123().recip();
             [self.e032() * r, self.e013() * r, self.e021() * r]
         }
+
+        /// The ideal norm `sqrt(x² + y² + z²)`: the length of a direction (a velocity, a
+        /// displacement). `norm()` is the weight, which is 0 for directions.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// assert_eq!(Point::direction(2.0, 3.0, 6.0).ideal_norm(), 7.0);
+        /// ```
+        #[inline]
+        pub fn ideal_norm(self) -> T {
+            let (x, y, z) = (self.e032(), self.e013(), self.e021());
+            (x * x + y * y + z * z).sqrt()
+        }
     }
 
     impl<T: Real> Plane<(), T> {
@@ -43,6 +56,26 @@ mod pga3d_extras {
         #[inline]
         pub fn from_normal(n: [T; 3], d: T) -> Self {
             Plane::new(n[0], n[1], n[2], -d)
+        }
+
+        /// The plane through the origin perpendicular to the direction `d`.
+        #[inline]
+        pub fn orthogonal_to(d: Point<(), T>) -> Self {
+            Plane::new(d.e032(), d.e013(), d.e021(), T::zero())
+        }
+
+        /// Reflect a point (or a direction) in this plane: the sandwich with the normalized
+        /// plane, which in PGA3D needs no sign correction for points or directions.
+        ///
+        /// ```
+        /// use gax::pga3d::{Plane, Point};
+        /// let wall = Plane::from_normal([1.0, 0.0, 0.0], 0.0);
+        /// let v = wall.reflect(Point::direction(1.0, 0.5, 0.0));
+        /// assert_eq!([v.e032(), v.e013(), v.e021()], [-1.0, 0.5, 0.0]);
+        /// ```
+        #[inline]
+        pub fn reflect(self, x: Point<(), T>) -> Point<(), T> {
+            self.normalized() >> x
         }
     }
 
@@ -176,6 +209,79 @@ mod pga3d_extras {
             let axis = Point::xyz(T::zero(), T::zero(), T::zero()) & Point::direction(x, y, z);
             Self::rotation(axis, angle)
         }
+
+        /// The shortest rotation (about an axis through the origin) that turns the direction
+        /// `from` into the direction `to`: `normalize(1 + B A)`, with `A` and `B` the planes
+        /// through the origin orthogonal to them. Opposite directions get a half turn about an
+        /// axis perpendicular to both.
+        ///
+        /// ```
+        /// use gax::pga3d::{Motor, Point};
+        /// let z = Point::<(), f64>::direction(0.0, 0.0, 1.0);
+        /// let r = Motor::rotation_between(z, Point::direction(0.0, 3.0, 0.0));
+        /// let d = r >> Point::direction(0.0, 0.0, 1.0);
+        /// assert!((d.e013() - 1.0).abs() < 1e-12 && d.e021().abs() < 1e-12);
+        /// ```
+        pub fn rotation_between(from: Point<(), T>, to: Point<(), T>) -> Unit<Self> {
+            let (o, zero) = (T::one(), T::zero());
+            let a = Plane::orthogonal_to(from).normalized().into_inner();
+            let b = Plane::orthogonal_to(to).normalized().into_inner();
+            let one = Self::translation(zero, zero, zero).into_inner();
+            let r = one + b * a;
+            // Opposite directions (`r` vanishes): a half turn about the meet of `A` with a
+            // plane orthogonal to it, `e` less its part along `a` (planes through the origin
+            // act as their normals). Branch-free, so that it traces.
+            let far = T::select_lt(a.e1().abs(), T::from_f64(0.9), o, zero);
+            let e = Plane::new(far, o - far, zero, zero);
+            let c = e - a.gp((e | a).s());
+            let half = c.normalized().into_inner() * a;
+            let (r, half) = (r.normalized().into_inner(), half.normalized().into_inner());
+            let n = (one + b * a).norm();
+            let eps = T::from_f64(1e-6);
+            Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
+                T::select_lt(n, eps, half.c[i], r.c[i])
+            })))
+        }
+
+        /// The motor of a camera (or any frame) at `eye` whose forward axis `+z` points at
+        /// `target` and whose `+y` axis is as close to `up` as it can be (no roll): the
+        /// rotation between the axes, then a roll about the forward axis, then the translation.
+        ///
+        /// ```
+        /// use gax::pga3d::{Motor, Point};
+        /// let m = Motor::look_at(
+        ///     Point::<(), f64>::xyz(1.0, 2.0, 3.0),
+        ///     Point::xyz(1.0, 2.0, 13.0),
+        ///     Point::direction(0.0, 1.0, 0.0),
+        /// );
+        /// let f = m >> Point::direction(0.0, 0.0, 1.0);
+        /// let u = m >> Point::direction(0.0, 1.0, 0.0);
+        /// assert!((f.e021() - 1.0).abs() < 1e-12 && (u.e013() - 1.0).abs() < 1e-12);
+        /// assert_eq!((m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean(), [1.0, 2.0, 3.0]);
+        /// ```
+        pub fn look_at(eye: Point<(), T>, target: Point<(), T>, up: Point<(), T>) -> Unit<Self> {
+            let (o, zero) = (T::one(), T::zero());
+            let [ex, ey, ez] = eye.to_euclidean();
+            let [tx, ty, tz] = target.to_euclidean();
+            let forward = Point::direction(tx - ex, ty - ey, tz - ez);
+            let turn = Self::rotation_between(Point::direction(zero, zero, o), forward);
+            // Where `+y` went, and where it should be: `up` less its part along `forward`.
+            let f = Plane::orthogonal_to(forward).normalized().into_inner();
+            let u = Plane::orthogonal_to(up);
+            let want = u - f.gp((u | f).s());
+            let have = Plane::orthogonal_to(turn >> Point::direction(zero, o, zero));
+            let roll = Self::rotation_between(
+                Point::direction(have.e1(), have.e2(), have.e3()),
+                Point::direction(want.e1(), want.e2(), want.e3()),
+            );
+            // `up` along `forward`: no roll is defined; keep the turn alone.
+            let id = Self::translation(zero, zero, zero);
+            let n = want.norm();
+            let roll = Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
+                T::select_lt(n, T::from_f64(1e-9), id.c[i], roll.c[i])
+            })));
+            Self::translation(ex, ey, ez) * roll * turn
+        }
     }
 
     impl<T: Real> Line<(), T> {
@@ -200,7 +306,7 @@ mod pga3d_extras {
 
 #[cfg(feature = "pga2d")]
 mod pga2d_extras {
-    use crate::pga2d::{Motor, Point};
+    use crate::pga2d::{Line, Motor, Point};
     use crate::{Real, Unit};
 
     impl<T: Real> Point<(), T> {
@@ -221,6 +327,19 @@ mod pga2d_extras {
         pub fn to_euclidean(self) -> [T; 2] {
             let r = self.e12().recip();
             [self.e20() * r, self.e01() * r]
+        }
+
+        /// The ideal norm `sqrt(x² + y²)`: the length of a direction (a velocity, a
+        /// displacement). `norm()` is the weight, which is 0 for directions.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// assert_eq!(Point::direction(3.0, 4.0).ideal_norm(), 5.0);
+        /// ```
+        #[inline]
+        pub fn ideal_norm(self) -> T {
+            let (x, y) = (self.e20(), self.e01());
+            (x * x + y * y).sqrt()
         }
 
         /// The twist (a bivector: in PGA2D, a point) of a translation at velocity `(vx, vy)`:
@@ -247,6 +366,24 @@ mod pga2d_extras {
                 .normalized()
                 .into_inner()
                 .gp(omega * T::from_f64(-0.5))
+        }
+    }
+
+    impl<T: Real> Line<(), T> {
+        /// Reflect a point (or a direction) in this line. In PGA2D the sandwich of a line, an
+        /// odd versor, with a point, an even element, comes out negated: harmless for a point
+        /// (`-p` is the same point), but for a direction it is the opposite velocity. This
+        /// applies the sign.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// let wall = Point::xy(0.0, 0.0) & Point::xy(0.0, 1.0);
+        /// let v = wall.reflect(Point::direction(1.0, 0.5));
+        /// assert_eq!([v.e20(), v.e01(), v.e12()], [-1.0, 0.5, 0.0]);
+        /// ```
+        #[inline]
+        pub fn reflect(self, x: Point<(), T>) -> Point<(), T> {
+            -(self.normalized() >> x)
         }
     }
 
@@ -302,6 +439,68 @@ mod tests {
                 .map(|x: f64| (x * 1e12).round()),
             b.c.map(|x| (x * 1e12).round())
         );
+    }
+
+    #[cfg(feature = "pga3d")]
+    #[test]
+    fn rotations_between_directions_and_look_at() {
+        use crate::pga3d::{Motor, Point};
+        let dirs: [[f64; 3]; 7] = [
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0],
+            [1.0, 0.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [0.3, -0.8, 0.5],
+            [-0.3, 0.8, -0.5],
+            [0.0, 1.0, 0.0],
+        ];
+        let unit = |d: [f64; 3]| {
+            let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+            [d[0] / n, d[1] / n, d[2] / n]
+        };
+        for a in dirs {
+            for b in dirs {
+                let r = Motor::rotation_between(
+                    Point::direction(a[0], a[1], a[2]),
+                    Point::direction(b[0], b[1], b[2]),
+                );
+                let got = r >> Point::direction(a[0], a[1], a[2]);
+                let n: f64 = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt();
+                let (a, b) = (unit(a), unit(b));
+                let g = [got.e032() / n, got.e013() / n, got.e021() / n];
+                assert!(
+                    g.iter().zip(b).all(|(x, y)| (x - y).abs() < 1e-9),
+                    "{a:?} -> {b:?}: {g:?}"
+                );
+                // A rotation: lengths kept, no translation.
+                let o = (r >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();
+                assert!(o.iter().all(|x| x.abs() < 1e-12));
+            }
+        }
+        // Look-at: forward to the target, right axis level, up upwards; and with `up` along
+        // the view, still a proper frame.
+        let up = Point::direction(0.0, 1.0, 0.0);
+        for t in [
+            [3.0, 1.0, 5.0],
+            [-2.0, -4.0, 1.0],
+            [0.0, 0.0, -7.0],
+            [0.0, 5.0, 0.0],
+        ] {
+            let m = Motor::look_at(Point::xyz(0.0, 0.0, 0.0), Point::xyz(t[0], t[1], t[2]), up);
+            let f = m >> Point::direction(0.0, 0.0, 1.0);
+            let x = m >> Point::direction(1.0, 0.0, 0.0);
+            let y = m >> Point::direction(0.0, 1.0, 0.0);
+            let t = unit(t);
+            assert!(
+                ((f.e032() - t[0]).abs() + (f.e013() - t[1]).abs() + (f.e021() - t[2]).abs())
+                    < 1e-9
+            );
+            if t[1].abs() < 0.99 {
+                assert!(x.e013().abs() < 1e-9, "rolled: {t:?}");
+                assert!(y.e013() > 0.0);
+            }
+            assert!((f.ideal_norm() - 1.0).abs() < 1e-9 && (x.ideal_norm() - 1.0).abs() < 1e-9);
+        }
     }
 
     #[cfg(feature = "pga3d")]
