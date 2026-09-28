@@ -433,17 +433,30 @@ impl View {
     }
 
     /// A direction on screen (movement, length up to 1) as a direction across the tunnel at
-    /// the ship: the ray through the ship's screen point moved by it, met with the ship's
-    /// cross-section.
+    /// the ship: how the ship's cross-section is met by the ray through its screen point, as
+    /// that point moves along `v`.
+    ///
+    /// In the frame of the cross-section (`z = 0` there, `x` and `y` straightened), the ray
+    /// along a camera-frame direction meets it at `hit.of(d)`: a projective map. The screen
+    /// point `(x, y)` is the direction `(-x/f, y/f, 1)`, so moving it at `v` moves the hit
+    /// as `(a + t b) / (w_a + t w_b)`, whose direction at the ship is `b w_a - a w_b`: the
+    /// exact differential, from two applications of one map.
     pub fn across(&self, w: &World, v: Point2<(), f32>) -> P {
         let p = self.proj();
         let s = w.ship.s();
         let Some(c) = p.camera(w.track.place(w.ship.pos)) else {
             return dir(0.0, 0.0, 0.0);
         };
-        let here = p.screen(c);
-        let there = self.through(w, here + v, s);
-        let d = there - self.through(w, here, s);
+        let cam = w.track.frame(s).reverse() * p.cam;
+        let eye = cam >> Point::xyz(0.0, 0.0, 0.0);
+        let section = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+        let hit: CamMap = (eye & (cam >> Point::slot())) ^ section;
+        let z = c.e021();
+        let (a, b) = (
+            hit.of(dir(c.e032() / z, c.e013() / z, 1.0)),
+            hit.of(dir(-v.e20() / self.focal, v.e01() / self.focal, 0.0)),
+        );
+        let d = b * a.e123() - a * b.e123();
         let d = dir(d.e032(), d.e013(), 0.0);
         let n = d.ideal_norm();
         if n < 1e-6 {

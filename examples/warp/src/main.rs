@@ -9,7 +9,9 @@ mod audio;
 mod fx;
 mod headless;
 mod input;
-#[cfg(test)]
+// The kernels run traced (below); the game uses the generic forms only for `colour_map`, the
+// tests for all of them.
+#[cfg_attr(not(test), allow(dead_code))]
 mod kernels;
 mod light;
 mod render;

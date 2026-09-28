@@ -115,7 +115,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] gax friction fixed from the game: ideal norms, sign-correct reflections, rotations between directions and look-at, the tracer's constant folding and two tracer bugs (VERIFY.md 4, 7, 8-11)
 - [x] warp in gax throughout: lights as points, traced line shaders, the Tunnel and the Plane rewritten, phasor audio, a clippy ban on geometry by hand
 - [x] The Tunnel renders through camera maps: one 4x4 per object and per wall ring (`Track::placement`), the frame interpolated once per object
-- [ ] More extensor use in warp: `inset.inverse()` for AgX's outset and the OkLab inverses in `light.rs`, one `colour_map`; `across()` as the exact differential of the screen-to-section map
+- [x] More extensor use in warp: AgX's outset is `inset.inverse()` (folded when traced), OkLab's way out is the inverse maps, one `colour_map`; `across()` is the exact differential of the screen-to-section map
+- [x] Tracer: solvers fold on constants (`all_lt` answers when nothing depends on the inputs), and arithmetic on named constants folds before the expansion limit makes it a node
 - [ ] gax friction open: a tracer warning when a `Unit` argument's renormalization simplifies away (VERIFY.md 2)
 
 ## Decisions for the project owner

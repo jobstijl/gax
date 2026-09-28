@@ -25,7 +25,9 @@
 //! The raw coordinates `(R, G, B)` are chromaticity times intensity: radiance. The GPU takes a
 //! light as it is (a `PointGpu`) and emits its first three coefficients.
 
+use crate::kernels::colour_map;
 use gax::pga3d::{Line, Motor, Point};
+use std::sync::LazyLock;
 
 /// A light: a homogeneous point in linear RGB space.
 pub type Light = Point<(), f32>;
@@ -56,37 +58,36 @@ pub fn whiten(l: Light, t: f32) -> Light {
 /// A light in OkLab: the point `(L, a, b)` with the light's intensity as its weight.
 pub type Tint = Point<(), f32>;
 
-/// A linear map of colour as a gax map on points (the weight kept): `m` holds the rows.
-fn colour_map(m: [[f32; 3]; 3]) -> Point<(Point,), f32> {
-    Point::from_coeffs([
-        [m[0][0], m[0][1], m[0][2], 0.0],
-        [m[1][0], m[1][1], m[1][2], 0.0],
-        [m[2][0], m[2][1], m[2][2], 0.0],
-        [0.0, 0.0, 0.0, 1.0],
-    ])
+/// Linear sRGB to cone responses (LMS), and the cube-rooted responses to `(L, a, b)`:
+/// Ottosson's `M1` and `M2`.
+const TO_LMS: [[f64; 3]; 3] = [
+    [0.412_221_470_8, 0.536_332_536_3, 0.051_445_992_9],
+    [0.211_903_498_2, 0.680_699_545_1, 0.107_396_956_6],
+    [0.088_302_461_9, 0.281_718_837_6, 0.629_978_700_5],
+];
+const TO_LAB: [[f64; 3]; 3] = [
+    [0.210_454_255_3, 0.793_617_785_0, -0.004_072_046_8],
+    [1.977_998_495_1, -2.428_592_205_0, 0.450_593_709_9],
+    [0.025_904_037_1, 0.782_771_766_2, -0.808_675_766_0],
+];
+
+/// OkLab's two linear maps, and their inverses for the way out, built once.
+struct Oklab {
+    to_lms: Point<(Point,), f32>,
+    to_lab: Point<(Point,), f32>,
+    from_lab: Point<(Point,), f32>,
+    from_lms: Point<(Point,), f32>,
 }
 
-/// Linear sRGB to cone responses (LMS), and the cube-rooted responses to `(L, a, b)`.
-const TO_LMS: [[f32; 3]; 3] = [
-    [0.412_221_46, 0.536_332_5, 0.051_445_995],
-    [0.211_903_5, 0.680_699_5, 0.107_396_96],
-    [0.088_302_46, 0.281_718_85, 0.629_978_7],
-];
-const TO_LAB: [[f32; 3]; 3] = [
-    [0.210_454_26, 0.793_617_8, -0.004_072_047],
-    [1.977_998_5, -2.428_592_2, 0.450_593_7],
-    [0.025_904_037, 0.782_771_77, -0.808_675_77],
-];
-const FROM_LAB: [[f32; 3]; 3] = [
-    [1.0, 0.396_337_78, 0.215_803_76],
-    [1.0, -0.105_561_346, -0.063_854_17],
-    [1.0, -0.089_484_18, -1.291_485_5],
-];
-const FROM_LMS: [[f32; 3]; 3] = [
-    [4.076_741_7, -3.307_711_6, 0.230_969_94],
-    [-1.268_438, 2.609_757_4, -0.341_319_38],
-    [-0.004_196_086_3, -0.703_418_6, 1.707_614_7],
-];
+static OKLAB: LazyLock<Oklab> = LazyLock::new(|| {
+    let (to_lms, to_lab) = (colour_map(TO_LMS), colour_map(TO_LAB));
+    Oklab {
+        to_lms,
+        to_lab,
+        from_lab: to_lab.inverse(),
+        from_lms: to_lms.inverse(),
+    }
+});
 
 /// `f` on each coordinate of a point of weight 1.
 fn each(p: Point<(), f32>, f: impl Fn(f32) -> f32) -> Point<(), f32> {
@@ -100,8 +101,8 @@ pub fn tint(l: Light) -> Tint {
     if w <= 0.0 {
         return DARK;
     }
-    let lms = colour_map(TO_LMS).of(l).unitized();
-    colour_map(TO_LAB).of(each(lms, f32::cbrt)) * w
+    let lms = OKLAB.to_lms.of(l).unitized();
+    OKLAB.to_lab.of(each(lms, f32::cbrt)) * w
 }
 
 /// The light of a tint.
@@ -110,10 +111,10 @@ pub fn untint(t: Tint) -> Light {
     if w <= 0.0 {
         return DARK;
     }
-    let lms = each(colour_map(FROM_LAB).of(t.unitized()), |x| x * x * x);
+    let lms = each(OKLAB.from_lab.of(t.unitized()), |x| x * x * x);
     // Outside the display's gamut a coordinate can go below zero: clipped, since negative
     // light would take light away where lines add up.
-    each(colour_map(FROM_LMS).of(lms), |x| x.max(0.0)) * w
+    each(OKLAB.from_lms.of(lms), |x| x.max(0.0)) * w
 }
 
 /// OkLab's lightness axis: black along `L`.

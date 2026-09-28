@@ -154,8 +154,8 @@ pub fn luma<T: Real>(l: Light<T>) -> T {
 }
 
 /// A linear map of colour, as a gax map on light points (the weight kept): `m` holds the
-/// matrix's rows.
-fn colour_map<T: Real>(m: [[f64; 3]; 3]) -> gax::pga3d::Point<(gax::pga3d::Point,), T> {
+/// matrix's rows. Its inverse is the map's own `inverse()`.
+pub fn colour_map<T: Real>(m: [[f64; 3]; 3]) -> gax::pga3d::Point<(gax::pga3d::Point,), T> {
     let w = |x: f64| T::from_f64(x);
     let (z, o) = (T::zero(), T::one());
     gax::pga3d::Point::from_coeffs([
@@ -183,11 +183,8 @@ pub fn agx<T: Real>(l: Light<T>, saturation: T) -> Light<T> {
         [0.0423282422610123, 0.878468636469772, 0.0791661274605434],
         [0.0423756549057051, 0.0784336, 0.879142973793104],
     ]);
-    let outset = colour_map::<T>([
-        [1.19687900512017, -0.0980208811401368, -0.0990297440797205],
-        [-0.0528968517574562, 1.15190312990417, -0.0989611768448433],
-        [-0.0529716355144438, -0.0980434501171241, 1.15107367264116],
-    ]);
+    // The outset is the inverse of the inset (folded to constants when traced).
+    let outset = inset.inverse();
     let log2 = T::from_f64(core::f64::consts::LOG2_E);
     let v = each(inset.of(l), |x| {
         let e = (x.max(T::from_f64(1e-10)).ln() * log2)
