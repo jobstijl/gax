@@ -6,6 +6,50 @@
 #[cfg(feature = "pga3d")]
 pub use pga3d_extras::PrincipalInertia;
 
+/// The elements a motor carries onto one another, for `Motor::between`: planes, lines and
+/// points in PGA3D, lines and points in PGA2D.
+pub trait Between<M>: Sized {
+    /// The motor that carries `a` onto `b`.
+    fn between(a: Self, b: Self) -> crate::Unit<M>;
+}
+
+/// `exp(log(b / a) / 2)`, the square root of the ratio: the motion that carries `a` onto `b`.
+/// The ratio is normalized first, so `a` and `b` need not be.
+macro_rules! between_by_ratio {
+    ($alg:ident: $($k:ident),* => $biv:ident) => {$(
+        impl<T: crate::Real> Between<crate::$alg::Motor<(), T>> for crate::$alg::$k<(), T> {
+            #[inline]
+            fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
+                let half: crate::$alg::$biv<(), T> = (b / a).normalized().log();
+                half.gp(T::from_f64(0.5)).exp()
+            }
+        }
+    )*};
+}
+#[cfg(feature = "pga3d")]
+between_by_ratio!(pga3d: Plane, Line => Line);
+#[cfg(feature = "pga2d")]
+between_by_ratio!(pga2d: Line => Point);
+
+/// Points: the translation between them. No motor carries a point onto its negative (motors
+/// keep the sign of the weight), so the points are unitized first.
+macro_rules! between_points {
+    ($alg:ident => $biv:ident) => {
+        impl<T: crate::Real> Between<crate::$alg::Motor<(), T>> for crate::$alg::Point<(), T> {
+            #[inline]
+            fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
+                let half: crate::$alg::$biv<(), T> =
+                    (b.unitized() / a.unitized()).normalized().log();
+                half.gp(T::from_f64(0.5)).exp()
+            }
+        }
+    };
+}
+#[cfg(feature = "pga3d")]
+between_points!(pga3d => Line);
+#[cfg(feature = "pga2d")]
+between_points!(pga2d => Point);
+
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
     use crate::pga3d::{Line, Motor, Plane, Point};
@@ -178,6 +222,34 @@ mod pga3d_extras {
     }
 
     impl<T: Real> Motor<(), T> {
+        /// The motor that carries `a` onto `b`: planes, lines or points. It is the square root
+        /// of their ratio, `sqrt(b / a)`: `b / a` is the motion from `a` to `b` twice (the
+        /// product of two reflections, for planes), and its square root goes halfway. The
+        /// result is exact for oriented planes and lines, `m >> a == b` (`a` and `b` need not
+        /// be normalized); points are taken with positive weight.
+        ///
+        /// Two planes meet in the axis of a rotation (parallel planes, a translation); two
+        /// lines give a screw. Computed as `exp(log(b / a) / 2)`, which stays precise near a
+        /// half turn, where `normalize(1 + b / a)` (the cheaper `(b / a).sqrt()` for unit `a`
+        /// and `b`) loses the angle to cancellation. Not defined for `b = -a`: a half turn about
+        /// any of infinitely many axes.
+        ///
+        /// ```
+        /// use gax::pga3d::{Motor, Plane, Point};
+        /// let (p, q) = (Point::<(), f64>::xyz(1.0, 2.0, 3.0), Point::xyz(0.0, 5.0, 3.0));
+        /// let (r, s) = (Point::xyz(1.0, 2.0, 4.0), Point::xyz(0.0, 6.0, 3.0));
+        /// // The motor that lays the line p r onto the line q s.
+        /// let m = Motor::between(p & r, q & s);
+        /// let l = (m >> (p & r)).normalized().into_inner();
+        /// let want = (q & s).normalized().into_inner();
+        /// assert!(l.c.iter().zip(want.c).all(|(x, y)| (x - y).abs() < 1e-12));
+        /// assert!(((m >> p).to_euclidean()[0] - 0.0).abs() < 1e-12); // p lands on q s
+        /// ```
+        #[inline]
+        pub fn between<X: crate::extras::Between<Self>>(a: X, b: X) -> Unit<Self> {
+            X::between(a, b)
+        }
+
         /// The translation by `(dx, dy, dz)`.
         ///
         /// ```
@@ -444,6 +516,23 @@ mod pga2d_extras {
     }
 
     impl<T: Real> Motor<(), T> {
+        /// The motor that carries `a` onto `b`, lines or points: the square root of their
+        /// ratio, `sqrt(b / a)`, as in PGA3D (see `gax::pga3d::Motor::between`). Two lines
+        /// give the rotation about their meet (parallel lines, a translation); two points, the
+        /// translation between them.
+        ///
+        /// ```
+        /// use gax::pga2d::{Motor, Point};
+        /// let a = Point::<(), f64>::xy(0.0, 0.0) & Point::xy(1.0, 0.0);
+        /// let b = Point::xy(2.0, 0.0) & Point::xy(2.0, 1.0);
+        /// let m = Motor::between(a, b); // a quarter turn about (2, 0)
+        /// assert!((m.angle() - std::f64::consts::FRAC_PI_2).abs() < 1e-12);
+        /// ```
+        #[inline]
+        pub fn between<X: crate::extras::Between<Self>>(a: X, b: X) -> Unit<Self> {
+            X::between(a, b)
+        }
+
         /// The translation by `(dx, dy)`.
         #[inline]
         pub fn translation(dx: T, dy: T) -> Unit<Self> {

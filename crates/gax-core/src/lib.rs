@@ -53,8 +53,8 @@ pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
 pub use kind::{Coeffs, Extensor, Kind, Retype};
 pub use ops::{
-    Anticommutator, Commutator, Conjugate, Dot, Dual, Gp, Involute, Lc, Log, Outermorphism, Rc,
-    Reverse, ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
+    Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Gp, Involute, Lc, Log, Outermorphism,
+    Rc, Reverse, ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,
 };
 pub use permute::MoveToFront;
 pub use prepared::{Prepare, Prepared};

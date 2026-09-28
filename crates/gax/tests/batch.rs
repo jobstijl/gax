@@ -152,6 +152,42 @@ mod pga3d {
         );
     }
 
+    /// A built map applied to many values, against `of` value by value: a square map (a
+    /// motor then a central projection) and a non-square one (the lines through a point).
+    #[test]
+    fn maps_of_slices() {
+        use gax::batch::BatchOf;
+        let mut rng = Rng(5);
+        each_level(|| {
+            for &n in LENS {
+                let m = unit_motor::<f32>(&mut rng);
+                let eye: Point = rng.value();
+                let screen: Plane = rng.value();
+                let square: Point<(Point,)> = (eye & (m >> Point::slot())) ^ screen;
+                let wide: Line<(Point,)> = eye & Point::slot();
+                let xs: Vec<Point> = rng.values(n);
+                let want: Vec<Point> = xs.iter().map(|&x| square.of(x)).collect();
+                let mut got = vec![Point::zero(); n];
+                square.of_slice(&xs, &mut got);
+                assert_lanes(&got, &want, 2e-5, &format!("Point <- Point of_slice n={n}"));
+                let soa: Soa<Point> = xs.iter().copied().collect();
+                let mut out = Soa::new();
+                square.of_soa(&soa, &mut out);
+                assert_lanes(&out.to_vec(), &want, 2e-5, &format!("of_soa n={n}"));
+                let want: Vec<Line> = xs.iter().map(|&x| wide.of(x)).collect();
+                let mut got = vec![Line::zero(); n];
+                wide.of_slice(&xs, &mut got);
+                assert_lanes(&got, &want, 2e-5, &format!("Line <- Point of_slice n={n}"));
+                let map64: Point<(Point,), f64> = unit_motor::<f64>(&mut rng) >> Point::slot();
+                let xs: Vec<Point<(), f64>> = rng.values(n);
+                let want: Vec<Point<(), f64>> = xs.iter().map(|&x| map64.of(x)).collect();
+                let mut got = vec![Point::zero(); n];
+                map64.of_slice(&xs, &mut got);
+                assert_lanes(&got, &want, 1e-12, &format!("f64 of_slice n={n}"));
+            }
+        });
+    }
+
     struct ExpLog;
     impl Map for ExpLog {
         type X = Line;

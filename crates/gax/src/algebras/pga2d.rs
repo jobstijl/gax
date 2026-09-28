@@ -446,12 +446,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Scalar<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Scalar<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Scalar<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Scalar { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Scalar<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -1049,12 +1060,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Line<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Line<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Line<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Line { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Line<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -1660,12 +1682,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Point<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Point<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Point<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Point { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Point<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -2271,12 +2304,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Pseudoscalar<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Pseudoscalar<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Pseudoscalar<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Pseudoscalar { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Pseudoscalar<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -2808,12 +2852,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Rotor<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Rotor<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Rotor<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Rotor { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Rotor<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -3441,12 +3496,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Translator<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Translator<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Translator<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Translator { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Translator<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -4079,12 +4145,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Motor<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Motor<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Motor<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Motor { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Motor<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -4729,12 +4806,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Flector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Flector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Flector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Flector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Flector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -5375,12 +5463,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Multivector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Multivector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Multivector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Multivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Multivector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -15959,6 +16058,638 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
                 ((((a[0] * b[7] + a[1] * b[6]) + (a[2] * b[5] + a[3] * b[4])) + ((a[4] * b[3] + a[5] * b[2]) + (a[6] * b[1] + a[7] * b[0])))).0,
             ],
         }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Line<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Line<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Line<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Point<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Point<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Point<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Translator<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Translator<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Translator<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Line<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Point<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Translator<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Flector<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Flector<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Flector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Flector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Rotor<S, T> {
+    /// The same multivector as a [`Rotor`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Rotor { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Translator<S, T> {
+    /// The same multivector as a [`Translator`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Translator { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Motor { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Line<S, T>> for Flector<S, T> {
+    /// The same multivector as a [`Flector`].
+    #[inline(always)]
+    fn from(x: Line<S, T>) -> Self {
+        Flector { c: [x.c[0], x.c[1], x.c[2], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Line<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Line<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[2], x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Point<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Point<S, T>) -> Self {
+        Motor { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[2], x.c[0], x.c[1]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Point<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Point<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[1], x.c[0], x.c[2], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Flector<S, T> {
+    /// The same multivector as a [`Flector`].
+    #[inline(always)]
+    fn from(x: Pseudoscalar<S, T>) -> Self {
+        Flector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Pseudoscalar<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Rotor<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Rotor<S, T>) -> Self {
+        Motor { c: [x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Rotor<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Rotor<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Translator<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Translator<S, T>) -> Self {
+        Motor { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[1], x.c[2]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Translator<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Translator<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[2], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Motor<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Motor<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[3], x.c[2], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Flector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Flector<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[2], x.c[0], x.c[1], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[3]] }
     }
 }
 

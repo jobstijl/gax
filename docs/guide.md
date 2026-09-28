@@ -82,7 +82,8 @@ Composition is filling a slot with a map:
 use gax::pga3d::{Motor, Point};
 
 let t = Motor::translation(1.0, 0.0, 0.0);
-let r = Motor::rotation_about(0.0, 0.0, 1.0, 0.3);
+let axis = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 1.0); // a vertical line through (1, 0, 0)
+let r = Motor::rotation(axis, 0.3);
 let move_then_turn: Point<(Point,)> = (r >> Point::slot()).of(t >> Point::slot());
 let p = Point::xyz(0.0, 1.0, 0.0);
 let [a, b, c] = move_then_turn.of(p).to_euclidean();
@@ -108,6 +109,7 @@ let moved = open.fill(m); // the same as m >> p, as a flector whose plane part i
 |---|---|---|
 | `a * b` | `gp` | geometric product: composes motors, reflections |
 | `a * t`, `t * a`, `a / t` | `gp` with a coefficient | scaling: the geometric product with a scalar (`v * dt`) |
+| `a / b` | `div_by` | division `a b⁻¹`: `b / a` is the motion from `a` to `b`, twice (section 5) |
 | `a ^ b` | `wedge` | outer product: *meet* (intersection) of planes and lines |
 | `a & b` | `vee` | regressive product: *join* of points and lines, and the plane–point pairing |
 | `a \| b` | `dot` | inner product (metric) |
@@ -141,6 +143,27 @@ uniformly. In PGA that cancels: shapes stay rigid. Still, renormalize now and th
 * the `check-units` feature asserts, in debug runs, that certified kernels only see units.
 
 See [numerics.md](numerics.md).
+
+**The motor between two elements.** Two planes make a rotation about the line where they meet
+(or a translation, if they are parallel), by twice the angle between them: the ratio `b / a` is
+the reflection in `a` followed by the reflection in `b`. Its square root is the motion that
+carries `a` onto `b`, and the same holds for lines and points:
+
+```rust
+use gax::pga3d::{Motor, Point};
+
+let (p, q, r) = (Point::xyz(0.0, 0.0, 0.0), Point::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 1.0, 0.0));
+let m = Motor::between(p & q, p & r); // the x axis onto the y axis: a quarter turn about z
+let t = Motor::between(p, q);         // the translation from p to q
+let [x, y, _]: [f64; 3] = (m >> q).to_euclidean();
+assert!(x.abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
+assert_eq!((t >> p).to_euclidean(), [1.0, 0.0, 0.0]);
+```
+
+For unit elements, `(b / a).sqrt()` is the same motor, as the formula reads. `Motor::between`
+takes any scale and stays precise near a half turn, where the plain square root loses the
+angle to cancellation. A `Unit<Translator>` or `Unit<Rotor>` becomes a motor with `widen()`,
+and any kind becomes a larger one that contains it with `From` (`Motor::from(rotor)`).
 
 The matrix of a motor is not a separate concept. It is the motor applied to an open slot:
 
@@ -368,9 +391,12 @@ kernel, with plain wgpu.
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);
   * a plane is `a e1 + b e2 + c e3 + d e0`, meaning `ax + by + cz + d = 0`.
 * **Signed distance:** `plane & point` is the signed distance of a unit point from a unit plane.
-* **The regressive product** is `J⁻¹(J a ∧ J b)`, with `J` the right complement. Its sign for some pairs
-  differs from ganja.js, and in PGA3D it differs from numga by the orientation of the pseudoscalar
-  (`e0123` here); see ADR-009 in the [design record](design.md).
+* **The regressive product** is `J⁻¹(J a ∧ J b)`, with `J` the right complement. The join and
+  the meet agree on the lines they share: the join of the origin and a point on `+x` is `+e23`,
+  the meet of the planes `y = 0` and `z = 0`, and a positive rotation about it is right handed
+  about `+x`. Its sign for some pairs differs from ganja.js, and in PGA3D it differs from numga
+  by the orientation of the pseudoscalar (`e0123` here); see ADR-009 in the
+  [design record](design.md).
 * **Float literals.** Type parameter defaults do not drive inference in Rust. `Point::xyz(1.0, 2.0, 3.0)`
   alone is `f64` by the literal fallback; annotate (`let p: Point = …`) for the `f32` default.
 * **Floating point.** See [numerics.md](numerics.md) for the details:

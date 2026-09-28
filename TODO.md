@@ -40,6 +40,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)
 - [x] A cheaper map inverse: scalar LU pivots with branches (`Real::SCALAR`), shared pivot reciprocals (now 0.6x nalgebra)
 - [ ] Emit fused code in a shape LLVM's SLP vectorizer handles well (fused single-value kernels can lose to generic code)
+- [x] Division `a / b` (`DivBy`), embeddings between kinds (`From`, `Unit::widen`), `Motor::between` as `sqrt(b / a)` (ADR-029)
 
 ## Phase 2b: batch kernels
 - [x] `batch` feature: runtime dispatch with fearless_simd 1.0 (SSE2, SSE4.2, AVX2, AVX-512, NEON, SIMD128, portable)
@@ -48,6 +49,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Per-kind `Soa` storage (blocks of 16), AoS slice functions, uniform and per-element sandwiches
 - [x] `Map`, `Kernel`, and batch forms of traced kernels (`Tracer::batch`), with broadcasting
 - [x] Lane-for-lane tests on every level with remainders; benchmarks (default and native builds)
+- [x] Built maps on batches: `BatchOf::of_slice` and `of_soa` for any one-slot extensor, as fast as a prepared motor
 
 ## Phase 3: quality and documentation
 - [x] trybuild compile-fail tests (slot mismatch, wrong kind bound, non-square inverse)

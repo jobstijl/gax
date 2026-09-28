@@ -86,6 +86,34 @@ binary_trait!(
     "no inverse versor transport (`<<`) of `{Self}` and `{Rhs}`"
 );
 
+/// Division `a / b`: the geometric product with the inverse, `a b⁻¹` (right division, as in
+/// ganja.js). Implemented by the generated algebras for every coefficient `b` and for every
+/// value `b` of a kind with a closed-form inverse whose product with `a` exists; `a` may carry
+/// slots, `b` may not (the inverse is not linear).
+///
+/// The quotient of two objects of the same kind is the motion between them, twice: for unit
+/// planes `b / a` is the rotation (or translation) that takes `a` to `b` and on as far again,
+/// and its square root takes `a` to `b` (`Motor::between`).
+///
+/// ```
+/// use gax::pga3d::{Plane, Point};
+/// let a = Plane::<(), f64>::from_normal([1.0, 0.0, 0.0], 0.0);
+/// let b = Plane::from_normal([0.0, 1.0, 0.0], 0.0);
+/// let r = (b / a).normalized(); // a quarter turn, twice: a half turn about z
+/// let q = (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
+/// assert!((q[0] + 1.0).abs() < 1e-12 && q[1].abs() < 1e-12);
+/// ```
+#[diagnostic::on_unimplemented(
+    message = "no division of `{Self}` by `{Rhs}`",
+    note = "division is by a coefficient or by a value (no open slots) of a kind with an inverse, whose geometric product with the left side exists"
+)]
+pub trait DivBy<Rhs> {
+    /// The result type.
+    type Output;
+    /// `self rhs⁻¹`.
+    fn div_by(self, rhs: Rhs) -> Self::Output;
+}
+
 macro_rules! unary_trait {
     ($(#[$doc:meta])* $Trait:ident, $method:ident) => {
         $(#[$doc])*

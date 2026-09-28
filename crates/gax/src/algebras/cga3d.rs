@@ -448,12 +448,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Scalar<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Scalar<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Scalar<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Scalar { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Scalar<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -1063,12 +1074,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Vector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Vector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Vector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Vector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Vector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -1723,12 +1745,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Twist<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Twist<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Twist<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Twist { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Twist<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -2483,12 +2516,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Bivector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Bivector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Bivector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Bivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Bivector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -3289,12 +3333,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Trivector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Trivector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Trivector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Trivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Trivector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -3869,12 +3924,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Quadvector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Quadvector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Quadvector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Quadvector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Quadvector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -4506,12 +4572,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Pseudoscalar<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Pseudoscalar<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Pseudoscalar<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Pseudoscalar { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Pseudoscalar<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -5134,12 +5211,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Motor<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Motor<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Motor<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Motor { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Motor<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -5979,12 +6067,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Even<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Even<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Even<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Even { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Even<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -6707,12 +6806,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Odd<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Odd<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Odd<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Odd { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Odd<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -7457,12 +7567,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Multivector<S, T> {
     }
 }
 
-impl<S: gx::Slots, T: gx::Real> core::ops::Div<T> for Multivector<S, T> {
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Multivector<S, T> {
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {
+    fn div_by(self, rhs: T) -> Self {
         let r = rhs.recip();
         Multivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Multivector<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
     }
 }
 
@@ -31798,6 +31919,702 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
                 ((((((a[0] * b[31] + a[1] * b[26]) + (a[2] * b[27] + a[3] * b[28])) + ((a[5] * b[29] + a[6] * b[22]) + (a[7] * b[23] + a[8] * b[24]))) + (((a[9] * b[19] + a[10] * b[20]) + (a[11] * b[21] + a[15] * b[25])) + ((a[19] * b[9] + a[20] * b[10]) + (a[21] * b[11] + a[22] * b[6])))) + ((((a[23] * b[7] + a[24] * b[8]) + (a[25] * b[15] + a[26] * b[1])) + ((a[27] * b[2] + a[28] * b[3]) + (a[29] * b[5] + a[31] * b[0]))) - (((a[4] * b[30] + a[12] * b[16]) + (a[13] * b[17] + a[14] * b[18])) + ((a[16] * b[12] + a[17] * b[13]) + (a[18] * b[14] + a[30] * b[4])))))).0,
             ],
         }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Quadvector<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Quadvector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Quadvector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Quadvector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Motor<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Motor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Motor { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Even<S, T> {
+    /// The same multivector as a [`Even`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Even { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Odd<S, T> {
+    /// The same multivector as a [`Odd`].
+    #[inline(always)]
+    fn from(x: Vector<S, T>) -> Self {
+        Odd { c: [x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Vector<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Twist<S, T>> for Bivector<S, T> {
+    /// The same multivector as a [`Bivector`].
+    #[inline(always)]
+    fn from(x: Twist<S, T>) -> Self {
+        Bivector { c: [x.c[0], x.c[1], x.c[2], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[3], x.c[4], x.c[5], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Twist<S, T>> for Motor<S, T> {
+    /// The same multivector as a [`Motor`].
+    #[inline(always)]
+    fn from(x: Twist<S, T>) -> Self {
+        Motor { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Twist<S, T>> for Even<S, T> {
+    /// The same multivector as a [`Even`].
+    #[inline(always)]
+    fn from(x: Twist<S, T>) -> Self {
+        Even { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[3], x.c[4], x.c[5], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Twist<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Twist<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[3], x.c[4], x.c[5], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Even<S, T> {
+    /// The same multivector as a [`Even`].
+    #[inline(always)]
+    fn from(x: Bivector<S, T>) -> Self {
+        Even { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Bivector<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Odd<S, T> {
+    /// The same multivector as a [`Odd`].
+    #[inline(always)]
+    fn from(x: Trivector<S, T>) -> Self {
+        Odd { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Trivector<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Quadvector<S, T>> for Even<S, T> {
+    /// The same multivector as a [`Even`].
+    #[inline(always)]
+    fn from(x: Quadvector<S, T>) -> Self {
+        Even { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Quadvector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Quadvector<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Odd<S, T> {
+    /// The same multivector as a [`Odd`].
+    #[inline(always)]
+    fn from(x: Pseudoscalar<S, T>) -> Self {
+        Odd { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Pseudoscalar<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Motor<S, T>> for Even<S, T> {
+    /// The same multivector as a [`Even`].
+    #[inline(always)]
+    fn from(x: Motor<S, T>) -> Self {
+        Even { c: [x.c[0], x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[4], x.c[5], x.c[6], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[7]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Motor<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Motor<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[4], x.c[5], x.c[6], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[7], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Even<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Even<S, T>) -> Self {
+        Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], x.c[10], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[11], x.c[12], x.c[13], x.c[14], x.c[15], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> From<Odd<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Odd<S, T>) -> Self {
+        Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[5], x.c[6], x.c[7], x.c[8], x.c[9], x.c[10], x.c[11], x.c[12], x.c[13], x.c[14], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[15]] }
     }
 }
 

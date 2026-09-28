@@ -250,6 +250,124 @@ pub fn map_soa<F: Map, E: LaneElem>(f: &F, xs: &Soa<F::X, E>, out: &mut Soa<F::Y
     run(Run(f, xs, out));
 }
 
+/// A map's rows applied to `x`: `y_i = Σ_j m_ij x_j`, a multiply-add chain per output
+/// coefficient.
+#[inline(always)]
+fn apply_rows<Y: Kind, X: Kind, L: Coef>(m: &Y::Arr<X::Arr<L>>, x: &Mv<X, L>) -> Mv<Y, L> {
+    let xc = x.coeffs().as_ref();
+    Extensor::from_coeffs(Y::arr_map(
+        m,
+        #[inline(always)]
+        |row| {
+            let row = row.as_ref();
+            let mut acc = row[0] * xc[0];
+            for j in 1..X::N {
+                acc = row[j].mul_add(xc[j], acc);
+            }
+            acc
+        },
+    ))
+}
+
+/// Batch application of a linear map `Y <- X` (an extensor with one open slot, such as
+/// `Point<(Point,)>`): `out[i] = m.of(xs[i])` for many values, on SIMD lanes of the current
+/// [`level`](super::level). Build the map once (compose motors, a projection, a lens) and
+/// apply it here: this is the batch path of "build the map, then apply it", as
+/// [`BatchTransform`] is for a single versor.
+///
+/// ```
+/// use gax::batch::{BatchOf, Soa};
+/// use gax::pga3d::{Motor, Plane, Point};
+/// let m = Motor::<(), f32>::translation(0.0, 0.0, 5.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.3);
+/// let floor = Plane::<(), f32>::from_normal([0.0, 1.0, 0.0], 0.0);
+/// // Move, then drop onto the floor from a light: one map.
+/// let light = Point::<(), f32>::xyz(0.0, 10.0, 0.0);
+/// let shadow: Point<(Point,), f32> = (light & (m >> Point::slot())) ^ floor;
+/// let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 1.0, 0.0)).collect();
+/// let mut out = vec![Point::zero(); points.len()];
+/// shadow.of_slice(&points, &mut out);
+/// let d = out[7].to_euclidean()[0] - shadow.of(points[7]).to_euclidean()[0];
+/// assert!(d.abs() < 1e-4);
+/// ```
+pub trait BatchOf<X: Kind>: Extensor<Slots = (X,)> {
+    /// `out[i] = self.of(xs[i])`, 8 (`f32`) or 4 (`f64`) values at a time.
+    ///
+    /// # Panics
+    /// If `xs` and `out` differ in length.
+    #[inline]
+    fn of_slice(&self, xs: &[Mv<X, Self::Coef>], out: &mut [Mv<Self::Kind, Self::Coef>])
+    where
+        Self::Coef: LaneElem,
+    {
+        struct Run<'a, Y: Kind, X: Kind, E: LaneElem>(
+            Y::Arr<X::Arr<E>>,
+            &'a [Mv<X, E>],
+            &'a mut [Mv<Y, E>],
+        );
+        impl<Y: Kind, X: Kind, E: LaneElem> Kernel<E> for Run<'_, Y, X, E> {
+            type Output = ();
+            #[inline(always)]
+            fn run<L: Batch<Elem = E>>(self) {
+                let Run(m, xs, out) = self;
+                let m = Y::arr_map(
+                    &m,
+                    #[inline(always)]
+                    |row| X::arr_map(row, |e| L::splat(*e)),
+                );
+                chunks::<L, _, _>(
+                    xs,
+                    out,
+                    zero(),
+                    zero(),
+                    #[inline(always)]
+                    |x, o| {
+                        let x: Mv<X, L> = gather::<Mv<X, E>, L>(x);
+                        scatter::<Mv<Y, E>, L>(&apply_rows::<Y, X, L>(&m, &x), o);
+                    },
+                );
+            }
+        }
+        assert_eq!(xs.len(), out.len(), "of_slice: lengths differ");
+        run(Run::<Self::Kind, X, Self::Coef>(*self.coeffs(), xs, out));
+    }
+
+    /// [`of_slice`](Self::of_slice) on struct-of-arrays storage (no transposes); `out` is
+    /// resized to `xs.len()`.
+    #[inline]
+    fn of_soa(&self, xs: &Soa<X, Self::Coef>, out: &mut Soa<Self::Kind, Self::Coef>)
+    where
+        Self::Coef: LaneElem,
+    {
+        struct Run<'a, Y: Kind, X: Kind, E: LaneElem>(
+            Y::Arr<X::Arr<E>>,
+            &'a Soa<X, E>,
+            &'a mut Soa<Y, E>,
+        );
+        impl<Y: Kind, X: Kind, E: LaneElem> Kernel<E> for Run<'_, Y, X, E> {
+            type Output = ();
+            #[inline(always)]
+            fn run<L: Batch<Elem = E>>(self) {
+                let Run(m, xs, out) = self;
+                let m = Y::arr_map(
+                    &m,
+                    #[inline(always)]
+                    |row| X::arr_map(row, |e| L::splat(*e)),
+                );
+                soa_map::<X, Y, L>(
+                    xs,
+                    out,
+                    #[inline(always)]
+                    |x| apply_rows::<Y, X, L>(&m, &x),
+                );
+            }
+        }
+        out.resize(xs.len());
+        run(Run::<Self::Kind, X, Self::Coef>(*self.coeffs(), xs, out));
+    }
+}
+
+impl<M: Extensor<Slots = (X,)>, X: Kind> BatchOf<X> for M {}
+
 /// Marker for plain versors in [`SandwichKernel`].
 #[derive(Clone, Copy, Debug)]
 pub enum Plain {}

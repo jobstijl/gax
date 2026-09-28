@@ -57,6 +57,33 @@ first, then coefficient 1, and so on. Inside a block every load is a single vect
 offset the compiler knows. Each generated algebra has an alias per kind, such as
 `pga3d::PointSoa`.
 
+## Maps
+
+A map built once, such as a motor composed with a projection or a camera, applies to many
+values with `BatchOf`. It is the batch form of `m.of(x)`, for any extensor with one open slot:
+
+| method | input layout |
+|---|---|
+| `map.of_slice(&xs, &mut out)` | array of structs |
+| `map.of_soa(&xs, &mut out)` | struct of arrays |
+
+```rust
+use gax::batch::BatchOf;
+use gax::pga3d::{Motor, Plane, Point};
+
+let cam = Motor::<(), f32>::translation(0.0, 1.0, -5.0);
+let screen = Plane::<(), f32>::from_normal([0.0, 0.0, 1.0], 1.0);
+let eye = Point::<(), f32>::xyz(0.0, 0.0, 0.0);
+// World to camera, then the central projection onto the screen: one 4x4.
+let view: Point<(Point,), f32> = (eye & (cam << Point::slot())) ^ screen;
+let points: Vec<Point> = (0..100).map(|i| Point::xyz(i as f32 * 0.1, 0.0, 10.0)).collect();
+let mut out = vec![Point::zero(); points.len()];
+view.of_slice(&points, &mut out);
+assert!((out[3].to_euclidean()[2] - 1.0).abs() < 1e-5);
+```
+
+It is as fast as the prepared action of a single motor ([performance.md](performance.md)).
+
 ## Your own kernels
 
 To run any function that is generic over `T: Real` on batches, implement `Map` (one input

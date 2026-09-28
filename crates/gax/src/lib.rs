@@ -28,6 +28,7 @@ pub use gax_gen::trace;
 #[rustfmt::skip]
 pub mod pga2d {
     include!("algebras/pga2d.rs");
+    pub use crate::extras::Between;
 }
 
 /// Plane-based projective geometric algebra of Euclidean space, `R(3,0,1)`.
@@ -38,7 +39,7 @@ pub mod pga2d {
 #[rustfmt::skip]
 pub mod pga3d {
     include!("algebras/pga3d.rs");
-    pub use crate::extras::PrincipalInertia;
+    pub use crate::extras::{Between, PrincipalInertia};
 }
 
 /// Vector geometric algebra of the Euclidean plane, `R(2,0,0)`.

@@ -34,6 +34,22 @@ impl<M> Unit<M> {
     pub fn into_inner(self) -> M {
         self.0
     }
+
+    /// The same versor as a kind that contains it, such as a translator or a rotor as a
+    /// motor. The generated algebras convert between kinds only by such embeddings, which keep
+    /// `x ~x = 1`.
+    ///
+    /// ```
+    /// use gax::pga3d::{Motor, Point, Translator};
+    /// use gax::Unit;
+    /// let t: Unit<Translator<(), f64>> = (Point::xyz(1.0, 0.0, 0.0) / Point::xyz(0.0, 0.0, 0.0)).sqrt();
+    /// let m: Unit<Motor<(), f64>> = t.widen();
+    /// assert_eq!((m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean(), [1.0, 0.0, 0.0]);
+    /// ```
+    #[inline(always)]
+    pub fn widen<N: From<M>>(self) -> Unit<N> {
+        Unit(N::from(self.0))
+    }
 }
 
 /// One Newton step towards the unit condition, `x (3 − x ~x) / 2` (implemented by the

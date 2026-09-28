@@ -90,6 +90,8 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             }
         }
     }
+    e.divisions();
+    e.embeddings();
     for k in &spec.kinds {
         for op in UnOp::ALL {
             e.unary(op, k);
@@ -166,6 +168,7 @@ pub const RESERVED: &[&str] = &[
     "Conjugate",
     "Dual",
     "Undual",
+    "DivBy",
 ];
 
 /// Qualify every bare reference to a core item with the private `gx` alias.
@@ -621,12 +624,23 @@ impl<S: Slots, T: Coef> Gp<T> for {name}<S, T> {{
     }}
 }}
 
-impl<S: Slots, T: Real> core::ops::Div<T> for {name}<S, T> {{
+impl<S: Slots, T: Real> DivBy<T> for {name}<S, T> {{
     type Output = Self;
     #[inline(always)]
-    fn div(self, rhs: T) -> Self {{
+    fn div_by(self, rhs: T) -> Self {{
         let r = rhs.recip();
         {name} {{ c: self.c.map(|x| SlotArr::<S, T>(x).scale(r).0) }}
+    }}
+}}
+
+impl<S: Slots, T: Coef, R> core::ops::Div<R> for {name}<S, T>
+where
+    Self: DivBy<R>,
+{{
+    type Output = <Self as DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {{
+        DivBy::div_by(self, rhs)
     }}
 }}
 
@@ -664,6 +678,80 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             );
         }
         let _ = core;
+    }
+
+    /// `a / b = a b⁻¹` for every value `b` with a closed-form inverse whose product with `a`
+    /// exists (after the binary products, whose list it reads).
+    fn divisions(&mut self) {
+        let mut body = String::new();
+        for (b, meta) in self.spec.kinds.iter().zip(&self.stats.values) {
+            let Some(inv) = &meta.inverse else { continue };
+            for a in &self.spec.kinds {
+                let exists = self
+                    .stats
+                    .products
+                    .iter()
+                    .any(|(op, x, y, _)| *op == BinOp::Gp && *x == a.name && y == inv);
+                if !exists {
+                    continue;
+                }
+                let (an, bn) = (&a.name, &b.name);
+                let _ = write!(
+                    body,
+                    "impl<S: Slots, T: Real> DivBy<{bn}<(), T>> for {an}<S, T> {{\n    type Output = <Self as Gp<{inv}<(), T>>>::Output;\n    #[inline(always)]\n    fn div_by(self, rhs: {bn}<(), T>) -> Self::Output {{\n        Gp::gp(self, rhs.inverse())\n    }}\n}}\n\n"
+                );
+            }
+        }
+        self.w(&body);
+    }
+
+    /// `From` for every kind whose blades are among another's: the same multivector as the
+    /// larger kind (a rotor as a motor), with the orientations of the target's blades.
+    fn embeddings(&mut self) {
+        let mut body = String::new();
+        for a in &self.spec.kinds {
+            for b in &self.spec.kinds {
+                if a.name == b.name {
+                    continue;
+                }
+                let place: Option<Vec<Option<(usize, bool)>>> = {
+                    let within = a
+                        .layout
+                        .blades
+                        .iter()
+                        .all(|(m, _)| b.layout.blades.iter().any(|(n, _)| n == m));
+                    within.then(|| {
+                        b.layout
+                            .blades
+                            .iter()
+                            .map(|(n, sb)| {
+                                a.layout
+                                    .blades
+                                    .iter()
+                                    .position(|(m, _)| m == n)
+                                    .map(|j| (j, a.layout.blades[j].1 != *sb))
+                            })
+                            .collect()
+                    })
+                };
+                let Some(place) = place else { continue };
+                let exprs: Vec<String> = place
+                    .iter()
+                    .map(|p| match p {
+                        None => "<S as Slots>::from_flat(&mut |_| T::zero(), 0)".to_string(),
+                        Some((j, false)) => format!("x.c[{j}]"),
+                        Some((j, true)) => format!("(-SlotArr::<S, T>(x.c[{j}])).0"),
+                    })
+                    .collect();
+                let (an, bn) = (&a.name, &b.name);
+                let _ = write!(
+                    body,
+                    "impl<S: Slots, T: Coef> From<{an}<S, T>> for {bn}<S, T> {{\n    /// The same multivector as a [`{bn}`].\n    #[inline(always)]\n    fn from(x: {an}<S, T>) -> Self {{\n        {bn} {{ c: [{}] }}\n    }}\n}}\n\n",
+                    exprs.join(", ")
+                );
+            }
+        }
+        self.w(&body);
     }
 
     fn binary(&mut self, op: BinOp, a: &KindSpec, b: &KindSpec) {

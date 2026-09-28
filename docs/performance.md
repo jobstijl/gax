@@ -220,6 +220,12 @@ against the motor sandwich's 24 multiplies and 14 adds per point).
 ³ The velocity half of the step, `Line` to `Line`, which has a struct-of-arrays form (`name_batch_soa`);
 the full step returns a tuple and is batched in AoS form only.
 
+A built map applied to many values (`BatchOf`) runs at the same speed as the prepared
+motor action: the dense 4x4 of `m >> Point::slot()` takes 1.06 µs in AoS form and 0.30 µs in SoA
+form, against 1.07 µs and 0.31 µs for `transform_slice` and `transform_soa` measured in the same
+run (default build, AVX2). At this size, both are bound by memory, not arithmetic. So any composed
+map (a camera and a projection, a lens) gets the SIMD path that a single motor gets.
+
 Per level, in the default build, SoA with one motor takes 0.47 µs portable, 0.50 µs on SSE2 and
 SSE4.2, and 0.27 µs on AVX2.
 

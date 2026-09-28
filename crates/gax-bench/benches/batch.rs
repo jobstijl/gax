@@ -8,7 +8,7 @@ use criterion::{
     BenchmarkGroup, Criterion, criterion_group, criterion_main, measurement::WallTime,
 };
 use gax::Unit;
-use gax::batch::{self, BatchTransform, Map, Soa};
+use gax::batch::{self, BatchOf, BatchTransform, Map, Soa};
 use gax::pga3d::{Line, Motor, Point};
 use gax::simd::wide::f32x8;
 use gax::{Extensor, Real};
@@ -122,6 +122,16 @@ fn uniform(c: &mut Criterion) {
     });
     per_level(&mut g, "batch transform_soa", || {
         black_box(m).transform_soa(&soa, &mut soa_out);
+        black_box(&soa_out);
+    });
+    // The motor's matrix, built once: the dense 4x4 against the prepared sparse action.
+    let map: Point<(Point,)> = m >> Point::slot();
+    per_level(&mut g, "batch of_slice (matrix)", || {
+        black_box(map).of_slice(&pts, &mut out);
+        black_box(&out);
+    });
+    per_level(&mut g, "batch of_soa (matrix)", || {
+        black_box(map).of_soa(&soa, &mut soa_out);
         black_box(&soa_out);
     });
     g.finish();

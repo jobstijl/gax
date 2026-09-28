@@ -174,6 +174,18 @@ files in `gax/src/algebras/`, behind cargo features.
   * It is metric free, so it works in PGA and in null bases.
   * It gives `e123 ∨ e032 = +e23`, like GAmphetamine and kingdon. ganja and bivector.net have the
     opposite sign for this pair.
+  * Why this sign: the join and the meet agree on every line.
+    * The join of the origin and a point on `+x` is `+e23`, the same bivector as the meet
+      `e2 ∧ e3` of the planes `y = 0` and `z = 0`.
+    * The rotation `exp(-θ/2 · p ∨ q)` is right handed about the direction from `p` to `q`.
+    * Planes and volumes come out with the right-hand rule: `O ∨ X ∨ Y = +e3`, and
+      `O ∨ X ∨ Y ∨ Z = +1`.
+    * ganja's join, `UnDual(Dual b ∧ Dual a)`, swaps its operands. The line from the origin to
+      `+x` then comes out as `-e23`, the opposite of the meet that makes the same axis. Both
+      conventions agree on planes through three points and on `plane ∨ point`, because the two
+      sign changes cancel there.
+    * The successors of ganja by its own author (GAmphetamine) and kingdon (Roelfs) use the sign
+      chosen here.
 * **Duality:** `dual()` is `J_R` and `undual()` is `J_L`. Both are metric free.
 * **Standard PGA layouts:** these are the bivector.net layouts:
   * PGA3D: `1,e0,e1,e2,e3,e01,e02,e03,e12,e31,e23,e021,e013,e032,e123,e0123`;
@@ -724,6 +736,40 @@ files in `gax/src/algebras/`, behind cargo features.
   * The 5D Study functions and the scaling-and-squaring `exp`.
   * `f16`.
   * Modules for algebras declared with `algebra!`.
+
+## ADR-029: Division, embeddings, and the motor between two elements
+*Status: accepted, implemented.*
+
+* **The idiom.** In plane-based GA, the motion that carries an element `a` onto `b` of the same
+  kind is `sqrt(b / a)`: for planes, `b / a` is two reflections, a rotation about their meet by
+  twice their angle. The same formula works for lines (a screw) and points (a translation). This
+  is how De Keninck, Roelfs and Todd teach PGA, and it needs division and a square root.
+* **Division.**
+  * `a / b` is `a b⁻¹`, right division as in ganja.js.
+  * It is the trait `DivBy`, emitted for every coefficient and for every pair where `b` is a
+    value of a kind with a closed-form inverse and the product `a b⁻¹` exists. `a` may carry
+    slots, `b` may not, because the inverse is not linear.
+  * Why a trait per pair, not a blanket `Div<R> where R: Invert`: with a blanket, a float
+    literal on the right (`v / 2.0`) could be either `f32` or `f64`, and Rust falls back to
+    `f64`. With one impl per right-hand kind, only the coefficient impl accepts a float, so
+    inference works as it does for `*`.
+* **Embeddings.** `From<A> for B` is emitted whenever every blade of `A` is in `B`, with the sign
+  for blades that `B` stores with the other orientation. `Unit::widen` carries the certificate
+  across, because an embedding keeps `x ~x = 1`. The WGSL modules already had
+  `motor_from_rotor`; now the Rust side has the general form.
+* **`Motor::between(a, b)`**, for PGA3D planes, lines and points and PGA2D lines and points:
+  * It is computed as `exp(log(normalize(b / a)) / 2)`, not `normalize(1 + b / a)`.
+  * Near a half turn, `1 + b / a` cancels, which gives an angle error of about `ulp/δ²` at `δ`
+    from the half turn: O(1) in `f32` by `δ = 1e-4`. Going through the logarithm (with
+    `atan2`) keeps the error at about `ulp/δ`, which is the conditioning of the problem itself,
+    since nearly opposite planes meet far away.
+  * `(b / a).sqrt()` stays available as the cheap literal form for unit elements.
+  * Points are unitized first. No motor carries `p` to `-p`, because motors keep the sign of the
+    weight.
+  * `b = -a` is undefined: a half turn about any of infinitely many axes.
+* **Verification.** `tests/between.rs` has property tests for every kind (unnormalized inputs,
+  both algebras), the square-root identity, division undoing the product (maps included), the
+  embeddings, and the `f32` precision near a half turn against the `ulp/δ` bound.
 
 ---
 
