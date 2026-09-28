@@ -112,11 +112,17 @@ impl Track {
         interpolate(self.keys[i], self.keys[i + 1], t)
     }
 
+    /// The motion that places straightened points near arc length `s` in the world: back along
+    /// the track by `s`, then the frame at `s`. Exact for points at `s`; for points near it, the
+    /// track's bend over their distance is ignored, which is what a rigid object wants.
+    pub fn placement(&self, s: f32) -> Frame {
+        self.frame(s) * Motor::translation(0.0, 0.0, -s)
+    }
+
     /// The world point of a straightened point `(x, y, s)`: the frame at `s` applied to
     /// `(x, y, 0)`.
     pub fn place(&self, p: Point<(), f32>) -> Point<(), f32> {
-        let s = crate::tunnel::arc(p);
-        self.frame(s) >> (p - Point::direction(0.0, 0.0, s))
+        self.placement(crate::tunnel::arc(p)) >> p
     }
 
     /// The straightened point of a world point near the track, starting from arc length `s`:

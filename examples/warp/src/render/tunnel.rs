@@ -4,7 +4,10 @@
 //! * The camera is `Motor::look_at` from just behind the ship, near the axis, down the track;
 //!   by default its up is the world's (it does not roll with the tunnel, a comfort setting).
 //!   It follows on a motor spring (screw interpolation towards the target).
-//! * `cam << p` takes a world point into the camera's frame. The projection to the screen is
+//! * `cam << p` takes a world point into the camera's frame. Objects go there as maps: one
+//!   4x4 per object, `(~cam placement) >> Point::slot()`, built from the motors once and
+//!   applied to every vertex (a wall ring's nodes in a batch, `of_slice`); the track's frame
+//!   is interpolated once per object, not per point. The projection to the screen is
 //!   projective geometry: the camera-space point becomes the PGA2D point with the depth as its
 //!   weight, and `to_euclidean` is the perspective divide. Segments crossing the near plane
 //!   are cut by their meet with it.
@@ -30,10 +33,11 @@ use crate::sim::body::identity;
 use crate::sim::rng::Rng;
 use crate::sim::{DT, Phase};
 use crate::tunnel::lattice::{AROUND, RADIUS, RINGS};
-use crate::tunnel::track::{Frame, interpolate};
+use crate::tunnel::track::{Frame, Track, interpolate};
 use crate::tunnel::{
     AIM_DEPTH, Event, Foe, GATE_RADIUS, GateState, P, World, about_axis, arc, dir, foot, off_axis,
 };
+use gax::batch::BatchOf;
 use gax::pga2d::Point as Point2;
 use gax::pga3d::{Motor, Plane, Point};
 
@@ -494,19 +498,18 @@ impl View {
         };
         let tinted = |c: Light, z: f32| if z > 0.03 { light::redshift(c, z) } else { c };
 
-        // The wall: each ring placed by its frame, every node into the camera once, then the
-        // lines between neighbours.
+        // The wall: one camera map per ring, from its placement, applied to the ring's nodes
+        // in a batch; then the lines between neighbours.
         let lat = &w.lattice;
         let mut nodes: Vec<Option<(P, f32, f32)>> = vec![None; RINGS * AROUND];
+        let mut seen = [Point::zero(); AROUND];
         for r in 0..RINGS {
-            let s = lat.ring_s(r);
-            let frame = track.frame(s);
-            for j in 0..AROUND {
-                let node = lat.node(r, j);
+            let view = p.to_camera(track.placement(lat.ring_s(r)));
+            let ring: [P; AROUND] = core::array::from_fn(|j| lat.node(r, j));
+            view.of_slice(&ring, &mut seen);
+            for (j, (&node, &c)) in ring.iter().zip(&seen).enumerate() {
                 let z = if wells.is_empty() { 0.0 } else { shift(node) };
-                nodes[r * AROUND + j] = p
-                    .camera(frame >> (node - dir(0.0, 0.0, s)))
-                    .map(|c| (c, lat.strain(r, j), z));
+                nodes[r * AROUND + j] = (p.depth(c) > NEAR).then(|| (c, lat.strain(r, j), z));
             }
         }
         let grid = palette::GRID;
@@ -536,14 +539,22 @@ impl View {
                 continue;
             }
             let dust = light::light(0.6, 0.7, 1.0, 0.35);
-            p.line(out, place(d - streak), place(d), dust, 0.02, Fog::Wall);
+            p.streak(out, track, d - streak, d, dust, 0.02, Fog::Wall);
         }
 
         // Warp-ins: rings contracting onto where a spawn lands.
         for pd in &w.pending {
             let k = (pd.t / 0.8).clamp(0.0, 1.0);
             let c = light::fade(scene::color(pd.foe.kind()), 0.8);
-            p.ring(out, &place, pd.pos, 0.4 + 2.0 * k, c, 10, 0.04);
+            p.ring(
+                out,
+                &p.at(track, pd.pos),
+                pd.pos,
+                0.4 + 2.0 * k,
+                c,
+                10,
+                0.04,
+            );
         }
 
         // Gates: the next one bright and pulsing, the rest of the slalom dimmer and joined by
@@ -560,10 +571,11 @@ impl View {
                     };
                     open += 1;
                     let c = light::fade(GATE_LIGHT, k);
-                    p.ring(out, &place, g.pos, GATE_RADIUS, c, 32, 0.09);
+                    let view = p.at(track, g.pos);
+                    p.ring(out, &view, g.pos, GATE_RADIUS, c, 32, 0.09);
                     p.ring(
                         out,
-                        &place,
+                        &view,
                         g.pos,
                         GATE_RADIUS * 0.8,
                         light::fade(c, 0.3),
@@ -580,7 +592,7 @@ impl View {
                     let c = light::fade(light::whiten(GATE_LIGHT, 0.6), 1.5 * (1.0 - g.t / 0.5));
                     p.ring(
                         out,
-                        &place,
+                        &p.at(track, g.pos),
                         g.pos,
                         GATE_RADIUS * (1.0 + 3.0 * g.t),
                         c,
@@ -591,7 +603,7 @@ impl View {
                 GateState::Missed if g.t < 0.6 => {
                     let grey = light::desaturate(GATE_LIGHT, 1.0);
                     let c = light::fade(grey, 0.5 * (1.0 - g.t / 0.6));
-                    p.ring(out, &place, g.pos, GATE_RADIUS, c, 32, 0.04);
+                    p.ring(out, &p.at(track, g.pos), g.pos, GATE_RADIUS, c, 32, 0.04);
                 }
                 _ => {}
             }
@@ -612,24 +624,26 @@ impl View {
             let tumble = Motor::rotation_about(0.0, 0.0, 1.0, spin)
                 * Motor::rotation_about(1.0, 0.0, 0.0, 0.7 * spin);
             match e.foe {
-                Foe::Drone => p.solid(out, &place, q, tumble, &OCTAHEDRON, 0.7, c),
+                Foe::Drone => p.solid(out, &p.object(track, q, tumble), &OCTAHEDRON, 0.7, c),
                 Foe::Mine => {
                     let pulse = 1.0 + 0.15 * crate::signal::wave(e.age * 7.0);
-                    p.solid(out, &place, q, tumble, &SPIKES, 0.9 * pulse, c);
-                    p.solid(out, &place, q, tumble.reverse(), &CUBE, 0.35, c);
+                    p.solid(out, &p.object(track, q, tumble), &SPIKES, 0.9 * pulse, c);
+                    let inner = p.object(track, q, tumble.reverse());
+                    p.solid(out, &inner, &CUBE, 0.35, c);
                 }
                 Foe::Turret => {
                     // A pyramid on the wall pointing at the axis, turned about the axis to its
                     // place; it glows before it fires.
                     let charge = ((0.35 - e.timer) / 0.35).clamp(0.0, 1.0);
                     let c = light::fade(c, 1.0 + 2.0 * charge);
-                    p.solid(out, &place, q, about_axis(e.angle), &PYRAMID, 1.0, c);
+                    let model = p.object(track, q, about_axis(e.angle));
+                    p.solid(out, &model, &PYRAMID, 1.0, c);
                 }
                 Foe::Serpent => {
                     // The head, pointing where it swims; the body, diamonds on the helix it has
                     // just swum, joined by its spine.
                     let pose = Motor::rotation_between(dir(0.0, 0.0, 1.0), e.vel);
-                    p.solid(out, &place, q, pose, &HEAD, 0.95, c);
+                    p.solid(out, &p.object(track, q, pose), &HEAD, 0.95, c);
                     let base = scene::color(Foe::Serpent.kind());
                     let n = e.body.len().max(1) as f32;
                     let mut last = q;
@@ -638,7 +652,7 @@ impl View {
                         let sc = tinted(light::fade(base, 1.0 - 0.45 * k as f32 / n), shift(sq));
                         let spin =
                             Motor::rotation_about(0.0, 0.0, 1.0, e.age * 3.0 + k as f32 * 0.5);
-                        p.solid(out, &place, sq, spin, &OCTAHEDRON, 0.5, sc);
+                        p.solid(out, &p.object(track, sq, spin), &OCTAHEDRON, 0.5, sc);
                         p.line(
                             out,
                             place(last),
@@ -650,7 +664,7 @@ impl View {
                         last = sq;
                     }
                 }
-                Foe::Singularity => singularity(out, &p, &place, eye, e, q, c, time),
+                Foe::Singularity => singularity(out, &p, &p.at(track, q), eye, e, q, c, time),
             }
         }
 
@@ -662,9 +676,7 @@ impl View {
             let spin = Motor::rotation_about(0.0, 0.0, 1.0, time * 9.0);
             p.solid(
                 out,
-                &place,
-                q,
-                spin,
+                &p.object(track, q, spin),
                 &OCTAHEDRON,
                 0.32,
                 light::fade(bolt, 1.0 + 2.5 * near),
@@ -674,29 +686,25 @@ impl View {
         // Shards.
         for sh in &w.shards {
             let spin = Motor::rotation_about(0.0, 1.0, 0.0, time * 4.0);
-            p.solid(out, &place, sh.pos, spin, &OCTAHEDRON, 0.3, scene::shard());
+            let model = p.object(track, sh.pos, spin);
+            p.solid(out, &model, &OCTAHEDRON, 0.3, scene::shard());
         }
 
         // Shots: streaks along their flight (bent ones curve round a singularity).
         for b in &w.shots {
             let q = lerp(b.prev, b.pos, alpha);
-            p.line(
-                out,
-                place(q - b.vel * 0.018),
-                place(q),
-                tinted(palette::BULLET, shift(q)),
-                0.07,
-                Fog::Objects,
-            );
+            let c = tinted(palette::BULLET, shift(q));
+            p.streak(out, track, q - b.vel * 0.018, q, c, 0.07, Fog::Objects);
         }
 
         // Sparks: streaks along their velocity.
         for sp in &self.sparks {
             let c = light::fade(sp.light, sp.life / sp.total);
-            p.line(
+            p.streak(
                 out,
-                place(sp.pos - sp.vel * 0.03),
-                place(sp.pos),
+                track,
+                sp.pos - sp.vel * 0.03,
+                sp.pos,
                 c,
                 0.03,
                 Fog::Objects,
@@ -717,7 +725,7 @@ impl View {
             // Banking into the movement across the tunnel.
             let sideways = (w.ship.pos - w.ship.prev).e032() / DT / 12.0;
             let pose = Motor::rotation_about(0.0, 0.0, 1.0, roll - 0.25 * sideways);
-            p.solid(out, &place, q, pose, &SHIP, 0.7, c);
+            p.solid(out, &p.object(track, q, pose), &SHIP, 0.7, c);
             // The shadow: the line from a light on the axis just behind the ship, through the
             // ship, meets the wall's tangent plane under it (the plane through the wall point
             // orthogonal to the radial line).
@@ -848,7 +856,7 @@ fn cosine(a: P, b: P) -> f32 {
 fn singularity(
     out: &mut Vec<LineInstance>,
     p: &Proj,
-    place: &dyn Fn(P) -> P,
+    view: &CamMap,
     eye: P,
     e: &crate::tunnel::Enemy,
     q: P,
@@ -872,19 +880,13 @@ fn singularity(
             let b = q + (tilt >> next);
             let orbit = tilt >> (quarter >> radial);
             let z = -0.55 * cosine(orbit, eye - a);
-            p.line(
-                out,
-                place(a),
-                place(b),
-                light::redshift(base, z),
-                0.05,
-                Fog::Objects,
-            );
+            let (a, b) = (view.of(a), view.of(b));
+            p.cam_line(out, a, b, light::redshift(base, z), 0.05, Fog::Objects);
             radial = next;
         }
     }
     let rim = light::fade(light::whiten(c, 0.75), 1.3);
-    p.ring(out, place, q, 1.2 * grow, rim, 32, 0.05);
+    p.ring(out, view, q, 1.2 * grow, rim, 32, 0.05);
 }
 
 const fn v(x: f32, y: f32, z: f32) -> P {
@@ -999,7 +1001,29 @@ struct Proj {
     lenses: Vec<Lens>,
 }
 
+/// A map from points (straightened, or in an object's own frame) to camera-frame points.
+type CamMap = Point<(Point,), f32>;
+
 impl Proj {
+    /// The camera map of a placement: `cam << (placement >> x)`, one 4x4 built from the motor
+    /// `~cam placement` and applied to every point placed by it.
+    fn to_camera(&self, placement: Frame) -> CamMap {
+        (self.cam.reverse() * placement) >> Point::slot()
+    }
+
+    /// The camera map for straightened points near `q`, placed rigidly with the frame at its
+    /// arc length.
+    fn at(&self, track: &Track, q: P) -> CamMap {
+        self.to_camera(track.placement(arc(q)))
+    }
+
+    /// The camera map of an object at `q` (straightened) turned by `turn`: from the object's
+    /// own frame, through the track's frame at `q`, into the camera.
+    fn object(&self, track: &Track, q: P, turn: Frame) -> CamMap {
+        let [x, y, s] = q.to_euclidean();
+        self.to_camera(track.frame(s) * Motor::translation(x, y, 0.0) * turn)
+    }
+
     /// A world point in the camera's frame (`cam << p`), or `None` behind the near plane.
     fn camera(&self, p: P) -> Option<P> {
         let c = self.cam << p;
@@ -1097,7 +1121,37 @@ impl Proj {
 
     /// A segment between two world points, cut at the near plane by its meet with it.
     fn line(&self, out: &mut Vec<LineInstance>, a: P, b: P, color: Light, width: f32, fog: Fog) {
-        let (ca, cb) = (self.cam << a, self.cam << b);
+        self.cam_line(out, self.cam << a, self.cam << b, color, width, fog);
+    }
+
+    /// A short segment between two straightened points, both placed with the frame at `b`:
+    /// streaks, whose ends are too close for the track to bend between them.
+    #[allow(clippy::too_many_arguments)]
+    fn streak(
+        &self,
+        out: &mut Vec<LineInstance>,
+        track: &Track,
+        a: P,
+        b: P,
+        color: Light,
+        width: f32,
+        fog: Fog,
+    ) {
+        let v = self.at(track, b);
+        self.cam_line(out, v.of(a), v.of(b), color, width, fog);
+    }
+
+    /// A segment between two camera-frame points, cut at the near plane by its meet with it.
+    #[allow(clippy::too_many_arguments)]
+    fn cam_line(
+        &self,
+        out: &mut Vec<LineInstance>,
+        ca: P,
+        cb: P,
+        color: Light,
+        width: f32,
+        fog: Fog,
+    ) {
         let (fa, fb) = (self.depth(ca) > NEAR, self.depth(cb) > NEAR);
         let near = Plane::from_normal([0.0, 0.0, 1.0], NEAR);
         let cut = || {
@@ -1113,32 +1167,31 @@ impl Proj {
         self.segment(out, ca, cb, color, width, width * 5.0, fog);
     }
 
-    /// A wireframe solid at `q` (straightened), turned by `turn`, scaled by `size`: each
-    /// vertex is a direction from the centre.
-    #[allow(clippy::too_many_arguments)]
+    /// A wireframe solid seen through its camera map `model` (see [`Proj::object`]), scaled
+    /// by `size`: each vertex is a direction from the centre.
     fn solid(
         &self,
         out: &mut Vec<LineInstance>,
-        place: &dyn Fn(P) -> P,
-        q: P,
-        turn: Frame,
+        model: &CamMap,
         edges: &[(P, P)],
         size: f32,
         color: Light,
     ) {
+        let o = Point::xyz(0.0, 0.0, 0.0);
         for &(a, b) in edges {
-            let (a, b) = (q + (turn >> a) * size, q + (turn >> b) * size);
-            self.line(out, place(a), place(b), color, 0.05, Fog::Objects);
+            let (a, b) = (model.of(o + a * size), model.of(o + b * size));
+            self.cam_line(out, a, b, color, 0.05, Fog::Objects);
         }
     }
 
     /// A ring across the tunnel (perpendicular to the track) at `q`: chords of a radius
-    /// turned about the line through `q` along the track.
+    /// turned about the line through `q` along the track, seen through `view`, the camera map
+    /// at `q` (every point of the ring is at its arc length).
     #[allow(clippy::too_many_arguments)]
     fn ring(
         &self,
         out: &mut Vec<LineInstance>,
-        place: &dyn Fn(P) -> P,
+        view: &CamMap,
         q: P,
         r: f32,
         color: Light,
@@ -1149,7 +1202,7 @@ impl Proj {
         let mut a = q + dir(r, 0.0, 0.0);
         for _ in 0..n {
             let b = spin >> a;
-            self.line(out, place(a), place(b), color, width, Fog::Objects);
+            self.cam_line(out, view.of(a), view.of(b), color, width, Fog::Objects);
             a = b;
         }
     }
