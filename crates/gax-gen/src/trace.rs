@@ -232,6 +232,9 @@ pub struct KernelReport {
     /// The cost at each expansion limit tried (`None` in the second place: the strategy was
     /// skipped or failed).
     pub limits: Vec<(Option<usize>, Option<Cost>)>,
+    /// Things the kernel does that tracing changes (also printed as cargo warnings by
+    /// `write_out_dir`).
+    pub warnings: Vec<String>,
 }
 
 /// Collects traced kernels and emits their source.
@@ -348,6 +351,15 @@ impl Tracer {
                 .0
                 .cost()
         };
+        // A kernel with `Unit` arguments assumes they are exactly unit, so renormalizing one
+        // inside it simplifies to nothing: the kernel will not repair drift.
+        let mut warnings = Vec::new();
+        if Sym::renormalized() && !traced.conditions.is_empty() {
+            warnings.push(format!(
+                "`{name}` renormalizes a `Unit` argument, which tracing removes (a `Unit` is \
+                 assumed exactly unit); take the plain kind and renormalize that instead"
+            ));
+        }
         let var_name = |v: Var| match defs[v as usize].clone() {
             VarDef::Input { arg, index } => format!("a{arg}[{index}]"),
             VarDef::Constant(ConstKind::Float(x)) => format!("T::from_f64({x:?})"),
@@ -375,6 +387,9 @@ impl Tracer {
             s,
             "///\n/// Cost: {cost} (generic code at run time: {naive})."
         );
+        for w in &warnings {
+            let _ = writeln!(s, "///\n/// **Warning:** {w}.");
+        }
         let _ = writeln!(
             s,
             "#[inline(always)]\n#[allow(clippy::all, clippy::pedantic, unused_variables, unused_parens, non_snake_case)]"
@@ -415,6 +430,7 @@ impl Tracer {
             cost,
             naive,
             limits,
+            warnings,
         });
         self
     }
@@ -468,6 +484,9 @@ impl Tracer {
             );
         }
         std::fs::write(&path, source).expect("write traced kernels");
+        for w in self.reports.iter().flat_map(|r| &r.warnings) {
+            println!("cargo:warning=gax::trace: {w}");
+        }
     }
 }
 

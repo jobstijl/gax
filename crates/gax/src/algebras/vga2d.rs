@@ -618,6 +618,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A vector. As a versor it is a reflection in the line perpendicular to it."]
@@ -1244,6 +1249,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t10 = (-t4).mul_add(T::from_ratio(1, 2), t9);
         Vector::from_coeffs([t7, t10])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The unit area element `e12`."]
@@ -1865,6 +1875,11 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
         let t3 = x[0] * T::from_ratio(3, 2);
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Pseudoscalar::from_coeffs([t4])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -2500,6 +2515,11 @@ impl<T: gx::Coef> gx::NewtonStep for Rotor<(), T> {
         let t9 = x[1] * T::from_ratio(3, 2);
         let t10 = (-t4).mul_add(T::from_ratio(1, 2), t9);
         Rotor::from_coeffs([t7, t10])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

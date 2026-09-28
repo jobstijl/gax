@@ -621,6 +621,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A vector: a point `x + Â½xÂ² ei + eo`, a sphere or a plane (dual representation). As a versor it is a reflection or an inversion."]
@@ -1298,6 +1303,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t18 = t13 * T::from_ratio(3, 2);
         let t19 = t14 * T::from_ratio(3, 2);
         Vector::from_coeffs([t15, t16, t17, t18, t19])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -2058,6 +2068,11 @@ impl<T: gx::Coef> gx::NewtonStep for Twist<(), T> {
         let t52 = t28.mul_add(T::from_ratio(3, 2), t51);
         let t53 = -t52;
         Twist::from_coeffs([t30, t31, t32, t39, t46, t53])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -4208,6 +4223,11 @@ impl<T: gx::Coef> gx::NewtonStep for Quadvector<(), T> {
         let t19 = t14 * T::from_ratio(3, 2);
         Quadvector::from_coeffs([t15, t16, t17, t18, t19])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The pseudoscalar `e123oi`."]
@@ -4817,6 +4837,11 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
         let t3 = x[0] * T::from_ratio(3, 2);
         let t4 = t1.mul_add(T::from_ratio(1, 2), t3);
         Pseudoscalar::from_coeffs([t4])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -5608,6 +5633,11 @@ impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
         let t69 = (-t66).mul_add(T::from_ratio(1, 2), t65);
         let t70 = (-t38).mul_add(T::from_ratio(3, 2), t69);
         Motor::from_coeffs([t43, t44, t45, t46, t52, t58, t64, t70])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

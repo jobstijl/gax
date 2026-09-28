@@ -202,11 +202,7 @@ impl View {
     }
 
     fn proj(&self) -> Proj {
-        Proj {
-            cam: self.cam,
-            focal: self.focal,
-            lenses: self.lenses.clone(),
-        }
+        Proj::new(self.cam, self.focal, self.lenses.clone())
     }
 
     /// The singularities in front of the camera `cam`, as lenses.
@@ -214,11 +210,7 @@ impl View {
         if !self.lensing {
             return Vec::new();
         }
-        let p = Proj {
-            cam,
-            focal: self.focal,
-            lenses: Vec::new(),
-        };
+        let p = Proj::new(cam, self.focal, Vec::new());
         w.wells()
             .filter_map(|(q, strength)| {
                 let c = p.camera(w.track.place(q))?;
@@ -490,11 +482,7 @@ impl View {
     pub fn draw(&mut self, w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>) {
         out.clear();
         let cam = self.shaken();
-        let p = Proj {
-            cam,
-            focal: self.focal,
-            lenses: self.lenses_for(cam, w),
-        };
+        let p = Proj::new(cam, self.focal, self.lenses_for(cam, w));
         let track = &w.track;
         let place = |q: P| track.place(q);
         let s_ship = arc(lerp(w.ship.prev, w.ship.pos, alpha));
@@ -1012,12 +1000,31 @@ struct Proj {
     cam: Frame,
     focal: f32,
     lenses: Vec<Lens>,
+    /// The pinhole: camera-frame points to screen points, with the depth as the weight.
+    pinhole: Point2<(Point,), f32>,
 }
 
 /// A map from points (straightened, or in an object's own frame) to camera-frame points.
 type CamMap = Point<(Point,), f32>;
 
 impl Proj {
+    fn new(cam: Frame, focal: f32, lenses: Vec<Lens>) -> Self {
+        // The images of `x`, `y`, `z` and the weight: the camera looks along `+z`, with `x`
+        // mirrored onto the screen, and the depth becomes the weight (the perspective divide).
+        let pinhole = Point2::<(Point,), f32>::from_images([
+            Point2::new(-focal, 0.0, 0.0),
+            Point2::new(0.0, focal, 0.0),
+            Point2::new(0.0, 0.0, 1.0),
+            Point2::new(0.0, 0.0, 0.0),
+        ]);
+        Proj {
+            cam,
+            focal,
+            lenses,
+            pinhole,
+        }
+    }
+
     /// The camera map of a placement: `cam << (placement >> x)`, one 4x4 built from the motor
     /// `~cam placement` and applied to every point placed by it.
     fn to_camera(&self, placement: Frame) -> CamMap {
@@ -1053,8 +1060,7 @@ impl Proj {
     /// weight (the perspective divide is normalizing it). The camera looks along `+z` with
     /// `+y` up, so its `+x` is on the left.
     fn screen(&self, c: P) -> Point2<(), f32> {
-        let h = Point2::new(-self.focal * c.e032(), self.focal * c.e013(), c.e021());
-        h.unitized()
+        self.pinhole.of(c).unitized()
     }
 
     /// Where a camera-frame point is seen: its screen point, lensed by every singularity in
@@ -1244,11 +1250,7 @@ mod tests {
         let right = cam >> dir(1.0, 0.0, 0.0);
         assert!(right.e013().abs() < 1e-4, "rolled: {}", right.e013());
         // The axis ahead lands near the screen's centre.
-        let p = Proj {
-            cam,
-            focal: v.focal,
-            lenses: Vec::new(),
-        };
+        let p = Proj::new(cam, v.focal, Vec::new());
         let ahead = w.track.place(at(0.0, 0.0, w.ship.s() + 16.0));
         let [x, y] = p.screen(p.camera(ahead).expect("in front")).to_euclidean();
         assert!(x.abs() < 3.0 && y.abs() < 4.0, "{x} {y}");
@@ -1372,11 +1374,7 @@ mod tests {
 
     #[test]
     fn a_projection_is_a_weight() {
-        let p = Proj {
-            cam: Motor::translation(0.0, 0.0, 0.0),
-            focal: 10.0,
-            lenses: Vec::new(),
-        };
+        let p = Proj::new(Motor::translation(0.0, 0.0, 0.0), 10.0, Vec::new());
         let s = p
             .screen(p.camera(at(2.0, 1.0, 4.0)).unwrap())
             .to_euclidean();

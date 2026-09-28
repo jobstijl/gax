@@ -32,7 +32,13 @@ pub trait Coef:
     /// nothing by default; `f32` and `f64` panic when a part is too large.
     #[inline(always)]
     fn check_unit(_deviations: &[Self]) {}
-    //// The rational constant `num / den`. Generated code writes non-integer constants this way,
+    /// Called by [`Unit::renormalize_fast`](crate::Unit::renormalize_fast). Does nothing for
+    /// numbers; the tracer's symbolic coefficients record it, because a traced kernel assumes
+    /// its `Unit` arguments are exactly unit, so a renormalization inside it simplifies to
+    /// nothing, and the tracer warns.
+    #[inline(always)]
+    fn note_renormalize() {}
+    /// The rational constant `num / den`. Generated code writes non-integer constants this way,
     /// so that exact coefficient types (the symbolic `Sym`) get them exactly; for floating
     /// point it is `from_f64(num / den)`, folded at compile time.
     #[inline(always)]

@@ -620,6 +620,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A spacetime vector (an event or a four-momentum)."]
@@ -1287,6 +1292,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t15 = t11 * T::from_ratio(3, 2);
         let t16 = t12 * T::from_ratio(3, 2);
         Vector::from_coeffs([t13, t14, t15, t16])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -2120,6 +2130,11 @@ impl<T: gx::Coef> gx::NewtonStep for Bivector<(), T> {
         let t70 = x[2].mul_add(t16, t69);
         Bivector::from_coeffs([t49, t52, t55, t61, t66, t70])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A trivector (a pseudovector)."]
@@ -2788,6 +2803,11 @@ impl<T: gx::Coef> gx::NewtonStep for Trivector<(), T> {
         let t16 = t12 * T::from_ratio(3, 2);
         Trivector::from_coeffs([t13, t14, t15, t16])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The unit four-volume `e0123`."]
@@ -3397,6 +3417,11 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
         let t3 = x[0] * T::from_ratio(3, 2);
         let t4 = t1.mul_add(T::from_ratio(1, 2), t3);
         Pseudoscalar::from_coeffs([t4])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -4325,6 +4350,11 @@ impl<T: gx::Coef> gx::NewtonStep for Even<(), T> {
         let t113 = t112 * T::from_ratio(3, 2);
         let t114 = t110.mul_add(T::from_ratio(1, 2), t113);
         Even::from_coeffs([t84, t87, t91, t94, t97, t101, t104, t114])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -5285,6 +5315,11 @@ impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
         let t114 = x[3].mul_add(t23, t113);
         let t115 = -t114;
         Odd::from_coeffs([t84, t87, t90, t93, t103, t107, t111, t115])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

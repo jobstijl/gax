@@ -68,6 +68,10 @@ pub trait Widen<N> {}
 pub trait NewtonStep {
     /// `x (3 − x ~x) / 2`.
     fn newton_step(self) -> Self;
+    /// Called when a `Unit` is renormalized; forwards to
+    /// [`Coef::note_renormalize`](crate::Coef::note_renormalize).
+    #[inline(always)]
+    fn note_renormalize() {}
 }
 
 impl<M: NewtonStep> Unit<M> {
@@ -90,6 +94,7 @@ impl<M: NewtonStep> Unit<M> {
     #[inline(always)]
     #[must_use]
     pub fn renormalize_fast(self) -> Self {
+        M::note_renormalize();
         Unit(self.0.newton_step())
     }
 }
@@ -101,6 +106,7 @@ impl<M: NewtonStep + core::ops::Mul<Output = M>> Unit<M> {
     #[inline(always)]
     #[must_use]
     pub fn mul_renormalized(self, other: Self) -> Self {
+        M::note_renormalize();
         Unit((self.0 * other.0).newton_step())
     }
 }

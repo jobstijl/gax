@@ -619,6 +619,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection."]
@@ -1253,6 +1258,11 @@ impl<T: gx::Coef> gx::NewtonStep for Line<(), T> {
         let t9 = t6 * T::from_ratio(3, 2);
         let t10 = t7 * T::from_ratio(3, 2);
         Line::from_coeffs([t8, t9, t10])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -1900,6 +1910,11 @@ impl<T: gx::Coef> gx::NewtonStep for Point<(), T> {
         let t7 = t4 * T::from_ratio(3, 2);
         let t8 = t5 * T::from_ratio(3, 2);
         Point::from_coeffs([t6, t7, t8])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -3091,6 +3106,11 @@ impl<T: gx::Coef> gx::NewtonStep for Rotor<(), T> {
         let t10 = (-t4).mul_add(T::from_ratio(1, 2), t9);
         Rotor::from_coeffs([t7, t10])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Rotor<(), T>> {
@@ -3747,6 +3767,11 @@ impl<T: gx::Coef> gx::NewtonStep for Translator<(), T> {
         let t10 = t4 * T::from_ratio(1, 2);
         let t11 = -t10;
         Translator::from_coeffs([t7, t9, t11])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -4419,6 +4444,11 @@ impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
         let t12 = t8 * T::from_ratio(3, 2);
         Motor::from_coeffs([t9, t10, t11, t12])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Motor<(), T>> {
@@ -5082,6 +5112,11 @@ impl<T: gx::Coef> gx::NewtonStep for Flector<(), T> {
         let t11 = t7 * T::from_ratio(3, 2);
         let t12 = t8 * T::from_ratio(3, 2);
         Flector::from_coeffs([t9, t10, t11, t12])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

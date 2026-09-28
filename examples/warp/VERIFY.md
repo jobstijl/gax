@@ -57,6 +57,7 @@ The only exception is a test that checks a phasor against `sin`.
 | Reflection in a plane | mines bounce off the lane's edge (`Plane::reflect`) | |
 | Meets | the ship's shadow (the light-to-ship line meets the wall's tangent plane, `wall point \| radial line`); near-plane clipping; the reticle's ray meeting the tunnel's cross-section | On the wall, ahead of the ship (a test) |
 | A camera as a motor | `Motor::look_at` (fixed in gax, friction 8); `cam << p` into its frame; the depth is the pairing with the image plane (`plane & point`), and the projection is homogeneous (the depth is the 2D point's weight) | The level camera does not roll (a test); the cross-section fills the screen (a test) |
+| A map between algebras | the pinhole: a `pga2d::Point<(pga3d::Point,)>` from `from_images` (the images of `x`, `y`, `z` and the weight), built once per frame; a screen point is `pinhole.of(c).unitized()` | The same arithmetic as the hand-picked coefficients it replaced (friction 16); every Tunnel test passes |
 | Aiming through the camera, backwards | `View::aim`, `View::across`: a screen point's ray (`eye & direction`) meets the cross-section, straightened back | A screen direction moves the ship that way on screen, and a ray comes back as the point it was cast through (tests); the reticle locks the enemy under it (a test) |
 | Rotation about a line | the barrel roll: `Motor::rotation(axis, θ) >> ship`, eased over 0.4 s | Keeps the radius exactly (a test) |
 | PGA3D motor interpolation | `track::interpolate`: `M(s)` between keyframes, and the camera's spring | For a screw between keyframes the interpolation is the screw itself. `Motor::interpolate` takes the shorter way (friction 15): the camera no longer whips round when its target's motor changes sign (a test over 10 minutes of flight) |
@@ -105,6 +106,16 @@ The only exception is a test that checks a phasor against `sin`.
 * **GPU time per frame** at 1600×900 in the Plane: compute 0.01 ms, scene 0.13 ms, bloom
   0.08 ms, post 0.04 ms. The join-based distance per fragment and the traced tonemapper cost
   little.
+* **The Tunnel, headless** (`WARP_SCENE=tunnel warp --shot DIR 15 45 90 150`, the bot flying,
+  1600×900, the mean of the last second before each shot):
+  * CPU per frame: simulation 0.05 to 0.06 ms; building the frame (every point through its
+    camera map, the pinhole and the lenses, then the lines and the submission) 1.1 to 2.2 ms,
+    the most at 45 s with the densest lattice view;
+  * GPU per frame: scene 0.05 ms, bloom 0.08 to 0.09 ms, post 0.03 to 0.04 ms (the Tunnel has
+    no compute pass).
+
+  All of it is a small part of a 16.7 ms frame. The CPU projection is the largest cost, and it
+  is linear maps built once per placement (the camera maps of ADR-style friction 16).
 * **Frame rate:** the startup test (`--smoke`, a bot playing for 8 s) held vsync, 60 Hz on this
   display, with a lattice of 9 417 nodes and a pool of 262 144 particles.
 
@@ -120,8 +131,9 @@ The only exception is a test that checks a phasor against `sin`.
      against `Motor::translation` and `Motor::rotation`.
 2. **Tracing a `Unit` argument simplifies renormalization away.** The tracer assumes `m ~m = 1`
    for a `Unit`, so `renormalize_fast` inside a kernel becomes the identity. Kernels that must
-   renormalize take the plain kind. This is documented in `docs/shaders.md`; a lint or warning
-   in the tracer would be better (open).
+   renormalize take the plain kind. This is documented in `docs/shaders.md`. **Fixed in
+   gax-gen:** the tracer now warns (in the kernel's report, its docs, and as a cargo warning)
+   when a kernel renormalizes a `Unit` argument (`tests/trace_warnings.rs`).
 3. **Numeric literals don't pin the coefficient type.** `Point::translation_twist(3.0, -1.0)`
    in a doctest failed to infer `T`. It's a known Rust limitation, documented in the guide's
    pitfalls; annotate `Point::<(), f64>`. It came up again in the new doctests.
@@ -186,3 +198,20 @@ The only exception is a test that checks a phasor against `sin`.
     motor flipped 2 to 16 times per seed. **Fixed in gax:** `Motor::interpolate` (PGA2D and
     PGA3D) takes the relative motor with its scalar part non-negative, branch-free so that it
     traces; tests in gax (a sweep through looking backwards) and in the game.
+16. **There was no map between algebras.** The Tunnel's screen projection took a camera-frame
+    PGA3D point to a PGA2D point by picking coefficients by hand
+    (`Point2::new(-f x, f y, z)`), and the same output-first matrix layout was written out by
+    hand in three places. **Fixed in gax:** `K<(A,)>::from_images` builds the map from the
+    images of `A`'s basis blades, for `A` of any algebra, so the pinhole is a
+    `pga2d::Point<(pga3d::Point,)>`. The same round added twelve homomorphisms between the
+    standard algebras as `From` (a PGA2D motor is a PGA3D motor about a vertical axis), proved
+    by the generator to keep every product (ADR-032).
+17. **A branch-free select on points was written by hand three times.** `if a < b { x } else
+    { y }` coefficient by coefficient, in the segment kernel here and in gax's own
+    `rotation_between` and `look_at`. **Fixed in gax:** `gax::select_lt(a, b, x, y)` for any
+    value or map; all three use it, and it traces.
+18. **Approximate equality is projective for points.** gax now has `ApproxEq` (coefficients
+    within a tolerance), but the game's tests compare points after dividing by the weight, or
+    by the distance their join measures, because two points of different weights are the same
+    point. That is the right comparison for points and `ApproxEq` is the right one for motors
+    and maps, so the tests keep their helpers. Recorded, not a gap.

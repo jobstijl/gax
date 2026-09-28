@@ -620,6 +620,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A vector: a point `x + Â½xÂ² ei + eo`, a circle or a line (dual representation). As a versor it is a reflection in a line or an inversion in a circle."]
@@ -1278,6 +1283,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t15 = t11 * T::from_ratio(3, 2);
         Vector::from_coeffs([t12, t13, t14, t15])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The bivectors of rigid motions (the Lie algebra of motors): the rotation `e12` and the translations `e1i, e2i`."]
@@ -1927,6 +1937,11 @@ impl<T: gx::Coef> gx::NewtonStep for Twist<(), T> {
         let t10 = t4 * T::from_ratio(1, 2);
         let t11 = -t10;
         Twist::from_coeffs([t7, t9, t11])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -2713,6 +2728,11 @@ impl<T: gx::Coef> gx::NewtonStep for Bivector<(), T> {
         let t49 = t46.mul_add(T::from_ratio(3, 2), t48);
         Bivector::from_coeffs([t40, t41, t42, t43, t44, t49])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A trivector: a circle or a line through three points (direct representation)."]
@@ -3377,6 +3397,11 @@ impl<T: gx::Coef> gx::NewtonStep for Trivector<(), T> {
         let t15 = t11 * T::from_ratio(3, 2);
         Trivector::from_coeffs([t12, t13, t14, t15])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The pseudoscalar `e12oi`."]
@@ -3986,6 +4011,11 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
         let t3 = x[0] * T::from_ratio(3, 2);
         let t4 = t1.mul_add(T::from_ratio(1, 2), t3);
         Pseudoscalar::from_coeffs([t4])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -4642,6 +4672,11 @@ impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
         let t11 = t7 * T::from_ratio(3, 2);
         let t12 = t8 * T::from_ratio(3, 2);
         Motor::from_coeffs([t9, t10, t11, t12])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -5518,6 +5553,11 @@ impl<T: gx::Coef> gx::NewtonStep for Even<(), T> {
         let t84 = t83 * T::from_ratio(3, 2);
         let t85 = t81.mul_add(T::from_ratio(1, 2), t84);
         Even::from_coeffs([t66, t71, t73, t74, t75, t77, t80, t85])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -6403,6 +6443,11 @@ impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
         let t91 = x[7] * T::from_ratio(3, 2);
         let t92 = t89.mul_add(T::from_ratio(1, 2), t91);
         Odd::from_coeffs([t67, t72, t75, t78, t81, t84, t87, t92])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

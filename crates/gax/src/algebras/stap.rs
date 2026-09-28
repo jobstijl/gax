@@ -621,6 +621,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A hyperplane `a e1 + b e2 + c e3 + d e4 + Î´ e0`. As a versor it is a reflection."]
@@ -1298,6 +1303,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t17 = t12 * T::from_ratio(3, 2);
         let t18 = t13 * T::from_ratio(3, 2);
         Vector::from_coeffs([t14, t15, t16, t17, t18])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -3338,6 +3348,11 @@ impl<T: gx::Coef> gx::NewtonStep for Quadvector<(), T> {
         let t11 = t6 * T::from_ratio(3, 2);
         let t12 = t7 * T::from_ratio(3, 2);
         Quadvector::from_coeffs([t8, t9, t10, t11, t12])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

@@ -497,7 +497,7 @@ fn emit_newton_step(
     let name = &k.name;
     let _ = write!(
         traits,
-        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `x (3 − x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n}}\n\n",
+        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `x (3 − x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
         outs.join(", ")
     );
 }

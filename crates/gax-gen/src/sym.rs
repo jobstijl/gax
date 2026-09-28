@@ -105,6 +105,8 @@ struct Arena {
     limit: Option<usize>,
     /// Keep constants opaque (as the running program sees them) instead of folding them.
     opaque_constants: bool,
+    /// A `Unit` was renormalized (`Coef::note_renormalize`) since the arena was cleared.
+    renormalized: bool,
 }
 
 thread_local! {
@@ -235,6 +237,12 @@ impl Sym {
             *a = Arena::default();
             a.limit = limit;
         });
+    }
+
+    /// Whether a `Unit` was renormalized since the arena was cleared (see
+    /// `Coef::note_renormalize`).
+    pub fn renormalized() -> bool {
+        with(|a| a.renormalized)
     }
 
     /// Clear the arena for a trace that models the program as it runs: every operation is a
@@ -513,6 +521,9 @@ impl Div for Sym {
 }
 
 impl Coef for Sym {
+    fn note_renormalize() {
+        with(|a| a.renormalized = true);
+    }
     fn zero() -> Sym {
         Sym::runtime_constant(0.0).unwrap_or_else(|| Sym::from_poly(Poly::zero()))
     }

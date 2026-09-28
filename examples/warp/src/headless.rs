@@ -179,13 +179,24 @@ pub fn shots(args: &[String]) {
         let end = times.iter().copied().fold(0.0f32, f32::max);
         times.sort_by(f32::total_cmp);
         let (mut t, mut next) = (0.0f32, 0);
+        // CPU time of the last second's frames: the simulation, and building the frame (the
+        // projection through the camera maps, the lines, and the submission).
+        let (mut sim_ms, mut draw_ms) = (Vec::new(), Vec::new());
         while t <= end + dt {
             g.time += dt;
             t += dt;
             let (input, flight) = tunnel_bot(&g, t);
             g.flight = flight;
+            let clock = std::time::Instant::now();
             advance(&mut g, input, none, dt, aspect, &mut sound);
+            let mid = std::time::Instant::now();
             render_game(&mut g, &mut renderer, &view, SIZE);
+            sim_ms.push((mid - clock).as_secs_f64() * 1e3);
+            draw_ms.push(mid.elapsed().as_secs_f64() * 1e3);
+            if sim_ms.len() > 60 {
+                sim_ms.remove(0);
+                draw_ms.remove(0);
+            }
             if next < times.len() && t >= times[next] {
                 let w = &g.tunnel.as_ref().expect("tunnel").world;
                 let name = format!("tunnel-{:03}s.png", times[next].round() as u32);
@@ -204,6 +215,18 @@ pub fn shots(args: &[String]) {
                         .count(),
                     w.bolts.len(),
                     w.ship.s()
+                );
+                let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len() as f64;
+                let gpu = renderer.timings().map_or(String::new(), |t| {
+                    format!(
+                        ", GPU ms: compute {:.2} scene {:.2} bloom {:.2} post {:.2}",
+                        t.compute, t.scene, t.bloom, t.composite
+                    )
+                });
+                println!(
+                    "    CPU ms per frame: simulation {:.2}, drawing {:.2}{gpu}",
+                    mean(&sim_ms),
+                    mean(&draw_ms)
                 );
                 next += 1;
             }

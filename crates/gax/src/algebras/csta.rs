@@ -622,6 +622,11 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Scalar::from_coeffs([t4])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "A vector: an event `x + Â½xÂ² ei + eo` (with the Minkowski square `xÂ²`), a hyperboloid or a hyperplane (dual). As a versor it is a reflection or an inversion."]
@@ -1325,6 +1330,11 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
         let t22 = t16 * T::from_ratio(3, 2);
         let t23 = t17 * T::from_ratio(3, 2);
         Vector::from_coeffs([t18, t19, t20, t21, t22, t23])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 
@@ -4896,6 +4906,11 @@ impl<T: gx::Coef> gx::NewtonStep for Quintvector<(), T> {
         let t23 = t17 * T::from_ratio(3, 2);
         Quintvector::from_coeffs([t18, t19, t20, t21, t22, t23])
     }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 #[doc = "The pseudoscalar `e1234oi`."]
@@ -5503,6 +5518,11 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
         let t3 = x[0] * T::from_ratio(3, 2);
         let t4 = (-t1).mul_add(T::from_ratio(1, 2), t3);
         Pseudoscalar::from_coeffs([t4])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
     }
 }
 

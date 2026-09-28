@@ -107,8 +107,9 @@ Arguments and results can be kinds of the standard algebras (WESL paths such as
 effects on the GPU then run one kernel, and cannot drift apart.
 
 A traced kernel sees a `Unit` argument as certified. The simplifier then uses `m ~m = 1`, and a
-renormalization inside the kernel would simplify away. To renormalize in a kernel, take the
-plain kind and wrap it yourself, as `examples/wgpu` does:
+renormalization inside the kernel would simplify away. The tracer notices: such a kernel gets
+a warning in its report, in its generated docs, and as a cargo warning from `build.rs`. To
+renormalize in a kernel, take the plain kind and wrap it yourself, as `examples/wgpu` does:
 
 ```rust,ignore
 pub fn particle_step<T: Real>(m: Motor<(), T>, rate: Point<(), T>, dt: T) -> Motor<(), T> {
