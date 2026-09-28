@@ -108,14 +108,14 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] M0: Bevy as plumbing (dependency contract script, clippy disallowed types), own wgpu surface, fixed-step pure simulation, input boundary, CI job
 - [x] M1: renderer core: SDF lines placed by motors in the vertex shader, HDR, bloom mip chain, AgX tonemapping, stroke font, GPU timestamps
 - [x] M2: Plane vertical slice: ship, bullets, drifter/chaser/singularity (+ motes), warped-space lattice and particles as traced kernels on the GPU with a CPU twin, synthesized effects, drone/pulse music (plus soft percussion), offline music renders
-- [ ] M2 gate: the owner plays it (is it fun for 5 minutes?)
+- [x] M2 gate: the owner played it: fun (2026-09-28)
 - [x] M3a: the full roster (evader, splitter, serpent, warden, carrier) with director formations
 - [x] M3b: replays (quantized inputs, per-second state hashes), high scores with initials, menus, settings (shake, flashes, colour-blind schemes, volumes, full screen)
 - [x] M3c: music layers from the multiplier (fragments, texture, octave doubling), effects on the beat
 - [x] M4: Tunnel slice: a track of PGA3D screw motions, a PGA3D lattice on the wall, flight (reticle, barrel roll, throttle), a level camera with an FOV setting, drones, mines and turrets, shadow and lock/lead indicators
-- [ ] M4 gate: the owner plays it (readable and fun at speed?)
-- [ ] M5: Tunnel complete (serpents, bonus gates, singularities that pinch the tunnel, replays and a table for the Tunnel, its own tempo), polish, attract mode, accessibility
-- [ ] M6: VERIFY.md complete, performance numbers (the Tunnel's CPU and GPU numbers and friction 16-18 are in; the rest follows the playtests)
+- [x] M4 gate: the owner played it: fun (2026-09-28)
+- [x] M5: Tunnel complete (serpents, bonus gates, singularities that pinch the tunnel, replays and a table for the Tunnel, its own tempo), polish, attract mode, accessibility
+- [x] M6: VERIFY.md complete, performance numbers (the Plane's and the Tunnel's CPU and GPU numbers, friction 1-18, the playtest verdict)
 - [x] gax friction fixed from the game: ideal norms, sign-correct reflections, rotations between directions and look-at, the tracer's constant folding and two tracer bugs (VERIFY.md 4, 7, 8-11)
 - [x] warp in gax throughout: lights as points, traced line shaders, the Tunnel and the Plane rewritten, phasor audio, a clippy ban on geometry by hand
 - [x] The Tunnel renders through camera maps: one 4x4 per object and per wall ring (`Track::placement`), the frame interpolated once per object

@@ -2,7 +2,8 @@
 
 The game's second purpose is to validate gax under real load. This file lists every gax feature
 it uses, where, and what was found. It covers milestones M2 (the Plane vertical slice), M3 (the
-Plane complete), M4 (the Tunnel slice) and M5 (the Tunnel complete), and grows with the game. The **friction log** at the
+Plane complete), M4 (the Tunnel slice), M5 (the Tunnel complete) and M6 (this file and the
+numbers), and grows with the game. The owner played both modes on 2026-09-28: fun. The **friction log** at the
 end is the most valuable part: each entry is a gax issue or fix.
 
 **The contract.** All of the game's geometry is gax, and the build enforces it. `clippy.toml`
