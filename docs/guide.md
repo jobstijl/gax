@@ -308,7 +308,8 @@ In this example it takes 31 mul and 21 add, where the generic code takes 46 and 
   values stay exact; others become named constants.
 * **Branches.** `T::select_lt` is data flow, not a branch: it becomes a `select` in the kernel
   (and folds when both compared values are constants). Traced code must not otherwise branch
-  on coefficient values, and iterative solvers (`all_lt`) cannot be traced.
+  on coefficient values. Iterative solvers (`all_lt`) run at trace time on constants, so the
+  `inverse()` of a fixed matrix folds to its constants, but they cannot be traced on inputs.
 
 `examples/traced` in the repository is a complete crate.
 

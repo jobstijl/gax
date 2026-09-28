@@ -293,6 +293,63 @@ impl Sym {
         })
     }
 
+    /// The value of something that depends on no input and not on `T::epsilon()`, computed in
+    /// `f64` through calls and opaque nodes too: how the program as it runs sees it. The
+    /// runtime model keeps constants opaque, and a solver's comparisons still need an answer.
+    fn input_free_value(self) -> Option<f64> {
+        fn value(v: Var, memo: &mut HashMap<Var, Option<f64>>) -> Option<f64> {
+            if let Some(&x) = memo.get(&v) {
+                return x;
+            }
+            let x = match Sym::var_def(v) {
+                VarDef::Input { .. } | VarDef::Constant(ConstKind::Epsilon) => None,
+                VarDef::Constant(ConstKind::Float(f)) => Some(f),
+                VarDef::Atom { func, arg } => poly_value(arg, memo).map(|x| match func {
+                    Func::Recip => 1.0 / x,
+                    Func::Sqrt => x.sqrt(),
+                    Func::Sin => x.sin(),
+                    Func::Cos => x.cos(),
+                    Func::Sinh => x.sinh(),
+                    Func::Cosh => x.cosh(),
+                    Func::Ln => x.ln(),
+                    Func::Abs => x.abs(),
+                    Func::Exp => x.exp(),
+                }),
+                VarDef::Atan2 { y, x } => Some(poly_value(y, memo)?.atan2(poly_value(x, memo)?)),
+                VarDef::Select { a, b, x, y } => {
+                    let pick = if poly_value(a, memo)? < poly_value(b, memo)? {
+                        x
+                    } else {
+                        y
+                    };
+                    poly_value(pick, memo)
+                }
+                VarDef::Node { op, a, b } => {
+                    let (a, b) = (poly_value(a, memo)?, poly_value(b, memo)?);
+                    Some(match op {
+                        NodeOp::Add => a + b,
+                        NodeOp::Sub => a - b,
+                        NodeOp::Mul => a * b,
+                    })
+                }
+            };
+            memo.insert(v, x);
+            x
+        }
+        fn poly_value(s: Sym, memo: &mut HashMap<Var, Option<f64>>) -> Option<f64> {
+            let mut sum = 0.0;
+            for (m, c) in &s.poly().0 {
+                let mut t = c.to_f64();
+                for &v in &m.0 {
+                    t *= value(v, memo)?;
+                }
+                sum += t;
+            }
+            Some(sum)
+        }
+        poly_value(self, &mut HashMap::new())
+    }
+
     fn atom(func: Func, arg: Sym) -> Sym {
         // A call on a constant is evaluated now, not in every run of the kernel: `|c|`
         // exactly, the others in `f64` (at least as accurate as the kernel's own arithmetic).
@@ -359,6 +416,18 @@ impl Sym {
         enum R {
             Poly(Poly),
             Node(Var),
+        }
+        // Arithmetic on constants only (named floats included) is done now, before the
+        // expansion limit could keep it as a node for the kernel to redo on every run.
+        if !with(|a| a.opaque_constants)
+            && let (Some(x), Some(y)) = (self.const_value(), o.const_value())
+            && (self.as_constant().is_none() || o.as_constant().is_none())
+        {
+            return Sym::value(match op {
+                NodeOp::Add => x + y,
+                NodeOp::Sub => x - y,
+                NodeOp::Mul => x * y,
+            });
         }
         let r = with(|a| {
             let x = &a.polys[self.0 as usize];
@@ -536,9 +605,18 @@ impl Real for Sym {
         });
         Sym::from_poly(Poly::var(v))
     }
-    fn all_lt(_: Sym, _: Sym) -> bool {
+    /// Folds on constants, as `select_lt` does, so solvers run at trace time on constant maps
+    /// (a fixed matrix's `inverse()` becomes its constants). On anything that depends on the
+    /// inputs it is a branch, which a kernel cannot have.
+    fn all_lt(a: Sym, b: Sym) -> bool {
+        if let (Some(p), Some(q)) = (a.poly().as_constant(), b.poly().as_constant()) {
+            return p.lt(q);
+        }
+        if let (Some(p), Some(q)) = (a.input_free_value(), b.input_free_value()) {
+            return p < q;
+        }
         panic!(
-            "gax tracing: a traced kernel tested convergence (all_lt); iterative solvers cannot be traced"
+            "gax tracing: a traced kernel compared values that depend on its inputs (all_lt): iterative solvers can be traced only on constants"
         )
     }
     fn epsilon() -> Sym {
