@@ -41,6 +41,9 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] A cheaper map inverse: scalar LU pivots with branches (`Real::SCALAR`), shared pivot reciprocals (now 0.6x nalgebra)
 - [ ] Emit fused code in a shape LLVM's SLP vectorizer handles well (fused single-value kernels can lose to generic code)
 - [x] Division `a / b` (`DivBy`), embeddings between kinds (`From`, `Unit::widen`), `Motor::between` as `sqrt(b / a)` (ADR-029)
+- [x] The generator runs its jobs in parallel: regenerating went from about 8 minutes to 34 s (ADR-030)
+- [x] Compile time: one closure per product (CSTA 16.3 s to 13.9 s, release code unchanged), line tables in dev builds of gax (ADR-031)
+- [x] Homomorphisms between the standard algebras as `From` (twelve, proved exactly), `Widen` for the ones that keep units, `from_images` for maps between any kinds, CGA `up`/`down`/`sphere` (ADR-032)
 
 ## Phase 2b: batch kernels
 - [x] `batch` feature: runtime dispatch with fearless_simd 1.0 (SSE2, SSE4.2, AVX2, AVX-512, NEON, SIMD128, portable)

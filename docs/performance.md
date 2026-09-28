@@ -353,6 +353,13 @@ the longest single jobs, 13 s each: CGA3D's unit sandwiches on a whole multivect
 outermorphism from vectors to quadvectors. `gax-regen --verbose --only <algebra>` times one
 algebra's phases, and `GAX_GEN_PROFILE=1` lists every job over half a second.
 
+**Building the library** is type checking, not code generation (the code is generic). With
+every algebra, rustc spent 39 s: 20.7 s type checking, 10.3 s borrow checking, 2.3 s writing
+metadata, 1.9 s on coherence (`-Z time-passes`). Binding each product's term operator once,
+as a closure (ADR-031), cut CSTA alone from 16.3 s to 13.9 s, with the release code
+unchanged. Line tables instead of full debug info in the dev profile halve a test binary
+(45 MB to 22 MB for `ops_pga3d`).
+
 * **Why generated code costs nothing unused.** Every generated function is either generic (over slots
   and coefficients) or `#[inline]`, so machine code exists only for what a program uses.
 * **What does cost.** The cost is in parsing and type-checking the generated impls. That is why the

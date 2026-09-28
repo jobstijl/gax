@@ -792,6 +792,63 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Result.** 34 s on 16 cores (ADR measurements in performance.md). The rest is the longest
   single jobs, which only a faster compiler (CSE) can shorten.
 
+## ADR-031: Compile time: one closure per product, and line tables in test builds
+*Status: accepted, implemented.*
+
+* **Where the time goes.** gax is all generic code, so building it is parsing and checking,
+  with no code generation. With every algebra, rustc spent 20.7 s type checking and 10.3 s
+  borrow checking, out of 39 s. Every term of a product, `a[i] * b[j]`, was a separate
+  operator to resolve, with the slot list of its result, `Cat<S1, S2>`, to normalize.
+* **The change.** Each product impl now binds `let p = move |i, j| a[i] * b[j];` once and
+  writes the terms as `p(i, j)`.
+  * CSTA alone: 16.3 s to 13.9 s (type checking 9.1 s to 6.4 s, borrow checking 4.3 s to
+    5.1 s).
+  * A closure that borrows `a` and `b` instead (not `move`) makes borrow checking dearer than
+    the saving. Closures for the sums as well (`add`, `sub`) made it slower overall, at 19.3 s.
+  * The release code is identical: the product, rigid-body, matrix and motor-to-matrix probes
+    of `gax-bench` have the same instruction counts.
+* **Rejected: fewer, more generic impls.** A single blanket impl per product family (or
+  products through constant tables) would type-check faster, but it gives up either the exact
+  output kinds or straight-line code (hypothesis 5).
+* **Debug info.** `gax` and `gax-core` build with `debug = "line-tables-only"` in the dev
+  profile:
+  * a test binary drops from 45 MB to 22 MB, and the target directory by a third;
+  * backtraces and `file:line` stay;
+  * only a debugger's view of locals inside generated code is lost.
+
+## ADR-032: Homomorphisms between the standard algebras
+*Status: accepted, implemented (`gax-gen/src/emit_homs.rs`).*
+
+* **What.** A homomorphism is declared by the image of each basis vector. When the images
+  keep the metric, it extends to the whole algebra and keeps every product. The generator:
+  * checks the metric;
+  * derives every blade's image, by the wedge of the images when vectors go to vectors, and
+    by the geometric product otherwise (the spacetime split, on an orthogonal source);
+  * **proves** `φ(a b) = φ(a) φ(b)` exactly, for every pair of source kinds;
+  * emits `From<src::A<S, T>> for tgt::B<S, T>`, with `B` the smallest target kind that holds
+    the image.
+
+  A generated test (`tests/homs.rs`) checks the emitted code on random values.
+* **Which.** Twelve natural, injective ones (the table in the guide, section 12).
+  * `pga3d` to `cga3d` sends `e0` to `-ei`, so that a plane `ax + by + cz + d = 0` becomes the
+    dual plane with `X · π` its signed distance. `e0` to `+ei` is a homomorphism too, but it
+    would flip the side.
+  * Quotients (PGA to VGA, `e0` to `0`) keep products too, but they lose information, so they
+    are not `From`. None is shipped yet.
+* **`From`, generic over slots.** A map converts like a value, and `B::from(A::slot())` is the
+  homomorphism as a map. Maps between algebras need nothing new: `Of` is generic over the slot
+  kind. `from_images` builds any linear map from the images of its input's basis blades.
+* **Units.** `Unit::widen` now requires `Widen<N>`, which is emitted only where the generator
+  proves `φ(~a) = ~φ(a)`:
+  * for every embedding inside an algebra;
+  * for grade-preserving homomorphisms;
+  * for scalars, bivectors and rotors under the spacetime split, but not its vectors, which go
+    to bivectors with `B ~B = -1`.
+
+  The earlier bound, `N: From<M>`, would have certified those.
+* **Not homomorphisms, so functions.** The round point `up` (quadratic) and `down` in
+  `cga2d`/`cga3d`, spheres, and a round point's PGA point.
+
 ---
 
 ## Hypotheses

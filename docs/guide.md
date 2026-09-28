@@ -386,7 +386,64 @@ See [shaders.md](shaders.md) for the list of functions, the layout, how everythi
 and GPU numerics. `examples/wgpu` puts it together: instanced motors and a traced particle
 kernel, with plain wgpu.
 
-## 12. Conventions and pitfalls
+## 12. Between algebras
+
+The algebras are related, and gax converts between them with `From` wherever one algebra is a
+part of another. Each conversion is an algebra homomorphism: it sends every basis vector to a
+vector of the same square, so it keeps every product, `φ(a b) = φ(a) φ(b)`, and with it
+sandwiches, meets and joins. The generator proves this exactly for every pair of kinds.
+
+| from | to | what it is |
+|---|---|---|
+| `vga2d` | `vga3d`, `pga2d`, `cga2d` | the plane in space; vectors as lines through the origin; the Euclidean part of CGA |
+| `vga3d` | `pga3d`, `cga3d` | vectors as planes through the origin, rotors as rotations about it |
+| `pga2d` | `pga3d` | the `xy` plane in space: lines as vertical planes, points as vertical lines |
+| `pga2d`, `pga3d` | `cga2d`, `cga3d` | plane-based PGA in CGA (`e0` to `-ei`): planes to dual planes, motors to motors |
+| `pga3d` | `stap` | space in spacetime |
+| `cga2d`, `cga3d` | `cga3d`, `csta` | the plane in space; space in spacetime |
+| `vga3d` | `sta` | the spacetime split for the observer `e0`: vectors as relative vectors `eₖ e0` |
+
+A conversion keeps the meaning that the homomorphism gives: a 2D point is the vertical line
+through it, because that is what the product structure says. A unit versor converts with
+`widen()`, where the conversion keeps `x ~x = 1`:
+
+```rust
+use gax::{pga2d, pga3d};
+use gax::Unit;
+
+let m2 = pga2d::Motor::<(), f64>::rotation(pga2d::Point::xy(1.0, 0.0), 0.5);
+let m3: Unit<pga3d::Motor<(), f64>> = m2.widen(); // a turn about the vertical line through (1, 0)
+let p = pga2d::Point::xy(0.0, 2.0);
+// Move, then convert; or convert, then move: the same vertical line.
+let a: pga3d::Line<(), f64> = (m2 >> p).into();
+let b = m3 >> pga3d::Line::from(p);
+assert!(a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-12));
+```
+
+The impls are generic over slots, so a map converts too, and `pga3d::Line::from(pga2d::Point::slot())`
+is the conversion itself as a map. Maps may also go between algebras of your choice:
+`from_images` builds one from the images of its input's basis blades. A projection that drops
+`z`, from PGA3D points to PGA2D points, composed with a motion of space, is one matrix:
+
+```rust
+use gax::{pga2d, pga3d};
+
+let drop_z = pga2d::Point::<(pga3d::Point,), f64>::from_images([
+    pga2d::Point::new(1.0, 0.0, 0.0), // e032 (x) to x
+    pga2d::Point::new(0.0, 1.0, 0.0), // e013 (y) to y
+    pga2d::Point::new(0.0, 0.0, 0.0), // e021 (z) to nothing
+    pga2d::Point::new(0.0, 0.0, 1.0), // e123 (the weight) to the weight
+]);
+let m = pga3d::Motor::<(), f64>::translation(1.0, 2.0, 3.0);
+let view: pga2d::Point<(pga3d::Point,), f64> = drop_z.of(m >> pga3d::Point::slot());
+let [x, y] = view.of(pga3d::Point::xyz(0.5, 0.5, 9.0)).to_euclidean();
+assert!((x - 1.5).abs() < 1e-12 && (y - 2.5).abs() < 1e-12);
+```
+
+What is not a homomorphism is spelled out as a function: a Euclidean point as a CGA round
+point (`cga3d::Vector::up`, which is quadratic) and back (`down`).
+
+## 13. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

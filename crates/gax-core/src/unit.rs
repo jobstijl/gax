@@ -36,8 +36,8 @@ impl<M> Unit<M> {
     }
 
     /// The same versor as a kind that contains it, such as a translator or a rotor as a
-    /// motor. The generated algebras convert between kinds only by such embeddings, which keep
-    /// `x ~x = 1`.
+    /// motor, or its image under a homomorphism between algebras (a PGA2D motor as a PGA3D
+    /// one). Only conversions that keep `x ~x = 1` qualify ([`Widen`]).
     ///
     /// ```
     /// use gax::pga3d::{Motor, Point, Translator};
@@ -47,10 +47,20 @@ impl<M> Unit<M> {
     /// assert_eq!((m >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean(), [1.0, 0.0, 0.0]);
     /// ```
     #[inline(always)]
-    pub fn widen<N: From<M>>(self) -> Unit<N> {
+    pub fn widen<N: From<M>>(self) -> Unit<N>
+    where
+        M: Widen<N>,
+    {
         Unit(N::from(self.0))
     }
 }
+
+/// A conversion `M -> N` that keeps the unit condition, so [`Unit::widen`] may carry the
+/// certificate across. The generated algebras implement it for embeddings between kinds and
+/// for the homomorphisms between algebras that commute with the reverse (`φ(~a) = ~φ(a)`, proved
+/// by the generator): not, for instance, the spacetime split on vectors, which sends a unit
+/// vector to a bivector `B` with `B ~B = -1`.
+pub trait Widen<N> {}
 
 /// One Newton step towards the unit condition, `x (3 − x ~x) / 2` (implemented by the
 /// generated algebras for the kinds whose norm is a Study number). For `x ~x = 1 + e` the result

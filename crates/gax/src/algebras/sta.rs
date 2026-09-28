@@ -308,6 +308,19 @@ impl<T: gx::Coef> Scalar<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef> Scalar<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Scalar`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Scalar<(), T>>) -> Self {
+        let images = images.as_ref();
+        Scalar { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -925,6 +938,19 @@ impl<T: gx::Coef> Vector<(), T> {
     #[inline(always)]
     pub fn e3(&self) -> T {
         self.c[3]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Vector<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Vector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Vector<(), T>>) -> Self {
+        let images = images.as_ref();
+        Vector { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
 }
 
@@ -1592,6 +1618,19 @@ impl<T: gx::Coef> Bivector<(), T> {
     #[inline(always)]
     pub fn e12(&self) -> T {
         self.c[5]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Bivector<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Bivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Bivector<(), T>>) -> Self {
+        let images = images.as_ref();
+        Bivector { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
 }
 
@@ -2402,6 +2441,19 @@ impl<T: gx::Coef> Trivector<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef> Trivector<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Trivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Trivector<(), T>>) -> Self {
+        let images = images.as_ref();
+        Trivector { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
@@ -3036,6 +3088,19 @@ impl<T: gx::Coef> Pseudoscalar<(), T> {
     #[inline(always)]
     pub fn e0123(&self) -> T {
         self.c[0]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Pseudoscalar<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Pseudoscalar`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Pseudoscalar<(), T>>) -> Self {
+        let images = images.as_ref();
+        Pseudoscalar { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
 }
 
@@ -3675,6 +3740,19 @@ impl<T: gx::Coef> Even<(), T> {
     #[inline(always)]
     pub fn e0123(&self) -> T {
         self.c[7]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Even<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Even`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Even<(), T>>) -> Self {
+        let images = images.as_ref();
+        Even { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
 }
 
@@ -4627,6 +4705,19 @@ impl<T: gx::Coef> Odd<(), T> {
     #[inline(always)]
     pub fn e021(&self) -> T {
         self.c[7]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Odd<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Odd`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Odd<(), T>>) -> Self {
+        let images = images.as_ref();
+        Odd { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
     }
 }
 
@@ -5588,6 +5679,19 @@ impl<T: gx::Coef> Multivector<(), T> {
     }
 }
 
+impl<A: gx::Kind, T: gx::Coef> Multivector<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Multivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Multivector<(), T>>) -> Self {
+        let images = images.as_ref();
+        Multivector { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
@@ -6130,9 +6234,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar
     fn gp(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -6144,12 +6249,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar
     fn gp(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -6161,14 +6267,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scal
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -6180,12 +6287,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Sca
     fn gp(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -6197,9 +6305,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -6211,16 +6320,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Scalar<S
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -6232,16 +6342,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -6253,24 +6364,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for S
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -6282,12 +6394,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector
     fn gp(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -6299,15 +6412,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -6320,16 +6434,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vect
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
-                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
-                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(3, 1) - p(0, 3)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 4)) - p(3, 0))).0,
+                (((p(2, 0) - p(0, 5)) - p(1, 1))).0,
             ],
         }
     }
@@ -6341,16 +6456,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Vec
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -6362,12 +6478,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -6379,16 +6496,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Vector<S
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[1] * b[0] + a[2] * b[6]) - (a[0] * b[1] + a[3] * b[5]))).0,
-                (((a[2] * b[0] + a[3] * b[4]) - (a[0] * b[2] + a[1] * b[6]))).0,
-                (((a[1] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[2] * b[4]))).0,
-                (((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6]))).0,
-                (((a[3] * b[2] - a[0] * b[4]) - (a[1] * b[7] + a[2] * b[3]))).0,
-                (((a[1] * b[3] - a[0] * b[5]) - (a[2] * b[7] + a[3] * b[1]))).0,
-                (((a[2] * b[1] - a[0] * b[6]) - (a[1] * b[2] + a[3] * b[7]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(1, 0) + p(2, 6)) - (p(0, 1) + p(3, 5)))).0,
+                (((p(2, 0) + p(3, 4)) - (p(0, 2) + p(1, 6)))).0,
+                (((p(1, 5) + p(3, 0)) - (p(0, 3) + p(2, 4)))).0,
+                (((p(0, 7) + p(1, 4)) + (p(2, 5) + p(3, 6)))).0,
+                (((p(3, 2) - p(0, 4)) - (p(1, 7) + p(2, 3)))).0,
+                (((p(1, 3) - p(0, 5)) - (p(2, 7) + p(3, 1)))).0,
+                (((p(2, 1) - p(0, 6)) - (p(1, 2) + p(3, 7)))).0,
             ],
         }
     }
@@ -6400,16 +6518,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[1] * b[0] + a[3] * b[6]) - (a[0] * b[1] + a[2] * b[7]))).0,
-                (((a[1] * b[7] + a[2] * b[0]) - (a[0] * b[2] + a[3] * b[5]))).0,
-                (((a[2] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[1] * b[6]))).0,
-                (((a[2] * b[3] - a[0] * b[5]) - (a[1] * b[4] + a[3] * b[2]))).0,
-                (((a[3] * b[1] - a[0] * b[6]) - (a[1] * b[3] + a[2] * b[4]))).0,
-                (((a[1] * b[2] - a[0] * b[7]) - (a[2] * b[1] + a[3] * b[4]))).0,
-                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(1, 0) + p(3, 6)) - (p(0, 1) + p(2, 7)))).0,
+                (((p(1, 7) + p(2, 0)) - (p(0, 2) + p(3, 5)))).0,
+                (((p(2, 5) + p(3, 0)) - (p(0, 3) + p(1, 6)))).0,
+                (((p(2, 3) - p(0, 5)) - (p(1, 4) + p(3, 2)))).0,
+                (((p(3, 1) - p(0, 6)) - (p(1, 3) + p(2, 4)))).0,
+                (((p(1, 2) - p(0, 7)) - (p(2, 1) + p(3, 4)))).0,
+                (((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -6421,24 +6540,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for V
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
-                (((a[0] * b[0] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                (((a[1] * b[0] + a[2] * b[10]) - (a[0] * b[5] + a[3] * b[9]))).0,
-                (((a[2] * b[0] + a[3] * b[8]) - (a[0] * b[6] + a[1] * b[10]))).0,
-                (((a[1] * b[9] + a[3] * b[0]) - (a[0] * b[7] + a[2] * b[8]))).0,
-                (((a[1] * b[1] + a[3] * b[13]) - (a[0] * b[2] + a[2] * b[14]))).0,
-                (((a[1] * b[14] + a[2] * b[1]) - (a[0] * b[3] + a[3] * b[12]))).0,
-                (((a[2] * b[12] + a[3] * b[1]) - (a[0] * b[4] + a[1] * b[13]))).0,
-                (((a[2] * b[4] - a[0] * b[12]) - (a[1] * b[11] + a[3] * b[3]))).0,
-                (((a[3] * b[2] - a[0] * b[13]) - (a[1] * b[4] + a[2] * b[11]))).0,
-                (((a[1] * b[3] - a[0] * b[14]) - (a[2] * b[2] + a[3] * b[11]))).0,
-                (((a[0] * b[15] + a[1] * b[8]) + (a[2] * b[9] + a[3] * b[10]))).0,
-                (((a[3] * b[6] - a[0] * b[8]) - (a[1] * b[15] + a[2] * b[7]))).0,
-                (((a[1] * b[7] - a[0] * b[9]) - (a[2] * b[15] + a[3] * b[5]))).0,
-                (((a[2] * b[5] - a[0] * b[10]) - (a[1] * b[6] + a[3] * b[15]))).0,
-                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (((p(0, 0) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                (((p(1, 0) + p(2, 10)) - (p(0, 5) + p(3, 9)))).0,
+                (((p(2, 0) + p(3, 8)) - (p(0, 6) + p(1, 10)))).0,
+                (((p(1, 9) + p(3, 0)) - (p(0, 7) + p(2, 8)))).0,
+                (((p(1, 1) + p(3, 13)) - (p(0, 2) + p(2, 14)))).0,
+                (((p(1, 14) + p(2, 1)) - (p(0, 3) + p(3, 12)))).0,
+                (((p(2, 12) + p(3, 1)) - (p(0, 4) + p(1, 13)))).0,
+                (((p(2, 4) - p(0, 12)) - (p(1, 11) + p(3, 3)))).0,
+                (((p(3, 2) - p(0, 13)) - (p(1, 4) + p(2, 11)))).0,
+                (((p(1, 3) - p(0, 14)) - (p(2, 2) + p(3, 11)))).0,
+                (((p(0, 15) + p(1, 8)) + (p(2, 9) + p(3, 10)))).0,
+                (((p(3, 6) - p(0, 8)) - (p(1, 15) + p(2, 7)))).0,
+                (((p(1, 7) - p(0, 9)) - (p(2, 15) + p(3, 5)))).0,
+                (((p(2, 5) - p(0, 10)) - (p(1, 6) + p(3, 15)))).0,
+                (((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14)))).0,
             ],
         }
     }
@@ -6450,14 +6570,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivect
     fn gp(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -6469,16 +6590,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivect
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
-                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
-                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(1, 3) - p(2, 2)) - p(3, 0))).0,
+                (((p(2, 1) - p(0, 3)) - p(4, 0))).0,
+                (((p(0, 2) - p(1, 1)) - p(5, 0))).0,
             ],
         }
     }
@@ -6490,16 +6612,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bive
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
-                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
-                (((a[2] * b[3] + a[5] * b[0]) - (a[0] * b[5] + a[3] * b[2]))).0,
-                (((a[0] * b[4] + a[3] * b[1]) - (a[1] * b[3] + a[4] * b[0]))).0,
-                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
-                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
-                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
-                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
+                (((p(1, 5) + p(4, 2)) - (p(2, 4) + p(5, 1)))).0,
+                (((p(2, 3) + p(5, 0)) - (p(0, 5) + p(3, 2)))).0,
+                (((p(0, 4) + p(3, 1)) - (p(1, 3) + p(4, 0)))).0,
+                (((p(2, 1) + p(4, 5)) - (p(1, 2) + p(5, 4)))).0,
+                (((p(0, 2) + p(5, 3)) - (p(2, 0) + p(3, 5)))).0,
+                (((p(1, 0) + p(3, 4)) - (p(0, 1) + p(4, 3)))).0,
+                (-(((p(0, 3) + p(1, 4)) + p(2, 5)) + ((p(3, 0) + p(4, 1)) + p(5, 2)))).0,
             ],
         }
     }
@@ -6511,16 +6634,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Biv
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
-                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
-                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
-                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
-                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
-                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(2, 2) - p(1, 3)) - p(3, 0))).0,
+                (((p(0, 3) - p(2, 1)) - p(4, 0))).0,
+                (((p(1, 1) - p(0, 2)) - p(5, 0))).0,
+                (-((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(4, 3) - p(0, 0)) - p(5, 2))).0,
+                (((p(5, 1) - p(1, 0)) - p(3, 3))).0,
+                (((p(3, 2) - p(2, 0)) - p(4, 1))).0,
             ],
         }
     }
@@ -6532,14 +6656,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (-a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (-p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
             ],
         }
     }
@@ -6551,16 +6676,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Bivector
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
-                ((((a[0] * b[0] + a[1] * b[6]) + a[3] * b[7]) + ((a[4] * b[3] - a[2] * b[5]) - a[5] * b[2]))).0,
-                ((((a[1] * b[0] + a[2] * b[4]) + a[4] * b[7]) + ((a[5] * b[1] - a[0] * b[6]) - a[3] * b[3]))).0,
-                ((((a[0] * b[5] + a[2] * b[0]) + a[3] * b[2]) + ((a[5] * b[7] - a[1] * b[4]) - a[4] * b[1]))).0,
-                ((((a[2] * b[2] + a[3] * b[0]) + a[4] * b[6]) - ((a[0] * b[7] + a[1] * b[3]) + a[5] * b[5]))).0,
-                ((((a[0] * b[3] + a[4] * b[0]) + a[5] * b[4]) - ((a[1] * b[7] + a[2] * b[1]) + a[3] * b[6]))).0,
-                ((((a[1] * b[1] + a[3] * b[5]) + a[5] * b[0]) - ((a[0] * b[2] + a[2] * b[7]) + a[4] * b[4]))).0,
-                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                ((((p(0, 0) + p(1, 6)) + p(3, 7)) + ((p(4, 3) - p(2, 5)) - p(5, 2)))).0,
+                ((((p(1, 0) + p(2, 4)) + p(4, 7)) + ((p(5, 1) - p(0, 6)) - p(3, 3)))).0,
+                ((((p(0, 5) + p(2, 0)) + p(3, 2)) + ((p(5, 7) - p(1, 4)) - p(4, 1)))).0,
+                ((((p(2, 2) + p(3, 0)) + p(4, 6)) - ((p(0, 7) + p(1, 3)) + p(5, 5)))).0,
+                ((((p(0, 3) + p(4, 0)) + p(5, 4)) - ((p(1, 7) + p(2, 1)) + p(3, 6)))).0,
+                ((((p(1, 1) + p(3, 5)) + p(5, 0)) - ((p(0, 2) + p(2, 7)) + p(4, 4)))).0,
+                (-(((p(0, 4) + p(1, 5)) + p(2, 6)) + ((p(3, 1) + p(4, 2)) + p(5, 3)))).0,
             ],
         }
     }
@@ -6572,16 +6698,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
-                ((((a[0] * b[0] + a[2] * b[6]) + a[4] * b[3]) - ((a[1] * b[7] + a[3] * b[4]) + a[5] * b[2]))).0,
-                ((((a[0] * b[7] + a[1] * b[0]) + a[5] * b[1]) - ((a[2] * b[5] + a[3] * b[3]) + a[4] * b[4]))).0,
-                ((((a[1] * b[5] + a[2] * b[0]) + a[3] * b[2]) - ((a[0] * b[6] + a[4] * b[1]) + a[5] * b[4]))).0,
-                ((((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]) - ((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]))).0,
-                ((((a[1] * b[3] + a[4] * b[7]) - a[0] * b[4]) - ((a[2] * b[2] + a[3] * b[0]) + a[5] * b[6]))).0,
-                ((((a[2] * b[1] + a[5] * b[5]) - a[0] * b[3]) - ((a[1] * b[4] + a[3] * b[7]) + a[4] * b[0]))).0,
-                ((((a[0] * b[2] + a[3] * b[6]) - a[1] * b[1]) - ((a[2] * b[4] + a[4] * b[5]) + a[5] * b[0]))).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
+                ((((p(0, 0) + p(2, 6)) + p(4, 3)) - ((p(1, 7) + p(3, 4)) + p(5, 2)))).0,
+                ((((p(0, 7) + p(1, 0)) + p(5, 1)) - ((p(2, 5) + p(3, 3)) + p(4, 4)))).0,
+                ((((p(1, 5) + p(2, 0)) + p(3, 2)) - ((p(0, 6) + p(4, 1)) + p(5, 4)))).0,
+                ((((p(3, 1) + p(4, 2)) + p(5, 3)) - ((p(0, 5) + p(1, 6)) + p(2, 7)))).0,
+                ((((p(1, 3) + p(4, 7)) - p(0, 4)) - ((p(2, 2) + p(3, 0)) + p(5, 6)))).0,
+                ((((p(2, 1) + p(5, 5)) - p(0, 3)) - ((p(1, 4) + p(3, 7)) + p(4, 0)))).0,
+                ((((p(0, 2) + p(3, 6)) - p(1, 1)) - ((p(2, 4) + p(4, 5)) + p(5, 0)))).0,
             ],
         }
     }
@@ -6593,24 +6720,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for B
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
-                ((((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4]) + ((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14]))).0,
-                ((((a[0] * b[1] + a[2] * b[13]) + a[4] * b[4]) - ((a[1] * b[14] + a[3] * b[11]) + a[5] * b[3]))).0,
-                ((((a[0] * b[14] + a[1] * b[1]) + a[5] * b[2]) - ((a[2] * b[12] + a[3] * b[4]) + a[4] * b[11]))).0,
-                ((((a[1] * b[12] + a[2] * b[1]) + a[3] * b[3]) - ((a[0] * b[13] + a[4] * b[2]) + a[5] * b[11]))).0,
-                ((((a[0] * b[0] + a[1] * b[10]) + a[3] * b[15]) + ((a[4] * b[7] - a[2] * b[9]) - a[5] * b[6]))).0,
-                ((((a[1] * b[0] + a[2] * b[8]) + a[4] * b[15]) + ((a[5] * b[5] - a[0] * b[10]) - a[3] * b[7]))).0,
-                ((((a[0] * b[9] + a[2] * b[0]) + a[3] * b[6]) + ((a[5] * b[15] - a[1] * b[8]) - a[4] * b[5]))).0,
-                ((((a[2] * b[6] + a[3] * b[0]) + a[4] * b[10]) - ((a[0] * b[15] + a[1] * b[7]) + a[5] * b[9]))).0,
-                ((((a[0] * b[7] + a[4] * b[0]) + a[5] * b[8]) - ((a[1] * b[15] + a[2] * b[5]) + a[3] * b[10]))).0,
-                ((((a[1] * b[5] + a[3] * b[9]) + a[5] * b[0]) - ((a[0] * b[6] + a[2] * b[15]) + a[4] * b[8]))).0,
-                ((((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4]) - ((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14]))).0,
-                ((((a[1] * b[4] + a[4] * b[14]) - a[0] * b[11]) - ((a[2] * b[3] + a[3] * b[1]) + a[5] * b[13]))).0,
-                ((((a[2] * b[2] + a[5] * b[12]) - a[0] * b[4]) - ((a[1] * b[11] + a[3] * b[14]) + a[4] * b[1]))).0,
-                ((((a[0] * b[3] + a[3] * b[13]) - a[1] * b[2]) - ((a[2] * b[11] + a[4] * b[12]) + a[5] * b[1]))).0,
-                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                ((((p(0, 2) + p(1, 3)) + p(2, 4)) + ((p(3, 12) + p(4, 13)) + p(5, 14)))).0,
+                ((((p(0, 1) + p(2, 13)) + p(4, 4)) - ((p(1, 14) + p(3, 11)) + p(5, 3)))).0,
+                ((((p(0, 14) + p(1, 1)) + p(5, 2)) - ((p(2, 12) + p(3, 4)) + p(4, 11)))).0,
+                ((((p(1, 12) + p(2, 1)) + p(3, 3)) - ((p(0, 13) + p(4, 2)) + p(5, 11)))).0,
+                ((((p(0, 0) + p(1, 10)) + p(3, 15)) + ((p(4, 7) - p(2, 9)) - p(5, 6)))).0,
+                ((((p(1, 0) + p(2, 8)) + p(4, 15)) + ((p(5, 5) - p(0, 10)) - p(3, 7)))).0,
+                ((((p(0, 9) + p(2, 0)) + p(3, 6)) + ((p(5, 15) - p(1, 8)) - p(4, 5)))).0,
+                ((((p(2, 6) + p(3, 0)) + p(4, 10)) - ((p(0, 15) + p(1, 7)) + p(5, 9)))).0,
+                ((((p(0, 7) + p(4, 0)) + p(5, 8)) - ((p(1, 15) + p(2, 5)) + p(3, 10)))).0,
+                ((((p(1, 5) + p(3, 9)) + p(5, 0)) - ((p(0, 6) + p(2, 15)) + p(4, 8)))).0,
+                ((((p(3, 2) + p(4, 3)) + p(5, 4)) - ((p(0, 12) + p(1, 13)) + p(2, 14)))).0,
+                ((((p(1, 4) + p(4, 14)) - p(0, 11)) - ((p(2, 3) + p(3, 1)) + p(5, 13)))).0,
+                ((((p(2, 2) + p(5, 12)) - p(0, 4)) - ((p(1, 11) + p(3, 14)) + p(4, 1)))).0,
+                ((((p(0, 3) + p(3, 13)) - p(1, 2)) - ((p(2, 11) + p(4, 12)) + p(5, 1)))).0,
+                (-(((p(0, 8) + p(1, 9)) + p(2, 10)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
             ],
         }
     }
@@ -6622,12 +6750,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Trivec
     fn gp(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -6639,16 +6768,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Trivec
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -6660,16 +6790,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Triv
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
-                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
-                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
-                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[0] * b[0] + a[2] * b[5]) - a[3] * b[4])).0,
-                (((a[0] * b[1] + a[3] * b[3]) - a[1] * b[5])).0,
-                (((a[0] * b[2] + a[1] * b[4]) - a[2] * b[3])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(2, 2) - p(0, 3)) - p(3, 1))).0,
+                (((p(3, 0) - p(0, 4)) - p(1, 2))).0,
+                (((p(1, 1) - p(0, 5)) - p(2, 0))).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(0, 0) + p(2, 5)) - p(3, 4))).0,
+                (((p(0, 1) + p(3, 3)) - p(1, 5))).0,
+                (((p(0, 2) + p(1, 4)) - p(2, 3))).0,
             ],
         }
     }
@@ -6681,15 +6812,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Tri
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[0] * b[1] - a[1] * b[0])).0,
-                ((a[0] * b[2] - a[2] * b[0])).0,
-                ((a[0] * b[3] - a[3] * b[0])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(0, 3) - p(3, 0))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -6702,12 +6834,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (-p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -6719,16 +6852,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Trivecto
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] - a[0] * b[7]))).0,
-                (((a[1] * b[7] + a[2] * b[3]) - (a[0] * b[4] + a[3] * b[2]))).0,
-                (((a[2] * b[7] + a[3] * b[1]) - (a[0] * b[5] + a[1] * b[3]))).0,
-                (((a[1] * b[2] + a[3] * b[7]) - (a[0] * b[6] + a[2] * b[1]))).0,
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[0] * b[1] + a[1] * b[0]) + (a[2] * b[6] - a[3] * b[5]))).0,
-                (((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[4] - a[1] * b[6]))).0,
-                (((a[0] * b[3] + a[1] * b[5]) + (a[3] * b[0] - a[2] * b[4]))).0,
+                (((p(1, 4) + p(2, 5)) + (p(3, 6) - p(0, 7)))).0,
+                (((p(1, 7) + p(2, 3)) - (p(0, 4) + p(3, 2)))).0,
+                (((p(2, 7) + p(3, 1)) - (p(0, 5) + p(1, 3)))).0,
+                (((p(1, 2) + p(3, 7)) - (p(0, 6) + p(2, 1)))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 1) + p(1, 0)) + (p(2, 6) - p(3, 5)))).0,
+                (((p(0, 2) + p(2, 0)) + (p(3, 4) - p(1, 6)))).0,
+                (((p(0, 3) + p(1, 5)) + (p(3, 0) - p(2, 4)))).0,
             ],
         }
     }
@@ -6740,16 +6874,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Trivector
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                (((a[0] * b[5] + a[2] * b[3]) - (a[1] * b[4] + a[3] * b[2]))).0,
-                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[2] * b[4]))).0,
-                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[3] * b[4]))).0,
-                (((a[2] * b[7] - a[0] * b[1]) - (a[1] * b[0] + a[3] * b[6]))).0,
-                (((a[3] * b[5] - a[0] * b[2]) - (a[1] * b[7] + a[2] * b[0]))).0,
-                (((a[1] * b[6] - a[0] * b[3]) - (a[2] * b[5] + a[3] * b[0]))).0,
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                (((p(0, 5) + p(2, 3)) - (p(1, 4) + p(3, 2)))).0,
+                (((p(0, 6) + p(3, 1)) - (p(1, 3) + p(2, 4)))).0,
+                (((p(0, 7) + p(1, 2)) - (p(2, 1) + p(3, 4)))).0,
+                (((p(2, 7) - p(0, 1)) - (p(1, 0) + p(3, 6)))).0,
+                (((p(3, 5) - p(0, 2)) - (p(1, 7) + p(2, 0)))).0,
+                (((p(1, 6) - p(0, 3)) - (p(2, 5) + p(3, 0)))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -6761,24 +6896,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for T
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
-                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] - a[0] * b[15]))).0,
-                (((a[1] * b[15] + a[2] * b[7]) - (a[0] * b[8] + a[3] * b[6]))).0,
-                (((a[2] * b[15] + a[3] * b[5]) - (a[0] * b[9] + a[1] * b[7]))).0,
-                (((a[1] * b[6] + a[3] * b[15]) - (a[0] * b[10] + a[2] * b[5]))).0,
-                (((a[0] * b[12] + a[2] * b[4]) - (a[1] * b[11] + a[3] * b[3]))).0,
-                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[2] * b[11]))).0,
-                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[3] * b[11]))).0,
-                (((a[2] * b[14] - a[0] * b[2]) - (a[1] * b[1] + a[3] * b[13]))).0,
-                (((a[3] * b[12] - a[0] * b[3]) - (a[1] * b[14] + a[2] * b[1]))).0,
-                (((a[1] * b[13] - a[0] * b[4]) - (a[2] * b[12] + a[3] * b[1]))).0,
-                (((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
-                (((a[0] * b[5] + a[1] * b[0]) + (a[2] * b[10] - a[3] * b[9]))).0,
-                (((a[0] * b[6] + a[2] * b[0]) + (a[3] * b[8] - a[1] * b[10]))).0,
-                (((a[0] * b[7] + a[1] * b[9]) + (a[3] * b[0] - a[2] * b[8]))).0,
-                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (((p(1, 8) + p(2, 9)) + (p(3, 10) - p(0, 15)))).0,
+                (((p(1, 15) + p(2, 7)) - (p(0, 8) + p(3, 6)))).0,
+                (((p(2, 15) + p(3, 5)) - (p(0, 9) + p(1, 7)))).0,
+                (((p(1, 6) + p(3, 15)) - (p(0, 10) + p(2, 5)))).0,
+                (((p(0, 12) + p(2, 4)) - (p(1, 11) + p(3, 3)))).0,
+                (((p(0, 13) + p(3, 2)) - (p(1, 4) + p(2, 11)))).0,
+                (((p(0, 14) + p(1, 3)) - (p(2, 2) + p(3, 11)))).0,
+                (((p(2, 14) - p(0, 2)) - (p(1, 1) + p(3, 13)))).0,
+                (((p(3, 12) - p(0, 3)) - (p(1, 14) + p(2, 1)))).0,
+                (((p(1, 13) - p(0, 4)) - (p(2, 12) + p(3, 1)))).0,
+                (((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7)))).0,
+                (((p(0, 5) + p(1, 0)) + (p(2, 10) - p(3, 9)))).0,
+                (((p(0, 6) + p(2, 0)) + (p(3, 8) - p(1, 10)))).0,
+                (((p(0, 7) + p(1, 9)) + (p(3, 0) - p(2, 8)))).0,
+                (-((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
             ],
         }
     }
@@ -6790,9 +6926,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudo
     fn gp(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -6804,12 +6941,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudo
     fn gp(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -6821,14 +6959,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseu
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (-a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
             ],
         }
     }
@@ -6840,12 +6979,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Pse
     fn gp(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
             ],
         }
     }
@@ -6857,9 +6997,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -6871,16 +7012,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Pseudosc
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[0] * b[7]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 7)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -6892,16 +7034,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudosca
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[4]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 4)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -6913,24 +7056,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[0] * b[15]).0,
-                (a[0] * b[11]).0,
-                (-a[0] * b[12]).0,
-                (-a[0] * b[13]).0,
-                (-a[0] * b[14]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 15)).0,
+                (p(0, 11)).0,
+                (-p(0, 12)).0,
+                (-p(0, 13)).0,
+                (-p(0, 14)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -6942,16 +7086,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Even<S
     fn gp(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -6963,16 +7108,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[3] - a[6] * b[2]))).0,
-                (((a[0] * b[2] + a[2] * b[0]) + (a[6] * b[1] - a[4] * b[3]))).0,
-                (((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[2] - a[5] * b[1]))).0,
-                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] - a[7] * b[0]))).0,
-                (((a[2] * b[3] + a[7] * b[1]) - (a[3] * b[2] + a[4] * b[0]))).0,
-                (((a[3] * b[1] + a[7] * b[2]) - (a[1] * b[3] + a[5] * b[0]))).0,
-                (((a[1] * b[2] + a[7] * b[3]) - (a[2] * b[1] + a[6] * b[0]))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 1) + p(1, 0)) + (p(5, 3) - p(6, 2)))).0,
+                (((p(0, 2) + p(2, 0)) + (p(6, 1) - p(4, 3)))).0,
+                (((p(0, 3) + p(3, 0)) + (p(4, 2) - p(5, 1)))).0,
+                (((p(4, 1) + p(5, 2)) + (p(6, 3) - p(7, 0)))).0,
+                (((p(2, 3) + p(7, 1)) - (p(3, 2) + p(4, 0)))).0,
+                (((p(3, 1) + p(7, 2)) - (p(1, 3) + p(5, 0)))).0,
+                (((p(1, 2) + p(7, 3)) - (p(2, 1) + p(6, 0)))).0,
             ],
         }
     }
@@ -6984,16 +7130,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Even
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
-                ((((a[0] * b[0] + a[2] * b[5]) + a[5] * b[2]) + ((a[7] * b[3] - a[3] * b[4]) - a[6] * b[1]))).0,
-                ((((a[0] * b[1] + a[3] * b[3]) + a[6] * b[0]) + ((a[7] * b[4] - a[1] * b[5]) - a[4] * b[2]))).0,
-                ((((a[0] * b[2] + a[1] * b[4]) + a[4] * b[1]) + ((a[7] * b[5] - a[2] * b[3]) - a[5] * b[0]))).0,
-                ((((a[0] * b[3] + a[3] * b[1]) + a[5] * b[5]) - ((a[2] * b[2] + a[6] * b[4]) + a[7] * b[0]))).0,
-                ((((a[0] * b[4] + a[1] * b[2]) + a[6] * b[3]) - ((a[3] * b[0] + a[4] * b[5]) + a[7] * b[1]))).0,
-                ((((a[0] * b[5] + a[2] * b[0]) + a[4] * b[4]) - ((a[1] * b[1] + a[5] * b[3]) + a[7] * b[2]))).0,
-                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                ((((p(0, 0) + p(2, 5)) + p(5, 2)) + ((p(7, 3) - p(3, 4)) - p(6, 1)))).0,
+                ((((p(0, 1) + p(3, 3)) + p(6, 0)) + ((p(7, 4) - p(1, 5)) - p(4, 2)))).0,
+                ((((p(0, 2) + p(1, 4)) + p(4, 1)) + ((p(7, 5) - p(2, 3)) - p(5, 0)))).0,
+                ((((p(0, 3) + p(3, 1)) + p(5, 5)) - ((p(2, 2) + p(6, 4)) + p(7, 0)))).0,
+                ((((p(0, 4) + p(1, 2)) + p(6, 3)) - ((p(3, 0) + p(4, 5)) + p(7, 1)))).0,
+                ((((p(0, 5) + p(2, 0)) + p(4, 4)) - ((p(1, 1) + p(5, 3)) + p(7, 2)))).0,
+                (-(((p(1, 3) + p(2, 4)) + p(3, 5)) + ((p(4, 0) + p(5, 1)) + p(6, 2)))).0,
             ],
         }
     }
@@ -7005,16 +7152,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Eve
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0]))).0,
-                (((a[3] * b[2] - a[2] * b[3]) - (a[4] * b[0] + a[7] * b[1]))).0,
-                (((a[1] * b[3] - a[3] * b[1]) - (a[5] * b[0] + a[7] * b[2]))).0,
-                (((a[2] * b[1] - a[1] * b[2]) - (a[6] * b[0] + a[7] * b[3]))).0,
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[0] * b[1] + a[5] * b[3]) - (a[1] * b[0] + a[6] * b[2]))).0,
-                (((a[0] * b[2] + a[6] * b[1]) - (a[2] * b[0] + a[4] * b[3]))).0,
-                (((a[0] * b[3] + a[4] * b[2]) - (a[3] * b[0] + a[5] * b[1]))).0,
+                (((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 0)))).0,
+                (((p(3, 2) - p(2, 3)) - (p(4, 0) + p(7, 1)))).0,
+                (((p(1, 3) - p(3, 1)) - (p(5, 0) + p(7, 2)))).0,
+                (((p(2, 1) - p(1, 2)) - (p(6, 0) + p(7, 3)))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 1) + p(5, 3)) - (p(1, 0) + p(6, 2)))).0,
+                (((p(0, 2) + p(6, 1)) - (p(2, 0) + p(4, 3)))).0,
+                (((p(0, 3) + p(4, 2)) - (p(3, 0) + p(5, 1)))).0,
             ],
         }
     }
@@ -7026,16 +7174,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[7] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(7, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -7047,16 +7196,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Even<S1,
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((((a[0] * b[1] + a[1] * b[0]) + (a[2] * b[6] + a[4] * b[7])) + ((a[5] * b[3] + a[7] * b[4]) - (a[3] * b[5] + a[6] * b[2])))).0,
-                ((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[4] + a[5] * b[7])) + ((a[6] * b[1] + a[7] * b[5]) - (a[1] * b[6] + a[4] * b[3])))).0,
-                ((((a[0] * b[3] + a[1] * b[5]) + (a[3] * b[0] + a[4] * b[2])) + ((a[6] * b[7] + a[7] * b[6]) - (a[2] * b[4] + a[5] * b[1])))).0,
-                ((((a[0] * b[4] + a[3] * b[2]) + (a[4] * b[0] + a[5] * b[6])) - ((a[1] * b[7] + a[2] * b[3]) + (a[6] * b[5] + a[7] * b[1])))).0,
-                ((((a[0] * b[5] + a[1] * b[3]) + (a[5] * b[0] + a[6] * b[4])) - ((a[2] * b[7] + a[3] * b[1]) + (a[4] * b[6] + a[7] * b[2])))).0,
-                ((((a[0] * b[6] + a[2] * b[1]) + (a[4] * b[5] + a[6] * b[0])) - ((a[1] * b[2] + a[3] * b[7]) + (a[5] * b[4] + a[7] * b[3])))).0,
-                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((((p(0, 1) + p(1, 0)) + (p(2, 6) + p(4, 7))) + ((p(5, 3) + p(7, 4)) - (p(3, 5) + p(6, 2))))).0,
+                ((((p(0, 2) + p(2, 0)) + (p(3, 4) + p(5, 7))) + ((p(6, 1) + p(7, 5)) - (p(1, 6) + p(4, 3))))).0,
+                ((((p(0, 3) + p(1, 5)) + (p(3, 0) + p(4, 2))) + ((p(6, 7) + p(7, 6)) - (p(2, 4) + p(5, 1))))).0,
+                ((((p(0, 4) + p(3, 2)) + (p(4, 0) + p(5, 6))) - ((p(1, 7) + p(2, 3)) + (p(6, 5) + p(7, 1))))).0,
+                ((((p(0, 5) + p(1, 3)) + (p(5, 0) + p(6, 4))) - ((p(2, 7) + p(3, 1)) + (p(4, 6) + p(7, 2))))).0,
+                ((((p(0, 6) + p(2, 1)) + (p(4, 5) + p(6, 0))) - ((p(1, 2) + p(3, 7)) + (p(5, 4) + p(7, 3))))).0,
+                ((((p(0, 7) + p(7, 0)) - (p(1, 4) + p(2, 5))) - ((p(3, 6) + p(4, 1)) + (p(5, 2) + p(6, 3))))).0,
             ],
         }
     }
@@ -7068,16 +7218,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Even<S1, 
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) + ((a[4] * b[5] + a[5] * b[6]) + (a[6] * b[7] + a[7] * b[4])))).0,
-                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[6] + a[5] * b[3])) - ((a[2] * b[7] + a[4] * b[4]) + (a[6] * b[2] + a[7] * b[5])))).0,
-                ((((a[0] * b[2] + a[1] * b[7]) + (a[2] * b[0] + a[6] * b[1])) - ((a[3] * b[5] + a[4] * b[3]) + (a[5] * b[4] + a[7] * b[6])))).0,
-                ((((a[0] * b[3] + a[2] * b[5]) + (a[3] * b[0] + a[4] * b[2])) - ((a[1] * b[6] + a[5] * b[1]) + (a[6] * b[4] + a[7] * b[7])))).0,
-                ((((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0])))).0,
-                ((((a[0] * b[5] + a[2] * b[3]) + (a[5] * b[7] + a[7] * b[1])) - ((a[1] * b[4] + a[3] * b[2]) + (a[4] * b[0] + a[6] * b[6])))).0,
-                ((((a[0] * b[6] + a[3] * b[1]) + (a[6] * b[5] + a[7] * b[2])) - ((a[1] * b[3] + a[2] * b[4]) + (a[4] * b[7] + a[5] * b[0])))).0,
-                ((((a[0] * b[7] + a[1] * b[2]) + (a[4] * b[6] + a[7] * b[3])) - ((a[2] * b[1] + a[3] * b[4]) + (a[5] * b[5] + a[6] * b[0])))).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) + ((p(4, 5) + p(5, 6)) + (p(6, 7) + p(7, 4))))).0,
+                ((((p(0, 1) + p(1, 0)) + (p(3, 6) + p(5, 3))) - ((p(2, 7) + p(4, 4)) + (p(6, 2) + p(7, 5))))).0,
+                ((((p(0, 2) + p(1, 7)) + (p(2, 0) + p(6, 1))) - ((p(3, 5) + p(4, 3)) + (p(5, 4) + p(7, 6))))).0,
+                ((((p(0, 3) + p(2, 5)) + (p(3, 0) + p(4, 2))) - ((p(1, 6) + p(5, 1)) + (p(6, 4) + p(7, 7))))).0,
+                ((((p(0, 4) + p(4, 1)) + (p(5, 2) + p(6, 3))) - ((p(1, 5) + p(2, 6)) + (p(3, 7) + p(7, 0))))).0,
+                ((((p(0, 5) + p(2, 3)) + (p(5, 7) + p(7, 1))) - ((p(1, 4) + p(3, 2)) + (p(4, 0) + p(6, 6))))).0,
+                ((((p(0, 6) + p(3, 1)) + (p(6, 5) + p(7, 2))) - ((p(1, 3) + p(2, 4)) + (p(4, 7) + p(5, 0))))).0,
+                ((((p(0, 7) + p(1, 2)) + (p(4, 6) + p(7, 3))) - ((p(2, 1) + p(3, 4)) + (p(5, 5) + p(6, 0))))).0,
             ],
         }
     }
@@ -7089,24 +7240,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for E
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
-                ((((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4])) + ((a[4] * b[12] + a[5] * b[13]) + (a[6] * b[14] + a[7] * b[11])))).0,
-                ((((a[0] * b[2] + a[1] * b[1]) + (a[3] * b[13] + a[5] * b[4])) - ((a[2] * b[14] + a[4] * b[11]) + (a[6] * b[3] + a[7] * b[12])))).0,
-                ((((a[0] * b[3] + a[1] * b[14]) + (a[2] * b[1] + a[6] * b[2])) - ((a[3] * b[12] + a[4] * b[4]) + (a[5] * b[11] + a[7] * b[13])))).0,
-                ((((a[0] * b[4] + a[2] * b[12]) + (a[3] * b[1] + a[4] * b[3])) - ((a[1] * b[13] + a[5] * b[2]) + (a[6] * b[11] + a[7] * b[14])))).0,
-                ((((a[0] * b[5] + a[1] * b[0]) + (a[2] * b[10] + a[4] * b[15])) + ((a[5] * b[7] + a[7] * b[8]) - (a[3] * b[9] + a[6] * b[6])))).0,
-                ((((a[0] * b[6] + a[2] * b[0]) + (a[3] * b[8] + a[5] * b[15])) + ((a[6] * b[5] + a[7] * b[9]) - (a[1] * b[10] + a[4] * b[7])))).0,
-                ((((a[0] * b[7] + a[1] * b[9]) + (a[3] * b[0] + a[4] * b[6])) + ((a[6] * b[15] + a[7] * b[10]) - (a[2] * b[8] + a[5] * b[5])))).0,
-                ((((a[0] * b[8] + a[3] * b[6]) + (a[4] * b[0] + a[5] * b[10])) - ((a[1] * b[15] + a[2] * b[7]) + (a[6] * b[9] + a[7] * b[5])))).0,
-                ((((a[0] * b[9] + a[1] * b[7]) + (a[5] * b[0] + a[6] * b[8])) - ((a[2] * b[15] + a[3] * b[5]) + (a[4] * b[10] + a[7] * b[6])))).0,
-                ((((a[0] * b[10] + a[2] * b[5]) + (a[4] * b[9] + a[6] * b[0])) - ((a[1] * b[6] + a[3] * b[15]) + (a[5] * b[8] + a[7] * b[7])))).0,
-                ((((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4])) - ((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1])))).0,
-                ((((a[0] * b[12] + a[2] * b[4]) + (a[5] * b[14] + a[7] * b[2])) - ((a[1] * b[11] + a[3] * b[3]) + (a[4] * b[1] + a[6] * b[13])))).0,
-                ((((a[0] * b[13] + a[3] * b[2]) + (a[6] * b[12] + a[7] * b[3])) - ((a[1] * b[4] + a[2] * b[11]) + (a[4] * b[14] + a[5] * b[1])))).0,
-                ((((a[0] * b[14] + a[1] * b[3]) + (a[4] * b[13] + a[7] * b[4])) - ((a[2] * b[2] + a[3] * b[11]) + (a[5] * b[12] + a[6] * b[1])))).0,
-                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                ((((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4))) + ((p(4, 12) + p(5, 13)) + (p(6, 14) + p(7, 11))))).0,
+                ((((p(0, 2) + p(1, 1)) + (p(3, 13) + p(5, 4))) - ((p(2, 14) + p(4, 11)) + (p(6, 3) + p(7, 12))))).0,
+                ((((p(0, 3) + p(1, 14)) + (p(2, 1) + p(6, 2))) - ((p(3, 12) + p(4, 4)) + (p(5, 11) + p(7, 13))))).0,
+                ((((p(0, 4) + p(2, 12)) + (p(3, 1) + p(4, 3))) - ((p(1, 13) + p(5, 2)) + (p(6, 11) + p(7, 14))))).0,
+                ((((p(0, 5) + p(1, 0)) + (p(2, 10) + p(4, 15))) + ((p(5, 7) + p(7, 8)) - (p(3, 9) + p(6, 6))))).0,
+                ((((p(0, 6) + p(2, 0)) + (p(3, 8) + p(5, 15))) + ((p(6, 5) + p(7, 9)) - (p(1, 10) + p(4, 7))))).0,
+                ((((p(0, 7) + p(1, 9)) + (p(3, 0) + p(4, 6))) + ((p(6, 15) + p(7, 10)) - (p(2, 8) + p(5, 5))))).0,
+                ((((p(0, 8) + p(3, 6)) + (p(4, 0) + p(5, 10))) - ((p(1, 15) + p(2, 7)) + (p(6, 9) + p(7, 5))))).0,
+                ((((p(0, 9) + p(1, 7)) + (p(5, 0) + p(6, 8))) - ((p(2, 15) + p(3, 5)) + (p(4, 10) + p(7, 6))))).0,
+                ((((p(0, 10) + p(2, 5)) + (p(4, 9) + p(6, 0))) - ((p(1, 6) + p(3, 15)) + (p(5, 8) + p(7, 7))))).0,
+                ((((p(0, 11) + p(4, 2)) + (p(5, 3) + p(6, 4))) - ((p(1, 12) + p(2, 13)) + (p(3, 14) + p(7, 1))))).0,
+                ((((p(0, 12) + p(2, 4)) + (p(5, 14) + p(7, 2))) - ((p(1, 11) + p(3, 3)) + (p(4, 1) + p(6, 13))))).0,
+                ((((p(0, 13) + p(3, 2)) + (p(6, 12) + p(7, 3))) - ((p(1, 4) + p(2, 11)) + (p(4, 14) + p(5, 1))))).0,
+                ((((p(0, 14) + p(1, 3)) + (p(4, 13) + p(7, 4))) - ((p(2, 2) + p(3, 11)) + (p(5, 12) + p(6, 1))))).0,
+                ((((p(0, 15) + p(7, 0)) - (p(1, 8) + p(2, 9))) - ((p(3, 10) + p(4, 5)) + (p(5, 6) + p(6, 7))))).0,
             ],
         }
     }
@@ -7118,16 +7270,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Odd<S1
     fn gp(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -7139,16 +7292,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Odd<S1
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[1] * b[0] + a[6] * b[3]) - (a[0] * b[1] + a[7] * b[2]))).0,
-                (((a[2] * b[0] + a[7] * b[1]) - (a[0] * b[2] + a[5] * b[3]))).0,
-                (((a[3] * b[0] + a[5] * b[2]) - (a[0] * b[3] + a[6] * b[1]))).0,
-                (((a[2] * b[3] - a[3] * b[2]) - (a[4] * b[1] + a[5] * b[0]))).0,
-                (((a[3] * b[1] - a[1] * b[3]) - (a[4] * b[2] + a[6] * b[0]))).0,
-                (((a[1] * b[2] - a[2] * b[1]) - (a[4] * b[3] + a[7] * b[0]))).0,
-                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(1, 0) + p(6, 3)) - (p(0, 1) + p(7, 2)))).0,
+                (((p(2, 0) + p(7, 1)) - (p(0, 2) + p(5, 3)))).0,
+                (((p(3, 0) + p(5, 2)) - (p(0, 3) + p(6, 1)))).0,
+                (((p(2, 3) - p(3, 2)) - (p(4, 1) + p(5, 0)))).0,
+                (((p(3, 1) - p(1, 3)) - (p(4, 2) + p(6, 0)))).0,
+                (((p(1, 2) - p(2, 1)) - (p(4, 3) + p(7, 0)))).0,
+                (-((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -7160,16 +7314,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Odd<
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
-                ((((a[2] * b[5] + a[6] * b[2]) - a[0] * b[0]) - ((a[3] * b[4] + a[4] * b[3]) + a[7] * b[1]))).0,
-                ((((a[3] * b[3] + a[7] * b[0]) - a[0] * b[1]) - ((a[1] * b[5] + a[4] * b[4]) + a[5] * b[2]))).0,
-                ((((a[1] * b[4] + a[5] * b[1]) - a[0] * b[2]) - ((a[2] * b[3] + a[4] * b[5]) + a[6] * b[0]))).0,
-                ((((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]))).0,
-                ((((a[3] * b[1] + a[4] * b[0]) + a[6] * b[5]) - ((a[0] * b[3] + a[2] * b[2]) + a[7] * b[4]))).0,
-                ((((a[1] * b[2] + a[4] * b[1]) + a[7] * b[3]) - ((a[0] * b[4] + a[3] * b[0]) + a[5] * b[5]))).0,
-                ((((a[2] * b[0] + a[4] * b[2]) + a[5] * b[4]) - ((a[0] * b[5] + a[1] * b[1]) + a[6] * b[3]))).0,
+                ((((p(5, 3) + p(6, 4)) + p(7, 5)) - ((p(1, 0) + p(2, 1)) + p(3, 2)))).0,
+                ((((p(2, 5) + p(6, 2)) - p(0, 0)) - ((p(3, 4) + p(4, 3)) + p(7, 1)))).0,
+                ((((p(3, 3) + p(7, 0)) - p(0, 1)) - ((p(1, 5) + p(4, 4)) + p(5, 2)))).0,
+                ((((p(1, 4) + p(5, 1)) - p(0, 2)) - ((p(2, 3) + p(4, 5)) + p(6, 0)))).0,
+                ((((p(1, 3) + p(2, 4)) + p(3, 5)) + ((p(5, 0) + p(6, 1)) + p(7, 2)))).0,
+                ((((p(3, 1) + p(4, 0)) + p(6, 5)) - ((p(0, 3) + p(2, 2)) + p(7, 4)))).0,
+                ((((p(1, 2) + p(4, 1)) + p(7, 3)) - ((p(0, 4) + p(3, 0)) + p(5, 5)))).0,
+                ((((p(2, 0) + p(4, 2)) + p(5, 4)) - ((p(0, 5) + p(1, 1)) + p(6, 3)))).0,
             ],
         }
     }
@@ -7181,16 +7336,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Odd
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[3] * b[2] + a[4] * b[1]) - (a[2] * b[3] + a[5] * b[0]))).0,
-                (((a[1] * b[3] + a[4] * b[2]) - (a[3] * b[1] + a[6] * b[0]))).0,
-                (((a[2] * b[1] + a[4] * b[3]) - (a[1] * b[2] + a[7] * b[0]))).0,
-                (((a[6] * b[3] - a[0] * b[1]) - (a[1] * b[0] + a[7] * b[2]))).0,
-                (((a[7] * b[1] - a[0] * b[2]) - (a[2] * b[0] + a[5] * b[3]))).0,
-                (((a[5] * b[2] - a[0] * b[3]) - (a[3] * b[0] + a[6] * b[1]))).0,
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                (((p(3, 2) + p(4, 1)) - (p(2, 3) + p(5, 0)))).0,
+                (((p(1, 3) + p(4, 2)) - (p(3, 1) + p(6, 0)))).0,
+                (((p(2, 1) + p(4, 3)) - (p(1, 2) + p(7, 0)))).0,
+                (((p(6, 3) - p(0, 1)) - (p(1, 0) + p(7, 2)))).0,
+                (((p(7, 1) - p(0, 2)) - (p(2, 0) + p(5, 3)))).0,
+                (((p(5, 2) - p(0, 3)) - (p(3, 0) + p(6, 1)))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -7202,16 +7358,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (-p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -7223,16 +7380,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Odd<S1, 
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6])) - ((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7])))).0,
-                ((((a[1] * b[0] + a[2] * b[6]) + (a[5] * b[7] + a[6] * b[3])) - ((a[0] * b[1] + a[3] * b[5]) + (a[4] * b[4] + a[7] * b[2])))).0,
-                ((((a[2] * b[0] + a[3] * b[4]) + (a[6] * b[7] + a[7] * b[1])) - ((a[0] * b[2] + a[1] * b[6]) + (a[4] * b[5] + a[5] * b[3])))).0,
-                ((((a[1] * b[5] + a[3] * b[0]) + (a[5] * b[2] + a[7] * b[7])) - ((a[0] * b[3] + a[2] * b[4]) + (a[4] * b[6] + a[6] * b[1])))).0,
-                ((((a[0] * b[7] + a[1] * b[4]) + (a[2] * b[5] + a[3] * b[6])) + ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
-                ((((a[3] * b[2] + a[4] * b[1]) + (a[5] * b[0] + a[6] * b[6])) - ((a[0] * b[4] + a[1] * b[7]) + (a[2] * b[3] + a[7] * b[5])))).0,
-                ((((a[1] * b[3] + a[4] * b[2]) + (a[6] * b[0] + a[7] * b[4])) - ((a[0] * b[5] + a[2] * b[7]) + (a[3] * b[1] + a[5] * b[6])))).0,
-                ((((a[2] * b[1] + a[4] * b[3]) + (a[5] * b[5] + a[7] * b[0])) - ((a[0] * b[6] + a[1] * b[2]) + (a[3] * b[7] + a[6] * b[4])))).0,
+                ((((p(0, 0) + p(5, 4)) + (p(6, 5) + p(7, 6))) - ((p(1, 1) + p(2, 2)) + (p(3, 3) + p(4, 7))))).0,
+                ((((p(1, 0) + p(2, 6)) + (p(5, 7) + p(6, 3))) - ((p(0, 1) + p(3, 5)) + (p(4, 4) + p(7, 2))))).0,
+                ((((p(2, 0) + p(3, 4)) + (p(6, 7) + p(7, 1))) - ((p(0, 2) + p(1, 6)) + (p(4, 5) + p(5, 3))))).0,
+                ((((p(1, 5) + p(3, 0)) + (p(5, 2) + p(7, 7))) - ((p(0, 3) + p(2, 4)) + (p(4, 6) + p(6, 1))))).0,
+                ((((p(0, 7) + p(1, 4)) + (p(2, 5) + p(3, 6))) + ((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))))).0,
+                ((((p(3, 2) + p(4, 1)) + (p(5, 0) + p(6, 6))) - ((p(0, 4) + p(1, 7)) + (p(2, 3) + p(7, 5))))).0,
+                ((((p(1, 3) + p(4, 2)) + (p(6, 0) + p(7, 4))) - ((p(0, 5) + p(2, 7)) + (p(3, 1) + p(5, 6))))).0,
+                ((((p(2, 1) + p(4, 3)) + (p(5, 5) + p(7, 0))) - ((p(0, 6) + p(1, 2)) + (p(3, 7) + p(6, 4))))).0,
             ],
         }
     }
@@ -7244,16 +7402,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Odd<S1, T
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((((a[1] * b[0] + a[3] * b[6]) + (a[4] * b[5] + a[6] * b[3])) - ((a[0] * b[1] + a[2] * b[7]) + (a[5] * b[4] + a[7] * b[2])))).0,
-                ((((a[1] * b[7] + a[2] * b[0]) + (a[4] * b[6] + a[7] * b[1])) - ((a[0] * b[2] + a[3] * b[5]) + (a[5] * b[3] + a[6] * b[4])))).0,
-                ((((a[2] * b[5] + a[3] * b[0]) + (a[4] * b[7] + a[5] * b[2])) - ((a[0] * b[3] + a[1] * b[6]) + (a[6] * b[1] + a[7] * b[4])))).0,
-                ((((a[2] * b[3] + a[6] * b[7]) - (a[0] * b[5] + a[1] * b[4])) - ((a[3] * b[2] + a[4] * b[1]) + (a[5] * b[0] + a[7] * b[6])))).0,
-                ((((a[3] * b[1] + a[7] * b[5]) - (a[0] * b[6] + a[1] * b[3])) - ((a[2] * b[4] + a[4] * b[2]) + (a[5] * b[7] + a[6] * b[0])))).0,
-                ((((a[1] * b[2] + a[5] * b[6]) - (a[0] * b[7] + a[2] * b[1])) - ((a[3] * b[4] + a[4] * b[3]) + (a[6] * b[5] + a[7] * b[0])))).0,
-                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((((p(1, 0) + p(3, 6)) + (p(4, 5) + p(6, 3))) - ((p(0, 1) + p(2, 7)) + (p(5, 4) + p(7, 2))))).0,
+                ((((p(1, 7) + p(2, 0)) + (p(4, 6) + p(7, 1))) - ((p(0, 2) + p(3, 5)) + (p(5, 3) + p(6, 4))))).0,
+                ((((p(2, 5) + p(3, 0)) + (p(4, 7) + p(5, 2))) - ((p(0, 3) + p(1, 6)) + (p(6, 1) + p(7, 4))))).0,
+                ((((p(2, 3) + p(6, 7)) - (p(0, 5) + p(1, 4))) - ((p(3, 2) + p(4, 1)) + (p(5, 0) + p(7, 6))))).0,
+                ((((p(3, 1) + p(7, 5)) - (p(0, 6) + p(1, 3))) - ((p(2, 4) + p(4, 2)) + (p(5, 7) + p(6, 0))))).0,
+                ((((p(1, 2) + p(5, 6)) - (p(0, 7) + p(2, 1))) - ((p(3, 4) + p(4, 3)) + (p(6, 5) + p(7, 0))))).0,
+                ((((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))))).0,
             ],
         }
     }
@@ -7265,24 +7424,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for O
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
-                ((((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15])))).0,
-                ((((a[1] * b[0] + a[2] * b[10]) + (a[5] * b[15] + a[6] * b[7])) - ((a[0] * b[5] + a[3] * b[9]) + (a[4] * b[8] + a[7] * b[6])))).0,
-                ((((a[2] * b[0] + a[3] * b[8]) + (a[6] * b[15] + a[7] * b[5])) - ((a[0] * b[6] + a[1] * b[10]) + (a[4] * b[9] + a[5] * b[7])))).0,
-                ((((a[1] * b[9] + a[3] * b[0]) + (a[5] * b[6] + a[7] * b[15])) - ((a[0] * b[7] + a[2] * b[8]) + (a[4] * b[10] + a[6] * b[5])))).0,
-                ((((a[1] * b[1] + a[3] * b[13]) + (a[4] * b[12] + a[6] * b[4])) - ((a[0] * b[2] + a[2] * b[14]) + (a[5] * b[11] + a[7] * b[3])))).0,
-                ((((a[1] * b[14] + a[2] * b[1]) + (a[4] * b[13] + a[7] * b[2])) - ((a[0] * b[3] + a[3] * b[12]) + (a[5] * b[4] + a[6] * b[11])))).0,
-                ((((a[2] * b[12] + a[3] * b[1]) + (a[4] * b[14] + a[5] * b[3])) - ((a[0] * b[4] + a[1] * b[13]) + (a[6] * b[2] + a[7] * b[11])))).0,
-                ((((a[2] * b[4] + a[6] * b[14]) - (a[0] * b[12] + a[1] * b[11])) - ((a[3] * b[3] + a[4] * b[2]) + (a[5] * b[1] + a[7] * b[13])))).0,
-                ((((a[3] * b[2] + a[7] * b[12]) - (a[0] * b[13] + a[1] * b[4])) - ((a[2] * b[11] + a[4] * b[3]) + (a[5] * b[14] + a[6] * b[1])))).0,
-                ((((a[1] * b[3] + a[5] * b[13]) - (a[0] * b[14] + a[2] * b[2])) - ((a[3] * b[11] + a[4] * b[4]) + (a[6] * b[12] + a[7] * b[1])))).0,
-                ((((a[0] * b[15] + a[1] * b[8]) + (a[2] * b[9] + a[3] * b[10])) + ((a[4] * b[0] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((((a[3] * b[6] + a[4] * b[5]) + (a[5] * b[0] + a[6] * b[10])) - ((a[0] * b[8] + a[1] * b[15]) + (a[2] * b[7] + a[7] * b[9])))).0,
-                ((((a[1] * b[7] + a[4] * b[6]) + (a[6] * b[0] + a[7] * b[8])) - ((a[0] * b[9] + a[2] * b[15]) + (a[3] * b[5] + a[5] * b[10])))).0,
-                ((((a[2] * b[5] + a[4] * b[7]) + (a[5] * b[9] + a[7] * b[0])) - ((a[0] * b[10] + a[1] * b[6]) + (a[3] * b[15] + a[6] * b[8])))).0,
-                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                ((((p(0, 0) + p(5, 8)) + (p(6, 9) + p(7, 10))) - ((p(1, 5) + p(2, 6)) + (p(3, 7) + p(4, 15))))).0,
+                ((((p(1, 0) + p(2, 10)) + (p(5, 15) + p(6, 7))) - ((p(0, 5) + p(3, 9)) + (p(4, 8) + p(7, 6))))).0,
+                ((((p(2, 0) + p(3, 8)) + (p(6, 15) + p(7, 5))) - ((p(0, 6) + p(1, 10)) + (p(4, 9) + p(5, 7))))).0,
+                ((((p(1, 9) + p(3, 0)) + (p(5, 6) + p(7, 15))) - ((p(0, 7) + p(2, 8)) + (p(4, 10) + p(6, 5))))).0,
+                ((((p(1, 1) + p(3, 13)) + (p(4, 12) + p(6, 4))) - ((p(0, 2) + p(2, 14)) + (p(5, 11) + p(7, 3))))).0,
+                ((((p(1, 14) + p(2, 1)) + (p(4, 13) + p(7, 2))) - ((p(0, 3) + p(3, 12)) + (p(5, 4) + p(6, 11))))).0,
+                ((((p(2, 12) + p(3, 1)) + (p(4, 14) + p(5, 3))) - ((p(0, 4) + p(1, 13)) + (p(6, 2) + p(7, 11))))).0,
+                ((((p(2, 4) + p(6, 14)) - (p(0, 12) + p(1, 11))) - ((p(3, 3) + p(4, 2)) + (p(5, 1) + p(7, 13))))).0,
+                ((((p(3, 2) + p(7, 12)) - (p(0, 13) + p(1, 4))) - ((p(2, 11) + p(4, 3)) + (p(5, 14) + p(6, 1))))).0,
+                ((((p(1, 3) + p(5, 13)) - (p(0, 14) + p(2, 2))) - ((p(3, 11) + p(4, 4)) + (p(6, 12) + p(7, 1))))).0,
+                ((((p(0, 15) + p(1, 8)) + (p(2, 9) + p(3, 10))) + ((p(4, 0) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((((p(3, 6) + p(4, 5)) + (p(5, 0) + p(6, 10))) - ((p(0, 8) + p(1, 15)) + (p(2, 7) + p(7, 9))))).0,
+                ((((p(1, 7) + p(4, 6)) + (p(6, 0) + p(7, 8))) - ((p(0, 9) + p(2, 15)) + (p(3, 5) + p(5, 10))))).0,
+                ((((p(2, 5) + p(4, 7)) + (p(5, 9) + p(7, 0))) - ((p(0, 10) + p(1, 6)) + (p(3, 15) + p(6, 8))))).0,
+                ((((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14))) - ((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 4))))).0,
             ],
         }
     }
@@ -7294,24 +7454,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multiv
     fn gp(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -7323,24 +7484,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Multiv
     fn gp(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
-                (((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[0] * b[1] + a[5] * b[0]) + (a[9] * b[3] - a[10] * b[2]))).0,
-                (((a[0] * b[2] + a[6] * b[0]) + (a[10] * b[1] - a[8] * b[3]))).0,
-                (((a[0] * b[3] + a[7] * b[0]) + (a[8] * b[2] - a[9] * b[1]))).0,
-                (((a[2] * b[0] + a[13] * b[3]) - (a[1] * b[1] + a[14] * b[2]))).0,
-                (((a[3] * b[0] + a[14] * b[1]) - (a[1] * b[2] + a[12] * b[3]))).0,
-                (((a[4] * b[0] + a[12] * b[2]) - (a[1] * b[3] + a[13] * b[1]))).0,
-                (((a[3] * b[3] - a[4] * b[2]) - (a[11] * b[1] + a[12] * b[0]))).0,
-                (((a[4] * b[1] - a[2] * b[3]) - (a[11] * b[2] + a[13] * b[0]))).0,
-                (((a[2] * b[2] - a[3] * b[1]) - (a[11] * b[3] + a[14] * b[0]))).0,
-                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] - a[15] * b[0]))).0,
-                (((a[6] * b[3] + a[15] * b[1]) - (a[7] * b[2] + a[8] * b[0]))).0,
-                (((a[7] * b[1] + a[15] * b[2]) - (a[5] * b[3] + a[9] * b[0]))).0,
-                (((a[5] * b[2] + a[15] * b[3]) - (a[6] * b[1] + a[10] * b[0]))).0,
-                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
+                (((p(0, 1) + p(5, 0)) + (p(9, 3) - p(10, 2)))).0,
+                (((p(0, 2) + p(6, 0)) + (p(10, 1) - p(8, 3)))).0,
+                (((p(0, 3) + p(7, 0)) + (p(8, 2) - p(9, 1)))).0,
+                (((p(2, 0) + p(13, 3)) - (p(1, 1) + p(14, 2)))).0,
+                (((p(3, 0) + p(14, 1)) - (p(1, 2) + p(12, 3)))).0,
+                (((p(4, 0) + p(12, 2)) - (p(1, 3) + p(13, 1)))).0,
+                (((p(3, 3) - p(4, 2)) - (p(11, 1) + p(12, 0)))).0,
+                (((p(4, 1) - p(2, 3)) - (p(11, 2) + p(13, 0)))).0,
+                (((p(2, 2) - p(3, 1)) - (p(11, 3) + p(14, 0)))).0,
+                (((p(8, 1) + p(9, 2)) + (p(10, 3) - p(15, 0)))).0,
+                (((p(6, 3) + p(15, 1)) - (p(7, 2) + p(8, 0)))).0,
+                (((p(7, 1) + p(15, 2)) - (p(5, 3) + p(9, 0)))).0,
+                (((p(5, 2) + p(15, 3)) - (p(6, 1) + p(10, 0)))).0,
+                (-((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
             ],
         }
     }
@@ -7352,24 +7514,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Mult
     fn gp(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
-                ((((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5]) - ((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2]))).0,
-                ((((a[3] * b[5] + a[13] * b[2]) - a[1] * b[0]) - ((a[4] * b[4] + a[11] * b[3]) + a[14] * b[1]))).0,
-                ((((a[4] * b[3] + a[14] * b[0]) - a[1] * b[1]) - ((a[2] * b[5] + a[11] * b[4]) + a[12] * b[2]))).0,
-                ((((a[2] * b[4] + a[12] * b[1]) - a[1] * b[2]) - ((a[3] * b[3] + a[11] * b[5]) + a[13] * b[0]))).0,
-                ((((a[0] * b[0] + a[6] * b[5]) + a[9] * b[2]) + ((a[15] * b[3] - a[7] * b[4]) - a[10] * b[1]))).0,
-                ((((a[0] * b[1] + a[7] * b[3]) + a[10] * b[0]) + ((a[15] * b[4] - a[5] * b[5]) - a[8] * b[2]))).0,
-                ((((a[0] * b[2] + a[5] * b[4]) + a[8] * b[1]) + ((a[15] * b[5] - a[6] * b[3]) - a[9] * b[0]))).0,
-                ((((a[0] * b[3] + a[7] * b[1]) + a[9] * b[5]) - ((a[6] * b[2] + a[10] * b[4]) + a[15] * b[0]))).0,
-                ((((a[0] * b[4] + a[5] * b[2]) + a[10] * b[3]) - ((a[7] * b[0] + a[8] * b[5]) + a[15] * b[1]))).0,
-                ((((a[0] * b[5] + a[6] * b[0]) + a[8] * b[4]) - ((a[5] * b[1] + a[9] * b[3]) + a[15] * b[2]))).0,
-                ((((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5]) + ((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2]))).0,
-                ((((a[4] * b[1] + a[11] * b[0]) + a[13] * b[5]) - ((a[1] * b[3] + a[3] * b[2]) + a[14] * b[4]))).0,
-                ((((a[2] * b[2] + a[11] * b[1]) + a[14] * b[3]) - ((a[1] * b[4] + a[4] * b[0]) + a[12] * b[5]))).0,
-                ((((a[3] * b[0] + a[11] * b[2]) + a[12] * b[4]) - ((a[1] * b[5] + a[2] * b[1]) + a[13] * b[3]))).0,
-                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                ((((p(12, 3) + p(13, 4)) + p(14, 5)) - ((p(2, 0) + p(3, 1)) + p(4, 2)))).0,
+                ((((p(3, 5) + p(13, 2)) - p(1, 0)) - ((p(4, 4) + p(11, 3)) + p(14, 1)))).0,
+                ((((p(4, 3) + p(14, 0)) - p(1, 1)) - ((p(2, 5) + p(11, 4)) + p(12, 2)))).0,
+                ((((p(2, 4) + p(12, 1)) - p(1, 2)) - ((p(3, 3) + p(11, 5)) + p(13, 0)))).0,
+                ((((p(0, 0) + p(6, 5)) + p(9, 2)) + ((p(15, 3) - p(7, 4)) - p(10, 1)))).0,
+                ((((p(0, 1) + p(7, 3)) + p(10, 0)) + ((p(15, 4) - p(5, 5)) - p(8, 2)))).0,
+                ((((p(0, 2) + p(5, 4)) + p(8, 1)) + ((p(15, 5) - p(6, 3)) - p(9, 0)))).0,
+                ((((p(0, 3) + p(7, 1)) + p(9, 5)) - ((p(6, 2) + p(10, 4)) + p(15, 0)))).0,
+                ((((p(0, 4) + p(5, 2)) + p(10, 3)) - ((p(7, 0) + p(8, 5)) + p(15, 1)))).0,
+                ((((p(0, 5) + p(6, 0)) + p(8, 4)) - ((p(5, 1) + p(9, 3)) + p(15, 2)))).0,
+                ((((p(2, 3) + p(3, 4)) + p(4, 5)) + ((p(12, 0) + p(13, 1)) + p(14, 2)))).0,
+                ((((p(4, 1) + p(11, 0)) + p(13, 5)) - ((p(1, 3) + p(3, 2)) + p(14, 4)))).0,
+                ((((p(2, 2) + p(11, 1)) + p(14, 3)) - ((p(1, 4) + p(4, 0)) + p(12, 5)))).0,
+                ((((p(3, 0) + p(11, 2)) + p(12, 4)) - ((p(1, 5) + p(2, 1)) + p(13, 3)))).0,
+                (-(((p(5, 3) + p(6, 4)) + p(7, 5)) + ((p(8, 0) + p(9, 1)) + p(10, 2)))).0,
             ],
         }
     }
@@ -7381,24 +7544,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Mul
     fn gp(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] + a[15] * b[0]))).0,
-                (((a[7] * b[2] - a[6] * b[3]) - (a[8] * b[0] + a[15] * b[1]))).0,
-                (((a[5] * b[3] - a[7] * b[1]) - (a[9] * b[0] + a[15] * b[2]))).0,
-                (((a[6] * b[1] - a[5] * b[2]) - (a[10] * b[0] + a[15] * b[3]))).0,
-                (((a[4] * b[2] + a[11] * b[1]) - (a[3] * b[3] + a[12] * b[0]))).0,
-                (((a[2] * b[3] + a[11] * b[2]) - (a[4] * b[1] + a[13] * b[0]))).0,
-                (((a[3] * b[1] + a[11] * b[3]) - (a[2] * b[2] + a[14] * b[0]))).0,
-                (((a[13] * b[3] - a[1] * b[1]) - (a[2] * b[0] + a[14] * b[2]))).0,
-                (((a[14] * b[1] - a[1] * b[2]) - (a[3] * b[0] + a[12] * b[3]))).0,
-                (((a[12] * b[2] - a[1] * b[3]) - (a[4] * b[0] + a[13] * b[1]))).0,
-                (((a[0] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[0] * b[1] + a[9] * b[3]) - (a[5] * b[0] + a[10] * b[2]))).0,
-                (((a[0] * b[2] + a[10] * b[1]) - (a[6] * b[0] + a[8] * b[3]))).0,
-                (((a[0] * b[3] + a[8] * b[2]) - (a[7] * b[0] + a[9] * b[1]))).0,
-                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (((p(8, 1) + p(9, 2)) + (p(10, 3) + p(15, 0)))).0,
+                (((p(7, 2) - p(6, 3)) - (p(8, 0) + p(15, 1)))).0,
+                (((p(5, 3) - p(7, 1)) - (p(9, 0) + p(15, 2)))).0,
+                (((p(6, 1) - p(5, 2)) - (p(10, 0) + p(15, 3)))).0,
+                (((p(4, 2) + p(11, 1)) - (p(3, 3) + p(12, 0)))).0,
+                (((p(2, 3) + p(11, 2)) - (p(4, 1) + p(13, 0)))).0,
+                (((p(3, 1) + p(11, 3)) - (p(2, 2) + p(14, 0)))).0,
+                (((p(13, 3) - p(1, 1)) - (p(2, 0) + p(14, 2)))).0,
+                (((p(14, 1) - p(1, 2)) - (p(3, 0) + p(12, 3)))).0,
+                (((p(12, 2) - p(1, 3)) - (p(4, 0) + p(13, 1)))).0,
+                (((p(0, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                (((p(0, 1) + p(9, 3)) - (p(5, 0) + p(10, 2)))).0,
+                (((p(0, 2) + p(10, 1)) - (p(6, 0) + p(8, 3)))).0,
+                (((p(0, 3) + p(8, 2)) - (p(7, 0) + p(9, 1)))).0,
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
             ],
         }
     }
@@ -7410,24 +7574,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[15] * b[0]).0,
-                (-a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (-a[5] * b[0]).0,
-                (-a[6] * b[0]).0,
-                (-a[7] * b[0]).0,
-                (a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (-a[4] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(15, 0)).0,
+                (-p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (-p(5, 0)).0,
+                (-p(6, 0)).0,
+                (-p(7, 0)).0,
+                (p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (-p(4, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -7439,24 +7604,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Multivec
     fn gp(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
-                ((((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6])) - ((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7])))).0,
-                ((((a[2] * b[0] + a[3] * b[6]) + (a[12] * b[7] + a[13] * b[3])) - ((a[1] * b[1] + a[4] * b[5]) + (a[11] * b[4] + a[14] * b[2])))).0,
-                ((((a[3] * b[0] + a[4] * b[4]) + (a[13] * b[7] + a[14] * b[1])) - ((a[1] * b[2] + a[2] * b[6]) + (a[11] * b[5] + a[12] * b[3])))).0,
-                ((((a[2] * b[5] + a[4] * b[0]) + (a[12] * b[2] + a[14] * b[7])) - ((a[1] * b[3] + a[3] * b[4]) + (a[11] * b[6] + a[13] * b[1])))).0,
-                ((((a[0] * b[1] + a[5] * b[0]) + (a[6] * b[6] + a[8] * b[7])) + ((a[9] * b[3] + a[15] * b[4]) - (a[7] * b[5] + a[10] * b[2])))).0,
-                ((((a[0] * b[2] + a[6] * b[0]) + (a[7] * b[4] + a[9] * b[7])) + ((a[10] * b[1] + a[15] * b[5]) - (a[5] * b[6] + a[8] * b[3])))).0,
-                ((((a[0] * b[3] + a[5] * b[5]) + (a[7] * b[0] + a[8] * b[2])) + ((a[10] * b[7] + a[15] * b[6]) - (a[6] * b[4] + a[9] * b[1])))).0,
-                ((((a[0] * b[4] + a[7] * b[2]) + (a[8] * b[0] + a[9] * b[6])) - ((a[5] * b[7] + a[6] * b[3]) + (a[10] * b[5] + a[15] * b[1])))).0,
-                ((((a[0] * b[5] + a[5] * b[3]) + (a[9] * b[0] + a[10] * b[4])) - ((a[6] * b[7] + a[7] * b[1]) + (a[8] * b[6] + a[15] * b[2])))).0,
-                ((((a[0] * b[6] + a[6] * b[1]) + (a[8] * b[5] + a[10] * b[0])) - ((a[5] * b[2] + a[7] * b[7]) + (a[9] * b[4] + a[15] * b[3])))).0,
-                ((((a[1] * b[7] + a[2] * b[4]) + (a[3] * b[5] + a[4] * b[6])) + ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
-                ((((a[4] * b[2] + a[11] * b[1]) + (a[12] * b[0] + a[13] * b[6])) - ((a[1] * b[4] + a[2] * b[7]) + (a[3] * b[3] + a[14] * b[5])))).0,
-                ((((a[2] * b[3] + a[11] * b[2]) + (a[13] * b[0] + a[14] * b[4])) - ((a[1] * b[5] + a[3] * b[7]) + (a[4] * b[1] + a[12] * b[6])))).0,
-                ((((a[3] * b[1] + a[11] * b[3]) + (a[12] * b[5] + a[14] * b[0])) - ((a[1] * b[6] + a[2] * b[2]) + (a[4] * b[7] + a[13] * b[4])))).0,
-                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                ((((p(1, 0) + p(12, 4)) + (p(13, 5) + p(14, 6))) - ((p(2, 1) + p(3, 2)) + (p(4, 3) + p(11, 7))))).0,
+                ((((p(2, 0) + p(3, 6)) + (p(12, 7) + p(13, 3))) - ((p(1, 1) + p(4, 5)) + (p(11, 4) + p(14, 2))))).0,
+                ((((p(3, 0) + p(4, 4)) + (p(13, 7) + p(14, 1))) - ((p(1, 2) + p(2, 6)) + (p(11, 5) + p(12, 3))))).0,
+                ((((p(2, 5) + p(4, 0)) + (p(12, 2) + p(14, 7))) - ((p(1, 3) + p(3, 4)) + (p(11, 6) + p(13, 1))))).0,
+                ((((p(0, 1) + p(5, 0)) + (p(6, 6) + p(8, 7))) + ((p(9, 3) + p(15, 4)) - (p(7, 5) + p(10, 2))))).0,
+                ((((p(0, 2) + p(6, 0)) + (p(7, 4) + p(9, 7))) + ((p(10, 1) + p(15, 5)) - (p(5, 6) + p(8, 3))))).0,
+                ((((p(0, 3) + p(5, 5)) + (p(7, 0) + p(8, 2))) + ((p(10, 7) + p(15, 6)) - (p(6, 4) + p(9, 1))))).0,
+                ((((p(0, 4) + p(7, 2)) + (p(8, 0) + p(9, 6))) - ((p(5, 7) + p(6, 3)) + (p(10, 5) + p(15, 1))))).0,
+                ((((p(0, 5) + p(5, 3)) + (p(9, 0) + p(10, 4))) - ((p(6, 7) + p(7, 1)) + (p(8, 6) + p(15, 2))))).0,
+                ((((p(0, 6) + p(6, 1)) + (p(8, 5) + p(10, 0))) - ((p(5, 2) + p(7, 7)) + (p(9, 4) + p(15, 3))))).0,
+                ((((p(1, 7) + p(2, 4)) + (p(3, 5) + p(4, 6))) + ((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3))))).0,
+                ((((p(4, 2) + p(11, 1)) + (p(12, 0) + p(13, 6))) - ((p(1, 4) + p(2, 7)) + (p(3, 3) + p(14, 5))))).0,
+                ((((p(2, 3) + p(11, 2)) + (p(13, 0) + p(14, 4))) - ((p(1, 5) + p(3, 7)) + (p(4, 1) + p(12, 6))))).0,
+                ((((p(3, 1) + p(11, 3)) + (p(12, 5) + p(14, 0))) - ((p(1, 6) + p(2, 2)) + (p(4, 7) + p(13, 4))))).0,
+                ((((p(0, 7) + p(15, 0)) - (p(5, 4) + p(6, 5))) - ((p(7, 6) + p(8, 1)) + (p(9, 2) + p(10, 3))))).0,
             ],
         }
     }
@@ -7468,24 +7634,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Multivect
     fn gp(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) + ((a[8] * b[5] + a[9] * b[6]) + (a[10] * b[7] + a[15] * b[4])))).0,
-                ((((a[0] * b[1] + a[5] * b[0]) + (a[7] * b[6] + a[9] * b[3])) - ((a[6] * b[7] + a[8] * b[4]) + (a[10] * b[2] + a[15] * b[5])))).0,
-                ((((a[0] * b[2] + a[5] * b[7]) + (a[6] * b[0] + a[10] * b[1])) - ((a[7] * b[5] + a[8] * b[3]) + (a[9] * b[4] + a[15] * b[6])))).0,
-                ((((a[0] * b[3] + a[6] * b[5]) + (a[7] * b[0] + a[8] * b[2])) - ((a[5] * b[6] + a[9] * b[1]) + (a[10] * b[4] + a[15] * b[7])))).0,
-                ((((a[2] * b[0] + a[4] * b[6]) + (a[11] * b[5] + a[13] * b[3])) - ((a[1] * b[1] + a[3] * b[7]) + (a[12] * b[4] + a[14] * b[2])))).0,
-                ((((a[2] * b[7] + a[3] * b[0]) + (a[11] * b[6] + a[14] * b[1])) - ((a[1] * b[2] + a[4] * b[5]) + (a[12] * b[3] + a[13] * b[4])))).0,
-                ((((a[3] * b[5] + a[4] * b[0]) + (a[11] * b[7] + a[12] * b[2])) - ((a[1] * b[3] + a[2] * b[6]) + (a[13] * b[1] + a[14] * b[4])))).0,
-                ((((a[3] * b[3] + a[13] * b[7]) - (a[1] * b[5] + a[2] * b[4])) - ((a[4] * b[2] + a[11] * b[1]) + (a[12] * b[0] + a[14] * b[6])))).0,
-                ((((a[4] * b[1] + a[14] * b[5]) - (a[1] * b[6] + a[2] * b[3])) - ((a[3] * b[4] + a[11] * b[2]) + (a[12] * b[7] + a[13] * b[0])))).0,
-                ((((a[2] * b[2] + a[12] * b[6]) - (a[1] * b[7] + a[3] * b[1])) - ((a[4] * b[4] + a[11] * b[3]) + (a[13] * b[5] + a[14] * b[0])))).0,
-                ((((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])) - ((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0])))).0,
-                ((((a[0] * b[5] + a[6] * b[3]) + (a[9] * b[7] + a[15] * b[1])) - ((a[5] * b[4] + a[7] * b[2]) + (a[8] * b[0] + a[10] * b[6])))).0,
-                ((((a[0] * b[6] + a[7] * b[1]) + (a[10] * b[5] + a[15] * b[2])) - ((a[5] * b[3] + a[6] * b[4]) + (a[8] * b[7] + a[9] * b[0])))).0,
-                ((((a[0] * b[7] + a[5] * b[2]) + (a[8] * b[6] + a[15] * b[3])) - ((a[6] * b[1] + a[7] * b[4]) + (a[9] * b[5] + a[10] * b[0])))).0,
-                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) + ((p(8, 5) + p(9, 6)) + (p(10, 7) + p(15, 4))))).0,
+                ((((p(0, 1) + p(5, 0)) + (p(7, 6) + p(9, 3))) - ((p(6, 7) + p(8, 4)) + (p(10, 2) + p(15, 5))))).0,
+                ((((p(0, 2) + p(5, 7)) + (p(6, 0) + p(10, 1))) - ((p(7, 5) + p(8, 3)) + (p(9, 4) + p(15, 6))))).0,
+                ((((p(0, 3) + p(6, 5)) + (p(7, 0) + p(8, 2))) - ((p(5, 6) + p(9, 1)) + (p(10, 4) + p(15, 7))))).0,
+                ((((p(2, 0) + p(4, 6)) + (p(11, 5) + p(13, 3))) - ((p(1, 1) + p(3, 7)) + (p(12, 4) + p(14, 2))))).0,
+                ((((p(2, 7) + p(3, 0)) + (p(11, 6) + p(14, 1))) - ((p(1, 2) + p(4, 5)) + (p(12, 3) + p(13, 4))))).0,
+                ((((p(3, 5) + p(4, 0)) + (p(11, 7) + p(12, 2))) - ((p(1, 3) + p(2, 6)) + (p(13, 1) + p(14, 4))))).0,
+                ((((p(3, 3) + p(13, 7)) - (p(1, 5) + p(2, 4))) - ((p(4, 2) + p(11, 1)) + (p(12, 0) + p(14, 6))))).0,
+                ((((p(4, 1) + p(14, 5)) - (p(1, 6) + p(2, 3))) - ((p(3, 4) + p(11, 2)) + (p(12, 7) + p(13, 0))))).0,
+                ((((p(2, 2) + p(12, 6)) - (p(1, 7) + p(3, 1))) - ((p(4, 4) + p(11, 3)) + (p(13, 5) + p(14, 0))))).0,
+                ((((p(0, 4) + p(8, 1)) + (p(9, 2) + p(10, 3))) - ((p(5, 5) + p(6, 6)) + (p(7, 7) + p(15, 0))))).0,
+                ((((p(0, 5) + p(6, 3)) + (p(9, 7) + p(15, 1))) - ((p(5, 4) + p(7, 2)) + (p(8, 0) + p(10, 6))))).0,
+                ((((p(0, 6) + p(7, 1)) + (p(10, 5) + p(15, 2))) - ((p(5, 3) + p(6, 4)) + (p(8, 7) + p(9, 0))))).0,
+                ((((p(0, 7) + p(5, 2)) + (p(8, 6) + p(15, 3))) - ((p(6, 1) + p(7, 4)) + (p(9, 5) + p(10, 0))))).0,
+                ((((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 7))) - ((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3))))).0,
             ],
         }
     }
@@ -7497,24 +7664,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
-                (((((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[2] + a[6] * b[3])) + ((a[7] * b[4] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14]))) + (((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15]))))).0,
-                (((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[10] + a[5] * b[1])) + ((a[7] * b[13] + a[9] * b[4]) + (a[12] * b[15] + a[13] * b[7]))) - (((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])) + ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12]))))).0,
-                (((((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[8] + a[5] * b[14])) + ((a[6] * b[1] + a[10] * b[2]) + (a[13] * b[15] + a[14] * b[5]))) - (((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[8] * b[4])) + ((a[9] * b[11] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13]))))).0,
-                (((((a[0] * b[4] + a[2] * b[9]) + (a[4] * b[0] + a[6] * b[12])) + ((a[7] * b[1] + a[8] * b[3]) + (a[12] * b[6] + a[14] * b[15]))) - (((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[9] * b[2])) + ((a[10] * b[11] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14]))))).0,
-                (((((a[0] * b[5] + a[2] * b[1]) + (a[4] * b[13] + a[5] * b[0])) + ((a[6] * b[10] + a[8] * b[15]) + (a[9] * b[7] + a[11] * b[12]))) + (((a[13] * b[4] + a[15] * b[8]) - (a[1] * b[2] + a[3] * b[14])) - ((a[7] * b[9] + a[10] * b[6]) + (a[12] * b[11] + a[14] * b[3]))))).0,
-                (((((a[0] * b[6] + a[2] * b[14]) + (a[3] * b[1] + a[6] * b[0])) + ((a[7] * b[8] + a[9] * b[15]) + (a[10] * b[5] + a[11] * b[13]))) + (((a[14] * b[2] + a[15] * b[9]) - (a[1] * b[3] + a[4] * b[12])) - ((a[5] * b[10] + a[8] * b[7]) + (a[12] * b[4] + a[13] * b[11]))))).0,
-                (((((a[0] * b[7] + a[3] * b[12]) + (a[4] * b[1] + a[5] * b[9])) + ((a[7] * b[0] + a[8] * b[6]) + (a[10] * b[15] + a[11] * b[14]))) + (((a[12] * b[3] + a[15] * b[10]) - (a[1] * b[4] + a[2] * b[13])) - ((a[6] * b[8] + a[9] * b[5]) + (a[13] * b[2] + a[14] * b[11]))))).0,
-                (((((a[0] * b[8] + a[3] * b[4]) + (a[7] * b[6] + a[8] * b[0])) + ((a[9] * b[10] + a[13] * b[14]) - (a[1] * b[12] + a[2] * b[11]))) - (((a[4] * b[3] + a[5] * b[15]) + (a[6] * b[7] + a[10] * b[9])) + ((a[11] * b[2] + a[12] * b[1]) + (a[14] * b[13] + a[15] * b[5]))))).0,
-                (((((a[0] * b[9] + a[4] * b[2]) + (a[5] * b[7] + a[9] * b[0])) + ((a[10] * b[8] + a[14] * b[12]) - (a[1] * b[13] + a[2] * b[4]))) - (((a[3] * b[11] + a[6] * b[15]) + (a[7] * b[5] + a[8] * b[10])) + ((a[11] * b[3] + a[12] * b[14]) + (a[13] * b[1] + a[15] * b[6]))))).0,
-                (((((a[0] * b[10] + a[2] * b[3]) + (a[6] * b[5] + a[8] * b[9])) + ((a[10] * b[0] + a[12] * b[13]) - (a[1] * b[14] + a[3] * b[2]))) - (((a[4] * b[11] + a[5] * b[6]) + (a[7] * b[15] + a[9] * b[8])) + ((a[11] * b[4] + a[13] * b[12]) + (a[14] * b[1] + a[15] * b[7]))))).0,
-                (((((a[0] * b[11] + a[1] * b[15]) + (a[2] * b[8] + a[3] * b[9])) + ((a[4] * b[10] + a[8] * b[2]) + (a[9] * b[3] + a[10] * b[4]))) + (((a[11] * b[0] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])) - ((a[5] * b[12] + a[6] * b[13]) + (a[7] * b[14] + a[15] * b[1]))))).0,
-                (((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[9] * b[14])) + ((a[11] * b[5] + a[12] * b[0]) + (a[13] * b[10] + a[15] * b[2]))) - (((a[1] * b[8] + a[2] * b[15]) + (a[3] * b[7] + a[5] * b[11])) + ((a[7] * b[3] + a[8] * b[1]) + (a[10] * b[13] + a[14] * b[9]))))).0,
-                (((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[10] * b[12])) + ((a[11] * b[6] + a[13] * b[0]) + (a[14] * b[8] + a[15] * b[3]))) - (((a[1] * b[9] + a[3] * b[15]) + (a[4] * b[5] + a[5] * b[4])) + ((a[6] * b[11] + a[8] * b[14]) + (a[9] * b[1] + a[12] * b[10]))))).0,
-                (((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[8] * b[13])) + ((a[11] * b[7] + a[12] * b[9]) + (a[14] * b[0] + a[15] * b[4]))) - (((a[1] * b[10] + a[2] * b[6]) + (a[4] * b[15] + a[6] * b[2])) + ((a[7] * b[11] + a[9] * b[12]) + (a[10] * b[1] + a[13] * b[8]))))).0,
-                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                (((((p(0, 1) + p(1, 0)) + (p(5, 2) + p(6, 3))) + ((p(7, 4) + p(8, 12)) + (p(9, 13) + p(10, 14)))) + (((p(12, 8) + p(13, 9)) + (p(14, 10) + p(15, 11))) - ((p(2, 5) + p(3, 6)) + (p(4, 7) + p(11, 15)))))).0,
+                (((((p(0, 2) + p(2, 0)) + (p(3, 10) + p(5, 1))) + ((p(7, 13) + p(9, 4)) + (p(12, 15) + p(13, 7)))) - (((p(1, 5) + p(4, 9)) + (p(6, 14) + p(8, 11))) + ((p(10, 3) + p(11, 8)) + (p(14, 6) + p(15, 12)))))).0,
+                (((((p(0, 3) + p(3, 0)) + (p(4, 8) + p(5, 14))) + ((p(6, 1) + p(10, 2)) + (p(13, 15) + p(14, 5)))) - (((p(1, 6) + p(2, 10)) + (p(7, 12) + p(8, 4))) + ((p(9, 11) + p(11, 9)) + (p(12, 7) + p(15, 13)))))).0,
+                (((((p(0, 4) + p(2, 9)) + (p(4, 0) + p(6, 12))) + ((p(7, 1) + p(8, 3)) + (p(12, 6) + p(14, 15)))) - (((p(1, 7) + p(3, 8)) + (p(5, 13) + p(9, 2))) + ((p(10, 11) + p(11, 10)) + (p(13, 5) + p(15, 14)))))).0,
+                (((((p(0, 5) + p(2, 1)) + (p(4, 13) + p(5, 0))) + ((p(6, 10) + p(8, 15)) + (p(9, 7) + p(11, 12)))) + (((p(13, 4) + p(15, 8)) - (p(1, 2) + p(3, 14))) - ((p(7, 9) + p(10, 6)) + (p(12, 11) + p(14, 3)))))).0,
+                (((((p(0, 6) + p(2, 14)) + (p(3, 1) + p(6, 0))) + ((p(7, 8) + p(9, 15)) + (p(10, 5) + p(11, 13)))) + (((p(14, 2) + p(15, 9)) - (p(1, 3) + p(4, 12))) - ((p(5, 10) + p(8, 7)) + (p(12, 4) + p(13, 11)))))).0,
+                (((((p(0, 7) + p(3, 12)) + (p(4, 1) + p(5, 9))) + ((p(7, 0) + p(8, 6)) + (p(10, 15) + p(11, 14)))) + (((p(12, 3) + p(15, 10)) - (p(1, 4) + p(2, 13))) - ((p(6, 8) + p(9, 5)) + (p(13, 2) + p(14, 11)))))).0,
+                (((((p(0, 8) + p(3, 4)) + (p(7, 6) + p(8, 0))) + ((p(9, 10) + p(13, 14)) - (p(1, 12) + p(2, 11)))) - (((p(4, 3) + p(5, 15)) + (p(6, 7) + p(10, 9))) + ((p(11, 2) + p(12, 1)) + (p(14, 13) + p(15, 5)))))).0,
+                (((((p(0, 9) + p(4, 2)) + (p(5, 7) + p(9, 0))) + ((p(10, 8) + p(14, 12)) - (p(1, 13) + p(2, 4)))) - (((p(3, 11) + p(6, 15)) + (p(7, 5) + p(8, 10))) + ((p(11, 3) + p(12, 14)) + (p(13, 1) + p(15, 6)))))).0,
+                (((((p(0, 10) + p(2, 3)) + (p(6, 5) + p(8, 9))) + ((p(10, 0) + p(12, 13)) - (p(1, 14) + p(3, 2)))) - (((p(4, 11) + p(5, 6)) + (p(7, 15) + p(9, 8))) + ((p(11, 4) + p(13, 12)) + (p(14, 1) + p(15, 7)))))).0,
+                (((((p(0, 11) + p(1, 15)) + (p(2, 8) + p(3, 9))) + ((p(4, 10) + p(8, 2)) + (p(9, 3) + p(10, 4)))) + (((p(11, 0) + p(12, 5)) + (p(13, 6) + p(14, 7))) - ((p(5, 12) + p(6, 13)) + (p(7, 14) + p(15, 1)))))).0,
+                (((((p(0, 12) + p(4, 6)) + (p(6, 4) + p(9, 14))) + ((p(11, 5) + p(12, 0)) + (p(13, 10) + p(15, 2)))) - (((p(1, 8) + p(2, 15)) + (p(3, 7) + p(5, 11))) + ((p(7, 3) + p(8, 1)) + (p(10, 13) + p(14, 9)))))).0,
+                (((((p(0, 13) + p(2, 7)) + (p(7, 2) + p(10, 12))) + ((p(11, 6) + p(13, 0)) + (p(14, 8) + p(15, 3)))) - (((p(1, 9) + p(3, 15)) + (p(4, 5) + p(5, 4))) + ((p(6, 11) + p(8, 14)) + (p(9, 1) + p(12, 10)))))).0,
+                (((((p(0, 14) + p(3, 5)) + (p(5, 3) + p(8, 13))) + ((p(11, 7) + p(12, 9)) + (p(14, 0) + p(15, 4)))) - (((p(1, 10) + p(2, 6)) + (p(4, 15) + p(6, 2))) + ((p(7, 11) + p(9, 12)) + (p(10, 1) + p(13, 8)))))).0,
+                (((((p(0, 15) + p(1, 11)) + (p(2, 12) + p(3, 13))) + ((p(4, 14) + p(15, 0)) - (p(5, 8) + p(6, 9)))) - (((p(7, 10) + p(8, 5)) + (p(9, 6) + p(10, 7))) + ((p(11, 1) + p(12, 2)) + (p(13, 3) + p(14, 4)))))).0,
             ],
         }
     }
@@ -7526,9 +7694,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Sca
     fn wedge(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -7540,12 +7709,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Sca
     fn wedge(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -7557,14 +7727,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for S
     fn wedge(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -7576,12 +7747,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
     fn wedge(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -7593,9 +7765,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -7607,16 +7780,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Scala
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -7628,16 +7802,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Scalar
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -7649,24 +7824,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -7678,12 +7854,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Vec
     fn wedge(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -7695,14 +7872,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Vec
     fn wedge(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
             ],
         }
     }
@@ -7714,12 +7892,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for V
     fn wedge(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
-                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
-                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(3, 1) - p(0, 3)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 4)) - p(3, 0))).0,
+                (((p(2, 0) - p(0, 5)) - p(1, 1))).0,
             ],
         }
     }
@@ -7731,9 +7910,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
     fn wedge(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -7745,16 +7925,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Vecto
     fn wedge(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
-                (((a[3] * b[2] - a[0] * b[4]) - a[2] * b[3])).0,
-                (((a[1] * b[3] - a[0] * b[5]) - a[3] * b[1])).0,
-                (((a[2] * b[1] - a[0] * b[6]) - a[1] * b[2])).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (((p(1, 4) + p(2, 5)) + p(3, 6))).0,
+                (((p(3, 2) - p(0, 4)) - p(2, 3))).0,
+                (((p(1, 3) - p(0, 5)) - p(3, 1))).0,
+                (((p(2, 1) - p(0, 6)) - p(1, 2))).0,
             ],
         }
     }
@@ -7766,16 +7947,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Vector
     fn wedge(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -7787,24 +7969,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                ((a[1] * b[1] - a[0] * b[2])).0,
-                ((a[2] * b[1] - a[0] * b[3])).0,
-                ((a[3] * b[1] - a[0] * b[4])).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
-                (((a[3] * b[6] - a[0] * b[8]) - a[2] * b[7])).0,
-                (((a[1] * b[7] - a[0] * b[9]) - a[3] * b[5])).0,
-                (((a[2] * b[5] - a[0] * b[10]) - a[1] * b[6])).0,
-                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                ((p(1, 1) - p(0, 2))).0,
+                ((p(2, 1) - p(0, 3))).0,
+                ((p(3, 1) - p(0, 4))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (((p(1, 8) + p(2, 9)) + p(3, 10))).0,
+                (((p(3, 6) - p(0, 8)) - p(2, 7))).0,
+                (((p(1, 7) - p(0, 9)) - p(3, 5))).0,
+                (((p(2, 5) - p(0, 10)) - p(1, 6))).0,
+                (((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14)))).0,
             ],
         }
     }
@@ -7816,14 +7999,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Biv
     fn wedge(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -7835,12 +8019,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Biv
     fn wedge(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
-                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
-                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(1, 3) - p(2, 2)) - p(3, 0))).0,
+                (((p(2, 1) - p(0, 3)) - p(4, 0))).0,
+                (((p(0, 2) - p(1, 1)) - p(5, 0))).0,
             ],
         }
     }
@@ -7852,9 +8037,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for B
     fn wedge(self, rhs: Bivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                (-(((p(0, 3) + p(1, 4)) + p(2, 5)) + ((p(3, 0) + p(4, 1)) + p(5, 2)))).0,
             ],
         }
     }
@@ -7866,16 +8052,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Bivec
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (-(((p(0, 4) + p(1, 5)) + p(2, 6)) + ((p(3, 1) + p(4, 2)) + p(5, 3)))).0,
             ],
         }
     }
@@ -7887,12 +8074,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Bivect
     fn wedge(self, rhs: Odd<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
-                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
-                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(1, 3) - p(2, 2)) - p(3, 0))).0,
+                (((p(2, 1) - p(0, 3)) - p(4, 0))).0,
+                (((p(0, 2) - p(1, 1)) - p(5, 0))).0,
             ],
         }
     }
@@ -7904,6 +8092,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -7911,17 +8100,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4])).0,
-                (((a[1] * b[4] - a[2] * b[3]) - a[3] * b[1])).0,
-                (((a[2] * b[2] - a[0] * b[4]) - a[4] * b[1])).0,
-                (((a[0] * b[3] - a[1] * b[2]) - a[5] * b[1])).0,
-                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (((p(3, 2) + p(4, 3)) + p(5, 4))).0,
+                (((p(1, 4) - p(2, 3)) - p(3, 1))).0,
+                (((p(2, 2) - p(0, 4)) - p(4, 1))).0,
+                (((p(0, 3) - p(1, 2)) - p(5, 1))).0,
+                (-(((p(0, 8) + p(1, 9)) + p(2, 10)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
             ],
         }
     }
@@ -7933,12 +8122,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Tri
     fn wedge(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -7950,9 +8140,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Tri
     fn wedge(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -7964,12 +8155,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Trive
     fn wedge(self, rhs: Even<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -7981,9 +8173,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Trivec
     fn wedge(self, rhs: Odd<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -7995,6 +8188,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -8008,11 +8202,11 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (-((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
             ],
         }
     }
@@ -8024,9 +8218,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pse
     fn wedge(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8038,9 +8233,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Pseud
     fn wedge(self, rhs: Even<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8052,9 +8248,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8066,16 +8263,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Eve
     fn wedge(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -8087,16 +8285,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Eve
     fn wedge(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
-                (((a[2] * b[3] - a[3] * b[2]) - a[4] * b[0])).0,
-                (((a[3] * b[1] - a[1] * b[3]) - a[5] * b[0])).0,
-                (((a[1] * b[2] - a[2] * b[1]) - a[6] * b[0])).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (((p(4, 1) + p(5, 2)) + p(6, 3))).0,
+                (((p(2, 3) - p(3, 2)) - p(4, 0))).0,
+                (((p(3, 1) - p(1, 3)) - p(5, 0))).0,
+                (((p(1, 2) - p(2, 1)) - p(6, 0))).0,
             ],
         }
     }
@@ -8108,16 +8307,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for E
     fn wedge(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (-(((p(1, 3) + p(2, 4)) + p(3, 5)) + ((p(4, 0) + p(5, 1)) + p(6, 2)))).0,
             ],
         }
     }
@@ -8129,12 +8329,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
     fn wedge(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -8146,9 +8347,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8160,16 +8362,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Even<
     fn wedge(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                ((a[0] * b[1] + a[1] * b[0])).0,
-                ((a[0] * b[2] + a[2] * b[0])).0,
-                ((a[0] * b[3] + a[3] * b[0])).0,
-                ((a[0] * b[4] + a[4] * b[0])).0,
-                ((a[0] * b[5] + a[5] * b[0])).0,
-                ((a[0] * b[6] + a[6] * b[0])).0,
-                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
+                (p(0, 0)).0,
+                ((p(0, 1) + p(1, 0))).0,
+                ((p(0, 2) + p(2, 0))).0,
+                ((p(0, 3) + p(3, 0))).0,
+                ((p(0, 4) + p(4, 0))).0,
+                ((p(0, 5) + p(5, 0))).0,
+                ((p(0, 6) + p(6, 0))).0,
+                ((((p(0, 7) + p(7, 0)) - (p(1, 4) + p(2, 5))) - ((p(3, 6) + p(4, 1)) + (p(5, 2) + p(6, 3))))).0,
             ],
         }
     }
@@ -8181,16 +8384,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Even<S
     fn wedge(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3]))).0,
-                (((a[0] * b[5] + a[2] * b[3]) - (a[3] * b[2] + a[4] * b[0]))).0,
-                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[5] * b[0]))).0,
-                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[6] * b[0]))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (((p(0, 4) + p(4, 1)) + (p(5, 2) + p(6, 3)))).0,
+                (((p(0, 5) + p(2, 3)) - (p(3, 2) + p(4, 0)))).0,
+                (((p(0, 6) + p(3, 1)) - (p(1, 3) + p(5, 0)))).0,
+                (((p(0, 7) + p(1, 2)) - (p(2, 1) + p(6, 0)))).0,
             ],
         }
     }
@@ -8202,24 +8406,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                ((a[0] * b[5] + a[1] * b[0])).0,
-                ((a[0] * b[6] + a[2] * b[0])).0,
-                ((a[0] * b[7] + a[3] * b[0])).0,
-                ((a[0] * b[8] + a[4] * b[0])).0,
-                ((a[0] * b[9] + a[5] * b[0])).0,
-                ((a[0] * b[10] + a[6] * b[0])).0,
-                (((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4]))).0,
-                (((a[0] * b[12] + a[2] * b[4]) - (a[3] * b[3] + a[4] * b[1]))).0,
-                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[5] * b[1]))).0,
-                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[6] * b[1]))).0,
-                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                ((p(0, 5) + p(1, 0))).0,
+                ((p(0, 6) + p(2, 0))).0,
+                ((p(0, 7) + p(3, 0))).0,
+                ((p(0, 8) + p(4, 0))).0,
+                ((p(0, 9) + p(5, 0))).0,
+                ((p(0, 10) + p(6, 0))).0,
+                (((p(0, 11) + p(4, 2)) + (p(5, 3) + p(6, 4)))).0,
+                (((p(0, 12) + p(2, 4)) - (p(3, 3) + p(4, 1)))).0,
+                (((p(0, 13) + p(3, 2)) - (p(1, 4) + p(5, 1)))).0,
+                (((p(0, 14) + p(1, 3)) - (p(2, 2) + p(6, 1)))).0,
+                ((((p(0, 15) + p(7, 0)) - (p(1, 8) + p(2, 9))) - ((p(3, 10) + p(4, 5)) + (p(5, 6) + p(6, 7))))).0,
             ],
         }
     }
@@ -8231,16 +8436,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Odd
     fn wedge(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -8252,16 +8458,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Odd
     fn wedge(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -8273,12 +8480,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for O
     fn wedge(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
-                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
-                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(3, 1) - p(0, 3)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 4)) - p(3, 0))).0,
+                (((p(2, 0) - p(0, 5)) - p(1, 1))).0,
             ],
         }
     }
@@ -8290,9 +8498,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
     fn wedge(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -8304,16 +8513,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Odd<S
     fn wedge(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[0]))).0,
-                (((a[3] * b[2] + a[5] * b[0]) - (a[0] * b[4] + a[2] * b[3]))).0,
-                (((a[1] * b[3] + a[6] * b[0]) - (a[0] * b[5] + a[3] * b[1]))).0,
-                (((a[2] * b[1] + a[7] * b[0]) - (a[0] * b[6] + a[1] * b[2]))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 0)))).0,
+                (((p(3, 2) + p(5, 0)) - (p(0, 4) + p(2, 3)))).0,
+                (((p(1, 3) + p(6, 0)) - (p(0, 5) + p(3, 1)))).0,
+                (((p(2, 1) + p(7, 0)) - (p(0, 6) + p(1, 2)))).0,
             ],
         }
     }
@@ -8325,16 +8535,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Odd<S1
     fn wedge(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                ((((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))))).0,
             ],
         }
     }
@@ -8346,24 +8557,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                ((a[1] * b[1] - a[0] * b[2])).0,
-                ((a[2] * b[1] - a[0] * b[3])).0,
-                ((a[3] * b[1] - a[0] * b[4])).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] + a[4] * b[0]))).0,
-                (((a[3] * b[6] + a[5] * b[0]) - (a[0] * b[8] + a[2] * b[7]))).0,
-                (((a[1] * b[7] + a[6] * b[0]) - (a[0] * b[9] + a[3] * b[5]))).0,
-                (((a[2] * b[5] + a[7] * b[0]) - (a[0] * b[10] + a[1] * b[6]))).0,
-                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                ((p(1, 1) - p(0, 2))).0,
+                ((p(2, 1) - p(0, 3))).0,
+                ((p(3, 1) - p(0, 4))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (((p(1, 8) + p(2, 9)) + (p(3, 10) + p(4, 0)))).0,
+                (((p(3, 6) + p(5, 0)) - (p(0, 8) + p(2, 7)))).0,
+                (((p(1, 7) + p(6, 0)) - (p(0, 9) + p(3, 5)))).0,
+                (((p(2, 5) + p(7, 0)) - (p(0, 10) + p(1, 6)))).0,
+                ((((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14))) - ((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 4))))).0,
             ],
         }
     }
@@ -8375,24 +8587,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Mul
     fn wedge(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -8404,24 +8617,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Vector<S2, T>> for Mul
     fn wedge(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                ((a[2] * b[0] - a[1] * b[1])).0,
-                ((a[3] * b[0] - a[1] * b[2])).0,
-                ((a[4] * b[0] - a[1] * b[3])).0,
-                ((a[3] * b[3] - a[4] * b[2])).0,
-                ((a[4] * b[1] - a[2] * b[3])).0,
-                ((a[2] * b[2] - a[3] * b[1])).0,
-                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
-                (((a[6] * b[3] - a[7] * b[2]) - a[8] * b[0])).0,
-                (((a[7] * b[1] - a[5] * b[3]) - a[9] * b[0])).0,
-                (((a[5] * b[2] - a[6] * b[1]) - a[10] * b[0])).0,
-                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                ((p(2, 0) - p(1, 1))).0,
+                ((p(3, 0) - p(1, 2))).0,
+                ((p(4, 0) - p(1, 3))).0,
+                ((p(3, 3) - p(4, 2))).0,
+                ((p(4, 1) - p(2, 3))).0,
+                ((p(2, 2) - p(3, 1))).0,
+                (((p(8, 1) + p(9, 2)) + p(10, 3))).0,
+                (((p(6, 3) - p(7, 2)) - p(8, 0))).0,
+                (((p(7, 1) - p(5, 3)) - p(9, 0))).0,
+                (((p(5, 2) - p(6, 1)) - p(10, 0))).0,
+                (-((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
             ],
         }
     }
@@ -8433,6 +8647,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
     fn wedge(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -8440,17 +8655,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Bivector<S2, T>> for M
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5])).0,
-                (((a[4] * b[1] - a[1] * b[3]) - a[3] * b[2])).0,
-                (((a[2] * b[2] - a[1] * b[4]) - a[4] * b[0])).0,
-                (((a[3] * b[0] - a[1] * b[5]) - a[2] * b[1])).0,
-                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (((p(2, 3) + p(3, 4)) + p(4, 5))).0,
+                (((p(4, 1) - p(1, 3)) - p(3, 2))).0,
+                (((p(2, 2) - p(1, 4)) - p(4, 0))).0,
+                (((p(3, 0) - p(1, 5)) - p(2, 1))).0,
+                (-(((p(5, 3) + p(6, 4)) + p(7, 5)) + ((p(8, 0) + p(9, 1)) + p(10, 2)))).0,
             ],
         }
     }
@@ -8462,6 +8677,7 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
     fn wedge(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -8475,11 +8691,11 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Trivector<S2, T>> for 
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
             ],
         }
     }
@@ -8491,9 +8707,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
     fn wedge(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8505,24 +8722,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Even<S2, T>> for Multi
     fn wedge(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                ((a[0] * b[1] + a[5] * b[0])).0,
-                ((a[0] * b[2] + a[6] * b[0])).0,
-                ((a[0] * b[3] + a[7] * b[0])).0,
-                ((a[0] * b[4] + a[8] * b[0])).0,
-                ((a[0] * b[5] + a[9] * b[0])).0,
-                ((a[0] * b[6] + a[10] * b[0])).0,
-                (((a[2] * b[4] + a[3] * b[5]) + (a[4] * b[6] + a[11] * b[0]))).0,
-                (((a[4] * b[2] + a[12] * b[0]) - (a[1] * b[4] + a[3] * b[3]))).0,
-                (((a[2] * b[3] + a[13] * b[0]) - (a[1] * b[5] + a[4] * b[1]))).0,
-                (((a[3] * b[1] + a[14] * b[0]) - (a[1] * b[6] + a[2] * b[2]))).0,
-                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                ((p(0, 1) + p(5, 0))).0,
+                ((p(0, 2) + p(6, 0))).0,
+                ((p(0, 3) + p(7, 0))).0,
+                ((p(0, 4) + p(8, 0))).0,
+                ((p(0, 5) + p(9, 0))).0,
+                ((p(0, 6) + p(10, 0))).0,
+                (((p(2, 4) + p(3, 5)) + (p(4, 6) + p(11, 0)))).0,
+                (((p(4, 2) + p(12, 0)) - (p(1, 4) + p(3, 3)))).0,
+                (((p(2, 3) + p(13, 0)) - (p(1, 5) + p(4, 1)))).0,
+                (((p(3, 1) + p(14, 0)) - (p(1, 6) + p(2, 2)))).0,
+                ((((p(0, 7) + p(15, 0)) - (p(5, 4) + p(6, 5))) - ((p(7, 6) + p(8, 1)) + (p(9, 2) + p(10, 3))))).0,
             ],
         }
     }
@@ -8534,24 +8752,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Odd<S2, T>> for Multiv
     fn wedge(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                ((a[2] * b[0] - a[1] * b[1])).0,
-                ((a[3] * b[0] - a[1] * b[2])).0,
-                ((a[4] * b[0] - a[1] * b[3])).0,
-                ((a[3] * b[3] - a[4] * b[2])).0,
-                ((a[4] * b[1] - a[2] * b[3])).0,
-                ((a[2] * b[2] - a[3] * b[1])).0,
-                (((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3]))).0,
-                (((a[0] * b[5] + a[6] * b[3]) - (a[7] * b[2] + a[8] * b[0]))).0,
-                (((a[0] * b[6] + a[7] * b[1]) - (a[5] * b[3] + a[9] * b[0]))).0,
-                (((a[0] * b[7] + a[5] * b[2]) - (a[6] * b[1] + a[10] * b[0]))).0,
-                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                ((p(2, 0) - p(1, 1))).0,
+                ((p(3, 0) - p(1, 2))).0,
+                ((p(4, 0) - p(1, 3))).0,
+                ((p(3, 3) - p(4, 2))).0,
+                ((p(4, 1) - p(2, 3))).0,
+                ((p(2, 2) - p(3, 1))).0,
+                (((p(0, 4) + p(8, 1)) + (p(9, 2) + p(10, 3)))).0,
+                (((p(0, 5) + p(6, 3)) - (p(7, 2) + p(8, 0)))).0,
+                (((p(0, 6) + p(7, 1)) - (p(5, 3) + p(9, 0)))).0,
+                (((p(0, 7) + p(5, 2)) - (p(6, 1) + p(10, 0)))).0,
+                ((((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 7))) - ((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3))))).0,
             ],
         }
     }
@@ -8563,24 +8782,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                ((a[0] * b[1] + a[1] * b[0])).0,
-                ((a[0] * b[2] + a[2] * b[0])).0,
-                ((a[0] * b[3] + a[3] * b[0])).0,
-                ((a[0] * b[4] + a[4] * b[0])).0,
-                (((a[0] * b[5] + a[2] * b[1]) + (a[5] * b[0] - a[1] * b[2]))).0,
-                (((a[0] * b[6] + a[3] * b[1]) + (a[6] * b[0] - a[1] * b[3]))).0,
-                (((a[0] * b[7] + a[4] * b[1]) + (a[7] * b[0] - a[1] * b[4]))).0,
-                (((a[0] * b[8] + a[3] * b[4]) + (a[8] * b[0] - a[4] * b[3]))).0,
-                (((a[0] * b[9] + a[4] * b[2]) + (a[9] * b[0] - a[2] * b[4]))).0,
-                (((a[0] * b[10] + a[2] * b[3]) + (a[10] * b[0] - a[3] * b[2]))).0,
-                ((((a[0] * b[11] + a[2] * b[8]) + (a[3] * b[9] + a[4] * b[10])) + ((a[8] * b[2] + a[9] * b[3]) + (a[10] * b[4] + a[11] * b[0])))).0,
-                ((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[12] * b[0])) - ((a[1] * b[8] + a[3] * b[7]) + (a[7] * b[3] + a[8] * b[1])))).0,
-                ((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[13] * b[0])) - ((a[1] * b[9] + a[4] * b[5]) + (a[5] * b[4] + a[9] * b[1])))).0,
-                ((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[14] * b[0])) - ((a[1] * b[10] + a[2] * b[6]) + (a[6] * b[2] + a[10] * b[1])))).0,
-                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
+                (p(0, 0)).0,
+                ((p(0, 1) + p(1, 0))).0,
+                ((p(0, 2) + p(2, 0))).0,
+                ((p(0, 3) + p(3, 0))).0,
+                ((p(0, 4) + p(4, 0))).0,
+                (((p(0, 5) + p(2, 1)) + (p(5, 0) - p(1, 2)))).0,
+                (((p(0, 6) + p(3, 1)) + (p(6, 0) - p(1, 3)))).0,
+                (((p(0, 7) + p(4, 1)) + (p(7, 0) - p(1, 4)))).0,
+                (((p(0, 8) + p(3, 4)) + (p(8, 0) - p(4, 3)))).0,
+                (((p(0, 9) + p(4, 2)) + (p(9, 0) - p(2, 4)))).0,
+                (((p(0, 10) + p(2, 3)) + (p(10, 0) - p(3, 2)))).0,
+                ((((p(0, 11) + p(2, 8)) + (p(3, 9) + p(4, 10))) + ((p(8, 2) + p(9, 3)) + (p(10, 4) + p(11, 0))))).0,
+                ((((p(0, 12) + p(4, 6)) + (p(6, 4) + p(12, 0))) - ((p(1, 8) + p(3, 7)) + (p(7, 3) + p(8, 1))))).0,
+                ((((p(0, 13) + p(2, 7)) + (p(7, 2) + p(13, 0))) - ((p(1, 9) + p(4, 5)) + (p(5, 4) + p(9, 1))))).0,
+                ((((p(0, 14) + p(3, 5)) + (p(5, 3) + p(14, 0))) - ((p(1, 10) + p(2, 6)) + (p(6, 2) + p(10, 1))))).0,
+                (((((p(0, 15) + p(1, 11)) + (p(2, 12) + p(3, 13))) + ((p(4, 14) + p(15, 0)) - (p(5, 8) + p(6, 9)))) - (((p(7, 10) + p(8, 5)) + (p(9, 6) + p(10, 7))) + ((p(11, 1) + p(12, 2)) + (p(13, 3) + p(14, 4)))))).0,
             ],
         }
     }
@@ -8592,9 +8812,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8606,9 +8827,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Scalar<
     fn vee(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[7]).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -8620,9 +8842,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[15]).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -8634,9 +8857,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ve
     fn vee(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -8648,12 +8872,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -8665,12 +8890,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Vector<
     fn vee(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[7]).0,
-                (a[1] * b[7]).0,
-                (a[2] * b[7]).0,
-                (a[3] * b[7]).0,
+                (p(0, 7)).0,
+                (p(1, 7)).0,
+                (p(2, 7)).0,
+                (p(3, 7)).0,
             ],
         }
     }
@@ -8682,9 +8908,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Vector<S
     fn vee(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
+                (((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -8696,13 +8923,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
-                (a[0] * b[15]).0,
-                (a[1] * b[15]).0,
-                (a[2] * b[15]).0,
-                (a[3] * b[15]).0,
+                (((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14)))).0,
+                (p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -8725,9 +8953,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Biv
     fn vee(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                (-(((p(0, 3) + p(1, 4)) + p(2, 5)) + ((p(3, 0) + p(4, 1)) + p(5, 2)))).0,
             ],
         }
     }
@@ -8739,12 +8968,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Bi
     fn vee(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
-                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
-                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(4, 3) - p(0, 0)) - p(5, 2))).0,
+                (((p(5, 1) - p(1, 0)) - p(3, 3))).0,
+                (((p(3, 2) - p(2, 0)) - p(4, 1))).0,
             ],
         }
     }
@@ -8756,14 +8986,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -8775,15 +9006,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Bivecto
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
-                (a[0] * b[7]).0,
-                (a[1] * b[7]).0,
-                (a[2] * b[7]).0,
-                (a[3] * b[7]).0,
-                (a[4] * b[7]).0,
-                (a[5] * b[7]).0,
+                (-(((p(0, 4) + p(1, 5)) + p(2, 6)) + ((p(3, 1) + p(4, 2)) + p(5, 3)))).0,
+                (p(0, 7)).0,
+                (p(1, 7)).0,
+                (p(2, 7)).0,
+                (p(3, 7)).0,
+                (p(4, 7)).0,
+                (p(5, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8796,12 +9028,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Bivector
     fn vee(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
-                (((a[4] * b[7] - a[0] * b[4]) - a[5] * b[6])).0,
-                (((a[5] * b[5] - a[1] * b[4]) - a[3] * b[7])).0,
-                (((a[3] * b[6] - a[2] * b[4]) - a[4] * b[5])).0,
+                (((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+                (((p(4, 7) - p(0, 4)) - p(5, 6))).0,
+                (((p(5, 5) - p(1, 4)) - p(3, 7))).0,
+                (((p(3, 6) - p(2, 4)) - p(4, 5))).0,
             ],
         }
     }
@@ -8813,19 +9046,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
-                (((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14])).0,
-                (((a[4] * b[14] - a[0] * b[11]) - a[5] * b[13])).0,
-                (((a[5] * b[12] - a[1] * b[11]) - a[3] * b[14])).0,
-                (((a[3] * b[13] - a[2] * b[11]) - a[4] * b[12])).0,
-                (a[0] * b[15]).0,
-                (a[1] * b[15]).0,
-                (a[2] * b[15]).0,
-                (a[3] * b[15]).0,
-                (a[4] * b[15]).0,
-                (a[5] * b[15]).0,
+                (-(((p(0, 8) + p(1, 9)) + p(2, 10)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
+                (((p(0, 12) + p(1, 13)) + p(2, 14))).0,
+                (((p(4, 14) - p(0, 11)) - p(5, 13))).0,
+                (((p(5, 12) - p(1, 11)) - p(3, 14))).0,
+                (((p(3, 13) - p(2, 11)) - p(4, 12))).0,
+                (p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (p(3, 15)).0,
+                (p(4, 15)).0,
+                (p(5, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -8842,9 +9076,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Trive
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -8856,12 +9091,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Tri
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[3] * b[4] - a[0] * b[0]) - a[2] * b[5])).0,
-                (((a[1] * b[5] - a[0] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[3] - a[0] * b[2]) - a[1] * b[4])).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(3, 4) - p(0, 0)) - p(2, 5))).0,
+                (((p(1, 5) - p(0, 1)) - p(3, 3))).0,
+                (((p(2, 3) - p(0, 2)) - p(1, 4))).0,
             ],
         }
     }
@@ -8873,14 +9109,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Tr
     fn vee(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                ((a[0] * b[1] - a[1] * b[0])).0,
-                ((a[0] * b[2] - a[2] * b[0])).0,
-                ((a[0] * b[3] - a[3] * b[0])).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(0, 3) - p(3, 0))).0,
             ],
         }
     }
@@ -8892,12 +9129,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -8909,16 +9147,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Trivect
     fn vee(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[3] * b[5] - a[0] * b[1]) - a[2] * b[6])).0,
-                (((a[1] * b[6] - a[0] * b[2]) - a[3] * b[4])).0,
-                (((a[2] * b[4] - a[0] * b[3]) - a[1] * b[5])).0,
-                (a[0] * b[7]).0,
-                (a[1] * b[7]).0,
-                (a[2] * b[7]).0,
-                (a[3] * b[7]).0,
+                (((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(3, 5) - p(0, 1)) - p(2, 6))).0,
+                (((p(1, 6) - p(0, 2)) - p(3, 4))).0,
+                (((p(2, 4) - p(0, 3)) - p(1, 5))).0,
+                (p(0, 7)).0,
+                (p(1, 7)).0,
+                (p(2, 7)).0,
+                (p(3, 7)).0,
             ],
         }
     }
@@ -8930,15 +9169,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Trivecto
     fn vee(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[3] * b[6] - a[2] * b[7])).0,
-                ((a[1] * b[7] - a[3] * b[5])).0,
-                ((a[2] * b[5] - a[1] * b[6])).0,
-                ((a[0] * b[5] - a[1] * b[4])).0,
-                ((a[0] * b[6] - a[2] * b[4])).0,
-                ((a[0] * b[7] - a[3] * b[4])).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+                ((p(3, 6) - p(2, 7))).0,
+                ((p(1, 7) - p(3, 5))).0,
+                ((p(2, 5) - p(1, 6))).0,
+                ((p(0, 5) - p(1, 4))).0,
+                ((p(0, 6) - p(2, 4))).0,
+                ((p(0, 7) - p(3, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8951,23 +9191,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
-                (((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
-                (((a[3] * b[9] - a[0] * b[5]) - a[2] * b[10])).0,
-                (((a[1] * b[10] - a[0] * b[6]) - a[3] * b[8])).0,
-                (((a[2] * b[8] - a[0] * b[7]) - a[1] * b[9])).0,
-                ((a[3] * b[13] - a[2] * b[14])).0,
-                ((a[1] * b[14] - a[3] * b[12])).0,
-                ((a[2] * b[12] - a[1] * b[13])).0,
-                ((a[0] * b[12] - a[1] * b[11])).0,
-                ((a[0] * b[13] - a[2] * b[11])).0,
-                ((a[0] * b[14] - a[3] * b[11])).0,
-                (a[0] * b[15]).0,
-                (a[1] * b[15]).0,
-                (a[2] * b[15]).0,
-                (a[3] * b[15]).0,
+                (-((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
+                (((p(1, 5) + p(2, 6)) + p(3, 7))).0,
+                (((p(3, 9) - p(0, 5)) - p(2, 10))).0,
+                (((p(1, 10) - p(0, 6)) - p(3, 8))).0,
+                (((p(2, 8) - p(0, 7)) - p(1, 9))).0,
+                ((p(3, 13) - p(2, 14))).0,
+                ((p(1, 14) - p(3, 12))).0,
+                ((p(2, 12) - p(1, 13))).0,
+                ((p(0, 12) - p(1, 11))).0,
+                ((p(0, 13) - p(2, 11))).0,
+                ((p(0, 14) - p(3, 11))).0,
+                (p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -8980,9 +9221,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Pseud
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -8994,12 +9236,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Pseud
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -9011,14 +9254,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Pse
     fn vee(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -9030,12 +9274,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ps
     fn vee(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -9047,9 +9292,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -9061,16 +9307,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Pseudos
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -9082,16 +9329,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Pseudosc
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -9103,24 +9351,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -9132,9 +9381,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Even<
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[7] * b[0]).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -9146,12 +9396,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Even<
     fn vee(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -9163,15 +9414,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Eve
     fn vee(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
-                (a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
-                (a[7] * b[4]).0,
-                (a[7] * b[5]).0,
+                (-(((p(1, 3) + p(2, 4)) + p(3, 5)) + ((p(4, 0) + p(5, 1)) + p(6, 2)))).0,
+                (p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
+                (p(7, 4)).0,
+                (p(7, 5)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9184,16 +9436,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Ev
     fn vee(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[5] * b[3] - a[1] * b[0]) - a[6] * b[2])).0,
-                (((a[6] * b[1] - a[2] * b[0]) - a[4] * b[3])).0,
-                (((a[4] * b[2] - a[3] * b[0]) - a[5] * b[1])).0,
-                (a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(5, 3) - p(1, 0)) - p(6, 2))).0,
+                (((p(6, 1) - p(2, 0)) - p(4, 3))).0,
+                (((p(4, 2) - p(3, 0)) - p(5, 1))).0,
+                (p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -9205,16 +9458,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -9226,16 +9480,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Even<S1
     fn vee(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
-                ((a[1] * b[7] + a[7] * b[1])).0,
-                ((a[2] * b[7] + a[7] * b[2])).0,
-                ((a[3] * b[7] + a[7] * b[3])).0,
-                ((a[4] * b[7] + a[7] * b[4])).0,
-                ((a[5] * b[7] + a[7] * b[5])).0,
-                ((a[6] * b[7] + a[7] * b[6])).0,
-                (a[7] * b[7]).0,
+                ((((p(0, 7) + p(7, 0)) - (p(1, 4) + p(2, 5))) - ((p(3, 6) + p(4, 1)) + (p(5, 2) + p(6, 3))))).0,
+                ((p(1, 7) + p(7, 1))).0,
+                ((p(2, 7) + p(7, 2))).0,
+                ((p(3, 7) + p(7, 3))).0,
+                ((p(4, 7) + p(7, 4))).0,
+                ((p(5, 7) + p(7, 5))).0,
+                ((p(6, 7) + p(7, 6))).0,
+                (p(7, 7)).0,
             ],
         }
     }
@@ -9247,16 +9502,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Even<S1,
     fn vee(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0]))).0,
-                (((a[5] * b[7] + a[7] * b[1]) - (a[1] * b[4] + a[6] * b[6]))).0,
-                (((a[6] * b[5] + a[7] * b[2]) - (a[2] * b[4] + a[4] * b[7]))).0,
-                (((a[4] * b[6] + a[7] * b[3]) - (a[3] * b[4] + a[5] * b[5]))).0,
-                (a[7] * b[4]).0,
-                (a[7] * b[5]).0,
-                (a[7] * b[6]).0,
-                (a[7] * b[7]).0,
+                (((p(1, 5) + p(2, 6)) + (p(3, 7) + p(7, 0)))).0,
+                (((p(5, 7) + p(7, 1)) - (p(1, 4) + p(6, 6)))).0,
+                (((p(6, 5) + p(7, 2)) - (p(2, 4) + p(4, 7)))).0,
+                (((p(4, 6) + p(7, 3)) - (p(3, 4) + p(5, 5)))).0,
+                (p(7, 4)).0,
+                (p(7, 5)).0,
+                (p(7, 6)).0,
+                (p(7, 7)).0,
             ],
         }
     }
@@ -9268,24 +9524,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
-                (((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1]))).0,
-                (((a[5] * b[14] + a[7] * b[2]) - (a[1] * b[11] + a[6] * b[13]))).0,
-                (((a[6] * b[12] + a[7] * b[3]) - (a[2] * b[11] + a[4] * b[14]))).0,
-                (((a[4] * b[13] + a[7] * b[4]) - (a[3] * b[11] + a[5] * b[12]))).0,
-                ((a[1] * b[15] + a[7] * b[5])).0,
-                ((a[2] * b[15] + a[7] * b[6])).0,
-                ((a[3] * b[15] + a[7] * b[7])).0,
-                ((a[4] * b[15] + a[7] * b[8])).0,
-                ((a[5] * b[15] + a[7] * b[9])).0,
-                ((a[6] * b[15] + a[7] * b[10])).0,
-                (a[7] * b[11]).0,
-                (a[7] * b[12]).0,
-                (a[7] * b[13]).0,
-                (a[7] * b[14]).0,
-                (a[7] * b[15]).0,
+                ((((p(0, 15) + p(7, 0)) - (p(1, 8) + p(2, 9))) - ((p(3, 10) + p(4, 5)) + (p(5, 6) + p(6, 7))))).0,
+                (((p(1, 12) + p(2, 13)) + (p(3, 14) + p(7, 1)))).0,
+                (((p(5, 14) + p(7, 2)) - (p(1, 11) + p(6, 13)))).0,
+                (((p(6, 12) + p(7, 3)) - (p(2, 11) + p(4, 14)))).0,
+                (((p(4, 13) + p(7, 4)) - (p(3, 11) + p(5, 12)))).0,
+                ((p(1, 15) + p(7, 5))).0,
+                ((p(2, 15) + p(7, 6))).0,
+                ((p(3, 15) + p(7, 7))).0,
+                ((p(4, 15) + p(7, 8))).0,
+                ((p(5, 15) + p(7, 9))).0,
+                ((p(6, 15) + p(7, 10))).0,
+                (p(7, 11)).0,
+                (p(7, 12)).0,
+                (p(7, 13)).0,
+                (p(7, 14)).0,
+                (p(7, 15)).0,
             ],
         }
     }
@@ -9297,9 +9554,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Odd<S
     fn vee(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                (-((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -9311,12 +9569,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Odd
     fn vee(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
-                (((a[7] * b[4] - a[4] * b[0]) - a[6] * b[5])).0,
-                (((a[5] * b[5] - a[4] * b[1]) - a[7] * b[3])).0,
-                (((a[6] * b[3] - a[4] * b[2]) - a[5] * b[4])).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+                (((p(7, 4) - p(4, 0)) - p(6, 5))).0,
+                (((p(5, 5) - p(4, 1)) - p(7, 3))).0,
+                (((p(6, 3) - p(4, 2)) - p(5, 4))).0,
             ],
         }
     }
@@ -9328,15 +9587,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Od
     fn vee(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[7] * b[2] - a[6] * b[3])).0,
-                ((a[5] * b[3] - a[7] * b[1])).0,
-                ((a[6] * b[1] - a[5] * b[2])).0,
-                ((a[4] * b[1] - a[5] * b[0])).0,
-                ((a[4] * b[2] - a[6] * b[0])).0,
-                ((a[4] * b[3] - a[7] * b[0])).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+                ((p(7, 2) - p(6, 3))).0,
+                ((p(5, 3) - p(7, 1))).0,
+                ((p(6, 1) - p(5, 2))).0,
+                ((p(4, 1) - p(5, 0))).0,
+                ((p(4, 2) - p(6, 0))).0,
+                ((p(4, 3) - p(7, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9349,16 +9609,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -9370,16 +9631,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Odd<S1,
     fn vee(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[7] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[1] * b[7] + a[7] * b[5]) - (a[4] * b[1] + a[6] * b[6]))).0,
-                (((a[2] * b[7] + a[5] * b[6]) - (a[4] * b[2] + a[7] * b[4]))).0,
-                (((a[3] * b[7] + a[6] * b[4]) - (a[4] * b[3] + a[5] * b[5]))).0,
-                (a[4] * b[7]).0,
-                (a[5] * b[7]).0,
-                (a[6] * b[7]).0,
-                (a[7] * b[7]).0,
+                (((p(0, 7) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
+                (((p(1, 7) + p(7, 5)) - (p(4, 1) + p(6, 6)))).0,
+                (((p(2, 7) + p(5, 6)) - (p(4, 2) + p(7, 4)))).0,
+                (((p(3, 7) + p(6, 4)) - (p(4, 3) + p(5, 5)))).0,
+                (p(4, 7)).0,
+                (p(5, 7)).0,
+                (p(6, 7)).0,
+                (p(7, 7)).0,
             ],
         }
     }
@@ -9391,15 +9653,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Odd<S1, 
     fn vee(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
-                ((a[7] * b[6] - a[6] * b[7])).0,
-                ((a[5] * b[7] - a[7] * b[5])).0,
-                ((a[6] * b[5] - a[5] * b[6])).0,
-                ((a[4] * b[5] - a[5] * b[4])).0,
-                ((a[4] * b[6] - a[6] * b[4])).0,
-                ((a[4] * b[7] - a[7] * b[4])).0,
+                ((((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))))).0,
+                ((p(7, 6) - p(6, 7))).0,
+                ((p(5, 7) - p(7, 5))).0,
+                ((p(6, 5) - p(5, 6))).0,
+                ((p(4, 5) - p(5, 4))).0,
+                ((p(4, 6) - p(6, 4))).0,
+                ((p(4, 7) - p(7, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9412,23 +9675,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
-                (((a[0] * b[15] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7]))).0,
-                (((a[1] * b[15] + a[7] * b[9]) - (a[4] * b[5] + a[6] * b[10]))).0,
-                (((a[2] * b[15] + a[5] * b[10]) - (a[4] * b[6] + a[7] * b[8]))).0,
-                (((a[3] * b[15] + a[6] * b[8]) - (a[4] * b[7] + a[5] * b[9]))).0,
-                ((a[7] * b[13] - a[6] * b[14])).0,
-                ((a[5] * b[14] - a[7] * b[12])).0,
-                ((a[6] * b[12] - a[5] * b[13])).0,
-                ((a[4] * b[12] - a[5] * b[11])).0,
-                ((a[4] * b[13] - a[6] * b[11])).0,
-                ((a[4] * b[14] - a[7] * b[11])).0,
-                (a[4] * b[15]).0,
-                (a[5] * b[15]).0,
-                (a[6] * b[15]).0,
-                (a[7] * b[15]).0,
+                ((((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14))) - ((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 4))))).0,
+                (((p(0, 15) + p(5, 5)) + (p(6, 6) + p(7, 7)))).0,
+                (((p(1, 15) + p(7, 9)) - (p(4, 5) + p(6, 10)))).0,
+                (((p(2, 15) + p(5, 10)) - (p(4, 6) + p(7, 8)))).0,
+                (((p(3, 15) + p(6, 8)) - (p(4, 7) + p(5, 9)))).0,
+                ((p(7, 13) - p(6, 14))).0,
+                ((p(5, 14) - p(7, 12))).0,
+                ((p(6, 12) - p(5, 13))).0,
+                ((p(4, 12) - p(5, 11))).0,
+                ((p(4, 13) - p(6, 11))).0,
+                ((p(4, 14) - p(7, 11))).0,
+                (p(4, 15)).0,
+                (p(5, 15)).0,
+                (p(6, 15)).0,
+                (p(7, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9441,9 +9705,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Scalar<S2, T>> for Multi
     fn vee(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[15] * b[0]).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -9455,13 +9720,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Vector<S2, T>> for Multi
     fn vee(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
-                (a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
+                (-((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
+                (p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -9484,19 +9750,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Bivector<S2, T>> for Mul
     fn vee(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
-                (((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2])).0,
-                (((a[14] * b[4] - a[11] * b[0]) - a[13] * b[5])).0,
-                (((a[12] * b[5] - a[11] * b[1]) - a[14] * b[3])).0,
-                (((a[13] * b[3] - a[11] * b[2]) - a[12] * b[4])).0,
-                (a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
-                (a[15] * b[4]).0,
-                (a[15] * b[5]).0,
+                (-(((p(5, 3) + p(6, 4)) + p(7, 5)) + ((p(8, 0) + p(9, 1)) + p(10, 2)))).0,
+                (((p(12, 0) + p(13, 1)) + p(14, 2))).0,
+                (((p(14, 4) - p(11, 0)) - p(13, 5))).0,
+                (((p(12, 5) - p(11, 1)) - p(14, 3))).0,
+                (((p(13, 3) - p(11, 2)) - p(12, 4))).0,
+                (p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
+                (p(15, 4)).0,
+                (p(15, 5)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -9513,23 +9780,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Trivector<S2, T>> for Mu
     fn vee(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
-                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
-                (((a[9] * b[3] - a[5] * b[0]) - a[10] * b[2])).0,
-                (((a[10] * b[1] - a[6] * b[0]) - a[8] * b[3])).0,
-                (((a[8] * b[2] - a[7] * b[0]) - a[9] * b[1])).0,
-                ((a[14] * b[2] - a[13] * b[3])).0,
-                ((a[12] * b[3] - a[14] * b[1])).0,
-                ((a[13] * b[1] - a[12] * b[2])).0,
-                ((a[11] * b[1] - a[12] * b[0])).0,
-                ((a[11] * b[2] - a[13] * b[0])).0,
-                ((a[11] * b[3] - a[14] * b[0])).0,
-                (a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
+                (((p(5, 1) + p(6, 2)) + p(7, 3))).0,
+                (((p(9, 3) - p(5, 0)) - p(10, 2))).0,
+                (((p(10, 1) - p(6, 0)) - p(8, 3))).0,
+                (((p(8, 2) - p(7, 0)) - p(9, 1))).0,
+                ((p(14, 2) - p(13, 3))).0,
+                ((p(12, 3) - p(14, 1))).0,
+                ((p(13, 1) - p(12, 2))).0,
+                ((p(11, 1) - p(12, 0))).0,
+                ((p(11, 2) - p(13, 0))).0,
+                ((p(11, 3) - p(14, 0))).0,
+                (p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9542,24 +9810,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Pseudoscalar<S2, T>> for
     fn vee(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -9571,24 +9840,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Even<S2, T>> for Multive
     fn vee(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
-                (((a[1] * b[7] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[2] * b[7] + a[14] * b[5]) - (a[11] * b[1] + a[13] * b[6]))).0,
-                (((a[3] * b[7] + a[12] * b[6]) - (a[11] * b[2] + a[14] * b[4]))).0,
-                (((a[4] * b[7] + a[13] * b[4]) - (a[11] * b[3] + a[12] * b[5]))).0,
-                ((a[5] * b[7] + a[15] * b[1])).0,
-                ((a[6] * b[7] + a[15] * b[2])).0,
-                ((a[7] * b[7] + a[15] * b[3])).0,
-                ((a[8] * b[7] + a[15] * b[4])).0,
-                ((a[9] * b[7] + a[15] * b[5])).0,
-                ((a[10] * b[7] + a[15] * b[6])).0,
-                (a[11] * b[7]).0,
-                (a[12] * b[7]).0,
-                (a[13] * b[7]).0,
-                (a[14] * b[7]).0,
-                (a[15] * b[7]).0,
+                ((((p(0, 7) + p(15, 0)) - (p(5, 4) + p(6, 5))) - ((p(7, 6) + p(8, 1)) + (p(9, 2) + p(10, 3))))).0,
+                (((p(1, 7) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
+                (((p(2, 7) + p(14, 5)) - (p(11, 1) + p(13, 6)))).0,
+                (((p(3, 7) + p(12, 6)) - (p(11, 2) + p(14, 4)))).0,
+                (((p(4, 7) + p(13, 4)) - (p(11, 3) + p(12, 5)))).0,
+                ((p(5, 7) + p(15, 1))).0,
+                ((p(6, 7) + p(15, 2))).0,
+                ((p(7, 7) + p(15, 3))).0,
+                ((p(8, 7) + p(15, 4))).0,
+                ((p(9, 7) + p(15, 5))).0,
+                ((p(10, 7) + p(15, 6))).0,
+                (p(11, 7)).0,
+                (p(12, 7)).0,
+                (p(13, 7)).0,
+                (p(14, 7)).0,
+                (p(15, 7)).0,
             ],
         }
     }
@@ -9600,23 +9870,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Odd<S2, T>> for Multivec
     fn vee(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
-                (((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0]))).0,
-                (((a[9] * b[7] + a[15] * b[1]) - (a[5] * b[4] + a[10] * b[6]))).0,
-                (((a[10] * b[5] + a[15] * b[2]) - (a[6] * b[4] + a[8] * b[7]))).0,
-                (((a[8] * b[6] + a[15] * b[3]) - (a[7] * b[4] + a[9] * b[5]))).0,
-                ((a[14] * b[6] - a[13] * b[7])).0,
-                ((a[12] * b[7] - a[14] * b[5])).0,
-                ((a[13] * b[5] - a[12] * b[6])).0,
-                ((a[11] * b[5] - a[12] * b[4])).0,
-                ((a[11] * b[6] - a[13] * b[4])).0,
-                ((a[11] * b[7] - a[14] * b[4])).0,
-                (a[15] * b[4]).0,
-                (a[15] * b[5]).0,
-                (a[15] * b[6]).0,
-                (a[15] * b[7]).0,
+                ((((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 7))) - ((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3))))).0,
+                (((p(5, 5) + p(6, 6)) + (p(7, 7) + p(15, 0)))).0,
+                (((p(9, 7) + p(15, 1)) - (p(5, 4) + p(10, 6)))).0,
+                (((p(10, 5) + p(15, 2)) - (p(6, 4) + p(8, 7)))).0,
+                (((p(8, 6) + p(15, 3)) - (p(7, 4) + p(9, 5)))).0,
+                ((p(14, 6) - p(13, 7))).0,
+                ((p(12, 7) - p(14, 5))).0,
+                ((p(13, 5) - p(12, 6))).0,
+                ((p(11, 5) - p(12, 4))).0,
+                ((p(11, 6) - p(13, 4))).0,
+                ((p(11, 7) - p(14, 4))).0,
+                (p(15, 4)).0,
+                (p(15, 5)).0,
+                (p(15, 6)).0,
+                (p(15, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9629,24 +9900,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Vee<Multivector<S2, T>> for 
     fn vee(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[15] + a[1] * b[11]) + (a[2] * b[12] + a[3] * b[13])) + ((a[4] * b[14] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9]))) - (((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])) + ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4]))))).0,
-                ((((a[1] * b[15] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])) + ((a[12] * b[5] + a[13] * b[6]) + (a[14] * b[7] + a[15] * b[1])))).0,
-                ((((a[2] * b[15] + a[9] * b[14]) + (a[14] * b[9] + a[15] * b[2])) - ((a[5] * b[11] + a[10] * b[13]) + (a[11] * b[5] + a[13] * b[10])))).0,
-                ((((a[3] * b[15] + a[10] * b[12]) + (a[12] * b[10] + a[15] * b[3])) - ((a[6] * b[11] + a[8] * b[14]) + (a[11] * b[6] + a[14] * b[8])))).0,
-                ((((a[4] * b[15] + a[8] * b[13]) + (a[13] * b[8] + a[15] * b[4])) - ((a[7] * b[11] + a[9] * b[12]) + (a[11] * b[7] + a[12] * b[9])))).0,
-                (((a[5] * b[15] + a[14] * b[13]) + (a[15] * b[5] - a[13] * b[14]))).0,
-                (((a[6] * b[15] + a[12] * b[14]) + (a[15] * b[6] - a[14] * b[12]))).0,
-                (((a[7] * b[15] + a[13] * b[12]) + (a[15] * b[7] - a[12] * b[13]))).0,
-                (((a[8] * b[15] + a[11] * b[12]) + (a[15] * b[8] - a[12] * b[11]))).0,
-                (((a[9] * b[15] + a[11] * b[13]) + (a[15] * b[9] - a[13] * b[11]))).0,
-                (((a[10] * b[15] + a[11] * b[14]) + (a[15] * b[10] - a[14] * b[11]))).0,
-                ((a[11] * b[15] + a[15] * b[11])).0,
-                ((a[12] * b[15] + a[15] * b[12])).0,
-                ((a[13] * b[15] + a[15] * b[13])).0,
-                ((a[14] * b[15] + a[15] * b[14])).0,
-                (a[15] * b[15]).0,
+                (((((p(0, 15) + p(1, 11)) + (p(2, 12) + p(3, 13))) + ((p(4, 14) + p(15, 0)) - (p(5, 8) + p(6, 9)))) - (((p(7, 10) + p(8, 5)) + (p(9, 6) + p(10, 7))) + ((p(11, 1) + p(12, 2)) + (p(13, 3) + p(14, 4)))))).0,
+                ((((p(1, 15) + p(5, 12)) + (p(6, 13) + p(7, 14))) + ((p(12, 5) + p(13, 6)) + (p(14, 7) + p(15, 1))))).0,
+                ((((p(2, 15) + p(9, 14)) + (p(14, 9) + p(15, 2))) - ((p(5, 11) + p(10, 13)) + (p(11, 5) + p(13, 10))))).0,
+                ((((p(3, 15) + p(10, 12)) + (p(12, 10) + p(15, 3))) - ((p(6, 11) + p(8, 14)) + (p(11, 6) + p(14, 8))))).0,
+                ((((p(4, 15) + p(8, 13)) + (p(13, 8) + p(15, 4))) - ((p(7, 11) + p(9, 12)) + (p(11, 7) + p(12, 9))))).0,
+                (((p(5, 15) + p(14, 13)) + (p(15, 5) - p(13, 14)))).0,
+                (((p(6, 15) + p(12, 14)) + (p(15, 6) - p(14, 12)))).0,
+                (((p(7, 15) + p(13, 12)) + (p(15, 7) - p(12, 13)))).0,
+                (((p(8, 15) + p(11, 12)) + (p(15, 8) - p(12, 11)))).0,
+                (((p(9, 15) + p(11, 13)) + (p(15, 9) - p(13, 11)))).0,
+                (((p(10, 15) + p(11, 14)) + (p(15, 10) - p(14, 11)))).0,
+                ((p(11, 15) + p(15, 11))).0,
+                ((p(12, 15) + p(15, 12))).0,
+                ((p(13, 15) + p(15, 13))).0,
+                ((p(14, 15) + p(15, 14))).0,
+                (p(15, 15)).0,
             ],
         }
     }
@@ -9658,9 +9930,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -9672,12 +9945,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -9689,14 +9963,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scal
     fn lc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -9708,12 +9983,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Sca
     fn lc(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -9725,9 +10001,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -9739,16 +10016,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Scalar<S
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -9760,16 +10038,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -9781,24 +10060,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for S
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -9810,9 +10090,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -9824,12 +10105,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vect
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
             ],
         }
     }
@@ -9841,14 +10123,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Vec
     fn lc(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -9860,12 +10143,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -9877,16 +10161,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Vector<S
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[2] * b[6] - a[0] * b[1]) - a[3] * b[5])).0,
-                (((a[3] * b[4] - a[0] * b[2]) - a[1] * b[6])).0,
-                (((a[1] * b[5] - a[0] * b[3]) - a[2] * b[4])).0,
-                (a[0] * b[7]).0,
-                (-a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
-                (-a[3] * b[7]).0,
+                (-((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(2, 6) - p(0, 1)) - p(3, 5))).0,
+                (((p(3, 4) - p(0, 2)) - p(1, 6))).0,
+                (((p(1, 5) - p(0, 3)) - p(2, 4))).0,
+                (p(0, 7)).0,
+                (-p(1, 7)).0,
+                (-p(2, 7)).0,
+                (-p(3, 7)).0,
             ],
         }
     }
@@ -9898,15 +10183,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[3] * b[6] - a[2] * b[7])).0,
-                ((a[1] * b[7] - a[3] * b[5])).0,
-                ((a[2] * b[5] - a[1] * b[6])).0,
-                (-(a[0] * b[5] + a[1] * b[4])).0,
-                (-(a[0] * b[6] + a[2] * b[4])).0,
-                (-(a[0] * b[7] + a[3] * b[4])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(3, 6) - p(2, 7))).0,
+                ((p(1, 7) - p(3, 5))).0,
+                ((p(2, 5) - p(1, 6))).0,
+                (-(p(0, 5) + p(1, 4))).0,
+                (-(p(0, 6) + p(2, 4))).0,
+                (-(p(0, 7) + p(3, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9919,23 +10205,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for V
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
-                (-((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
-                (((a[2] * b[10] - a[0] * b[5]) - a[3] * b[9])).0,
-                (((a[3] * b[8] - a[0] * b[6]) - a[1] * b[10])).0,
-                (((a[1] * b[9] - a[0] * b[7]) - a[2] * b[8])).0,
-                ((a[3] * b[13] - a[2] * b[14])).0,
-                ((a[1] * b[14] - a[3] * b[12])).0,
-                ((a[2] * b[12] - a[1] * b[13])).0,
-                (-(a[0] * b[12] + a[1] * b[11])).0,
-                (-(a[0] * b[13] + a[2] * b[11])).0,
-                (-(a[0] * b[14] + a[3] * b[11])).0,
-                (a[0] * b[15]).0,
-                (-a[1] * b[15]).0,
-                (-a[2] * b[15]).0,
-                (-a[3] * b[15]).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (-((p(1, 5) + p(2, 6)) + p(3, 7))).0,
+                (((p(2, 10) - p(0, 5)) - p(3, 9))).0,
+                (((p(3, 8) - p(0, 6)) - p(1, 10))).0,
+                (((p(1, 9) - p(0, 7)) - p(2, 8))).0,
+                ((p(3, 13) - p(2, 14))).0,
+                ((p(1, 14) - p(3, 12))).0,
+                ((p(2, 12) - p(1, 13))).0,
+                (-(p(0, 12) + p(1, 11))).0,
+                (-(p(0, 13) + p(2, 11))).0,
+                (-(p(0, 14) + p(3, 11))).0,
+                (p(0, 15)).0,
+                (-p(1, 15)).0,
+                (-p(2, 15)).0,
+                (-p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -9948,9 +10235,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bive
     fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
             ],
         }
     }
@@ -9962,12 +10250,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Biv
     fn lc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
-                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
-                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(2, 2) - p(1, 3)) - p(3, 0))).0,
+                (((p(0, 3) - p(2, 1)) - p(4, 0))).0,
+                (((p(1, 1) - p(0, 2)) - p(5, 0))).0,
             ],
         }
     }
@@ -9979,14 +10268,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (-a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (-p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
             ],
         }
     }
@@ -9998,15 +10288,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Bivector
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
-                (a[3] * b[7]).0,
-                (a[4] * b[7]).0,
-                (a[5] * b[7]).0,
-                (-a[0] * b[7]).0,
-                (-a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                (p(3, 7)).0,
+                (p(4, 7)).0,
+                (p(5, 7)).0,
+                (-p(0, 7)).0,
+                (-p(1, 7)).0,
+                (-p(2, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10019,12 +10310,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<
     fn lc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7])).0,
-                (((a[2] * b[6] - a[1] * b[7]) - a[3] * b[4])).0,
-                (((a[0] * b[7] - a[2] * b[5]) - a[4] * b[4])).0,
-                (((a[1] * b[5] - a[0] * b[6]) - a[5] * b[4])).0,
+                (((p(3, 5) + p(4, 6)) + p(5, 7))).0,
+                (((p(2, 6) - p(1, 7)) - p(3, 4))).0,
+                (((p(0, 7) - p(2, 5)) - p(4, 4))).0,
+                (((p(1, 5) - p(0, 6)) - p(5, 4))).0,
             ],
         }
     }
@@ -10036,19 +10328,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for B
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
-                (((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14])).0,
-                (((a[2] * b[13] - a[1] * b[14]) - a[3] * b[11])).0,
-                (((a[0] * b[14] - a[2] * b[12]) - a[4] * b[11])).0,
-                (((a[1] * b[12] - a[0] * b[13]) - a[5] * b[11])).0,
-                (a[3] * b[15]).0,
-                (a[4] * b[15]).0,
-                (a[5] * b[15]).0,
-                (-a[0] * b[15]).0,
-                (-a[1] * b[15]).0,
-                (-a[2] * b[15]).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                (((p(3, 12) + p(4, 13)) + p(5, 14))).0,
+                (((p(2, 13) - p(1, 14)) - p(3, 11))).0,
+                (((p(0, 14) - p(2, 12)) - p(4, 11))).0,
+                (((p(1, 12) - p(0, 13)) - p(5, 11))).0,
+                (p(3, 15)).0,
+                (p(4, 15)).0,
+                (p(5, 15)).0,
+                (-p(0, 15)).0,
+                (-p(1, 15)).0,
+                (-p(2, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10065,9 +10358,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Tri
     fn lc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -10079,12 +10373,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (-p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -10096,12 +10391,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Trivecto
     fn lc(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-a[0] * b[7]).0,
-                (a[1] * b[7]).0,
-                (a[2] * b[7]).0,
-                (a[3] * b[7]).0,
+                (-p(0, 7)).0,
+                (p(1, 7)).0,
+                (p(2, 7)).0,
+                (p(3, 7)).0,
             ],
         }
     }
@@ -10113,9 +10409,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Trivector
     fn lc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -10127,13 +10424,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for T
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
-                (-a[0] * b[15]).0,
-                (a[1] * b[15]).0,
-                (a[2] * b[15]).0,
-                (a[3] * b[15]).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (-p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10156,9 +10454,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -10170,9 +10469,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Pseudosc
     fn lc(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[7]).0,
+                (-p(0, 7)).0,
             ],
         }
     }
@@ -10184,9 +10484,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for P
     fn lc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[15]).0,
+                (-p(0, 15)).0,
             ],
         }
     }
@@ -10198,9 +10499,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Even<S
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10212,12 +10514,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Even<S
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -10229,15 +10532,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Even
     fn lc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10250,16 +10554,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Eve
     fn lc(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
-                (((a[3] * b[2] - a[2] * b[3]) - a[4] * b[0])).0,
-                (((a[1] * b[3] - a[3] * b[1]) - a[5] * b[0])).0,
-                (((a[2] * b[1] - a[1] * b[2]) - a[6] * b[0])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(4, 1) + p(5, 2)) + p(6, 3))).0,
+                (((p(3, 2) - p(2, 3)) - p(4, 0))).0,
+                (((p(1, 3) - p(3, 1)) - p(5, 0))).0,
+                (((p(2, 1) - p(1, 2)) - p(6, 0))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -10271,16 +10576,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[7] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(7, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10292,16 +10598,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Even<S1,
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((a[0] * b[1] + a[4] * b[7])).0,
-                ((a[0] * b[2] + a[5] * b[7])).0,
-                ((a[0] * b[3] + a[6] * b[7])).0,
-                ((a[0] * b[4] - a[1] * b[7])).0,
-                ((a[0] * b[5] - a[2] * b[7])).0,
-                ((a[0] * b[6] - a[3] * b[7])).0,
-                (a[0] * b[7]).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((p(0, 1) + p(4, 7))).0,
+                ((p(0, 2) + p(5, 7))).0,
+                ((p(0, 3) + p(6, 7))).0,
+                ((p(0, 4) - p(1, 7))).0,
+                ((p(0, 5) - p(2, 7))).0,
+                ((p(0, 6) - p(3, 7))).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -10313,16 +10620,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Even<S1, 
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7]))).0,
-                (((a[0] * b[1] + a[3] * b[6]) - (a[2] * b[7] + a[4] * b[4]))).0,
-                (((a[0] * b[2] + a[1] * b[7]) - (a[3] * b[5] + a[5] * b[4]))).0,
-                (((a[0] * b[3] + a[2] * b[5]) - (a[1] * b[6] + a[6] * b[4]))).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (((p(0, 0) + p(4, 5)) + (p(5, 6) + p(6, 7)))).0,
+                (((p(0, 1) + p(3, 6)) - (p(2, 7) + p(4, 4)))).0,
+                (((p(0, 2) + p(1, 7)) - (p(3, 5) + p(5, 4)))).0,
+                (((p(0, 3) + p(2, 5)) - (p(1, 6) + p(6, 4)))).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -10334,24 +10642,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for E
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
-                (((a[0] * b[1] + a[4] * b[12]) + (a[5] * b[13] + a[6] * b[14]))).0,
-                (((a[0] * b[2] + a[3] * b[13]) - (a[2] * b[14] + a[4] * b[11]))).0,
-                (((a[0] * b[3] + a[1] * b[14]) - (a[3] * b[12] + a[5] * b[11]))).0,
-                (((a[0] * b[4] + a[2] * b[12]) - (a[1] * b[13] + a[6] * b[11]))).0,
-                ((a[0] * b[5] + a[4] * b[15])).0,
-                ((a[0] * b[6] + a[5] * b[15])).0,
-                ((a[0] * b[7] + a[6] * b[15])).0,
-                ((a[0] * b[8] - a[1] * b[15])).0,
-                ((a[0] * b[9] - a[2] * b[15])).0,
-                ((a[0] * b[10] - a[3] * b[15])).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                (((p(0, 1) + p(4, 12)) + (p(5, 13) + p(6, 14)))).0,
+                (((p(0, 2) + p(3, 13)) - (p(2, 14) + p(4, 11)))).0,
+                (((p(0, 3) + p(1, 14)) - (p(3, 12) + p(5, 11)))).0,
+                (((p(0, 4) + p(2, 12)) - (p(1, 13) + p(6, 11)))).0,
+                ((p(0, 5) + p(4, 15))).0,
+                ((p(0, 6) + p(5, 15))).0,
+                ((p(0, 7) + p(6, 15))).0,
+                ((p(0, 8) - p(1, 15))).0,
+                ((p(0, 9) - p(2, 15))).0,
+                ((p(0, 10) - p(3, 15))).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -10363,9 +10672,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -10377,12 +10687,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
             ],
         }
     }
@@ -10394,15 +10705,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Odd
     fn lc(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10415,16 +10727,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (-p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -10436,16 +10749,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Odd<S1, 
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7]))).0,
-                (((a[2] * b[6] + a[5] * b[7]) - (a[0] * b[1] + a[3] * b[5]))).0,
-                (((a[3] * b[4] + a[6] * b[7]) - (a[0] * b[2] + a[1] * b[6]))).0,
-                (((a[1] * b[5] + a[7] * b[7]) - (a[0] * b[3] + a[2] * b[4]))).0,
-                (a[0] * b[7]).0,
-                (-a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
-                (-a[3] * b[7]).0,
+                (-((p(1, 1) + p(2, 2)) + (p(3, 3) + p(4, 7)))).0,
+                (((p(2, 6) + p(5, 7)) - (p(0, 1) + p(3, 5)))).0,
+                (((p(3, 4) + p(6, 7)) - (p(0, 2) + p(1, 6)))).0,
+                (((p(1, 5) + p(7, 7)) - (p(0, 3) + p(2, 4)))).0,
+                (p(0, 7)).0,
+                (-p(1, 7)).0,
+                (-p(2, 7)).0,
+                (-p(3, 7)).0,
             ],
         }
     }
@@ -10457,15 +10771,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((a[3] * b[6] - a[2] * b[7])).0,
-                ((a[1] * b[7] - a[3] * b[5])).0,
-                ((a[2] * b[5] - a[1] * b[6])).0,
-                (-(a[0] * b[5] + a[1] * b[4])).0,
-                (-(a[0] * b[6] + a[2] * b[4])).0,
-                (-(a[0] * b[7] + a[3] * b[4])).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((p(3, 6) - p(2, 7))).0,
+                ((p(1, 7) - p(3, 5))).0,
+                ((p(2, 5) - p(1, 6))).0,
+                (-(p(0, 5) + p(1, 4))).0,
+                (-(p(0, 6) + p(2, 4))).0,
+                (-(p(0, 7) + p(3, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10478,23 +10793,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for O
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
-                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15]))).0,
-                (((a[2] * b[10] + a[5] * b[15]) - (a[0] * b[5] + a[3] * b[9]))).0,
-                (((a[3] * b[8] + a[6] * b[15]) - (a[0] * b[6] + a[1] * b[10]))).0,
-                (((a[1] * b[9] + a[7] * b[15]) - (a[0] * b[7] + a[2] * b[8]))).0,
-                ((a[3] * b[13] - a[2] * b[14])).0,
-                ((a[1] * b[14] - a[3] * b[12])).0,
-                ((a[2] * b[12] - a[1] * b[13])).0,
-                (-(a[0] * b[12] + a[1] * b[11])).0,
-                (-(a[0] * b[13] + a[2] * b[11])).0,
-                (-(a[0] * b[14] + a[3] * b[11])).0,
-                (a[0] * b[15]).0,
-                (-a[1] * b[15]).0,
-                (-a[2] * b[15]).0,
-                (-a[3] * b[15]).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                (-((p(1, 5) + p(2, 6)) + (p(3, 7) + p(4, 15)))).0,
+                (((p(2, 10) + p(5, 15)) - (p(0, 5) + p(3, 9)))).0,
+                (((p(3, 8) + p(6, 15)) - (p(0, 6) + p(1, 10)))).0,
+                (((p(1, 9) + p(7, 15)) - (p(0, 7) + p(2, 8)))).0,
+                ((p(3, 13) - p(2, 14))).0,
+                ((p(1, 14) - p(3, 12))).0,
+                ((p(2, 12) - p(1, 13))).0,
+                (-(p(0, 12) + p(1, 11))).0,
+                (-(p(0, 13) + p(2, 11))).0,
+                (-(p(0, 14) + p(3, 11))).0,
+                (p(0, 15)).0,
+                (-p(1, 15)).0,
+                (-p(2, 15)).0,
+                (-p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10507,9 +10823,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multiv
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10521,13 +10838,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multiv
     fn lc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10550,19 +10868,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Mult
     fn lc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
-                (-((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2])).0,
-                (((a[3] * b[5] - a[1] * b[0]) - a[4] * b[4])).0,
-                (((a[4] * b[3] - a[1] * b[1]) - a[2] * b[5])).0,
-                (((a[2] * b[4] - a[1] * b[2]) - a[3] * b[3])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                (-((p(2, 0) + p(3, 1)) + p(4, 2))).0,
+                (((p(3, 5) - p(1, 0)) - p(4, 4))).0,
+                (((p(4, 3) - p(1, 1)) - p(2, 5))).0,
+                (((p(2, 4) - p(1, 2)) - p(3, 3))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10579,23 +10898,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Mul
     fn lc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
-                (((a[7] * b[2] - a[6] * b[3]) - a[8] * b[0])).0,
-                (((a[5] * b[3] - a[7] * b[1]) - a[9] * b[0])).0,
-                (((a[6] * b[1] - a[5] * b[2]) - a[10] * b[0])).0,
-                ((a[4] * b[2] - a[3] * b[3])).0,
-                ((a[2] * b[3] - a[4] * b[1])).0,
-                ((a[3] * b[1] - a[2] * b[2])).0,
-                (-(a[1] * b[1] + a[2] * b[0])).0,
-                (-(a[1] * b[2] + a[3] * b[0])).0,
-                (-(a[1] * b[3] + a[4] * b[0])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (((p(8, 1) + p(9, 2)) + p(10, 3))).0,
+                (((p(7, 2) - p(6, 3)) - p(8, 0))).0,
+                (((p(5, 3) - p(7, 1)) - p(9, 0))).0,
+                (((p(6, 1) - p(5, 2)) - p(10, 0))).0,
+                ((p(4, 2) - p(3, 3))).0,
+                ((p(2, 3) - p(4, 1))).0,
+                ((p(3, 1) - p(2, 2))).0,
+                (-(p(1, 1) + p(2, 0))).0,
+                (-(p(1, 2) + p(3, 0))).0,
+                (-(p(1, 3) + p(4, 0))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10608,24 +10928,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[15] * b[0]).0,
-                (-a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (-a[5] * b[0]).0,
-                (-a[6] * b[0]).0,
-                (-a[7] * b[0]).0,
-                (a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (-a[4] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(15, 0)).0,
+                (-p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (-p(5, 0)).0,
+                (-p(6, 0)).0,
+                (-p(7, 0)).0,
+                (p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (-p(4, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10637,24 +10958,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Multivec
     fn lc(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
-                (-((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7]))).0,
-                (((a[3] * b[6] + a[12] * b[7]) - (a[1] * b[1] + a[4] * b[5]))).0,
-                (((a[4] * b[4] + a[13] * b[7]) - (a[1] * b[2] + a[2] * b[6]))).0,
-                (((a[2] * b[5] + a[14] * b[7]) - (a[1] * b[3] + a[3] * b[4]))).0,
-                ((a[0] * b[1] + a[8] * b[7])).0,
-                ((a[0] * b[2] + a[9] * b[7])).0,
-                ((a[0] * b[3] + a[10] * b[7])).0,
-                ((a[0] * b[4] - a[5] * b[7])).0,
-                ((a[0] * b[5] - a[6] * b[7])).0,
-                ((a[0] * b[6] - a[7] * b[7])).0,
-                (a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
-                (-a[3] * b[7]).0,
-                (-a[4] * b[7]).0,
-                (a[0] * b[7]).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                (-((p(2, 1) + p(3, 2)) + (p(4, 3) + p(11, 7)))).0,
+                (((p(3, 6) + p(12, 7)) - (p(1, 1) + p(4, 5)))).0,
+                (((p(4, 4) + p(13, 7)) - (p(1, 2) + p(2, 6)))).0,
+                (((p(2, 5) + p(14, 7)) - (p(1, 3) + p(3, 4)))).0,
+                ((p(0, 1) + p(8, 7))).0,
+                ((p(0, 2) + p(9, 7))).0,
+                ((p(0, 3) + p(10, 7))).0,
+                ((p(0, 4) - p(5, 7))).0,
+                ((p(0, 5) - p(6, 7))).0,
+                ((p(0, 6) - p(7, 7))).0,
+                (p(1, 7)).0,
+                (-p(2, 7)).0,
+                (-p(3, 7)).0,
+                (-p(4, 7)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -10666,23 +10988,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivect
     fn lc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
-                (((a[0] * b[0] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7]))).0,
-                (((a[0] * b[1] + a[7] * b[6]) - (a[6] * b[7] + a[8] * b[4]))).0,
-                (((a[0] * b[2] + a[5] * b[7]) - (a[7] * b[5] + a[9] * b[4]))).0,
-                (((a[0] * b[3] + a[6] * b[5]) - (a[5] * b[6] + a[10] * b[4]))).0,
-                ((a[4] * b[6] - a[3] * b[7])).0,
-                ((a[2] * b[7] - a[4] * b[5])).0,
-                ((a[3] * b[5] - a[2] * b[6])).0,
-                (-(a[1] * b[5] + a[2] * b[4])).0,
-                (-(a[1] * b[6] + a[3] * b[4])).0,
-                (-(a[1] * b[7] + a[4] * b[4])).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                (((p(0, 0) + p(8, 5)) + (p(9, 6) + p(10, 7)))).0,
+                (((p(0, 1) + p(7, 6)) - (p(6, 7) + p(8, 4)))).0,
+                (((p(0, 2) + p(5, 7)) - (p(7, 5) + p(9, 4)))).0,
+                (((p(0, 3) + p(6, 5)) - (p(5, 6) + p(10, 4)))).0,
+                ((p(4, 6) - p(3, 7))).0,
+                ((p(2, 7) - p(4, 5))).0,
+                ((p(3, 5) - p(2, 6))).0,
+                (-(p(1, 5) + p(2, 4))).0,
+                (-(p(1, 6) + p(3, 4))).0,
+                (-(p(1, 7) + p(4, 4))).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10695,24 +11018,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for M
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
-                ((((a[0] * b[1] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15])))).0,
-                ((((a[0] * b[2] + a[3] * b[10]) + (a[7] * b[13] + a[12] * b[15])) - ((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])))).0,
-                ((((a[0] * b[3] + a[4] * b[8]) + (a[5] * b[14] + a[13] * b[15])) - ((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[9] * b[11])))).0,
-                ((((a[0] * b[4] + a[2] * b[9]) + (a[6] * b[12] + a[14] * b[15])) - ((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[10] * b[11])))).0,
-                (((a[0] * b[5] + a[4] * b[13]) + (a[8] * b[15] - a[3] * b[14]))).0,
-                (((a[0] * b[6] + a[2] * b[14]) + (a[9] * b[15] - a[4] * b[12]))).0,
-                (((a[0] * b[7] + a[3] * b[12]) + (a[10] * b[15] - a[2] * b[13]))).0,
-                (((a[0] * b[8] - a[1] * b[12]) - (a[2] * b[11] + a[5] * b[15]))).0,
-                (((a[0] * b[9] - a[1] * b[13]) - (a[3] * b[11] + a[6] * b[15]))).0,
-                (((a[0] * b[10] - a[1] * b[14]) - (a[4] * b[11] + a[7] * b[15]))).0,
-                ((a[0] * b[11] + a[1] * b[15])).0,
-                ((a[0] * b[12] - a[2] * b[15])).0,
-                ((a[0] * b[13] - a[3] * b[15])).0,
-                ((a[0] * b[14] - a[4] * b[15])).0,
-                (a[0] * b[15]).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                ((((p(0, 1) + p(8, 12)) + (p(9, 13) + p(10, 14))) - ((p(2, 5) + p(3, 6)) + (p(4, 7) + p(11, 15))))).0,
+                ((((p(0, 2) + p(3, 10)) + (p(7, 13) + p(12, 15))) - ((p(1, 5) + p(4, 9)) + (p(6, 14) + p(8, 11))))).0,
+                ((((p(0, 3) + p(4, 8)) + (p(5, 14) + p(13, 15))) - ((p(1, 6) + p(2, 10)) + (p(7, 12) + p(9, 11))))).0,
+                ((((p(0, 4) + p(2, 9)) + (p(6, 12) + p(14, 15))) - ((p(1, 7) + p(3, 8)) + (p(5, 13) + p(10, 11))))).0,
+                (((p(0, 5) + p(4, 13)) + (p(8, 15) - p(3, 14)))).0,
+                (((p(0, 6) + p(2, 14)) + (p(9, 15) - p(4, 12)))).0,
+                (((p(0, 7) + p(3, 12)) + (p(10, 15) - p(2, 13)))).0,
+                (((p(0, 8) - p(1, 12)) - (p(2, 11) + p(5, 15)))).0,
+                (((p(0, 9) - p(1, 13)) - (p(3, 11) + p(6, 15)))).0,
+                (((p(0, 10) - p(1, 14)) - (p(4, 11) + p(7, 15)))).0,
+                ((p(0, 11) + p(1, 15))).0,
+                ((p(0, 12) - p(2, 15))).0,
+                ((p(0, 13) - p(3, 15))).0,
+                ((p(0, 14) - p(4, 15))).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -10724,9 +11048,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar
     fn rc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10738,9 +11063,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Scalar<S
     fn rc(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10752,9 +11078,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for S
     fn rc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -10766,12 +11093,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector
     fn rc(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -10783,9 +11111,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector
     fn rc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -10797,12 +11126,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Vector<S
     fn rc(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -10814,9 +11144,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1
     fn rc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -10828,13 +11159,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for V
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10857,14 +11189,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivect
     fn rc(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -10876,12 +11209,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivect
     fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
             ],
         }
     }
@@ -10893,9 +11227,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bive
     fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
             ],
         }
     }
@@ -10907,15 +11242,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Bivector
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -10928,12 +11264,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<
     fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
             ],
         }
     }
@@ -10945,19 +11282,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for B
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
-                (((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4])).0,
-                (((a[0] * b[1] + a[4] * b[4]) - a[5] * b[3])).0,
-                (((a[1] * b[1] + a[5] * b[2]) - a[3] * b[4])).0,
-                (((a[2] * b[1] + a[3] * b[3]) - a[4] * b[2])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                (((p(0, 2) + p(1, 3)) + p(2, 4))).0,
+                (((p(0, 1) + p(4, 4)) - p(5, 3))).0,
+                (((p(1, 1) + p(5, 2)) - p(3, 4))).0,
+                (((p(2, 1) + p(3, 3)) - p(4, 2))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -10974,12 +11312,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Trivec
     fn rc(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -10991,14 +11330,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Trivec
     fn rc(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -11010,12 +11350,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Triv
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
-                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
-                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(2, 2) - p(0, 3)) - p(3, 1))).0,
+                (((p(3, 0) - p(0, 4)) - p(1, 2))).0,
+                (((p(1, 1) - p(0, 5)) - p(2, 0))).0,
             ],
         }
     }
@@ -11027,9 +11368,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Tri
     fn rc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -11041,16 +11383,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Trivecto
     fn rc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
-                (((a[2] * b[3] - a[0] * b[4]) - a[3] * b[2])).0,
-                (((a[3] * b[1] - a[0] * b[5]) - a[1] * b[3])).0,
-                (((a[1] * b[2] - a[0] * b[6]) - a[2] * b[1])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(1, 4) + p(2, 5)) + p(3, 6))).0,
+                (((p(2, 3) - p(0, 4)) - p(3, 2))).0,
+                (((p(3, 1) - p(0, 5)) - p(1, 3))).0,
+                (((p(1, 2) - p(0, 6)) - p(2, 1))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -11062,15 +11405,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Trivector
     fn rc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11083,23 +11427,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for T
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
-                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
-                (((a[2] * b[7] - a[0] * b[8]) - a[3] * b[6])).0,
-                (((a[3] * b[5] - a[0] * b[9]) - a[1] * b[7])).0,
-                (((a[1] * b[6] - a[0] * b[10]) - a[2] * b[5])).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (-(a[0] * b[2] + a[1] * b[1])).0,
-                (-(a[0] * b[3] + a[2] * b[1])).0,
-                (-(a[0] * b[4] + a[3] * b[1])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (((p(1, 8) + p(2, 9)) + p(3, 10))).0,
+                (((p(2, 7) - p(0, 8)) - p(3, 6))).0,
+                (((p(3, 5) - p(0, 9)) - p(1, 7))).0,
+                (((p(1, 6) - p(0, 10)) - p(2, 5))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (-(p(0, 2) + p(1, 1))).0,
+                (-(p(0, 3) + p(2, 1))).0,
+                (-(p(0, 4) + p(3, 1))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11112,9 +11457,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudo
     fn rc(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -11126,12 +11472,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudo
     fn rc(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -11143,14 +11490,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseu
     fn rc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (-a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
             ],
         }
     }
@@ -11162,12 +11510,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Pse
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
             ],
         }
     }
@@ -11179,9 +11528,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -11193,16 +11543,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Pseudosc
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[0] * b[7]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 7)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -11214,16 +11565,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudosca
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[4]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 4)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -11235,24 +11587,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for P
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[0] * b[15]).0,
-                (a[0] * b[11]).0,
-                (-a[0] * b[12]).0,
-                (-a[0] * b[13]).0,
-                (-a[0] * b[14]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 15)).0,
+                (p(0, 11)).0,
+                (-p(0, 12)).0,
+                (-p(0, 13)).0,
+                (-p(0, 14)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -11264,16 +11617,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Even<S
     fn rc(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -11285,16 +11639,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Even<S
     fn rc(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[1] * b[0] + a[5] * b[3]) - a[6] * b[2])).0,
-                (((a[2] * b[0] + a[6] * b[1]) - a[4] * b[3])).0,
-                (((a[3] * b[0] + a[4] * b[2]) - a[5] * b[1])).0,
-                (-a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(1, 0) + p(5, 3)) - p(6, 2))).0,
+                (((p(2, 0) + p(6, 1)) - p(4, 3))).0,
+                (((p(3, 0) + p(4, 2)) - p(5, 1))).0,
+                (-p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -11306,15 +11661,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Even
     fn rc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
-                (a[7] * b[3]).0,
-                (a[7] * b[4]).0,
-                (a[7] * b[5]).0,
-                (-a[7] * b[0]).0,
-                (-a[7] * b[1]).0,
-                (-a[7] * b[2]).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                (p(7, 3)).0,
+                (p(7, 4)).0,
+                (p(7, 5)).0,
+                (-p(7, 0)).0,
+                (-p(7, 1)).0,
+                (-p(7, 2)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11327,12 +11683,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Eve
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[7] * b[0]).0,
-                (-a[7] * b[1]).0,
-                (-a[7] * b[2]).0,
-                (-a[7] * b[3]).0,
+                (p(7, 0)).0,
+                (-p(7, 1)).0,
+                (-p(7, 2)).0,
+                (-p(7, 3)).0,
             ],
         }
     }
@@ -11344,9 +11701,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[7] * b[0]).0,
+                (-p(7, 0)).0,
             ],
         }
     }
@@ -11358,16 +11716,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Even<S1,
     fn rc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((a[1] * b[0] + a[7] * b[4])).0,
-                ((a[2] * b[0] + a[7] * b[5])).0,
-                ((a[3] * b[0] + a[7] * b[6])).0,
-                ((a[4] * b[0] - a[7] * b[1])).0,
-                ((a[5] * b[0] - a[7] * b[2])).0,
-                ((a[6] * b[0] - a[7] * b[3])).0,
-                (a[7] * b[0]).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((p(1, 0) + p(7, 4))).0,
+                ((p(2, 0) + p(7, 5))).0,
+                ((p(3, 0) + p(7, 6))).0,
+                ((p(4, 0) - p(7, 1))).0,
+                ((p(5, 0) - p(7, 2))).0,
+                ((p(6, 0) - p(7, 3))).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -11379,16 +11738,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Even<S1, 
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[4]))).0,
-                (((a[1] * b[0] + a[5] * b[3]) - (a[6] * b[2] + a[7] * b[5]))).0,
-                (((a[2] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[7] * b[6]))).0,
-                (((a[3] * b[0] + a[4] * b[2]) - (a[5] * b[1] + a[7] * b[7]))).0,
-                (-a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (((p(1, 1) + p(2, 2)) + (p(3, 3) + p(7, 4)))).0,
+                (((p(1, 0) + p(5, 3)) - (p(6, 2) + p(7, 5)))).0,
+                (((p(2, 0) + p(6, 1)) - (p(4, 3) + p(7, 6)))).0,
+                (((p(3, 0) + p(4, 2)) - (p(5, 1) + p(7, 7)))).0,
+                (-p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -11400,24 +11760,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for E
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
-                (((a[1] * b[2] + a[2] * b[3]) + (a[3] * b[4] + a[7] * b[11]))).0,
-                (((a[1] * b[1] + a[5] * b[4]) - (a[6] * b[3] + a[7] * b[12]))).0,
-                (((a[2] * b[1] + a[6] * b[2]) - (a[4] * b[4] + a[7] * b[13]))).0,
-                (((a[3] * b[1] + a[4] * b[3]) - (a[5] * b[2] + a[7] * b[14]))).0,
-                ((a[1] * b[0] + a[7] * b[8])).0,
-                ((a[2] * b[0] + a[7] * b[9])).0,
-                ((a[3] * b[0] + a[7] * b[10])).0,
-                ((a[4] * b[0] - a[7] * b[5])).0,
-                ((a[5] * b[0] - a[7] * b[6])).0,
-                ((a[6] * b[0] - a[7] * b[7])).0,
-                (-a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
-                (a[7] * b[4]).0,
-                (a[7] * b[0]).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                (((p(1, 2) + p(2, 3)) + (p(3, 4) + p(7, 11)))).0,
+                (((p(1, 1) + p(5, 4)) - (p(6, 3) + p(7, 12)))).0,
+                (((p(2, 1) + p(6, 2)) - (p(4, 4) + p(7, 13)))).0,
+                (((p(3, 1) + p(4, 3)) - (p(5, 2) + p(7, 14)))).0,
+                ((p(1, 0) + p(7, 8))).0,
+                ((p(2, 0) + p(7, 9))).0,
+                ((p(3, 0) + p(7, 10))).0,
+                ((p(4, 0) - p(7, 5))).0,
+                ((p(5, 0) - p(7, 6))).0,
+                ((p(6, 0) - p(7, 7))).0,
+                (-p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
+                (p(7, 4)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -11429,16 +11790,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1
     fn rc(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -11450,15 +11812,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1
     fn rc(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[6] * b[3] - a[7] * b[2])).0,
-                ((a[7] * b[1] - a[5] * b[3])).0,
-                ((a[5] * b[2] - a[6] * b[1])).0,
-                (-(a[4] * b[1] + a[5] * b[0])).0,
-                (-(a[4] * b[2] + a[6] * b[0])).0,
-                (-(a[4] * b[3] + a[7] * b[0])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(6, 3) - p(7, 2))).0,
+                ((p(7, 1) - p(5, 3))).0,
+                ((p(5, 2) - p(6, 1))).0,
+                (-(p(4, 1) + p(5, 0))).0,
+                (-(p(4, 2) + p(6, 0))).0,
+                (-(p(4, 3) + p(7, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11471,12 +11834,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5])).0,
-                (((a[6] * b[2] - a[4] * b[3]) - a[7] * b[1])).0,
-                (((a[7] * b[0] - a[4] * b[4]) - a[5] * b[2])).0,
-                (((a[5] * b[1] - a[4] * b[5]) - a[6] * b[0])).0,
+                (((p(5, 3) + p(6, 4)) + p(7, 5))).0,
+                (((p(6, 2) - p(4, 3)) - p(7, 1))).0,
+                (((p(7, 0) - p(4, 4)) - p(5, 2))).0,
+                (((p(5, 1) - p(4, 5)) - p(6, 0))).0,
             ],
         }
     }
@@ -11488,9 +11852,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Odd
     fn rc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -11502,16 +11867,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Odd<S1, 
     fn rc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6]))).0,
-                (((a[1] * b[0] + a[6] * b[3]) - (a[4] * b[4] + a[7] * b[2]))).0,
-                (((a[2] * b[0] + a[7] * b[1]) - (a[4] * b[5] + a[5] * b[3]))).0,
-                (((a[3] * b[0] + a[5] * b[2]) - (a[4] * b[6] + a[6] * b[1]))).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (((p(0, 0) + p(5, 4)) + (p(6, 5) + p(7, 6)))).0,
+                (((p(1, 0) + p(6, 3)) - (p(4, 4) + p(7, 2)))).0,
+                (((p(2, 0) + p(7, 1)) - (p(4, 5) + p(5, 3)))).0,
+                (((p(3, 0) + p(5, 2)) - (p(4, 6) + p(6, 1)))).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -11523,15 +11889,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T
     fn rc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                ((a[6] * b[3] - a[7] * b[2])).0,
-                ((a[7] * b[1] - a[5] * b[3])).0,
-                ((a[5] * b[2] - a[6] * b[1])).0,
-                (-(a[4] * b[1] + a[5] * b[0])).0,
-                (-(a[4] * b[2] + a[6] * b[0])).0,
-                (-(a[4] * b[3] + a[7] * b[0])).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                ((p(6, 3) - p(7, 2))).0,
+                ((p(7, 1) - p(5, 3))).0,
+                ((p(5, 2) - p(6, 1))).0,
+                (-(p(4, 1) + p(5, 0))).0,
+                (-(p(4, 2) + p(6, 0))).0,
+                (-(p(4, 3) + p(7, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11544,23 +11911,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for O
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
-                (((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10]))).0,
-                (((a[1] * b[0] + a[6] * b[7]) - (a[4] * b[8] + a[7] * b[6]))).0,
-                (((a[2] * b[0] + a[7] * b[5]) - (a[4] * b[9] + a[5] * b[7]))).0,
-                (((a[3] * b[0] + a[5] * b[6]) - (a[4] * b[10] + a[6] * b[5]))).0,
-                ((a[6] * b[4] - a[7] * b[3])).0,
-                ((a[7] * b[2] - a[5] * b[4])).0,
-                ((a[5] * b[3] - a[6] * b[2])).0,
-                (-(a[4] * b[2] + a[5] * b[1])).0,
-                (-(a[4] * b[3] + a[6] * b[1])).0,
-                (-(a[4] * b[4] + a[7] * b[1])).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                (((p(0, 0) + p(5, 8)) + (p(6, 9) + p(7, 10)))).0,
+                (((p(1, 0) + p(6, 7)) - (p(4, 8) + p(7, 6)))).0,
+                (((p(2, 0) + p(7, 5)) - (p(4, 9) + p(5, 7)))).0,
+                (((p(3, 0) + p(5, 6)) - (p(4, 10) + p(6, 5)))).0,
+                ((p(6, 4) - p(7, 3))).0,
+                ((p(7, 2) - p(5, 4))).0,
+                ((p(5, 3) - p(6, 2))).0,
+                (-(p(4, 2) + p(5, 1))).0,
+                (-(p(4, 3) + p(6, 1))).0,
+                (-(p(4, 4) + p(7, 1))).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11573,24 +11941,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multiv
     fn rc(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -11602,23 +11971,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multiv
     fn rc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
-                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
-                (((a[5] * b[0] + a[9] * b[3]) - a[10] * b[2])).0,
-                (((a[6] * b[0] + a[10] * b[1]) - a[8] * b[3])).0,
-                (((a[7] * b[0] + a[8] * b[2]) - a[9] * b[1])).0,
-                ((a[13] * b[3] - a[14] * b[2])).0,
-                ((a[14] * b[1] - a[12] * b[3])).0,
-                ((a[12] * b[2] - a[13] * b[1])).0,
-                (-(a[11] * b[1] + a[12] * b[0])).0,
-                (-(a[11] * b[2] + a[13] * b[0])).0,
-                (-(a[11] * b[3] + a[14] * b[0])).0,
-                (-a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (((p(5, 1) + p(6, 2)) + p(7, 3))).0,
+                (((p(5, 0) + p(9, 3)) - p(10, 2))).0,
+                (((p(6, 0) + p(10, 1)) - p(8, 3))).0,
+                (((p(7, 0) + p(8, 2)) - p(9, 1))).0,
+                ((p(13, 3) - p(14, 2))).0,
+                ((p(14, 1) - p(12, 3))).0,
+                ((p(12, 2) - p(13, 1))).0,
+                (-(p(11, 1) + p(12, 0))).0,
+                (-(p(11, 2) + p(13, 0))).0,
+                (-(p(11, 3) + p(14, 0))).0,
+                (-p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11631,19 +12001,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Mult
     fn rc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
-                (((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5])).0,
-                (((a[13] * b[2] - a[11] * b[3]) - a[14] * b[1])).0,
-                (((a[14] * b[0] - a[11] * b[4]) - a[12] * b[2])).0,
-                (((a[12] * b[1] - a[11] * b[5]) - a[13] * b[0])).0,
-                (a[15] * b[3]).0,
-                (a[15] * b[4]).0,
-                (a[15] * b[5]).0,
-                (-a[15] * b[0]).0,
-                (-a[15] * b[1]).0,
-                (-a[15] * b[2]).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                (((p(12, 3) + p(13, 4)) + p(14, 5))).0,
+                (((p(13, 2) - p(11, 3)) - p(14, 1))).0,
+                (((p(14, 0) - p(11, 4)) - p(12, 2))).0,
+                (((p(12, 1) - p(11, 5)) - p(13, 0))).0,
+                (p(15, 3)).0,
+                (p(15, 4)).0,
+                (p(15, 5)).0,
+                (-p(15, 0)).0,
+                (-p(15, 1)).0,
+                (-p(15, 2)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -11660,13 +12031,14 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Mul
     fn rc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
-                (a[15] * b[0]).0,
-                (-a[15] * b[1]).0,
-                (-a[15] * b[2]).0,
-                (-a[15] * b[3]).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (p(15, 0)).0,
+                (-p(15, 1)).0,
+                (-p(15, 2)).0,
+                (-p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -11689,9 +12061,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Pseudoscalar<S2, T>> for 
     fn rc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[15] * b[0]).0,
+                (-p(15, 0)).0,
             ],
         }
     }
@@ -11703,24 +12076,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Even<S2, T>> for Multivec
     fn rc(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
-                (((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6]))).0,
-                (((a[2] * b[0] + a[13] * b[3]) - (a[11] * b[4] + a[14] * b[2]))).0,
-                (((a[3] * b[0] + a[14] * b[1]) - (a[11] * b[5] + a[12] * b[3]))).0,
-                (((a[4] * b[0] + a[12] * b[2]) - (a[11] * b[6] + a[13] * b[1]))).0,
-                ((a[5] * b[0] + a[15] * b[4])).0,
-                ((a[6] * b[0] + a[15] * b[5])).0,
-                ((a[7] * b[0] + a[15] * b[6])).0,
-                ((a[8] * b[0] - a[15] * b[1])).0,
-                ((a[9] * b[0] - a[15] * b[2])).0,
-                ((a[10] * b[0] - a[15] * b[3])).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                (((p(1, 0) + p(12, 4)) + (p(13, 5) + p(14, 6)))).0,
+                (((p(2, 0) + p(13, 3)) - (p(11, 4) + p(14, 2)))).0,
+                (((p(3, 0) + p(14, 1)) - (p(11, 5) + p(12, 3)))).0,
+                (((p(4, 0) + p(12, 2)) - (p(11, 6) + p(13, 1)))).0,
+                ((p(5, 0) + p(15, 4))).0,
+                ((p(6, 0) + p(15, 5))).0,
+                ((p(7, 0) + p(15, 6))).0,
+                ((p(8, 0) - p(15, 1))).0,
+                ((p(9, 0) - p(15, 2))).0,
+                ((p(10, 0) - p(15, 3))).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -11732,23 +12106,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivect
     fn rc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
-                (((a[5] * b[1] + a[6] * b[2]) + (a[7] * b[3] + a[15] * b[4]))).0,
-                (((a[5] * b[0] + a[9] * b[3]) - (a[10] * b[2] + a[15] * b[5]))).0,
-                (((a[6] * b[0] + a[10] * b[1]) - (a[8] * b[3] + a[15] * b[6]))).0,
-                (((a[7] * b[0] + a[8] * b[2]) - (a[9] * b[1] + a[15] * b[7]))).0,
-                ((a[13] * b[3] - a[14] * b[2])).0,
-                ((a[14] * b[1] - a[12] * b[3])).0,
-                ((a[12] * b[2] - a[13] * b[1])).0,
-                (-(a[11] * b[1] + a[12] * b[0])).0,
-                (-(a[11] * b[2] + a[13] * b[0])).0,
-                (-(a[11] * b[3] + a[14] * b[0])).0,
-                (-a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                (((p(5, 1) + p(6, 2)) + (p(7, 3) + p(15, 4)))).0,
+                (((p(5, 0) + p(9, 3)) - (p(10, 2) + p(15, 5)))).0,
+                (((p(6, 0) + p(10, 1)) - (p(8, 3) + p(15, 6)))).0,
+                (((p(7, 0) + p(8, 2)) - (p(9, 1) + p(15, 7)))).0,
+                ((p(13, 3) - p(14, 2))).0,
+                ((p(14, 1) - p(12, 3))).0,
+                ((p(12, 2) - p(13, 1))).0,
+                (-(p(11, 1) + p(12, 0))).0,
+                (-(p(11, 2) + p(13, 0))).0,
+                (-(p(11, 3) + p(14, 0))).0,
+                (-p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -11761,24 +12136,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for M
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
-                ((((a[1] * b[0] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])) + ((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])))).0,
-                ((((a[2] * b[0] + a[5] * b[1]) + (a[9] * b[4] + a[13] * b[7])) - ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12])))).0,
-                ((((a[3] * b[0] + a[6] * b[1]) + (a[10] * b[2] + a[14] * b[5])) - ((a[8] * b[4] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13])))).0,
-                ((((a[4] * b[0] + a[7] * b[1]) + (a[8] * b[3] + a[12] * b[6])) - ((a[9] * b[2] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14])))).0,
-                (((a[5] * b[0] + a[13] * b[4]) + (a[15] * b[8] - a[14] * b[3]))).0,
-                (((a[6] * b[0] + a[14] * b[2]) + (a[15] * b[9] - a[12] * b[4]))).0,
-                (((a[7] * b[0] + a[12] * b[3]) + (a[15] * b[10] - a[13] * b[2]))).0,
-                (((a[8] * b[0] - a[11] * b[2]) - (a[12] * b[1] + a[15] * b[5]))).0,
-                (((a[9] * b[0] - a[11] * b[3]) - (a[13] * b[1] + a[15] * b[6]))).0,
-                (((a[10] * b[0] - a[11] * b[4]) - (a[14] * b[1] + a[15] * b[7]))).0,
-                ((a[11] * b[0] - a[15] * b[1])).0,
-                ((a[12] * b[0] + a[15] * b[2])).0,
-                ((a[13] * b[0] + a[15] * b[3])).0,
-                ((a[14] * b[0] + a[15] * b[4])).0,
-                (a[15] * b[0]).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                ((((p(1, 0) + p(5, 2)) + (p(6, 3) + p(7, 4))) + ((p(12, 8) + p(13, 9)) + (p(14, 10) + p(15, 11))))).0,
+                ((((p(2, 0) + p(5, 1)) + (p(9, 4) + p(13, 7))) - ((p(10, 3) + p(11, 8)) + (p(14, 6) + p(15, 12))))).0,
+                ((((p(3, 0) + p(6, 1)) + (p(10, 2) + p(14, 5))) - ((p(8, 4) + p(11, 9)) + (p(12, 7) + p(15, 13))))).0,
+                ((((p(4, 0) + p(7, 1)) + (p(8, 3) + p(12, 6))) - ((p(9, 2) + p(11, 10)) + (p(13, 5) + p(15, 14))))).0,
+                (((p(5, 0) + p(13, 4)) + (p(15, 8) - p(14, 3)))).0,
+                (((p(6, 0) + p(14, 2)) + (p(15, 9) - p(12, 4)))).0,
+                (((p(7, 0) + p(12, 3)) + (p(15, 10) - p(13, 2)))).0,
+                (((p(8, 0) - p(11, 2)) - (p(12, 1) + p(15, 5)))).0,
+                (((p(9, 0) - p(11, 3)) - (p(13, 1) + p(15, 6)))).0,
+                (((p(10, 0) - p(11, 4)) - (p(14, 1) + p(15, 7)))).0,
+                ((p(11, 0) - p(15, 1))).0,
+                ((p(12, 0) + p(15, 2))).0,
+                ((p(13, 0) + p(15, 3))).0,
+                ((p(14, 0) + p(15, 4))).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -11790,9 +12166,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Scala
     fn dot(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -11804,12 +12181,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Scala
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -11821,14 +12199,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Sca
     fn dot(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -11840,12 +12219,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Sc
     fn dot(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -11857,9 +12237,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -11871,16 +12252,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Scalar<
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -11892,16 +12274,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Scalar<S
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -11913,24 +12296,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -11942,12 +12326,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Vecto
     fn dot(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -11959,9 +12344,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Vecto
     fn dot(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -11973,12 +12359,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Vec
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
             ],
         }
     }
@@ -11990,14 +12377,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ve
     fn dot(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -12009,12 +12397,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -12026,16 +12415,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Vector<
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[1] * b[0] + a[2] * b[6]) - (a[0] * b[1] + a[3] * b[5]))).0,
-                (((a[2] * b[0] + a[3] * b[4]) - (a[0] * b[2] + a[1] * b[6]))).0,
-                (((a[1] * b[5] + a[3] * b[0]) - (a[0] * b[3] + a[2] * b[4]))).0,
-                (a[0] * b[7]).0,
-                (-a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
-                (-a[3] * b[7]).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                (((p(1, 0) + p(2, 6)) - (p(0, 1) + p(3, 5)))).0,
+                (((p(2, 0) + p(3, 4)) - (p(0, 2) + p(1, 6)))).0,
+                (((p(1, 5) + p(3, 0)) - (p(0, 3) + p(2, 4)))).0,
+                (p(0, 7)).0,
+                (-p(1, 7)).0,
+                (-p(2, 7)).0,
+                (-p(3, 7)).0,
             ],
         }
     }
@@ -12047,15 +12437,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Vector<S
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[3] * b[6] - a[2] * b[7])).0,
-                ((a[1] * b[7] - a[3] * b[5])).0,
-                ((a[2] * b[5] - a[1] * b[6])).0,
-                (-(a[0] * b[5] + a[1] * b[4])).0,
-                (-(a[0] * b[6] + a[2] * b[4])).0,
-                (-(a[0] * b[7] + a[3] * b[4])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(3, 6) - p(2, 7))).0,
+                ((p(1, 7) - p(3, 5))).0,
+                ((p(2, 5) - p(1, 6))).0,
+                (-(p(0, 5) + p(1, 4))).0,
+                (-(p(0, 6) + p(2, 4))).0,
+                (-(p(0, 7) + p(3, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12068,23 +12459,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
-                (((a[0] * b[0] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                (((a[1] * b[0] + a[2] * b[10]) - (a[0] * b[5] + a[3] * b[9]))).0,
-                (((a[2] * b[0] + a[3] * b[8]) - (a[0] * b[6] + a[1] * b[10]))).0,
-                (((a[1] * b[9] + a[3] * b[0]) - (a[0] * b[7] + a[2] * b[8]))).0,
-                ((a[3] * b[13] - a[2] * b[14])).0,
-                ((a[1] * b[14] - a[3] * b[12])).0,
-                ((a[2] * b[12] - a[1] * b[13])).0,
-                (-(a[0] * b[12] + a[1] * b[11])).0,
-                (-(a[0] * b[13] + a[2] * b[11])).0,
-                (-(a[0] * b[14] + a[3] * b[11])).0,
-                (a[0] * b[15]).0,
-                (-a[1] * b[15]).0,
-                (-a[2] * b[15]).0,
-                (-a[3] * b[15]).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (((p(0, 0) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                (((p(1, 0) + p(2, 10)) - (p(0, 5) + p(3, 9)))).0,
+                (((p(2, 0) + p(3, 8)) - (p(0, 6) + p(1, 10)))).0,
+                (((p(1, 9) + p(3, 0)) - (p(0, 7) + p(2, 8)))).0,
+                ((p(3, 13) - p(2, 14))).0,
+                ((p(1, 14) - p(3, 12))).0,
+                ((p(2, 12) - p(1, 13))).0,
+                (-(p(0, 12) + p(1, 11))).0,
+                (-(p(0, 13) + p(2, 11))).0,
+                (-(p(0, 14) + p(3, 11))).0,
+                (p(0, 15)).0,
+                (-p(1, 15)).0,
+                (-p(2, 15)).0,
+                (-p(3, 15)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12097,14 +12489,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Bivec
     fn dot(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -12116,12 +12509,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Bivec
     fn dot(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
             ],
         }
     }
@@ -12133,9 +12527,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Biv
     fn dot(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
             ],
         }
     }
@@ -12147,12 +12542,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Bi
     fn dot(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
-                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
-                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(2, 2) - p(1, 3)) - p(3, 0))).0,
+                (((p(0, 3) - p(2, 1)) - p(4, 0))).0,
+                (((p(1, 1) - p(0, 2)) - p(5, 0))).0,
             ],
         }
     }
@@ -12164,14 +12560,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (-a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (-p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
             ],
         }
     }
@@ -12183,15 +12580,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Bivecto
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
-                ((a[0] * b[0] + a[3] * b[7])).0,
-                ((a[1] * b[0] + a[4] * b[7])).0,
-                ((a[2] * b[0] + a[5] * b[7])).0,
-                ((a[3] * b[0] - a[0] * b[7])).0,
-                ((a[4] * b[0] - a[1] * b[7])).0,
-                ((a[5] * b[0] - a[2] * b[7])).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                ((p(0, 0) + p(3, 7))).0,
+                ((p(1, 0) + p(4, 7))).0,
+                ((p(2, 0) + p(5, 7))).0,
+                ((p(3, 0) - p(0, 7))).0,
+                ((p(4, 0) - p(1, 7))).0,
+                ((p(5, 0) - p(2, 7))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12204,12 +12602,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Bivector
     fn dot(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
-                ((((a[0] * b[0] + a[2] * b[6]) + a[4] * b[3]) - ((a[1] * b[7] + a[3] * b[4]) + a[5] * b[2]))).0,
-                ((((a[0] * b[7] + a[1] * b[0]) + a[5] * b[1]) - ((a[2] * b[5] + a[3] * b[3]) + a[4] * b[4]))).0,
-                ((((a[1] * b[5] + a[2] * b[0]) + a[3] * b[2]) - ((a[0] * b[6] + a[4] * b[1]) + a[5] * b[4]))).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
+                ((((p(0, 0) + p(2, 6)) + p(4, 3)) - ((p(1, 7) + p(3, 4)) + p(5, 2)))).0,
+                ((((p(0, 7) + p(1, 0)) + p(5, 1)) - ((p(2, 5) + p(3, 3)) + p(4, 4)))).0,
+                ((((p(1, 5) + p(2, 0)) + p(3, 2)) - ((p(0, 6) + p(4, 1)) + p(5, 4)))).0,
             ],
         }
     }
@@ -12221,19 +12620,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
-                ((((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4]) + ((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14]))).0,
-                ((((a[0] * b[1] + a[2] * b[13]) + a[4] * b[4]) - ((a[1] * b[14] + a[3] * b[11]) + a[5] * b[3]))).0,
-                ((((a[0] * b[14] + a[1] * b[1]) + a[5] * b[2]) - ((a[2] * b[12] + a[3] * b[4]) + a[4] * b[11]))).0,
-                ((((a[1] * b[12] + a[2] * b[1]) + a[3] * b[3]) - ((a[0] * b[13] + a[4] * b[2]) + a[5] * b[11]))).0,
-                ((a[0] * b[0] + a[3] * b[15])).0,
-                ((a[1] * b[0] + a[4] * b[15])).0,
-                ((a[2] * b[0] + a[5] * b[15])).0,
-                ((a[3] * b[0] - a[0] * b[15])).0,
-                ((a[4] * b[0] - a[1] * b[15])).0,
-                ((a[5] * b[0] - a[2] * b[15])).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                ((((p(0, 2) + p(1, 3)) + p(2, 4)) + ((p(3, 12) + p(4, 13)) + p(5, 14)))).0,
+                ((((p(0, 1) + p(2, 13)) + p(4, 4)) - ((p(1, 14) + p(3, 11)) + p(5, 3)))).0,
+                ((((p(0, 14) + p(1, 1)) + p(5, 2)) - ((p(2, 12) + p(3, 4)) + p(4, 11)))).0,
+                ((((p(1, 12) + p(2, 1)) + p(3, 3)) - ((p(0, 13) + p(4, 2)) + p(5, 11)))).0,
+                ((p(0, 0) + p(3, 15))).0,
+                ((p(1, 0) + p(4, 15))).0,
+                ((p(2, 0) + p(5, 15))).0,
+                ((p(3, 0) - p(0, 15))).0,
+                ((p(4, 0) - p(1, 15))).0,
+                ((p(5, 0) - p(2, 15))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -12250,12 +12650,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Trive
     fn dot(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -12267,14 +12668,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Trive
     fn dot(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -12286,12 +12688,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Tri
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
-                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
-                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(2, 2) - p(0, 3)) - p(3, 1))).0,
+                (((p(3, 0) - p(0, 4)) - p(1, 2))).0,
+                (((p(1, 1) - p(0, 5)) - p(2, 0))).0,
             ],
         }
     }
@@ -12303,9 +12706,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Tr
     fn dot(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -12317,12 +12721,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (-p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -12334,16 +12739,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Trivect
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] - a[0] * b[7]))).0,
-                (((a[1] * b[7] + a[2] * b[3]) - (a[0] * b[4] + a[3] * b[2]))).0,
-                (((a[2] * b[7] + a[3] * b[1]) - (a[0] * b[5] + a[1] * b[3]))).0,
-                (((a[1] * b[2] + a[3] * b[7]) - (a[0] * b[6] + a[2] * b[1]))).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(1, 4) + p(2, 5)) + (p(3, 6) - p(0, 7)))).0,
+                (((p(1, 7) + p(2, 3)) - (p(0, 4) + p(3, 2)))).0,
+                (((p(2, 7) + p(3, 1)) - (p(0, 5) + p(1, 3)))).0,
+                (((p(1, 2) + p(3, 7)) - (p(0, 6) + p(2, 1)))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -12355,15 +12761,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Trivecto
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12376,23 +12783,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
-                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] - a[0] * b[15]))).0,
-                (((a[1] * b[15] + a[2] * b[7]) - (a[0] * b[8] + a[3] * b[6]))).0,
-                (((a[2] * b[15] + a[3] * b[5]) - (a[0] * b[9] + a[1] * b[7]))).0,
-                (((a[1] * b[6] + a[3] * b[15]) - (a[0] * b[10] + a[2] * b[5]))).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (-(a[0] * b[2] + a[1] * b[1])).0,
-                (-(a[0] * b[3] + a[2] * b[1])).0,
-                (-(a[0] * b[4] + a[3] * b[1])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (((p(1, 8) + p(2, 9)) + (p(3, 10) - p(0, 15)))).0,
+                (((p(1, 15) + p(2, 7)) - (p(0, 8) + p(3, 6)))).0,
+                (((p(2, 15) + p(3, 5)) - (p(0, 9) + p(1, 7)))).0,
+                (((p(1, 6) + p(3, 15)) - (p(0, 10) + p(2, 5)))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (-(p(0, 2) + p(1, 1))).0,
+                (-(p(0, 3) + p(2, 1))).0,
+                (-(p(0, 4) + p(3, 1))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12405,9 +12813,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Pseud
     fn dot(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -12419,12 +12828,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Pseud
     fn dot(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -12436,14 +12846,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Pse
     fn dot(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (-a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
             ],
         }
     }
@@ -12455,12 +12866,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ps
     fn dot(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
             ],
         }
     }
@@ -12472,9 +12884,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -12486,16 +12899,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Pseudos
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[0] * b[7]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 7)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -12507,16 +12921,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Pseudosc
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[4]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 4)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -12528,24 +12943,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[0] * b[15]).0,
-                (a[0] * b[11]).0,
-                (-a[0] * b[12]).0,
-                (-a[0] * b[13]).0,
-                (-a[0] * b[14]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 15)).0,
+                (p(0, 11)).0,
+                (-p(0, 12)).0,
+                (-p(0, 13)).0,
+                (-p(0, 14)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -12557,16 +12973,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Even<
     fn dot(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -12578,16 +12995,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Even<
     fn dot(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
-                (((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[3] - a[6] * b[2]))).0,
-                (((a[0] * b[2] + a[2] * b[0]) + (a[6] * b[1] - a[4] * b[3]))).0,
-                (((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[2] - a[5] * b[1]))).0,
-                (-a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
+                (((p(0, 1) + p(1, 0)) + (p(5, 3) - p(6, 2)))).0,
+                (((p(0, 2) + p(2, 0)) + (p(6, 1) - p(4, 3)))).0,
+                (((p(0, 3) + p(3, 0)) + (p(4, 2) - p(5, 1)))).0,
+                (-p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -12599,15 +13017,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Eve
     fn dot(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
-                ((a[0] * b[0] + a[7] * b[3])).0,
-                ((a[0] * b[1] + a[7] * b[4])).0,
-                ((a[0] * b[2] + a[7] * b[5])).0,
-                ((a[0] * b[3] - a[7] * b[0])).0,
-                ((a[0] * b[4] - a[7] * b[1])).0,
-                ((a[0] * b[5] - a[7] * b[2])).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                ((p(0, 0) + p(7, 3))).0,
+                ((p(0, 1) + p(7, 4))).0,
+                ((p(0, 2) + p(7, 5))).0,
+                ((p(0, 3) - p(7, 0))).0,
+                ((p(0, 4) - p(7, 1))).0,
+                ((p(0, 5) - p(7, 2))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12620,16 +13039,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Ev
     fn dot(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[0]))).0,
-                (((a[3] * b[2] - a[2] * b[3]) - (a[4] * b[0] + a[7] * b[1]))).0,
-                (((a[1] * b[3] - a[3] * b[1]) - (a[5] * b[0] + a[7] * b[2]))).0,
-                (((a[2] * b[1] - a[1] * b[2]) - (a[6] * b[0] + a[7] * b[3]))).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 0)))).0,
+                (((p(3, 2) - p(2, 3)) - (p(4, 0) + p(7, 1)))).0,
+                (((p(1, 3) - p(3, 1)) - (p(5, 0) + p(7, 2)))).0,
+                (((p(2, 1) - p(1, 2)) - (p(6, 0) + p(7, 3)))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -12641,16 +13061,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[7] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(7, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -12662,16 +13083,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Even<S1
     fn dot(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                (((a[0] * b[1] + a[1] * b[0]) + (a[4] * b[7] + a[7] * b[4]))).0,
-                (((a[0] * b[2] + a[2] * b[0]) + (a[5] * b[7] + a[7] * b[5]))).0,
-                (((a[0] * b[3] + a[3] * b[0]) + (a[6] * b[7] + a[7] * b[6]))).0,
-                (((a[0] * b[4] + a[4] * b[0]) - (a[1] * b[7] + a[7] * b[1]))).0,
-                (((a[0] * b[5] + a[5] * b[0]) - (a[2] * b[7] + a[7] * b[2]))).0,
-                (((a[0] * b[6] + a[6] * b[0]) - (a[3] * b[7] + a[7] * b[3]))).0,
-                ((a[0] * b[7] + a[7] * b[0])).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                (((p(0, 1) + p(1, 0)) + (p(4, 7) + p(7, 4)))).0,
+                (((p(0, 2) + p(2, 0)) + (p(5, 7) + p(7, 5)))).0,
+                (((p(0, 3) + p(3, 0)) + (p(6, 7) + p(7, 6)))).0,
+                (((p(0, 4) + p(4, 0)) - (p(1, 7) + p(7, 1)))).0,
+                (((p(0, 5) + p(5, 0)) - (p(2, 7) + p(7, 2)))).0,
+                (((p(0, 6) + p(6, 0)) - (p(3, 7) + p(7, 3)))).0,
+                ((p(0, 7) + p(7, 0))).0,
             ],
         }
     }
@@ -12683,16 +13105,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Even<S1,
     fn dot(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) + ((a[4] * b[5] + a[5] * b[6]) + (a[6] * b[7] + a[7] * b[4])))).0,
-                ((((a[0] * b[1] + a[1] * b[0]) + (a[3] * b[6] + a[5] * b[3])) - ((a[2] * b[7] + a[4] * b[4]) + (a[6] * b[2] + a[7] * b[5])))).0,
-                ((((a[0] * b[2] + a[1] * b[7]) + (a[2] * b[0] + a[6] * b[1])) - ((a[3] * b[5] + a[4] * b[3]) + (a[5] * b[4] + a[7] * b[6])))).0,
-                ((((a[0] * b[3] + a[2] * b[5]) + (a[3] * b[0] + a[4] * b[2])) - ((a[1] * b[6] + a[5] * b[1]) + (a[6] * b[4] + a[7] * b[7])))).0,
-                ((a[0] * b[4] - a[7] * b[0])).0,
-                ((a[0] * b[5] + a[7] * b[1])).0,
-                ((a[0] * b[6] + a[7] * b[2])).0,
-                ((a[0] * b[7] + a[7] * b[3])).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) + ((p(4, 5) + p(5, 6)) + (p(6, 7) + p(7, 4))))).0,
+                ((((p(0, 1) + p(1, 0)) + (p(3, 6) + p(5, 3))) - ((p(2, 7) + p(4, 4)) + (p(6, 2) + p(7, 5))))).0,
+                ((((p(0, 2) + p(1, 7)) + (p(2, 0) + p(6, 1))) - ((p(3, 5) + p(4, 3)) + (p(5, 4) + p(7, 6))))).0,
+                ((((p(0, 3) + p(2, 5)) + (p(3, 0) + p(4, 2))) - ((p(1, 6) + p(5, 1)) + (p(6, 4) + p(7, 7))))).0,
+                ((p(0, 4) - p(7, 0))).0,
+                ((p(0, 5) + p(7, 1))).0,
+                ((p(0, 6) + p(7, 2))).0,
+                ((p(0, 7) + p(7, 3))).0,
             ],
         }
     }
@@ -12704,24 +13127,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
-                ((((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4])) + ((a[4] * b[12] + a[5] * b[13]) + (a[6] * b[14] + a[7] * b[11])))).0,
-                ((((a[0] * b[2] + a[1] * b[1]) + (a[3] * b[13] + a[5] * b[4])) - ((a[2] * b[14] + a[4] * b[11]) + (a[6] * b[3] + a[7] * b[12])))).0,
-                ((((a[0] * b[3] + a[1] * b[14]) + (a[2] * b[1] + a[6] * b[2])) - ((a[3] * b[12] + a[4] * b[4]) + (a[5] * b[11] + a[7] * b[13])))).0,
-                ((((a[0] * b[4] + a[2] * b[12]) + (a[3] * b[1] + a[4] * b[3])) - ((a[1] * b[13] + a[5] * b[2]) + (a[6] * b[11] + a[7] * b[14])))).0,
-                (((a[0] * b[5] + a[1] * b[0]) + (a[4] * b[15] + a[7] * b[8]))).0,
-                (((a[0] * b[6] + a[2] * b[0]) + (a[5] * b[15] + a[7] * b[9]))).0,
-                (((a[0] * b[7] + a[3] * b[0]) + (a[6] * b[15] + a[7] * b[10]))).0,
-                (((a[0] * b[8] + a[4] * b[0]) - (a[1] * b[15] + a[7] * b[5]))).0,
-                (((a[0] * b[9] + a[5] * b[0]) - (a[2] * b[15] + a[7] * b[6]))).0,
-                (((a[0] * b[10] + a[6] * b[0]) - (a[3] * b[15] + a[7] * b[7]))).0,
-                ((a[0] * b[11] - a[7] * b[1])).0,
-                ((a[0] * b[12] + a[7] * b[2])).0,
-                ((a[0] * b[13] + a[7] * b[3])).0,
-                ((a[0] * b[14] + a[7] * b[4])).0,
-                ((a[0] * b[15] + a[7] * b[0])).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                ((((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4))) + ((p(4, 12) + p(5, 13)) + (p(6, 14) + p(7, 11))))).0,
+                ((((p(0, 2) + p(1, 1)) + (p(3, 13) + p(5, 4))) - ((p(2, 14) + p(4, 11)) + (p(6, 3) + p(7, 12))))).0,
+                ((((p(0, 3) + p(1, 14)) + (p(2, 1) + p(6, 2))) - ((p(3, 12) + p(4, 4)) + (p(5, 11) + p(7, 13))))).0,
+                ((((p(0, 4) + p(2, 12)) + (p(3, 1) + p(4, 3))) - ((p(1, 13) + p(5, 2)) + (p(6, 11) + p(7, 14))))).0,
+                (((p(0, 5) + p(1, 0)) + (p(4, 15) + p(7, 8)))).0,
+                (((p(0, 6) + p(2, 0)) + (p(5, 15) + p(7, 9)))).0,
+                (((p(0, 7) + p(3, 0)) + (p(6, 15) + p(7, 10)))).0,
+                (((p(0, 8) + p(4, 0)) - (p(1, 15) + p(7, 5)))).0,
+                (((p(0, 9) + p(5, 0)) - (p(2, 15) + p(7, 6)))).0,
+                (((p(0, 10) + p(6, 0)) - (p(3, 15) + p(7, 7)))).0,
+                ((p(0, 11) - p(7, 1))).0,
+                ((p(0, 12) + p(7, 2))).0,
+                ((p(0, 13) + p(7, 3))).0,
+                ((p(0, 14) + p(7, 4))).0,
+                ((p(0, 15) + p(7, 0))).0,
             ],
         }
     }
@@ -12733,16 +13157,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Odd<S
     fn dot(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -12754,15 +13179,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Odd<S
     fn dot(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[6] * b[3] - a[7] * b[2])).0,
-                ((a[7] * b[1] - a[5] * b[3])).0,
-                ((a[5] * b[2] - a[6] * b[1])).0,
-                (-(a[4] * b[1] + a[5] * b[0])).0,
-                (-(a[4] * b[2] + a[6] * b[0])).0,
-                (-(a[4] * b[3] + a[7] * b[0])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(6, 3) - p(7, 2))).0,
+                ((p(7, 1) - p(5, 3))).0,
+                ((p(5, 2) - p(6, 1))).0,
+                (-(p(4, 1) + p(5, 0))).0,
+                (-(p(4, 2) + p(6, 0))).0,
+                (-(p(4, 3) + p(7, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12775,12 +13201,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Odd
     fn dot(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                ((((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) - ((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]))).0,
-                ((((a[2] * b[5] + a[6] * b[2]) - a[0] * b[0]) - ((a[3] * b[4] + a[4] * b[3]) + a[7] * b[1]))).0,
-                ((((a[3] * b[3] + a[7] * b[0]) - a[0] * b[1]) - ((a[1] * b[5] + a[4] * b[4]) + a[5] * b[2]))).0,
-                ((((a[1] * b[4] + a[5] * b[1]) - a[0] * b[2]) - ((a[2] * b[3] + a[4] * b[5]) + a[6] * b[0]))).0,
+                ((((p(5, 3) + p(6, 4)) + p(7, 5)) - ((p(1, 0) + p(2, 1)) + p(3, 2)))).0,
+                ((((p(2, 5) + p(6, 2)) - p(0, 0)) - ((p(3, 4) + p(4, 3)) + p(7, 1)))).0,
+                ((((p(3, 3) + p(7, 0)) - p(0, 1)) - ((p(1, 5) + p(4, 4)) + p(5, 2)))).0,
+                ((((p(1, 4) + p(5, 1)) - p(0, 2)) - ((p(2, 3) + p(4, 5)) + p(6, 0)))).0,
             ],
         }
     }
@@ -12792,15 +13219,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Od
     fn dot(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12813,16 +13241,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (-p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -12834,16 +13263,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Odd<S1,
     fn dot(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                ((((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6])) - ((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7])))).0,
-                ((((a[1] * b[0] + a[2] * b[6]) + (a[5] * b[7] + a[6] * b[3])) - ((a[0] * b[1] + a[3] * b[5]) + (a[4] * b[4] + a[7] * b[2])))).0,
-                ((((a[2] * b[0] + a[3] * b[4]) + (a[6] * b[7] + a[7] * b[1])) - ((a[0] * b[2] + a[1] * b[6]) + (a[4] * b[5] + a[5] * b[3])))).0,
-                ((((a[1] * b[5] + a[3] * b[0]) + (a[5] * b[2] + a[7] * b[7])) - ((a[0] * b[3] + a[2] * b[4]) + (a[4] * b[6] + a[6] * b[1])))).0,
-                ((a[0] * b[7] + a[4] * b[0])).0,
-                ((a[5] * b[0] - a[1] * b[7])).0,
-                ((a[6] * b[0] - a[2] * b[7])).0,
-                ((a[7] * b[0] - a[3] * b[7])).0,
+                ((((p(0, 0) + p(5, 4)) + (p(6, 5) + p(7, 6))) - ((p(1, 1) + p(2, 2)) + (p(3, 3) + p(4, 7))))).0,
+                ((((p(1, 0) + p(2, 6)) + (p(5, 7) + p(6, 3))) - ((p(0, 1) + p(3, 5)) + (p(4, 4) + p(7, 2))))).0,
+                ((((p(2, 0) + p(3, 4)) + (p(6, 7) + p(7, 1))) - ((p(0, 2) + p(1, 6)) + (p(4, 5) + p(5, 3))))).0,
+                ((((p(1, 5) + p(3, 0)) + (p(5, 2) + p(7, 7))) - ((p(0, 3) + p(2, 4)) + (p(4, 6) + p(6, 1))))).0,
+                ((p(0, 7) + p(4, 0))).0,
+                ((p(5, 0) - p(1, 7))).0,
+                ((p(6, 0) - p(2, 7))).0,
+                ((p(7, 0) - p(3, 7))).0,
             ],
         }
     }
@@ -12855,15 +13285,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Odd<S1, 
     fn dot(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                (((a[3] * b[6] + a[6] * b[3]) - (a[2] * b[7] + a[7] * b[2]))).0,
-                (((a[1] * b[7] + a[7] * b[1]) - (a[3] * b[5] + a[5] * b[3]))).0,
-                (((a[2] * b[5] + a[5] * b[2]) - (a[1] * b[6] + a[6] * b[1]))).0,
-                (-((a[0] * b[5] + a[1] * b[4]) + (a[4] * b[1] + a[5] * b[0]))).0,
-                (-((a[0] * b[6] + a[2] * b[4]) + (a[4] * b[2] + a[6] * b[0]))).0,
-                (-((a[0] * b[7] + a[3] * b[4]) + (a[4] * b[3] + a[7] * b[0]))).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                (((p(3, 6) + p(6, 3)) - (p(2, 7) + p(7, 2)))).0,
+                (((p(1, 7) + p(7, 1)) - (p(3, 5) + p(5, 3)))).0,
+                (((p(2, 5) + p(5, 2)) - (p(1, 6) + p(6, 1)))).0,
+                (-((p(0, 5) + p(1, 4)) + (p(4, 1) + p(5, 0)))).0,
+                (-((p(0, 6) + p(2, 4)) + (p(4, 2) + p(6, 0)))).0,
+                (-((p(0, 7) + p(3, 4)) + (p(4, 3) + p(7, 0)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12876,23 +13307,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
-                ((((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10])) - ((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15])))).0,
-                ((((a[1] * b[0] + a[2] * b[10]) + (a[5] * b[15] + a[6] * b[7])) - ((a[0] * b[5] + a[3] * b[9]) + (a[4] * b[8] + a[7] * b[6])))).0,
-                ((((a[2] * b[0] + a[3] * b[8]) + (a[6] * b[15] + a[7] * b[5])) - ((a[0] * b[6] + a[1] * b[10]) + (a[4] * b[9] + a[5] * b[7])))).0,
-                ((((a[1] * b[9] + a[3] * b[0]) + (a[5] * b[6] + a[7] * b[15])) - ((a[0] * b[7] + a[2] * b[8]) + (a[4] * b[10] + a[6] * b[5])))).0,
-                (((a[3] * b[13] + a[6] * b[4]) - (a[2] * b[14] + a[7] * b[3]))).0,
-                (((a[1] * b[14] + a[7] * b[2]) - (a[3] * b[12] + a[5] * b[4]))).0,
-                (((a[2] * b[12] + a[5] * b[3]) - (a[1] * b[13] + a[6] * b[2]))).0,
-                (-((a[0] * b[12] + a[1] * b[11]) + (a[4] * b[2] + a[5] * b[1]))).0,
-                (-((a[0] * b[13] + a[2] * b[11]) + (a[4] * b[3] + a[6] * b[1]))).0,
-                (-((a[0] * b[14] + a[3] * b[11]) + (a[4] * b[4] + a[7] * b[1]))).0,
-                ((a[0] * b[15] + a[4] * b[0])).0,
-                ((a[5] * b[0] - a[1] * b[15])).0,
-                ((a[6] * b[0] - a[2] * b[15])).0,
-                ((a[7] * b[0] - a[3] * b[15])).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                ((((p(0, 0) + p(5, 8)) + (p(6, 9) + p(7, 10))) - ((p(1, 5) + p(2, 6)) + (p(3, 7) + p(4, 15))))).0,
+                ((((p(1, 0) + p(2, 10)) + (p(5, 15) + p(6, 7))) - ((p(0, 5) + p(3, 9)) + (p(4, 8) + p(7, 6))))).0,
+                ((((p(2, 0) + p(3, 8)) + (p(6, 15) + p(7, 5))) - ((p(0, 6) + p(1, 10)) + (p(4, 9) + p(5, 7))))).0,
+                ((((p(1, 9) + p(3, 0)) + (p(5, 6) + p(7, 15))) - ((p(0, 7) + p(2, 8)) + (p(4, 10) + p(6, 5))))).0,
+                (((p(3, 13) + p(6, 4)) - (p(2, 14) + p(7, 3)))).0,
+                (((p(1, 14) + p(7, 2)) - (p(3, 12) + p(5, 4)))).0,
+                (((p(2, 12) + p(5, 3)) - (p(1, 13) + p(6, 2)))).0,
+                (-((p(0, 12) + p(1, 11)) + (p(4, 2) + p(5, 1)))).0,
+                (-((p(0, 13) + p(2, 11)) + (p(4, 3) + p(6, 1)))).0,
+                (-((p(0, 14) + p(3, 11)) + (p(4, 4) + p(7, 1)))).0,
+                ((p(0, 15) + p(4, 0))).0,
+                ((p(5, 0) - p(1, 15))).0,
+                ((p(6, 0) - p(2, 15))).0,
+                ((p(7, 0) - p(3, 15))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12905,24 +13337,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Scalar<S2, T>> for Multi
     fn dot(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -12934,23 +13367,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Vector<S2, T>> for Multi
     fn dot(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
-                (((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[0] * b[1] + a[5] * b[0]) + (a[9] * b[3] - a[10] * b[2]))).0,
-                (((a[0] * b[2] + a[6] * b[0]) + (a[10] * b[1] - a[8] * b[3]))).0,
-                (((a[0] * b[3] + a[7] * b[0]) + (a[8] * b[2] - a[9] * b[1]))).0,
-                ((a[13] * b[3] - a[14] * b[2])).0,
-                ((a[14] * b[1] - a[12] * b[3])).0,
-                ((a[12] * b[2] - a[13] * b[1])).0,
-                (-(a[11] * b[1] + a[12] * b[0])).0,
-                (-(a[11] * b[2] + a[13] * b[0])).0,
-                (-(a[11] * b[3] + a[14] * b[0])).0,
-                (-a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
+                (((p(0, 1) + p(5, 0)) + (p(9, 3) - p(10, 2)))).0,
+                (((p(0, 2) + p(6, 0)) + (p(10, 1) - p(8, 3)))).0,
+                (((p(0, 3) + p(7, 0)) + (p(8, 2) - p(9, 1)))).0,
+                ((p(13, 3) - p(14, 2))).0,
+                ((p(14, 1) - p(12, 3))).0,
+                ((p(12, 2) - p(13, 1))).0,
+                (-(p(11, 1) + p(12, 0))).0,
+                (-(p(11, 2) + p(13, 0))).0,
+                (-(p(11, 3) + p(14, 0))).0,
+                (-p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -12963,19 +13397,20 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Bivector<S2, T>> for Mul
     fn dot(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
-                ((((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5]) - ((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2]))).0,
-                ((((a[3] * b[5] + a[13] * b[2]) - a[1] * b[0]) - ((a[4] * b[4] + a[11] * b[3]) + a[14] * b[1]))).0,
-                ((((a[4] * b[3] + a[14] * b[0]) - a[1] * b[1]) - ((a[2] * b[5] + a[11] * b[4]) + a[12] * b[2]))).0,
-                ((((a[2] * b[4] + a[12] * b[1]) - a[1] * b[2]) - ((a[3] * b[3] + a[11] * b[5]) + a[13] * b[0]))).0,
-                ((a[0] * b[0] + a[15] * b[3])).0,
-                ((a[0] * b[1] + a[15] * b[4])).0,
-                ((a[0] * b[2] + a[15] * b[5])).0,
-                ((a[0] * b[3] - a[15] * b[0])).0,
-                ((a[0] * b[4] - a[15] * b[1])).0,
-                ((a[0] * b[5] - a[15] * b[2])).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                ((((p(12, 3) + p(13, 4)) + p(14, 5)) - ((p(2, 0) + p(3, 1)) + p(4, 2)))).0,
+                ((((p(3, 5) + p(13, 2)) - p(1, 0)) - ((p(4, 4) + p(11, 3)) + p(14, 1)))).0,
+                ((((p(4, 3) + p(14, 0)) - p(1, 1)) - ((p(2, 5) + p(11, 4)) + p(12, 2)))).0,
+                ((((p(2, 4) + p(12, 1)) - p(1, 2)) - ((p(3, 3) + p(11, 5)) + p(13, 0)))).0,
+                ((p(0, 0) + p(15, 3))).0,
+                ((p(0, 1) + p(15, 4))).0,
+                ((p(0, 2) + p(15, 5))).0,
+                ((p(0, 3) - p(15, 0))).0,
+                ((p(0, 4) - p(15, 1))).0,
+                ((p(0, 5) - p(15, 2))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
@@ -12992,23 +13427,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Trivector<S2, T>> for Mu
     fn dot(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[8] * b[1] + a[9] * b[2]) + (a[10] * b[3] + a[15] * b[0]))).0,
-                (((a[7] * b[2] - a[6] * b[3]) - (a[8] * b[0] + a[15] * b[1]))).0,
-                (((a[5] * b[3] - a[7] * b[1]) - (a[9] * b[0] + a[15] * b[2]))).0,
-                (((a[6] * b[1] - a[5] * b[2]) - (a[10] * b[0] + a[15] * b[3]))).0,
-                ((a[4] * b[2] - a[3] * b[3])).0,
-                ((a[2] * b[3] - a[4] * b[1])).0,
-                ((a[3] * b[1] - a[2] * b[2])).0,
-                (-(a[1] * b[1] + a[2] * b[0])).0,
-                (-(a[1] * b[2] + a[3] * b[0])).0,
-                (-(a[1] * b[3] + a[4] * b[0])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (((p(8, 1) + p(9, 2)) + (p(10, 3) + p(15, 0)))).0,
+                (((p(7, 2) - p(6, 3)) - (p(8, 0) + p(15, 1)))).0,
+                (((p(5, 3) - p(7, 1)) - (p(9, 0) + p(15, 2)))).0,
+                (((p(6, 1) - p(5, 2)) - (p(10, 0) + p(15, 3)))).0,
+                ((p(4, 2) - p(3, 3))).0,
+                ((p(2, 3) - p(4, 1))).0,
+                ((p(3, 1) - p(2, 2))).0,
+                (-(p(1, 1) + p(2, 0))).0,
+                (-(p(1, 2) + p(3, 0))).0,
+                (-(p(1, 3) + p(4, 0))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13021,24 +13457,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Pseudoscalar<S2, T>> for
     fn dot(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (-a[15] * b[0]).0,
-                (-a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (-a[5] * b[0]).0,
-                (-a[6] * b[0]).0,
-                (-a[7] * b[0]).0,
-                (a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (-a[4] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(15, 0)).0,
+                (-p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (-p(5, 0)).0,
+                (-p(6, 0)).0,
+                (-p(7, 0)).0,
+                (p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (-p(4, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13050,24 +13487,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Even<S2, T>> for Multive
     fn dot(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
-                ((((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6])) - ((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7])))).0,
-                ((((a[2] * b[0] + a[3] * b[6]) + (a[12] * b[7] + a[13] * b[3])) - ((a[1] * b[1] + a[4] * b[5]) + (a[11] * b[4] + a[14] * b[2])))).0,
-                ((((a[3] * b[0] + a[4] * b[4]) + (a[13] * b[7] + a[14] * b[1])) - ((a[1] * b[2] + a[2] * b[6]) + (a[11] * b[5] + a[12] * b[3])))).0,
-                ((((a[2] * b[5] + a[4] * b[0]) + (a[12] * b[2] + a[14] * b[7])) - ((a[1] * b[3] + a[3] * b[4]) + (a[11] * b[6] + a[13] * b[1])))).0,
-                (((a[0] * b[1] + a[5] * b[0]) + (a[8] * b[7] + a[15] * b[4]))).0,
-                (((a[0] * b[2] + a[6] * b[0]) + (a[9] * b[7] + a[15] * b[5]))).0,
-                (((a[0] * b[3] + a[7] * b[0]) + (a[10] * b[7] + a[15] * b[6]))).0,
-                (((a[0] * b[4] + a[8] * b[0]) - (a[5] * b[7] + a[15] * b[1]))).0,
-                (((a[0] * b[5] + a[9] * b[0]) - (a[6] * b[7] + a[15] * b[2]))).0,
-                (((a[0] * b[6] + a[10] * b[0]) - (a[7] * b[7] + a[15] * b[3]))).0,
-                ((a[1] * b[7] + a[11] * b[0])).0,
-                ((a[12] * b[0] - a[2] * b[7])).0,
-                ((a[13] * b[0] - a[3] * b[7])).0,
-                ((a[14] * b[0] - a[4] * b[7])).0,
-                ((a[0] * b[7] + a[15] * b[0])).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                ((((p(1, 0) + p(12, 4)) + (p(13, 5) + p(14, 6))) - ((p(2, 1) + p(3, 2)) + (p(4, 3) + p(11, 7))))).0,
+                ((((p(2, 0) + p(3, 6)) + (p(12, 7) + p(13, 3))) - ((p(1, 1) + p(4, 5)) + (p(11, 4) + p(14, 2))))).0,
+                ((((p(3, 0) + p(4, 4)) + (p(13, 7) + p(14, 1))) - ((p(1, 2) + p(2, 6)) + (p(11, 5) + p(12, 3))))).0,
+                ((((p(2, 5) + p(4, 0)) + (p(12, 2) + p(14, 7))) - ((p(1, 3) + p(3, 4)) + (p(11, 6) + p(13, 1))))).0,
+                (((p(0, 1) + p(5, 0)) + (p(8, 7) + p(15, 4)))).0,
+                (((p(0, 2) + p(6, 0)) + (p(9, 7) + p(15, 5)))).0,
+                (((p(0, 3) + p(7, 0)) + (p(10, 7) + p(15, 6)))).0,
+                (((p(0, 4) + p(8, 0)) - (p(5, 7) + p(15, 1)))).0,
+                (((p(0, 5) + p(9, 0)) - (p(6, 7) + p(15, 2)))).0,
+                (((p(0, 6) + p(10, 0)) - (p(7, 7) + p(15, 3)))).0,
+                ((p(1, 7) + p(11, 0))).0,
+                ((p(12, 0) - p(2, 7))).0,
+                ((p(13, 0) - p(3, 7))).0,
+                ((p(14, 0) - p(4, 7))).0,
+                ((p(0, 7) + p(15, 0))).0,
             ],
         }
     }
@@ -13079,23 +13517,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Odd<S2, T>> for Multivec
     fn dot(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) + ((a[8] * b[5] + a[9] * b[6]) + (a[10] * b[7] + a[15] * b[4])))).0,
-                ((((a[0] * b[1] + a[5] * b[0]) + (a[7] * b[6] + a[9] * b[3])) - ((a[6] * b[7] + a[8] * b[4]) + (a[10] * b[2] + a[15] * b[5])))).0,
-                ((((a[0] * b[2] + a[5] * b[7]) + (a[6] * b[0] + a[10] * b[1])) - ((a[7] * b[5] + a[8] * b[3]) + (a[9] * b[4] + a[15] * b[6])))).0,
-                ((((a[0] * b[3] + a[6] * b[5]) + (a[7] * b[0] + a[8] * b[2])) - ((a[5] * b[6] + a[9] * b[1]) + (a[10] * b[4] + a[15] * b[7])))).0,
-                (((a[4] * b[6] + a[13] * b[3]) - (a[3] * b[7] + a[14] * b[2]))).0,
-                (((a[2] * b[7] + a[14] * b[1]) - (a[4] * b[5] + a[12] * b[3]))).0,
-                (((a[3] * b[5] + a[12] * b[2]) - (a[2] * b[6] + a[13] * b[1]))).0,
-                (-((a[1] * b[5] + a[2] * b[4]) + (a[11] * b[1] + a[12] * b[0]))).0,
-                (-((a[1] * b[6] + a[3] * b[4]) + (a[11] * b[2] + a[13] * b[0]))).0,
-                (-((a[1] * b[7] + a[4] * b[4]) + (a[11] * b[3] + a[14] * b[0]))).0,
-                ((a[0] * b[4] - a[15] * b[0])).0,
-                ((a[0] * b[5] + a[15] * b[1])).0,
-                ((a[0] * b[6] + a[15] * b[2])).0,
-                ((a[0] * b[7] + a[15] * b[3])).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) + ((p(8, 5) + p(9, 6)) + (p(10, 7) + p(15, 4))))).0,
+                ((((p(0, 1) + p(5, 0)) + (p(7, 6) + p(9, 3))) - ((p(6, 7) + p(8, 4)) + (p(10, 2) + p(15, 5))))).0,
+                ((((p(0, 2) + p(5, 7)) + (p(6, 0) + p(10, 1))) - ((p(7, 5) + p(8, 3)) + (p(9, 4) + p(15, 6))))).0,
+                ((((p(0, 3) + p(6, 5)) + (p(7, 0) + p(8, 2))) - ((p(5, 6) + p(9, 1)) + (p(10, 4) + p(15, 7))))).0,
+                (((p(4, 6) + p(13, 3)) - (p(3, 7) + p(14, 2)))).0,
+                (((p(2, 7) + p(14, 1)) - (p(4, 5) + p(12, 3)))).0,
+                (((p(3, 5) + p(12, 2)) - (p(2, 6) + p(13, 1)))).0,
+                (-((p(1, 5) + p(2, 4)) + (p(11, 1) + p(12, 0)))).0,
+                (-((p(1, 6) + p(3, 4)) + (p(11, 2) + p(13, 0)))).0,
+                (-((p(1, 7) + p(4, 4)) + (p(11, 3) + p(14, 0)))).0,
+                ((p(0, 4) - p(15, 0))).0,
+                ((p(0, 5) + p(15, 1))).0,
+                ((p(0, 6) + p(15, 2))).0,
+                ((p(0, 7) + p(15, 3))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13108,24 +13547,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Dot<Multivector<S2, T>> for 
     fn dot(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
-                (((((a[0] * b[1] + a[1] * b[0]) + (a[5] * b[2] + a[6] * b[3])) + ((a[7] * b[4] + a[8] * b[12]) + (a[9] * b[13] + a[10] * b[14]))) + (((a[12] * b[8] + a[13] * b[9]) + (a[14] * b[10] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15]))))).0,
-                (((((a[0] * b[2] + a[2] * b[0]) + (a[3] * b[10] + a[5] * b[1])) + ((a[7] * b[13] + a[9] * b[4]) + (a[12] * b[15] + a[13] * b[7]))) - (((a[1] * b[5] + a[4] * b[9]) + (a[6] * b[14] + a[8] * b[11])) + ((a[10] * b[3] + a[11] * b[8]) + (a[14] * b[6] + a[15] * b[12]))))).0,
-                (((((a[0] * b[3] + a[3] * b[0]) + (a[4] * b[8] + a[5] * b[14])) + ((a[6] * b[1] + a[10] * b[2]) + (a[13] * b[15] + a[14] * b[5]))) - (((a[1] * b[6] + a[2] * b[10]) + (a[7] * b[12] + a[8] * b[4])) + ((a[9] * b[11] + a[11] * b[9]) + (a[12] * b[7] + a[15] * b[13]))))).0,
-                (((((a[0] * b[4] + a[2] * b[9]) + (a[4] * b[0] + a[6] * b[12])) + ((a[7] * b[1] + a[8] * b[3]) + (a[12] * b[6] + a[14] * b[15]))) - (((a[1] * b[7] + a[3] * b[8]) + (a[5] * b[13] + a[9] * b[2])) + ((a[10] * b[11] + a[11] * b[10]) + (a[13] * b[5] + a[15] * b[14]))))).0,
-                ((((a[0] * b[5] + a[4] * b[13]) + (a[5] * b[0] + a[8] * b[15])) + ((a[13] * b[4] + a[15] * b[8]) - (a[3] * b[14] + a[14] * b[3])))).0,
-                ((((a[0] * b[6] + a[2] * b[14]) + (a[6] * b[0] + a[9] * b[15])) + ((a[14] * b[2] + a[15] * b[9]) - (a[4] * b[12] + a[12] * b[4])))).0,
-                ((((a[0] * b[7] + a[3] * b[12]) + (a[7] * b[0] + a[10] * b[15])) + ((a[12] * b[3] + a[15] * b[10]) - (a[2] * b[13] + a[13] * b[2])))).0,
-                ((((a[0] * b[8] + a[8] * b[0]) - (a[1] * b[12] + a[2] * b[11])) - ((a[5] * b[15] + a[11] * b[2]) + (a[12] * b[1] + a[15] * b[5])))).0,
-                ((((a[0] * b[9] + a[9] * b[0]) - (a[1] * b[13] + a[3] * b[11])) - ((a[6] * b[15] + a[11] * b[3]) + (a[13] * b[1] + a[15] * b[6])))).0,
-                ((((a[0] * b[10] + a[10] * b[0]) - (a[1] * b[14] + a[4] * b[11])) - ((a[7] * b[15] + a[11] * b[4]) + (a[14] * b[1] + a[15] * b[7])))).0,
-                (((a[0] * b[11] + a[1] * b[15]) + (a[11] * b[0] - a[15] * b[1]))).0,
-                (((a[0] * b[12] + a[12] * b[0]) + (a[15] * b[2] - a[2] * b[15]))).0,
-                (((a[0] * b[13] + a[13] * b[0]) + (a[15] * b[3] - a[3] * b[15]))).0,
-                (((a[0] * b[14] + a[14] * b[0]) + (a[15] * b[4] - a[4] * b[15]))).0,
-                ((a[0] * b[15] + a[15] * b[0])).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                (((((p(0, 1) + p(1, 0)) + (p(5, 2) + p(6, 3))) + ((p(7, 4) + p(8, 12)) + (p(9, 13) + p(10, 14)))) + (((p(12, 8) + p(13, 9)) + (p(14, 10) + p(15, 11))) - ((p(2, 5) + p(3, 6)) + (p(4, 7) + p(11, 15)))))).0,
+                (((((p(0, 2) + p(2, 0)) + (p(3, 10) + p(5, 1))) + ((p(7, 13) + p(9, 4)) + (p(12, 15) + p(13, 7)))) - (((p(1, 5) + p(4, 9)) + (p(6, 14) + p(8, 11))) + ((p(10, 3) + p(11, 8)) + (p(14, 6) + p(15, 12)))))).0,
+                (((((p(0, 3) + p(3, 0)) + (p(4, 8) + p(5, 14))) + ((p(6, 1) + p(10, 2)) + (p(13, 15) + p(14, 5)))) - (((p(1, 6) + p(2, 10)) + (p(7, 12) + p(8, 4))) + ((p(9, 11) + p(11, 9)) + (p(12, 7) + p(15, 13)))))).0,
+                (((((p(0, 4) + p(2, 9)) + (p(4, 0) + p(6, 12))) + ((p(7, 1) + p(8, 3)) + (p(12, 6) + p(14, 15)))) - (((p(1, 7) + p(3, 8)) + (p(5, 13) + p(9, 2))) + ((p(10, 11) + p(11, 10)) + (p(13, 5) + p(15, 14)))))).0,
+                ((((p(0, 5) + p(4, 13)) + (p(5, 0) + p(8, 15))) + ((p(13, 4) + p(15, 8)) - (p(3, 14) + p(14, 3))))).0,
+                ((((p(0, 6) + p(2, 14)) + (p(6, 0) + p(9, 15))) + ((p(14, 2) + p(15, 9)) - (p(4, 12) + p(12, 4))))).0,
+                ((((p(0, 7) + p(3, 12)) + (p(7, 0) + p(10, 15))) + ((p(12, 3) + p(15, 10)) - (p(2, 13) + p(13, 2))))).0,
+                ((((p(0, 8) + p(8, 0)) - (p(1, 12) + p(2, 11))) - ((p(5, 15) + p(11, 2)) + (p(12, 1) + p(15, 5))))).0,
+                ((((p(0, 9) + p(9, 0)) - (p(1, 13) + p(3, 11))) - ((p(6, 15) + p(11, 3)) + (p(13, 1) + p(15, 6))))).0,
+                ((((p(0, 10) + p(10, 0)) - (p(1, 14) + p(4, 11))) - ((p(7, 15) + p(11, 4)) + (p(14, 1) + p(15, 7))))).0,
+                (((p(0, 11) + p(1, 15)) + (p(11, 0) - p(15, 1)))).0,
+                (((p(0, 12) + p(12, 0)) + (p(15, 2) - p(2, 15)))).0,
+                (((p(0, 13) + p(13, 0)) + (p(15, 3) - p(3, 15)))).0,
+                (((p(0, 14) + p(14, 0)) + (p(15, 4) - p(4, 15)))).0,
+                ((p(0, 15) + p(15, 0))).0,
             ],
         }
     }
@@ -13137,9 +13577,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13151,9 +13592,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13165,9 +13607,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13179,9 +13622,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13193,9 +13637,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13207,9 +13652,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
             ],
         }
     }
@@ -13221,9 +13667,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
             ],
         }
     }
@@ -13235,9 +13682,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
             ],
         }
     }
@@ -13249,9 +13697,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
             ],
         }
     }
@@ -13263,9 +13712,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13277,9 +13727,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -13291,9 +13742,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
             ],
         }
     }
@@ -13305,9 +13757,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -13319,9 +13772,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[7]).0,
+                (-p(0, 7)).0,
             ],
         }
     }
@@ -13333,9 +13787,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[15]).0,
+                (-p(0, 15)).0,
             ],
         }
     }
@@ -13347,9 +13802,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13361,9 +13817,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
             ],
         }
     }
@@ -13375,9 +13832,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[7] * b[0]).0,
+                (-p(7, 0)).0,
             ],
         }
     }
@@ -13389,9 +13847,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
             ],
         }
     }
@@ -13403,9 +13862,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
             ],
         }
     }
@@ -13417,9 +13877,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13431,9 +13892,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -13445,9 +13907,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
             ],
         }
     }
@@ -13459,9 +13922,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
             ],
         }
     }
@@ -13473,9 +13937,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
     fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -13487,9 +13952,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Vector<S2, T>>
     fn scalar_product(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
             ],
         }
     }
@@ -13501,9 +13967,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Bivector<S2, T
     fn scalar_product(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
             ],
         }
     }
@@ -13515,9 +13982,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Trivector<S2, 
     fn scalar_product(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
             ],
         }
     }
@@ -13529,9 +13997,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
     fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[15] * b[0]).0,
+                (-p(15, 0)).0,
             ],
         }
     }
@@ -13543,9 +14012,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> f
     fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
             ],
         }
     }
@@ -13557,9 +14027,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Odd<S2, T>> fo
     fn scalar_product(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
             ],
         }
     }
@@ -13571,9 +14042,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
     fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
             ],
         }
     }
@@ -13585,14 +14057,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
             ],
         }
     }
@@ -13604,12 +14077,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
             ],
         }
     }
@@ -13621,9 +14095,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13635,12 +14110,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -13652,16 +14128,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[2] * b[6] - a[0] * b[1]) - a[3] * b[5])).0,
-                (((a[3] * b[4] - a[0] * b[2]) - a[1] * b[6])).0,
-                (((a[1] * b[5] - a[0] * b[3]) - a[2] * b[4])).0,
-                (a[0] * b[7]).0,
-                (-a[1] * b[7]).0,
-                (-a[2] * b[7]).0,
-                (-a[3] * b[7]).0,
+                (-((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(2, 6) - p(0, 1)) - p(3, 5))).0,
+                (((p(3, 4) - p(0, 2)) - p(1, 6))).0,
+                (((p(1, 5) - p(0, 3)) - p(2, 4))).0,
+                (p(0, 7)).0,
+                (-p(1, 7)).0,
+                (-p(2, 7)).0,
+                (-p(3, 7)).0,
             ],
         }
     }
@@ -13673,16 +14150,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for V
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7]))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7)))).0,
             ],
         }
     }
@@ -13694,24 +14172,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
-                (((a[2] * b[10] - a[0] * b[5]) - a[3] * b[9])).0,
-                (((a[3] * b[8] - a[0] * b[6]) - a[1] * b[10])).0,
-                (((a[1] * b[9] - a[0] * b[7]) - a[2] * b[8])).0,
-                ((a[1] * b[1] - a[0] * b[2])).0,
-                ((a[2] * b[1] - a[0] * b[3])).0,
-                ((a[3] * b[1] - a[0] * b[4])).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (a[0] * b[15]).0,
-                (-a[1] * b[15]).0,
-                (-a[2] * b[15]).0,
-                (-a[3] * b[15]).0,
-                (((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14]))).0,
+                (-((p(1, 5) + p(2, 6)) + p(3, 7))).0,
+                (((p(2, 10) - p(0, 5)) - p(3, 9))).0,
+                (((p(3, 8) - p(0, 6)) - p(1, 10))).0,
+                (((p(1, 9) - p(0, 7)) - p(2, 8))).0,
+                ((p(1, 1) - p(0, 2))).0,
+                ((p(2, 1) - p(0, 3))).0,
+                ((p(3, 1) - p(0, 4))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (p(0, 15)).0,
+                (-p(1, 15)).0,
+                (-p(2, 15)).0,
+                (-p(3, 15)).0,
+                (((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14)))).0,
             ],
         }
     }
@@ -13723,12 +14202,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
             ],
         }
     }
@@ -13740,14 +14220,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
-                (((a[2] * b[3] + a[5] * b[0]) - (a[0] * b[5] + a[3] * b[2]))).0,
-                (((a[0] * b[4] + a[3] * b[1]) - (a[1] * b[3] + a[4] * b[0]))).0,
-                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
-                (((a[0] * b[2] + a[5] * b[3]) - (a[2] * b[0] + a[3] * b[5]))).0,
-                (((a[1] * b[0] + a[3] * b[4]) - (a[0] * b[1] + a[4] * b[3]))).0,
+                (((p(1, 5) + p(4, 2)) - (p(2, 4) + p(5, 1)))).0,
+                (((p(2, 3) + p(5, 0)) - (p(0, 5) + p(3, 2)))).0,
+                (((p(0, 4) + p(3, 1)) - (p(1, 3) + p(4, 0)))).0,
+                (((p(2, 1) + p(4, 5)) - (p(1, 2) + p(5, 4)))).0,
+                (((p(0, 2) + p(5, 3)) - (p(2, 0) + p(3, 5)))).0,
+                (((p(1, 0) + p(3, 4)) - (p(0, 1) + p(4, 3)))).0,
             ],
         }
     }
@@ -13759,12 +14240,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (-((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[4] * b[3] - a[0] * b[0]) - a[5] * b[2])).0,
-                (((a[5] * b[1] - a[1] * b[0]) - a[3] * b[3])).0,
-                (((a[3] * b[2] - a[2] * b[0]) - a[4] * b[1])).0,
+                (-((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(4, 3) - p(0, 0)) - p(5, 2))).0,
+                (((p(5, 1) - p(1, 0)) - p(3, 3))).0,
+                (((p(3, 2) - p(2, 0)) - p(4, 1))).0,
             ],
         }
     }
@@ -13776,14 +14258,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (((a[1] * b[6] + a[4] * b[3]) - (a[2] * b[5] + a[5] * b[2]))).0,
-                (((a[2] * b[4] + a[5] * b[1]) - (a[0] * b[6] + a[3] * b[3]))).0,
-                (((a[0] * b[5] + a[3] * b[2]) - (a[1] * b[4] + a[4] * b[1]))).0,
-                (((a[2] * b[2] + a[4] * b[6]) - (a[1] * b[3] + a[5] * b[5]))).0,
-                (((a[0] * b[3] + a[5] * b[4]) - (a[2] * b[1] + a[3] * b[6]))).0,
-                (((a[1] * b[1] + a[3] * b[5]) - (a[0] * b[2] + a[4] * b[4]))).0,
+                (((p(1, 6) + p(4, 3)) - (p(2, 5) + p(5, 2)))).0,
+                (((p(2, 4) + p(5, 1)) - (p(0, 6) + p(3, 3)))).0,
+                (((p(0, 5) + p(3, 2)) - (p(1, 4) + p(4, 1)))).0,
+                (((p(2, 2) + p(4, 6)) - (p(1, 3) + p(5, 5)))).0,
+                (((p(0, 3) + p(5, 4)) - (p(2, 1) + p(3, 6)))).0,
+                (((p(1, 1) + p(3, 5)) - (p(0, 2) + p(4, 4)))).0,
             ],
         }
     }
@@ -13795,16 +14278,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for B
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3])).0,
-                (((a[0] * b[0] + a[4] * b[3]) - a[5] * b[2])).0,
-                (((a[1] * b[0] + a[5] * b[1]) - a[3] * b[3])).0,
-                (((a[2] * b[0] + a[3] * b[2]) - a[4] * b[1])).0,
-                (-((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7])).0,
-                (((a[4] * b[7] - a[0] * b[4]) - a[5] * b[6])).0,
-                (((a[5] * b[5] - a[1] * b[4]) - a[3] * b[7])).0,
-                (((a[3] * b[6] - a[2] * b[4]) - a[4] * b[5])).0,
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (((p(0, 0) + p(4, 3)) - p(5, 2))).0,
+                (((p(1, 0) + p(5, 1)) - p(3, 3))).0,
+                (((p(2, 0) + p(3, 2)) - p(4, 1))).0,
+                (-((p(0, 5) + p(1, 6)) + p(2, 7))).0,
+                (((p(4, 7) - p(0, 4)) - p(5, 6))).0,
+                (((p(5, 5) - p(1, 4)) - p(3, 7))).0,
+                (((p(3, 6) - p(2, 4)) - p(4, 5))).0,
             ],
         }
     }
@@ -13816,23 +14300,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((a[0] * b[2] + a[1] * b[3]) + a[2] * b[4])).0,
-                (((a[0] * b[1] + a[4] * b[4]) - a[5] * b[3])).0,
-                (((a[1] * b[1] + a[5] * b[2]) - a[3] * b[4])).0,
-                (((a[2] * b[1] + a[3] * b[3]) - a[4] * b[2])).0,
-                (((a[1] * b[10] + a[4] * b[7]) - (a[2] * b[9] + a[5] * b[6]))).0,
-                (((a[2] * b[8] + a[5] * b[5]) - (a[0] * b[10] + a[3] * b[7]))).0,
-                (((a[0] * b[9] + a[3] * b[6]) - (a[1] * b[8] + a[4] * b[5]))).0,
-                (((a[2] * b[6] + a[4] * b[10]) - (a[1] * b[7] + a[5] * b[9]))).0,
-                (((a[0] * b[7] + a[5] * b[8]) - (a[2] * b[5] + a[3] * b[10]))).0,
-                (((a[1] * b[5] + a[3] * b[9]) - (a[0] * b[6] + a[4] * b[8]))).0,
-                (-((a[0] * b[12] + a[1] * b[13]) + a[2] * b[14])).0,
-                (((a[4] * b[14] - a[0] * b[11]) - a[5] * b[13])).0,
-                (((a[5] * b[12] - a[1] * b[11]) - a[3] * b[14])).0,
-                (((a[3] * b[13] - a[2] * b[11]) - a[4] * b[12])).0,
+                (((p(0, 2) + p(1, 3)) + p(2, 4))).0,
+                (((p(0, 1) + p(4, 4)) - p(5, 3))).0,
+                (((p(1, 1) + p(5, 2)) - p(3, 4))).0,
+                (((p(2, 1) + p(3, 3)) - p(4, 2))).0,
+                (((p(1, 10) + p(4, 7)) - (p(2, 9) + p(5, 6)))).0,
+                (((p(2, 8) + p(5, 5)) - (p(0, 10) + p(3, 7)))).0,
+                (((p(0, 9) + p(3, 6)) - (p(1, 8) + p(4, 5)))).0,
+                (((p(2, 6) + p(4, 10)) - (p(1, 7) + p(5, 9)))).0,
+                (((p(0, 7) + p(5, 8)) - (p(2, 5) + p(3, 10)))).0,
+                (((p(1, 5) + p(3, 9)) - (p(0, 6) + p(4, 8)))).0,
+                (-((p(0, 12) + p(1, 13)) + p(2, 14))).0,
+                (((p(4, 14) - p(0, 11)) - p(5, 13))).0,
+                (((p(5, 12) - p(1, 11)) - p(3, 14))).0,
+                (((p(3, 13) - p(2, 11)) - p(4, 12))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -13845,9 +14330,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13859,12 +14345,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[0] * b[0] + a[2] * b[5]) - a[3] * b[4])).0,
-                (((a[0] * b[1] + a[3] * b[3]) - a[1] * b[5])).0,
-                (((a[0] * b[2] + a[1] * b[4]) - a[2] * b[3])).0,
+                (((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(0, 0) + p(2, 5)) - p(3, 4))).0,
+                (((p(0, 1) + p(3, 3)) - p(1, 5))).0,
+                (((p(0, 2) + p(1, 4)) - p(2, 3))).0,
             ],
         }
     }
@@ -13876,14 +14363,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[0] * b[1] - a[1] * b[0])).0,
-                ((a[0] * b[2] - a[2] * b[0])).0,
-                ((a[0] * b[3] - a[3] * b[0])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
+                ((p(0, 1) - p(1, 0))).0,
+                ((p(0, 2) - p(2, 0))).0,
+                ((p(0, 3) - p(3, 0))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
             ],
         }
     }
@@ -13895,12 +14383,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (-p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -13912,16 +14401,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[0] * b[7]).0,
-                (a[1] * b[7]).0,
-                (a[2] * b[7]).0,
-                (a[3] * b[7]).0,
-                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[0] * b[1] + a[2] * b[6]) - a[3] * b[5])).0,
-                (((a[0] * b[2] + a[3] * b[4]) - a[1] * b[6])).0,
-                (((a[0] * b[3] + a[1] * b[5]) - a[2] * b[4])).0,
+                (-p(0, 7)).0,
+                (p(1, 7)).0,
+                (p(2, 7)).0,
+                (p(3, 7)).0,
+                (((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(0, 1) + p(2, 6)) - p(3, 5))).0,
+                (((p(0, 2) + p(3, 4)) - p(1, 6))).0,
+                (((p(0, 3) + p(1, 5)) - p(2, 4))).0,
             ],
         }
     }
@@ -13933,16 +14423,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[0] * b[5] - a[1] * b[4])).0,
-                ((a[0] * b[6] - a[2] * b[4])).0,
-                ((a[0] * b[7] - a[3] * b[4])).0,
-                ((a[2] * b[7] - a[3] * b[6])).0,
-                ((a[3] * b[5] - a[1] * b[7])).0,
-                ((a[1] * b[6] - a[2] * b[5])).0,
-                (-((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((p(0, 5) - p(1, 4))).0,
+                ((p(0, 6) - p(2, 4))).0,
+                ((p(0, 7) - p(3, 4))).0,
+                ((p(2, 7) - p(3, 6))).0,
+                ((p(3, 5) - p(1, 7))).0,
+                ((p(1, 6) - p(2, 5))).0,
+                (-((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -13954,24 +14445,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-a[0] * b[15]).0,
-                (a[1] * b[15]).0,
-                (a[2] * b[15]).0,
-                (a[3] * b[15]).0,
-                ((a[0] * b[12] - a[1] * b[11])).0,
-                ((a[0] * b[13] - a[2] * b[11])).0,
-                ((a[0] * b[14] - a[3] * b[11])).0,
-                ((a[2] * b[14] - a[3] * b[13])).0,
-                ((a[3] * b[12] - a[1] * b[14])).0,
-                ((a[1] * b[13] - a[2] * b[12])).0,
-                (((a[1] * b[5] + a[2] * b[6]) + a[3] * b[7])).0,
-                (((a[0] * b[5] + a[2] * b[10]) - a[3] * b[9])).0,
-                (((a[0] * b[6] + a[3] * b[8]) - a[1] * b[10])).0,
-                (((a[0] * b[7] + a[1] * b[9]) - a[2] * b[8])).0,
-                (-((a[0] * b[1] + a[1] * b[2]) + (a[2] * b[3] + a[3] * b[4]))).0,
+                (-p(0, 15)).0,
+                (p(1, 15)).0,
+                (p(2, 15)).0,
+                (p(3, 15)).0,
+                ((p(0, 12) - p(1, 11))).0,
+                ((p(0, 13) - p(2, 11))).0,
+                ((p(0, 14) - p(3, 11))).0,
+                ((p(2, 14) - p(3, 13))).0,
+                ((p(3, 12) - p(1, 14))).0,
+                ((p(1, 13) - p(2, 12))).0,
+                (((p(1, 5) + p(2, 6)) + p(3, 7))).0,
+                (((p(0, 5) + p(2, 10)) - p(3, 9))).0,
+                (((p(0, 6) + p(3, 8)) - p(1, 10))).0,
+                (((p(0, 7) + p(1, 9)) - p(2, 8))).0,
+                (-((p(0, 1) + p(1, 2)) + (p(2, 3) + p(3, 4)))).0,
             ],
         }
     }
@@ -13983,12 +14475,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -14000,12 +14493,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
             ],
         }
     }
@@ -14017,16 +14511,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for P
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[4]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (-a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 4)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (-p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -14038,16 +14533,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[11]).0,
-                (-a[0] * b[12]).0,
-                (-a[0] * b[13]).0,
-                (-a[0] * b[14]).0,
-                (-a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
+                (p(0, 11)).0,
+                (-p(0, 12)).0,
+                (-p(0, 13)).0,
+                (-p(0, 14)).0,
+                (-p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
             ],
         }
     }
@@ -14059,16 +14555,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[1] * b[0] + a[5] * b[3]) - a[6] * b[2])).0,
-                (((a[2] * b[0] + a[6] * b[1]) - a[4] * b[3])).0,
-                (((a[3] * b[0] + a[4] * b[2]) - a[5] * b[1])).0,
-                (-a[7] * b[0]).0,
-                (a[7] * b[1]).0,
-                (a[7] * b[2]).0,
-                (a[7] * b[3]).0,
+                (((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(1, 0) + p(5, 3)) - p(6, 2))).0,
+                (((p(2, 0) + p(6, 1)) - p(4, 3))).0,
+                (((p(3, 0) + p(4, 2)) - p(5, 1))).0,
+                (-p(7, 0)).0,
+                (p(7, 1)).0,
+                (p(7, 2)).0,
+                (p(7, 3)).0,
             ],
         }
     }
@@ -14080,14 +14577,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (((a[2] * b[5] + a[5] * b[2]) - (a[3] * b[4] + a[6] * b[1]))).0,
-                (((a[3] * b[3] + a[6] * b[0]) - (a[1] * b[5] + a[4] * b[2]))).0,
-                (((a[1] * b[4] + a[4] * b[1]) - (a[2] * b[3] + a[5] * b[0]))).0,
-                (((a[3] * b[1] + a[5] * b[5]) - (a[2] * b[2] + a[6] * b[4]))).0,
-                (((a[1] * b[2] + a[6] * b[3]) - (a[3] * b[0] + a[4] * b[5]))).0,
-                (((a[2] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[5] * b[3]))).0,
+                (((p(2, 5) + p(5, 2)) - (p(3, 4) + p(6, 1)))).0,
+                (((p(3, 3) + p(6, 0)) - (p(1, 5) + p(4, 2)))).0,
+                (((p(1, 4) + p(4, 1)) - (p(2, 3) + p(5, 0)))).0,
+                (((p(3, 1) + p(5, 5)) - (p(2, 2) + p(6, 4)))).0,
+                (((p(1, 2) + p(6, 3)) - (p(3, 0) + p(4, 5)))).0,
+                (((p(2, 0) + p(4, 4)) - (p(1, 1) + p(5, 3)))).0,
             ],
         }
     }
@@ -14099,16 +14597,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[7] * b[0]).0,
-                (-a[7] * b[1]).0,
-                (-a[7] * b[2]).0,
-                (-a[7] * b[3]).0,
-                (-((a[1] * b[1] + a[2] * b[2]) + a[3] * b[3])).0,
-                (((a[5] * b[3] - a[1] * b[0]) - a[6] * b[2])).0,
-                (((a[6] * b[1] - a[2] * b[0]) - a[4] * b[3])).0,
-                (((a[4] * b[2] - a[3] * b[0]) - a[5] * b[1])).0,
+                (p(7, 0)).0,
+                (-p(7, 1)).0,
+                (-p(7, 2)).0,
+                (-p(7, 3)).0,
+                (-((p(1, 1) + p(2, 2)) + p(3, 3))).0,
+                (((p(5, 3) - p(1, 0)) - p(6, 2))).0,
+                (((p(6, 1) - p(2, 0)) - p(4, 3))).0,
+                (((p(4, 2) - p(3, 0)) - p(5, 1))).0,
             ],
         }
     }
@@ -14120,14 +14619,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (((a[2] * b[6] + a[5] * b[3]) - (a[3] * b[5] + a[6] * b[2]))).0,
-                (((a[3] * b[4] + a[6] * b[1]) - (a[1] * b[6] + a[4] * b[3]))).0,
-                (((a[1] * b[5] + a[4] * b[2]) - (a[2] * b[4] + a[5] * b[1]))).0,
-                (((a[3] * b[2] + a[5] * b[6]) - (a[2] * b[3] + a[6] * b[5]))).0,
-                (((a[1] * b[3] + a[6] * b[4]) - (a[3] * b[1] + a[4] * b[6]))).0,
-                (((a[2] * b[1] + a[4] * b[5]) - (a[1] * b[2] + a[5] * b[4]))).0,
+                (((p(2, 6) + p(5, 3)) - (p(3, 5) + p(6, 2)))).0,
+                (((p(3, 4) + p(6, 1)) - (p(1, 6) + p(4, 3)))).0,
+                (((p(1, 5) + p(4, 2)) - (p(2, 4) + p(5, 1)))).0,
+                (((p(3, 2) + p(5, 6)) - (p(2, 3) + p(6, 5)))).0,
+                (((p(1, 3) + p(6, 4)) - (p(3, 1) + p(4, 6)))).0,
+                (((p(2, 1) + p(4, 5)) - (p(1, 2) + p(5, 4)))).0,
             ],
         }
     }
@@ -14139,16 +14639,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for E
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[7] * b[4]))).0,
-                (((a[1] * b[0] + a[5] * b[3]) - (a[6] * b[2] + a[7] * b[5]))).0,
-                (((a[2] * b[0] + a[6] * b[1]) - (a[4] * b[3] + a[7] * b[6]))).0,
-                (((a[3] * b[0] + a[4] * b[2]) - (a[5] * b[1] + a[7] * b[7]))).0,
-                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[7] * b[0]))).0,
-                (((a[5] * b[7] + a[7] * b[1]) - (a[1] * b[4] + a[6] * b[6]))).0,
-                (((a[6] * b[5] + a[7] * b[2]) - (a[2] * b[4] + a[4] * b[7]))).0,
-                (((a[4] * b[6] + a[7] * b[3]) - (a[3] * b[4] + a[5] * b[5]))).0,
+                (((p(1, 1) + p(2, 2)) + (p(3, 3) + p(7, 4)))).0,
+                (((p(1, 0) + p(5, 3)) - (p(6, 2) + p(7, 5)))).0,
+                (((p(2, 0) + p(6, 1)) - (p(4, 3) + p(7, 6)))).0,
+                (((p(3, 0) + p(4, 2)) - (p(5, 1) + p(7, 7)))).0,
+                (-((p(1, 5) + p(2, 6)) + (p(3, 7) + p(7, 0)))).0,
+                (((p(5, 7) + p(7, 1)) - (p(1, 4) + p(6, 6)))).0,
+                (((p(6, 5) + p(7, 2)) - (p(2, 4) + p(4, 7)))).0,
+                (((p(4, 6) + p(7, 3)) - (p(3, 4) + p(5, 5)))).0,
             ],
         }
     }
@@ -14160,23 +14661,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((a[1] * b[2] + a[2] * b[3]) + (a[3] * b[4] + a[7] * b[11]))).0,
-                (((a[1] * b[1] + a[5] * b[4]) - (a[6] * b[3] + a[7] * b[12]))).0,
-                (((a[2] * b[1] + a[6] * b[2]) - (a[4] * b[4] + a[7] * b[13]))).0,
-                (((a[3] * b[1] + a[4] * b[3]) - (a[5] * b[2] + a[7] * b[14]))).0,
-                (((a[2] * b[10] + a[5] * b[7]) - (a[3] * b[9] + a[6] * b[6]))).0,
-                (((a[3] * b[8] + a[6] * b[5]) - (a[1] * b[10] + a[4] * b[7]))).0,
-                (((a[1] * b[9] + a[4] * b[6]) - (a[2] * b[8] + a[5] * b[5]))).0,
-                (((a[3] * b[6] + a[5] * b[10]) - (a[2] * b[7] + a[6] * b[9]))).0,
-                (((a[1] * b[7] + a[6] * b[8]) - (a[3] * b[5] + a[4] * b[10]))).0,
-                (((a[2] * b[5] + a[4] * b[9]) - (a[1] * b[6] + a[5] * b[8]))).0,
-                (-((a[1] * b[12] + a[2] * b[13]) + (a[3] * b[14] + a[7] * b[1]))).0,
-                (((a[5] * b[14] + a[7] * b[2]) - (a[1] * b[11] + a[6] * b[13]))).0,
-                (((a[6] * b[12] + a[7] * b[3]) - (a[2] * b[11] + a[4] * b[14]))).0,
-                (((a[4] * b[13] + a[7] * b[4]) - (a[3] * b[11] + a[5] * b[12]))).0,
+                (((p(1, 2) + p(2, 3)) + (p(3, 4) + p(7, 11)))).0,
+                (((p(1, 1) + p(5, 4)) - (p(6, 3) + p(7, 12)))).0,
+                (((p(2, 1) + p(6, 2)) - (p(4, 4) + p(7, 13)))).0,
+                (((p(3, 1) + p(4, 3)) - (p(5, 2) + p(7, 14)))).0,
+                (((p(2, 10) + p(5, 7)) - (p(3, 9) + p(6, 6)))).0,
+                (((p(3, 8) + p(6, 5)) - (p(1, 10) + p(4, 7)))).0,
+                (((p(1, 9) + p(4, 6)) - (p(2, 8) + p(5, 5)))).0,
+                (((p(3, 6) + p(5, 10)) - (p(2, 7) + p(6, 9)))).0,
+                (((p(1, 7) + p(6, 8)) - (p(3, 5) + p(4, 10)))).0,
+                (((p(2, 5) + p(4, 9)) - (p(1, 6) + p(5, 8)))).0,
+                (-((p(1, 12) + p(2, 13)) + (p(3, 14) + p(7, 1)))).0,
+                (((p(5, 14) + p(7, 2)) - (p(1, 11) + p(6, 13)))).0,
+                (((p(6, 12) + p(7, 3)) - (p(2, 11) + p(4, 14)))).0,
+                (((p(4, 13) + p(7, 4)) - (p(3, 11) + p(5, 12)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14189,16 +14691,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[1] * b[0] - a[0] * b[1])).0,
-                ((a[2] * b[0] - a[0] * b[2])).0,
-                ((a[3] * b[0] - a[0] * b[3])).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
+                ((p(1, 0) - p(0, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(3, 0) - p(0, 3))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
             ],
         }
     }
@@ -14210,16 +14713,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2])).0,
-                (((a[2] * b[5] - a[0] * b[0]) - a[3] * b[4])).0,
-                (((a[3] * b[3] - a[0] * b[1]) - a[1] * b[5])).0,
-                (((a[1] * b[4] - a[0] * b[2]) - a[2] * b[3])).0,
-                (((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2])).0,
-                (((a[4] * b[0] + a[6] * b[5]) - a[7] * b[4])).0,
-                (((a[4] * b[1] + a[7] * b[3]) - a[5] * b[5])).0,
-                (((a[4] * b[2] + a[5] * b[4]) - a[6] * b[3])).0,
+                (-((p(1, 0) + p(2, 1)) + p(3, 2))).0,
+                (((p(2, 5) - p(0, 0)) - p(3, 4))).0,
+                (((p(3, 3) - p(0, 1)) - p(1, 5))).0,
+                (((p(1, 4) - p(0, 2)) - p(2, 3))).0,
+                (((p(5, 0) + p(6, 1)) + p(7, 2))).0,
+                (((p(4, 0) + p(6, 5)) - p(7, 4))).0,
+                (((p(4, 1) + p(7, 3)) - p(5, 5))).0,
+                (((p(4, 2) + p(5, 4)) - p(6, 3))).0,
             ],
         }
     }
@@ -14231,16 +14735,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((a[4] * b[1] - a[5] * b[0])).0,
-                ((a[4] * b[2] - a[6] * b[0])).0,
-                ((a[4] * b[3] - a[7] * b[0])).0,
-                ((a[6] * b[3] - a[7] * b[2])).0,
-                ((a[7] * b[1] - a[5] * b[3])).0,
-                ((a[5] * b[2] - a[6] * b[1])).0,
-                (((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3]))).0,
+                ((p(4, 1) - p(5, 0))).0,
+                ((p(4, 2) - p(6, 0))).0,
+                ((p(4, 3) - p(7, 0))).0,
+                ((p(6, 3) - p(7, 2))).0,
+                ((p(7, 1) - p(5, 3))).0,
+                ((p(5, 2) - p(6, 1))).0,
+                (((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -14252,16 +14757,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
+                (-p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
             ],
         }
     }
@@ -14273,16 +14779,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-((a[1] * b[1] + a[2] * b[2]) + (a[3] * b[3] + a[4] * b[7]))).0,
-                (((a[2] * b[6] + a[5] * b[7]) - (a[0] * b[1] + a[3] * b[5]))).0,
-                (((a[3] * b[4] + a[6] * b[7]) - (a[0] * b[2] + a[1] * b[6]))).0,
-                (((a[1] * b[5] + a[7] * b[7]) - (a[0] * b[3] + a[2] * b[4]))).0,
-                (((a[0] * b[7] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3]))).0,
-                (((a[4] * b[1] + a[6] * b[6]) - (a[1] * b[7] + a[7] * b[5]))).0,
-                (((a[4] * b[2] + a[7] * b[4]) - (a[2] * b[7] + a[5] * b[6]))).0,
-                (((a[4] * b[3] + a[5] * b[5]) - (a[3] * b[7] + a[6] * b[4]))).0,
+                (-((p(1, 1) + p(2, 2)) + (p(3, 3) + p(4, 7)))).0,
+                (((p(2, 6) + p(5, 7)) - (p(0, 1) + p(3, 5)))).0,
+                (((p(3, 4) + p(6, 7)) - (p(0, 2) + p(1, 6)))).0,
+                (((p(1, 5) + p(7, 7)) - (p(0, 3) + p(2, 4)))).0,
+                (((p(0, 7) + p(5, 1)) + (p(6, 2) + p(7, 3)))).0,
+                (((p(4, 1) + p(6, 6)) - (p(1, 7) + p(7, 5)))).0,
+                (((p(4, 2) + p(7, 4)) - (p(2, 7) + p(5, 6)))).0,
+                (((p(4, 3) + p(5, 5)) - (p(3, 7) + p(6, 4)))).0,
             ],
         }
     }
@@ -14294,16 +14801,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for O
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((a[1] * b[0] + a[4] * b[5]) - (a[0] * b[1] + a[5] * b[4]))).0,
-                (((a[2] * b[0] + a[4] * b[6]) - (a[0] * b[2] + a[6] * b[4]))).0,
-                (((a[3] * b[0] + a[4] * b[7]) - (a[0] * b[3] + a[7] * b[4]))).0,
-                (((a[2] * b[3] + a[6] * b[7]) - (a[3] * b[2] + a[7] * b[6]))).0,
-                (((a[3] * b[1] + a[7] * b[5]) - (a[1] * b[3] + a[5] * b[7]))).0,
-                (((a[1] * b[2] + a[5] * b[6]) - (a[2] * b[1] + a[6] * b[5]))).0,
-                ((((a[0] * b[4] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])))).0,
+                (((p(1, 0) + p(4, 5)) - (p(0, 1) + p(5, 4)))).0,
+                (((p(2, 0) + p(4, 6)) - (p(0, 2) + p(6, 4)))).0,
+                (((p(3, 0) + p(4, 7)) - (p(0, 3) + p(7, 4)))).0,
+                (((p(2, 3) + p(6, 7)) - (p(3, 2) + p(7, 6)))).0,
+                (((p(3, 1) + p(7, 5)) - (p(1, 3) + p(5, 7)))).0,
+                (((p(1, 2) + p(5, 6)) - (p(2, 1) + p(6, 5)))).0,
+                ((((p(0, 4) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))))).0,
             ],
         }
     }
@@ -14315,24 +14823,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-((a[1] * b[5] + a[2] * b[6]) + (a[3] * b[7] + a[4] * b[15]))).0,
-                (((a[2] * b[10] + a[5] * b[15]) - (a[0] * b[5] + a[3] * b[9]))).0,
-                (((a[3] * b[8] + a[6] * b[15]) - (a[0] * b[6] + a[1] * b[10]))).0,
-                (((a[1] * b[9] + a[7] * b[15]) - (a[0] * b[7] + a[2] * b[8]))).0,
-                (((a[1] * b[1] + a[4] * b[12]) - (a[0] * b[2] + a[5] * b[11]))).0,
-                (((a[2] * b[1] + a[4] * b[13]) - (a[0] * b[3] + a[6] * b[11]))).0,
-                (((a[3] * b[1] + a[4] * b[14]) - (a[0] * b[4] + a[7] * b[11]))).0,
-                (((a[2] * b[4] + a[6] * b[14]) - (a[3] * b[3] + a[7] * b[13]))).0,
-                (((a[3] * b[2] + a[7] * b[12]) - (a[1] * b[4] + a[5] * b[14]))).0,
-                (((a[1] * b[3] + a[5] * b[13]) - (a[2] * b[2] + a[6] * b[12]))).0,
-                (((a[0] * b[15] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7]))).0,
-                (((a[4] * b[5] + a[6] * b[10]) - (a[1] * b[15] + a[7] * b[9]))).0,
-                (((a[4] * b[6] + a[7] * b[8]) - (a[2] * b[15] + a[5] * b[10]))).0,
-                (((a[4] * b[7] + a[5] * b[9]) - (a[3] * b[15] + a[6] * b[8]))).0,
-                ((((a[0] * b[11] + a[1] * b[12]) + (a[2] * b[13] + a[3] * b[14])) - ((a[4] * b[1] + a[5] * b[2]) + (a[6] * b[3] + a[7] * b[4])))).0,
+                (-((p(1, 5) + p(2, 6)) + (p(3, 7) + p(4, 15)))).0,
+                (((p(2, 10) + p(5, 15)) - (p(0, 5) + p(3, 9)))).0,
+                (((p(3, 8) + p(6, 15)) - (p(0, 6) + p(1, 10)))).0,
+                (((p(1, 9) + p(7, 15)) - (p(0, 7) + p(2, 8)))).0,
+                (((p(1, 1) + p(4, 12)) - (p(0, 2) + p(5, 11)))).0,
+                (((p(2, 1) + p(4, 13)) - (p(0, 3) + p(6, 11)))).0,
+                (((p(3, 1) + p(4, 14)) - (p(0, 4) + p(7, 11)))).0,
+                (((p(2, 4) + p(6, 14)) - (p(3, 3) + p(7, 13)))).0,
+                (((p(3, 2) + p(7, 12)) - (p(1, 4) + p(5, 14)))).0,
+                (((p(1, 3) + p(5, 13)) - (p(2, 2) + p(6, 12)))).0,
+                (((p(0, 15) + p(5, 5)) + (p(6, 6) + p(7, 7)))).0,
+                (((p(4, 5) + p(6, 10)) - (p(1, 15) + p(7, 9)))).0,
+                (((p(4, 6) + p(7, 8)) - (p(2, 15) + p(5, 10)))).0,
+                (((p(4, 7) + p(5, 9)) - (p(3, 15) + p(6, 8)))).0,
+                ((((p(0, 11) + p(1, 12)) + (p(2, 13) + p(3, 14))) - ((p(4, 1) + p(5, 2)) + (p(6, 3) + p(7, 4))))).0,
             ],
         }
     }
@@ -14344,24 +14853,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     fn commutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
-                (((a[5] * b[0] + a[9] * b[3]) - a[10] * b[2])).0,
-                (((a[6] * b[0] + a[10] * b[1]) - a[8] * b[3])).0,
-                (((a[7] * b[0] + a[8] * b[2]) - a[9] * b[1])).0,
-                ((a[2] * b[0] - a[1] * b[1])).0,
-                ((a[3] * b[0] - a[1] * b[2])).0,
-                ((a[4] * b[0] - a[1] * b[3])).0,
-                ((a[3] * b[3] - a[4] * b[2])).0,
-                ((a[4] * b[1] - a[2] * b[3])).0,
-                ((a[2] * b[2] - a[3] * b[1])).0,
-                (-a[15] * b[0]).0,
-                (a[15] * b[1]).0,
-                (a[15] * b[2]).0,
-                (a[15] * b[3]).0,
-                (-((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
+                (((p(5, 1) + p(6, 2)) + p(7, 3))).0,
+                (((p(5, 0) + p(9, 3)) - p(10, 2))).0,
+                (((p(6, 0) + p(10, 1)) - p(8, 3))).0,
+                (((p(7, 0) + p(8, 2)) - p(9, 1))).0,
+                ((p(2, 0) - p(1, 1))).0,
+                ((p(3, 0) - p(1, 2))).0,
+                ((p(4, 0) - p(1, 3))).0,
+                ((p(3, 3) - p(4, 2))).0,
+                ((p(4, 1) - p(2, 3))).0,
+                ((p(2, 2) - p(3, 1))).0,
+                (-p(15, 0)).0,
+                (p(15, 1)).0,
+                (p(15, 2)).0,
+                (p(15, 3)).0,
+                (-((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
             ],
         }
     }
@@ -14373,23 +14883,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     fn commutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-((a[2] * b[0] + a[3] * b[1]) + a[4] * b[2])).0,
-                (((a[3] * b[5] - a[1] * b[0]) - a[4] * b[4])).0,
-                (((a[4] * b[3] - a[1] * b[1]) - a[2] * b[5])).0,
-                (((a[2] * b[4] - a[1] * b[2]) - a[3] * b[3])).0,
-                (((a[6] * b[5] + a[9] * b[2]) - (a[7] * b[4] + a[10] * b[1]))).0,
-                (((a[7] * b[3] + a[10] * b[0]) - (a[5] * b[5] + a[8] * b[2]))).0,
-                (((a[5] * b[4] + a[8] * b[1]) - (a[6] * b[3] + a[9] * b[0]))).0,
-                (((a[7] * b[1] + a[9] * b[5]) - (a[6] * b[2] + a[10] * b[4]))).0,
-                (((a[5] * b[2] + a[10] * b[3]) - (a[7] * b[0] + a[8] * b[5]))).0,
-                (((a[6] * b[0] + a[8] * b[4]) - (a[5] * b[1] + a[9] * b[3]))).0,
-                (((a[12] * b[0] + a[13] * b[1]) + a[14] * b[2])).0,
-                (((a[11] * b[0] + a[13] * b[5]) - a[14] * b[4])).0,
-                (((a[11] * b[1] + a[14] * b[3]) - a[12] * b[5])).0,
-                (((a[11] * b[2] + a[12] * b[4]) - a[13] * b[3])).0,
+                (-((p(2, 0) + p(3, 1)) + p(4, 2))).0,
+                (((p(3, 5) - p(1, 0)) - p(4, 4))).0,
+                (((p(4, 3) - p(1, 1)) - p(2, 5))).0,
+                (((p(2, 4) - p(1, 2)) - p(3, 3))).0,
+                (((p(6, 5) + p(9, 2)) - (p(7, 4) + p(10, 1)))).0,
+                (((p(7, 3) + p(10, 0)) - (p(5, 5) + p(8, 2)))).0,
+                (((p(5, 4) + p(8, 1)) - (p(6, 3) + p(9, 0)))).0,
+                (((p(7, 1) + p(9, 5)) - (p(6, 2) + p(10, 4)))).0,
+                (((p(5, 2) + p(10, 3)) - (p(7, 0) + p(8, 5)))).0,
+                (((p(6, 0) + p(8, 4)) - (p(5, 1) + p(9, 3)))).0,
+                (((p(12, 0) + p(13, 1)) + p(14, 2))).0,
+                (((p(11, 0) + p(13, 5)) - p(14, 4))).0,
+                (((p(11, 1) + p(14, 3)) - p(12, 5))).0,
+                (((p(11, 2) + p(12, 4)) - p(13, 3))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14402,24 +14913,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     fn commutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (a[15] * b[0]).0,
-                (-a[15] * b[1]).0,
-                (-a[15] * b[2]).0,
-                (-a[15] * b[3]).0,
-                ((a[11] * b[1] - a[12] * b[0])).0,
-                ((a[11] * b[2] - a[13] * b[0])).0,
-                ((a[11] * b[3] - a[14] * b[0])).0,
-                ((a[13] * b[3] - a[14] * b[2])).0,
-                ((a[14] * b[1] - a[12] * b[3])).0,
-                ((a[12] * b[2] - a[13] * b[1])).0,
-                (-((a[5] * b[1] + a[6] * b[2]) + a[7] * b[3])).0,
-                (((a[9] * b[3] - a[5] * b[0]) - a[10] * b[2])).0,
-                (((a[10] * b[1] - a[6] * b[0]) - a[8] * b[3])).0,
-                (((a[8] * b[2] - a[7] * b[0]) - a[9] * b[1])).0,
-                (((a[1] * b[0] + a[2] * b[1]) + (a[3] * b[2] + a[4] * b[3]))).0,
+                (p(15, 0)).0,
+                (-p(15, 1)).0,
+                (-p(15, 2)).0,
+                (-p(15, 3)).0,
+                ((p(11, 1) - p(12, 0))).0,
+                ((p(11, 2) - p(13, 0))).0,
+                ((p(11, 3) - p(14, 0))).0,
+                ((p(13, 3) - p(14, 2))).0,
+                ((p(14, 1) - p(12, 3))).0,
+                ((p(12, 2) - p(13, 1))).0,
+                (-((p(5, 1) + p(6, 2)) + p(7, 3))).0,
+                (((p(9, 3) - p(5, 0)) - p(10, 2))).0,
+                (((p(10, 1) - p(6, 0)) - p(8, 3))).0,
+                (((p(8, 2) - p(7, 0)) - p(9, 1))).0,
+                (((p(1, 0) + p(2, 1)) + (p(3, 2) + p(4, 3)))).0,
             ],
         }
     }
@@ -14431,16 +14943,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (-a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (-a[4] * b[0]).0,
+                (-p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (-p(4, 0)).0,
             ],
         }
     }
@@ -14452,23 +14965,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     fn commutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-((a[2] * b[1] + a[3] * b[2]) + (a[4] * b[3] + a[11] * b[7]))).0,
-                (((a[3] * b[6] + a[12] * b[7]) - (a[1] * b[1] + a[4] * b[5]))).0,
-                (((a[4] * b[4] + a[13] * b[7]) - (a[1] * b[2] + a[2] * b[6]))).0,
-                (((a[2] * b[5] + a[14] * b[7]) - (a[1] * b[3] + a[3] * b[4]))).0,
-                (((a[6] * b[6] + a[9] * b[3]) - (a[7] * b[5] + a[10] * b[2]))).0,
-                (((a[7] * b[4] + a[10] * b[1]) - (a[5] * b[6] + a[8] * b[3]))).0,
-                (((a[5] * b[5] + a[8] * b[2]) - (a[6] * b[4] + a[9] * b[1]))).0,
-                (((a[7] * b[2] + a[9] * b[6]) - (a[6] * b[3] + a[10] * b[5]))).0,
-                (((a[5] * b[3] + a[10] * b[4]) - (a[7] * b[1] + a[8] * b[6]))).0,
-                (((a[6] * b[1] + a[8] * b[5]) - (a[5] * b[2] + a[9] * b[4]))).0,
-                (((a[1] * b[7] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[11] * b[1] + a[13] * b[6]) - (a[2] * b[7] + a[14] * b[5]))).0,
-                (((a[11] * b[2] + a[14] * b[4]) - (a[3] * b[7] + a[12] * b[6]))).0,
-                (((a[11] * b[3] + a[12] * b[5]) - (a[4] * b[7] + a[13] * b[4]))).0,
+                (-((p(2, 1) + p(3, 2)) + (p(4, 3) + p(11, 7)))).0,
+                (((p(3, 6) + p(12, 7)) - (p(1, 1) + p(4, 5)))).0,
+                (((p(4, 4) + p(13, 7)) - (p(1, 2) + p(2, 6)))).0,
+                (((p(2, 5) + p(14, 7)) - (p(1, 3) + p(3, 4)))).0,
+                (((p(6, 6) + p(9, 3)) - (p(7, 5) + p(10, 2)))).0,
+                (((p(7, 4) + p(10, 1)) - (p(5, 6) + p(8, 3)))).0,
+                (((p(5, 5) + p(8, 2)) - (p(6, 4) + p(9, 1)))).0,
+                (((p(7, 2) + p(9, 6)) - (p(6, 3) + p(10, 5)))).0,
+                (((p(5, 3) + p(10, 4)) - (p(7, 1) + p(8, 6)))).0,
+                (((p(6, 1) + p(8, 5)) - (p(5, 2) + p(9, 4)))).0,
+                (((p(1, 7) + p(12, 1)) + (p(13, 2) + p(14, 3)))).0,
+                (((p(11, 1) + p(13, 6)) - (p(2, 7) + p(14, 5)))).0,
+                (((p(11, 2) + p(14, 4)) - (p(3, 7) + p(12, 6)))).0,
+                (((p(11, 3) + p(12, 5)) - (p(4, 7) + p(13, 4)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14481,24 +14995,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
     fn commutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((a[5] * b[1] + a[6] * b[2]) + (a[7] * b[3] + a[15] * b[4]))).0,
-                (((a[5] * b[0] + a[9] * b[3]) - (a[10] * b[2] + a[15] * b[5]))).0,
-                (((a[6] * b[0] + a[10] * b[1]) - (a[8] * b[3] + a[15] * b[6]))).0,
-                (((a[7] * b[0] + a[8] * b[2]) - (a[9] * b[1] + a[15] * b[7]))).0,
-                (((a[2] * b[0] + a[11] * b[5]) - (a[1] * b[1] + a[12] * b[4]))).0,
-                (((a[3] * b[0] + a[11] * b[6]) - (a[1] * b[2] + a[13] * b[4]))).0,
-                (((a[4] * b[0] + a[11] * b[7]) - (a[1] * b[3] + a[14] * b[4]))).0,
-                (((a[3] * b[3] + a[13] * b[7]) - (a[4] * b[2] + a[14] * b[6]))).0,
-                (((a[4] * b[1] + a[14] * b[5]) - (a[2] * b[3] + a[12] * b[7]))).0,
-                (((a[2] * b[2] + a[12] * b[6]) - (a[3] * b[1] + a[13] * b[5]))).0,
-                (-((a[5] * b[5] + a[6] * b[6]) + (a[7] * b[7] + a[15] * b[0]))).0,
-                (((a[9] * b[7] + a[15] * b[1]) - (a[5] * b[4] + a[10] * b[6]))).0,
-                (((a[10] * b[5] + a[15] * b[2]) - (a[6] * b[4] + a[8] * b[7]))).0,
-                (((a[8] * b[6] + a[15] * b[3]) - (a[7] * b[4] + a[9] * b[5]))).0,
-                ((((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[7])) - ((a[11] * b[0] + a[12] * b[1]) + (a[13] * b[2] + a[14] * b[3])))).0,
+                (((p(5, 1) + p(6, 2)) + (p(7, 3) + p(15, 4)))).0,
+                (((p(5, 0) + p(9, 3)) - (p(10, 2) + p(15, 5)))).0,
+                (((p(6, 0) + p(10, 1)) - (p(8, 3) + p(15, 6)))).0,
+                (((p(7, 0) + p(8, 2)) - (p(9, 1) + p(15, 7)))).0,
+                (((p(2, 0) + p(11, 5)) - (p(1, 1) + p(12, 4)))).0,
+                (((p(3, 0) + p(11, 6)) - (p(1, 2) + p(13, 4)))).0,
+                (((p(4, 0) + p(11, 7)) - (p(1, 3) + p(14, 4)))).0,
+                (((p(3, 3) + p(13, 7)) - (p(4, 2) + p(14, 6)))).0,
+                (((p(4, 1) + p(14, 5)) - (p(2, 3) + p(12, 7)))).0,
+                (((p(2, 2) + p(12, 6)) - (p(3, 1) + p(13, 5)))).0,
+                (-((p(5, 5) + p(6, 6)) + (p(7, 7) + p(15, 0)))).0,
+                (((p(9, 7) + p(15, 1)) - (p(5, 4) + p(10, 6)))).0,
+                (((p(10, 5) + p(15, 2)) - (p(6, 4) + p(8, 7)))).0,
+                (((p(8, 6) + p(15, 3)) - (p(7, 4) + p(9, 5)))).0,
+                ((((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 7))) - ((p(11, 0) + p(12, 1)) + (p(13, 2) + p(14, 3))))).0,
             ],
         }
     }
@@ -14510,24 +15025,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                ((((a[5] * b[2] + a[6] * b[3]) + (a[7] * b[4] + a[15] * b[11])) - ((a[2] * b[5] + a[3] * b[6]) + (a[4] * b[7] + a[11] * b[15])))).0,
-                ((((a[3] * b[10] + a[5] * b[1]) + (a[9] * b[4] + a[12] * b[15])) - ((a[1] * b[5] + a[4] * b[9]) + (a[10] * b[3] + a[15] * b[12])))).0,
-                ((((a[4] * b[8] + a[6] * b[1]) + (a[10] * b[2] + a[13] * b[15])) - ((a[1] * b[6] + a[2] * b[10]) + (a[8] * b[4] + a[15] * b[13])))).0,
-                ((((a[2] * b[9] + a[7] * b[1]) + (a[8] * b[3] + a[14] * b[15])) - ((a[1] * b[7] + a[3] * b[8]) + (a[9] * b[2] + a[15] * b[14])))).0,
-                ((((a[2] * b[1] + a[6] * b[10]) + (a[9] * b[7] + a[11] * b[12])) - ((a[1] * b[2] + a[7] * b[9]) + (a[10] * b[6] + a[12] * b[11])))).0,
-                ((((a[3] * b[1] + a[7] * b[8]) + (a[10] * b[5] + a[11] * b[13])) - ((a[1] * b[3] + a[5] * b[10]) + (a[8] * b[7] + a[13] * b[11])))).0,
-                ((((a[4] * b[1] + a[5] * b[9]) + (a[8] * b[6] + a[11] * b[14])) - ((a[1] * b[4] + a[6] * b[8]) + (a[9] * b[5] + a[14] * b[11])))).0,
-                ((((a[3] * b[4] + a[7] * b[6]) + (a[9] * b[10] + a[13] * b[14])) - ((a[4] * b[3] + a[6] * b[7]) + (a[10] * b[9] + a[14] * b[13])))).0,
-                ((((a[4] * b[2] + a[5] * b[7]) + (a[10] * b[8] + a[14] * b[12])) - ((a[2] * b[4] + a[7] * b[5]) + (a[8] * b[10] + a[12] * b[14])))).0,
-                ((((a[2] * b[3] + a[6] * b[5]) + (a[8] * b[9] + a[12] * b[13])) - ((a[3] * b[2] + a[5] * b[6]) + (a[9] * b[8] + a[13] * b[12])))).0,
-                ((((a[1] * b[15] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])) - ((a[5] * b[12] + a[6] * b[13]) + (a[7] * b[14] + a[15] * b[1])))).0,
-                ((((a[9] * b[14] + a[11] * b[5]) + (a[13] * b[10] + a[15] * b[2])) - ((a[2] * b[15] + a[5] * b[11]) + (a[10] * b[13] + a[14] * b[9])))).0,
-                ((((a[10] * b[12] + a[11] * b[6]) + (a[14] * b[8] + a[15] * b[3])) - ((a[3] * b[15] + a[6] * b[11]) + (a[8] * b[14] + a[12] * b[10])))).0,
-                ((((a[8] * b[13] + a[11] * b[7]) + (a[12] * b[9] + a[15] * b[4])) - ((a[4] * b[15] + a[7] * b[11]) + (a[9] * b[12] + a[13] * b[8])))).0,
-                ((((a[1] * b[11] + a[2] * b[12]) + (a[3] * b[13] + a[4] * b[14])) - ((a[11] * b[1] + a[12] * b[2]) + (a[13] * b[3] + a[14] * b[4])))).0,
+                ((((p(5, 2) + p(6, 3)) + (p(7, 4) + p(15, 11))) - ((p(2, 5) + p(3, 6)) + (p(4, 7) + p(11, 15))))).0,
+                ((((p(3, 10) + p(5, 1)) + (p(9, 4) + p(12, 15))) - ((p(1, 5) + p(4, 9)) + (p(10, 3) + p(15, 12))))).0,
+                ((((p(4, 8) + p(6, 1)) + (p(10, 2) + p(13, 15))) - ((p(1, 6) + p(2, 10)) + (p(8, 4) + p(15, 13))))).0,
+                ((((p(2, 9) + p(7, 1)) + (p(8, 3) + p(14, 15))) - ((p(1, 7) + p(3, 8)) + (p(9, 2) + p(15, 14))))).0,
+                ((((p(2, 1) + p(6, 10)) + (p(9, 7) + p(11, 12))) - ((p(1, 2) + p(7, 9)) + (p(10, 6) + p(12, 11))))).0,
+                ((((p(3, 1) + p(7, 8)) + (p(10, 5) + p(11, 13))) - ((p(1, 3) + p(5, 10)) + (p(8, 7) + p(13, 11))))).0,
+                ((((p(4, 1) + p(5, 9)) + (p(8, 6) + p(11, 14))) - ((p(1, 4) + p(6, 8)) + (p(9, 5) + p(14, 11))))).0,
+                ((((p(3, 4) + p(7, 6)) + (p(9, 10) + p(13, 14))) - ((p(4, 3) + p(6, 7)) + (p(10, 9) + p(14, 13))))).0,
+                ((((p(4, 2) + p(5, 7)) + (p(10, 8) + p(14, 12))) - ((p(2, 4) + p(7, 5)) + (p(8, 10) + p(12, 14))))).0,
+                ((((p(2, 3) + p(6, 5)) + (p(8, 9) + p(12, 13))) - ((p(3, 2) + p(5, 6)) + (p(9, 8) + p(13, 12))))).0,
+                ((((p(1, 15) + p(12, 5)) + (p(13, 6) + p(14, 7))) - ((p(5, 12) + p(6, 13)) + (p(7, 14) + p(15, 1))))).0,
+                ((((p(9, 14) + p(11, 5)) + (p(13, 10) + p(15, 2))) - ((p(2, 15) + p(5, 11)) + (p(10, 13) + p(14, 9))))).0,
+                ((((p(10, 12) + p(11, 6)) + (p(14, 8) + p(15, 3))) - ((p(3, 15) + p(6, 11)) + (p(8, 14) + p(12, 10))))).0,
+                ((((p(8, 13) + p(11, 7)) + (p(12, 9) + p(15, 4))) - ((p(4, 15) + p(7, 11)) + (p(9, 12) + p(13, 8))))).0,
+                ((((p(1, 11) + p(2, 12)) + (p(3, 13) + p(4, 14))) - ((p(11, 1) + p(12, 2)) + (p(13, 3) + p(14, 4))))).0,
             ],
         }
     }
@@ -14539,9 +15055,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -14553,12 +15070,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -14570,14 +15088,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
             ],
         }
     }
@@ -14589,12 +15108,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -14606,9 +15126,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -14620,16 +15141,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -14641,16 +15163,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
             ],
         }
     }
@@ -14662,24 +15185,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (a[0] * b[7]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (a[0] * b[11]).0,
-                (a[0] * b[12]).0,
-                (a[0] * b[13]).0,
-                (a[0] * b[14]).0,
-                (a[0] * b[15]).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (p(0, 7)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (p(0, 11)).0,
+                (p(0, 12)).0,
+                (p(0, 13)).0,
+                (p(0, 14)).0,
+                (p(0, 15)).0,
             ],
         }
     }
@@ -14691,12 +15215,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -14708,9 +15233,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -14722,12 +15248,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
-                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
-                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(3, 1) - p(0, 3)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 4)) - p(3, 0))).0,
+                (((p(2, 0) - p(0, 5)) - p(1, 1))).0,
             ],
         }
     }
@@ -14739,14 +15266,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -14758,16 +15286,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
-                (((a[3] * b[2] - a[0] * b[4]) - a[2] * b[3])).0,
-                (((a[1] * b[3] - a[0] * b[5]) - a[3] * b[1])).0,
-                (((a[2] * b[1] - a[0] * b[6]) - a[1] * b[2])).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (((p(1, 4) + p(2, 5)) + p(3, 6))).0,
+                (((p(3, 2) - p(0, 4)) - p(2, 3))).0,
+                (((p(1, 3) - p(0, 5)) - p(3, 1))).0,
+                (((p(2, 1) - p(0, 6)) - p(1, 2))).0,
             ],
         }
     }
@@ -14779,15 +15308,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[3] * b[6] - a[2] * b[7])).0,
-                ((a[1] * b[7] - a[3] * b[5])).0,
-                ((a[2] * b[5] - a[1] * b[6])).0,
-                (-(a[0] * b[5] + a[1] * b[4])).0,
-                (-(a[0] * b[6] + a[2] * b[4])).0,
-                (-(a[0] * b[7] + a[3] * b[4])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(3, 6) - p(2, 7))).0,
+                ((p(1, 7) - p(3, 5))).0,
+                ((p(2, 5) - p(1, 6))).0,
+                (-(p(0, 5) + p(1, 4))).0,
+                (-(p(0, 6) + p(2, 4))).0,
+                (-(p(0, 7) + p(3, 4))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14800,23 +15330,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[1] - a[1] * b[2]) - (a[2] * b[3] + a[3] * b[4]))).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                ((a[3] * b[13] - a[2] * b[14])).0,
-                ((a[1] * b[14] - a[3] * b[12])).0,
-                ((a[2] * b[12] - a[1] * b[13])).0,
-                (-(a[0] * b[12] + a[1] * b[11])).0,
-                (-(a[0] * b[13] + a[2] * b[11])).0,
-                (-(a[0] * b[14] + a[3] * b[11])).0,
-                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
-                (((a[3] * b[6] - a[0] * b[8]) - a[2] * b[7])).0,
-                (((a[1] * b[7] - a[0] * b[9]) - a[3] * b[5])).0,
-                (((a[2] * b[5] - a[0] * b[10]) - a[1] * b[6])).0,
+                (((p(0, 1) - p(1, 2)) - (p(2, 3) + p(3, 4)))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                ((p(3, 13) - p(2, 14))).0,
+                ((p(1, 14) - p(3, 12))).0,
+                ((p(2, 12) - p(1, 13))).0,
+                (-(p(0, 12) + p(1, 11))).0,
+                (-(p(0, 13) + p(2, 11))).0,
+                (-(p(0, 14) + p(3, 11))).0,
+                (((p(1, 8) + p(2, 9)) + p(3, 10))).0,
+                (((p(3, 6) - p(0, 8)) - p(2, 7))).0,
+                (((p(1, 7) - p(0, 9)) - p(3, 5))).0,
+                (((p(2, 5) - p(0, 10)) - p(1, 6))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -14829,14 +15360,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
             ],
         }
     }
@@ -14848,12 +15380,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
-                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
-                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(1, 3) - p(2, 2)) - p(3, 0))).0,
+                (((p(2, 1) - p(0, 3)) - p(4, 0))).0,
+                (((p(0, 2) - p(1, 1)) - p(5, 0))).0,
             ],
         }
     }
@@ -14865,16 +15398,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + a[2] * b[2]) - ((a[3] * b[3] + a[4] * b[4]) + a[5] * b[5]))).0,
+                ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (-(((a[0] * b[3] + a[1] * b[4]) + a[2] * b[5]) + ((a[3] * b[0] + a[4] * b[1]) + a[5] * b[2]))).0,
+                (-(((p(0, 3) + p(1, 4)) + p(2, 5)) + ((p(3, 0) + p(4, 1)) + p(5, 2)))).0,
             ],
         }
     }
@@ -14886,12 +15420,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[2] * b[2] - a[1] * b[3]) - a[3] * b[0])).0,
-                (((a[0] * b[3] - a[2] * b[1]) - a[4] * b[0])).0,
-                (((a[1] * b[1] - a[0] * b[2]) - a[5] * b[0])).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(2, 2) - p(1, 3)) - p(3, 0))).0,
+                (((p(0, 3) - p(2, 1)) - p(4, 0))).0,
+                (((p(1, 1) - p(0, 2)) - p(5, 0))).0,
             ],
         }
     }
@@ -14903,14 +15438,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (-a[0] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (-p(0, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
             ],
         }
     }
@@ -14922,16 +15458,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[1] + a[1] * b[2]) + a[2] * b[3]) - ((a[3] * b[4] + a[4] * b[5]) + a[5] * b[6]))).0,
-                ((a[0] * b[0] + a[3] * b[7])).0,
-                ((a[1] * b[0] + a[4] * b[7])).0,
-                ((a[2] * b[0] + a[5] * b[7])).0,
-                ((a[3] * b[0] - a[0] * b[7])).0,
-                ((a[4] * b[0] - a[1] * b[7])).0,
-                ((a[5] * b[0] - a[2] * b[7])).0,
-                (-(((a[0] * b[4] + a[1] * b[5]) + a[2] * b[6]) + ((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3]))).0,
+                ((((p(0, 1) + p(1, 2)) + p(2, 3)) - ((p(3, 4) + p(4, 5)) + p(5, 6)))).0,
+                ((p(0, 0) + p(3, 7))).0,
+                ((p(1, 0) + p(4, 7))).0,
+                ((p(2, 0) + p(5, 7))).0,
+                ((p(3, 0) - p(0, 7))).0,
+                ((p(4, 0) - p(1, 7))).0,
+                ((p(5, 0) - p(2, 7))).0,
+                (-(((p(0, 4) + p(1, 5)) + p(2, 6)) + ((p(3, 1) + p(4, 2)) + p(5, 3)))).0,
             ],
         }
     }
@@ -14943,16 +15480,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7])).0,
-                (((a[2] * b[6] - a[1] * b[7]) - a[3] * b[4])).0,
-                (((a[0] * b[7] - a[2] * b[5]) - a[4] * b[4])).0,
-                (((a[1] * b[5] - a[0] * b[6]) - a[5] * b[4])).0,
-                (((a[3] * b[1] + a[4] * b[2]) + a[5] * b[3])).0,
-                (((a[1] * b[3] - a[2] * b[2]) - a[3] * b[0])).0,
-                (((a[2] * b[1] - a[0] * b[3]) - a[4] * b[0])).0,
-                (((a[0] * b[2] - a[1] * b[1]) - a[5] * b[0])).0,
+                (((p(3, 5) + p(4, 6)) + p(5, 7))).0,
+                (((p(2, 6) - p(1, 7)) - p(3, 4))).0,
+                (((p(0, 7) - p(2, 5)) - p(4, 4))).0,
+                (((p(1, 5) - p(0, 6)) - p(5, 4))).0,
+                (((p(3, 1) + p(4, 2)) + p(5, 3))).0,
+                (((p(1, 3) - p(2, 2)) - p(3, 0))).0,
+                (((p(2, 1) - p(0, 3)) - p(4, 0))).0,
+                (((p(0, 2) - p(1, 1)) - p(5, 0))).0,
             ],
         }
     }
@@ -14964,24 +15502,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[5] + a[1] * b[6]) + a[2] * b[7]) - ((a[3] * b[8] + a[4] * b[9]) + a[5] * b[10]))).0,
-                (((a[3] * b[12] + a[4] * b[13]) + a[5] * b[14])).0,
-                (((a[2] * b[13] - a[1] * b[14]) - a[3] * b[11])).0,
-                (((a[0] * b[14] - a[2] * b[12]) - a[4] * b[11])).0,
-                (((a[1] * b[12] - a[0] * b[13]) - a[5] * b[11])).0,
-                ((a[0] * b[0] + a[3] * b[15])).0,
-                ((a[1] * b[0] + a[4] * b[15])).0,
-                ((a[2] * b[0] + a[5] * b[15])).0,
-                ((a[3] * b[0] - a[0] * b[15])).0,
-                ((a[4] * b[0] - a[1] * b[15])).0,
-                ((a[5] * b[0] - a[2] * b[15])).0,
-                (((a[3] * b[2] + a[4] * b[3]) + a[5] * b[4])).0,
-                (((a[1] * b[4] - a[2] * b[3]) - a[3] * b[1])).0,
-                (((a[2] * b[2] - a[0] * b[4]) - a[4] * b[1])).0,
-                (((a[0] * b[3] - a[1] * b[2]) - a[5] * b[1])).0,
-                (-(((a[0] * b[8] + a[1] * b[9]) + a[2] * b[10]) + ((a[3] * b[5] + a[4] * b[6]) + a[5] * b[7]))).0,
+                ((((p(0, 5) + p(1, 6)) + p(2, 7)) - ((p(3, 8) + p(4, 9)) + p(5, 10)))).0,
+                (((p(3, 12) + p(4, 13)) + p(5, 14))).0,
+                (((p(2, 13) - p(1, 14)) - p(3, 11))).0,
+                (((p(0, 14) - p(2, 12)) - p(4, 11))).0,
+                (((p(1, 12) - p(0, 13)) - p(5, 11))).0,
+                ((p(0, 0) + p(3, 15))).0,
+                ((p(1, 0) + p(4, 15))).0,
+                ((p(2, 0) + p(5, 15))).0,
+                ((p(3, 0) - p(0, 15))).0,
+                ((p(4, 0) - p(1, 15))).0,
+                ((p(5, 0) - p(2, 15))).0,
+                (((p(3, 2) + p(4, 3)) + p(5, 4))).0,
+                (((p(1, 4) - p(2, 3)) - p(3, 1))).0,
+                (((p(2, 2) - p(0, 4)) - p(4, 1))).0,
+                (((p(0, 3) - p(1, 2)) - p(5, 1))).0,
+                (-(((p(0, 8) + p(1, 9)) + p(2, 10)) + ((p(3, 5) + p(4, 6)) + p(5, 7)))).0,
             ],
         }
     }
@@ -14993,12 +15532,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Trivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -15010,14 +15550,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
             ],
         }
     }
@@ -15029,12 +15570,13 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Vector {
             c: [
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[2] * b[2] - a[0] * b[3]) - a[3] * b[1])).0,
-                (((a[3] * b[0] - a[0] * b[4]) - a[1] * b[2])).0,
-                (((a[1] * b[1] - a[0] * b[5]) - a[2] * b[0])).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(2, 2) - p(0, 3)) - p(3, 1))).0,
+                (((p(3, 0) - p(0, 4)) - p(1, 2))).0,
+                (((p(1, 1) - p(0, 5)) - p(2, 0))).0,
             ],
         }
     }
@@ -15046,9 +15588,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
             ],
         }
     }
@@ -15060,16 +15603,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[1] * b[4] + a[2] * b[5]) + a[3] * b[6])).0,
-                (((a[2] * b[3] - a[0] * b[4]) - a[3] * b[2])).0,
-                (((a[3] * b[1] - a[0] * b[5]) - a[1] * b[3])).0,
-                (((a[1] * b[2] - a[0] * b[6]) - a[2] * b[1])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(1, 4) + p(2, 5)) + p(3, 6))).0,
+                (((p(2, 3) - p(0, 4)) - p(3, 2))).0,
+                (((p(3, 1) - p(0, 5)) - p(1, 3))).0,
+                (((p(1, 2) - p(0, 6)) - p(2, 1))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
             ],
         }
     }
@@ -15081,15 +15625,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[4] - a[1] * b[5]) - (a[2] * b[6] + a[3] * b[7]))).0,
-                ((a[2] * b[3] - a[3] * b[2])).0,
-                ((a[3] * b[1] - a[1] * b[3])).0,
-                ((a[1] * b[2] - a[2] * b[1])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(0, 4) - p(1, 5)) - (p(2, 6) + p(3, 7)))).0,
+                ((p(2, 3) - p(3, 2))).0,
+                ((p(3, 1) - p(1, 3))).0,
+                ((p(1, 2) - p(2, 1))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15102,23 +15647,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[0] * b[11] - a[1] * b[12]) - (a[2] * b[13] + a[3] * b[14]))).0,
-                (((a[1] * b[8] + a[2] * b[9]) + a[3] * b[10])).0,
-                (((a[2] * b[7] - a[0] * b[8]) - a[3] * b[6])).0,
-                (((a[3] * b[5] - a[0] * b[9]) - a[1] * b[7])).0,
-                (((a[1] * b[6] - a[0] * b[10]) - a[2] * b[5])).0,
-                ((a[2] * b[4] - a[3] * b[3])).0,
-                ((a[3] * b[2] - a[1] * b[4])).0,
-                ((a[1] * b[3] - a[2] * b[2])).0,
-                (-(a[0] * b[2] + a[1] * b[1])).0,
-                (-(a[0] * b[3] + a[2] * b[1])).0,
-                (-(a[0] * b[4] + a[3] * b[1])).0,
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
+                (((p(0, 11) - p(1, 12)) - (p(2, 13) + p(3, 14)))).0,
+                (((p(1, 8) + p(2, 9)) + p(3, 10))).0,
+                (((p(2, 7) - p(0, 8)) - p(3, 6))).0,
+                (((p(3, 5) - p(0, 9)) - p(1, 7))).0,
+                (((p(1, 6) - p(0, 10)) - p(2, 5))).0,
+                ((p(2, 4) - p(3, 3))).0,
+                ((p(3, 2) - p(1, 4))).0,
+                ((p(1, 3) - p(2, 2))).0,
+                (-(p(0, 2) + p(1, 1))).0,
+                (-(p(0, 3) + p(2, 1))).0,
+                (-(p(0, 4) + p(3, 1))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15131,9 +15677,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Pseudoscalar {
             c: [
-                (a[0] * b[0]).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -15145,14 +15692,15 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Bivector {
             c: [
-                (a[0] * b[3]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (-a[0] * b[0]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
+                (p(0, 3)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (-p(0, 0)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
             ],
         }
     }
@@ -15164,9 +15712,10 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Scalar {
             c: [
-                (-a[0] * b[0]).0,
+                (-p(0, 0)).0,
             ],
         }
     }
@@ -15178,16 +15727,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[0] * b[7]).0,
-                (a[0] * b[4]).0,
-                (a[0] * b[5]).0,
-                (a[0] * b[6]).0,
-                (-a[0] * b[1]).0,
-                (-a[0] * b[2]).0,
-                (-a[0] * b[3]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 7)).0,
+                (p(0, 4)).0,
+                (p(0, 5)).0,
+                (p(0, 6)).0,
+                (-p(0, 1)).0,
+                (-p(0, 2)).0,
+                (-p(0, 3)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -15199,16 +15749,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[0] * b[15]).0,
-                (a[0] * b[8]).0,
-                (a[0] * b[9]).0,
-                (a[0] * b[10]).0,
-                (-a[0] * b[5]).0,
-                (-a[0] * b[6]).0,
-                (-a[0] * b[7]).0,
-                (a[0] * b[0]).0,
+                (-p(0, 15)).0,
+                (p(0, 8)).0,
+                (p(0, 9)).0,
+                (p(0, 10)).0,
+                (-p(0, 5)).0,
+                (-p(0, 6)).0,
+                (-p(0, 7)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -15220,16 +15771,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -15241,16 +15793,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
-                (((a[2] * b[3] - a[3] * b[2]) - a[4] * b[0])).0,
-                (((a[3] * b[1] - a[1] * b[3]) - a[5] * b[0])).0,
-                (((a[1] * b[2] - a[2] * b[1]) - a[6] * b[0])).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (((p(4, 1) + p(5, 2)) + p(6, 3))).0,
+                (((p(2, 3) - p(3, 2)) - p(4, 0))).0,
+                (((p(3, 1) - p(1, 3)) - p(5, 0))).0,
+                (((p(1, 2) - p(2, 1)) - p(6, 0))).0,
             ],
         }
     }
@@ -15262,16 +15815,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[1] * b[0] + a[2] * b[1]) + a[3] * b[2]) - ((a[4] * b[3] + a[5] * b[4]) + a[6] * b[5]))).0,
-                ((a[0] * b[0] + a[7] * b[3])).0,
-                ((a[0] * b[1] + a[7] * b[4])).0,
-                ((a[0] * b[2] + a[7] * b[5])).0,
-                ((a[0] * b[3] - a[7] * b[0])).0,
-                ((a[0] * b[4] - a[7] * b[1])).0,
-                ((a[0] * b[5] - a[7] * b[2])).0,
-                (-(((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5]) + ((a[4] * b[0] + a[5] * b[1]) + a[6] * b[2]))).0,
+                ((((p(1, 0) + p(2, 1)) + p(3, 2)) - ((p(4, 3) + p(5, 4)) + p(6, 5)))).0,
+                ((p(0, 0) + p(7, 3))).0,
+                ((p(0, 1) + p(7, 4))).0,
+                ((p(0, 2) + p(7, 5))).0,
+                ((p(0, 3) - p(7, 0))).0,
+                ((p(0, 4) - p(7, 1))).0,
+                ((p(0, 5) - p(7, 2))).0,
+                (-(((p(1, 3) + p(2, 4)) + p(3, 5)) + ((p(4, 0) + p(5, 1)) + p(6, 2)))).0,
             ],
         }
     }
@@ -15283,16 +15837,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[4] * b[1] + a[5] * b[2]) + a[6] * b[3])).0,
-                (((a[3] * b[2] - a[2] * b[3]) - a[4] * b[0])).0,
-                (((a[1] * b[3] - a[3] * b[1]) - a[5] * b[0])).0,
-                (((a[2] * b[1] - a[1] * b[2]) - a[6] * b[0])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(4, 1) + p(5, 2)) + p(6, 3))).0,
+                (((p(3, 2) - p(2, 3)) - p(4, 0))).0,
+                (((p(1, 3) - p(3, 1)) - p(5, 0))).0,
+                (((p(2, 1) - p(1, 2)) - p(6, 0))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
             ],
         }
     }
@@ -15304,16 +15859,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[7] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (-a[1] * b[0]).0,
-                (-a[2] * b[0]).0,
-                (-a[3] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(7, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (-p(1, 0)).0,
+                (-p(2, 0)).0,
+                (-p(3, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -15325,16 +15881,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[1] * b[1]) + (a[2] * b[2] + a[3] * b[3])) - ((a[4] * b[4] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                (((a[0] * b[1] + a[1] * b[0]) + (a[4] * b[7] + a[7] * b[4]))).0,
-                (((a[0] * b[2] + a[2] * b[0]) + (a[5] * b[7] + a[7] * b[5]))).0,
-                (((a[0] * b[3] + a[3] * b[0]) + (a[6] * b[7] + a[7] * b[6]))).0,
-                (((a[0] * b[4] + a[4] * b[0]) - (a[1] * b[7] + a[7] * b[1]))).0,
-                (((a[0] * b[5] + a[5] * b[0]) - (a[2] * b[7] + a[7] * b[2]))).0,
-                (((a[0] * b[6] + a[6] * b[0]) - (a[3] * b[7] + a[7] * b[3]))).0,
-                ((((a[0] * b[7] + a[7] * b[0]) - (a[1] * b[4] + a[2] * b[5])) - ((a[3] * b[6] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3])))).0,
+                ((((p(0, 0) + p(1, 1)) + (p(2, 2) + p(3, 3))) - ((p(4, 4) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                (((p(0, 1) + p(1, 0)) + (p(4, 7) + p(7, 4)))).0,
+                (((p(0, 2) + p(2, 0)) + (p(5, 7) + p(7, 5)))).0,
+                (((p(0, 3) + p(3, 0)) + (p(6, 7) + p(7, 6)))).0,
+                (((p(0, 4) + p(4, 0)) - (p(1, 7) + p(7, 1)))).0,
+                (((p(0, 5) + p(5, 0)) - (p(2, 7) + p(7, 2)))).0,
+                (((p(0, 6) + p(6, 0)) - (p(3, 7) + p(7, 3)))).0,
+                ((((p(0, 7) + p(7, 0)) - (p(1, 4) + p(2, 5))) - ((p(3, 6) + p(4, 1)) + (p(5, 2) + p(6, 3))))).0,
             ],
         }
     }
@@ -15346,16 +15903,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7]))).0,
-                (((a[0] * b[1] + a[3] * b[6]) - (a[2] * b[7] + a[4] * b[4]))).0,
-                (((a[0] * b[2] + a[1] * b[7]) - (a[3] * b[5] + a[5] * b[4]))).0,
-                (((a[0] * b[3] + a[2] * b[5]) - (a[1] * b[6] + a[6] * b[4]))).0,
-                (((a[0] * b[4] + a[4] * b[1]) + (a[5] * b[2] + a[6] * b[3]))).0,
-                (((a[0] * b[5] + a[2] * b[3]) - (a[3] * b[2] + a[4] * b[0]))).0,
-                (((a[0] * b[6] + a[3] * b[1]) - (a[1] * b[3] + a[5] * b[0]))).0,
-                (((a[0] * b[7] + a[1] * b[2]) - (a[2] * b[1] + a[6] * b[0]))).0,
+                (((p(0, 0) + p(4, 5)) + (p(5, 6) + p(6, 7)))).0,
+                (((p(0, 1) + p(3, 6)) - (p(2, 7) + p(4, 4)))).0,
+                (((p(0, 2) + p(1, 7)) - (p(3, 5) + p(5, 4)))).0,
+                (((p(0, 3) + p(2, 5)) - (p(1, 6) + p(6, 4)))).0,
+                (((p(0, 4) + p(4, 1)) + (p(5, 2) + p(6, 3)))).0,
+                (((p(0, 5) + p(2, 3)) - (p(3, 2) + p(4, 0)))).0,
+                (((p(0, 6) + p(3, 1)) - (p(1, 3) + p(5, 0)))).0,
+                (((p(0, 7) + p(1, 2)) - (p(2, 1) + p(6, 0)))).0,
             ],
         }
     }
@@ -15367,24 +15925,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[1] * b[5]) + (a[2] * b[6] + a[3] * b[7])) - ((a[4] * b[8] + a[5] * b[9]) + (a[6] * b[10] + a[7] * b[15])))).0,
-                (((a[0] * b[1] + a[4] * b[12]) + (a[5] * b[13] + a[6] * b[14]))).0,
-                (((a[0] * b[2] + a[3] * b[13]) - (a[2] * b[14] + a[4] * b[11]))).0,
-                (((a[0] * b[3] + a[1] * b[14]) - (a[3] * b[12] + a[5] * b[11]))).0,
-                (((a[0] * b[4] + a[2] * b[12]) - (a[1] * b[13] + a[6] * b[11]))).0,
-                (((a[0] * b[5] + a[1] * b[0]) + (a[4] * b[15] + a[7] * b[8]))).0,
-                (((a[0] * b[6] + a[2] * b[0]) + (a[5] * b[15] + a[7] * b[9]))).0,
-                (((a[0] * b[7] + a[3] * b[0]) + (a[6] * b[15] + a[7] * b[10]))).0,
-                (((a[0] * b[8] + a[4] * b[0]) - (a[1] * b[15] + a[7] * b[5]))).0,
-                (((a[0] * b[9] + a[5] * b[0]) - (a[2] * b[15] + a[7] * b[6]))).0,
-                (((a[0] * b[10] + a[6] * b[0]) - (a[3] * b[15] + a[7] * b[7]))).0,
-                (((a[0] * b[11] + a[4] * b[2]) + (a[5] * b[3] + a[6] * b[4]))).0,
-                (((a[0] * b[12] + a[2] * b[4]) - (a[3] * b[3] + a[4] * b[1]))).0,
-                (((a[0] * b[13] + a[3] * b[2]) - (a[1] * b[4] + a[5] * b[1]))).0,
-                (((a[0] * b[14] + a[1] * b[3]) - (a[2] * b[2] + a[6] * b[1]))).0,
-                ((((a[0] * b[15] + a[7] * b[0]) - (a[1] * b[8] + a[2] * b[9])) - ((a[3] * b[10] + a[4] * b[5]) + (a[5] * b[6] + a[6] * b[7])))).0,
+                ((((p(0, 0) + p(1, 5)) + (p(2, 6) + p(3, 7))) - ((p(4, 8) + p(5, 9)) + (p(6, 10) + p(7, 15))))).0,
+                (((p(0, 1) + p(4, 12)) + (p(5, 13) + p(6, 14)))).0,
+                (((p(0, 2) + p(3, 13)) - (p(2, 14) + p(4, 11)))).0,
+                (((p(0, 3) + p(1, 14)) - (p(3, 12) + p(5, 11)))).0,
+                (((p(0, 4) + p(2, 12)) - (p(1, 13) + p(6, 11)))).0,
+                (((p(0, 5) + p(1, 0)) + (p(4, 15) + p(7, 8)))).0,
+                (((p(0, 6) + p(2, 0)) + (p(5, 15) + p(7, 9)))).0,
+                (((p(0, 7) + p(3, 0)) + (p(6, 15) + p(7, 10)))).0,
+                (((p(0, 8) + p(4, 0)) - (p(1, 15) + p(7, 5)))).0,
+                (((p(0, 9) + p(5, 0)) - (p(2, 15) + p(7, 6)))).0,
+                (((p(0, 10) + p(6, 0)) - (p(3, 15) + p(7, 7)))).0,
+                (((p(0, 11) + p(4, 2)) + (p(5, 3) + p(6, 4)))).0,
+                (((p(0, 12) + p(2, 4)) - (p(3, 3) + p(4, 1)))).0,
+                (((p(0, 13) + p(3, 2)) - (p(1, 4) + p(5, 1)))).0,
+                (((p(0, 14) + p(1, 3)) - (p(2, 2) + p(6, 1)))).0,
+                ((((p(0, 15) + p(7, 0)) - (p(1, 8) + p(2, 9))) - ((p(3, 10) + p(4, 5)) + (p(5, 6) + p(6, 7))))).0,
             ],
         }
     }
@@ -15396,16 +15955,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
             ],
         }
     }
@@ -15417,15 +15977,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[0] * b[0] - a[1] * b[1]) - (a[2] * b[2] + a[3] * b[3]))).0,
-                ((a[6] * b[3] - a[7] * b[2])).0,
-                ((a[7] * b[1] - a[5] * b[3])).0,
-                ((a[5] * b[2] - a[6] * b[1])).0,
-                (-(a[4] * b[1] + a[5] * b[0])).0,
-                (-(a[4] * b[2] + a[6] * b[0])).0,
-                (-(a[4] * b[3] + a[7] * b[0])).0,
+                (((p(0, 0) - p(1, 1)) - (p(2, 2) + p(3, 3)))).0,
+                ((p(6, 3) - p(7, 2))).0,
+                ((p(7, 1) - p(5, 3))).0,
+                ((p(5, 2) - p(6, 1))).0,
+                (-(p(4, 1) + p(5, 0))).0,
+                (-(p(4, 2) + p(6, 0))).0,
+                (-(p(4, 3) + p(7, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15438,16 +15999,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5])).0,
-                (((a[6] * b[2] - a[4] * b[3]) - a[7] * b[1])).0,
-                (((a[7] * b[0] - a[4] * b[4]) - a[5] * b[2])).0,
-                (((a[5] * b[1] - a[4] * b[5]) - a[6] * b[0])).0,
-                (((a[1] * b[3] + a[2] * b[4]) + a[3] * b[5])).0,
-                (((a[3] * b[1] - a[0] * b[3]) - a[2] * b[2])).0,
-                (((a[1] * b[2] - a[0] * b[4]) - a[3] * b[0])).0,
-                (((a[2] * b[0] - a[0] * b[5]) - a[1] * b[1])).0,
+                (((p(5, 3) + p(6, 4)) + p(7, 5))).0,
+                (((p(6, 2) - p(4, 3)) - p(7, 1))).0,
+                (((p(7, 0) - p(4, 4)) - p(5, 2))).0,
+                (((p(5, 1) - p(4, 5)) - p(6, 0))).0,
+                (((p(1, 3) + p(2, 4)) + p(3, 5))).0,
+                (((p(3, 1) - p(0, 3)) - p(2, 2))).0,
+                (((p(1, 2) - p(0, 4)) - p(3, 0))).0,
+                (((p(2, 0) - p(0, 5)) - p(1, 1))).0,
             ],
         }
     }
@@ -15459,15 +16021,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (((a[4] * b[0] - a[5] * b[1]) - (a[6] * b[2] + a[7] * b[3]))).0,
-                ((a[3] * b[2] - a[2] * b[3])).0,
-                ((a[1] * b[3] - a[3] * b[1])).0,
-                ((a[2] * b[1] - a[1] * b[2])).0,
-                (-(a[0] * b[1] + a[1] * b[0])).0,
-                (-(a[0] * b[2] + a[2] * b[0])).0,
-                (-(a[0] * b[3] + a[3] * b[0])).0,
+                (((p(4, 0) - p(5, 1)) - (p(6, 2) + p(7, 3)))).0,
+                ((p(3, 2) - p(2, 3))).0,
+                ((p(1, 3) - p(3, 1))).0,
+                ((p(2, 1) - p(1, 2))).0,
+                (-(p(0, 1) + p(1, 0))).0,
+                (-(p(0, 2) + p(2, 0))).0,
+                (-(p(0, 3) + p(3, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15480,16 +16043,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Odd {
             c: [
-                (((a[0] * b[0] + a[5] * b[4]) + (a[6] * b[5] + a[7] * b[6]))).0,
-                (((a[1] * b[0] + a[6] * b[3]) - (a[4] * b[4] + a[7] * b[2]))).0,
-                (((a[2] * b[0] + a[7] * b[1]) - (a[4] * b[5] + a[5] * b[3]))).0,
-                (((a[3] * b[0] + a[5] * b[2]) - (a[4] * b[6] + a[6] * b[1]))).0,
-                (((a[1] * b[4] + a[2] * b[5]) + (a[3] * b[6] + a[4] * b[0]))).0,
-                (((a[3] * b[2] + a[5] * b[0]) - (a[0] * b[4] + a[2] * b[3]))).0,
-                (((a[1] * b[3] + a[6] * b[0]) - (a[0] * b[5] + a[3] * b[1]))).0,
-                (((a[2] * b[1] + a[7] * b[0]) - (a[0] * b[6] + a[1] * b[2]))).0,
+                (((p(0, 0) + p(5, 4)) + (p(6, 5) + p(7, 6)))).0,
+                (((p(1, 0) + p(6, 3)) - (p(4, 4) + p(7, 2)))).0,
+                (((p(2, 0) + p(7, 1)) - (p(4, 5) + p(5, 3)))).0,
+                (((p(3, 0) + p(5, 2)) - (p(4, 6) + p(6, 1)))).0,
+                (((p(1, 4) + p(2, 5)) + (p(3, 6) + p(4, 0)))).0,
+                (((p(3, 2) + p(5, 0)) - (p(0, 4) + p(2, 3)))).0,
+                (((p(1, 3) + p(6, 0)) - (p(0, 5) + p(3, 1)))).0,
+                (((p(2, 1) + p(7, 0)) - (p(0, 6) + p(1, 2)))).0,
             ],
         }
     }
@@ -15501,15 +16065,16 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                ((((a[0] * b[0] + a[4] * b[4]) - (a[1] * b[1] + a[2] * b[2])) - ((a[3] * b[3] + a[5] * b[5]) + (a[6] * b[6] + a[7] * b[7])))).0,
-                (((a[3] * b[6] + a[6] * b[3]) - (a[2] * b[7] + a[7] * b[2]))).0,
-                (((a[1] * b[7] + a[7] * b[1]) - (a[3] * b[5] + a[5] * b[3]))).0,
-                (((a[2] * b[5] + a[5] * b[2]) - (a[1] * b[6] + a[6] * b[1]))).0,
-                (-((a[0] * b[5] + a[1] * b[4]) + (a[4] * b[1] + a[5] * b[0]))).0,
-                (-((a[0] * b[6] + a[2] * b[4]) + (a[4] * b[2] + a[6] * b[0]))).0,
-                (-((a[0] * b[7] + a[3] * b[4]) + (a[4] * b[3] + a[7] * b[0]))).0,
+                ((((p(0, 0) + p(4, 4)) - (p(1, 1) + p(2, 2))) - ((p(3, 3) + p(5, 5)) + (p(6, 6) + p(7, 7))))).0,
+                (((p(3, 6) + p(6, 3)) - (p(2, 7) + p(7, 2)))).0,
+                (((p(1, 7) + p(7, 1)) - (p(3, 5) + p(5, 3)))).0,
+                (((p(2, 5) + p(5, 2)) - (p(1, 6) + p(6, 1)))).0,
+                (-((p(0, 5) + p(1, 4)) + (p(4, 1) + p(5, 0)))).0,
+                (-((p(0, 6) + p(2, 4)) + (p(4, 2) + p(6, 0)))).0,
+                (-((p(0, 7) + p(3, 4)) + (p(4, 3) + p(7, 0)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15522,23 +16087,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[1] + a[4] * b[11]) - (a[1] * b[2] + a[2] * b[3])) - ((a[3] * b[4] + a[5] * b[12]) + (a[6] * b[13] + a[7] * b[14])))).0,
-                (((a[0] * b[0] + a[5] * b[8]) + (a[6] * b[9] + a[7] * b[10]))).0,
-                (((a[1] * b[0] + a[6] * b[7]) - (a[4] * b[8] + a[7] * b[6]))).0,
-                (((a[2] * b[0] + a[7] * b[5]) - (a[4] * b[9] + a[5] * b[7]))).0,
-                (((a[3] * b[0] + a[5] * b[6]) - (a[4] * b[10] + a[6] * b[5]))).0,
-                (((a[3] * b[13] + a[6] * b[4]) - (a[2] * b[14] + a[7] * b[3]))).0,
-                (((a[1] * b[14] + a[7] * b[2]) - (a[3] * b[12] + a[5] * b[4]))).0,
-                (((a[2] * b[12] + a[5] * b[3]) - (a[1] * b[13] + a[6] * b[2]))).0,
-                (-((a[0] * b[12] + a[1] * b[11]) + (a[4] * b[2] + a[5] * b[1]))).0,
-                (-((a[0] * b[13] + a[2] * b[11]) + (a[4] * b[3] + a[6] * b[1]))).0,
-                (-((a[0] * b[14] + a[3] * b[11]) + (a[4] * b[4] + a[7] * b[1]))).0,
-                (((a[1] * b[8] + a[2] * b[9]) + (a[3] * b[10] + a[4] * b[0]))).0,
-                (((a[3] * b[6] + a[5] * b[0]) - (a[0] * b[8] + a[2] * b[7]))).0,
-                (((a[1] * b[7] + a[6] * b[0]) - (a[0] * b[9] + a[3] * b[5]))).0,
-                (((a[2] * b[5] + a[7] * b[0]) - (a[0] * b[10] + a[1] * b[6]))).0,
+                ((((p(0, 1) + p(4, 11)) - (p(1, 2) + p(2, 3))) - ((p(3, 4) + p(5, 12)) + (p(6, 13) + p(7, 14))))).0,
+                (((p(0, 0) + p(5, 8)) + (p(6, 9) + p(7, 10)))).0,
+                (((p(1, 0) + p(6, 7)) - (p(4, 8) + p(7, 6)))).0,
+                (((p(2, 0) + p(7, 5)) - (p(4, 9) + p(5, 7)))).0,
+                (((p(3, 0) + p(5, 6)) - (p(4, 10) + p(6, 5)))).0,
+                (((p(3, 13) + p(6, 4)) - (p(2, 14) + p(7, 3)))).0,
+                (((p(1, 14) + p(7, 2)) - (p(3, 12) + p(5, 4)))).0,
+                (((p(2, 12) + p(5, 3)) - (p(1, 13) + p(6, 2)))).0,
+                (-((p(0, 12) + p(1, 11)) + (p(4, 2) + p(5, 1)))).0,
+                (-((p(0, 13) + p(2, 11)) + (p(4, 3) + p(6, 1)))).0,
+                (-((p(0, 14) + p(3, 11)) + (p(4, 4) + p(7, 1)))).0,
+                (((p(1, 8) + p(2, 9)) + (p(3, 10) + p(4, 0)))).0,
+                (((p(3, 6) + p(5, 0)) - (p(0, 8) + p(2, 7)))).0,
+                (((p(1, 7) + p(6, 0)) - (p(0, 9) + p(3, 5)))).0,
+                (((p(2, 5) + p(7, 0)) - (p(0, 10) + p(1, 6)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15551,24 +16117,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>
     fn anticommutator(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (a[0] * b[0]).0,
-                (a[1] * b[0]).0,
-                (a[2] * b[0]).0,
-                (a[3] * b[0]).0,
-                (a[4] * b[0]).0,
-                (a[5] * b[0]).0,
-                (a[6] * b[0]).0,
-                (a[7] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (a[11] * b[0]).0,
-                (a[12] * b[0]).0,
-                (a[13] * b[0]).0,
-                (a[14] * b[0]).0,
-                (a[15] * b[0]).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(4, 0)).0,
+                (p(5, 0)).0,
+                (p(6, 0)).0,
+                (p(7, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (p(11, 0)).0,
+                (p(12, 0)).0,
+                (p(13, 0)).0,
+                (p(14, 0)).0,
+                (p(15, 0)).0,
             ],
         }
     }
@@ -15580,23 +16147,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
     fn anticommutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[1] * b[0] - a[2] * b[1]) - (a[3] * b[2] + a[4] * b[3]))).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
-                ((a[13] * b[3] - a[14] * b[2])).0,
-                ((a[14] * b[1] - a[12] * b[3])).0,
-                ((a[12] * b[2] - a[13] * b[1])).0,
-                (-(a[11] * b[1] + a[12] * b[0])).0,
-                (-(a[11] * b[2] + a[13] * b[0])).0,
-                (-(a[11] * b[3] + a[14] * b[0])).0,
-                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
-                (((a[6] * b[3] - a[7] * b[2]) - a[8] * b[0])).0,
-                (((a[7] * b[1] - a[5] * b[3]) - a[9] * b[0])).0,
-                (((a[5] * b[2] - a[6] * b[1]) - a[10] * b[0])).0,
+                (((p(1, 0) - p(2, 1)) - (p(3, 2) + p(4, 3)))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                ((p(13, 3) - p(14, 2))).0,
+                ((p(14, 1) - p(12, 3))).0,
+                ((p(12, 2) - p(13, 1))).0,
+                (-(p(11, 1) + p(12, 0))).0,
+                (-(p(11, 2) + p(13, 0))).0,
+                (-(p(11, 3) + p(14, 0))).0,
+                (((p(8, 1) + p(9, 2)) + p(10, 3))).0,
+                (((p(6, 3) - p(7, 2)) - p(8, 0))).0,
+                (((p(7, 1) - p(5, 3)) - p(9, 0))).0,
+                (((p(5, 2) - p(6, 1)) - p(10, 0))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15609,24 +16177,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, 
     fn anticommutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[5] * b[0] + a[6] * b[1]) + a[7] * b[2]) - ((a[8] * b[3] + a[9] * b[4]) + a[10] * b[5]))).0,
-                (((a[12] * b[3] + a[13] * b[4]) + a[14] * b[5])).0,
-                (((a[13] * b[2] - a[11] * b[3]) - a[14] * b[1])).0,
-                (((a[14] * b[0] - a[11] * b[4]) - a[12] * b[2])).0,
-                (((a[12] * b[1] - a[11] * b[5]) - a[13] * b[0])).0,
-                ((a[0] * b[0] + a[15] * b[3])).0,
-                ((a[0] * b[1] + a[15] * b[4])).0,
-                ((a[0] * b[2] + a[15] * b[5])).0,
-                ((a[0] * b[3] - a[15] * b[0])).0,
-                ((a[0] * b[4] - a[15] * b[1])).0,
-                ((a[0] * b[5] - a[15] * b[2])).0,
-                (((a[2] * b[3] + a[3] * b[4]) + a[4] * b[5])).0,
-                (((a[4] * b[1] - a[1] * b[3]) - a[3] * b[2])).0,
-                (((a[2] * b[2] - a[1] * b[4]) - a[4] * b[0])).0,
-                (((a[3] * b[0] - a[1] * b[5]) - a[2] * b[1])).0,
-                (-(((a[5] * b[3] + a[6] * b[4]) + a[7] * b[5]) + ((a[8] * b[0] + a[9] * b[1]) + a[10] * b[2]))).0,
+                ((((p(5, 0) + p(6, 1)) + p(7, 2)) - ((p(8, 3) + p(9, 4)) + p(10, 5)))).0,
+                (((p(12, 3) + p(13, 4)) + p(14, 5))).0,
+                (((p(13, 2) - p(11, 3)) - p(14, 1))).0,
+                (((p(14, 0) - p(11, 4)) - p(12, 2))).0,
+                (((p(12, 1) - p(11, 5)) - p(13, 0))).0,
+                ((p(0, 0) + p(15, 3))).0,
+                ((p(0, 1) + p(15, 4))).0,
+                ((p(0, 2) + p(15, 5))).0,
+                ((p(0, 3) - p(15, 0))).0,
+                ((p(0, 4) - p(15, 1))).0,
+                ((p(0, 5) - p(15, 2))).0,
+                (((p(2, 3) + p(3, 4)) + p(4, 5))).0,
+                (((p(4, 1) - p(1, 3)) - p(3, 2))).0,
+                (((p(2, 2) - p(1, 4)) - p(4, 0))).0,
+                (((p(3, 0) - p(1, 5)) - p(2, 1))).0,
+                (-(((p(5, 3) + p(6, 4)) + p(7, 5)) + ((p(8, 0) + p(9, 1)) + p(10, 2)))).0,
             ],
         }
     }
@@ -15638,23 +16207,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
     fn anticommutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((a[11] * b[0] - a[12] * b[1]) - (a[13] * b[2] + a[14] * b[3]))).0,
-                (((a[8] * b[1] + a[9] * b[2]) + a[10] * b[3])).0,
-                (((a[7] * b[2] - a[6] * b[3]) - a[8] * b[0])).0,
-                (((a[5] * b[3] - a[7] * b[1]) - a[9] * b[0])).0,
-                (((a[6] * b[1] - a[5] * b[2]) - a[10] * b[0])).0,
-                ((a[4] * b[2] - a[3] * b[3])).0,
-                ((a[2] * b[3] - a[4] * b[1])).0,
-                ((a[3] * b[1] - a[2] * b[2])).0,
-                (-(a[1] * b[1] + a[2] * b[0])).0,
-                (-(a[1] * b[2] + a[3] * b[0])).0,
-                (-(a[1] * b[3] + a[4] * b[0])).0,
-                (a[0] * b[0]).0,
-                (a[0] * b[1]).0,
-                (a[0] * b[2]).0,
-                (a[0] * b[3]).0,
+                (((p(11, 0) - p(12, 1)) - (p(13, 2) + p(14, 3)))).0,
+                (((p(8, 1) + p(9, 2)) + p(10, 3))).0,
+                (((p(7, 2) - p(6, 3)) - p(8, 0))).0,
+                (((p(5, 3) - p(7, 1)) - p(9, 0))).0,
+                (((p(6, 1) - p(5, 2)) - p(10, 0))).0,
+                ((p(4, 2) - p(3, 3))).0,
+                ((p(2, 3) - p(4, 1))).0,
+                ((p(3, 1) - p(2, 2))).0,
+                (-(p(1, 1) + p(2, 0))).0,
+                (-(p(1, 2) + p(3, 0))).0,
+                (-(p(1, 3) + p(4, 0))).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15667,16 +16237,17 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
     fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Even {
             c: [
-                (-a[15] * b[0]).0,
-                (a[8] * b[0]).0,
-                (a[9] * b[0]).0,
-                (a[10] * b[0]).0,
-                (-a[5] * b[0]).0,
-                (-a[6] * b[0]).0,
-                (-a[7] * b[0]).0,
-                (a[0] * b[0]).0,
+                (-p(15, 0)).0,
+                (p(8, 0)).0,
+                (p(9, 0)).0,
+                (p(10, 0)).0,
+                (-p(5, 0)).0,
+                (-p(6, 0)).0,
+                (-p(7, 0)).0,
+                (p(0, 0)).0,
             ],
         }
     }
@@ -15688,24 +16259,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Even<S2, T>> 
     fn anticommutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[0] * b[0] + a[5] * b[1]) + (a[6] * b[2] + a[7] * b[3])) - ((a[8] * b[4] + a[9] * b[5]) + (a[10] * b[6] + a[15] * b[7])))).0,
-                (((a[1] * b[0] + a[12] * b[4]) + (a[13] * b[5] + a[14] * b[6]))).0,
-                (((a[2] * b[0] + a[13] * b[3]) - (a[11] * b[4] + a[14] * b[2]))).0,
-                (((a[3] * b[0] + a[14] * b[1]) - (a[11] * b[5] + a[12] * b[3]))).0,
-                (((a[4] * b[0] + a[12] * b[2]) - (a[11] * b[6] + a[13] * b[1]))).0,
-                (((a[0] * b[1] + a[5] * b[0]) + (a[8] * b[7] + a[15] * b[4]))).0,
-                (((a[0] * b[2] + a[6] * b[0]) + (a[9] * b[7] + a[15] * b[5]))).0,
-                (((a[0] * b[3] + a[7] * b[0]) + (a[10] * b[7] + a[15] * b[6]))).0,
-                (((a[0] * b[4] + a[8] * b[0]) - (a[5] * b[7] + a[15] * b[1]))).0,
-                (((a[0] * b[5] + a[9] * b[0]) - (a[6] * b[7] + a[15] * b[2]))).0,
-                (((a[0] * b[6] + a[10] * b[0]) - (a[7] * b[7] + a[15] * b[3]))).0,
-                (((a[2] * b[4] + a[3] * b[5]) + (a[4] * b[6] + a[11] * b[0]))).0,
-                (((a[4] * b[2] + a[12] * b[0]) - (a[1] * b[4] + a[3] * b[3]))).0,
-                (((a[2] * b[3] + a[13] * b[0]) - (a[1] * b[5] + a[4] * b[1]))).0,
-                (((a[3] * b[1] + a[14] * b[0]) - (a[1] * b[6] + a[2] * b[2]))).0,
-                ((((a[0] * b[7] + a[15] * b[0]) - (a[5] * b[4] + a[6] * b[5])) - ((a[7] * b[6] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3])))).0,
+                ((((p(0, 0) + p(5, 1)) + (p(6, 2) + p(7, 3))) - ((p(8, 4) + p(9, 5)) + (p(10, 6) + p(15, 7))))).0,
+                (((p(1, 0) + p(12, 4)) + (p(13, 5) + p(14, 6)))).0,
+                (((p(2, 0) + p(13, 3)) - (p(11, 4) + p(14, 2)))).0,
+                (((p(3, 0) + p(14, 1)) - (p(11, 5) + p(12, 3)))).0,
+                (((p(4, 0) + p(12, 2)) - (p(11, 6) + p(13, 1)))).0,
+                (((p(0, 1) + p(5, 0)) + (p(8, 7) + p(15, 4)))).0,
+                (((p(0, 2) + p(6, 0)) + (p(9, 7) + p(15, 5)))).0,
+                (((p(0, 3) + p(7, 0)) + (p(10, 7) + p(15, 6)))).0,
+                (((p(0, 4) + p(8, 0)) - (p(5, 7) + p(15, 1)))).0,
+                (((p(0, 5) + p(9, 0)) - (p(6, 7) + p(15, 2)))).0,
+                (((p(0, 6) + p(10, 0)) - (p(7, 7) + p(15, 3)))).0,
+                (((p(2, 4) + p(3, 5)) + (p(4, 6) + p(11, 0)))).0,
+                (((p(4, 2) + p(12, 0)) - (p(1, 4) + p(3, 3)))).0,
+                (((p(2, 3) + p(13, 0)) - (p(1, 5) + p(4, 1)))).0,
+                (((p(3, 1) + p(14, 0)) - (p(1, 6) + p(2, 2)))).0,
+                ((((p(0, 7) + p(15, 0)) - (p(5, 4) + p(6, 5))) - ((p(7, 6) + p(8, 1)) + (p(9, 2) + p(10, 3))))).0,
             ],
         }
     }
@@ -15717,23 +16289,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Odd<S2, T>> f
     fn anticommutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                ((((a[1] * b[0] + a[11] * b[4]) - (a[2] * b[1] + a[3] * b[2])) - ((a[4] * b[3] + a[12] * b[5]) + (a[13] * b[6] + a[14] * b[7])))).0,
-                (((a[0] * b[0] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7]))).0,
-                (((a[0] * b[1] + a[7] * b[6]) - (a[6] * b[7] + a[8] * b[4]))).0,
-                (((a[0] * b[2] + a[5] * b[7]) - (a[7] * b[5] + a[9] * b[4]))).0,
-                (((a[0] * b[3] + a[6] * b[5]) - (a[5] * b[6] + a[10] * b[4]))).0,
-                (((a[4] * b[6] + a[13] * b[3]) - (a[3] * b[7] + a[14] * b[2]))).0,
-                (((a[2] * b[7] + a[14] * b[1]) - (a[4] * b[5] + a[12] * b[3]))).0,
-                (((a[3] * b[5] + a[12] * b[2]) - (a[2] * b[6] + a[13] * b[1]))).0,
-                (-((a[1] * b[5] + a[2] * b[4]) + (a[11] * b[1] + a[12] * b[0]))).0,
-                (-((a[1] * b[6] + a[3] * b[4]) + (a[11] * b[2] + a[13] * b[0]))).0,
-                (-((a[1] * b[7] + a[4] * b[4]) + (a[11] * b[3] + a[14] * b[0]))).0,
-                (((a[0] * b[4] + a[8] * b[1]) + (a[9] * b[2] + a[10] * b[3]))).0,
-                (((a[0] * b[5] + a[6] * b[3]) - (a[7] * b[2] + a[8] * b[0]))).0,
-                (((a[0] * b[6] + a[7] * b[1]) - (a[5] * b[3] + a[9] * b[0]))).0,
-                (((a[0] * b[7] + a[5] * b[2]) - (a[6] * b[1] + a[10] * b[0]))).0,
+                ((((p(1, 0) + p(11, 4)) - (p(2, 1) + p(3, 2))) - ((p(4, 3) + p(12, 5)) + (p(13, 6) + p(14, 7))))).0,
+                (((p(0, 0) + p(8, 5)) + (p(9, 6) + p(10, 7)))).0,
+                (((p(0, 1) + p(7, 6)) - (p(6, 7) + p(8, 4)))).0,
+                (((p(0, 2) + p(5, 7)) - (p(7, 5) + p(9, 4)))).0,
+                (((p(0, 3) + p(6, 5)) - (p(5, 6) + p(10, 4)))).0,
+                (((p(4, 6) + p(13, 3)) - (p(3, 7) + p(14, 2)))).0,
+                (((p(2, 7) + p(14, 1)) - (p(4, 5) + p(12, 3)))).0,
+                (((p(3, 5) + p(12, 2)) - (p(2, 6) + p(13, 1)))).0,
+                (-((p(1, 5) + p(2, 4)) + (p(11, 1) + p(12, 0)))).0,
+                (-((p(1, 6) + p(3, 4)) + (p(11, 2) + p(13, 0)))).0,
+                (-((p(1, 7) + p(4, 4)) + (p(11, 3) + p(14, 0)))).0,
+                (((p(0, 4) + p(8, 1)) + (p(9, 2) + p(10, 3)))).0,
+                (((p(0, 5) + p(6, 3)) - (p(7, 2) + p(8, 0)))).0,
+                (((p(0, 6) + p(7, 1)) - (p(5, 3) + p(9, 0)))).0,
+                (((p(0, 7) + p(5, 2)) - (p(6, 1) + p(10, 0)))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
@@ -15746,24 +16319,25 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
     fn anticommutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
         Multivector {
             c: [
-                (((((a[0] * b[0] + a[1] * b[1]) + (a[5] * b[5] + a[6] * b[6])) + ((a[7] * b[7] + a[11] * b[11]) - (a[2] * b[2] + a[3] * b[3]))) - (((a[4] * b[4] + a[8] * b[8]) + (a[9] * b[9] + a[10] * b[10])) + ((a[12] * b[12] + a[13] * b[13]) + (a[14] * b[14] + a[15] * b[15]))))).0,
-                ((((a[0] * b[1] + a[1] * b[0]) + (a[8] * b[12] + a[9] * b[13])) + ((a[10] * b[14] + a[12] * b[8]) + (a[13] * b[9] + a[14] * b[10])))).0,
-                ((((a[0] * b[2] + a[2] * b[0]) + (a[7] * b[13] + a[13] * b[7])) - ((a[6] * b[14] + a[8] * b[11]) + (a[11] * b[8] + a[14] * b[6])))).0,
-                ((((a[0] * b[3] + a[3] * b[0]) + (a[5] * b[14] + a[14] * b[5])) - ((a[7] * b[12] + a[9] * b[11]) + (a[11] * b[9] + a[12] * b[7])))).0,
-                ((((a[0] * b[4] + a[4] * b[0]) + (a[6] * b[12] + a[12] * b[6])) - ((a[5] * b[13] + a[10] * b[11]) + (a[11] * b[10] + a[13] * b[5])))).0,
-                ((((a[0] * b[5] + a[4] * b[13]) + (a[5] * b[0] + a[8] * b[15])) + ((a[13] * b[4] + a[15] * b[8]) - (a[3] * b[14] + a[14] * b[3])))).0,
-                ((((a[0] * b[6] + a[2] * b[14]) + (a[6] * b[0] + a[9] * b[15])) + ((a[14] * b[2] + a[15] * b[9]) - (a[4] * b[12] + a[12] * b[4])))).0,
-                ((((a[0] * b[7] + a[3] * b[12]) + (a[7] * b[0] + a[10] * b[15])) + ((a[12] * b[3] + a[15] * b[10]) - (a[2] * b[13] + a[13] * b[2])))).0,
-                ((((a[0] * b[8] + a[8] * b[0]) - (a[1] * b[12] + a[2] * b[11])) - ((a[5] * b[15] + a[11] * b[2]) + (a[12] * b[1] + a[15] * b[5])))).0,
-                ((((a[0] * b[9] + a[9] * b[0]) - (a[1] * b[13] + a[3] * b[11])) - ((a[6] * b[15] + a[11] * b[3]) + (a[13] * b[1] + a[15] * b[6])))).0,
-                ((((a[0] * b[10] + a[10] * b[0]) - (a[1] * b[14] + a[4] * b[11])) - ((a[7] * b[15] + a[11] * b[4]) + (a[14] * b[1] + a[15] * b[7])))).0,
-                ((((a[0] * b[11] + a[2] * b[8]) + (a[3] * b[9] + a[4] * b[10])) + ((a[8] * b[2] + a[9] * b[3]) + (a[10] * b[4] + a[11] * b[0])))).0,
-                ((((a[0] * b[12] + a[4] * b[6]) + (a[6] * b[4] + a[12] * b[0])) - ((a[1] * b[8] + a[3] * b[7]) + (a[7] * b[3] + a[8] * b[1])))).0,
-                ((((a[0] * b[13] + a[2] * b[7]) + (a[7] * b[2] + a[13] * b[0])) - ((a[1] * b[9] + a[4] * b[5]) + (a[5] * b[4] + a[9] * b[1])))).0,
-                ((((a[0] * b[14] + a[3] * b[5]) + (a[5] * b[3] + a[14] * b[0])) - ((a[1] * b[10] + a[2] * b[6]) + (a[6] * b[2] + a[10] * b[1])))).0,
-                ((((a[0] * b[15] + a[15] * b[0]) - (a[5] * b[8] + a[6] * b[9])) - ((a[7] * b[10] + a[8] * b[5]) + (a[9] * b[6] + a[10] * b[7])))).0,
+                (((((p(0, 0) + p(1, 1)) + (p(5, 5) + p(6, 6))) + ((p(7, 7) + p(11, 11)) - (p(2, 2) + p(3, 3)))) - (((p(4, 4) + p(8, 8)) + (p(9, 9) + p(10, 10))) + ((p(12, 12) + p(13, 13)) + (p(14, 14) + p(15, 15)))))).0,
+                ((((p(0, 1) + p(1, 0)) + (p(8, 12) + p(9, 13))) + ((p(10, 14) + p(12, 8)) + (p(13, 9) + p(14, 10))))).0,
+                ((((p(0, 2) + p(2, 0)) + (p(7, 13) + p(13, 7))) - ((p(6, 14) + p(8, 11)) + (p(11, 8) + p(14, 6))))).0,
+                ((((p(0, 3) + p(3, 0)) + (p(5, 14) + p(14, 5))) - ((p(7, 12) + p(9, 11)) + (p(11, 9) + p(12, 7))))).0,
+                ((((p(0, 4) + p(4, 0)) + (p(6, 12) + p(12, 6))) - ((p(5, 13) + p(10, 11)) + (p(11, 10) + p(13, 5))))).0,
+                ((((p(0, 5) + p(4, 13)) + (p(5, 0) + p(8, 15))) + ((p(13, 4) + p(15, 8)) - (p(3, 14) + p(14, 3))))).0,
+                ((((p(0, 6) + p(2, 14)) + (p(6, 0) + p(9, 15))) + ((p(14, 2) + p(15, 9)) - (p(4, 12) + p(12, 4))))).0,
+                ((((p(0, 7) + p(3, 12)) + (p(7, 0) + p(10, 15))) + ((p(12, 3) + p(15, 10)) - (p(2, 13) + p(13, 2))))).0,
+                ((((p(0, 8) + p(8, 0)) - (p(1, 12) + p(2, 11))) - ((p(5, 15) + p(11, 2)) + (p(12, 1) + p(15, 5))))).0,
+                ((((p(0, 9) + p(9, 0)) - (p(1, 13) + p(3, 11))) - ((p(6, 15) + p(11, 3)) + (p(13, 1) + p(15, 6))))).0,
+                ((((p(0, 10) + p(10, 0)) - (p(1, 14) + p(4, 11))) - ((p(7, 15) + p(11, 4)) + (p(14, 1) + p(15, 7))))).0,
+                ((((p(0, 11) + p(2, 8)) + (p(3, 9) + p(4, 10))) + ((p(8, 2) + p(9, 3)) + (p(10, 4) + p(11, 0))))).0,
+                ((((p(0, 12) + p(4, 6)) + (p(6, 4) + p(12, 0))) - ((p(1, 8) + p(3, 7)) + (p(7, 3) + p(8, 1))))).0,
+                ((((p(0, 13) + p(2, 7)) + (p(7, 2) + p(13, 0))) - ((p(1, 9) + p(4, 5)) + (p(5, 4) + p(9, 1))))).0,
+                ((((p(0, 14) + p(3, 5)) + (p(5, 3) + p(14, 0))) - ((p(1, 10) + p(2, 6)) + (p(6, 2) + p(10, 1))))).0,
+                ((((p(0, 15) + p(15, 0)) - (p(5, 8) + p(6, 9))) - ((p(7, 10) + p(8, 5)) + (p(9, 6) + p(10, 7))))).0,
             ],
         }
     }
@@ -16225,6 +16799,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Even<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Even<(), T>> for Scalar<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16232,6 +16808,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Multivector<S, T> {
         Multivector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Scalar<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Odd<S, T> {
     /// The same multivector as a [`Odd`].
@@ -16241,6 +16819,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Odd<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Odd<(), T>> for Vector<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16248,6 +16828,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Multivector<S, T> {
         Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Vector<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Even<S, T> {
     /// The same multivector as a [`Even`].
@@ -16257,6 +16839,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Even<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Even<(), T>> for Bivector<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16264,6 +16848,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Bivector<S, T>> for Multivector<S, T> {
         Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], x.c[4], x.c[5], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Bivector<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Odd<S, T> {
     /// The same multivector as a [`Odd`].
@@ -16273,6 +16859,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Odd<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Odd<(), T>> for Trivector<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16280,6 +16868,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Trivector<S, T>> for Multivector<S, T> {
         Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Trivector<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Even<S, T> {
     /// The same multivector as a [`Even`].
@@ -16289,6 +16879,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Even<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Even<(), T>> for Pseudoscalar<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16296,6 +16888,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Multivector<S, T> {
         Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0]] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Pseudoscalar<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Even<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
@@ -16305,6 +16899,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Even<S, T>> for Multivector<S, T> {
     }
 }
 
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Even<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Odd<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
     #[inline(always)]
@@ -16312,6 +16908,8 @@ impl<S: gx::Slots, T: gx::Coef> From<Odd<S, T>> for Multivector<S, T> {
         Multivector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[4], x.c[5], x.c[6], x.c[7], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
     }
 }
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Odd<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> gx::Reverse for Scalar<S, T> {
     type Output = Scalar<S, T>;

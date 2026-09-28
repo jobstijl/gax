@@ -44,5 +44,14 @@ opt-level = 3
 [profile.dev.build-override]
 opt-level = 3
 
+# The generated algebras are large: full debug info doubles every test binary (45 MB against
+# 22 MB for ops_pga3d) and a third of the target directory. Line tables keep backtraces and
+# file:line in panics; only a debugger's view of locals in generated code is lost.
+[profile.dev.package.gax]
+debug = "line-tables-only"
+
+[profile.dev.package.gax-core]
+debug = "line-tables-only"
+
 [profile.bench]
 debug = true

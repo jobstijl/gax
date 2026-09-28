@@ -221,6 +221,7 @@ pub const RESERVED: &[&str] = &[
     "Dual",
     "Undual",
     "DivBy",
+    "Widen",
 ];
 
 /// Qualify every bare reference to a core item with the private `gx` alias.
@@ -667,6 +668,25 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         }
         self.w("}\n\n");
 
+        // Building a map from the images of its input's basis blades.
+        let _ = write!(
+            self.out,
+            r"impl<A: Kind, T: Coef> {name}<(A,), T> {{
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `{name}`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<{name}<(), T>>) -> Self {{
+        let images = images.as_ref();
+        {name} {{ c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }}
+    }}
+}}
+
+"
+        );
+
         // Methods of maps and forms (see `gax_core::extensor`).
         let _ = write!(
             self.out,
@@ -942,7 +962,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 let (an, bn) = (&a.name, &b.name);
                 let _ = write!(
                     body,
-                    "impl<S: Slots, T: Coef> From<{an}<S, T>> for {bn}<S, T> {{\n    /// The same multivector as a [`{bn}`].\n    #[inline(always)]\n    fn from(x: {an}<S, T>) -> Self {{\n        {bn} {{ c: [{}] }}\n    }}\n}}\n\n",
+                    "impl<S: Slots, T: Coef> From<{an}<S, T>> for {bn}<S, T> {{\n    /// The same multivector as a [`{bn}`].\n    #[inline(always)]\n    fn from(x: {an}<S, T>) -> Self {{\n        {bn} {{ c: [{}] }}\n    }}\n}}\n\nimpl<T: Coef> gx::Widen<{bn}<(), T>> for {an}<(), T> {{}}\n\n",
                     exprs.join(", ")
                 );
             }
@@ -975,12 +995,12 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             let items: Vec<(bool, String)> = terms
                 .iter()
                 .map(|t| {
-                    let prod = format!("a[{}] * b[{}]", t.i, t.j);
+                    let prod = format!("p({}, {})", t.i, t.j);
                     let mag = t.coef.abs();
                     let term = if mag == 1 {
                         prod
                     } else {
-                        format!("({prod}).scale(T::from_i64({mag}))")
+                        format!("{prod}.scale(T::from_i64({mag}))")
                     };
                     (t.coef < 0, term)
                 })
@@ -988,9 +1008,14 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             let e = balanced_sum(&items);
             exprs.push(format!("({e}).0"));
         }
+        // The product of coefficients as one closure: its operator (and the slot list of its
+        // result, `Cat<S1, S2>`) is resolved once per impl instead of once per term, which
+        // takes a third off type checking. `move`: it captures the two small arrays by copy,
+        // which is cheaper to borrow-check than borrowing them.
+        let ops = "        let p = move |i: usize, j: usize| a[i] * b[j];\n";
         let _ = write!(
             body,
-            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        {on} {{\n            c: [\n"
+            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
         );
         for e in exprs {
             let _ = writeln!(body, "                {e},");

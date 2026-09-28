@@ -6,6 +6,7 @@
 #[cfg(feature = "pga3d")]
 pub use pga3d_extras::PrincipalInertia;
 
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
 /// The elements a motor carries onto one another, for `Motor::between`: planes, lines and
 /// points in PGA3D, lines and points in PGA2D.
 pub trait Between<M>: Sized {
@@ -13,6 +14,7 @@ pub trait Between<M>: Sized {
     fn between(a: Self, b: Self) -> crate::Unit<M>;
 }
 
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
 /// `exp(log(b / a) / 2)`, the square root of the ratio: the motion that carries `a` onto `b`.
 /// The ratio is normalized first, so `a` and `b` need not be.
 macro_rules! between_by_ratio {
@@ -31,6 +33,7 @@ between_by_ratio!(pga3d: Plane, Line => Line);
 #[cfg(feature = "pga2d")]
 between_by_ratio!(pga2d: Line => Point);
 
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
 /// Points: the translation between them. No motor carries a point onto its negative (motors
 /// keep the sign of the weight), so the points are unitized first.
 macro_rules! between_points {
@@ -595,6 +598,78 @@ mod pga2d_extras {
     }
 }
 
+#[cfg(any(feature = "cga2d", feature = "cga3d"))]
+/// Conformal points: the up map from Euclidean space (quadratic, so a function rather than a
+/// homomorphism) and back, spheres, and the PGA point of a round point.
+macro_rules! cga_points {
+    ($alg:ident, $pga:ident, $pga_feature:literal, [$($x:ident),+], $n:literal, $up_doc:literal) => {
+        impl<T: crate::Real> crate::$alg::Vector<(), T> {
+            #[doc = $up_doc]
+            #[inline]
+            pub fn up($($x: T),+) -> Self {
+                let half = T::from_f64(0.5);
+                let sq = T::zero() $(+ $x * $x)+;
+                Self::new($($x,)+ T::one(), half * sq)
+            }
+
+            /// The Euclidean coordinates of a round point (of any weight): its vector part
+            /// divided by its `eo` coefficient. Not finite for a point at infinity or a plane.
+            #[inline]
+            pub fn down(self) -> [T; $n] {
+                let r = self.c[$n].recip();
+                core::array::from_fn(|i| self.c[i] * r)
+            }
+
+            /// The sphere (or circle) with this centre and radius: `up(c) - ½r² ei`, in the
+            /// dual representation (a point `X` lies on it when `X · s = 0`).
+            #[inline]
+            pub fn sphere(centre: [T; $n], radius: T) -> Self {
+                let mut s = Self::from_coeffs(core::array::from_fn(|i| {
+                    if i < $n { centre[i] } else if i == $n { T::one() } else { T::zero() }
+                }));
+                let sq = centre.iter().fold(T::zero(), |a, &x| a + x * x);
+                s.c[$n + 1] = T::from_f64(0.5) * (sq - radius * radius);
+                s
+            }
+        }
+
+        #[cfg(feature = $pga_feature)]
+        impl<T: crate::Real> crate::$alg::Vector<(), T> {
+            /// The round point of a PGA point (of weight `w`): `w up(p / w)`.
+            #[inline]
+            pub fn from_point(p: crate::$pga::Point<(), T>) -> Self {
+                let [$($x),+] = p.to_euclidean();
+                Self::up($($x),+).gp(p.c[$n])
+            }
+
+            /// The PGA point of a round point: its vector part with its `eo` coefficient as the
+            /// weight. Linear (it drops `ei`), so it also maps round points' maps.
+            #[inline]
+            pub fn to_point(self) -> crate::$pga::Point<(), T> {
+                crate::$pga::Point::from_coeffs(core::array::from_fn(|i| self.c[i]))
+            }
+        }
+    };
+}
+#[cfg(feature = "cga3d")]
+cga_points!(
+    cga3d,
+    pga3d,
+    "pga3d",
+    [x, y, z],
+    3,
+    "The round point `eo + x + ½|x|² ei` of the Euclidean point `(x, y, z)`: a null vector, and `X · Y = -½|x - y|²` for two of them."
+);
+#[cfg(feature = "cga2d")]
+cga_points!(
+    cga2d,
+    pga2d,
+    "pga2d",
+    [x, y],
+    2,
+    "The round point `eo + x + ½|x|² ei` of the Euclidean point `(x, y)`: a null vector, and `X · Y = -½|x - y|²` for two of them."
+);
+
 #[cfg(test)]
 mod tests {
     #[cfg(feature = "pga3d")]
@@ -846,6 +921,30 @@ mod tests {
                     .all(|(a, b): (&f64, f64)| (a - b).abs() < 1e-12)
             );
         }
+    }
+
+    /// Round points are null, come back down, and measure distance; the homomorphism from PGA
+    /// keeps incidence: a point on a PGA plane lies on its CGA image, with `X · π` the plane's
+    /// signed distance.
+    #[cfg(all(feature = "cga3d", feature = "pga3d"))]
+    #[test]
+    #[allow(clippy::float_cmp)] // small integers, exact in f64
+    fn cga_round_points_and_pga_planes() {
+        use crate::{cga3d, pga3d};
+        let x = cga3d::Vector::<(), f64>::up(1.0, 2.0, 3.0);
+        assert!((x | x).s().abs() < 1e-12);
+        assert_eq!(x.down(), [1.0, 2.0, 3.0]);
+        let y = cga3d::Vector::up(4.0, 6.0, 3.0);
+        assert!(((x | y).s() + 12.5).abs() < 1e-12); // -½ |(3, 4, 0)|²
+        let s = cga3d::Vector::sphere([1.0, 2.0, 3.0], 5.0);
+        assert!((y | s).s().abs() < 1e-12); // (4, 6, 3) is 5 from the centre
+        let p = pga3d::Point::xyz(1.0, 2.0, 3.0);
+        assert_eq!(cga3d::Vector::from_point(p).down(), [1.0, 2.0, 3.0]);
+        assert_eq!(cga3d::Vector::from_point(p).to_point(), p);
+        let plane = pga3d::Plane::from_normal([0.0, 0.0, 1.0], 1.0); // z = 1
+        let dual: cga3d::Vector<(), f64> = plane.into();
+        assert!(((x | dual).s() - (plane & p).s()).abs() < 1e-12);
+        assert!(((x | dual).s() - 2.0).abs() < 1e-12);
     }
 
     #[cfg(feature = "pga3d")]

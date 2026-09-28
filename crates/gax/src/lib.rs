@@ -6,6 +6,14 @@ pub use gax_core::*;
 
 mod extras;
 
+/// The homomorphisms between the standard algebras, as `From` impls (generated from
+/// `gax_gen::emit_homs::HOMS`; see the guide, "Between algebras").
+#[allow(unused_imports, unused_parens, clippy::all, clippy::pedantic)]
+#[rustfmt::skip]
+mod homs {
+    include!("algebras/homs.rs");
+}
+
 #[cfg(feature = "std")]
 extern crate std;
 
