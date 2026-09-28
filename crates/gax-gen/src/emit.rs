@@ -59,6 +59,7 @@ pub struct Stats {
 pub const WGSL_MAX: usize = 16;
 
 /// Emit the module source for an algebra.
+#[allow(clippy::too_many_lines)]
 pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     let mut e = Emitter {
         spec,
@@ -67,9 +68,15 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         stats: Stats::default(),
     };
     e.header();
-    for k in &spec.kinds {
+    let phase = std::time::Instant::now();
+    let values = crate::par::map(&spec.kinds, |k| {
+        crate::par::timed(
+            || format!("{} values of {}", spec.name, k.name),
+            || crate::emit_values::value_methods(spec, k),
+        )
+    });
+    for (k, (methods, meta)) in spec.kinds.iter().zip(values) {
         e.kind(k);
-        let (methods, meta) = crate::emit_values::value_methods(spec, k);
         e.out.push_str(&methods);
         e.stats.values.push(meta);
     }
@@ -83,6 +90,8 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             );
         }
     }
+    crate::par::report(&format!("{} values", spec.name), phase);
+    let phase = std::time::Instant::now();
     for op in BinOp::ALL {
         for a in &spec.kinds {
             for b in &spec.kinds {
@@ -90,6 +99,8 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             }
         }
     }
+    crate::par::report(&format!("{} products", spec.name), phase);
+    let phase = std::time::Instant::now();
     e.divisions();
     e.embeddings();
     for k in &spec.kinds {
@@ -97,13 +108,54 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             e.unary(op, k);
         }
     }
-    for v in spec.kinds.iter().filter(|k| k.versor) {
-        for x in &spec.kinds {
-            e.sandwich(v, x, false);
-            e.sandwich(v, x, true);
+    crate::par::report(
+        &format!("{} divisions, embeddings, unary", spec.name),
+        phase,
+    );
+    let phase = std::time::Instant::now();
+    let jobs: Vec<(&KindSpec, &KindSpec, bool)> = spec
+        .kinds
+        .iter()
+        .filter(|k| k.versor)
+        .flat_map(|v| {
+            spec.kinds
+                .iter()
+                .flat_map(move |x| [(v, x, false), (v, x, true)])
+        })
+        .collect();
+    // Heaviest first: the cost grows with both sizes, and the unit kernels simplify further.
+    let weight = |&(v, x, unit): &(&KindSpec, &KindSpec, bool)| {
+        v.layout.len() * v.layout.len() * x.layout.len() * (1 + usize::from(unit))
+    };
+    // The sandwiches and the outermorphisms are independent: derived side by side.
+    let (maths, (outer, pairs)) = crate::par::join(
+        || {
+            crate::par::map_heaviest_first(&jobs, weight, |&(v, x, unit)| {
+                crate::par::timed(
+                    || {
+                        format!(
+                            "{} sandwich {}{} >> {}",
+                            spec.name,
+                            if unit { "unit " } else { "" },
+                            v.name,
+                            x.name
+                        )
+                    },
+                    || sandwich_math(spec, v, x, unit),
+                )
+            })
+        },
+        || crate::emit_outer::outermorphisms(spec),
+    );
+    for (&(v, x, unit), math) in jobs.iter().zip(maths) {
+        if let Some(math) = math {
+            e.sandwich(v, x, unit, math);
         }
     }
-    let (outer, pairs) = crate::emit_outer::outermorphisms(spec);
+    crate::par::report(
+        &format!("{} sandwiches and outermorphisms", spec.name),
+        phase,
+    );
     e.out.push_str(&outer);
     e.stats.outermorphisms = pairs;
     for (alias, kind) in &spec.aliases {
@@ -207,6 +259,150 @@ fn qualify(src: &str) -> String {
         }
     }
     out
+}
+
+/// The symbolic work of one sandwich kernel `vk >> xk`: its output kind, the fused value
+/// program, and the map path's matrix. Pure, so the kernels are computed in parallel.
+struct SandwichMath {
+    out: KindSpec,
+    relations: Vec<Poly>,
+    direct: Program,
+    matrix: Program,
+    entries: Vec<(usize, usize, Poly)>,
+}
+
+#[allow(clippy::too_many_lines)]
+fn sandwich_math(
+    spec: &AlgebraSpec,
+    vk: &KindSpec,
+    xk: &KindSpec,
+    unit: bool,
+) -> Option<SandwichMath> {
+    let alg = &spec.algebra;
+    let nv = vk.layout.len() as Var;
+    let v = symbolic::variables(&vk.layout, 0);
+    let x = symbolic::variables(&xk.layout, nv);
+    let vx = symbolic::binop(alg, BinOp::Gp, &v, &x);
+    let rev = symbolic::unop(alg, UnOp::Reverse, &v);
+    let res: SymMv = symbolic::binop(alg, BinOp::Gp, &vx, &rev);
+    let relations = if unit {
+        symbolic::unit_relations(alg, &v)
+    } else {
+        Vec::new()
+    };
+    if unit && relations.is_empty() {
+        return None;
+    }
+    // The output kind comes from the support modulo the relations (a unit versor's
+    // sandwich keeps the passenger's grades); the kernels are compiled from the unreduced
+    // polynomials, and the portfolio decides whether reducing them pays.
+    let mut reduced = res.clone();
+    for p in reduced.values_mut() {
+        *p = cse::reduce_by_relations(p, &relations);
+    }
+    reduced.retain(|_, p| !p.is_zero());
+    let support = symbolic::support(&reduced);
+    if support.is_empty() {
+        return None;
+    }
+    let out = spec
+        .kind_for_support(&support)
+        .expect("a full kind exists")
+        .clone();
+    let projected: SymMv = res
+        .into_iter()
+        .filter(|(m, _)| out.layout.position(*m).is_some())
+        .collect();
+    let coeffs = symbolic::to_coeffs(&out.layout, &projected).expect("support fits");
+    let passengers: BTreeSet<Var> = (nv..nv + xk.layout.len() as Var).collect();
+
+    // Value path: the whole formula, simplified jointly. For a `Unit` versor the simplified
+    // formulas are made homogeneous again in the versor (ADR-020, drift), so that a drifted
+    // versor (`v ~v = (1 + δ)²`) scales results uniformly instead of distorting them.
+    let norm = symbolic::binop(alg, BinOp::Gp, &v, &rev)
+        .get(&0)
+        .cloned()
+        .unwrap_or_else(Poly::zero);
+    // Map path: the matrix M[o][i] = d out[o] / d x[i], a polynomial in v.
+    let mut entries: Vec<(usize, usize, Poly)> = Vec::new();
+    for (o, p) in coeffs.iter().enumerate() {
+        for i in 0..xk.layout.len() {
+            let xi = nv + i as Var;
+            let mut c = Poly::zero();
+            for (m, &k) in &p.0 {
+                assert!(m.power(xi) <= 1, "sandwich must be linear in x");
+                if m.contains(xi) {
+                    let rest = m.div(&crate::poly::Monomial::var(xi)).expect("contains");
+                    c.add_term(rest, k);
+                }
+            }
+            if !c.is_zero() {
+                entries.push((o, i, c));
+            }
+        }
+    }
+    // Entries that are constant under the unit condition (a unit motor's weight row is
+    // exactly 1) are used as constants: they cost nothing and need no storage.
+    let matrix_polys: Vec<Poly> = entries
+        .iter()
+        .map(|e| {
+            let r = cse::reduce_by_relations(&e.2, &relations);
+            if r.as_constant().is_some() {
+                r
+            } else {
+                e.2.clone()
+            }
+        })
+        .collect();
+    // The value path and the map path are independent: compiled side by side.
+    let (direct, matrix) = crate::par::join(
+        || {
+            let direct = crate::par::timed(
+                || format!("{} {}>>{} value path", spec.name, vk.name, xk.name),
+                || cse::compile_best(&coeffs, &passengers, &relations),
+            );
+            let direct = if unit {
+                let h = homogeneous(&direct, nv, &norm, &passengers);
+                assert!(
+                    check_equal(&h, &coeffs, &relations) && is_homogeneous(&h, nv, 2),
+                    "the drift-tolerant {}>>{} kernel must equal the sandwich and be homogeneous",
+                    vk.name,
+                    xk.name
+                );
+                h
+            } else {
+                direct
+            };
+            debug_assert!(check_equal(&direct, &coeffs, &relations));
+            direct
+        },
+        || {
+            let matrix = crate::par::timed(
+                || format!("{} {}>>{} map path", spec.name, vk.name, xk.name),
+                || cse::compile_best(&matrix_polys, &BTreeSet::new(), &relations),
+            );
+            if unit {
+                let h = homogeneous(&matrix, nv, &norm, &BTreeSet::new());
+                assert!(
+                    check_equal(&h, &matrix_polys, &relations) && is_homogeneous(&h, nv, 2),
+                    "the drift-tolerant {}>>{} matrix must equal the sandwich's and be homogeneous",
+                    vk.name,
+                    xk.name
+                );
+                h
+            } else {
+                matrix
+            }
+        },
+    );
+
+    Some(SandwichMath {
+        out,
+        relations,
+        direct,
+        matrix,
+        entries,
+    })
 }
 
 struct Emitter<'a> {
@@ -843,113 +1039,15 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
 
     /// Fused `v x ~v` with `v` a value of versor kind `vk` and `x` of kind `xk` with any slots.
     #[allow(clippy::too_many_lines)]
-    fn sandwich(&mut self, vk: &KindSpec, xk: &KindSpec, unit: bool) {
-        let alg = &self.spec.algebra;
+    fn sandwich(&mut self, vk: &KindSpec, xk: &KindSpec, unit: bool, math: SandwichMath) {
+        let SandwichMath {
+            out,
+            relations,
+            direct,
+            matrix,
+            entries,
+        } = math;
         let nv = vk.layout.len() as Var;
-        let v = symbolic::variables(&vk.layout, 0);
-        let x = symbolic::variables(&xk.layout, nv);
-        let vx = symbolic::binop(alg, BinOp::Gp, &v, &x);
-        let rev = symbolic::unop(alg, UnOp::Reverse, &v);
-        let res: SymMv = symbolic::binop(alg, BinOp::Gp, &vx, &rev);
-        let relations = if unit {
-            symbolic::unit_relations(alg, &v)
-        } else {
-            Vec::new()
-        };
-        if unit && relations.is_empty() {
-            return;
-        }
-        // The output kind comes from the support modulo the relations (a unit versor's
-        // sandwich keeps the passenger's grades); the kernels are compiled from the unreduced
-        // polynomials, and the portfolio decides whether reducing them pays.
-        let mut reduced = res.clone();
-        for p in reduced.values_mut() {
-            *p = cse::reduce_by_relations(p, &relations);
-        }
-        reduced.retain(|_, p| !p.is_zero());
-        let support = symbolic::support(&reduced);
-        if support.is_empty() {
-            return;
-        }
-        let out = self
-            .spec
-            .kind_for_support(&support)
-            .expect("a full kind exists")
-            .clone();
-        let projected: SymMv = res
-            .into_iter()
-            .filter(|(m, _)| out.layout.position(*m).is_some())
-            .collect();
-        let coeffs = symbolic::to_coeffs(&out.layout, &projected).expect("support fits");
-        let passengers: BTreeSet<Var> = (nv..nv + xk.layout.len() as Var).collect();
-
-        // Value path: the whole formula, simplified jointly. For a `Unit` versor the simplified
-        // formulas are made homogeneous again in the versor (ADR-020, drift), so that a drifted
-        // versor (`v ~v = (1 + δ)²`) scales results uniformly instead of distorting them.
-        let norm = symbolic::binop(alg, BinOp::Gp, &v, &rev)
-            .get(&0)
-            .cloned()
-            .unwrap_or_else(Poly::zero);
-        let direct = cse::compile_best(&coeffs, &passengers, &relations);
-        let direct = if unit {
-            let h = homogeneous(&direct, nv, &norm, &passengers);
-            assert!(
-                check_equal(&h, &coeffs, &relations) && is_homogeneous(&h, nv, 2),
-                "the drift-tolerant {}>>{} kernel must equal the sandwich and be homogeneous",
-                vk.name,
-                xk.name
-            );
-            h
-        } else {
-            direct
-        };
-        debug_assert!(check_equal(&direct, &coeffs, &relations));
-
-        // Map path: the matrix M[o][i] = d out[o] / d x[i], a polynomial in v.
-        let mut entries: Vec<(usize, usize, Poly)> = Vec::new();
-        for (o, p) in coeffs.iter().enumerate() {
-            for i in 0..xk.layout.len() {
-                let xi = nv + i as Var;
-                let mut c = Poly::zero();
-                for (m, &k) in &p.0 {
-                    assert!(m.power(xi) <= 1, "sandwich must be linear in x");
-                    if m.contains(xi) {
-                        let rest = m.div(&crate::poly::Monomial::var(xi)).expect("contains");
-                        c.add_term(rest, k);
-                    }
-                }
-                if !c.is_zero() {
-                    entries.push((o, i, c));
-                }
-            }
-        }
-        // Entries that are constant under the unit condition (a unit motor's weight row is
-        // exactly 1) are used as constants: they cost nothing and need no storage.
-        let matrix_polys: Vec<Poly> = entries
-            .iter()
-            .map(|e| {
-                let r = cse::reduce_by_relations(&e.2, &relations);
-                if r.as_constant().is_some() {
-                    r
-                } else {
-                    e.2.clone()
-                }
-            })
-            .collect();
-        let matrix = cse::compile_best(&matrix_polys, &BTreeSet::new(), &relations);
-        let matrix = if unit {
-            let h = homogeneous(&matrix, nv, &norm, &BTreeSet::new());
-            assert!(
-                check_equal(&h, &matrix_polys, &relations) && is_homogeneous(&h, nv, 2),
-                "the drift-tolerant {}>>{} matrix must equal the sandwich's and be homogeneous",
-                vk.name,
-                xk.name
-            );
-            h
-        } else {
-            matrix
-        };
-
         let (vn, xn, on) = (&vk.name, &xk.name, &out.name);
         self.record_sandwich(vk, xk, &out, unit, &direct, &matrix, &entries);
         // check-units: the parts of v ~v - 1, handed to Coef::check_unit.

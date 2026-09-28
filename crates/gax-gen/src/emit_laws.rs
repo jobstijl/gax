@@ -109,9 +109,15 @@ fn scale(mv: &SymMv, p: &Poly) -> SymMv {
         .collect()
 }
 
+/// A versor's norm `N` and the Gröbner basis of its conditions.
+type Conditions = (Poly, Vec<Poly>);
+
+/// A product: the operation, the operand kinds and the output kind.
+type Product = (BinOp, String, String, String);
+
 /// `N`, the scalar part of `v ~v`, and a Gröbner basis of the other parts (the conditions
 /// under which `v` is a versor).
-fn versor_conditions(spec: &AlgebraSpec, v: &SymMv) -> Option<(Poly, Vec<Poly>)> {
+fn versor_conditions(spec: &AlgebraSpec, v: &SymMv) -> Option<Conditions> {
     let alg = &spec.algebra;
     let vv = symbolic::binop(alg, BinOp::Gp, v, &symbolic::unop(alg, UnOp::Reverse, v));
     let n = vv.get(&0).cloned().unwrap_or_else(Poly::zero);
@@ -308,78 +314,89 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
         }
     }
 
-    // Equivariance of the single-grade products under every versor, with the factor.
-    let mut equivariance = Vec::new();
-    for v in &versors {
+    // Equivariance of the single-grade products under every versor, with the factor. Each
+    // versor's conditions once, then every (versor, product) pair on its own core.
+    let conditions: Vec<Option<Conditions>> = crate::par::map(&versors, |v| {
+        versor_conditions(spec, &symbolic::variables(&kind(&v.name).layout, 0))
+    });
+    let jobs: Vec<(usize, &Product)> = versors
+        .iter()
+        .enumerate()
+        .filter(|(k, _)| conditions[*k].is_some())
+        .flat_map(|(k, v)| {
+            products
+                .iter()
+                .filter(move |(_, a, b, o)| {
+                    single_grade(kind(a))
+                        && single_grade(kind(b))
+                        && keeps(&v.name, a, false)
+                        && keeps(&v.name, b, false)
+                        && keeps(&v.name, o, false)
+                })
+                .map(move |p| (k, *p))
+        })
+        .collect();
+    let equivariance: Vec<Equivariance> = crate::par::map(&jobs, |&(k, (op, a, b, o))| {
+        let v = versors[k];
+        let (n, basis) = conditions[k].as_ref().expect("filtered");
         let vk = kind(&v.name);
         let vs = symbolic::variables(&vk.layout, 0);
-        let Some((n, basis)) = versor_conditions(spec, &vs) else {
-            continue;
-        };
         let nv = vk.layout.len() as Var;
-        for (op, a, b, o) in &products {
-            let (ak, bk) = (kind(a), kind(b));
-            if !single_grade(ak) || !single_grade(bk) {
-                continue;
-            }
-            if !(keeps(&v.name, a, false) && keeps(&v.name, b, false) && keeps(&v.name, o, false)) {
-                continue;
-            }
-            let av = symbolic::variables(&ak.layout, nv);
-            let bv = symbolic::variables(&bk.layout, nv + ak.layout.len() as Var);
-            let lhs = symbolic::binop(
-                alg,
-                *op,
-                &sandwich(spec, &vs, &av),
-                &sandwich(spec, &vs, &bv),
-            );
-            let rhs = sandwich(spec, &vs, &symbolic::binop(alg, *op, &av, &bv));
-            equivariance.push(Equivariance {
-                versor: v.name.clone(),
-                op: *op,
-                kinds: (a.clone(), b.clone(), o.clone()),
-                factor: find_factor(&lhs, &rhs, &n, &basis),
-            });
+        let (ak, bk) = (kind(a), kind(b));
+        let av = symbolic::variables(&ak.layout, nv);
+        let bv = symbolic::variables(&bk.layout, nv + ak.layout.len() as Var);
+        let lhs = symbolic::binop(
+            alg,
+            *op,
+            &sandwich(spec, &vs, &av),
+            &sandwich(spec, &vs, &bv),
+        );
+        let rhs = sandwich(spec, &vs, &symbolic::binop(alg, *op, &av, &bv));
+        Equivariance {
+            versor: v.name.clone(),
+            op: *op,
+            kinds: (a.clone(), b.clone(), o.clone()),
+            factor: find_factor(&lhs, &rhs, n, basis),
         }
-    }
+    });
 
     // Conjugation of maps on the slot kind: conj_m(f).of(m >> x) against m >> f.of(x).
-    let mut conjugation = Vec::new();
-    for v in &versors {
-        if !keeps(&v.name, &slot.name, false) {
-            continue;
-        }
-        let vk = kind(&v.name);
-        let vs = symbolic::variables(&vk.layout, 0);
-        let Some((n, basis)) = versor_conditions(spec, &vs) else {
-            continue;
-        };
-        let nv = vk.layout.len() as Var;
-        let nx = slot.layout.len();
-        // f as a matrix of variables, x as variables.
-        let fvar = |o: usize, i: usize| Poly::var(nv + (o * nx + i) as Var);
-        let xs = symbolic::variables(&slot.layout, nv + (nx * nx) as Var);
-        let apply = |x: &SymMv| -> SymMv {
-            let c = symbolic::to_coeffs(&slot.layout, x).expect("slot kind");
-            let out: Vec<Poly> = (0..nx)
-                .map(|o| (0..nx).fold(Poly::zero(), |acc, i| &acc + &(&fvar(o, i) * &c[i])))
-                .collect();
-            symbolic::from_coeffs(&slot.layout, &out)
-        };
-        // conj_m(f)(y) = m f(~m y m) ~m, so conj_m(f)(m x ~m) = m f(~m m x ~m m) ~m.
-        let rev = symbolic::unop(alg, UnOp::Reverse, &vs);
-        let lhs = sandwich(
-            spec,
-            &vs,
-            &apply(&sandwich(spec, &rev, &sandwich(spec, &vs, &xs))),
-        );
-        let rhs = sandwich(spec, &vs, &apply(&xs));
-        conjugation.push((
-            v.name.clone(),
-            slot.name.clone(),
-            find_factor(&lhs, &rhs, &n, &basis),
-        ));
-    }
+    let conj_versors: Vec<(usize, &&KindSpec)> = versors
+        .iter()
+        .enumerate()
+        .filter(|(k, v)| keeps(&v.name, &slot.name, false) && conditions[*k].is_some())
+        .collect();
+    let conjugation: Vec<(String, String, Option<Factor>)> =
+        crate::par::map(&conj_versors, |&(k, v)| {
+            let (n, basis) = conditions[k].as_ref().expect("filtered");
+            let vk = kind(&v.name);
+            let vs = symbolic::variables(&vk.layout, 0);
+            let nv = vk.layout.len() as Var;
+            let nx = slot.layout.len();
+            // f as a matrix of variables, x as variables.
+            let fvar = |o: usize, i: usize| Poly::var(nv + (o * nx + i) as Var);
+            let xs = symbolic::variables(&slot.layout, nv + (nx * nx) as Var);
+            let apply = |x: &SymMv| -> SymMv {
+                let c = symbolic::to_coeffs(&slot.layout, x).expect("slot kind");
+                let out: Vec<Poly> = (0..nx)
+                    .map(|o| (0..nx).fold(Poly::zero(), |acc, i| &acc + &(&fvar(o, i) * &c[i])))
+                    .collect();
+                symbolic::from_coeffs(&slot.layout, &out)
+            };
+            // conj_m(f)(y) = m f(~m y m) ~m, so conj_m(f)(m x ~m) = m f(~m m x ~m m) ~m.
+            let rev = symbolic::unop(alg, UnOp::Reverse, &vs);
+            let lhs = sandwich(
+                spec,
+                &vs,
+                &apply(&sandwich(spec, &rev, &sandwich(spec, &vs, &xs))),
+            );
+            let rhs = sandwich(spec, &vs, &apply(&xs));
+            (
+                v.name.clone(),
+                slot.name.clone(),
+                find_factor(&lhs, &rhs, n, basis),
+            )
+        });
 
     // Pairings that are constant signed permutations, for the adjoint laws.
     let mut pairings = Vec::new();

@@ -771,6 +771,27 @@ files in `gax/src/algebras/`, behind cargo features.
   both algebras), the square-root identity, division undoing the product (maps included), the
   embeddings, and the `f32` precision near a half turn against the `ulp/δ` bound.
 
+## ADR-030: The generator runs its jobs in parallel
+*Status: accepted, implemented (`gax-gen/src/par.rs`).*
+
+* **The problem.** Regenerating the standard algebras took about 8 minutes on one core, and
+  the `algebra!` macro runs the same generator at compile time.
+* **What is parallel.** Every job is a pure function of the algebra: a sandwich kernel, an
+  outermorphism, a kind's value methods, a law. `par::map` runs them on all cores, taking the
+  next job from a shared counter, heaviest first where a cost estimate exists, and returns the
+  results in order. The emitter then writes them sequentially, so the output is byte for byte
+  the sequential one, and `gax-regen --check` guards that.
+* **Why no dependency.** `std::thread::scope` and an atomic counter are enough, and the
+  generator is also a proc-macro dependency, where every crate adds build time.
+* **Nesting.** Inside a job, the value path and the map path compile side by side, and the
+  compiler's portfolio of strategies runs in parallel for programs over 2000 terms. Below that
+  size, threads cost more than they save. Running whole algebras side by side as well was
+  slower (39 s against 34 s), because it only oversubscribes the cores.
+* **The tracer's `Sym` is thread-local.** The emitters use `SymMv`, plain data, so they are
+  safe to run anywhere. Traced kernels still run on one thread each.
+* **Result.** 34 s on 16 cores (ADR measurements in performance.md). The rest is the longest
+  single jobs, which only a faster compiler (CSE) can shorten.
+
 ---
 
 ## Hypotheses

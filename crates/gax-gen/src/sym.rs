@@ -270,26 +270,28 @@ impl Sym {
         }
     }
 
-    /// The value, if this depends on no input: an exact constant, or a polynomial in named
-    /// float constants (folded calls). Used to fold calls and selects at trace time.
+    /// The value, if this depends on no input: an exact constant, or a named float constant
+    /// times an exact one (folded calls and arithmetic). Used to fold calls, arithmetic and
+    /// selects at trace time. Constants fold as they are made, so a constant is always one
+    /// term: this looks at no more than that, in place, which keeps it cheap on the large
+    /// polynomials of the generator's own simplifications.
     pub fn const_value(self) -> Option<f64> {
-        if let Some(c) = self.as_constant() {
-            return Some(c.to_f64());
-        }
-        let p = self.poly();
         with(|a| {
-            let mut sum = 0.0;
-            for (m, c) in &p.0 {
-                let mut t = c.to_f64();
-                for &v in &m.0 {
-                    match a.vars[v as usize] {
-                        VarDef::Constant(ConstKind::Float(f)) => t *= f,
-                        _ => return None,
-                    }
-                }
-                sum += t;
+            let p = &a.polys[self.0 as usize];
+            if p.0.len() > 1 {
+                return None;
             }
-            Some(sum)
+            let Some((m, c)) = p.0.iter().next() else {
+                return Some(0.0);
+            };
+            match m.0.as_slice() {
+                [] => Some(c.to_f64()),
+                [v] => match a.vars[*v as usize] {
+                    VarDef::Constant(ConstKind::Float(f)) => Some(c.to_f64() * f),
+                    _ => None,
+                },
+                _ => None,
+            }
         })
     }
 

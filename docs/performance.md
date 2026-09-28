@@ -335,9 +335,23 @@ These are debug builds of the library alone; generic code is compiled only when 
 
 ¹ Measured on a busy machine, where CGA3D took 18 s instead of 14.4 s.
 
-A release build with the first six algebras takes 27 s. Regenerating all eight takes about two
-minutes in release. Most of it goes to CSTA (100 s) and to simplifying CGA3D's 16-component
-versors. The line counts above predate the batch kernels (about 5% more per algebra now).
+A release build with the first six algebras takes 27 s.
+
+**Regenerating** all nine standard algebras (`gax-regen`) takes 34 s on 16 cores. It took
+about 8 minutes when it ran on one core: CSTA 205 s, CGA3D 173 s, STAP 63 s, STA 23 s,
+CGA2D 13 s, and the rest a few seconds. The generator's jobs are pure functions of the
+algebra (ADR-030), so it now runs them in parallel and writes their output in order:
+
+* the sandwich kernels, heaviest first, and in each the value path beside the map path;
+* the outermorphisms, beside the sandwiches;
+* the value methods of each kind;
+* the law derivations, one per versor and product;
+* the strategies of the compiler's portfolio, for programs over 2000 terms.
+
+Its output is byte for byte the sequential one: `gax-regen --check` passes. What remains is
+the longest single jobs, 13 s each: CGA3D's unit sandwiches on a whole multivector and CSTA's
+outermorphism from vectors to quadvectors. `gax-regen --verbose --only <algebra>` times one
+algebra's phases, and `GAX_GEN_PROFILE=1` lists every job over half a second.
 
 * **Why generated code costs nothing unused.** Every generated function is either generic (over slots
   and coefficients) or `#[inline]`, so machine code exists only for what a program uses.

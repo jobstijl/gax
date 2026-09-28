@@ -113,7 +113,8 @@ pub fn compile(polys: &[Poly], opts: &Options) -> Program {
 
 /// Compile with several strategies and keep the cheapest program.
 pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Poly]) -> Program {
-    let mut candidates = Vec::new();
+    // The strategies are independent: compiled in parallel, chosen in this order.
+    let mut strategies = Vec::new();
     for use_rel in [false, true] {
         if use_rel && relations.is_empty() {
             continue;
@@ -124,26 +125,27 @@ pub fn compile_best(polys: &[Poly], passengers: &BTreeSet<Var>, relations: &[Pol
             Vec::new()
         };
         for kernels in [false, true] {
-            candidates.push(compile(
-                polys,
-                &Options {
-                    passengers: BTreeSet::new(),
+            strategies.push(Options {
+                passengers: BTreeSet::new(),
+                relations: rel.clone(),
+                kernels,
+            });
+            if !passengers.is_empty() {
+                strategies.push(Options {
+                    passengers: passengers.clone(),
                     relations: rel.clone(),
                     kernels,
-                },
-            ));
-            if !passengers.is_empty() {
-                candidates.push(compile(
-                    polys,
-                    &Options {
-                        passengers: passengers.clone(),
-                        relations: rel.clone(),
-                        kernels,
-                    },
-                ));
+                });
             }
         }
     }
+    // Threads pay off only for large programs; most kernels compile in microseconds.
+    let terms: usize = polys.iter().map(Poly::len).sum();
+    let candidates = if terms > 2000 {
+        crate::par::map(&strategies, |o| compile(polys, o))
+    } else {
+        strategies.iter().map(|o| compile(polys, o)).collect()
+    };
     choose(candidates)
 }
 

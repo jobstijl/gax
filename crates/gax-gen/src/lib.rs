@@ -13,6 +13,7 @@ pub mod emit_values;
 pub mod emit_wgsl;
 pub mod groebner;
 pub mod kernel;
+pub mod par;
 pub mod poly;
 pub mod slp;
 pub mod spec;
