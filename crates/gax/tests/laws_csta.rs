@@ -315,4 +315,10 @@ law_suite::law_suite! {
         (ScalarProduct, scalar_product, Vector, Vector),
         (ScalarProduct, scalar_product, Quintvector, Quintvector),
     ],
+    divisions: [
+        (Scalar, Vector, Even),
+        (Vector, Vector, Odd),
+        (Quintvector, Vector, Odd),
+        (Pseudoscalar, Vector, Even),
+    ],
 }

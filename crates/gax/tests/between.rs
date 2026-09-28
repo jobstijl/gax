@@ -104,6 +104,10 @@ proptest! {
         let map: Motor<(Plane,), f64> = Plane::slot() / b;
         prop_assert!(close(&map.of(b), &Motor::from(gax::pga3d::Scalar::new(1.0)), 1e-12));
         prop_assert!(close(&(p / 2.0), &(p * 0.5), 0.0));
+        // By a unit versor: the reverse, the same as the inverse.
+        let u = (Line::new(0.3, -0.2, 0.5, 0.1, 0.7, -0.4) * 0.8).exp();
+        prop_assert!(close(&(a / u), &(a / u.into_inner()), 1e-12));
+        prop_assert!(close(&((p / u) * u.into_inner()), &gax::pga3d::Flector::from(p), 1e-12));
     }
 }
 

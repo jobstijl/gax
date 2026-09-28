@@ -5,7 +5,8 @@ each one is checked, and lists the rewrites they license. Numerical behaviour (f
 fusion, drift) is in [numerics.md](numerics.md).
 
 Tags: **[sym]** is an exact proof on symbolic coefficients, **[sym/ideal]** is an exact proof modulo
-the ideal of a condition, **[prop]** is an f64 property test, **[doc]** is documentation only. The
+the ideal of a condition, **[gen]** is an exact proof the generator runs before it emits the
+code, **[prop]** is an f64 property test, **[doc]** is documentation only. The
 proofs are the test functions of the `law_suite!` macro in
 [`crates/gax/tests/law_suite/mod.rs`](../crates/gax/tests/law_suite/mod.rs). Each algebra
 instantiates it in a generated `crates/gax/tests/laws_{algebra}.rs`.
@@ -197,6 +198,19 @@ generator finds.
 * No `+` between different slot lists (`compile_fail/add_different_slots.rs`,
   `compile_fail/add_map_to_value.rs`).
 * `Cat` is associative only through `reassoc` (`compile_fail/generic_bracketing.rs`).
+
+### K. Division, and maps between algebras
+
+* [sym/ideal] **Division undoes the product** (`division`): `(a / v) v == a` for every invertible
+  versor kind `v` and every kind `a` whose quotient comes back to a kind that holds it. It is
+  checked on symbolic values modulo the relations of the reciprocals in the inverse (`r N = 1`),
+  so it holds wherever `v` is invertible. Dividing by a `Unit` versor multiplies by its reverse
+  (`tests/between.rs` checks it against the inverse).
+* [gen] **Homomorphisms between algebras keep products.** For each of the twelve declared
+  homomorphisms (ADR-032), the generator proves `φ(a b) == φ(a) φ(b)` exactly, on symbolic
+  values of every pair of source kinds, before it emits the `From` impls, and proves
+  `φ(~a) == ~φ(a)` for the kinds it lets `Unit::widen` convert. `tests/homs.rs` checks the
+  emitted code on random values.
 
 ## 4. Licensed rewrites
 

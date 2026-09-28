@@ -61,11 +61,6 @@ pub fn particle_step<T: Real>(
     (p + v * dt, v)
 }
 
-/// `if a < b { x } else { y }`, coefficient-wise on points (branch-free, so it traces).
-fn select_point<T: Real>(a: T, b: T, x: Point<(), T>, y: Point<(), T>) -> Point<(), T> {
-    Point::from_coeffs(core::array::from_fn(|i| T::select_lt(a, b, x.c[i], y.c[i])))
-}
-
 /// A corner of the quad drawn around the segment `a → b` (the line renderer's vertex shader):
 /// `k` is `[along, side, extent]`, with `along` and `side` in `{-1, 1}`. The quad reaches
 /// `extent` past both ends and to both sides. The side direction is the segment's direction
@@ -75,7 +70,7 @@ pub fn segment_corner<T: Real>(a: Point<(), T>, b: Point<(), T>, k: [T; 3]) -> P
     let (zero, one) = (T::zero(), T::one());
     let d = b - a;
     let len = d.ideal_norm();
-    let u = select_point(
+    let u = gax::select_lt(
         len,
         T::from_f64(1e-6),
         Point::direction(one, zero),

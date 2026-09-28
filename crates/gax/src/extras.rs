@@ -330,9 +330,7 @@ mod pga3d_extras {
             let e = Plane::new(far, o - far, zero, zero);
             let other = an ^ (e - an.gp((e | an).s()));
             let small = meet.norm() * (a.norm() * b.norm()).recip();
-            let axis = Line::from_coeffs(core::array::from_fn(|i| {
-                T::select_lt(small, T::from_f64(1e-6), other.c[i], meet.c[i])
-            }));
+            let axis = crate::select_lt(small, T::from_f64(1e-6), other, meet);
             Self::rotation(axis, angle)
         }
 
@@ -392,9 +390,12 @@ mod pga3d_extras {
             // `up` along `forward`: no roll is defined; keep the turn alone.
             let id = Self::translation(zero, zero, zero);
             let n = want.norm();
-            let roll = Unit::new_unchecked(Self::from_coeffs(core::array::from_fn(|i| {
-                T::select_lt(n, T::from_f64(1e-9), id.c[i], roll.c[i])
-            })));
+            let roll = Unit::new_unchecked(crate::select_lt(
+                n,
+                T::from_f64(1e-9),
+                id.into_inner(),
+                roll.into_inner(),
+            ));
             Self::translation(ex, ey, ez) * roll * turn
         }
     }

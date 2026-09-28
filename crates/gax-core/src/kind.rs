@@ -80,3 +80,74 @@ pub trait Extensor: Copy + Debug + PartialEq + 'static {
 
 /// Same kind, other slots and coefficients.
 pub type Retype<M, S, T> = <<M as Extensor>::Kind as Kind>::Mv<S, T>;
+
+/// `if a < b { x } else { y }`, coefficient by coefficient, for values and maps alike. It is
+/// data flow, not a branch (`Real::select_lt` on every coefficient), so it vectorizes on SIMD
+/// lanes and traces.
+///
+/// ```
+/// use gax::pga3d::Point;
+/// let (near, far) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(9.0, 0.0, 0.0));
+/// assert_eq!(gax::select_lt(0.2, 0.5, near, far), near);
+/// assert_eq!(gax::select_lt(0.7, 0.5, near, far), far);
+/// ```
+#[inline]
+pub fn select_lt<M: Extensor>(a: M::Coef, b: M::Coef, x: M, y: M) -> M
+where
+    M::Coef: crate::coef::Real,
+{
+    M::from_coeffs(<M::Kind as Kind>::arr_zip(
+        x.coeffs(),
+        y.coeffs(),
+        |cx, cy| {
+            <M::Slots as Slots>::zip(cx, cy, &mut |p, q| {
+                <M::Coef as crate::coef::Real>::select_lt(a, b, *p, *q)
+            })
+        },
+    ))
+}
+
+/// Approximate equality of values, maps and forms: every coefficient within `tol` of the
+/// other's, relative to the larger of 1 and the largest coefficient of the two (so it is an
+/// absolute tolerance near zero and a relative one for large values).
+///
+/// ```
+/// use gax::ApproxEq;
+/// use gax::pga3d::{Motor, Point};
+/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, std::f64::consts::FRAC_PI_2);
+/// assert!((m >> Point::xyz(1.0, 0.0, 0.0)).approx_eq(&Point::xyz(0.0, 1.0, 0.0), 1e-12));
+/// ```
+pub trait ApproxEq {
+    /// Whether every coefficient is within `tol` (relative to the magnitude, see above).
+    fn approx_eq(&self, other: &Self, tol: f64) -> bool;
+    /// The largest difference of two coefficients (absolute).
+    fn max_abs_diff(&self, other: &Self) -> f64;
+}
+
+impl<M: Extensor> ApproxEq for M
+where
+    M::Coef: Into<f64>,
+{
+    fn approx_eq(&self, other: &Self, tol: f64) -> bool {
+        let scale = flat(self)
+            .chain(flat(other))
+            .fold(1.0f64, |m, x| m.max(x.abs()));
+        self.max_abs_diff(other) <= tol * scale
+    }
+
+    fn max_abs_diff(&self, other: &Self) -> f64 {
+        flat(self)
+            .zip(flat(other))
+            .fold(0.0f64, |m, (x, y)| m.max((x - y).abs()))
+    }
+}
+
+/// Every coefficient of `m`, output first, as `f64`.
+fn flat<M: Extensor>(m: &M) -> impl Iterator<Item = f64> + '_
+where
+    M::Coef: Into<f64>,
+{
+    m.coeffs().as_ref().iter().flat_map(|col| {
+        (0..<M::Slots as Slots>::SIZE).map(move |k| <M::Slots as Slots>::get_flat(col, k).into())
+    })
+}

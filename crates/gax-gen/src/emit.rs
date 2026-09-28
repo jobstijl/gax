@@ -916,6 +916,13 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                     body,
                     "impl<S: Slots, T: Real> DivBy<{bn}<(), T>> for {an}<S, T> {{\n    type Output = <Self as Gp<{inv}<(), T>>>::Output;\n    #[inline(always)]\n    fn div_by(self, rhs: {bn}<(), T>) -> Self::Output {{\n        Gp::gp(self, rhs.inverse())\n    }}\n}}\n\n"
                 );
+                // A unit versor's inverse is its reverse: no arithmetic.
+                if b.versor && *inv == b.name {
+                    let _ = write!(
+                        body,
+                        "impl<S: Slots, T: Coef> DivBy<Unit<{bn}<(), T>>> for {an}<S, T> {{\n    type Output = <Self as Gp<{bn}<(), T>>>::Output;\n    /// `self ~rhs`: a unit versor's inverse is its reverse.\n    #[inline(always)]\n    fn div_by(self, rhs: Unit<{bn}<(), T>>) -> Self::Output {{\n        Gp::gp(self, rhs.into_inner().reverse())\n    }}\n}}\n\n"
+                    );
+                }
             }
         }
         self.w(&body);

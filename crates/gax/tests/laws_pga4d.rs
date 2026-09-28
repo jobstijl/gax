@@ -108,4 +108,6 @@ law_suite::law_suite! {
         (Vee, vee, Hyperplane, Point),
         (Vee, vee, Point, Hyperplane),
     ],
+    divisions: [
+    ],
 }

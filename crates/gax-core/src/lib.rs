@@ -51,7 +51,7 @@ pub use coef::{Coef, Elem, Real};
 pub use extensor::{Endomorphism, Form, Pairing, SquareMap, TraceFirst};
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
-pub use kind::{Coeffs, Extensor, Kind, Retype};
+pub use kind::{ApproxEq, Coeffs, Extensor, Kind, Retype, select_lt};
 pub use ops::{
     Anticommutator, Commutator, Conjugate, DivBy, Dot, Dual, Gp, Involute, Lc, Log, Outermorphism,
     Rc, Reverse, ScalarProduct, Transform, TransformInv, Undual, Vee, Wedge,

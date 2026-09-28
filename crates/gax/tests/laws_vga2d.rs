@@ -498,4 +498,16 @@ law_suite::law_suite! {
         (Dot, dot, Vector, Vector),
         (ScalarProduct, scalar_product, Vector, Vector),
     ],
+    divisions: [
+        (Scalar, Vector, Rotor),
+        (Vector, Vector, Vector),
+        (Pseudoscalar, Vector, Rotor),
+        (Rotor, Vector, Rotor),
+        (Multivector, Vector, Multivector),
+        (Scalar, Rotor, Rotor),
+        (Vector, Rotor, Vector),
+        (Pseudoscalar, Rotor, Rotor),
+        (Rotor, Rotor, Rotor),
+        (Multivector, Rotor, Multivector),
+    ],
 }

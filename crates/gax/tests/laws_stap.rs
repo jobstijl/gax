@@ -301,4 +301,10 @@ law_suite::law_suite! {
         (Vee, vee, Vector, Quadvector),
         (Vee, vee, Quadvector, Vector),
     ],
+    divisions: [
+        (Scalar, Vector, Motor),
+        (Vector, Vector, Odd),
+        (Quadvector, Vector, Motor),
+        (Pseudoscalar, Vector, Odd),
+    ],
 }

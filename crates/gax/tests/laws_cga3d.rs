@@ -424,4 +424,18 @@ law_suite::law_suite! {
         (ScalarProduct, scalar_product, Vector, Vector),
         (ScalarProduct, scalar_product, Quadvector, Quadvector),
     ],
+    divisions: [
+        (Scalar, Vector, Even),
+        (Vector, Vector, Odd),
+        (Twist, Vector, Even),
+        (Quadvector, Vector, Even),
+        (Pseudoscalar, Vector, Odd),
+        (Motor, Vector, Even),
+        (Scalar, Motor, Motor),
+        (Vector, Motor, Odd),
+        (Twist, Motor, Motor),
+        (Quadvector, Motor, Even),
+        (Pseudoscalar, Motor, Odd),
+        (Motor, Motor, Motor),
+    ],
 }

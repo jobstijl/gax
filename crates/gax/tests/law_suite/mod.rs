@@ -257,8 +257,26 @@ macro_rules! law_suite {
         outer: [$(($ov:ident, $ob:ident)),* $(,)?],
         top: [$(($tv:ident, $tb:ident)),* $(,)?],
         unit_det: [$(($dv:ident, $dx:ident, $dt:ident, $de:literal)),* $(,)?],
-        pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?] $(,)?
+        pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?],
+        divisions: [$(($divnum:ident, $divden:ident, $divback:ident)),* $(,)?] $(,)?
     ) => {
+        /// K: division undoes the product, `(a / v) v = a`, modulo the relations of the
+        /// reciprocals in the inverse (`r N = 1`).
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn division() {
+            $((|| {
+                reset();
+                let (a, v): ($divnum<(), T>, $divden<(), T>) = (fresh(), fresh());
+                let back: $divback<(), T> = (a / v) * v;
+                let relations = law_suite::basis(&law_suite::Sym::atom_relations());
+                law(
+                    same_mod(&back, &$divback::from(a), &relations),
+                    concat!("(a / v) v = a for ", stringify!($divnum), " / ", stringify!($divden)),
+                );
+            })();)*
+        }
+
         #[allow(unused_imports)]
         use law_suite::{
             adjoint, close, factor, flat, fresh, law, projects_to, random_f64, reset,

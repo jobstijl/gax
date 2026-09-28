@@ -43,6 +43,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Division `a / b` (`DivBy`), embeddings between kinds (`From`, `Unit::widen`), `Motor::between` as `sqrt(b / a)` (ADR-029)
 - [x] The generator runs its jobs in parallel: regenerating went from about 8 minutes to 34 s (ADR-030)
 - [x] Compile time: one closure per product (CSTA 16.3 s to 13.9 s, release code unchanged), line tables in dev builds of gax (ADR-031)
+- [x] Division by a `Unit` versor (its reverse), the division law in every symbolic law suite, `gax::select_lt` for any value or map, `ApproxEq`
 - [x] Homomorphisms between the standard algebras as `From` (twelve, proved exactly), `Widen` for the ones that keep units, `from_images` for maps between any kinds, CGA `up`/`down`/`sphere` (ADR-032)
 
 ## Phase 2b: batch kernels

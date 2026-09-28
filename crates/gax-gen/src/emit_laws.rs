@@ -595,6 +595,49 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             })
             .collect(),
     );
+    // Division: `(a / v) v = a` for each invertible versor kind `v` and law kind `a` whose
+    // quotient's product comes back to a kind holding `a`.
+    let product_kind = |x: &str, y: &str| {
+        stats
+            .products
+            .iter()
+            .find(|(op, p, q, _)| *op == BinOp::Gp && p == x && q == y)
+            .map(|p| p.3.clone())
+    };
+    let mut divisions = Vec::new();
+    for (vk, meta) in spec.kinds.iter().zip(&stats.values) {
+        if !(vk.versor
+            && vk.layout.len() <= LAW_VERSOR
+            && meta.inverse.as_deref() == Some(&vk.name))
+        {
+            continue;
+        }
+        for a in &law_kinds {
+            let Some(quotient) = product_kind(&a.name, &vk.name) else {
+                continue;
+            };
+            let Some(back) = product_kind(&quotient, &vk.name) else {
+                continue;
+            };
+            let holds = kind(&back)
+                .layout
+                .blades
+                .iter()
+                .map(|b| b.0)
+                .collect::<BTreeSet<u32>>();
+            if a.layout.blades.iter().all(|b| holds.contains(&b.0)) {
+                divisions.push((a.name.clone(), vk.name.clone(), back));
+            }
+        }
+    }
+    list(
+        &mut s,
+        "divisions",
+        divisions
+            .iter()
+            .map(|(a, v, back)| format!("({a}, {v}, {back})"))
+            .collect(),
+    );
     Laws {
         invocation: s,
         equivariance,
