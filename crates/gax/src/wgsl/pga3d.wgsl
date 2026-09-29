@@ -2099,6 +2099,17 @@ fn translator_renormalize_fast(x: Translator) -> Translator {
     return Translator(vec4<f32>(t8, t10, t12, t14));
 }
 
+// The logarithm of a unit `Translator`: the `Line` B with `exp(B) = x`.
+fn unit_translator_log(x: Translator) -> Line {
+    let r1 = study_log_complex(x.c0.x, 0.0, 0.0, 0.0);
+    let h0 = r1[0];
+    let h1 = r1[1];
+    let t0 = x.c0.y * h0;
+    let t1 = x.c0.z * h0;
+    let t2 = x.c0.w * h0;
+    return Line(vec4<f32>(0.0, 0.0, 0.0, t0), vec4<f32>(t1, t2, 0.0, 0.0));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn motor_norm_squared(x: Motor) -> f32 {
     let t1 = x.c0.y * x.c0.y;
@@ -9475,6 +9486,156 @@ fn unit_flector_sandwich_multivector(v: Flector, x: Multivector) -> Multivector 
     return Multivector(vec4<f32>(t66, t124, t127, t130), vec4<f32>(t133, t140, t147, t154), vec4<f32>(t157, t160, t163, t167), vec4<f32>(t171, t176, t119, t177));
 }
 
+// Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
+// `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
+struct StudyDual {
+    p: vec2<f32>,
+    d: vec2<f32>,
+}
+
+fn cx_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    let d = 1.0 / (b.x * b.x + b.y * b.y);
+    return vec2<f32>((a.x * b.x + a.y * b.y) * d, (a.y * b.x - a.x * b.y) * d);
+}
+
+// The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
+// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
+    let r = sqrt(z.x * z.x + z.y * z.y);
+    let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));
+    let other = z.y / (2.0 * select(1.0, t, 0.0 < t));
+    let signed = select(t, -t, z.y < 0.0);
+    return select(vec2<f32>(t, other), vec2<f32>(abs(other), signed), z.x < 0.0);
+}
+
+fn cx_ln(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(log(z.x * z.x + z.y * z.y) * 0.5, atan2(z.y, z.x));
+}
+
+fn cx_sinh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(sinh(z.x) * cos(z.y), cosh(z.x) * sin(z.y));
+}
+
+fn cx_cosh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(cosh(z.x) * cos(z.y), sinh(z.x) * sin(z.y));
+}
+
+fn sd_real(x: f32) -> StudyDual {
+    return StudyDual(vec2<f32>(x, 0.0), vec2<f32>(0.0, 0.0));
+}
+
+fn sd_add(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p + b.p, a.d + b.d);
+}
+
+fn sd_sub(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p - b.p, a.d - b.d);
+}
+
+fn sd_scale(a: StudyDual, k: f32) -> StudyDual {
+    return StudyDual(a.p * k, a.d * k);
+}
+
+fn sd_mul(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(cx_mul(a.p, b.p), cx_mul(a.p, b.d) + cx_mul(a.d, b.p));
+}
+
+fn sd_div(a: StudyDual, b: StudyDual) -> StudyDual {
+    let q = cx_div(a.p, b.p);
+    return StudyDual(q, cx_div(a.d - cx_mul(q, b.d), b.p));
+}
+
+fn sd_sqrt(a: StudyDual) -> StudyDual {
+    let r = cx_sqrt(a.p);
+    return StudyDual(r, cx_div(a.d, r + r));
+}
+
+fn sd_ln(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_ln(a.p), cx_div(a.d, a.p));
+}
+
+fn sd_sinh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_sinh(a.p), cx_mul(a.d, cx_cosh(a.p)));
+}
+
+fn sd_cosh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_cosh(a.p), cx_mul(a.d, cx_sinh(a.p)));
+}
+
+// `if |x|² < t { a } else { b }` on the value's squared magnitude.
+fn sd_select_small(x: StudyDual, t: f32, a: StudyDual, b: StudyDual) -> StudyDual {
+    let small = dot(x.p, x.p) < t;
+    return StudyDual(select(b.p, a.p, small), select(b.d, a.d, small));
+}
+
+// Every function below computes its direct form at a stand-in argument wherever its series is
+// selected, so a discarded branch never divides by zero (`sqrt` has an infinite derivative at
+// 0): the result is the same, and there are no non-finite intermediates to rely on discarding.
+
+// `C(x) = cosh(sqrt x)`, with its series where `|x|² < 1/100` (thresholds for `f32`).
+fn study_exp_c(x: StudyDual) -> StudyDual {
+    let c = sd_cosh(sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x)));
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var cs = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 2.0));
+    cs = sd_add(cs, sd_scale(x2, 1.0 / 24.0));
+    cs = sd_add(cs, sd_scale(x3, 1.0 / 720.0));
+    cs = sd_add(cs, sd_scale(sd_mul(x3, x), 1.0 / 40320.0));
+    return sd_select_small(x, 0.01, cs, c);
+}
+
+// `S(x) = sinh(sqrt x) / sqrt x`, with its series where `|x|² < 1/100`.
+fn study_exp_s(x: StudyDual) -> StudyDual {
+    let r = sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x));
+    let s = sd_div(sd_sinh(r), r);
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var ss = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 6.0));
+    ss = sd_add(ss, sd_scale(x2, 1.0 / 120.0));
+    ss = sd_add(ss, sd_scale(x3, 1.0 / 5040.0));
+    ss = sd_add(ss, sd_scale(sd_mul(x3, x), 1.0 / 362880.0));
+    return sd_select_small(x, 0.01, ss, s);
+}
+
+// The factor `H` of `log(R) = H <R>_2` for a versor `R = c + P` with `u = P²`:
+// `2 atanh(t) / (t (1 + c))`, `t = sqrt(u) / (1 + c)` (see gax_core::study::log_factor).
+fn study_log_factor(c: StudyDual, u: StudyDual) -> StudyDual {
+    let opc = sd_add(sd_real(1.0), c);
+    // `t² = u / (1 + c)²` for the series, without the root; the direct form at `t = 1/2`
+    // where the series is selected.
+    let t2 = sd_div(u, sd_mul(opc, opc));
+    let safe = sd_select_small(t2, 1e-4, sd_scale(sd_mul(opc, opc), 0.25), u);
+    let t = sd_div(sd_sqrt(safe), opc);
+    let direct = sd_div(sd_scale(sd_ln(sd_div(sd_add(sd_real(1.0), t), sd_sub(sd_real(1.0), t))), 0.5), t);
+    var series = sd_real(1.0 / 15.0);
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 13.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 11.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 9.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 7.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 5.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 3.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0));
+    let ratio = sd_select_small(t2, 1e-4, series, direct);
+    return sd_div(sd_scale(ratio, 2.0), opc);
+}
+
+// `acosh(y)²`, with its series near `y = 1` (`|y - 1|² < 1e-8`).
+fn study_acosh_sq(y: StudyDual) -> StudyDual {
+    let t = sd_sub(y, sd_real(1.0));
+    let ys = sd_select_small(t, 1e-8, sd_real(2.0), y);
+    let w = sd_ln(sd_add(ys, sd_sqrt(sd_mul(sd_sub(ys, sd_real(1.0)), sd_add(ys, sd_real(1.0))))));
+    let direct = sd_mul(w, w);
+    let tt = sd_mul(t, t);
+    var series = sd_scale(t, 2.0);
+    series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
+    series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
+    return sd_select_small(t, 1e-8, series, direct);
+}
+
 // `exp(B) = C + S B` for `B² = lambda + mu I` with `I² = 0` and `lambda <= 0`, as
 // `[C, C_I, S, S_I]`: `C = cos a`, `S = sin a / a` with `a = sqrt(-lambda)`, and the `I` parts
 // `mu S / 2` and `mu S'`, `S' = (S - C) / (2 a²)` (series near `a = 0`, see gax_core::study).
@@ -9495,6 +9656,14 @@ fn study_exp_rotation(lambda: f32, mu: f32) -> vec4<f32> {
     ds = ds * a2 + (1.0 / 6.0);
     let d = select((s - cs) * inv * inv * 0.5, ds, a2 < 0.25);
     return vec4<f32>(cs, mu * s * 0.5, s, mu * d);
+}
+
+// `log R = (h0 + h1 I) <R>_2` for a unit versor with scalar-pseudoscalar part `c0 + c1 I`
+// and bivector part squaring to `u0 + u1 I`, `I² = -1`, as `[h0, h1]`
+// (gax_core::study::log_coeffs).
+fn study_log_complex(c0: f32, c1: f32, u0: f32, u1: f32) -> vec2<f32> {
+    let r = study_log_factor(StudyDual(vec2<f32>(c0, c1), vec2<f32>(0.0, 0.0)), StudyDual(vec2<f32>(u0, u1), vec2<f32>(0.0, 0.0))).p;
+    return vec2<f32>(r.x, r.y);
 }
 
 // `log R = h0 P + h1 I P` for a unit versor `R = c + P` with `c = c0 + c1 I`,

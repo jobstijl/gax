@@ -731,8 +731,13 @@ files in `gax/src/algebras/`, behind cargo features.
      kernel's computed error bound.
   5. A wgpu harness runs every kernel on a GPU (lavapipe in CI), and checks the matrix
      orientation, a layout round trip and a traced kernel.
+* **Every `exp` and `log`.** The general Study helpers (`study_exp_split`, `study_log_q`, …)
+  are ports of `gax_core::study` over a small complex and dual-number library (`CHANNELS`),
+  with their direct forms evaluated at a stand-in argument wherever the series is selected, so
+  no discarded branch divides by zero. CSTA's bivector `exp` has no closed form; it is scaling
+  and squaring as in Rust, a loop, emitted as text (`fallback_exp`) and tested against the Rust
+  `exp`, within `2⁻¹²` on the CPU evaluator (each squaring doubles the relative error).
 * **Not included, yet.**
-  * The 5D Study functions and the scaling-and-squaring `exp`.
   * `f16`.
   * Modules for algebras declared with `algebra!`.
 

@@ -254,6 +254,36 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                         "        let [c0, c1, s0, s1] = gx::study::exp_coeffs({}, {lam_e}, {mu_e});",
                         study.isq
                     );
+                    let mut post_vars = arg_vars(n);
+                    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
+                        post_vars.push((nv + i as Var, Source::Local((*l).into())));
+                    }
+                    meta.kernels.extend(value_kernel(
+                        k,
+                        &format!("{ks}_exp"),
+                        &format!(
+                            "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B`.",
+                            out_kind.name
+                        ),
+                        Ty::Kind(out_kind.name.clone()),
+                        vec![
+                            Step::Lets {
+                                prog: pre.clone(),
+                                prefix: "p".into(),
+                                vars: arg_vars(n),
+                            },
+                            Step::Study {
+                                func: StudyFn::Exp(study.isq),
+                                args: vec![(0, 0), (0, 1)],
+                                outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
+                            },
+                            Step::Lets {
+                                prog: prog.clone(),
+                                prefix: "t".into(),
+                                vars: post_vars,
+                            },
+                        ],
+                    ));
                 }
                 prog.emit_lets(&names, "t", &mut lets);
                 let outs: Vec<String> = prog
@@ -274,7 +304,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
 
     // exp in 5D: B² = λ + Q with a 4-vector Q (several blades) whose square is a scalar.
     if all_grade2 && meta.exp.is_none() {
-        meta.exp = emit_exp_general(spec, k, &x, &mut body);
+        meta.exp = emit_exp_general(spec, k, &x, &mut body, &mut meta.kernels);
     }
     // exp in any dimension: scaling and squaring in the product closure (6D and up).
     if all_grade2 && meta.exp.is_none() {
@@ -284,7 +314,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     // log: for unit versors whose parts are a Study number and a bivector.
     meta.log = emit_log(spec, k, &x, &mut traits, &mut meta.kernels);
     if meta.log.is_none() {
-        meta.log = emit_log_general(spec, k, &x, &mut traits);
+        meta.log = emit_log_general(spec, k, &x, &mut traits, &mut meta.kernels);
     }
 
     // sqrt of a unit versor: normalize(1 + R).
@@ -614,6 +644,35 @@ fn emit_log(
             "        let [h0, h1] = gx::study::log_coeffs({isq}, ({}, {}), ({}, {}));",
             r[0], r[1], r[2], r[3]
         );
+        let mut post_vars = arg_vars(nv as usize);
+        post_vars.push((h0, Source::Local("h0".into())));
+        post_vars.push((h1, Source::Local("h1".into())));
+        kernels.extend(value_kernel(
+            k,
+            &format!("unit_{}_log", snake(&k.name)),
+            &format!(
+                "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x`.",
+                k.name, out_kind.name
+            ),
+            Ty::Kind(out_kind.name.clone()),
+            vec![
+                Step::Lets {
+                    prog: pre.clone(),
+                    prefix: "p".into(),
+                    vars: arg_vars(nv as usize),
+                },
+                Step::Study {
+                    func: StudyFn::Log(isq),
+                    args: vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+                    outs: vec!["h0".into(), "h1".into()],
+                },
+                Step::Lets {
+                    prog: prog.clone(),
+                    prefix: "t".into(),
+                    vars: post_vars,
+                },
+            ],
+        ));
     }
     prog.emit_lets(&names, "t", &mut lets);
     let outs: Vec<String> = prog
@@ -653,6 +712,7 @@ fn emit_exp_general(
     k: &KindSpec,
     x: &SymMv,
     body: &mut String,
+    kernels: &mut Vec<Kernel>,
 ) -> Option<String> {
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
@@ -687,6 +747,29 @@ fn emit_exp_general(
         lets,
         "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_q({lam}, {qq});"
     );
+    let n = nv as usize;
+    let mut post_vars = arg_vars(n);
+    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
+        post_vars.push((nv + i as Var, Source::Local((*l).into())));
+    }
+    kernels.extend(value_kernel(
+        k,
+        &format!("{}_exp", snake(&k.name)),
+        &format!(
+            "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B` with `B² = λ + Q`, `Q²` a scalar.",
+            out_kind.name
+        ),
+        Ty::Kind(out_kind.name.clone()),
+        vec![
+            Step::Lets { prog: pre.clone(), prefix: "p".into(), vars: arg_vars(n) },
+            Step::Study {
+                func: StudyFn::ExpQ,
+                args: vec![(0, 0), (0, 1)],
+                outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
+            },
+            Step::Lets { prog: prog.clone(), prefix: "t".into(), vars: post_vars },
+        ],
+    ));
     prog.emit_lets(&names, "t", &mut lets);
     let outs: Vec<String> = prog
         .outputs
@@ -707,6 +790,7 @@ fn emit_log_general(
     k: &KindSpec,
     x: &SymMv,
     traits: &mut String,
+    kernels: &mut Vec<Kernel>,
 ) -> Option<String> {
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
@@ -766,6 +850,36 @@ fn emit_log_general(
         lets,
         "        let [h0, h1] = gx::study::log_coeffs_q({c0}, {qc});"
     );
+    let n = nv as usize;
+    let mut post_vars = arg_vars(n);
+    post_vars.push((h0, Source::Local("h0".into())));
+    post_vars.push((h1, Source::Local("h1".into())));
+    kernels.extend(value_kernel(
+        k,
+        &format!("unit_{}_log", snake(&k.name)),
+        &format!(
+            "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x`.",
+            k.name, out_kind.name
+        ),
+        Ty::Kind(out_kind.name.clone()),
+        vec![
+            Step::Lets {
+                prog: pre.clone(),
+                prefix: "p".into(),
+                vars: arg_vars(n),
+            },
+            Step::Study {
+                func: StudyFn::LogQ,
+                args: vec![(0, 0), (0, 1)],
+                outs: vec!["h0".into(), "h1".into()],
+            },
+            Step::Lets {
+                prog: prog.clone(),
+                prefix: "t".into(),
+                vars: post_vars,
+            },
+        ],
+    ));
     prog.emit_lets(&names, "t", &mut lets);
     let outs: Vec<String> = prog
         .outputs

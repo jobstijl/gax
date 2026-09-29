@@ -131,6 +131,13 @@ which compares the two branches. This found three defects, now fixed:
   respectively, and both branches are within a few ulps at the boundary.
 * **Near a full turn, the series silently changed branch** (see below).
 
+**The complex square root cancelled** (found porting the 5D functions to WGSL, 2026-09-29). The
+general Study functions evaluate `f(a ± √q)` and take the `I` part from the difference, which
+lives in the small imaginary part of `√(a + iw)` when `|w| ≪ |a|`. `Cx::sqrt` computed that part
+as `√((|z| − a)/2)`, which cancels there: in `f32` a CSTA twist's `exp` was off by 0.2% (and
+`f64` lost about five digits). It now computes the larger part `t = √((|z| + |a|)/2)` and the
+other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
+
 **Pure translations** (`B² = 0`, a degenerate Study number): `exp(B) = 1 + B` and
 `log(1 + B) = B` exactly, for any size.
 

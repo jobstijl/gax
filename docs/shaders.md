@@ -44,11 +44,10 @@ in a vertex buffer, each field is one attribute location.
 | `line_exp(b)` | the exponential of a bivector: a unit motor |
 | `unit_motor_log(m)` | its inverse, with the rotation half-angle in `[0, π]` |
 
-The names are `snake_case` kind names joined by the operation. `exp` and `log` exist where the
-Rust code has a real-trigonometric path:
-* rotors in VGA2D, VGA3D, PGA2D and PGA3D;
-* motors in PGA2D and PGA3D;
-* the Euclidean motors (`Twist`, `Motor`) of CGA2D and CGA3D.
+The names are `snake_case` kind names joined by the operation. `exp` and `log` exist wherever
+the Rust code has them, in every algebra: rotations and motions through real trigonometry, boosts
+and general versors (STA, CGA, STAP, CSTA) through the general Study functions, and CSTA's
+bivector `exp` by scaling and squaring, as in Rust.
 
 STA boosts and the 5D and 6D paths are not included.
 
@@ -175,8 +174,6 @@ Run it with:
 
 ## Not included yet
 
-* The 5D Study functions (CGA3D and STAP `exp` and `log`), and the scaling-and-squaring `exp`
-  (CSTA).
 * `f16`.
 * WGSL modules for algebras declared with `algebra!`. Their traced kernels have no WGSL form
   either.

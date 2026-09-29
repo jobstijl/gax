@@ -52,6 +52,15 @@ pub enum StudyFn {
     Rsqrt(i8),
     /// `s0 = 1 / sqrt(|a|)`.
     RsqrtAbs,
+    /// `[c0, c1, s0, s1] = exp_coeffs(isq, lambda, mu)`: the general Study exponential
+    /// (boosts, and rotations with `I² = ±1`).
+    Exp(i8),
+    /// `[h0, h1] = log_coeffs(isq, (c0, c1), (u0, u1))`.
+    Log(i8),
+    /// `[c0, c1, s0, s1] = exp_coeffs_q(lambda, q)`: 5D algebras, `B² = λ + Q`, `Q² = q`.
+    ExpQ,
+    /// `[h0, h1] = log_coeffs_q(c0, qc)`: 5D algebras.
+    LogQ,
 }
 
 impl StudyFn {
@@ -64,7 +73,24 @@ impl StudyFn {
             StudyFn::Rsqrt(1) => "study_rsqrt_split",
             StudyFn::Rsqrt(_) => "study_rsqrt_complex",
             StudyFn::RsqrtAbs => "study_rsqrt_abs",
+            StudyFn::Exp(0) => "study_exp_nil",
+            StudyFn::Exp(1) => "study_exp_split",
+            StudyFn::Exp(_) => "study_exp_complex",
+            StudyFn::Log(0) => "study_log_nil",
+            StudyFn::Log(1) => "study_log_split",
+            StudyFn::Log(_) => "study_log_complex",
+            StudyFn::ExpQ => "study_exp_q",
+            StudyFn::LogQ => "study_log_q",
         }
+    }
+
+    /// Whether the helper uses the complex and dual arithmetic of
+    /// [`crate::emit_wgsl::CHANNELS`].
+    pub fn needs_channels(self) -> bool {
+        matches!(
+            self,
+            StudyFn::Exp(_) | StudyFn::Log(_) | StudyFn::ExpQ | StudyFn::LogQ
+        )
     }
 }
 
@@ -286,6 +312,12 @@ impl Kernel {
                         StudyFn::RsqrtNil => study::rsqrt_nil(x[0], x[1]).to_vec(),
                         StudyFn::Rsqrt(isq) => study::rsqrt(*isq, x[0], x[1]).to_vec(),
                         StudyFn::RsqrtAbs => vec![1.0 / x[0].abs().sqrt()],
+                        StudyFn::Exp(isq) => study::exp_coeffs(*isq, x[0], x[1]).to_vec(),
+                        StudyFn::Log(isq) => {
+                            study::log_coeffs(*isq, (x[0], x[1]), (x[2], x[3])).to_vec()
+                        }
+                        StudyFn::ExpQ => study::exp_coeffs_q(x[0], x[1]).to_vec(),
+                        StudyFn::LogQ => study::log_coeffs_q(x[0], x[1]).to_vec(),
                     };
                     for (n, v) in names.iter().zip(r) {
                         locals.push((n.clone(), v));

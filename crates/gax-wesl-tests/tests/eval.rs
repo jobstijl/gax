@@ -94,6 +94,7 @@ fn outputs(k: &Kernel, bytes: &[u8]) -> Vec<f32> {
 }
 
 /// `(kernels checked, worst ratio to the bound, worst relative error of Study kernels)`.
+#[allow(clippy::too_many_lines)]
 fn check(name: &str, committed: &str) -> (usize, f64, f64) {
     let spec = spec(name);
     let (_, stats) = emit(
@@ -123,8 +124,20 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
         .unwrap_or_else(|e| panic!("{name}: {e}"));
     let mut rng = Rng(0x2545_f491_4f6c_dd1d);
     let (mut count, mut worst, mut worst_rel) = (0, 0.0f64, 0.0f64);
+    // `GAX_EVAL_KERNEL=csta::twist_exp GAX_EVAL_SAMPLES=1000`: one kernel, many inputs.
+    let only = std::env::var("GAX_EVAL_KERNEL").ok();
+    let samples: usize = std::env::var("GAX_EVAL_SAMPLES")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3);
     for k in emit_wgsl::kernels(&spec, &stats) {
-        for _ in 0..3 {
+        if only
+            .as_ref()
+            .is_some_and(|o| *o != format!("{name}::{}", k.name))
+        {
+            continue;
+        }
+        for _ in 0..samples {
             let args: Vec<Vec<f32>> = k
                 .params
                 .iter()
@@ -168,7 +181,7 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
                     let rel = (f64::from(*g) - e).abs() / scale;
                     assert!(
                         rel < 1.0 / 16384.0,
-                        "{name}: {} output {o}: {g} vs {e}",
+                        "{name}: {} output {o}: {g} vs {e} at {args:?}",
                         k.name
                     );
                     worst_rel = worst_rel.max(rel);
@@ -177,7 +190,51 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
         }
         count += 1;
     }
+    // The scaling-and-squaring exponentials (loops, not straight-line kernels), against gax's
+    // Rust `exp` for the same kind.
+    for (kind, _) in emit_wgsl::fallback_exps(&spec, &stats) {
+        let name_fn = format!("{}_exp", gax_gen::kernel::snake(&kind.name));
+        let n = kind.layout.len();
+        for _ in 0..samples.max(8) {
+            let c: Vec<f32> = (0..n).map(|_| rng.next()).collect();
+            let exact = reference_exp(name, &kind.name, &c);
+            let expr = format!("{name_fn}({})", literal(&Ty::Kind(kind.name.clone()), &c));
+            let mut v = res
+                .eval(&expr)
+                .unwrap_or_else(|e| panic!("{name}: {expr}: {e}"));
+            let bytes = v.to_buffer().expect("bytes");
+            let got: Vec<f32> = bytes
+                .chunks(4)
+                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                .collect();
+            let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+            for (o, (g, e)) in got.iter().zip(&exact).enumerate() {
+                let rel = (f64::from(*g) - e).abs() / scale;
+                // Scaling and squaring doubles the relative error with each of its up to 8
+                // squarings, so its bound is looser than a closed form's: 2⁻¹².
+                assert!(
+                    rel < 1.0 / 4096.0,
+                    "{name}: {name_fn} output {o}: {g} vs {e} at {c:?}"
+                );
+                worst_rel = worst_rel.max(rel);
+            }
+        }
+        count += 1;
+    }
     (count, worst, worst_rel)
+}
+
+/// gax's Rust `exp` of a kind whose WGSL `exp` is the scaling-and-squaring fallback.
+fn reference_exp(algebra: &str, kind: &str, c: &[f32]) -> Vec<f64> {
+    match (algebra, kind) {
+        ("csta", "Bivector") => {
+            let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+                f64::from(c[i])
+            }));
+            b.exp().into_inner().c.to_vec()
+        }
+        _ => panic!("no reference exp for {algebra}::{kind}"),
+    }
 }
 
 #[test]
@@ -197,6 +254,6 @@ fn every_kernel_evaluates_within_its_bound() {
         println!(
             "{name}: {n} kernels, worst {worst:.3} of the bound, Study kernels within {rel:.1e}"
         );
-        assert!(n > 20);
+        assert!(n > 20 || std::env::var_os("GAX_EVAL_KERNEL").is_some());
     }
 }

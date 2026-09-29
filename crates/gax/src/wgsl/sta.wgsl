@@ -918,6 +918,40 @@ fn bivector_renormalize_fast(x: Bivector) -> Bivector {
     return Bivector(vec4<f32>(t49, t52, t55, t61), vec4<f32>(t66, t70, 0.0, 0.0));
 }
 
+// The exponential, a unit `Even`: `exp(B) = C(B²) + S(B²) B`.
+fn bivector_exp(x: Bivector) -> Even {
+    let p1 = x.c0.y * x.c0.y;
+    let p4 = x.c1.x * x.c1.x;
+    let p7 = x.c0.y * x.c1.x;
+    let p9 = fma(x.c0.x, x.c0.x, p1);
+    let p10 = fma(x.c0.z, x.c0.z, p9);
+    let p11 = fma(x.c0.w, x.c0.w, p4);
+    let p12 = fma(x.c1.y, x.c1.y, p11);
+    let p13 = p10 - p12;
+    let p14 = fma(x.c0.x, x.c0.w, p7);
+    let p15 = fma(x.c0.z, x.c1.y, p14);
+    let p16 = p15 * 2.0;
+    let p17 = -p16;
+    let r1 = study_exp_complex(p13, p17);
+    let c0 = r1[0];
+    let c1 = r1[1];
+    let s0 = r1[2];
+    let s1 = r1[3];
+    let t1 = x.c0.w * s1;
+    let t3 = x.c1.x * s1;
+    let t5 = x.c1.y * s1;
+    let t7 = x.c0.w * s0;
+    let t9 = x.c1.x * s0;
+    let t11 = x.c1.y * s0;
+    let t12 = fma(x.c0.x, s0, t1);
+    let t13 = fma(x.c0.y, s0, t3);
+    let t14 = fma(x.c0.z, s0, t5);
+    let t15 = fma(-x.c0.x, s1, t7);
+    let t16 = fma(-x.c0.y, s1, t9);
+    let t17 = fma(-x.c0.z, s1, t11);
+    return Even(vec4<f32>(c0, t12, t13, t14), vec4<f32>(t15, t16, t17, c1));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn trivector_norm_squared(x: Trivector) -> f32 {
     let t2 = x.c0.z * x.c0.z;
@@ -1134,6 +1168,38 @@ fn even_renormalize_fast(x: Even) -> Even {
     let t113 = t112 * (3.0 / 2.0);
     let t114 = fma(t110, (1.0 / 2.0), t113);
     return Even(vec4<f32>(t84, t87, t91, t94), vec4<f32>(t97, t101, t104, t114));
+}
+
+// The logarithm of a unit `Even`: the `Bivector` B with `exp(B) = x`.
+fn unit_even_log(x: Even) -> Bivector {
+    let p1 = x.c0.z * x.c0.z;
+    let p4 = x.c1.y * x.c1.y;
+    let p7 = x.c0.z * x.c1.y;
+    let p9 = fma(x.c0.y, x.c0.y, p1);
+    let p10 = fma(x.c0.w, x.c0.w, p9);
+    let p11 = fma(x.c1.x, x.c1.x, p4);
+    let p12 = fma(x.c1.z, x.c1.z, p11);
+    let p13 = p10 - p12;
+    let p14 = fma(x.c0.y, x.c1.x, p7);
+    let p15 = fma(x.c0.w, x.c1.z, p14);
+    let p16 = p15 * 2.0;
+    let p17 = -p16;
+    let r1 = study_log_complex(x.c0.x, x.c1.w, p13, p17);
+    let h0 = r1[0];
+    let h1 = r1[1];
+    let t1 = x.c1.x * h1;
+    let t3 = x.c1.y * h1;
+    let t5 = x.c1.z * h1;
+    let t7 = x.c1.x * h0;
+    let t9 = x.c1.y * h0;
+    let t11 = x.c1.z * h0;
+    let t12 = fma(x.c0.y, h0, t1);
+    let t13 = fma(x.c0.z, h0, t3);
+    let t14 = fma(x.c0.w, h0, t5);
+    let t15 = fma(-x.c0.y, h1, t7);
+    let t16 = fma(-x.c0.z, h1, t9);
+    let t17 = fma(-x.c0.w, h1, t11);
+    return Bivector(vec4<f32>(t12, t13, t14, t15), vec4<f32>(t16, t17, 0.0, 0.0));
 }
 
 // The squared norm: the scalar part of `x ~x`.
@@ -5744,6 +5810,173 @@ fn unit_odd_sandwich_multivector(v: Odd, x: Multivector) -> Multivector {
     let t254 = fma(x.c3.z, t91, t253);
     let t255 = -t179;
     return Multivector(vec4<f32>(t110, t183, t187, t191), vec4<f32>(t195, t202, t209, t216), vec4<f32>(t223, t230, t237, t242), vec4<f32>(t246, t250, t254, t255));
+}
+
+// Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
+// `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
+struct StudyDual {
+    p: vec2<f32>,
+    d: vec2<f32>,
+}
+
+fn cx_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    let d = 1.0 / (b.x * b.x + b.y * b.y);
+    return vec2<f32>((a.x * b.x + a.y * b.y) * d, (a.y * b.x - a.x * b.y) * d);
+}
+
+// The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
+// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
+    let r = sqrt(z.x * z.x + z.y * z.y);
+    let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));
+    let other = z.y / (2.0 * select(1.0, t, 0.0 < t));
+    let signed = select(t, -t, z.y < 0.0);
+    return select(vec2<f32>(t, other), vec2<f32>(abs(other), signed), z.x < 0.0);
+}
+
+fn cx_ln(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(log(z.x * z.x + z.y * z.y) * 0.5, atan2(z.y, z.x));
+}
+
+fn cx_sinh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(sinh(z.x) * cos(z.y), cosh(z.x) * sin(z.y));
+}
+
+fn cx_cosh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(cosh(z.x) * cos(z.y), sinh(z.x) * sin(z.y));
+}
+
+fn sd_real(x: f32) -> StudyDual {
+    return StudyDual(vec2<f32>(x, 0.0), vec2<f32>(0.0, 0.0));
+}
+
+fn sd_add(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p + b.p, a.d + b.d);
+}
+
+fn sd_sub(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p - b.p, a.d - b.d);
+}
+
+fn sd_scale(a: StudyDual, k: f32) -> StudyDual {
+    return StudyDual(a.p * k, a.d * k);
+}
+
+fn sd_mul(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(cx_mul(a.p, b.p), cx_mul(a.p, b.d) + cx_mul(a.d, b.p));
+}
+
+fn sd_div(a: StudyDual, b: StudyDual) -> StudyDual {
+    let q = cx_div(a.p, b.p);
+    return StudyDual(q, cx_div(a.d - cx_mul(q, b.d), b.p));
+}
+
+fn sd_sqrt(a: StudyDual) -> StudyDual {
+    let r = cx_sqrt(a.p);
+    return StudyDual(r, cx_div(a.d, r + r));
+}
+
+fn sd_ln(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_ln(a.p), cx_div(a.d, a.p));
+}
+
+fn sd_sinh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_sinh(a.p), cx_mul(a.d, cx_cosh(a.p)));
+}
+
+fn sd_cosh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_cosh(a.p), cx_mul(a.d, cx_sinh(a.p)));
+}
+
+// `if |x|² < t { a } else { b }` on the value's squared magnitude.
+fn sd_select_small(x: StudyDual, t: f32, a: StudyDual, b: StudyDual) -> StudyDual {
+    let small = dot(x.p, x.p) < t;
+    return StudyDual(select(b.p, a.p, small), select(b.d, a.d, small));
+}
+
+// Every function below computes its direct form at a stand-in argument wherever its series is
+// selected, so a discarded branch never divides by zero (`sqrt` has an infinite derivative at
+// 0): the result is the same, and there are no non-finite intermediates to rely on discarding.
+
+// `C(x) = cosh(sqrt x)`, with its series where `|x|² < 1/100` (thresholds for `f32`).
+fn study_exp_c(x: StudyDual) -> StudyDual {
+    let c = sd_cosh(sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x)));
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var cs = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 2.0));
+    cs = sd_add(cs, sd_scale(x2, 1.0 / 24.0));
+    cs = sd_add(cs, sd_scale(x3, 1.0 / 720.0));
+    cs = sd_add(cs, sd_scale(sd_mul(x3, x), 1.0 / 40320.0));
+    return sd_select_small(x, 0.01, cs, c);
+}
+
+// `S(x) = sinh(sqrt x) / sqrt x`, with its series where `|x|² < 1/100`.
+fn study_exp_s(x: StudyDual) -> StudyDual {
+    let r = sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x));
+    let s = sd_div(sd_sinh(r), r);
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var ss = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 6.0));
+    ss = sd_add(ss, sd_scale(x2, 1.0 / 120.0));
+    ss = sd_add(ss, sd_scale(x3, 1.0 / 5040.0));
+    ss = sd_add(ss, sd_scale(sd_mul(x3, x), 1.0 / 362880.0));
+    return sd_select_small(x, 0.01, ss, s);
+}
+
+// The factor `H` of `log(R) = H <R>_2` for a versor `R = c + P` with `u = P²`:
+// `2 atanh(t) / (t (1 + c))`, `t = sqrt(u) / (1 + c)` (see gax_core::study::log_factor).
+fn study_log_factor(c: StudyDual, u: StudyDual) -> StudyDual {
+    let opc = sd_add(sd_real(1.0), c);
+    // `t² = u / (1 + c)²` for the series, without the root; the direct form at `t = 1/2`
+    // where the series is selected.
+    let t2 = sd_div(u, sd_mul(opc, opc));
+    let safe = sd_select_small(t2, 1e-4, sd_scale(sd_mul(opc, opc), 0.25), u);
+    let t = sd_div(sd_sqrt(safe), opc);
+    let direct = sd_div(sd_scale(sd_ln(sd_div(sd_add(sd_real(1.0), t), sd_sub(sd_real(1.0), t))), 0.5), t);
+    var series = sd_real(1.0 / 15.0);
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 13.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 11.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 9.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 7.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 5.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 3.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0));
+    let ratio = sd_select_small(t2, 1e-4, series, direct);
+    return sd_div(sd_scale(ratio, 2.0), opc);
+}
+
+// `acosh(y)²`, with its series near `y = 1` (`|y - 1|² < 1e-8`).
+fn study_acosh_sq(y: StudyDual) -> StudyDual {
+    let t = sd_sub(y, sd_real(1.0));
+    let ys = sd_select_small(t, 1e-8, sd_real(2.0), y);
+    let w = sd_ln(sd_add(ys, sd_sqrt(sd_mul(sd_sub(ys, sd_real(1.0)), sd_add(ys, sd_real(1.0))))));
+    let direct = sd_mul(w, w);
+    let tt = sd_mul(t, t);
+    var series = sd_scale(t, 2.0);
+    series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
+    series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
+    return sd_select_small(t, 1e-8, series, direct);
+}
+
+// `exp(B) = c0 + c1 I + (s0 + s1 I) B` for `B² = lambda + mu I`, `I² = -1`, as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs).
+fn study_exp_complex(lambda: f32, mu: f32) -> vec4<f32> {
+    let x = StudyDual(vec2<f32>(lambda, mu), vec2<f32>(0.0, 0.0));
+    let c = study_exp_c(x).p;
+    let s = study_exp_s(x).p;
+    return vec4<f32>(c.x, c.y, s.x, s.y);
+}
+
+// `log R = (h0 + h1 I) <R>_2` for a unit versor with scalar-pseudoscalar part `c0 + c1 I`
+// and bivector part squaring to `u0 + u1 I`, `I² = -1`, as `[h0, h1]`
+// (gax_core::study::log_coeffs).
+fn study_log_complex(c0: f32, c1: f32, u0: f32, u1: f32) -> vec2<f32> {
+    let r = study_log_factor(StudyDual(vec2<f32>(c0, c1), vec2<f32>(0.0, 0.0)), StudyDual(vec2<f32>(u0, u1), vec2<f32>(0.0, 0.0))).p;
+    return vec2<f32>(r.x, r.y);
 }
 
 // `1 / sqrt(|a|)`.

@@ -181,7 +181,11 @@ fn main() -> ExitCode {
                 spec.name
             );
             for (v, x, unit, direct, matrix) in &stats.sandwich_costs {
-                let v = if *unit { format!("`Unit<{v}>`") } else { format!("`{v}`") };
+                let v = if *unit {
+                    format!("`Unit<{v}>`")
+                } else {
+                    format!("`{v}`")
+                };
                 let _ = writeln!(costs, "| {v} `>>` `{x}` | {direct} | {matrix} |");
             }
             costs.push('\n');

@@ -123,14 +123,20 @@ impl<T: Real> Channel<T> for Cx<T> {
     }
     #[inline(always)]
     fn sqrt(self) -> Self {
-        // Principal root: re = sqrt((|z| + a) / 2), im = sign(b) sqrt((|z| - a) / 2).
-        let half = T::from_f64(0.5);
-        let r = (self.re * self.re + self.im * self.im).sqrt();
-        let re = ((r + self.re) * half).max(T::zero()).sqrt();
-        let im = ((r - self.re) * half).max(T::zero()).sqrt();
+        // Principal root, in the form without cancellation: t = sqrt((|z| + |a|) / 2) is the
+        // larger part, and the other is b / (2t). (Computing the smaller part as
+        // sqrt((|z| - |a|) / 2) cancels when |b| << |a|, which is exactly where the Study
+        // functions take a derivative from the imaginary part: in f32 it lost all digits.)
+        let (zero, one, half) = (T::zero(), T::one(), T::from_f64(0.5));
+        let (a, b) = (self.re, self.im);
+        let r = (a * a + b * b).sqrt();
+        let t = ((r + a.abs()) * half).max(zero).sqrt();
+        let safe = T::select_lt(zero, t, t, one); // z = 0: t = 0 and b = 0, so b / 2 = 0
+        let other = b / (safe + safe);
+        let signed = T::select_lt(b, zero, -t, t);
         Cx {
-            re,
-            im: T::select_lt(self.im, T::zero(), -im, im),
+            re: T::select_lt(a, zero, other.abs(), t),
+            im: T::select_lt(a, zero, signed, other),
         }
     }
     #[inline(always)]

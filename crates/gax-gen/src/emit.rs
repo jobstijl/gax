@@ -1282,9 +1282,13 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         }
         self.w(&s);
         self.stats.sandwich_impls += 1;
-        self.stats
-            .sandwich_costs
-            .push((vn.clone(), xn.clone(), unit, direct.cost(), matrix.cost()));
+        self.stats.sandwich_costs.push((
+            vn.clone(),
+            xn.clone(),
+            unit,
+            direct.cost(),
+            matrix.cost(),
+        ));
         self.stats
             .sandwiches
             .push((vn.clone(), xn.clone(), unit, on.clone()));

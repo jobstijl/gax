@@ -1,10 +1,12 @@
 //! gax's WGSL kernels on a GPU (docs/shaders.md, layer 5).
 //!
-//! * Every kernel of five algebras runs over random inputs, and each output is compared with
+//! * Every kernel of eight algebras runs over random inputs, and each output is compared with
 //!   the kernel's exact value: within twice its computed `f32` error bound for straight-line
 //!   kernels (WGSL's `+`, `-`, `*` are correctly rounded, and fusing only removes roundings),
 //!   and within a relative `2⁻¹⁰` for kernels that call WGSL's elementary functions, whose
 //!   specified accuracy is loose (`sin` and `cos` to an absolute `2⁻¹¹`).
+//! * The scaling-and-squaring exponentials (loops, not straight-line kernels) against gax's Rust
+//!   `exp`, within a relative `2⁻¹⁰`.
 //! * The matrix orientation: a map uploaded as `GpuMat` and applied as `m * x` in the shader
 //!   equals the map applied in Rust.
 //! * A layout round trip: kinds written by Rust are read field by field by the shader.
@@ -238,6 +240,61 @@ fn every_kernel_on_the_gpu() {
         println!(
             "{name}: {n} kernels x {SAMPLES} samples, worst {worst:.3} of the bound, elementary-function kernels within {rel:.1e}"
         );
+    }
+}
+
+#[test]
+fn fallback_exponentials_on_the_gpu() {
+    let Some(gpu) = Gpu::or_skip() else { return };
+    let spec = spec("csta");
+    let (_, stats) = emit(
+        &spec,
+        &Config {
+            core: "crate".into(),
+            batch: None,
+            check_units: None,
+            gpu: None,
+        },
+    );
+    let module = gax::wgsl::CSTA.source;
+    let mut rng = Rng(0x0dd_ba11);
+    let fallbacks = emit_wgsl::fallback_exps(&spec, &stats);
+    assert!(!fallbacks.is_empty());
+    for (k, e) in fallbacks {
+        // The harness only needs the call's name and signature.
+        let call = Kernel {
+            name: format!("{}_exp", gax_gen::kernel::snake(&k.name)),
+            doc: String::new(),
+            params: vec![("x".into(), Ty::Kind(k.name.clone()))],
+            result: Ty::Kind(e.name.clone()),
+            steps: Vec::new(),
+            entries: None,
+        };
+        let (n_in, n_out) = (k.layout.len(), e.layout.len());
+        let src = harness(module, &spec, &[&call], n_in, n_out);
+        let inputs: Vec<f32> = (0..SAMPLES * n_in).map(|_| rng.next()).collect();
+        let out = floats(&gpu.run(
+            &src,
+            "main",
+            &[bytemuck::cast_slice(&inputs)],
+            SAMPLES * n_out * 4,
+            SAMPLES as u32,
+        ));
+        let mut worst = 0.0f64;
+        for n in 0..SAMPLES {
+            let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+                f64::from(inputs[n * n_in + i])
+            }));
+            let exact = b.exp().into_inner().c;
+            let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+            for (o, e) in exact.iter().enumerate() {
+                let g = f64::from(out[n * n_out + o]);
+                let rel = (g - e).abs() / scale;
+                assert!(rel < 1.0 / 1024.0, "csta: {} output {o}: {g} vs {e}", call.name);
+                worst = worst.max(rel);
+            }
+        }
+        println!("csta: {} x {SAMPLES} samples within {worst:.1e}", call.name);
     }
 }
 

@@ -1017,6 +1017,130 @@ fn twist_norm_squared(x: Twist) -> f32 {
     return t10;
 }
 
+// The exponential, a unit `Motor`: `exp(B) = C(B²) + S(B²) B` with `B² = λ + Q`, `Q²` a scalar.
+fn twist_exp(x: Twist) -> Motor {
+    let p0 = x.c0.x * x.c0.w;
+    let p1 = x.c0.y * x.c1.x;
+    let p2 = x.c0.z * x.c1.y;
+    let p4 = x.c0.y * x.c0.y;
+    let p7 = x.c1.x * x.c1.x;
+    let p11 = p0 * p2;
+    let p12 = p1 * p1;
+    let p15 = fma(x.c0.w, x.c0.w, p7);
+    let p16 = fma(x.c1.y, x.c1.y, p15);
+    let p17 = fma(x.c0.x, x.c0.x, p4);
+    let p18 = fma(x.c0.z, x.c0.z, p17);
+    let p19 = p16 - p18;
+    let p20 = fma(p0, p0, p12);
+    let p21 = fma(p2, p2, p20);
+    let p23 = fma(p0, p1, p11);
+    let p24 = fma(p1, p2, p23);
+    let p25 = p24 * 8.0;
+    let p26 = fma(p21, 4.0, p25);
+    let p27 = -p26;
+    let r1 = study_exp_q(p19, p27);
+    let c0 = r1[0];
+    let c1 = r1[1];
+    let s0 = r1[2];
+    let s1 = r1[3];
+    let t0 = x.c0.x * x.c0.w;
+    let t2 = x.c0.y * x.c1.x;
+    let t3 = s1 * t2;
+    let t4 = x.c0.z * x.c1.y;
+    let t6 = fma(s1, t0, t3);
+    let t7 = fma(s1, t4, t6);
+    let t8 = x.c0.x * x.c1.z;
+    let t10 = x.c0.y * x.c1.w;
+    let t11 = s1 * t10;
+    let t12 = x.c0.z * x.c2.x;
+    let t14 = fma(s1, t8, t11);
+    let t15 = fma(s1, t12, t14);
+    let t16 = x.c0.x * x.c2.y;
+    let t18 = x.c1.x * x.c2.x;
+    let t19 = s1 * t18;
+    let t20 = x.c1.y * x.c1.w;
+    let t22 = fma(s1, t16, t19);
+    let t23 = fma(-s1, t20, t22);
+    let t24 = x.c0.y * x.c2.y;
+    let t26 = x.c0.w * x.c2.x;
+    let t28 = x.c1.y * x.c1.z;
+    let t29 = s1 * t28;
+    let t30 = fma(s1, t24, t29);
+    let t31 = fma(-s1, t26, t30);
+    let t32 = x.c0.z * x.c2.y;
+    let t34 = x.c0.w * x.c1.w;
+    let t35 = s1 * t34;
+    let t36 = x.c1.x * x.c1.z;
+    let t38 = fma(s1, t32, t35);
+    let t39 = fma(-s1, t36, t38);
+    let t40 = x.c0.x * c1;
+    let t41 = x.c0.y * c1;
+    let t42 = x.c0.z * c1;
+    let t43 = x.c0.w * c1;
+    let t44 = x.c1.x * c1;
+    let t45 = x.c1.y * c1;
+    let t47 = x.c0.w * t7;
+    let t49 = x.c1.x * t7;
+    let t51 = x.c1.y * t7;
+    let t52 = x.c0.x * t7;
+    let t53 = x.c0.w * s0;
+    let t54 = x.c0.y * t7;
+    let t55 = x.c1.x * s0;
+    let t56 = x.c0.z * t7;
+    let t57 = x.c1.y * s0;
+    let t60 = x.c1.y * t31;
+    let t63 = x.c0.w * t39;
+    let t68 = x.c1.x * t23;
+    let t71 = x.c0.y * t31;
+    let t73 = x.c2.y * s0;
+    let t75 = x.c2.x * t44;
+    let t79 = x.c1.z * t45;
+    let t81 = x.c1.w * t43;
+    let t84 = x.c1.w * t41;
+    let t87 = x.c1.x * t41;
+    let t89 = t47 * 2.0;
+    let t90 = fma(x.c0.x, s0, t89);
+    let t91 = t49 * 2.0;
+    let t92 = fma(x.c0.y, s0, t91);
+    let t93 = t51 * 2.0;
+    let t94 = fma(x.c0.z, s0, t93);
+    let t96 = fma(-t52, 2.0, t53);
+    let t98 = fma(-t54, 2.0, t55);
+    let t100 = fma(-t56, 2.0, t57);
+    let t101 = fma(-x.c0.x, t15, t60);
+    let t102 = fma(-x.c1.x, t39, t101);
+    let t103 = t102 * 2.0;
+    let t104 = fma(x.c1.z, s0, t103);
+    let t105 = fma(-x.c0.y, t15, t63);
+    let t106 = fma(-x.c1.y, t23, t105);
+    let t107 = t106 * 2.0;
+    let t108 = fma(x.c1.w, s0, t107);
+    let t109 = fma(-x.c0.z, t15, t68);
+    let t110 = fma(-x.c0.w, t31, t109);
+    let t111 = t110 * 2.0;
+    let t112 = fma(x.c2.x, s0, t111);
+    let t113 = fma(x.c0.x, t23, t71);
+    let t114 = fma(x.c0.z, t39, t113);
+    let t116 = fma(-t114, 2.0, t73);
+    let t117 = fma(x.c2.y, t40, t75);
+    let t118 = fma(-x.c1.w, t45, t117);
+    let t119 = t118 * 2.0;
+    let t120 = fma(x.c2.y, t41, t79);
+    let t121 = fma(-x.c2.x, t43, t120);
+    let t122 = t121 * 2.0;
+    let t123 = fma(x.c2.y, t42, t81);
+    let t124 = fma(-x.c1.z, t44, t123);
+    let t125 = t124 * 2.0;
+    let t126 = fma(x.c1.z, t40, t84);
+    let t127 = fma(x.c2.x, t42, t126);
+    let t128 = t127 * 2.0;
+    let t129 = fma(x.c0.w, t40, t87);
+    let t130 = fma(x.c1.y, t42, t129);
+    let t131 = t130 * 2.0;
+    let t132 = -t131;
+    return Motor(vec4<f32>(c0, t90, t92, t94), vec4<f32>(t96, t98, t100, t104), vec4<f32>(t108, t112, t116, t119), vec4<f32>(t122, t125, t128, t132));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn bivector_norm_squared(x: Bivector) -> f32 {
     let t1 = x.c0.y * x.c0.y;
@@ -1174,6 +1298,53 @@ fn motor_norm_squared(x: Motor) -> f32 {
     let t13 = t11 + t12;
     let t14 = t10 - t13;
     return t14;
+}
+
+// The logarithm of a unit `Motor`: the `Twist` B with `exp(B) = x`.
+fn unit_motor_log(x: Motor) -> Twist {
+    let p0 = x.c3.w * x.c3.w;
+    let p1 = -p0;
+    let r1 = study_log_q(x.c0.x, p1);
+    let h0 = r1[0];
+    let h1 = r1[1];
+    let t0 = x.c3.w * h1;
+    let t1 = x.c2.w * h1;
+    let t2 = x.c3.x * h1;
+    let t3 = x.c3.y * h1;
+    let t4 = x.c3.z * h1;
+    let t5 = x.c0.y * h0;
+    let t7 = x.c0.z * h0;
+    let t9 = x.c0.w * h0;
+    let t12 = x.c1.x * h0;
+    let t14 = x.c1.y * h0;
+    let t16 = x.c1.z * h0;
+    let t18 = x.c1.y * t3;
+    let t20 = x.c1.w * h0;
+    let t23 = x.c1.z * t1;
+    let t24 = x.c2.x * h0;
+    let t26 = x.c1.x * t2;
+    let t28 = x.c2.y * h0;
+    let t31 = x.c0.w * t3;
+    let t32 = x.c2.z * h0;
+    let t33 = fma(-x.c1.x, t0, t5);
+    let t34 = fma(-x.c1.y, t0, t7);
+    let t35 = fma(-x.c1.z, t0, t9);
+    let t36 = fma(x.c0.y, t0, t12);
+    let t37 = fma(x.c0.z, t0, t14);
+    let t38 = fma(x.c0.w, t0, t16);
+    let t39 = fma(x.c1.z, t2, t20);
+    let t40 = fma(x.c0.y, t4, t18);
+    let t41 = t39 - t40;
+    let t42 = fma(x.c1.x, t3, t24);
+    let t43 = fma(x.c0.z, t4, t23);
+    let t44 = t42 - t43;
+    let t45 = fma(x.c1.y, t1, t28);
+    let t46 = fma(x.c0.w, t4, t26);
+    let t47 = t45 - t46;
+    let t48 = fma(-x.c0.y, t1, t32);
+    let t49 = fma(x.c0.z, t2, t31);
+    let t50 = t48 - t49;
+    return Twist(vec4<f32>(t33, t34, t35, t36), vec4<f32>(t37, t38, t41, t44), vec4<f32>(t47, t50, 0.0, 0.0));
 }
 
 // The squared norm: the scalar part of `x ~x`.
@@ -17903,6 +18074,1206 @@ fn unit_motor_sandwich_multivector(v: Motor, x: Multivector) -> Multivector {
     let t1668 = t1667 * 4.0;
     let t1669 = fma(x.c15.w, t299, t1668);
     return Multivector(vec4<f32>(t1042, t1047, t1052, t1057), vec4<f32>(t1062, t471, t1074, t1085), vec4<f32>(t1096, t1107, t1118, t1129), vec4<f32>(t1140, t1144, t1148, t1152), vec4<f32>(t1156, t1172, t1188, t1204), vec4<f32>(t1220, t1225, t1236, t1247), vec4<f32>(t1258, t1269, t1276, t1283), vec4<f32>(t1290, t1297, t1304, t1311), vec4<f32>(t1332, t1353, t1374, t1395), vec4<f32>(t1416, t1437, t1448, t1459), vec4<f32>(t1470, t1481, t1486, t1490), vec4<f32>(t1494, t1498, t1502, t1518), vec4<f32>(t1534, t1550, t1566, t1577), vec4<f32>(t1588, t1599, t1610, t1621), vec4<f32>(t1632, t1637, t1642, t1647), vec4<f32>(t1652, t1021, t1664, t1669));
+}
+
+// The geometric product of two `Even`.
+fn even_mul_even(a: Even, b: Even) -> Even {
+    let t0 = a.c0.x - a.c3.w;
+    let t1 = a.c0.x + a.c3.w;
+    let t2 = a.c0.y - a.c6.y;
+    let t3 = a.c0.y + a.c6.y;
+    let t4 = a.c0.z - a.c6.z;
+    let t5 = a.c0.z + a.c6.z;
+    let t6 = a.c0.w - a.c6.w;
+    let t7 = a.c0.w + a.c6.w;
+    let t8 = a.c1.x - a.c7.x;
+    let t9 = a.c1.x + a.c7.x;
+    let t10 = a.c1.y - a.c7.y;
+    let t11 = a.c1.y + a.c7.y;
+    let t12 = a.c1.z - a.c7.z;
+    let t13 = a.c1.z + a.c7.z;
+    let t14 = a.c4.x - a.c7.w;
+    let t15 = a.c4.x + a.c7.w;
+    let t16 = b.c0.x - b.c3.w;
+    let t17 = b.c0.x + b.c3.w;
+    let t18 = b.c0.y - b.c6.y;
+    let t19 = b.c0.y + b.c6.y;
+    let t20 = b.c0.z - b.c6.z;
+    let t21 = b.c0.z + b.c6.z;
+    let t22 = b.c0.w - b.c6.w;
+    let t23 = b.c0.w + b.c6.w;
+    let t24 = b.c1.x - b.c7.x;
+    let t25 = b.c1.x + b.c7.x;
+    let t26 = b.c1.y - b.c7.y;
+    let t27 = b.c1.y + b.c7.y;
+    let t28 = b.c1.z - b.c7.z;
+    let t29 = b.c1.z + b.c7.z;
+    let t30 = b.c4.x - b.c7.w;
+    let t31 = b.c4.x + b.c7.w;
+    let t33 = a.c1.w * b.c3.x;
+    let t34 = a.c1.w * b.c3.y;
+    let t35 = a.c1.w * b.c3.z;
+    let t37 = a.c1.w * b.c5.z;
+    let t41 = a.c2.x * b.c3.x;
+    let t42 = a.c2.x * b.c3.y;
+    let t43 = a.c2.x * b.c3.z;
+    let t45 = a.c2.x * b.c5.z;
+    let t48 = a.c2.y * b.c2.w;
+    let t50 = a.c2.y * b.c3.y;
+    let t51 = a.c2.y * b.c3.z;
+    let t53 = a.c2.y * b.c5.z;
+    let t54 = a.c2.y * b.c5.w;
+    let t55 = a.c2.y * b.c6.x;
+    let t57 = a.c2.z * b.c3.x;
+    let t60 = a.c2.z * b.c5.y;
+    let t65 = a.c2.w * b.c2.x;
+    let t66 = a.c2.w * b.c2.y;
+    let t67 = a.c2.w * b.c2.z;
+    let t69 = a.c2.w * b.c4.z;
+    let t73 = a.c3.x * b.c2.x;
+    let t74 = a.c3.x * b.c2.y;
+    let t75 = a.c3.x * b.c2.z;
+    let t77 = a.c3.x * b.c4.z;
+    let t80 = a.c3.y * b.c1.w;
+    let t82 = a.c3.y * b.c2.y;
+    let t83 = a.c3.y * b.c2.z;
+    let t85 = a.c3.y * b.c4.z;
+    let t86 = a.c3.y * b.c4.w;
+    let t87 = a.c3.y * b.c5.x;
+    let t89 = a.c3.z * b.c2.x;
+    let t92 = a.c3.z * b.c4.y;
+    let t97 = a.c4.y * b.c3.x;
+    let t98 = a.c4.y * b.c3.y;
+    let t99 = a.c4.y * b.c3.z;
+    let t101 = a.c4.y * b.c5.z;
+    let t105 = a.c4.z * b.c3.x;
+    let t106 = a.c4.z * b.c3.y;
+    let t107 = a.c4.z * b.c3.z;
+    let t109 = a.c4.z * b.c5.z;
+    let t112 = a.c4.w * b.c2.w;
+    let t114 = a.c4.w * b.c3.y;
+    let t115 = a.c4.w * b.c3.z;
+    let t117 = a.c4.w * b.c5.z;
+    let t118 = a.c4.w * b.c5.w;
+    let t119 = a.c4.w * b.c6.x;
+    let t121 = a.c5.x * b.c3.x;
+    let t124 = a.c5.x * b.c5.y;
+    let t129 = a.c5.y * b.c2.x;
+    let t130 = a.c5.y * b.c2.y;
+    let t131 = a.c5.y * b.c2.z;
+    let t133 = a.c5.y * b.c4.z;
+    let t137 = a.c5.z * b.c2.x;
+    let t138 = a.c5.z * b.c2.y;
+    let t139 = a.c5.z * b.c2.z;
+    let t141 = a.c5.z * b.c4.z;
+    let t144 = a.c5.w * b.c1.w;
+    let t146 = a.c5.w * b.c2.y;
+    let t147 = a.c5.w * b.c2.z;
+    let t149 = a.c5.w * b.c4.z;
+    let t150 = a.c5.w * b.c4.w;
+    let t151 = a.c5.w * b.c5.x;
+    let t153 = a.c6.x * b.c2.x;
+    let t156 = a.c6.x * b.c4.y;
+    let t164 = a.c1.x * b.c1.x;
+    let t167 = a.c3.w * b.c3.w;
+    let t168 = a.c4.x * b.c4.x;
+    let t170 = a.c6.z * b.c6.z;
+    let t173 = a.c7.y * b.c7.y;
+    let t175 = a.c7.w * b.c7.w;
+    let t177 = a.c0.y * b.c0.x;
+    let t183 = a.c3.w * b.c6.y;
+    let t184 = a.c4.x * b.c1.x;
+    let t187 = a.c6.w * b.c6.z;
+    let t188 = a.c7.x * b.c7.w;
+    let t191 = a.c7.w * b.c7.x;
+    let t193 = a.c0.y * b.c0.w;
+    let t197 = a.c1.y * b.c4.x;
+    let t199 = a.c3.w * b.c6.z;
+    let t202 = a.c6.z * b.c3.w;
+    let t204 = a.c7.x * b.c7.z;
+    let t206 = a.c7.z * b.c7.x;
+    let t207 = a.c7.w * b.c7.y;
+    let t210 = a.c0.z * b.c0.y;
+    let t215 = a.c3.w * b.c6.w;
+    let t216 = a.c4.x * b.c1.z;
+    let t219 = a.c6.w * b.c3.w;
+    let t221 = a.c7.y * b.c7.x;
+    let t223 = a.c7.w * b.c7.z;
+    let t225 = a.c0.y * b.c4.x;
+    let t229 = a.c1.y * b.c0.w;
+    let t230 = a.c1.z * b.c0.z;
+    let t232 = a.c4.x * b.c0.y;
+    let t235 = a.c6.w * b.c7.y;
+    let t237 = a.c7.y * b.c6.w;
+    let t238 = a.c7.z * b.c6.z;
+    let t241 = a.c0.y * b.c1.z;
+    let t245 = a.c1.y * b.c0.x;
+    let t246 = a.c1.z * b.c0.y;
+    let t248 = a.c4.x * b.c0.z;
+    let t250 = a.c6.z * b.c7.w;
+    let t253 = a.c7.y * b.c3.w;
+    let t254 = a.c7.z * b.c6.y;
+    let t258 = a.c0.z * b.c1.x;
+    let t260 = a.c1.x * b.c0.z;
+    let t262 = a.c1.z * b.c0.x;
+    let t264 = a.c4.x * b.c0.w;
+    let t267 = a.c6.w * b.c7.w;
+    let t268 = a.c7.x * b.c6.z;
+    let t270 = a.c7.z * b.c3.w;
+    let t274 = a.c2.y * t21;
+    let t275 = a.c2.z * t25;
+    let t278 = a.c4.w * t27;
+    let t280 = b.c1.w * t0;
+    let t282 = b.c2.y * t4;
+    let t283 = b.c2.z * t8;
+    let t285 = b.c4.z * t12;
+    let t287 = b.c5.x * t2;
+    let t289 = a.c2.x * t17;
+    let t291 = a.c2.z * t27;
+    let t293 = a.c4.z * t31;
+    let t296 = b.c1.w * t6;
+    let t297 = b.c2.x * t0;
+    let t299 = b.c2.z * t10;
+    let t302 = b.c4.w * t8;
+    let t303 = b.c5.x * t4;
+    let t306 = a.c2.y * t17;
+    let t307 = a.c2.z * t29;
+    let t310 = a.c4.w * t31;
+    let t312 = b.c1.w * t4;
+    let t313 = b.c2.x * t2;
+    let t315 = b.c2.z * t12;
+    let t318 = b.c4.w * t14;
+    let t319 = b.c5.x * t6;
+    let t321 = a.c2.x * t27;
+    let t324 = a.c4.y * t19;
+    let t326 = a.c4.w * t23;
+    let t328 = b.c1.w * t8;
+    let t330 = b.c2.y * t12;
+    let t332 = b.c4.y * t2;
+    let t334 = b.c4.w * t6;
+    let t335 = b.c5.x * t14;
+    let t338 = a.c3.y * t20;
+    let t339 = a.c3.z * t24;
+    let t342 = a.c5.w * t26;
+    let t344 = b.c2.w * t1;
+    let t346 = b.c3.y * t5;
+    let t347 = b.c3.z * t9;
+    let t349 = b.c5.z * t13;
+    let t351 = b.c6.x * t3;
+    let t353 = a.c3.x * t16;
+    let t355 = a.c3.z * t26;
+    let t357 = a.c5.z * t30;
+    let t360 = b.c2.w * t7;
+    let t361 = b.c3.x * t1;
+    let t363 = b.c3.z * t11;
+    let t366 = b.c5.w * t9;
+    let t367 = b.c6.x * t5;
+    let t370 = a.c3.y * t16;
+    let t371 = a.c3.z * t28;
+    let t374 = a.c5.w * t30;
+    let t376 = b.c2.w * t5;
+    let t377 = b.c3.x * t3;
+    let t379 = b.c3.z * t13;
+    let t382 = b.c5.w * t15;
+    let t383 = b.c6.x * t7;
+    let t385 = a.c3.x * t26;
+    let t388 = a.c5.y * t18;
+    let t390 = a.c5.w * t22;
+    let t392 = b.c2.w * t9;
+    let t394 = b.c3.y * t13;
+    let t396 = b.c5.y * t3;
+    let t398 = b.c5.w * t7;
+    let t399 = b.c6.x * t15;
+    let t402 = a.c0.z * b.c6.z;
+    let t404 = a.c1.x * b.c7.x;
+    let t407 = a.c3.w * b.c0.x;
+    let t409 = a.c6.y * b.c0.y;
+    let t411 = a.c6.w * b.c0.w;
+    let t413 = a.c7.y * b.c1.y;
+    let t419 = a.c0.w * b.c1.z;
+    let t421 = a.c1.y * b.c0.z;
+    let t423 = a.c3.w * b.c7.w;
+    let t426 = a.c6.z * b.c7.y;
+    let t428 = a.c7.x * b.c6.y;
+    let t430 = a.c7.z * b.c6.w;
+    let t434 = a.c2.y * t27;
+    let t436 = a.c4.y * t17;
+    let t437 = a.c4.z * t23;
+    let t440 = b.c1.w * t14;
+    let t442 = b.c2.y * t10;
+    let t444 = b.c4.y * t0;
+    let t446 = b.c4.w * t4;
+    let t447 = b.c5.x * t8;
+    let t449 = a.c2.x * t31;
+    let t452 = a.c4.y * t23;
+    let t454 = a.c4.w * t19;
+    let t456 = b.c1.w * t12;
+    let t457 = b.c2.x * t14;
+    let t460 = b.c4.y * t6;
+    let t461 = b.c4.z * t0;
+    let t463 = b.c5.x * t10;
+    let t466 = a.c2.y * t31;
+    let t468 = a.c4.y * t21;
+    let t469 = a.c4.z * t19;
+    let t472 = b.c1.w * t10;
+    let t473 = b.c2.x * t8;
+    let t476 = b.c4.y * t4;
+    let t477 = b.c4.z * t2;
+    let t479 = b.c5.x * t12;
+    let t481 = a.c2.x * t21;
+    let t483 = a.c2.z * t31;
+    let t485 = a.c4.z * t27;
+    let t488 = b.c1.w * t2;
+    let t490 = b.c2.y * t6;
+    let t491 = b.c2.z * t14;
+    let t493 = b.c4.z * t10;
+    let t495 = b.c5.x * t0;
+    let t498 = a.c3.y * t26;
+    let t500 = a.c5.y * t16;
+    let t501 = a.c5.z * t22;
+    let t504 = b.c2.w * t15;
+    let t506 = b.c3.y * t11;
+    let t508 = b.c5.y * t1;
+    let t510 = b.c5.w * t5;
+    let t511 = b.c6.x * t9;
+    let t513 = a.c3.x * t30;
+    let t516 = a.c5.y * t22;
+    let t518 = a.c5.w * t18;
+    let t520 = b.c2.w * t13;
+    let t521 = b.c3.x * t15;
+    let t524 = b.c5.y * t7;
+    let t525 = b.c5.z * t1;
+    let t527 = b.c6.x * t11;
+    let t530 = a.c3.y * t30;
+    let t532 = a.c5.y * t20;
+    let t533 = a.c5.z * t18;
+    let t536 = b.c2.w * t11;
+    let t537 = b.c3.x * t9;
+    let t540 = b.c5.y * t5;
+    let t541 = b.c5.z * t3;
+    let t543 = b.c6.x * t13;
+    let t545 = a.c3.x * t20;
+    let t547 = a.c3.z * t30;
+    let t549 = a.c5.z * t26;
+    let t552 = b.c2.w * t3;
+    let t554 = b.c3.y * t7;
+    let t555 = b.c3.z * t15;
+    let t557 = b.c5.z * t11;
+    let t559 = b.c6.x * t1;
+    let t561 = a.c0.y * b.c3.w;
+    let t564 = a.c1.x * b.c7.w;
+    let t567 = a.c3.w * b.c0.y;
+    let t570 = a.c6.z * b.c0.w;
+    let t571 = a.c6.w * b.c0.z;
+    let t574 = a.c7.z * b.c1.y;
+    let t577 = a.c0.y * b.c6.w;
+    let t580 = a.c1.x * b.c7.z;
+    let t583 = a.c3.w * b.c0.z;
+    let t586 = a.c6.z * b.c0.x;
+    let t587 = a.c6.w * b.c0.y;
+    let t589 = a.c7.y * b.c4.x;
+    let t594 = a.c0.z * b.c6.y;
+    let t597 = a.c1.y * b.c7.x;
+    let t599 = a.c3.w * b.c0.w;
+    let t601 = a.c6.y * b.c0.z;
+    let t603 = a.c6.w * b.c0.x;
+    let t606 = a.c7.z * b.c4.x;
+    let t609 = a.c0.y * b.c7.w;
+    let t614 = a.c1.z * b.c6.z;
+    let t616 = a.c4.x * b.c6.y;
+    let t618 = a.c6.z * b.c1.z;
+    let t619 = a.c6.w * b.c1.y;
+    let t622 = a.c7.z * b.c0.z;
+    let t625 = a.c0.y * b.c7.z;
+    let t629 = a.c1.y * b.c3.w;
+    let t632 = a.c4.x * b.c6.z;
+    let t634 = a.c6.z * b.c4.x;
+    let t635 = a.c6.w * b.c1.x;
+    let t637 = a.c7.y * b.c0.x;
+    let t642 = a.c0.z * b.c7.x;
+    let t646 = a.c1.z * b.c3.w;
+    let t648 = a.c4.x * b.c6.w;
+    let t649 = a.c6.y * b.c1.y;
+    let t651 = a.c6.w * b.c4.x;
+    let t654 = a.c7.z * b.c0.x;
+    let t658 = a.c0.z * b.c7.y;
+    let t660 = a.c1.x * b.c6.y;
+    let t662 = a.c1.z * b.c6.w;
+    let t663 = a.c3.w * b.c4.x;
+    let t667 = a.c6.w * b.c1.z;
+    let t669 = a.c7.y * b.c0.z;
+    let t672 = fma(a.c1.w, b.c2.w, t41);
+    let t673 = fma(-a.c2.x, b.c2.w, t33);
+    let t674 = fma(-a.c2.x, b.c6.x, t34);
+    let t675 = fma(-a.c2.x, b.c5.w, t35);
+    let t676 = fma(a.c1.w, b.c5.y, t45);
+    let t677 = fma(-a.c2.x, b.c5.y, t37);
+    let t678 = fma(a.c1.w, b.c5.w, t43);
+    let t679 = fma(a.c1.w, b.c6.x, t42);
+    let t680 = fma(-a.c2.z, b.c5.z, t48);
+    let t681 = fma(a.c2.y, b.c3.x, t60);
+    let t682 = fma(-a.c2.z, b.c3.z, t50);
+    let t683 = fma(-a.c2.z, b.c3.y, t51);
+    let t684 = fma(a.c2.y, b.c5.y, t57);
+    let t685 = fma(-a.c2.z, b.c2.w, t53);
+    let t686 = fma(-a.c2.z, b.c6.x, t54);
+    let t687 = fma(-a.c2.z, b.c5.w, t55);
+    let t688 = fma(a.c2.w, b.c1.w, t73);
+    let t689 = fma(-a.c3.x, b.c1.w, t65);
+    let t690 = fma(-a.c3.x, b.c5.x, t66);
+    let t691 = fma(-a.c3.x, b.c4.w, t67);
+    let t692 = fma(a.c2.w, b.c4.y, t77);
+    let t693 = fma(-a.c3.x, b.c4.y, t69);
+    let t694 = fma(a.c2.w, b.c4.w, t75);
+    let t695 = fma(a.c2.w, b.c5.x, t74);
+    let t696 = fma(-a.c3.z, b.c4.z, t80);
+    let t697 = fma(a.c3.y, b.c2.x, t92);
+    let t698 = fma(-a.c3.z, b.c2.z, t82);
+    let t699 = fma(-a.c3.z, b.c2.y, t83);
+    let t700 = fma(a.c3.y, b.c4.y, t89);
+    let t701 = fma(-a.c3.z, b.c1.w, t85);
+    let t702 = fma(-a.c3.z, b.c5.x, t86);
+    let t703 = fma(-a.c3.z, b.c4.w, t87);
+    let t704 = fma(a.c4.y, b.c2.w, t105);
+    let t705 = fma(-a.c4.z, b.c2.w, t97);
+    let t706 = fma(-a.c4.z, b.c6.x, t98);
+    let t707 = fma(-a.c4.z, b.c5.w, t99);
+    let t708 = fma(a.c4.y, b.c5.y, t109);
+    let t709 = fma(-a.c4.z, b.c5.y, t101);
+    let t710 = fma(a.c4.y, b.c5.w, t107);
+    let t711 = fma(a.c4.y, b.c6.x, t106);
+    let t712 = fma(-a.c5.x, b.c5.z, t112);
+    let t713 = fma(a.c4.w, b.c3.x, t124);
+    let t714 = fma(-a.c5.x, b.c3.z, t114);
+    let t715 = fma(-a.c5.x, b.c3.y, t115);
+    let t716 = fma(a.c4.w, b.c5.y, t121);
+    let t717 = fma(-a.c5.x, b.c2.w, t117);
+    let t718 = fma(-a.c5.x, b.c6.x, t118);
+    let t719 = fma(-a.c5.x, b.c5.w, t119);
+    let t720 = fma(a.c5.y, b.c1.w, t137);
+    let t721 = fma(-a.c5.z, b.c1.w, t129);
+    let t722 = fma(-a.c5.z, b.c5.x, t130);
+    let t723 = fma(-a.c5.z, b.c4.w, t131);
+    let t724 = fma(a.c5.y, b.c4.y, t141);
+    let t725 = fma(-a.c5.z, b.c4.y, t133);
+    let t726 = fma(a.c5.y, b.c4.w, t139);
+    let t727 = fma(a.c5.y, b.c5.x, t138);
+    let t728 = fma(-a.c6.x, b.c4.z, t144);
+    let t729 = fma(a.c5.w, b.c2.x, t156);
+    let t730 = fma(-a.c6.x, b.c2.z, t146);
+    let t731 = fma(-a.c6.x, b.c2.y, t147);
+    let t732 = fma(a.c5.w, b.c4.y, t153);
+    let t733 = fma(-a.c6.x, b.c1.w, t149);
+    let t734 = fma(-a.c6.x, b.c5.x, t150);
+    let t735 = fma(-a.c6.x, b.c4.w, t151);
+    let t736 = t672 + t682;
+    let t737 = t673 + t687;
+    let t738 = t674 - t680;
+    let t739 = t675 + t685;
+    let t740 = t676 + t686;
+    let t741 = t677 - t683;
+    let t742 = t678 - t684;
+    let t743 = t679 - t681;
+    let t744 = t688 + t698;
+    let t745 = t689 + t703;
+    let t746 = t690 - t696;
+    let t747 = t691 + t701;
+    let t748 = t692 + t702;
+    let t749 = t693 - t699;
+    let t750 = t694 - t700;
+    let t751 = t695 - t697;
+    let t752 = t704 + t714;
+    let t753 = t705 + t719;
+    let t754 = t706 - t712;
+    let t755 = t707 + t717;
+    let t756 = t708 + t718;
+    let t757 = t709 - t715;
+    let t758 = t710 - t716;
+    let t759 = t711 - t713;
+    let t760 = t720 + t730;
+    let t761 = t721 + t735;
+    let t762 = t722 - t728;
+    let t763 = t723 + t733;
+    let t764 = t724 + t734;
+    let t765 = t725 - t731;
+    let t766 = t726 - t732;
+    let t767 = t727 - t729;
+    let t768 = t736 + t756;
+    let t769 = t737 + t757;
+    let t770 = t738 + t758;
+    let t771 = t739 + t759;
+    let t772 = t740 - t752;
+    let t773 = t741 - t753;
+    let t774 = t742 - t754;
+    let t775 = t743 - t755;
+    let t776 = t744 + t764;
+    let t777 = t745 + t765;
+    let t778 = t746 + t766;
+    let t779 = t747 + t767;
+    let t780 = t748 - t760;
+    let t781 = t749 - t761;
+    let t782 = t750 - t762;
+    let t783 = t751 - t763;
+    let t784 = fma(a.c0.x, b.c0.x, t164);
+    let t785 = fma(a.c1.y, b.c1.y, t784);
+    let t786 = fma(a.c1.z, b.c1.z, t167);
+    let t787 = t785 + t786;
+    let t788 = fma(a.c7.x, b.c7.x, t173);
+    let t789 = fma(a.c7.z, b.c7.z, t768);
+    let t790 = t788 + t789;
+    let t791 = t787 + t790;
+    let t792 = fma(-a.c0.y, b.c0.y, t776);
+    let t793 = fma(-a.c0.z, b.c0.z, t792);
+    let t794 = fma(a.c0.w, b.c0.w, t168);
+    let t795 = t793 - t794;
+    let t796 = fma(a.c6.y, b.c6.y, t170);
+    let t797 = fma(a.c6.w, b.c6.w, t175);
+    let t798 = t796 + t797;
+    let t799 = t795 - t798;
+    let t800 = t791 + t799;
+    let t801 = fma(a.c0.x, b.c0.y, t177);
+    let t802 = fma(a.c0.w, b.c0.z, t801);
+    let t803 = fma(a.c1.y, b.c1.z, t183);
+    let t804 = t802 + t803;
+    let t805 = fma(a.c6.y, b.c3.w, t187);
+    let t806 = fma(a.c7.y, b.c7.z, t775);
+    let t807 = t805 + t806;
+    let t808 = t804 + t807;
+    let t809 = fma(-a.c0.z, b.c0.w, t783);
+    let t810 = fma(-a.c1.x, b.c4.x, t809);
+    let t811 = fma(a.c1.z, b.c1.y, t184);
+    let t812 = t810 - t811;
+    let t813 = fma(a.c6.z, b.c6.w, t188);
+    let t814 = fma(a.c7.z, b.c7.y, t191);
+    let t815 = t813 + t814;
+    let t816 = t812 - t815;
+    let t817 = t808 + t816;
+    let t818 = fma(a.c0.x, b.c0.z, t193);
+    let t819 = fma(a.c0.z, b.c0.x, t818);
+    let t820 = fma(a.c1.z, b.c1.x, t199);
+    let t821 = t819 + t820;
+    let t822 = fma(a.c6.y, b.c6.w, t202);
+    let t823 = fma(-a.c0.w, b.c0.y, t206);
+    let t824 = t822 + t823;
+    let t825 = t821 + t824;
+    let t826 = fma(a.c1.x, b.c1.z, t197);
+    let t827 = fma(a.c4.x, b.c1.y, t826);
+    let t828 = fma(a.c6.w, b.c6.y, t204);
+    let t829 = t827 + t828;
+    let t830 = fma(a.c7.y, b.c7.w, t207);
+    let t831 = t770 + t778;
+    let t832 = t830 + t831;
+    let t833 = t829 + t832;
+    let t834 = t825 - t833;
+    let t835 = fma(a.c0.x, b.c0.w, t210);
+    let t836 = fma(a.c0.w, b.c0.x, t835);
+    let t837 = fma(a.c1.x, b.c1.y, t215);
+    let t838 = t836 + t837;
+    let t839 = fma(a.c6.z, b.c6.y, t219);
+    let t840 = fma(a.c7.x, b.c7.y, t769);
+    let t841 = t839 + t840;
+    let t842 = t838 + t841;
+    let t843 = fma(-a.c0.y, b.c0.z, t777);
+    let t844 = fma(-a.c1.y, b.c1.x, t843);
+    let t845 = fma(a.c1.z, b.c4.x, t216);
+    let t846 = t844 - t845;
+    let t847 = fma(a.c6.y, b.c6.z, t221);
+    let t848 = fma(a.c7.z, b.c7.w, t223);
+    let t849 = t847 + t848;
+    let t850 = t846 - t849;
+    let t851 = t842 + t850;
+    let t852 = fma(a.c0.x, b.c1.x, t225);
+    let t853 = fma(a.c0.w, b.c1.y, t852);
+    let t854 = fma(a.c1.x, b.c0.x, t230);
+    let t855 = t853 + t854;
+    let t856 = fma(a.c3.w, b.c7.x, t232);
+    let t857 = fma(a.c6.y, b.c7.w, t235);
+    let t858 = t856 + t857;
+    let t859 = t855 + t858;
+    let t860 = fma(a.c7.x, b.c3.w, t238);
+    let t861 = fma(a.c7.w, b.c6.y, t860);
+    let t862 = fma(a.c0.z, b.c1.z, t229);
+    let t863 = t861 - t862;
+    let t864 = fma(a.c6.z, b.c7.z, t237);
+    let t865 = t771 + t779;
+    let t866 = t864 + t865;
+    let t867 = t863 - t866;
+    let t868 = t859 + t867;
+    let t869 = fma(a.c0.x, b.c1.y, t241);
+    let t870 = fma(a.c0.z, b.c4.x, t869);
+    let t871 = fma(a.c1.x, b.c0.w, t245);
+    let t872 = t870 + t871;
+    let t873 = fma(a.c3.w, b.c7.y, t248);
+    let t874 = fma(a.c6.y, b.c7.z, t250);
+    let t875 = t873 + t874;
+    let t876 = t872 + t875;
+    let t877 = fma(a.c7.x, b.c6.w, t253);
+    let t878 = fma(a.c7.w, b.c6.z, t877);
+    let t879 = fma(a.c0.w, b.c1.x, t246);
+    let t880 = t878 - t879;
+    let t881 = fma(a.c6.w, b.c7.x, t254);
+    let t882 = t774 + t782;
+    let t883 = t881 + t882;
+    let t884 = t880 - t883;
+    let t885 = t876 + t884;
+    let t886 = fma(a.c0.x, b.c1.z, t258);
+    let t887 = fma(a.c0.w, b.c4.x, t886);
+    let t888 = fma(a.c1.y, b.c0.y, t262);
+    let t889 = t887 + t888;
+    let t890 = fma(a.c3.w, b.c7.z, t264);
+    let t891 = fma(a.c6.z, b.c7.x, t267);
+    let t892 = t890 + t891;
+    let t893 = t889 + t892;
+    let t894 = fma(a.c7.y, b.c6.y, t270);
+    let t895 = fma(a.c7.w, b.c6.w, t894);
+    let t896 = t773 + t781;
+    let t897 = t895 + t896;
+    let t898 = fma(a.c0.y, b.c1.y, t260);
+    let t899 = fma(a.c6.y, b.c7.y, t268);
+    let t900 = t898 + t899;
+    let t901 = t897 - t900;
+    let t902 = t893 + t901;
+    let t903 = fma(a.c1.w, t17, t274);
+    let t904 = fma(a.c4.z, t29, t280);
+    let t905 = t903 + t904;
+    let t906 = fma(b.c2.x, t6, t283);
+    let t907 = fma(b.c4.y, t14, t285);
+    let t908 = t906 + t907;
+    let t909 = t905 + t908;
+    let t910 = fma(a.c2.x, t23, t275);
+    let t911 = fma(a.c4.y, t31, t278);
+    let t912 = t910 + t911;
+    let t913 = fma(a.c5.x, t19, t282);
+    let t914 = fma(b.c4.w, t10, t287);
+    let t915 = t913 + t914;
+    let t916 = t912 + t915;
+    let t917 = t909 - t916;
+    let t918 = fma(a.c1.w, t23, t289);
+    let t919 = fma(a.c4.w, t25, t297);
+    let t920 = t918 + t919;
+    let t921 = fma(b.c2.y, t2, t299);
+    let t922 = fma(b.c4.z, t14, t302);
+    let t923 = t921 + t922;
+    let t924 = t920 + t923;
+    let t925 = fma(a.c2.y, t19, t291);
+    let t926 = fma(a.c4.y, t29, t293);
+    let t927 = t925 + t926;
+    let t928 = fma(a.c5.x, t21, t296);
+    let t929 = fma(b.c4.y, t12, t303);
+    let t930 = t928 + t929;
+    let t931 = t927 + t930;
+    let t932 = t924 - t931;
+    let t933 = fma(a.c2.x, t19, t306);
+    let t934 = fma(a.c4.y, t27, t312);
+    let t935 = t933 + t934;
+    let t936 = fma(b.c2.y, t0, t315);
+    let t937 = fma(b.c4.y, t10, t318);
+    let t938 = t936 + t937;
+    let t939 = t935 + t938;
+    let t940 = fma(a.c1.w, t21, t307);
+    let t941 = fma(a.c4.z, t25, t310);
+    let t942 = t940 + t941;
+    let t943 = fma(a.c5.x, t23, t313);
+    let t944 = fma(b.c4.z, t8, t319);
+    let t945 = t943 + t944;
+    let t946 = t942 + t945;
+    let t947 = t939 - t946;
+    let t948 = fma(a.c2.z, t17, t328);
+    let t949 = fma(b.c2.x, t10, t330);
+    let t950 = t948 + t949;
+    let t951 = fma(b.c2.z, t0, t335);
+    let t952 = fma(a.c1.w, t25, t321);
+    let t953 = t951 - t952;
+    let t954 = t950 + t953;
+    let t955 = fma(a.c2.y, t29, t324);
+    let t956 = fma(a.c4.z, t21, t326);
+    let t957 = t955 + t956;
+    let t958 = fma(a.c5.x, t31, t332);
+    let t959 = fma(b.c4.z, t4, t334);
+    let t960 = t958 + t959;
+    let t961 = t957 + t960;
+    let t962 = t954 - t961;
+    let t963 = fma(a.c2.w, t16, t338);
+    let t964 = fma(a.c5.z, t28, t344);
+    let t965 = t963 + t964;
+    let t966 = fma(b.c3.x, t7, t347);
+    let t967 = fma(b.c5.y, t15, t349);
+    let t968 = t966 + t967;
+    let t969 = t965 + t968;
+    let t970 = fma(a.c3.x, t22, t339);
+    let t971 = fma(a.c5.y, t30, t342);
+    let t972 = t970 + t971;
+    let t973 = fma(a.c6.x, t18, t346);
+    let t974 = fma(b.c5.w, t11, t351);
+    let t975 = t973 + t974;
+    let t976 = t972 + t975;
+    let t977 = t969 - t976;
+    let t978 = fma(a.c2.w, t22, t353);
+    let t979 = fma(a.c5.w, t24, t361);
+    let t980 = t978 + t979;
+    let t981 = fma(b.c3.y, t3, t363);
+    let t982 = fma(b.c5.z, t15, t366);
+    let t983 = t981 + t982;
+    let t984 = t980 + t983;
+    let t985 = fma(a.c3.y, t18, t355);
+    let t986 = fma(a.c5.y, t28, t357);
+    let t987 = t985 + t986;
+    let t988 = fma(a.c6.x, t20, t360);
+    let t989 = fma(b.c5.y, t13, t367);
+    let t990 = t988 + t989;
+    let t991 = t987 + t990;
+    let t992 = t984 - t991;
+    let t993 = fma(a.c3.x, t18, t370);
+    let t994 = fma(a.c5.y, t26, t376);
+    let t995 = t993 + t994;
+    let t996 = fma(b.c3.y, t1, t379);
+    let t997 = fma(b.c5.y, t11, t382);
+    let t998 = t996 + t997;
+    let t999 = t995 + t998;
+    let t1000 = fma(a.c2.w, t20, t371);
+    let t1001 = fma(a.c5.z, t24, t374);
+    let t1002 = t1000 + t1001;
+    let t1003 = fma(a.c6.x, t22, t377);
+    let t1004 = fma(b.c5.z, t9, t383);
+    let t1005 = t1003 + t1004;
+    let t1006 = t1002 + t1005;
+    let t1007 = t999 - t1006;
+    let t1008 = fma(a.c3.z, t16, t392);
+    let t1009 = fma(b.c3.x, t11, t394);
+    let t1010 = t1008 + t1009;
+    let t1011 = fma(b.c3.z, t1, t399);
+    let t1012 = fma(a.c2.w, t24, t385);
+    let t1013 = t1011 - t1012;
+    let t1014 = t1010 + t1013;
+    let t1015 = fma(a.c3.y, t28, t388);
+    let t1016 = fma(a.c5.z, t20, t390);
+    let t1017 = t1015 + t1016;
+    let t1018 = fma(a.c6.x, t30, t396);
+    let t1019 = fma(b.c5.z, t5, t398);
+    let t1020 = t1018 + t1019;
+    let t1021 = t1017 + t1020;
+    let t1022 = t1014 - t1021;
+    let t1023 = fma(a.c0.x, b.c3.w, t404);
+    let t1024 = fma(a.c1.y, b.c7.y, t1023);
+    let t1025 = fma(a.c1.z, b.c7.z, t407);
+    let t1026 = t1024 + t1025;
+    let t1027 = fma(a.c7.x, b.c1.x, t413);
+    let t1028 = fma(a.c7.z, b.c1.z, t776);
+    let t1029 = t1027 + t1028;
+    let t1030 = t1026 + t1029;
+    let t1031 = fma(a.c0.y, b.c6.y, t402);
+    let t1032 = fma(a.c0.w, b.c6.w, t1031);
+    let t1033 = fma(a.c4.x, b.c7.w, t409);
+    let t1034 = t1032 + t1033;
+    let t1035 = fma(a.c6.z, b.c0.z, t411);
+    let t1036 = fma(a.c7.w, b.c4.x, t768);
+    let t1037 = t1035 + t1036;
+    let t1038 = t1034 + t1037;
+    let t1039 = t1030 - t1038;
+    let t1040 = fma(a.c0.x, b.c4.x, t423);
+    let t1041 = fma(a.c4.x, b.c0.x, t1040);
+    let t1042 = fma(a.c7.w, b.c3.w, t772);
+    let t1043 = t1041 + t1042;
+    let t1044 = fma(-a.c0.y, b.c1.x, t780);
+    let t1045 = fma(a.c0.z, b.c1.y, t419);
+    let t1046 = t1044 - t1045;
+    let t1047 = t1043 + t1046;
+    let t1048 = fma(a.c1.x, b.c0.y, t421);
+    let t1049 = fma(a.c1.z, b.c0.w, t1048);
+    let t1050 = fma(a.c6.y, b.c7.x, t426);
+    let t1051 = t1049 + t1050;
+    let t1052 = fma(a.c6.w, b.c7.z, t428);
+    let t1053 = fma(a.c7.y, b.c6.z, t430);
+    let t1054 = t1052 + t1053;
+    let t1055 = t1051 + t1054;
+    let t1056 = t1047 - t1055;
+    let t1057 = fma(a.c1.w, t31, t434);
+    let t1058 = fma(a.c2.z, t19, t436);
+    let t1059 = t1057 + t1058;
+    let t1060 = fma(a.c4.w, t21, t442);
+    let t1061 = fma(b.c2.z, t2, t444);
+    let t1062 = t1060 + t1061;
+    let t1063 = t1059 + t1062;
+    let t1064 = fma(b.c4.z, t6, t447);
+    let t1065 = fma(a.c2.x, t29, t437);
+    let t1066 = t1064 - t1065;
+    let t1067 = fma(a.c5.x, t25, t440);
+    let t1068 = fma(b.c2.x, t12, t446);
+    let t1069 = t1067 + t1068;
+    let t1070 = t1066 - t1069;
+    let t1071 = t1063 + t1070;
+    let t1072 = fma(a.c1.w, t29, t449);
+    let t1073 = fma(a.c2.z, t21, t452);
+    let t1074 = t1072 + t1073;
+    let t1075 = fma(a.c4.z, t17, t456);
+    let t1076 = fma(b.c2.z, t4, t461);
+    let t1077 = t1075 + t1076;
+    let t1078 = t1074 + t1077;
+    let t1079 = fma(b.c4.w, t2, t463);
+    let t1080 = fma(a.c2.y, t25, t454);
+    let t1081 = t1079 - t1080;
+    let t1082 = fma(a.c5.x, t27, t457);
+    let t1083 = fma(b.c2.y, t8, t460);
+    let t1084 = t1082 + t1083;
+    let t1085 = t1081 - t1084;
+    let t1086 = t1078 + t1085;
+    let t1087 = fma(a.c2.x, t25, t466);
+    let t1088 = fma(a.c2.z, t23, t469);
+    let t1089 = t1087 + t1088;
+    let t1090 = fma(a.c4.w, t17, t473);
+    let t1091 = fma(b.c2.z, t6, t476);
+    let t1092 = t1090 + t1091;
+    let t1093 = t1089 + t1092;
+    let t1094 = fma(b.c4.w, t0, t479);
+    let t1095 = fma(a.c1.w, t27, t468);
+    let t1096 = t1094 - t1095;
+    let t1097 = fma(a.c5.x, t29, t472);
+    let t1098 = fma(b.c2.y, t14, t477);
+    let t1099 = t1097 + t1098;
+    let t1100 = t1096 - t1099;
+    let t1101 = t1093 + t1100;
+    let t1102 = fma(a.c1.w, t19, t481);
+    let t1103 = fma(a.c2.y, t23, t483);
+    let t1104 = t1102 + t1103;
+    let t1105 = fma(a.c5.x, t17, t488);
+    let t1106 = fma(b.c2.x, t4, t490);
+    let t1107 = t1105 + t1106;
+    let t1108 = t1104 + t1107;
+    let t1109 = fma(b.c4.y, t8, t493);
+    let t1110 = fma(b.c4.w, t12, t495);
+    let t1111 = t1109 + t1110;
+    let t1112 = fma(a.c4.y, t25, t485);
+    let t1113 = fma(a.c4.w, t29, t491);
+    let t1114 = t1112 + t1113;
+    let t1115 = t1111 - t1114;
+    let t1116 = t1108 + t1115;
+    let t1117 = fma(a.c2.w, t30, t498);
+    let t1118 = fma(a.c3.z, t18, t500);
+    let t1119 = t1117 + t1118;
+    let t1120 = fma(a.c5.w, t20, t506);
+    let t1121 = fma(b.c3.z, t3, t508);
+    let t1122 = t1120 + t1121;
+    let t1123 = t1119 + t1122;
+    let t1124 = fma(b.c5.z, t7, t511);
+    let t1125 = fma(a.c3.x, t28, t501);
+    let t1126 = t1124 - t1125;
+    let t1127 = fma(a.c6.x, t24, t504);
+    let t1128 = fma(b.c3.x, t13, t510);
+    let t1129 = t1127 + t1128;
+    let t1130 = t1126 - t1129;
+    let t1131 = t1123 + t1130;
+    let t1132 = fma(a.c2.w, t28, t513);
+    let t1133 = fma(a.c3.z, t20, t516);
+    let t1134 = t1132 + t1133;
+    let t1135 = fma(a.c5.z, t16, t520);
+    let t1136 = fma(b.c3.z, t5, t525);
+    let t1137 = t1135 + t1136;
+    let t1138 = t1134 + t1137;
+    let t1139 = fma(b.c5.w, t3, t527);
+    let t1140 = fma(a.c3.y, t24, t518);
+    let t1141 = t1139 - t1140;
+    let t1142 = fma(a.c6.x, t26, t521);
+    let t1143 = fma(b.c3.y, t9, t524);
+    let t1144 = t1142 + t1143;
+    let t1145 = t1141 - t1144;
+    let t1146 = t1138 + t1145;
+    let t1147 = fma(a.c3.x, t24, t530);
+    let t1148 = fma(a.c3.z, t22, t533);
+    let t1149 = t1147 + t1148;
+    let t1150 = fma(a.c5.w, t16, t537);
+    let t1151 = fma(b.c3.z, t7, t540);
+    let t1152 = t1150 + t1151;
+    let t1153 = t1149 + t1152;
+    let t1154 = fma(b.c5.w, t1, t543);
+    let t1155 = fma(a.c2.w, t26, t532);
+    let t1156 = t1154 - t1155;
+    let t1157 = fma(a.c6.x, t28, t536);
+    let t1158 = fma(b.c3.y, t15, t541);
+    let t1159 = t1157 + t1158;
+    let t1160 = t1156 - t1159;
+    let t1161 = t1153 + t1160;
+    let t1162 = fma(a.c2.w, t18, t545);
+    let t1163 = fma(a.c3.y, t22, t547);
+    let t1164 = t1162 + t1163;
+    let t1165 = fma(a.c6.x, t16, t552);
+    let t1166 = fma(b.c3.x, t5, t554);
+    let t1167 = t1165 + t1166;
+    let t1168 = t1164 + t1167;
+    let t1169 = fma(b.c5.y, t9, t557);
+    let t1170 = fma(b.c5.w, t13, t559);
+    let t1171 = t1169 + t1170;
+    let t1172 = fma(a.c5.y, t24, t549);
+    let t1173 = fma(a.c5.w, t28, t555);
+    let t1174 = t1172 + t1173;
+    let t1175 = t1171 - t1174;
+    let t1176 = t1168 + t1175;
+    let t1177 = fma(a.c0.x, b.c6.y, t561);
+    let t1178 = fma(a.c0.w, b.c6.z, t1177);
+    let t1179 = fma(a.c1.y, b.c7.z, t567);
+    let t1180 = t1178 + t1179;
+    let t1181 = fma(a.c6.y, b.c0.x, t571);
+    let t1182 = fma(a.c7.y, b.c1.z, t783);
+    let t1183 = t1181 + t1182;
+    let t1184 = t1180 + t1183;
+    let t1185 = fma(a.c0.z, b.c6.w, t564);
+    let t1186 = fma(a.c1.z, b.c7.y, t1185);
+    let t1187 = fma(a.c4.x, b.c7.x, t570);
+    let t1188 = t1186 + t1187;
+    let t1189 = fma(a.c7.x, b.c4.x, t574);
+    let t1190 = fma(a.c7.w, b.c1.x, t775);
+    let t1191 = t1189 + t1190;
+    let t1192 = t1188 + t1191;
+    let t1193 = t1184 - t1192;
+    let t1194 = fma(a.c0.x, b.c6.z, t577);
+    let t1195 = fma(a.c0.z, b.c3.w, t1194);
+    let t1196 = fma(a.c1.z, b.c7.x, t583);
+    let t1197 = t1195 + t1196;
+    let t1198 = fma(a.c6.y, b.c0.w, t586);
+    let t1199 = fma(a.c7.z, b.c1.x, t770);
+    let t1200 = t1198 + t1199;
+    let t1201 = t1197 + t1200;
+    let t1202 = fma(a.c0.w, b.c6.y, t580);
+    let t1203 = fma(a.c1.y, b.c7.w, t1202);
+    let t1204 = fma(a.c4.x, b.c7.y, t587);
+    let t1205 = t1203 + t1204;
+    let t1206 = fma(a.c7.x, b.c1.z, t589);
+    let t1207 = fma(a.c7.w, b.c1.y, t778);
+    let t1208 = t1206 + t1207;
+    let t1209 = t1205 + t1208;
+    let t1210 = t1201 - t1209;
+    let t1211 = fma(a.c0.x, b.c6.w, t594);
+    let t1212 = fma(a.c0.w, b.c3.w, t1211);
+    let t1213 = fma(a.c1.x, b.c7.y, t599);
+    let t1214 = t1212 + t1213;
+    let t1215 = fma(a.c6.z, b.c0.y, t603);
+    let t1216 = fma(a.c7.x, b.c1.y, t777);
+    let t1217 = t1215 + t1216;
+    let t1218 = t1214 + t1217;
+    let t1219 = fma(a.c0.y, b.c6.z, t597);
+    let t1220 = fma(a.c1.z, b.c7.w, t1219);
+    let t1221 = fma(a.c4.x, b.c7.z, t601);
+    let t1222 = t1220 + t1221;
+    let t1223 = fma(a.c7.y, b.c1.x, t606);
+    let t1224 = fma(a.c7.w, b.c1.z, t769);
+    let t1225 = t1223 + t1224;
+    let t1226 = t1222 + t1225;
+    let t1227 = t1218 - t1226;
+    let t1228 = fma(a.c0.x, b.c7.x, t609);
+    let t1229 = fma(a.c0.w, b.c7.y, t1228);
+    let t1230 = fma(a.c1.x, b.c3.w, t614);
+    let t1231 = t1229 + t1230;
+    let t1232 = fma(a.c3.w, b.c1.x, t616);
+    let t1233 = fma(a.c6.y, b.c4.x, t619);
+    let t1234 = t1232 + t1233;
+    let t1235 = t1231 + t1234;
+    let t1236 = fma(a.c7.x, b.c0.x, t622);
+    let t1237 = fma(a.c7.w, b.c0.y, t1236);
+    let t1238 = fma(-a.c0.z, b.c7.z, t771);
+    let t1239 = t1237 + t1238;
+    let t1240 = fma(a.c1.y, b.c6.w, t618);
+    let t1241 = fma(a.c7.y, b.c0.w, t779);
+    let t1242 = t1240 + t1241;
+    let t1243 = t1239 - t1242;
+    let t1244 = t1235 + t1243;
+    let t1245 = fma(a.c0.x, b.c7.y, t625);
+    let t1246 = fma(a.c0.z, b.c7.w, t1245);
+    let t1247 = fma(a.c1.x, b.c6.w, t629);
+    let t1248 = t1246 + t1247;
+    let t1249 = fma(a.c3.w, b.c1.y, t632);
+    let t1250 = fma(a.c6.y, b.c1.z, t634);
+    let t1251 = t1249 + t1250;
+    let t1252 = t1248 + t1251;
+    let t1253 = fma(a.c7.x, b.c0.w, t637);
+    let t1254 = fma(a.c7.w, b.c0.z, t1253);
+    let t1255 = fma(-a.c0.w, b.c7.x, t774);
+    let t1256 = t1254 + t1255;
+    let t1257 = fma(a.c1.z, b.c6.y, t635);
+    let t1258 = fma(a.c7.z, b.c0.y, t782);
+    let t1259 = t1257 + t1258;
+    let t1260 = t1256 - t1259;
+    let t1261 = t1252 + t1260;
+    let t1262 = fma(a.c0.x, b.c7.z, t642);
+    let t1263 = fma(a.c0.w, b.c7.w, t1262);
+    let t1264 = fma(a.c1.y, b.c6.y, t646);
+    let t1265 = t1263 + t1264;
+    let t1266 = fma(a.c3.w, b.c1.z, t648);
+    let t1267 = fma(a.c6.z, b.c1.x, t651);
+    let t1268 = t1266 + t1267;
+    let t1269 = t1265 + t1268;
+    let t1270 = fma(a.c7.y, b.c0.y, t654);
+    let t1271 = fma(a.c7.w, b.c0.w, t1270);
+    let t1272 = fma(-a.c0.y, b.c7.y, t781);
+    let t1273 = t1271 + t1272;
+    let t1274 = fma(a.c1.x, b.c6.z, t649);
+    let t1275 = fma(a.c7.x, b.c0.z, t773);
+    let t1276 = t1274 + t1275;
+    let t1277 = t1273 - t1276;
+    let t1278 = t1269 + t1277;
+    let t1279 = fma(a.c0.x, b.c7.w, t663);
+    let t1280 = fma(a.c4.x, b.c3.w, t1279);
+    let t1281 = fma(a.c7.w, b.c0.x, t780);
+    let t1282 = t1280 + t1281;
+    let t1283 = fma(a.c0.y, b.c7.x, t658);
+    let t1284 = fma(a.c0.w, b.c7.z, t660);
+    let t1285 = t1283 + t1284;
+    let t1286 = t1282 - t1285;
+    let t1287 = fma(a.c1.y, b.c6.z, t662);
+    let t1288 = fma(a.c6.y, b.c1.x, t1287);
+    let t1289 = fma(a.c6.z, b.c1.y, t667);
+    let t1290 = t1288 + t1289;
+    let t1291 = fma(a.c7.x, b.c0.y, t669);
+    let t1292 = fma(a.c7.z, b.c0.w, t772);
+    let t1293 = t1291 + t1292;
+    let t1294 = t1290 + t1293;
+    let t1295 = t1286 - t1294;
+    return Even(vec4<f32>(t800, t817, t834, t851), vec4<f32>(t868, t885, t902, t917), vec4<f32>(t932, t947, t962, t977), vec4<f32>(t992, t1007, t1022, t1039), vec4<f32>(t1056, t1071, t1086, t1101), vec4<f32>(t1116, t1131, t1146, t1161), vec4<f32>(t1176, t1193, t1210, t1227), vec4<f32>(t1244, t1261, t1278, t1295));
+}
+
+// `a + b` for `Even`.
+fn even_add(a: Even, b: Even) -> Even {
+    return Even(a.c0 + b.c0, a.c1 + b.c1, a.c2 + b.c2, a.c3 + b.c3, a.c4 + b.c4, a.c5 + b.c5, a.c6 + b.c6, a.c7 + b.c7);
+}
+
+// `a - b` for `Even`.
+fn even_sub(a: Even, b: Even) -> Even {
+    return Even(a.c0 - b.c0, a.c1 - b.c1, a.c2 - b.c2, a.c3 - b.c3, a.c4 - b.c4, a.c5 - b.c5, a.c6 - b.c6, a.c7 - b.c7);
+}
+
+// `a k` for `Even` and a scalar `k`.
+fn even_scale(a: Even, k: f32) -> Even {
+    return Even(a.c0 * k, a.c1 * k, a.c2 * k, a.c3 * k, a.c4 * k, a.c5 * k, a.c6 * k, a.c7 * k);
+}
+
+// The exponential of a `Bivector`, a unit `Even`, by scaling and squaring (gax's Rust `exp` for this
+// kind): `B` is halved `s` times until its 1-norm is at most 1/16, a Taylor series of degree 10
+// gives `exp(B / 2^s)`, a Newton step renormalizes it, `s` squarings undo the scaling, and a
+// second Newton step renormalizes the result where it is small (1-norm below 4).
+fn bivector_exp(x: Bivector) -> Even {
+    let norm = abs(x.c0.x) + abs(x.c0.y) + abs(x.c0.z) + abs(x.c0.w) + abs(x.c1.x) + abs(x.c1.y) + abs(x.c1.z) + abs(x.c1.w) + abs(x.c2.x) + abs(x.c2.y) + abs(x.c2.z) + abs(x.c2.w) + abs(x.c3.x) + abs(x.c3.y) + abs(x.c3.z);
+    var h = 1.0;
+    var s = 0u;
+    loop {
+        if s >= 64u || norm * h < 0.0625 {
+            break;
+        }
+        h = h * 0.5;
+        s = s + 1u;
+    }
+    let e = Even(vec4<f32>(0.0, (x.c0.x) * h, (x.c0.y) * h, (x.c0.z) * h), vec4<f32>((x.c0.w) * h, (x.c1.x) * h, (x.c1.y) * h, (x.c1.z) * h), vec4<f32>((x.c1.w) * h, (x.c2.x) * h, (x.c2.y) * h, (x.c2.z) * h), vec4<f32>((x.c2.w) * h, (x.c3.x) * h, (x.c3.y) * h, (x.c3.z) * h), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    let one = Even(vec4<f32>(1.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    var r = one;
+    for (var k = 10; k >= 1; k = k - 1) {
+        r = even_add(one, even_scale(even_mul_even(e, r), 1.0 / f32(k)));
+    }
+    let three = even_scale(one, 3.0);
+    r = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
+    for (var i = 0u; i < s; i = i + 1u) {
+        r = even_mul_even(r, r);
+    }
+    let size = abs(r.c0.x) + abs(r.c0.y) + abs(r.c0.z) + abs(r.c0.w) + abs(r.c1.x) + abs(r.c1.y) + abs(r.c1.z) + abs(r.c1.w) + abs(r.c2.x) + abs(r.c2.y) + abs(r.c2.z) + abs(r.c2.w) + abs(r.c3.x) + abs(r.c3.y) + abs(r.c3.z) + abs(r.c3.w) + abs(r.c4.x) + abs(r.c4.y) + abs(r.c4.z) + abs(r.c4.w) + abs(r.c5.x) + abs(r.c5.y) + abs(r.c5.z) + abs(r.c5.w) + abs(r.c6.x) + abs(r.c6.y) + abs(r.c6.z) + abs(r.c6.w) + abs(r.c7.x) + abs(r.c7.y) + abs(r.c7.z) + abs(r.c7.w);
+    let fixed = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
+    return Even(select(r.c0, fixed.c0, size < 4.0), select(r.c1, fixed.c1, size < 4.0), select(r.c2, fixed.c2, size < 4.0), select(r.c3, fixed.c3, size < 4.0), select(r.c4, fixed.c4, size < 4.0), select(r.c5, fixed.c5, size < 4.0), select(r.c6, fixed.c6, size < 4.0), select(r.c7, fixed.c7, size < 4.0));
+}
+
+// Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
+// `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
+struct StudyDual {
+    p: vec2<f32>,
+    d: vec2<f32>,
+}
+
+fn cx_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    let d = 1.0 / (b.x * b.x + b.y * b.y);
+    return vec2<f32>((a.x * b.x + a.y * b.y) * d, (a.y * b.x - a.x * b.y) * d);
+}
+
+// The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
+// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
+    let r = sqrt(z.x * z.x + z.y * z.y);
+    let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));
+    let other = z.y / (2.0 * select(1.0, t, 0.0 < t));
+    let signed = select(t, -t, z.y < 0.0);
+    return select(vec2<f32>(t, other), vec2<f32>(abs(other), signed), z.x < 0.0);
+}
+
+fn cx_ln(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(log(z.x * z.x + z.y * z.y) * 0.5, atan2(z.y, z.x));
+}
+
+fn cx_sinh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(sinh(z.x) * cos(z.y), cosh(z.x) * sin(z.y));
+}
+
+fn cx_cosh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(cosh(z.x) * cos(z.y), sinh(z.x) * sin(z.y));
+}
+
+fn sd_real(x: f32) -> StudyDual {
+    return StudyDual(vec2<f32>(x, 0.0), vec2<f32>(0.0, 0.0));
+}
+
+fn sd_add(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p + b.p, a.d + b.d);
+}
+
+fn sd_sub(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p - b.p, a.d - b.d);
+}
+
+fn sd_scale(a: StudyDual, k: f32) -> StudyDual {
+    return StudyDual(a.p * k, a.d * k);
+}
+
+fn sd_mul(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(cx_mul(a.p, b.p), cx_mul(a.p, b.d) + cx_mul(a.d, b.p));
+}
+
+fn sd_div(a: StudyDual, b: StudyDual) -> StudyDual {
+    let q = cx_div(a.p, b.p);
+    return StudyDual(q, cx_div(a.d - cx_mul(q, b.d), b.p));
+}
+
+fn sd_sqrt(a: StudyDual) -> StudyDual {
+    let r = cx_sqrt(a.p);
+    return StudyDual(r, cx_div(a.d, r + r));
+}
+
+fn sd_ln(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_ln(a.p), cx_div(a.d, a.p));
+}
+
+fn sd_sinh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_sinh(a.p), cx_mul(a.d, cx_cosh(a.p)));
+}
+
+fn sd_cosh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_cosh(a.p), cx_mul(a.d, cx_sinh(a.p)));
+}
+
+// `if |x|² < t { a } else { b }` on the value's squared magnitude.
+fn sd_select_small(x: StudyDual, t: f32, a: StudyDual, b: StudyDual) -> StudyDual {
+    let small = dot(x.p, x.p) < t;
+    return StudyDual(select(b.p, a.p, small), select(b.d, a.d, small));
+}
+
+// Every function below computes its direct form at a stand-in argument wherever its series is
+// selected, so a discarded branch never divides by zero (`sqrt` has an infinite derivative at
+// 0): the result is the same, and there are no non-finite intermediates to rely on discarding.
+
+// `C(x) = cosh(sqrt x)`, with its series where `|x|² < 1/100` (thresholds for `f32`).
+fn study_exp_c(x: StudyDual) -> StudyDual {
+    let c = sd_cosh(sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x)));
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var cs = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 2.0));
+    cs = sd_add(cs, sd_scale(x2, 1.0 / 24.0));
+    cs = sd_add(cs, sd_scale(x3, 1.0 / 720.0));
+    cs = sd_add(cs, sd_scale(sd_mul(x3, x), 1.0 / 40320.0));
+    return sd_select_small(x, 0.01, cs, c);
+}
+
+// `S(x) = sinh(sqrt x) / sqrt x`, with its series where `|x|² < 1/100`.
+fn study_exp_s(x: StudyDual) -> StudyDual {
+    let r = sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x));
+    let s = sd_div(sd_sinh(r), r);
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var ss = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 6.0));
+    ss = sd_add(ss, sd_scale(x2, 1.0 / 120.0));
+    ss = sd_add(ss, sd_scale(x3, 1.0 / 5040.0));
+    ss = sd_add(ss, sd_scale(sd_mul(x3, x), 1.0 / 362880.0));
+    return sd_select_small(x, 0.01, ss, s);
+}
+
+// The factor `H` of `log(R) = H <R>_2` for a versor `R = c + P` with `u = P²`:
+// `2 atanh(t) / (t (1 + c))`, `t = sqrt(u) / (1 + c)` (see gax_core::study::log_factor).
+fn study_log_factor(c: StudyDual, u: StudyDual) -> StudyDual {
+    let opc = sd_add(sd_real(1.0), c);
+    // `t² = u / (1 + c)²` for the series, without the root; the direct form at `t = 1/2`
+    // where the series is selected.
+    let t2 = sd_div(u, sd_mul(opc, opc));
+    let safe = sd_select_small(t2, 1e-4, sd_scale(sd_mul(opc, opc), 0.25), u);
+    let t = sd_div(sd_sqrt(safe), opc);
+    let direct = sd_div(sd_scale(sd_ln(sd_div(sd_add(sd_real(1.0), t), sd_sub(sd_real(1.0), t))), 0.5), t);
+    var series = sd_real(1.0 / 15.0);
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 13.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 11.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 9.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 7.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 5.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 3.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0));
+    let ratio = sd_select_small(t2, 1e-4, series, direct);
+    return sd_div(sd_scale(ratio, 2.0), opc);
+}
+
+// `acosh(y)²`, with its series near `y = 1` (`|y - 1|² < 1e-8`).
+fn study_acosh_sq(y: StudyDual) -> StudyDual {
+    let t = sd_sub(y, sd_real(1.0));
+    let ys = sd_select_small(t, 1e-8, sd_real(2.0), y);
+    let w = sd_ln(sd_add(ys, sd_sqrt(sd_mul(sd_sub(ys, sd_real(1.0)), sd_add(ys, sd_real(1.0))))));
+    let direct = sd_mul(w, w);
+    let tt = sd_mul(t, t);
+    var series = sd_scale(t, 2.0);
+    series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
+    series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
+    return sd_select_small(t, 1e-8, series, direct);
+}
+
+// `study_exp_c` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_exp_c(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_exp_c(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_exp_c(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_exp_c(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `study_exp_s` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_exp_s(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_exp_s(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_exp_s(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_exp_s(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `exp(B) = c0 + c1 Q + (s0 + s1 Q) B` for `B² = lambda + Q` with `Q² = q` (5D algebras), as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs_q).
+fn study_exp_q(lambda: f32, q: f32) -> vec4<f32> {
+    let c = study_q_exp_c(lambda, q);
+    let s = study_q_exp_s(lambda, q);
+    return vec4<f32>(c.x, c.y, s.x, s.y);
+}
+
+// `study_acosh_sq` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_acosh_sq(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `log R = h0 P + h1 C4 P` for a unit versor `R = c0 + C4 + P` with `C4² = qc` (5D
+// algebras), as `[h0, h1]` (gax_core::study::log_coeffs_q).
+fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {
+    let g = study_q_acosh_sq(c0, qc);
+    let qx = g.y * g.y * qc;
+    let s = study_q_exp_s(g.x, qx);
+    let d = 1.0 / (s.x * s.x - s.y * s.y * qx);
+    return vec2<f32>(s.x * d, -(s.y * g.y) * d);
 }
 
 // `1 / sqrt(|a|)`.

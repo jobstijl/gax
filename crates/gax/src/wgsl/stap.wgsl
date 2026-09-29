@@ -1833,6 +1833,128 @@ fn bivector_norm_squared(x: Bivector) -> f32 {
     return t10;
 }
 
+// The exponential, a unit `Motor`: `exp(B) = C(B²) + S(B²) B` with `B² = λ + Q`, `Q²` a scalar.
+fn bivector_exp(x: Bivector) -> Motor {
+    let p0 = x.c1.x * x.c1.w;
+    let p1 = x.c1.y * x.c2.x;
+    let p2 = x.c1.z * x.c2.y;
+    let p4 = x.c1.y * x.c1.y;
+    let p7 = x.c2.x * x.c2.x;
+    let p11 = p0 * p2;
+    let p12 = p1 * p1;
+    let p15 = fma(x.c1.w, x.c1.w, p7);
+    let p16 = fma(x.c2.y, x.c2.y, p15);
+    let p17 = fma(x.c1.x, x.c1.x, p4);
+    let p18 = fma(x.c1.z, x.c1.z, p17);
+    let p19 = p16 - p18;
+    let p20 = fma(p0, p0, p12);
+    let p21 = fma(p2, p2, p20);
+    let p23 = fma(p0, p1, p11);
+    let p24 = fma(p1, p2, p23);
+    let p25 = p24 * 8.0;
+    let p26 = fma(p21, 4.0, p25);
+    let p27 = -p26;
+    let r1 = study_exp_q(p19, p27);
+    let c0 = r1[0];
+    let c1 = r1[1];
+    let s0 = r1[2];
+    let s1 = r1[3];
+    let t0 = x.c1.x * x.c1.w;
+    let t2 = x.c1.y * x.c2.x;
+    let t3 = s1 * t2;
+    let t4 = x.c1.z * x.c2.y;
+    let t6 = fma(s1, t0, t3);
+    let t7 = fma(s1, t4, t6);
+    let t8 = x.c0.x * x.c1.x;
+    let t10 = x.c0.y * x.c1.y;
+    let t11 = s1 * t10;
+    let t12 = x.c0.z * x.c1.z;
+    let t14 = fma(s1, t8, t11);
+    let t15 = fma(s1, t12, t14);
+    let t16 = x.c0.x * x.c2.x;
+    let t17 = s1 * t16;
+    let t18 = x.c0.y * x.c1.w;
+    let t20 = x.c0.w * x.c1.z;
+    let t22 = fma(-s1, t18, t17);
+    let t23 = fma(-s1, t20, t22);
+    let t24 = x.c0.x * x.c2.y;
+    let t26 = x.c0.z * x.c1.w;
+    let t28 = x.c0.w * x.c1.y;
+    let t29 = s1 * t28;
+    let t30 = fma(s1, t24, t29);
+    let t31 = fma(-s1, t26, t30);
+    let t32 = x.c0.y * x.c2.y;
+    let t33 = s1 * t32;
+    let t34 = x.c0.z * x.c2.x;
+    let t36 = x.c0.w * x.c1.x;
+    let t38 = fma(-s1, t34, t33);
+    let t39 = fma(-s1, t36, t38);
+    let t40 = x.c0.x * c1;
+    let t41 = x.c0.y * c1;
+    let t42 = x.c0.z * c1;
+    let t43 = x.c0.w * c1;
+    let t47 = x.c2.y * t31;
+    let t51 = x.c2.y * t39;
+    let t52 = x.c0.z * s0;
+    let t54 = x.c1.w * t31;
+    let t59 = x.c1.z * t23;
+    let t61 = x.c1.w * t7;
+    let t63 = x.c2.x * t7;
+    let t65 = x.c2.y * t7;
+    let t66 = x.c1.x * t7;
+    let t67 = x.c1.w * s0;
+    let t68 = x.c1.y * t7;
+    let t69 = x.c2.x * s0;
+    let t70 = x.c1.z * t7;
+    let t71 = x.c2.y * s0;
+    let t72 = x.c2.y * t41;
+    let t76 = x.c1.w * t42;
+    let t78 = x.c2.x * t40;
+    let t82 = x.c1.y * t41;
+    let t85 = c1 * t2;
+    let t87 = fma(x.c2.x, t23, t47);
+    let t88 = fma(-x.c1.x, t15, t87);
+    let t89 = t88 * 2.0;
+    let t90 = fma(x.c0.x, s0, t89);
+    let t91 = fma(-x.c1.y, t15, t51);
+    let t92 = fma(-x.c1.w, t23, t91);
+    let t93 = t92 * 2.0;
+    let t94 = fma(x.c0.y, s0, t93);
+    let t95 = fma(x.c1.z, t15, t54);
+    let t96 = fma(x.c2.x, t39, t95);
+    let t98 = fma(-t96, 2.0, t52);
+    let t99 = fma(x.c1.x, t39, t59);
+    let t100 = fma(-x.c1.y, t31, t99);
+    let t101 = t100 * 2.0;
+    let t102 = fma(x.c0.w, s0, t101);
+    let t103 = t61 * 2.0;
+    let t104 = fma(x.c1.x, s0, t103);
+    let t105 = t63 * 2.0;
+    let t106 = fma(x.c1.y, s0, t105);
+    let t107 = t65 * 2.0;
+    let t108 = fma(x.c1.z, s0, t107);
+    let t110 = fma(-t66, 2.0, t67);
+    let t112 = fma(-t68, 2.0, t69);
+    let t114 = fma(-t70, 2.0, t71);
+    let t115 = fma(-x.c2.x, t42, t72);
+    let t116 = fma(-x.c1.x, t43, t115);
+    let t117 = t116 * 2.0;
+    let t118 = fma(-x.c2.y, t40, t76);
+    let t119 = fma(-x.c1.y, t43, t118);
+    let t120 = t119 * 2.0;
+    let t121 = fma(-x.c1.w, t41, t78);
+    let t122 = fma(-x.c1.z, t43, t121);
+    let t123 = t122 * 2.0;
+    let t124 = fma(x.c1.x, t40, t82);
+    let t125 = fma(x.c1.z, t42, t124);
+    let t126 = t125 * 2.0;
+    let t127 = fma(c1, t0, t85);
+    let t128 = fma(c1, t4, t127);
+    let t129 = t128 * 2.0;
+    let t130 = -t129;
+    return Motor(vec4<f32>(c0, t90, t94, t98), vec4<f32>(t102, t104, t106, t108), vec4<f32>(t110, t112, t114, t117), vec4<f32>(t120, t123, t126, t130));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn trivector_norm_squared(x: Trivector) -> f32 {
     let t0 = x.c1.z * x.c1.z;
@@ -1894,6 +2016,53 @@ fn motor_norm_squared(x: Motor) -> f32 {
     let t13 = t11 + t12;
     let t14 = t10 - t13;
     return t14;
+}
+
+// The logarithm of a unit `Motor`: the `Bivector` B with `exp(B) = x`.
+fn unit_motor_log(x: Motor) -> Bivector {
+    let p0 = x.c3.w * x.c3.w;
+    let p1 = -p0;
+    let r1 = study_log_q(x.c0.x, p1);
+    let h0 = r1[0];
+    let h1 = r1[1];
+    let t0 = x.c3.w * h1;
+    let t1 = x.c2.w * h1;
+    let t2 = x.c3.x * h1;
+    let t3 = x.c3.y * h1;
+    let t4 = x.c3.z * h1;
+    let t7 = x.c2.y * t3;
+    let t8 = x.c2.z * t2;
+    let t11 = x.c2.x * t3;
+    let t12 = x.c2.z * t1;
+    let t15 = x.c2.x * t2;
+    let t16 = x.c2.y * t1;
+    let t18 = x.c1.y * t1;
+    let t20 = x.c1.w * t3;
+    let t21 = x.c1.y * h0;
+    let t23 = x.c1.z * h0;
+    let t25 = x.c1.w * h0;
+    let t28 = x.c2.x * h0;
+    let t30 = x.c2.y * h0;
+    let t32 = x.c2.z * h0;
+    let t33 = fma(x.c0.y, h0, t7);
+    let t34 = fma(x.c1.y, t4, t8);
+    let t35 = t33 - t34;
+    let t36 = fma(x.c0.z, h0, t12);
+    let t37 = fma(x.c1.z, t4, t11);
+    let t38 = t36 - t37;
+    let t39 = fma(x.c0.w, h0, t15);
+    let t40 = fma(x.c1.w, t4, t16);
+    let t41 = t39 - t40;
+    let t42 = fma(x.c1.x, h0, t18);
+    let t43 = fma(x.c1.z, t2, t20);
+    let t44 = t42 + t43;
+    let t45 = fma(-x.c2.x, t0, t21);
+    let t46 = fma(-x.c2.y, t0, t23);
+    let t47 = fma(-x.c2.z, t0, t25);
+    let t48 = fma(x.c1.y, t0, t28);
+    let t49 = fma(x.c1.z, t0, t30);
+    let t50 = fma(x.c1.w, t0, t32);
+    return Bivector(vec4<f32>(t35, t38, t41, t44), vec4<f32>(t45, t46, t47, t48), vec4<f32>(t49, t50, 0.0, 0.0));
 }
 
 // The squared norm: the scalar part of `x ~x`.
@@ -13063,6 +13232,207 @@ fn unit_odd_sandwich_multivector(v: Odd, x: Multivector) -> Multivector {
     let t759 = t758 * 4.0;
     let t760 = fma(x.c7.w, t205, t759);
     return Multivector(vec4<f32>(t346, t550, t554, t558), vec4<f32>(t562, t566, t577, t588), vec4<f32>(t599, t610, t617, t624), vec4<f32>(t631, t638, t645, t652), vec4<f32>(t663, t674, t685, t696), vec4<f32>(t707, t718, t722, t726), vec4<f32>(t730, t734, t739, t744), vec4<f32>(t749, t754, t755, t760));
+}
+
+// Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
+// `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
+struct StudyDual {
+    p: vec2<f32>,
+    d: vec2<f32>,
+}
+
+fn cx_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    let d = 1.0 / (b.x * b.x + b.y * b.y);
+    return vec2<f32>((a.x * b.x + a.y * b.y) * d, (a.y * b.x - a.x * b.y) * d);
+}
+
+// The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
+// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
+    let r = sqrt(z.x * z.x + z.y * z.y);
+    let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));
+    let other = z.y / (2.0 * select(1.0, t, 0.0 < t));
+    let signed = select(t, -t, z.y < 0.0);
+    return select(vec2<f32>(t, other), vec2<f32>(abs(other), signed), z.x < 0.0);
+}
+
+fn cx_ln(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(log(z.x * z.x + z.y * z.y) * 0.5, atan2(z.y, z.x));
+}
+
+fn cx_sinh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(sinh(z.x) * cos(z.y), cosh(z.x) * sin(z.y));
+}
+
+fn cx_cosh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(cosh(z.x) * cos(z.y), sinh(z.x) * sin(z.y));
+}
+
+fn sd_real(x: f32) -> StudyDual {
+    return StudyDual(vec2<f32>(x, 0.0), vec2<f32>(0.0, 0.0));
+}
+
+fn sd_add(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p + b.p, a.d + b.d);
+}
+
+fn sd_sub(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p - b.p, a.d - b.d);
+}
+
+fn sd_scale(a: StudyDual, k: f32) -> StudyDual {
+    return StudyDual(a.p * k, a.d * k);
+}
+
+fn sd_mul(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(cx_mul(a.p, b.p), cx_mul(a.p, b.d) + cx_mul(a.d, b.p));
+}
+
+fn sd_div(a: StudyDual, b: StudyDual) -> StudyDual {
+    let q = cx_div(a.p, b.p);
+    return StudyDual(q, cx_div(a.d - cx_mul(q, b.d), b.p));
+}
+
+fn sd_sqrt(a: StudyDual) -> StudyDual {
+    let r = cx_sqrt(a.p);
+    return StudyDual(r, cx_div(a.d, r + r));
+}
+
+fn sd_ln(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_ln(a.p), cx_div(a.d, a.p));
+}
+
+fn sd_sinh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_sinh(a.p), cx_mul(a.d, cx_cosh(a.p)));
+}
+
+fn sd_cosh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_cosh(a.p), cx_mul(a.d, cx_sinh(a.p)));
+}
+
+// `if |x|² < t { a } else { b }` on the value's squared magnitude.
+fn sd_select_small(x: StudyDual, t: f32, a: StudyDual, b: StudyDual) -> StudyDual {
+    let small = dot(x.p, x.p) < t;
+    return StudyDual(select(b.p, a.p, small), select(b.d, a.d, small));
+}
+
+// Every function below computes its direct form at a stand-in argument wherever its series is
+// selected, so a discarded branch never divides by zero (`sqrt` has an infinite derivative at
+// 0): the result is the same, and there are no non-finite intermediates to rely on discarding.
+
+// `C(x) = cosh(sqrt x)`, with its series where `|x|² < 1/100` (thresholds for `f32`).
+fn study_exp_c(x: StudyDual) -> StudyDual {
+    let c = sd_cosh(sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x)));
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var cs = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 2.0));
+    cs = sd_add(cs, sd_scale(x2, 1.0 / 24.0));
+    cs = sd_add(cs, sd_scale(x3, 1.0 / 720.0));
+    cs = sd_add(cs, sd_scale(sd_mul(x3, x), 1.0 / 40320.0));
+    return sd_select_small(x, 0.01, cs, c);
+}
+
+// `S(x) = sinh(sqrt x) / sqrt x`, with its series where `|x|² < 1/100`.
+fn study_exp_s(x: StudyDual) -> StudyDual {
+    let r = sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x));
+    let s = sd_div(sd_sinh(r), r);
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var ss = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 6.0));
+    ss = sd_add(ss, sd_scale(x2, 1.0 / 120.0));
+    ss = sd_add(ss, sd_scale(x3, 1.0 / 5040.0));
+    ss = sd_add(ss, sd_scale(sd_mul(x3, x), 1.0 / 362880.0));
+    return sd_select_small(x, 0.01, ss, s);
+}
+
+// The factor `H` of `log(R) = H <R>_2` for a versor `R = c + P` with `u = P²`:
+// `2 atanh(t) / (t (1 + c))`, `t = sqrt(u) / (1 + c)` (see gax_core::study::log_factor).
+fn study_log_factor(c: StudyDual, u: StudyDual) -> StudyDual {
+    let opc = sd_add(sd_real(1.0), c);
+    // `t² = u / (1 + c)²` for the series, without the root; the direct form at `t = 1/2`
+    // where the series is selected.
+    let t2 = sd_div(u, sd_mul(opc, opc));
+    let safe = sd_select_small(t2, 1e-4, sd_scale(sd_mul(opc, opc), 0.25), u);
+    let t = sd_div(sd_sqrt(safe), opc);
+    let direct = sd_div(sd_scale(sd_ln(sd_div(sd_add(sd_real(1.0), t), sd_sub(sd_real(1.0), t))), 0.5), t);
+    var series = sd_real(1.0 / 15.0);
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 13.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 11.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 9.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 7.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 5.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 3.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0));
+    let ratio = sd_select_small(t2, 1e-4, series, direct);
+    return sd_div(sd_scale(ratio, 2.0), opc);
+}
+
+// `acosh(y)²`, with its series near `y = 1` (`|y - 1|² < 1e-8`).
+fn study_acosh_sq(y: StudyDual) -> StudyDual {
+    let t = sd_sub(y, sd_real(1.0));
+    let ys = sd_select_small(t, 1e-8, sd_real(2.0), y);
+    let w = sd_ln(sd_add(ys, sd_sqrt(sd_mul(sd_sub(ys, sd_real(1.0)), sd_add(ys, sd_real(1.0))))));
+    let direct = sd_mul(w, w);
+    let tt = sd_mul(t, t);
+    var series = sd_scale(t, 2.0);
+    series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
+    series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
+    return sd_select_small(t, 1e-8, series, direct);
+}
+
+// `study_exp_c` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_exp_c(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_exp_c(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_exp_c(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_exp_c(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `study_exp_s` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_exp_s(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_exp_s(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_exp_s(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_exp_s(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `exp(B) = c0 + c1 Q + (s0 + s1 Q) B` for `B² = lambda + Q` with `Q² = q` (5D algebras), as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs_q).
+fn study_exp_q(lambda: f32, q: f32) -> vec4<f32> {
+    let c = study_q_exp_c(lambda, q);
+    let s = study_q_exp_s(lambda, q);
+    return vec4<f32>(c.x, c.y, s.x, s.y);
+}
+
+// `study_acosh_sq` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn study_q_acosh_sq(a: f32, q: f32) -> vec2<f32> {
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = study_acosh_sq(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}
+// `log R = h0 P + h1 C4 P` for a unit versor `R = c0 + C4 + P` with `C4² = qc` (5D
+// algebras), as `[h0, h1]` (gax_core::study::log_coeffs_q).
+fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {
+    let g = study_q_acosh_sq(c0, qc);
+    let qx = g.y * g.y * qc;
+    let s = study_q_exp_s(g.x, qx);
+    let d = 1.0 / (s.x * s.x - s.y * s.y * qx);
+    return vec2<f32>(s.x * d, -(s.y * g.y) * d);
 }
 
 // `1 / sqrt(|a|)`.

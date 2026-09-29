@@ -23,6 +23,180 @@ use crate::table::{BinOp, UnOp};
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
+/// Complex numbers (`vec2<f32>`, re and im) and dual numbers over them (a value and a
+/// derivative), with the elementary functions the general Study helpers need: a port of
+/// `gax_core::study`'s `Cx`, `Dual` and `Channel`. Included once when a module uses a helper
+/// that [`StudyFn::needs_channels`].
+pub const CHANNELS: &str = "// Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
+// `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
+struct StudyDual {
+    p: vec2<f32>,
+    d: vec2<f32>,
+}
+
+fn cx_mul(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
+}
+
+fn cx_div(a: vec2<f32>, b: vec2<f32>) -> vec2<f32> {
+    let d = 1.0 / (b.x * b.x + b.y * b.y);
+    return vec2<f32>((a.x * b.x + a.y * b.y) * d, (a.y * b.x - a.x * b.y) * d);
+}
+
+// The principal root without cancellation: the larger part `t = sqrt((|z| + |a|) / 2)`, the
+// other `b / (2t)` (the form of gax_core::study::Cx::sqrt).
+fn cx_sqrt(z: vec2<f32>) -> vec2<f32> {
+    let r = sqrt(z.x * z.x + z.y * z.y);
+    let t = sqrt(max((r + abs(z.x)) * 0.5, 0.0));
+    let other = z.y / (2.0 * select(1.0, t, 0.0 < t));
+    let signed = select(t, -t, z.y < 0.0);
+    return select(vec2<f32>(t, other), vec2<f32>(abs(other), signed), z.x < 0.0);
+}
+
+fn cx_ln(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(log(z.x * z.x + z.y * z.y) * 0.5, atan2(z.y, z.x));
+}
+
+fn cx_sinh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(sinh(z.x) * cos(z.y), cosh(z.x) * sin(z.y));
+}
+
+fn cx_cosh(z: vec2<f32>) -> vec2<f32> {
+    return vec2<f32>(cosh(z.x) * cos(z.y), sinh(z.x) * sin(z.y));
+}
+
+fn sd_real(x: f32) -> StudyDual {
+    return StudyDual(vec2<f32>(x, 0.0), vec2<f32>(0.0, 0.0));
+}
+
+fn sd_add(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p + b.p, a.d + b.d);
+}
+
+fn sd_sub(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(a.p - b.p, a.d - b.d);
+}
+
+fn sd_scale(a: StudyDual, k: f32) -> StudyDual {
+    return StudyDual(a.p * k, a.d * k);
+}
+
+fn sd_mul(a: StudyDual, b: StudyDual) -> StudyDual {
+    return StudyDual(cx_mul(a.p, b.p), cx_mul(a.p, b.d) + cx_mul(a.d, b.p));
+}
+
+fn sd_div(a: StudyDual, b: StudyDual) -> StudyDual {
+    let q = cx_div(a.p, b.p);
+    return StudyDual(q, cx_div(a.d - cx_mul(q, b.d), b.p));
+}
+
+fn sd_sqrt(a: StudyDual) -> StudyDual {
+    let r = cx_sqrt(a.p);
+    return StudyDual(r, cx_div(a.d, r + r));
+}
+
+fn sd_ln(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_ln(a.p), cx_div(a.d, a.p));
+}
+
+fn sd_sinh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_sinh(a.p), cx_mul(a.d, cx_cosh(a.p)));
+}
+
+fn sd_cosh(a: StudyDual) -> StudyDual {
+    return StudyDual(cx_cosh(a.p), cx_mul(a.d, cx_sinh(a.p)));
+}
+
+// `if |x|² < t { a } else { b }` on the value's squared magnitude.
+fn sd_select_small(x: StudyDual, t: f32, a: StudyDual, b: StudyDual) -> StudyDual {
+    let small = dot(x.p, x.p) < t;
+    return StudyDual(select(b.p, a.p, small), select(b.d, a.d, small));
+}
+
+// Every function below computes its direct form at a stand-in argument wherever its series is
+// selected, so a discarded branch never divides by zero (`sqrt` has an infinite derivative at
+// 0): the result is the same, and there are no non-finite intermediates to rely on discarding.
+
+// `C(x) = cosh(sqrt x)`, with its series where `|x|² < 1/100` (thresholds for `f32`).
+fn study_exp_c(x: StudyDual) -> StudyDual {
+    let c = sd_cosh(sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x)));
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var cs = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 2.0));
+    cs = sd_add(cs, sd_scale(x2, 1.0 / 24.0));
+    cs = sd_add(cs, sd_scale(x3, 1.0 / 720.0));
+    cs = sd_add(cs, sd_scale(sd_mul(x3, x), 1.0 / 40320.0));
+    return sd_select_small(x, 0.01, cs, c);
+}
+
+// `S(x) = sinh(sqrt x) / sqrt x`, with its series where `|x|² < 1/100`.
+fn study_exp_s(x: StudyDual) -> StudyDual {
+    let r = sd_sqrt(sd_select_small(x, 0.01, sd_real(1.0), x));
+    let s = sd_div(sd_sinh(r), r);
+    let x2 = sd_mul(x, x);
+    let x3 = sd_mul(x2, x);
+    var ss = sd_add(sd_real(1.0), sd_scale(x, 1.0 / 6.0));
+    ss = sd_add(ss, sd_scale(x2, 1.0 / 120.0));
+    ss = sd_add(ss, sd_scale(x3, 1.0 / 5040.0));
+    ss = sd_add(ss, sd_scale(sd_mul(x3, x), 1.0 / 362880.0));
+    return sd_select_small(x, 0.01, ss, s);
+}
+
+// The factor `H` of `log(R) = H <R>_2` for a versor `R = c + P` with `u = P²`:
+// `2 atanh(t) / (t (1 + c))`, `t = sqrt(u) / (1 + c)` (see gax_core::study::log_factor).
+fn study_log_factor(c: StudyDual, u: StudyDual) -> StudyDual {
+    let opc = sd_add(sd_real(1.0), c);
+    // `t² = u / (1 + c)²` for the series, without the root; the direct form at `t = 1/2`
+    // where the series is selected.
+    let t2 = sd_div(u, sd_mul(opc, opc));
+    let safe = sd_select_small(t2, 1e-4, sd_scale(sd_mul(opc, opc), 0.25), u);
+    let t = sd_div(sd_sqrt(safe), opc);
+    let direct = sd_div(sd_scale(sd_ln(sd_div(sd_add(sd_real(1.0), t), sd_sub(sd_real(1.0), t))), 0.5), t);
+    var series = sd_real(1.0 / 15.0);
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 13.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 11.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 9.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 7.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 5.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0 / 3.0));
+    series = sd_add(sd_mul(series, t2), sd_real(1.0));
+    let ratio = sd_select_small(t2, 1e-4, series, direct);
+    return sd_div(sd_scale(ratio, 2.0), opc);
+}
+
+// `acosh(y)²`, with its series near `y = 1` (`|y - 1|² < 1e-8`).
+fn study_acosh_sq(y: StudyDual) -> StudyDual {
+    let t = sd_sub(y, sd_real(1.0));
+    let ys = sd_select_small(t, 1e-8, sd_real(2.0), y);
+    let w = sd_ln(sd_add(ys, sd_sqrt(sd_mul(sd_sub(ys, sd_real(1.0)), sd_add(ys, sd_real(1.0))))));
+    let direct = sd_mul(w, w);
+    let tt = sd_mul(t, t);
+    var series = sd_scale(t, 2.0);
+    series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
+    series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
+    return sd_select_small(t, 1e-8, series, direct);
+}
+";
+
+/// A WGSL function `f(a, q) -> vec2<f32>`: the Study function `inner` of `a + X` with `X² = q`
+/// (`gax_core::study::study_q`), as `(f0, f1)` with `f(a + X) = f0 + f1 X`.
+fn study_q_source(name: &str, inner: &str) -> String {
+    format!(
+        "// `{inner}` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).
+fn {name}(a: f32, q: f32) -> vec2<f32> {{
+    let small = abs(q) < 1e-8;
+    let w = cx_sqrt(vec2<f32>(select(q, 1.0, small), 0.0));
+    let plus = {inner}(StudyDual(vec2<f32>(a, 0.0) + w, vec2<f32>(0.0, 0.0))).p;
+    let minus = {inner}(StudyDual(vec2<f32>(a, 0.0) - w, vec2<f32>(0.0, 0.0))).p;
+    let f0 = (plus.x + minus.x) * 0.5;
+    let diff = cx_div(plus - minus, w + w);
+    let d = {inner}(StudyDual(vec2<f32>(a, 0.0), vec2<f32>(1.0, 0.0)));
+    return vec2<f32>(select(f0, d.p.x, small), select(diff.x, d.d.x, small));
+}}
+"
+    )
+}
+
 /// The WGSL source of a Study-number helper (ports of `gax_core::study`, in `f32`).
 #[allow(clippy::too_many_lines)]
 pub fn study_source(f: StudyFn) -> String {
@@ -131,6 +305,96 @@ fn study_rsqrt_complex(a: f32, b: f32) -> vec2<f32> {
 "
             .into()
         }
+        StudyFn::Exp(isq) => {
+            let (name, body) = match isq {
+                0 => (
+                    "study_exp_nil",
+                    "    let x = StudyDual(vec2<f32>(lambda, 0.0), vec2<f32>(mu, 0.0));
+    let c = study_exp_c(x);
+    let s = study_exp_s(x);
+    return vec4<f32>(c.p.x, c.d.x, s.p.x, s.d.x);",
+                ),
+                1 => (
+                    "study_exp_split",
+                    "    let p = sd_real(lambda + mu);
+    let m = sd_real(lambda - mu);
+    let cp = study_exp_c(p).p.x;
+    let cm = study_exp_c(m).p.x;
+    let sp = study_exp_s(p).p.x;
+    let sm = study_exp_s(m).p.x;
+    return vec4<f32>((cp + cm) * 0.5, (cp - cm) * 0.5, (sp + sm) * 0.5, (sp - sm) * 0.5);",
+                ),
+                _ => (
+                    "study_exp_complex",
+                    "    let x = StudyDual(vec2<f32>(lambda, mu), vec2<f32>(0.0, 0.0));
+    let c = study_exp_c(x).p;
+    let s = study_exp_s(x).p;
+    return vec4<f32>(c.x, c.y, s.x, s.y);",
+                ),
+            };
+            format!(
+                "// `exp(B) = c0 + c1 I + (s0 + s1 I) B` for `B² = lambda + mu I`, `I² = {isq}`, as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs).
+fn {name}(lambda: f32, mu: f32) -> vec4<f32> {{
+{body}
+}}
+"
+            )
+        }
+        StudyFn::Log(isq) => {
+            let (name, body) = match isq {
+                0 => (
+                    "study_log_nil",
+                    "    let r = study_log_factor(StudyDual(vec2<f32>(c0, 0.0), vec2<f32>(c1, 0.0)), StudyDual(vec2<f32>(u0, 0.0), vec2<f32>(u1, 0.0)));
+    return vec2<f32>(r.p.x, r.d.x);",
+                ),
+                1 => (
+                    "study_log_split",
+                    "    let fp = study_log_factor(sd_real(c0 + c1), sd_real(u0 + u1)).p.x;
+    let fm = study_log_factor(sd_real(c0 - c1), sd_real(u0 - u1)).p.x;
+    return vec2<f32>((fp + fm) * 0.5, (fp - fm) * 0.5);",
+                ),
+                _ => (
+                    "study_log_complex",
+                    "    let r = study_log_factor(StudyDual(vec2<f32>(c0, c1), vec2<f32>(0.0, 0.0)), StudyDual(vec2<f32>(u0, u1), vec2<f32>(0.0, 0.0))).p;
+    return vec2<f32>(r.x, r.y);",
+                ),
+            };
+            format!(
+                "// `log R = (h0 + h1 I) <R>_2` for a unit versor with scalar-pseudoscalar part `c0 + c1 I`
+// and bivector part squaring to `u0 + u1 I`, `I² = {isq}`, as `[h0, h1]`
+// (gax_core::study::log_coeffs).
+fn {name}(c0: f32, c1: f32, u0: f32, u1: f32) -> vec2<f32> {{
+{body}
+}}
+"
+            )
+        }
+        StudyFn::ExpQ => format!(
+            "{}{}// `exp(B) = c0 + c1 Q + (s0 + s1 Q) B` for `B² = lambda + Q` with `Q² = q` (5D algebras), as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs_q).
+fn study_exp_q(lambda: f32, q: f32) -> vec4<f32> {{
+    let c = study_q_exp_c(lambda, q);
+    let s = study_q_exp_s(lambda, q);
+    return vec4<f32>(c.x, c.y, s.x, s.y);
+}}
+",
+            study_q_source("study_q_exp_c", "study_exp_c"),
+            study_q_source("study_q_exp_s", "study_exp_s")
+        ),
+        StudyFn::LogQ => format!(
+            "{}// `log R = h0 P + h1 C4 P` for a unit versor `R = c0 + C4 + P` with `C4² = qc` (5D
+// algebras), as `[h0, h1]` (gax_core::study::log_coeffs_q).
+fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {{
+    let g = study_q_acosh_sq(c0, qc);
+    let qx = g.y * g.y * qc;
+    let s = study_q_exp_s(g.x, qx);
+    let d = 1.0 / (s.x * s.x - s.y * s.y * qx);
+    return vec2<f32>(s.x * d, -(s.y * g.y) * d);
+}}
+",
+            study_q_source("study_q_acosh_sq", "study_acosh_sq")
+        ),
         StudyFn::RsqrtAbs => "// `1 / sqrt(|a|)`.
 fn study_rsqrt_abs(a: f32) -> f32 {
     return 1.0 / sqrt(abs(a));
@@ -240,6 +504,114 @@ fn unary(k: &KindSpec, out: &KindSpec, coeffs: &[Poly], name: &str, doc: &str) -
     }
 }
 
+/// The exponential of bivector kind `k` by scaling and squaring in kind `e` (the Rust
+/// fallback of `emit_values`, for kinds without a closed form: CSTA's bivectors), as WGSL text.
+/// It loops, so it is not a straight-line [`Kernel`]; it uses the module's `{e}_mul_{e}` and
+/// `{e}_reverse`, and adds the componentwise helpers it needs. `None` if `k` does not embed in
+/// `e`.
+pub fn fallback_exp(k: &KindSpec, e: &KindSpec) -> Option<String> {
+    let (ks, es) = (snake(&k.name), snake(&e.name));
+    let (kn, en) = (&k.name, &e.name);
+    let fields = vec4s(e.layout.len());
+    let each = |f: &dyn Fn(usize) -> String| -> String {
+        (0..fields).map(f).collect::<Vec<_>>().join(", ")
+    };
+    let abs_sum = |x: &str, n: usize| -> String {
+        (0..n)
+            .map(|i| format!("abs({})", wgsl_coeff(x, i)))
+            .collect::<Vec<_>>()
+            .join(" + ")
+    };
+    let scaled: Vec<String> = embedding(k, e, "x")?
+        .into_iter()
+        .map(|c| if c == "0.0" { c } else { format!("({c}) * h") })
+        .collect();
+    let (one_pos, one_sign) = e.layout.position(0)?;
+    let mut one = vec!["0.0".to_string(); e.layout.len()];
+    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
+    let newton = format!(
+        "{es}_mul_{es}(r, {es}_scale({es}_sub(three, {es}_mul_{es}({es}_reverse(r), r)), 0.5))"
+    );
+    Some(format!(
+        "// `a + b` for `{en}`.
+fn {es}_add(a: {en}, b: {en}) -> {en} {{
+    return {en}({});
+}}
+
+// `a - b` for `{en}`.
+fn {es}_sub(a: {en}, b: {en}) -> {en} {{
+    return {en}({});
+}}
+
+// `a k` for `{en}` and a scalar `k`.
+fn {es}_scale(a: {en}, k: f32) -> {en} {{
+    return {en}({});
+}}
+
+// The exponential of a `{kn}`, a unit `{en}`, by scaling and squaring (gax's Rust `exp` for this
+// kind): `B` is halved `s` times until its 1-norm is at most 1/16, a Taylor series of degree 10
+// gives `exp(B / 2^s)`, a Newton step renormalizes it, `s` squarings undo the scaling, and a
+// second Newton step renormalizes the result where it is small (1-norm below 4).
+fn {ks}_exp(x: {kn}) -> {en} {{
+    let norm = {};
+    var h = 1.0;
+    var s = 0u;
+    loop {{
+        if s >= 64u || norm * h < 0.0625 {{
+            break;
+        }}
+        h = h * 0.5;
+        s = s + 1u;
+    }}
+    let e = {};
+    let one = {};
+    var r = one;
+    for (var k = 10; k >= 1; k = k - 1) {{
+        r = {es}_add(one, {es}_scale({es}_mul_{es}(e, r), 1.0 / f32(k)));
+    }}
+    let three = {es}_scale(one, 3.0);
+    r = {newton};
+    for (var i = 0u; i < s; i = i + 1u) {{
+        r = {es}_mul_{es}(r, r);
+    }}
+    let size = {};
+    let fixed = {newton};
+    return {en}({});
+}}
+",
+        each(&|f| format!("a.c{f} + b.c{f}")),
+        each(&|f| format!("a.c{f} - b.c{f}")),
+        each(&|f| format!("a.c{f} * k")),
+        abs_sum("x", k.layout.len()),
+        wgsl_construct(en, &scaled),
+        wgsl_construct(en, &one),
+        abs_sum("r", e.layout.len()),
+        each(&|f| format!("select(r.c{f}, fixed.c{f}, size < 4.0)")),
+    ))
+}
+
+/// The kinds whose `exp` is the scaling-and-squaring fallback, with the kind it lands in: those
+/// with an `exp` in Rust but no straight-line WGSL kernel.
+pub fn fallback_exps<'a>(
+    spec: &'a AlgebraSpec,
+    stats: &Stats,
+) -> Vec<(&'a KindSpec, &'a KindSpec)> {
+    stats
+        .values
+        .iter()
+        .filter_map(|v| {
+            let e = v.exp.as_ref()?;
+            let ks = snake(&v.kind);
+            if v.kernels.iter().any(|k| k.name == format!("{ks}_exp")) {
+                return None;
+            }
+            let k = spec.kinds.iter().find(|x| x.name == v.kind)?;
+            let e = spec.kinds.iter().find(|x| &x.name == e)?;
+            Some((k, e))
+        })
+        .collect()
+}
+
 /// The WGSL module of an algebra, from its spec and the kernels the Rust emitter recorded.
 ///
 /// `fma` fuses single-use products into `fma(a, b, c)`.
@@ -323,6 +695,7 @@ pub fn module(spec: &AlgebraSpec, stats: &Stats, fma: bool) -> String {
         }
     }
     let kernels = kernels(spec, stats);
+    let fallbacks = fallback_exps(spec, stats);
     let mut used: BTreeSet<&'static str> = BTreeSet::new();
     let mut helpers = Vec::new();
     for k in &kernels {
@@ -335,7 +708,19 @@ pub fn module(spec: &AlgebraSpec, stats: &Stats, fma: bool) -> String {
             }
         }
     }
+    for (k, e) in &fallbacks {
+        if let Some(text) = fallback_exp(k, e) {
+            let _ = writeln!(s, "{text}");
+        }
+    }
+    // `study_log_q` calls `study_q_exp_s`, which `study_exp_q` defines.
+    if helpers.contains(&StudyFn::LogQ) && !helpers.contains(&StudyFn::ExpQ) {
+        let _ = writeln!(s, "{}", study_q_source("study_q_exp_s", "study_exp_s"));
+    }
     helpers.sort_by_key(|f| f.wgsl_name());
+    if helpers.iter().any(|f| f.needs_channels()) {
+        let _ = writeln!(s, "{CHANNELS}");
+    }
     for f in helpers {
         let _ = writeln!(s, "{}", study_source(f));
     }
@@ -383,6 +768,20 @@ pub fn kernels(spec: &AlgebraSpec, stats: &Stats) -> Vec<Kernel> {
     }
     kernels.extend(stats.values.iter().flat_map(|v| v.kernels.iter().cloned()));
     kernels.extend(stats.kernels.iter().cloned());
+    // The scaling-and-squaring exponentials (`fallback_exp`) need their kind's product.
+    for (_, e) in fallback_exps(spec, stats) {
+        let name = format!("{}_mul_{}", snake(&e.name), snake(&e.name));
+        if !kernels.iter().any(|k| k.name == name) {
+            kernels.extend(product(
+                spec,
+                BinOp::Gp,
+                e,
+                e,
+                &name,
+                &format!("The geometric product of two `{}`.", e.name),
+            ));
+        }
+    }
     kernels
 }
 
