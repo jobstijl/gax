@@ -7,9 +7,9 @@
 //!   specified accuracy is loose (`sin` and `cos` to an absolute `2⁻¹¹`).
 //! * The scaling-and-squaring exponentials (loops, not straight-line kernels) against gax's Rust
 //!   `exp`, within a relative `2⁻¹⁰`.
-//! * CSTA's `unit_even_log` (the closed form, or near a half turn inverse scaling and squaring)
-//!   against gax's Rust `log`, within a relative `2⁻¹⁰`; the closed-form kernel, defined on unit
-//!   versors only, gets `exp` of random bivectors in the kernel sweep.
+//! * CSTA's `unit_even_log` (the closed form, turning planes near a half turn first) against
+//!   gax's Rust `log`, within a relative `2⁻¹⁰`; its kernels, defined on unit versors only, get
+//!   `exp` of random bivectors in the kernel sweep.
 //! * The matrix orientation: a map uploaded as `GpuMat` and applied as `m * x` in the shader
 //!   equals the map applied in Rust.
 //! * A layout round trip: kinds written by Rust are read field by field by the shader.
@@ -377,24 +377,25 @@ fn fallback_exponentials_on_the_gpu() {
 }
 
 /// A CSTA unit versor `exp(B)` rounded to `f32`, `B` random with entries up to `size`, redrawn
-/// until `⟨R⟩₀ > min` (clear of a half turn).
-fn csta_versor(rng: &mut Rng, size: f64, min: f64) -> Vec<f32> {
+/// until `min < ⟨R⟩₀ < max`.
+fn csta_versor(rng: &mut Rng, size: f64, min: f64, max: f64) -> Vec<f32> {
     loop {
         let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| {
             size * f64::from(rng.next())
         }));
         let r = b.exp().into_inner().c;
-        if r[0] > min {
+        if min < r[0] && r[0] < max {
             return r.iter().map(|x| *x as f32).collect();
         }
     }
 }
 
 /// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
-/// `⟨R⟩₀ > 1/16`), or `None` for the others.
+/// `⟨R⟩₀ > 1/16`, and the planes it turns below), or `None` for the others.
 fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
     match (algebra, kernel) {
-        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125)),
+        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125, f64::INFINITY)),
+        ("csta", "unit_even_log_turning") => Some(csta_versor(rng, 1.0, f64::NEG_INFINITY, 0.0625)),
         _ => None,
     }
 }
@@ -417,7 +418,7 @@ fn csta_log_on_the_gpu() {
     let (n_in, n_out) = (32, 15);
     let src = harness(module, &spec, &[&call], n_in, n_out);
     let mut rng = Rng(0x0106_5d6d);
-    // Every fourth sample a rotation towards a half turn, where the fallback takes over.
+    // Every fourth sample a rotation towards a half turn, and every fourth below 1/16: turned.
     let e12 = <gax::csta::Bivector as Kind>::BLADES.iter().position(|n| *n == "e12").expect("e12");
     let mut inputs: Vec<f32> = Vec::with_capacity(SAMPLES * n_in);
     for n in 0..SAMPLES {
@@ -428,8 +429,11 @@ fn csta_log_on_the_gpu() {
             }
             b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
             inputs.extend(B::from_coeffs(b).exp().into_inner().c.iter().map(|x| *x as f32));
+        } else if n % 4 == 2 {
+            // Below 1/16, either sign: turned.
+            inputs.extend(csta_versor(&mut rng, 1.0, f64::NEG_INFINITY, 0.0625));
         } else {
-            inputs.extend(csta_versor(&mut rng, 0.3, -1.0));
+            inputs.extend(csta_versor(&mut rng, 0.3, f64::NEG_INFINITY, f64::INFINITY));
         }
     }
     let out = floats(&gpu.run(

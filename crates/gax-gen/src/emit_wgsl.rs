@@ -330,6 +330,37 @@ fn log6_cbrt(x: f32) -> f32 {
     return sign(x) * exp(log(a) / 3.0);
 }
 
+// The most isolated real root of t³ − p1 t² + p2 t − p3 (Cardano, or the trigonometric form
+// for three real roots), from its shifted form t³ + e2 t − e3 about m, with a Newton step.
+fn log6_root(p1: f32, p2: f32, p3: f32, m: f32, e2: f32, e3: f32) -> f32 {
+    let disc = e3 * e3 * 0.25 + e2 * e2 * e2 / 27.0;
+    var r: f32;
+    if disc >= 0.0 {
+        let sq = sqrt(disc);
+        r = log6_cbrt(e3 * 0.5 + sq) + log6_cbrt(e3 * 0.5 - sq);
+    } else {
+        let rad = sqrt(max(-e2 / 3.0, 0.0));
+        let pn = min(e2, -1e-30);
+        let arg = clamp(-e3 * 1.5 / pn * sqrt(-3.0 / pn), -1.0, 1.0);
+        let ang = atan2(sqrt(max(1.0 - arg * arg, 0.0)), arg) / 3.0;
+        let third = 2.0943951;
+        let s = 2.0 * rad * vec3<f32>(cos(ang), cos(ang - third), cos(ang - 2.0 * third));
+        let g = vec3<f32>(
+            min(abs(s.x - s.y), abs(s.x - s.z)),
+            min(abs(s.y - s.z), abs(s.y - s.x)),
+            min(abs(s.z - s.x), abs(s.z - s.y)),
+        );
+        r = select(select(s.x, s.y, g.x < g.y), s.z, max(g.x, g.y) < g.z);
+    }
+    r += m;
+    let f = ((r - p1) * r + p2) * r - p3;
+    let df = (3.0 * r - 2.0 * p1) * r + p2;
+    if abs(df) >= 1e-30 {
+        r -= f / df;
+    }
+    return r;
+}
+
 fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     let m = p1 / 3.0;
     let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
@@ -339,32 +370,7 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     if bound < 0.25 * m {
         al = log6_reduce3(log6_phi_series(m), m, e2, e3);
     } else {
-        // An isolated real root r (Cardano, or the most isolated of three), a Newton step.
-        let disc = e3 * e3 * 0.25 + e2 * e2 * e2 / 27.0;
-        var r: f32;
-        if disc >= 0.0 {
-            let sq = sqrt(disc);
-            r = log6_cbrt(e3 * 0.5 + sq) + log6_cbrt(e3 * 0.5 - sq);
-        } else {
-            let rad = sqrt(max(-e2 / 3.0, 0.0));
-            let pn = min(e2, -1e-30);
-            let arg = clamp(-e3 * 1.5 / pn * sqrt(-3.0 / pn), -1.0, 1.0);
-            let ang = atan2(sqrt(max(1.0 - arg * arg, 0.0)), arg) / 3.0;
-            let third = 2.0943951;
-            let s = 2.0 * rad * vec3<f32>(cos(ang), cos(ang - third), cos(ang - 2.0 * third));
-            let g = vec3<f32>(
-                min(abs(s.x - s.y), abs(s.x - s.z)),
-                min(abs(s.y - s.z), abs(s.y - s.x)),
-                min(abs(s.z - s.x), abs(s.z - s.y)),
-            );
-            r = select(select(s.x, s.y, g.x < g.y), s.z, max(g.x, g.y) < g.z);
-        }
-        r += m;
-        let f = ((r - p1) * r + p2) * r - p3;
-        let df = (3.0 * r - 2.0 * p1) * r + p2;
-        if abs(df) >= 1e-30 {
-            r -= f / df;
-        }
+        let r = log6_root(p1, p2, p3, m, e2, e3);
         // The remaining pair by its sum and product; its line through its series at the
         // midpoint (close) or its two values (real, or a conjugate pair).
         let sum = p1 - r;
@@ -373,7 +379,9 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
         let d2 = mid * mid - prod;
         let d = sqrt(abs(d2));
         var pair: vec2<f32>;
-        if d < 0.25 * abs(mid) {
+        // Only right of the branch point u = 0 (a pair with a negative midpoint straddles the
+        // branch cut).
+        if d < 0.25 * mid {
             pair = log6_reduce2(log6_phi_series(mid), mid, d2);
         } else if d2 < 0.0 {
             let fc = log6_phi_cx(vec2<f32>(mid, d));
@@ -393,6 +401,153 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     let b = al.z * p1 + al.y;
     let rinv = 1.0 / r0;
     return vec4<f32>((al.x - 2.0 * p3 * al.z + b * p3) * rinv, (al.z - b) * rinv, b * rinv, 0.0);
+}
+";
+
+/// The WGSL helper `study_log6_turn` (a port of `gax_core::study::log_turn_6d`), which uses
+/// the series functions of [`LOG6`].
+const LOG6_TURN: &str = r"
+// The planes to turn by a quarter turn near a half turn (gax_core::study::log_turn_6d in f32):
+// `[α0, α1, α2, n]`, `Z = α2 Q2 + α1 Q1 + α0 G1` the sum of the `n` turned unit bivectors, the
+// set with the smallest error estimate among those with a positive scalar part after turning.
+fn log6_g_series(m: f32) -> array<f32, 16> {
+    return log6_mul(log6_pow(max(m, 1e-30), 1.0, 0.5), log6_pow(max(1.0 - m, 1e-30), -1.0, -0.5));
+}
+
+// The error estimate 1/<R'>_0 + extra of turning with scalar part `v` after, or 1e30 for
+// `v <= 0`.
+fn log6_cost(v: f32, extra: f32) -> f32 {
+    return select(1e30, 1.0 / max(v, 1e-30) + extra, v > 0.0);
+}
+
+// A cluster's 1/|w| = sqrt(u/(1-u))/|r0| at its centre.
+fn log6_cluster(u: f32, ar0: f32) -> f32 {
+    return sqrt(max(u, 0.0) / max(1.0 - u, 1e-30)) / ar0;
+}
+
+fn study_log6_turn(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
+    let m = p1 / 3.0;
+    let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+    let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
+    let ar0 = max(abs(r0), 1e-30);
+    let pos = r0 > 0.0;
+    // All three as one cluster, through the series at their mean.
+    let all = 1.0 - p1 + p2 - p3;
+    let series_ok = bound < 0.25 * min(m, 1.0 - m) && all > 0.0;
+    // The isolated root r and the pair (a, b) = mid ± d.
+    let r = log6_root(p1, p2, p3, m, e2, e3);
+    let sum = p1 - r;
+    let prod = p2 - r * sum;
+    let mid = sum * 0.5;
+    let d2 = mid * mid - prod;
+    let d = sqrt(abs(d2));
+    let a = mid + d;
+    let b = max(mid - d, 0.0);
+    let real = d2 + 7.6e-6 * (1.0 + mid * mid) > 0.0;
+    let close = d < 0.25 * mid;
+    let close_g = close && d < 0.25 * (1.0 - mid);
+    var gap_r = sqrt((r - mid) * (r - mid) + d * d);
+    if real {
+        gap_r = min(abs(r - a), abs(r - b));
+    }
+    let sep = gap_r > (1.0 + abs(r)) / 64.0;
+    let sep_pair = 2.0 * d > (1.0 + abs(mid)) / 64.0;
+    let ok_r = r < 1.0;
+    let ok_pair = real && a < 1.0 && (!close || close_g);
+    let ok_a = real && d > 0.0 && a < 1.0;
+    let ok_b = real && d > 0.0 && b < 1.0;
+    let in_r = sqrt(max(1.0 - r, 0.0));
+    let out_r = sqrt(max(r, 0.0));
+    let in_a = sqrt(max(1.0 - a, 0.0));
+    let out_a = sqrt(max(a, 0.0));
+    let in_b = sqrt(max(1.0 - b, 0.0));
+    let out_b = sqrt(b);
+    let in_pair = sqrt(max(1.0 - sum + prod, 0.0));
+    let out_pair = sqrt(max(prod, 0.0));
+    // 1/|w| of each root, and of the pair (as a cluster when close).
+    let iw_r = 1.0 / max(sqrt(max((1.0 - r) * prod, 0.0)), 1e-30);
+    let iw_a = 1.0 / max(sqrt(max((1.0 - a) * b * r, 0.0)), 1e-30);
+    let iw_b = 1.0 / max(sqrt(max((1.0 - b) * a * r, 0.0)), 1e-30);
+    var iw_pair = iw_a + iw_b;
+    if close {
+        iw_pair = 2.0 * log6_cluster(mid, ar0);
+    }
+    // Which roots to turn (r, a, b, and whether all through the series): the smallest error
+    // estimate 1/<R'>_0 + sum of 1/|w| over them, among those with <R'>_0 > 0; sets separating
+    // r from the pair first only where it is apart.
+    var t = vec4<f32>(0.0, 0.0, 0.0, 0.0);
+    var best = 1e30;
+    if pos {
+        best = 1.0 / max(r0, 1e-30);
+    }
+    if series_ok && log6_cost(sqrt(all), 3.0 * log6_cluster(m, ar0)) < best {
+        best = log6_cost(sqrt(all), 3.0 * log6_cluster(m, ar0));
+        t = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+    }
+    let base = best;
+    let base_t = t;
+    for (var round = 0; round < 2; round++) {
+        let strict = round == 0;
+        best = base;
+        t = base_t;
+        let s_r = sep || !strict;
+        let s_p = (sep && sep_pair) || !strict;
+        var c = log6_cost(in_r * out_pair, iw_r);
+        if s_r && ok_r && c < best {
+            best = c;
+            t = vec4<f32>(1.0, 0.0, 0.0, 0.0);
+        }
+        c = log6_cost(out_r * in_pair, iw_pair);
+        if s_r && ok_pair && pos && c < best {
+            best = c;
+            t = vec4<f32>(0.0, 1.0, 1.0, 0.0);
+        }
+        c = log6_cost(in_r * in_pair, iw_r + iw_pair);
+        if s_r && ok_r && ok_pair && c < best {
+            best = c;
+            t = vec4<f32>(1.0, 1.0, 1.0, 0.0);
+        }
+        c = log6_cost(out_r * in_a * out_b, iw_a);
+        if s_p && ok_a && c < best {
+            best = c;
+            t = vec4<f32>(0.0, 1.0, 0.0, 0.0);
+        }
+        c = log6_cost(out_r * out_a * in_b, iw_b);
+        if s_p && ok_b && c < best {
+            best = c;
+            t = vec4<f32>(0.0, 0.0, 1.0, 0.0);
+        }
+        c = log6_cost(in_r * in_a * out_b, iw_r + iw_a);
+        if s_p && ok_r && ok_a && pos && c < best {
+            best = c;
+            t = vec4<f32>(1.0, 1.0, 0.0, 0.0);
+        }
+        c = log6_cost(in_r * out_a * in_b, iw_r + iw_b);
+        if s_p && ok_r && ok_b && pos && c < best {
+            best = c;
+            t = vec4<f32>(1.0, 0.0, 1.0, 0.0);
+        }
+        if best < 5e29 {
+            break;
+        }
+    }
+    let n = t.x + t.y + t.z;
+    if t.w > 0.5 {
+        return vec4<f32>(log6_reduce3(log6_g_series(m), m, e2, e3) / ar0, n);
+    }
+    let h_r = t.x / sqrt(max((1.0 - r) * prod, 1e-30));
+    let h_a = t.y / sqrt(max((1.0 - a) * b * r, 1e-30));
+    let h_b = t.z / sqrt(max((1.0 - b) * a * r, 1e-30));
+    var pair: vec2<f32>;
+    if close && t.y > 0.5 && t.z > 0.5 {
+        pair = log6_reduce2(log6_g_series(mid), mid, d2) / ar0;
+    } else {
+        let slope = (h_a - h_b) / max(a - b, 1e-30);
+        pair = vec2<f32>(h_a - slope * a, slope);
+    }
+    let kk = (h_r - (pair.y * r + pair.x)) / ((r - sum) * r + prod);
+    return vec4<f32>(pair.x + prod * kk, pair.y - sum * kk, kk, n);
 }
 ";
 
@@ -614,6 +769,7 @@ fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {{
             study_q_source("study_q_acosh_sq", "study_acosh_sq")
         ),
         StudyFn::Log6 => LOG6.into(),
+        StudyFn::Log6Turn => LOG6_TURN.into(),
         StudyFn::RsqrtAbs => "// `1 / sqrt(|a|)`.
 fn study_rsqrt_abs(a: f32) -> f32 {
     return 1.0 / sqrt(abs(a));
@@ -823,14 +979,13 @@ fn {ks}_exp(x: {kn}) -> {en} {{
 }
 
 /// The logarithm of a unit `e` (a 6D algebra's full even kind) into bivector kind `k`, as WGSL
-/// text: `unit_{e}_log` takes the recorded closed form `unit_{e}_log_closed` for `⟨x⟩₀ > 1/16`
-/// and otherwise `{e}_log_by_scaling`, inverse scaling and squaring (the Rust fallback of
-/// `emit_values`: square roots `normalize(1 + x)` by Newton steps of the polar decomposition
-/// until `x` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone). It
-/// uses the module's `{e}_mul_{e}`, `{e}_reverse` and [`arithmetic`]. `None` if `e` has no
-/// scalar or lacks one of `k`'s blades.
+/// text: `unit_{e}_log` takes the recorded closed form `unit_{e}_log_closed` for `⟨x⟩₀ > 1/16`.
+/// Below, it turns the planes near a half turn by a quarter turn first, as the Rust `log`
+/// does: `Z` (their unit bivectors' sum) from the recorded `unit_{e}_log_turning`, their number
+/// `n = −⟨Z²⟩₀`, `E = ∏(−b̂)` as a polynomial in `Z`, and `log x = log(x E) + (π/2) Z`. It uses
+/// the module's `{e}_mul_{e}` and [`arithmetic`]. `None` if `e` has no scalar or lacks one of
+/// `k`'s blades.
 pub fn fallback_log(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
-    let t = prec.scalar();
     let es = snake(&e.name);
     let (kn, en) = (&k.name, &e.name);
     let (one_pos, one_sign) = e.layout.position(0)?;
@@ -840,92 +995,65 @@ pub fn fallback_log(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<Strin
     };
     let mut one = vec!["0.0".to_string(); e.layout.len()];
     one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
-    let dist = |x: &str| -> String {
-        (0..e.layout.len())
-            .map(|i| {
-                let c = wgsl_coeff(x, i);
-                if i == one_pos {
-                    format!("abs({c} - ({}))", one[one_pos])
-                } else {
-                    format!("abs({c})")
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(" + ")
-    };
-    let project: Vec<String> = k
+    let embed: Vec<String> = e
         .layout
         .blades
         .iter()
-        .map(|&(m, sk)| {
-            let (pos, se) = e.layout.position(m)?;
-            let sign = if sk * se > 0 { "" } else { "-" };
-            Some(format!("{sign}{} * f", wgsl_coeff("l", pos)))
+        .map(|&(m, se)| match k.layout.position(m) {
+            Some((i, sk)) => {
+                let c = wgsl_coeff("zb", i);
+                if sk * se > 0 { c } else { format!("-{c}") }
+            }
+            None => "0.0".into(),
         })
-        .collect::<Option<_>>()?;
-    // Newton stops at 64 ε of the precision (8 ε in `f16`, whose 64 ε is 1/16).
-    let tol = match prec {
-        Precision::F32 => "7.6e-6",
-        Precision::F16 => "0.008",
-    };
+        .collect();
+    if k.layout
+        .blades
+        .iter()
+        .any(|(m, _)| e.layout.position(*m).is_none())
+    {
+        return None;
+    }
+    let fields = vec4s(k.layout.len());
+    let sum: Vec<String> = (0..fields)
+        .map(|f| format!("b.c{f} + zb.c{f} * 1.5707963"))
+        .collect();
     Some(format!(
-        "// The logarithm of a unit `{en}` by inverse scaling and squaring (the fallback of
-// `unit_{es}_log` near a half turn, where the closed form loses `ε/<x>_0`): square roots
-// `normalize(1 + x)` until `x` is within 1/16 of the identity, each `1 + x` scaled so that its
-// invariant parts are at most 1 and made unit by Newton steps `y (3 - ~y y) / 2`, then a series
-// of `log(1 + z)` to degree 16, and the scaling undone.
-fn {es}_log_by_scaling(r: {en}) -> {kn} {{
-    let one = {};
-    let three = {es}_scale(one, 3.0);
-    var x = r;
-    var s = 0u;
-    loop {{
-        if s >= 64u || {} < 0.0625 {{
-            break;
-        }}
-        var y = {es}_add(one, x);
-        let yy = {es}_mul_{es}({es}_reverse(y), y);
-        y = {es}_scale(y, 1.0 / sqrt(4.0 * {}));
-        for (var k = 0; k < 200; k++) {{
-            let n = {es}_mul_{es}({es}_reverse(y), y);
-            if {} < {tol} {{
-                break;
-            }}
-            y = {es}_mul_{es}(y, {es}_scale({es}_sub(three, n), 0.5));
-        }}
-        x = y;
-        s = s + 1u;
-    }}
-    let z = {es}_sub(x, one);
-    var q = {es}_scale(one, -1.0 / 16.0);
-    for (var k = 15; k >= 1; k--) {{
-        q = {es}_add({es}_scale(one, select({t}(-1.0), {t}(1.0), k % 2 == 1) / {t}(k)), {es}_mul_{es}(z, q));
-    }}
-    let l = {es}_mul_{es}(z, q);
-    let f = exp2({t}(s));
-    return {};
-}}
-
-// The logarithm of a unit `{en}`: the `{kn}` B with `exp(B) = x`, principal (every invariant
-// plane below a half turn). In closed form (`unit_{es}_log_closed`, docs/log6d.md) where
-// `<x>_0 > 1/16`, else by inverse scaling and squaring.
+        "// The logarithm of a unit `{en}`: the `{kn}` B with `exp(B) = x`, principal (every invariant
+// plane below a half turn where `<x>_0 > 0`). In closed form (`unit_{es}_log_closed`,
+// docs/log6d.md) where `<x>_0 > 1/16`; below, the planes near a half turn are turned by a
+// quarter turn first: `log x = log(x E) + (pi/2) Z`, `Z` the sum of their unit bivectors
+// (`unit_{es}_log_turning`, `n = -<Z Z>_0` of them) and `E` the product of their `-b`.
 fn unit_{es}_log(x: {en}) -> {kn} {{
     if {} > 0.0625 {{
         return unit_{es}_log_closed(x);
     }}
-    return {es}_log_by_scaling(x);
+    let zb = unit_{es}_log_turning(x);
+    let z = {};
+    let z2 = {es}_mul_{es}(z, z);
+    let n = -({});
+    let one = {};
+    var e = one;
+    if n > 2.5 {{
+        e = {es}_scale({es}_add({es}_mul_{es}(z2, z), {es}_scale(z, 7.0)), -1.0 / 6.0);
+    }} else if n > 1.5 {{
+        e = {es}_add(one, {es}_scale(z2, 0.5));
+    }} else if n > 0.5 {{
+        e = {es}_scale(z, -1.0);
+    }}
+    let b = unit_{es}_log_closed({es}_mul_{es}(x, e));
+    return {kn}({});
 }}
 ",
-        wgsl_construct_in(prec, en, &one),
-        dist("x"),
-        scalar("yy"),
-        dist("n"),
-        wgsl_construct_in(prec, kn, &project),
         scalar("x"),
+        wgsl_construct_in(prec, en, &embed),
+        scalar("z2"),
+        wgsl_construct_in(prec, en, &one),
+        sum.join(", "),
     ))
 }
 
-/// The even kinds whose `log` is the closed form with a fallback ([`fallback_log`]), with their
+/// The even kinds whose `log` is the closed form with turning ([`fallback_log`]), with their
 /// bivector kind: those with a recorded `unit_{e}_log_closed` kernel.
 pub fn fallback_logs<'a>(
     spec: &'a AlgebraSpec,
@@ -1097,6 +1225,10 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         if let Some(text) = fallback_log(k, e, prec) {
             let _ = writeln!(s, "{text}");
         }
+    }
+    // `study_log6_turn` calls the series functions of `study_log6`.
+    if helpers.contains(&StudyFn::Log6Turn) && !helpers.contains(&StudyFn::Log6) {
+        helpers.push(StudyFn::Log6);
     }
     // `study_log_q` calls `study_q_exp_s`, which `study_exp_q` defines.
     if helpers.contains(&StudyFn::LogQ) && !helpers.contains(&StudyFn::ExpQ) {

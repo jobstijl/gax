@@ -108,6 +108,8 @@ pub enum StudyFn {
     LogQ,
     /// `[w1, w2, w3] = log_weights_6d(p1, p2, p3, r0)`: 6D even versors (docs/log6d.md).
     Log6,
+    /// `[a0, a1, a2, n] = log_turn_6d(p1, p2, p3, r0)`: the planes to turn near a half turn.
+    Log6Turn,
 }
 
 impl StudyFn {
@@ -129,6 +131,7 @@ impl StudyFn {
             StudyFn::ExpQ => "study_exp_q",
             StudyFn::LogQ => "study_log_q",
             StudyFn::Log6 => "study_log6",
+            StudyFn::Log6Turn => "study_log6_turn",
         }
     }
 
@@ -137,7 +140,12 @@ impl StudyFn {
     pub fn needs_channels(self) -> bool {
         matches!(
             self,
-            StudyFn::Exp(_) | StudyFn::Log(_) | StudyFn::ExpQ | StudyFn::LogQ | StudyFn::Log6
+            StudyFn::Exp(_)
+                | StudyFn::Log(_)
+                | StudyFn::ExpQ
+                | StudyFn::LogQ
+                | StudyFn::Log6
+                | StudyFn::Log6Turn
         )
     }
 }
@@ -402,6 +410,7 @@ impl Kernel {
                         StudyFn::ExpQ => study::exp_coeffs_q(x[0], x[1]).to_vec(),
                         StudyFn::LogQ => study::log_coeffs_q(x[0], x[1]).to_vec(),
                         StudyFn::Log6 => study::log_weights_6d(x[0], x[1], x[2], x[3]).to_vec(),
+                        StudyFn::Log6Turn => study::log_turn_6d(x[0], x[1], x[2], x[3]).to_vec(),
                     };
                     for (n, v) in names.iter().zip(r) {
                         locals.push((n.clone(), v));

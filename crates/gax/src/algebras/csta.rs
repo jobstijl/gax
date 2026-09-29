@@ -7043,72 +7043,13 @@ impl<T: gx::Real> Even<(), T> {
 }
 
 impl<T: gx::Real> Even<(), T> {
-    /// The logarithm of a unit `Even` by inverse scaling and squaring (the fallback of
-    /// `log` near a half turn, where the closed form loses `Îµ/â¨Râ©â`): square roots until
-    /// `R` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone.
+    /// The invariants `[r0, p1, p2, p3]` and bivectors `[G1, G2, G3]` of the closed-form
+    /// logarithm (docs/log6d.md), as one straight-line program.
     #[doc(hidden)]
     #[inline]
-    pub fn log_by_scaling(self) -> Bivector<(), T> {
-        T::vectorize(#[inline(always)] move || {
-        let mut one = Even::<(), T>::zero();
-        one.c[0] = T::one();
-        let (half, three) = (T::from_ratio(1, 2), one.gp(T::from_i64(3)));
-        let dist = |x: Even<(), T>| {
-            let mut d = T::zero();
-            for (a, b) in x.c.iter().zip(one.c) {
-                d = d + (*a - b).abs();
-            }
-            d
-        };
-        let tol = T::epsilon() * T::from_i64(64);
-        let mut x = self;
-        let mut s = 0u32;
-        while s < 64 && !T::all_lt(dist(x), T::from_ratio(1, 16)) {
-            let mut y = one + x;
-            // Scale so that every invariant part of y ~y is at most 1 (they are positive, and
-            // there are at most four distinct ones, averaging to the scalar part).
-            let n = (y.reverse() * y).c[0];
-            y = y.gp((n * T::from_i64(4)).sqrt().recip());
-            let mut k = 0;
-            while k < 200 && !T::all_lt(dist(y.reverse() * y), tol) {
-                y = y * (three - y.reverse() * y).gp(half);
-                k += 1;
-            }
-            x = y;
-            s += 1;
-        }
-        // log(1 + z) = z (1 - z/2 + zÂ²/3 - ...), by Horner, for |z| <= 1/16.
-        let z = x - one;
-        let mut q = one.gp(T::from_ratio(-1, 16));
-        for k in (1..16).rev() {
-            let a = if k % 2 == 1 { T::from_ratio(1, k) } else { T::from_ratio(-1, k) };
-            q = one.gp(a) + z * q;
-        }
-        let l = z * q;
-        let mut f = T::one();
-        for _ in 0..s {
-            f = f + f;
-        }
-        Bivector::from_coeffs([l.c[1] * f, l.c[2] * f, l.c[3] * f, l.c[4] * f, l.c[5] * f, l.c[6] * f, l.c[7] * f, l.c[8] * f, l.c[9] * f, l.c[10] * f, l.c[11] * f, l.c[12] * f, l.c[13] * f, l.c[14] * f, l.c[15] * f])
-        })
-    }
-}
-
-impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
-    /// The logarithm of a unit versor, in closed form through the invariant decomposition
-    /// (docs/log6d.md): `u_j = coshÂ²(Î¼_j)` of the three commuting planes are the roots of a
-    /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
-    /// `r0â»Â¹ (Î±2 Q2 + Î±1 Q1 + Î±0 â¨Râ©â)` for bivectors `Q` from `R`'s grade parts and the
-    /// quadratic `Î±` interpolating `Ï(u) = âu asinh(â(uâ1))/â(uâ1)` at the roots
-    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Near a half
-    /// turn (`â¨Râ©â < 1/16`), where it loses `Îµ/â¨Râ©â`, the lanes there use inverse scaling and
-    /// squaring instead. The principal logarithm:
-    /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
-    #[inline]
     #[allow(unused_variables)]
-    fn log(self) -> Bivector<(), T> {
-        T::vectorize(#[inline(always)] move || {
-        let x = self.into_inner().c;
+    pub fn log_invariants(self) -> ([T; 4], [[T; 15]; 3]) {
+        let x = self.c;
         let p0 = x[0] * x[31];
         let p1 = x[0] * x[1];
         let p2 = x[0] * x[2];
@@ -7289,18 +7230,62 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
         let p253 = -p137;
         let p254 = -p138;
         let p255 = -p143;
-        let (r0, p1, p2, p3) = (x[0], p169, p171, p16);
-        let g1: [T; 15] = [x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15]];
-        let g2: [T; 15] = [p176, p181, p186, p191, p196, p201, p206, p211, p216, p222, p227, p232, p237, p242, p247];
-        let g3: [T; 15] = [p248, p249, p250, p132, p133, p134, p251, p252, p253, p254, p139, p140, p141, p142, p255];
+        (
+            [x[0], p169, p171, p16],
+            [[x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15]], [p176, p181, p186, p191, p196, p201, p206, p211, p216, p222, p227, p232, p237, p242, p247], [p248, p249, p250, p132, p133, p134, p251, p252, p253, p254, p139, p140, p141, p142, p255]],
+        )
+    }
+
+    /// The logarithm of a unit `Even` in closed form (docs/log6d.md), right where `â¨Râ©â > 0`
+    /// and accurate to `Îµ/â¨Râ©â`.
+    #[doc(hidden)]
+    #[inline]
+    pub fn log_closed(self) -> Bivector<(), T> {
+        let ([r0, p1, p2, p3], [g1, g2, g3]) = self.log_invariants();
         let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
-        let closed = Bivector::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]));
+        Bivector::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]))
+    }
+}
+
+impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
+    /// The logarithm of a unit versor, in closed form through the invariant decomposition
+    /// (docs/log6d.md): `u_j = coshÂ²(Î¼_j)` of the three commuting planes are the roots of a
+    /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
+    /// `r0â»Â¹ (Î±2 Q2 + Î±1 Q1 + Î±0 â¨Râ©â)` for bivectors `Q` from `R`'s grade parts and the
+    /// quadratic `Î±` interpolating `Ï(u) = âu asinh(â(uâ1))/â(uâ1)` at the roots
+    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Below
+    /// `â¨Râ©â = 1/16` (near or past a half turn in some plane), the lanes there first turn the
+    /// planes near a half turn by a quarter turn (`gx::study::log_turn_6d`): `log R =
+    /// log(R E) + (Ï/2) Z`, with `Z` the sum of their unit bivectors and `E = â(âbÌ)`. The
+    /// principal logarithm: rotations below a half turn in each invariant plane where
+    /// `â¨Râ©â > 0`, boosts and dilations of any size.
+    #[inline]
+    fn log(self) -> Bivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.into_inner();
+        let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
+        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        let closed: [T; 15] = core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]);
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {
-            return closed;
+            return Bivector::from_coeffs(closed);
         }
-        let numeric = self.into_inner().log_by_scaling();
-        Bivector::from_coeffs(core::array::from_fn(|i| T::select_lt(limit, r0, closed.c[i], numeric.c[i])))
+        let [a0, a1, a2, n] = gx::study::log_turn_6d(p1, p2, p3, r0);
+        let z: [T; 15] = core::array::from_fn(|i| {
+            let q1 = g3[i] - g2[i] + p3 * g1[i];
+            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
+            a2 * q2 + a1 * q1 + a0 * g1[i]
+        });
+        let [e0, e1, e2, e3] = gx::study::turn_polynomial(n);
+        let ze = Even::<(), T>::from_coeffs([T::zero(), z[0], z[1], z[2], z[3], z[4], z[5], z[6], z[7], z[8], z[9], z[10], z[11], z[12], z[13], z[14], T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero(), T::zero()]);
+        let z2 = ze * ze;
+        let mut e = ze.gp(e1) + z2.gp(e2) + (z2 * ze).gp(e3);
+        e.c[0] = e.c[0] + e0;
+        let turned = (x * e).log_closed();
+        let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
+        Bivector::from_coeffs(core::array::from_fn(|i| {
+            T::select_lt(limit, r0, closed[i], turned.c[i] + quarter * z[i])
+        }))
         })
     }
 }

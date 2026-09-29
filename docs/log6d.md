@@ -94,7 +94,9 @@ of a perturbation). gax evaluates the interpolant in two regimes, chosen per lan
   the trigonometric form for three real roots, then a Newton step), and the remaining pair by
   its sum `S = p₁ − r` and product `P = p₂ − rS`, never the individual pair. The pair's line is
   `φ`'s series at its midpoint reduced modulo `t² − d²` when the pair is close, and the chord
-  through its two values otherwise (a conjugate pair's chord is real). The quadratic adds the
+  through its two values otherwise (a conjugate pair's chord is real). "Close" needs a positive
+  midpoint: a loxodromic pair can have invariants with a negative real part, and then it
+  straddles the branch cut of `√u`, which the series cannot cross. The quadratic adds the
   isolated root: `L(u) + (u² − Su + P)(φ(r) − L(r))/(r² − Sr + P)`.
 
 `φ`'s Taylor coefficients at any centre come without cancellation from `φ(u) = √u · F(u−1)`,
@@ -106,27 +108,71 @@ analytic there: `v = √(x₀ + t)`, `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/
 ## 4. Conditioning and the branch
 
 * **Near a half turn** (`r₀ → 0`) the formula divides by `r₀` and loses `ε/r₀`: `6·10⁻¹⁵`
-  at `r₀ = 0.01`, `8·10⁻⁹` at `10⁻⁸`. Below `r₀ = 1/16` gax uses inverse scaling and squaring
-  instead (`Even::log_by_scaling`, per lane), which stays at machine precision there, because
-  its first square roots move away from the half turn.
+  at `r₀ = 0.01`, `8·10⁻⁹` at `10⁻⁸`.
 * **The branch.** The closed form takes `cⱼ = √uⱼ` with a non-negative real part: every
   invariant plane's rotation is below a half turn (for a loxodromic pair, the principal value
   of the pair). That is the geometric principal logarithm, and it is idempotent:
-  `log(exp(log R)) = log R`. It is right wherever `⟨R⟩₀ > 0`: then an even number of the
-  `cⱼ` are negative, and turning two planes by a half turn each leaves `R` unchanged.
-* **The fallback's limit.** Inverse scaling and squaring takes the square root
-  `normalize(1 + R)`, which is the principal root in each of the even algebra's four
-  eigen-channels (in `R(6,0)`, `Spin(6) = SU(4)`, whose channels have the phases
-  `±θ₁ ± θ₂ ± θ₃` with an even number of minus signs). When the rotation angles add up past a
-  half turn, one channel's phase wraps around. The "root" is then unitary but leaves the spin
-  group (its determinant is `−1`), and the logarithm misses `R` by a central element, `±1` or
-  the pseudoscalar `±I`. Below six dimensions this cannot happen; in 6D it does, for
-  `⟨R⟩₀ < 0` in `R(6,0)` for example (§6). The closed form is used wherever `⟨R⟩₀ > 1/16`, so
-  the limit concerns only the fallback's domain, and there only versors with large rotations in
-  several planes. A fix needs the planes of the result, to add the missing quarter or half
-  turns (§8).
+  `log(exp(log R)) = log R`. It is right wherever `r₀ > 0`: then an even number of the `cⱼ`
+  are negative, and turning two planes by a half turn each leaves `R` unchanged. Where
+  `r₀ < 0` an odd number are, and the formula returns a logarithm of `−R`.
 
-## 5. Validation and cost
+So the formula alone serves `r₀ > 1/16`. Below, gax first turns the planes near a half turn
+out of the way (§5).
+
+## 5. Turning planes near a half turn
+
+A rotation plane (`uⱼ < 1`, `cⱼ = cos θⱼ`, `sⱼ = sin θⱼ`) near a half turn has `cⱼ ≈ 0`.
+Multiplying `R` by a quarter turn in that plane, `−b̂ⱼ = exp(−(π/2) b̂ⱼ)`, turns its factor
+`cⱼ + sⱼ b̂ⱼ` into `sⱼ − cⱼ b̂ⱼ`: its angle drops by `π/2`, and `sⱼ` takes the place of `cⱼ` in
+`r₀`. For a set `T` of rotation planes, with `E = ∏_T (−b̂ⱼ)`,
+
+```
+R' = R E,   ⟨R'⟩₀ = ∏_T sⱼ ∏_rest cⱼ,   log R = log R' + (π/2) Σ_T b̂ⱼ,
+```
+
+since the `b̂ⱼ` commute with `R`'s planes. The closed form then serves `R'`.
+
+* **The sign comes for free.** Orient each `b̂ⱼ` so that its weight `wⱼ = sⱼ cₖ cₗ` in `⟨R⟩₂`
+  is positive. Then `sign(sⱼ) = sign(cₖ cₗ)`, and `⟨R'⟩₀` is positive when `T` has one plane or
+  three, and has the sign of `r₀` when it has two. So turning one plane repairs `r₀ < 0` too.
+* **Which planes.** `|⟨R'⟩₀| = ∏_T √(1 − uⱼ) ∏_rest √uⱼ` follows from the roots, and so do
+  the planes' weights `|wⱼ|` in `⟨R⟩₂` (below). A plane's direction is read from its weight,
+  so turning it costs `ε/|wⱼ|`, and the closed form on `R'` costs `ε/⟨R'⟩₀`. Among the sets
+  with a positive `⟨R'⟩₀`, none included, gax picks the one with the smallest
+  `1/⟨R'⟩₀ + Σ_T 1/|wⱼ|` (`gax_core::study::log_turn_6d`). For example, with one plane at a
+  half turn and another at `u = 0.26`, turning both gives the larger `⟨R'⟩₀`. But the second
+  plane's weight contains the first one's cosine and is `3·10⁻⁴`, so only the first is turned.
+* **The planes' sum** `Z = Σ_T b̂ⱼ` is again an interpolant applied to the bivectors of §2:
+  `Z = α₂Q₂ + α₁Q₁ + α₀G₁` with `α` interpolating `h(u) = [u ∈ T]/|w(u)|`,
+  `|wⱼ| = √((1 − uⱼ) ∏_{k≠j} uₖ)`, at the roots. Coinciding roots must be turned together (a
+  cluster); on a cluster, `h` is the smooth `√(u/(1−u))/|r₀|`, taken through its series as in
+  §3. The candidates are none, all three through the series at their mean, and unions of the
+  isolated root, the pair and each of the pair. Sets that separate the isolated root from the
+  pair are preferred where its gap is at least 1/64 (relative).
+* **The product `E`** is a polynomial in `Z`: for `n` commuting orthogonal unit rotation
+  bivectors, `∏(−b̂ⱼ)` is `−Z`, `1 + Z²/2` or `−(Z³ + 7Z)/6` (`turn_polynomial`).
+* **What remains ill-conditioned is so in itself.** Where two or three planes are at a half
+  turn together (`R = b̂₁b̂₂(…)`, or `R = ±I`), `R` fixes only their product, and the log is not
+  unique. Where a plane is near a full turn (`R ≈ −1` in it), its direction is barely
+  determined. Near those points any logarithm moves by `1/δ` per unit change of `R`.
+
+**Why not inverse scaling and squaring.** gax used it as the fallback before, and it fails in
+6D in two ways:
+
+* **It can leave the group.** Its square root `normalize(1 + R)` takes the principal root in
+  each of the even algebra's four eigen-channels. In `R(6,0)`, `Spin(6) = SU(4)` has channel
+  phases `±θ₁ ± θ₂ ± θ₃`, with an even number of minus signs. When the angles add up past a
+  half turn, one phase wraps around. The "root" is then unitary with determinant `−1`, outside
+  the spin group, and the logarithm misses `R` by a central element, `±1` or the pseudoscalar
+  `±I`. Below six dimensions this cannot happen.
+* **It can find no root at all.** With boosts, `(1 + R)~(1 + R)` has negative channel values
+  near a half turn (`2 − 2 cosh α` for a half turn times a boost), and the Newton iteration
+  returns NaN.
+
+At random CSTA bivector entries up to 1.2, one versor in five is below `r₀ = 1/16`. Of those,
+inverse scaling and squaring got 7% wrong or NaN.
+
+## 6. Validation and cost
 
 Checked in `f64` against `exp` (itself scaling and squaring, independent of the log):
 
@@ -136,28 +182,44 @@ Checked in `f64` against `exp` (itself scaling and squaring, independent of the 
 | one rotation up to half-angle 1.5 (a half turn is π/2) | `7·10⁻¹⁶` |
 | boosts and dilations up to rapidity 3 | `4·10⁻¹⁵` |
 | translation (null), rotation and translation, isoclinic, near the identity | `0` to `10⁻¹⁶` |
-| towards a half turn, `π/2 − 10⁻⁸` (fallback) | `7·10⁻¹⁶` |
+| towards a half turn, `π/2 − 10⁻⁸` (turned) | `10⁻¹⁶` |
+| past a half turn (`r₀ < 0`), and towards one with a boost or dilation (turned) | `10⁻¹²` or better |
 
-At random entries up to 1, where some planes pass a half turn, every log with `⟨R⟩₀ > 0.1` is a
-log of `R` and a fixed point of `log ∘ exp` (`tests/csta_log.rs`). This holds on portable SIMD
-lanes (lanes mixing the closed form and the fallback) and in `f32` (within `2·10⁻⁴`).
+Random CSTA versors, 5000 per size, checked for `exp(log R) = R` (relative):
 
-The closed form takes 2.9 µs against 50.7 µs for inverse scaling and squaring (f64, Ryzen 7
-5800X, `benches/compare.rs`).
+| bivector entries up to | below `r₀ = 1/16` | worst | not fixed points of `log ∘ exp` |
+|---|---|---|---|
+| 0.5 | 0 | `2·10⁻¹⁴` | 0 |
+| 1.0 | 303 | `3·10⁻¹²` | 0 |
+| 1.5 | 1991 | `10⁻⁷` | 0 |
+| 2.0 | 2987 | `1.4·10⁻⁶` | 1 |
+| 2.5 | 3418 | `4·10⁻⁶` | 2 |
 
-## 6. Other 6D algebras
+No log is NaN, and none misses `R`. The least accurate ones combine boosts of `cosh² μ` in the
+hundreds to thousands (`|R|` up to 200) with a plane near a full turn (`u ≈ 1`, `r₀ < 0`),
+whose direction is barely determined (§5). The tests (`tests/csta_log.rs`) also cover portable SIMD lanes (lanes mixing
+the closed form and turning, each equal to its scalar result) and `f32` (within `2·10⁻⁴`).
+
+The closed form takes 2.6 µs, and 6.6 µs near a half turn (turned: the closed form twice and
+four products). Inverse scaling and squaring took 50.7 µs (f64, Ryzen 7 5800X,
+`benches/compare.rs`; the timings of this section on a loaded machine).
+
+## 7. Other 6D algebras
 
 Nothing in the construction is specific to CSTA's signature. The generator emits it for the full
 even kind of every 6D algebra, standard or declared with `algebra!`. `tests/log6d_algebras.rs`
-declares three more and checks each against `exp` and against inverse scaling and squaring:
-Euclidean `R(6,0)` (rotations only), split `R(3,3)` (rotations, boosts and loxodromic planes)
-and degenerate `R(5,0,1)` (5D PGA: rotations and translations, null planes). `log(exp B) = B`
-holds to `10⁻¹¹` for bivector entries up to 0.25, each basis plane alone (two or three
-coinciding invariants) to `10⁻¹³`, and larger versors with `⟨R⟩₀ > 0.1` are fixed points. In
-`R(6,0)`, versors with `⟨R⟩₀ < 0` (random entries up to 0.8) show the fallback's limit of §4:
-the closed form is not used there, and inverse scaling and squaring misses by a central element.
+declares three more and checks each against `exp`:
+- Euclidean `R(6,0)` (rotations only);
+- split `R(3,3)` (rotations, boosts and loxodromic planes);
+- degenerate `R(5,0,1)` (5D PGA: rotations and translations, null planes).
 
-## 7. In WGSL
+For each:
+- `log(exp B) = B` holds to `10⁻¹¹` for bivector entries up to 0.25.
+- Each basis plane alone (two or three coinciding invariants) is exact to `10⁻¹³`, and to
+  `10⁻¹²` towards and past a half turn.
+- Random versors with entries up to 0.8, `r₀` of either sign, are logs of `R` and fixed points.
+
+## 8. In WGSL
 
 The WGSL modules (`gax::wgsl::CSTA`, and those of declared 6D algebras) have
 `unit_even_log(x: Even) -> Bivector`:
@@ -167,15 +229,19 @@ The WGSL modules (`gax::wgsl::CSTA`, and those of declared 6D algebras) have
   combination. `study_log6` ports `log_coeffs_6d` to `f32` with the same two regimes, but
   16 series terms (the regimes keep the ratio at most 1/4, so 16 reach `2·10⁻¹⁰`, below
   `f32`'s precision) and branches instead of selects.
-* Below `⟨x⟩₀ = 1/16`, `unit_even_log` calls `even_log_by_scaling`, a WGSL port of the fallback
-  (loops, like the scaling-and-squaring `exp`).
+* `unit_even_log_turning` is another: the same program, `study_log6_turn` (a port of
+  `log_turn_6d`), and `Z`.
+* `unit_even_log` takes the closed form above `⟨x⟩₀ = 1/16`. Below, it recovers the number of
+  turned planes as `n = −⟨Z²⟩₀`, forms `E` from `Z`, and returns
+  `unit_even_log_closed(x E) + (π/2) Z`.
 
 In the `f16` module the helpers and the programs feeding them compute in `f32`. Checked with
-`wesl`'s CPU evaluator: `unit_even_log_closed` agrees with its `f64` evaluation, and
-`unit_even_log` agrees with the Rust `log` on unit versors, a quarter of them near a half turn,
-within `4·10⁻⁵` relative; on a GPU (`gax-gpu-tests`), `unit_even_log` agrees within `3·10⁻⁶`.
+`wesl`'s CPU evaluator: both kernels agree with their `f64` evaluations. `unit_even_log`
+agrees with the Rust `log` within `6·10⁻⁵` relative, on unit versors of which a quarter are near
+a half turn and a quarter below `⟨x⟩₀ = 1/16`. On a GPU (`gax-gpu-tests`) it agrees within
+`3·10⁻⁶`.
 
-## 8. Higher dimensions
+## 9. Higher dimensions
 
 The construction carries over to `n` dimensions, where a bivector has `k = ⌊n/2⌋` commuting
 planes.
@@ -193,15 +259,8 @@ planes.
   emits the closed form only in 6D). 8D and 9D give a quartic, which still has roots in
   closed form. From 10D on (five planes), Abel–Ruffini rules out a formula in radicals, and the
   spread regime would find roots numerically: closed form except for a polynomial root.
+* **Turning** carries over as it is: `⟨R'⟩₀` is positive for an odd number of turned planes,
+  and `E` is a polynomial in `Z` of degree up to `k`.
 
 The costs grow quickly: the even kind has `2ⁿ⁻¹` coefficients (128 in 8D), and the bivectors
-of the separation are polynomials of degree up to `k + 1` in them. The fallback's limit (§4)
-grows with the dimension too: more channels, whose phases can wrap.
-
-## 9. Open
-
-* **A fallback that stays in the spin group.** The limit of §4: the fallback needs the planes of
-  its result, to add the quarter or half turns that the central element takes away. The plane
-  projectors are Lagrange polynomials in `Q₁, Q₂` through the roots. Alternatively, the closed
-  form could extend to `⟨R⟩₀ < 0`, by interpolating `−√u (π − acos √u)/√(1−u)` at an
-  isolated root instead of `φ`. Only near `⟨R⟩₀ = 0` would a fallback remain.
+of the separation are polynomials of degree up to `k + 1` in them.

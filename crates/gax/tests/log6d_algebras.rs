@@ -2,7 +2,7 @@
 //! declared with `algebra!`: Euclidean `R(6,0)` (rotations only), split `R(3,3)` (rotations,
 //! boosts and loxodromic planes) and degenerate `R(5,0,1)` (5D PGA: rotations and
 //! translations). The generator emits the closed form for any 6D algebra's full even kind; here
-//! it is checked against `exp` and against inverse scaling and squaring.
+//! it is checked against `exp`, near and past half turns too.
 
 #![cfg(feature = "macros")]
 
@@ -60,8 +60,7 @@ macro_rules! log6d_checks {
                 Bivector::from_coeffs(core::array::from_fn(|_| size * rng.next()))
             }
 
-            /// Small enough that every plane is well below a half turn: `log(exp B) = B`, and
-            /// the closed form agrees with inverse scaling and squaring.
+            /// Small enough that every plane is well below a half turn: `log(exp B) = B`.
             #[test]
             fn log_of_exp_is_the_bivector() {
                 let mut rng = Rng(0x6d_1065);
@@ -74,27 +73,18 @@ macro_rules! log6d_checks {
                             close(&back.c, &b.c, 1e-11),
                             "size {size}: {back:?} vs {b:?}"
                         );
-                        let numeric = r.into_inner().log_by_scaling();
-                        assert!(close(&back.c, &numeric.c, 1e-11), "size {size}: vs scaling");
                     }
                 }
             }
 
-            /// Larger versors, in the closed form's domain `⟨R⟩₀ > 1/16`: the log is a log of `R`
-            /// and a fixed point of `log ∘ exp`. (Below it, inverse scaling and squaring can miss
-            /// by a central element where rotation angles add up past a half turn: docs/log6d.md.)
+            /// Larger versors, planes near and past half turns included (`⟨R⟩₀` of either sign):
+            /// the log is a log of `R` and a fixed point of `log ∘ exp`.
             #[test]
             fn exp_of_log_is_the_versor() {
                 let mut rng = Rng(0x6d_e7b0);
                 let mut checked = 0;
-                for _ in 0..4000 {
-                    if checked == 60 {
-                        break;
-                    }
+                for _ in 0..200 {
                     let r = bivector(&mut rng, 0.8).exp();
-                    if r.into_inner().c[0] <= 0.1 {
-                        continue;
-                    }
                     let b: Bivector<(), f64> = r.log();
                     let again = b.exp();
                     assert!(
@@ -108,11 +98,11 @@ macro_rules! log6d_checks {
                     );
                     checked += 1;
                 }
-                assert_eq!(checked, 60);
+                assert_eq!(checked, 200);
             }
 
             /// Single planes (two or three coinciding invariants), each basis bivector alone,
-            /// and one towards a half turn where rotations exist (the fallback).
+            /// and where it is a rotation, towards and past a half turn (turned first).
             #[test]
             fn single_planes() {
                 for i in 0..15 {
@@ -121,12 +111,20 @@ macro_rules! log6d_checks {
                     let b = Bivector::from_coeffs(c);
                     let back: Bivector<(), f64> = b.exp().log();
                     assert!(close(&back.c, &b.c, 1e-13), "plane {i}: {back:?}");
-                    c[i] = core::f64::consts::FRAC_PI_2 - 1e-6;
-                    let b = Bivector::from_coeffs(c);
-                    let r = b.exp();
-                    if r.into_inner().c[0].abs() < 0.5 {
-                        let back: Bivector<(), f64> = r.log();
-                        assert!(close(&back.c, &b.c, 1e-9), "plane {i} near a half turn");
+                    for angle in [
+                        core::f64::consts::FRAC_PI_2 - 1e-6,
+                        core::f64::consts::FRAC_PI_2 + 0.4,
+                    ] {
+                        c[i] = angle;
+                        let b = Bivector::from_coeffs(c);
+                        let r = b.exp();
+                        if r.into_inner().c[0].abs() < 0.5 {
+                            let back: Bivector<(), f64> = r.log();
+                            assert!(
+                                close(&back.c, &b.c, 1e-12),
+                                "plane {i} at {angle}: {back:?}"
+                            );
+                        }
                     }
                 }
             }

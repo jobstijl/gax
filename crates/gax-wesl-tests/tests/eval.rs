@@ -7,9 +7,9 @@
 //!   must agree within a relative `2⁻¹⁴` (the evaluator uses Rust's `f32` functions; a GPU's
 //!   WGSL built-ins are looser, see the GPU tests).
 //!
-//! * The closed-form 6D logarithm is defined on unit versors only; it gets `exp` of random
-//!   bivectors, and the module's `unit_even_log` (the closed form or, near a half turn, inverse
-//!   scaling and squaring) is checked against gax's Rust `log`.
+//! * The closed-form 6D logarithm and its turning are defined on unit versors only; they get
+//!   `exp` of random bivectors, and the module's `unit_even_log` (the closed form, turning planes
+//!   near a half turn first) is checked against gax's Rust `log`.
 //!
 //! The evaluator implements neither `fma` nor calls of non-`@const` functions, so the module
 //! is evaluated with every function marked `@const` and `fma(a, b, c)` as `a * b + c`. That
@@ -258,30 +258,31 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
 }
 
 /// A CSTA unit versor `exp(B)` rounded to `f32`, `B` random with entries up to `size`, redrawn
-/// until `⟨R⟩₀ > min` (clear of a half turn).
-fn csta_versor(rng: &mut Rng, size: f64, min: f64) -> Vec<f32> {
+/// until `min < ⟨R⟩₀ < max`.
+fn csta_versor(rng: &mut Rng, size: f64, min: f64, max: f64) -> Vec<f32> {
     loop {
         let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| {
             size * f64::from(rng.next())
         }));
         let r = b.exp().into_inner().c;
-        if r[0] > min {
+        if min < r[0] && r[0] < max {
             return r.iter().map(|x| *x as f32).collect();
         }
     }
 }
 
 /// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
-/// `⟨R⟩₀ > 1/16`), or `None` for the others.
+/// `⟨R⟩₀ > 1/16`, and the planes it turns below), or `None` for the others.
 fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
     match (algebra, kernel) {
-        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125)),
+        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125, f64::INFINITY)),
+        ("csta", "unit_even_log_turning") => Some(csta_versor(rng, 1.0, f64::NEG_INFINITY, 0.0625)),
         _ => None,
     }
 }
 
-/// A unit versor (every fourth one a rotation towards a half turn, where the fallback takes
-/// over) and gax's Rust `log` of it.
+/// A unit versor (every fourth one a rotation towards a half turn, and every fourth one below
+/// `⟨R⟩₀ = 1/16`, where planes are turned first) and gax's Rust `log` of it.
 fn reference_log(algebra: &str, kind: &str, rng: &mut Rng, case: usize) -> (Vec<f32>, Vec<f64>) {
     use gax::Kind;
     match (algebra, kind) {
@@ -299,8 +300,11 @@ fn reference_log(algebra: &str, kind: &str, rng: &mut Rng, case: usize) -> (Vec<
                 b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
                 let r = B::from_coeffs(b).exp().into_inner().c;
                 r.iter().map(|x| *x as f32).collect()
+            } else if case % 4 == 2 {
+                // Below 1/16, either sign: turned.
+                csta_versor(rng, 1.0, f64::NEG_INFINITY, 0.0625)
             } else {
-                csta_versor(rng, 0.3, -1.0)
+                csta_versor(rng, 0.3, f64::NEG_INFINITY, f64::INFINITY)
             };
             let r =
                 gax::csta::Even::<(), f64>::from_coeffs(core::array::from_fn(|i| f64::from(c[i])));

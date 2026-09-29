@@ -161,12 +161,12 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
   roots of a cubic in scalar parts of `R`'s grade parts squared, and the log is a quadratic
   interpolant of one scalar function at those roots applied to three bivectors built from `R`.
   The derivation, how coinciding roots are handled, the branch and the validation are in
-  [log6d.md](log6d.md). Near a half turn (`⟨R⟩₀ < 1/16`), where the closed form loses
-  `ε/⟨R⟩₀`, it falls back to inverse scaling and squaring (square roots until within `1/16` of
-  the identity, each made unit by Newton steps `y (3 − ~y y)/2`, then the series of
-  `log(1 + z)`). The same holds for every 6D algebra's full even kind. The fallback has a 6D
-  limit: when the rotation angles of several planes add up past a half turn, its first square
-  root leaves the spin group, and the result misses `R` by a central element (log6d.md §4).
+  [log6d.md](log6d.md). Near and past a half turn (`⟨R⟩₀ ≤ 1/16`), where the closed form
+  loses `ε/⟨R⟩₀` (or, for `⟨R⟩₀ < 0`, returns a log of `−R`), it first turns the planes near a
+  half turn by a quarter turn, and applies the closed form to the result. The same holds for
+  every 6D algebra's full even kind. What stays ill-conditioned is so in itself: two or three
+  planes at a half turn together, where `R` fixes only their product, and a plane near a full
+  turn.
 
 **`normalized`.**
 

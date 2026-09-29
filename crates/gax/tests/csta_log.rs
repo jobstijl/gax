@@ -1,6 +1,7 @@
-//! The logarithm of CSTA's even versors (the full 6D conformal group), by inverse scaling and
-//! squaring: `exp(log R) = R` for versors built from random bivectors mixing rotations, boosts
-//! and dilations, and `log(exp B) = B` for bivectors on the principal branch.
+//! The logarithm of CSTA's even versors (the full 6D conformal group), in closed form, turning
+//! planes near a half turn first (docs/log6d.md): `exp(log R) = R` for versors built from random
+//! bivectors mixing rotations, boosts and dilations, and `log(exp B) = B` for bivectors on the
+//! principal branch.
 
 #![cfg(feature = "csta")]
 
@@ -58,8 +59,7 @@ fn log_of_exp_is_the_bivector_on_the_principal_branch() {
 }
 
 /// Boosts (`e41`, `e42`, `e43`) and dilations (`eoi`) of large rapidity, alone and with a small
-/// rotation: the square roots' Newton steps start from parts scaled to at most 1, so they
-/// converge however unequal the parts are.
+/// rotation.
 #[test]
 fn large_boosts_and_dilations() {
     let mut rng = Rng(0x0b00_57ed);
@@ -120,8 +120,8 @@ fn coinciding_invariants() {
     }
 }
 
-/// Towards a half turn the closed form would lose `ε/⟨R⟩₀`; below `⟨R⟩₀ = 1/16` the log
-/// switches to inverse scaling and squaring, and stays accurate.
+/// Towards a half turn the closed form would lose `ε/⟨R⟩₀`; below `⟨R⟩₀ = 1/16` the log turns
+/// that plane by a quarter turn first, and stays accurate.
 #[test]
 fn towards_a_half_turn() {
     for delta in [0.2, 1e-2, 1e-4, 1e-6, 1e-8] {
@@ -131,17 +131,66 @@ fn towards_a_half_turn() {
     }
 }
 
-/// Larger random versors, rotations and boosts coupled (loxodromic planes). The log is a log
-/// of `R`, and a fixed point: `log(exp(log R)) = log R`, as a principal log is.
+/// Past a half turn (`⟨R⟩₀ < 0`), and towards one with boosts and dilations, where `1 + R` has
+/// no real square root in some channel: `log(exp B) = B`.
+#[test]
+fn past_a_half_turn_and_with_boosts() {
+    use core::f64::consts::FRAC_PI_2;
+    for (name, parts) in [
+        (
+            "past, with a translation",
+            vec![("e12", FRAC_PI_2 + 0.3), ("e3i", 0.4)],
+        ),
+        ("far past", vec![("e23", FRAC_PI_2 + 1.2), ("e1o", 0.2)]),
+        (
+            "towards, with a boost",
+            vec![("e12", FRAC_PI_2 - 1e-4), ("e43", 1.5)],
+        ),
+        (
+            "past, with a boost",
+            vec![("e12", FRAC_PI_2 + 0.2), ("e43", 2.0)],
+        ),
+        (
+            "towards, with a dilation",
+            vec![("e31", FRAC_PI_2 - 1e-6), ("eoi", 2.0)],
+        ),
+    ] {
+        let b = plane(&parts);
+        let back: Bivector<(), f64> = b.exp().log();
+        assert!(close(&back.c, &b.c, 1e-12), "{name}: {back:?} vs {b:?}");
+    }
+}
+
+/// Large random versors, many near or past half turns in several planes: every log is a log of
+/// `R` (where inverse scaling and squaring, the fallback before turning, missed by a central
+/// element or found no square root).
+#[test]
+fn every_versor() {
+    let mut rng = Rng(0x00e7_e3ee);
+    for size in [1.2, 1.6] {
+        for _ in 0..400 {
+            let r = rng.bivector(size).exp();
+            let b: Bivector<(), f64> = r.log();
+            let again = b.exp();
+            assert!(
+                close(&again.into_inner().c, &r.into_inner().c, 1e-8),
+                "size {size}: exp(log R) differs from R: {:?} vs {:?}",
+                again.into_inner().c,
+                r.into_inner().c
+            );
+        }
+    }
+}
+
+/// Larger random versors, rotations and boosts coupled (loxodromic planes), `⟨R⟩₀` of either
+/// sign. The log is a log of `R`, and a fixed point: `log(exp(log R)) = log R`, as a principal
+/// log is.
 #[test]
 fn larger_versors() {
     let mut rng = Rng(0x0006_d106);
     let mut checked = 0;
     for _ in 0..400 {
         let r = rng.bivector(1.0).exp();
-        if r.into_inner().c[0] <= 0.1 {
-            continue; // near or past a half turn in some plane
-        }
         let b: Bivector<(), f64> = r.log();
         let again = b.exp();
         assert!(
@@ -155,14 +204,14 @@ fn larger_versors() {
         );
         checked += 1;
     }
-    assert!(checked > 300);
+    assert_eq!(checked, 400);
 }
 
-/// On SIMD lanes, a lane near a half turn takes the fallback and the others the closed form,
-/// each equal to its scalar result.
+/// On SIMD lanes, a lane near a half turn is turned and the others take the closed form
+/// directly, each equal to its scalar result.
 #[cfg(feature = "batch")]
 #[test]
-fn lanes_mix_the_closed_form_and_the_fallback() {
+fn lanes_mix_the_closed_form_and_turning() {
     type L = gax::batch::Lanes<f64, 4>;
     let bs = [
         plane(&[("e12", 0.4), ("e41", 0.3)]),
@@ -182,7 +231,8 @@ fn lanes_mix_the_closed_form_and_the_fallback() {
 }
 
 /// In `f32`: within `f32`'s accuracy of the `f64` log, on random versors and the degenerate
-/// cases (the `f64` guards underflow to zero in `f32`; only discarded branches meet them).
+/// cases (the `f64` guards of the closed form underflow to zero in `f32`; only discarded
+/// branches meet them).
 #[test]
 fn in_f32() {
     let mut rng = Rng(0x00f3_2f32);
@@ -191,6 +241,10 @@ fn in_f32() {
     cases.push(plane(&[("e12", 0.7)]));
     cases.push(plane(&[("e23", 0.5), ("e1i", 0.3), ("e1o", -0.3)]));
     cases.push(plane(&[("e12", core::f64::consts::FRAC_PI_2 - 1e-3)]));
+    cases.push(plane(&[
+        ("e12", core::f64::consts::FRAC_PI_2 + 0.3),
+        ("e43", 1.0),
+    ]));
     for b in cases {
         let r = b.exp().into_inner();
         let r32 = Even::<(), f32>::from_coeffs(core::array::from_fn(|i| r.c[i] as f32));

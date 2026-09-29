@@ -935,6 +935,11 @@ fn emit_log_fallback(
     if bv.layout.len() != grade2.len() {
         return None;
     }
+    // In 6D the logarithm is in closed form, turning planes near a half turn (log6d.md).
+    if alg.dim() == 6 {
+        emit_log_6d(spec, k, bv, traits, kernels);
+        return Some(bv.name.clone());
+    }
     let (en, bn) = (&k.name, &bv.name);
     let (one_pos, one_sign) = k.layout.position(0)?;
     let one = if one_sign > 0 {
@@ -952,23 +957,10 @@ fn emit_log_fallback(
             format!("{sign}l.c[{pos}] * f")
         })
         .collect();
-    // In 6D the closed form is the logarithm, and this is its fallback near a half turn.
-    let six = alg.dim() == 6;
-    let (head, start) = if six {
-        (
-            format!(
-                "impl<T: gx::Real> {en}<(), T> {{\n    /// The logarithm of a unit `{en}` by inverse scaling and squaring (the fallback of\n    /// `log` near a half turn, where the closed form loses `ε/⟨R⟩₀`): square roots until\n    /// `R` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone.\n    #[doc(hidden)]\n    #[inline]\n    pub fn log_by_scaling(self) -> {bn}<(), T> {{"
-            ),
-            "self",
-        )
-    } else {
-        (
-            format!(
-                "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T> {{"
-            ),
-            "self.into_inner()",
-        )
-    };
+    let head = format!(
+        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T> {{"
+    );
+    let start = "self.into_inner()";
     let _ = write!(
         traits,
         "{head}
@@ -1021,15 +1013,14 @@ fn emit_log_fallback(
         project.join(", "),
         one_sign_mul = if one_sign > 0 { "" } else { "-" },
     );
-    if six {
-        emit_log_6d(spec, k, bv, traits, kernels);
-    }
     Some(bn.clone())
 }
 
 /// The closed-form logarithm of a 6D even versor (docs/log6d.md): the invariants and the three
 /// bivectors `G1 = ⟨R⟩₂`, `G2 = r0 ⟨R₄ R₂⟩₂`, `G3 = r0 ⟨R₆ R₄⟩₂` as one straight-line program,
-/// the interpolant from `gx::study::log_coeffs_6d`, and `log_by_scaling` near a half turn.
+/// the interpolant from `gx::study::log_coeffs_6d`, and near a half turn the planes turned by
+/// `gx::study::log_turn_6d` first. Also the WGSL kernels `unit_{e}_log_closed` and
+/// `unit_{e}_log_turning`.
 #[allow(clippy::too_many_lines)]
 fn emit_log_6d(
     spec: &AlgebraSpec,
@@ -1126,6 +1117,67 @@ fn emit_log_6d(
             },
         ],
     ));
+    // The planes to turn near a half turn: `Z = α2 Q2 + α1 Q1 + α0 G1` from `study_log6_turn`,
+    // with `Q1 = G3 − G2 + p3 G1`, `Q2 = G2 + p1 Q1 − 2 p3 G1`.
+    let (p1v, p3v) = (
+        Poly::var(base + 3 + (3 * n) as Var),
+        Poly::var(base + 4 + (3 * n) as Var),
+    );
+    let two = Poly::constant(Rational::int(2));
+    let zs: Vec<Poly> = (0..n)
+        .map(|i| {
+            let q1 = &(&g(2, i) - &g(1, i)) + &(&p3v * &g(0, i));
+            let q2 = &(&g(1, i) + &(&p1v * &q1)) - &(&(&two * &p3v) * &g(0, i));
+            &(&(&w(2) * &q2) + &(&w(1) * &q1)) + &(&w(0) * &g(0, i))
+        })
+        .collect();
+    let turn = cse::compile_best(&zs, &BTreeSet::new(), &[]);
+    let mut turn_vars: Vec<(Var, Source)> = (0..3)
+        .map(|j| (base + j, Source::Local(format!("a{j}"))))
+        .collect();
+    turn_vars.extend((0..3 * n).map(|o| {
+        (
+            base + 3 + o as Var,
+            Source::Output {
+                step: 0,
+                index: 4 + o,
+            },
+        )
+    }));
+    turn_vars.push((
+        base + 3 + (3 * n) as Var,
+        Source::Output { step: 0, index: 1 },
+    ));
+    turn_vars.push((
+        base + 4 + (3 * n) as Var,
+        Source::Output { step: 0, index: 3 },
+    ));
+    kernels.extend(value_kernel(
+        k,
+        &format!("unit_{}_log_turning", snake(&k.name)),
+        &format!(
+            "The sum `Z` of the unit bivectors of the planes `unit_{}_log` turns by a quarter turn (docs/log6d.md); `-<Z Z>_0` is their number.",
+            snake(&k.name)
+        ),
+        Ty::Kind(bv.name.clone()),
+        vec![
+            Step::Lets {
+                prog: prog.clone(),
+                prefix: "p".into(),
+                vars: arg_vars(k.layout.len()),
+            },
+            Step::Study {
+                func: StudyFn::Log6Turn,
+                args: vec![(0, 1), (0, 2), (0, 3), (0, 0)],
+                outs: vec!["a0".into(), "a1".into(), "a2".into(), "n".into()],
+            },
+            Step::Lets {
+                prog: turn,
+                prefix: "t".into(),
+                vars: turn_vars,
+            },
+        ],
+    ));
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "p", &mut lets);
@@ -1136,35 +1188,91 @@ fn emit_log_6d(
         .collect();
     let list = |from: usize| o[from..from + n].join(", ");
     let (en, bn) = (&k.name, &bv.name);
+    // `Z` (a bivector) as an `{en}`, and the position of the scalar.
+    let embed: Vec<String> = (0..k.layout.len())
+        .map(|pos| {
+            let m = k.layout.blades[pos].0;
+            match bv.layout.position(m) {
+                Some((i, sb)) => {
+                    let se = k.layout.blades[pos].1;
+                    if sb * se > 0 {
+                        format!("z[{i}]")
+                    } else {
+                        format!("-z[{i}]")
+                    }
+                }
+                None => "T::zero()".into(),
+            }
+        })
+        .collect();
+    let (one_pos, one_sign) = k.layout.position(0).expect("a scalar");
+    let e0 = if one_sign > 0 { "e0" } else { "-e0" };
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+        "impl<T: gx::Real> {en}<(), T> {{
+    /// The invariants `[r0, p1, p2, p3]` and bivectors `[G1, G2, G3]` of the closed-form
+    /// logarithm (docs/log6d.md), as one straight-line program.
+    #[doc(hidden)]
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn log_invariants(self) -> ([T; 4], [[T; {n}]; 3]) {{
+        let x = self.c;
+{lets}        (
+            [{}, {}, {}, {}],
+            [[{}], [{}], [{}]],
+        )
+    }}
+
+    /// The logarithm of a unit `{en}` in closed form (docs/log6d.md), right where `⟨R⟩₀ > 0`
+    /// and accurate to `ε/⟨R⟩₀`.
+    #[doc(hidden)]
+    #[inline]
+    pub fn log_closed(self) -> {bn}<(), T> {{
+        let ([r0, p1, p2, p3], [g1, g2, g3]) = self.log_invariants();
+        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        {bn}::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]))
+    }}
+}}
+
+impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
     /// The logarithm of a unit versor, in closed form through the invariant decomposition
     /// (docs/log6d.md): `u_j = cosh²(μ_j)` of the three commuting planes are the roots of a
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
     /// `r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂)` for bivectors `Q` from `R`'s grade parts and the
     /// quadratic `α` interpolating `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots
-    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Near a half
-    /// turn (`⟨R⟩₀ < 1/16`), where it loses `ε/⟨R⟩₀`, the lanes there use inverse scaling and
-    /// squaring instead. The principal logarithm:
-    /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
+    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Below
+    /// `⟨R⟩₀ = 1/16` (near or past a half turn in some plane), the lanes there first turn the
+    /// planes near a half turn by a quarter turn (`gx::study::log_turn_6d`): `log R =
+    /// log(R E) + (π/2) Z`, with `Z` the sum of their unit bivectors and `E = ∏(−b̂)`. The
+    /// principal logarithm: rotations below a half turn in each invariant plane where
+    /// `⟨R⟩₀ > 0`, boosts and dilations of any size.
     #[inline]
-    #[allow(unused_variables)]
     fn log(self) -> {bn}<(), T> {{
         T::vectorize(#[inline(always)] move || {{
-        let x = self.into_inner().c;
-{lets}        let (r0, p1, p2, p3) = ({}, {}, {}, {});
-        let g1: [T; {n}] = [{}];
-        let g2: [T; {n}] = [{}];
-        let g3: [T; {n}] = [{}];
+        let x = self.into_inner();
+        let ([r0, p1, p2, p3], [g1, g2, g3]) = x.log_invariants();
         let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
-        let closed = {bn}::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]));
+        let closed: [T; {n}] = core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]);
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {{
-            return closed;
+            return {bn}::from_coeffs(closed);
         }}
-        let numeric = self.into_inner().log_by_scaling();
-        {bn}::from_coeffs(core::array::from_fn(|i| T::select_lt(limit, r0, closed.c[i], numeric.c[i])))
+        let [a0, a1, a2, n] = gx::study::log_turn_6d(p1, p2, p3, r0);
+        let z: [T; {n}] = core::array::from_fn(|i| {{
+            let q1 = g3[i] - g2[i] + p3 * g1[i];
+            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
+            a2 * q2 + a1 * q1 + a0 * g1[i]
+        }});
+        let [e0, e1, e2, e3] = gx::study::turn_polynomial(n);
+        let ze = {en}::<(), T>::from_coeffs([{}]);
+        let z2 = ze * ze;
+        let mut e = ze.gp(e1) + z2.gp(e2) + (z2 * ze).gp(e3);
+        e.c[{one_pos}] = e.c[{one_pos}] + {e0};
+        let turned = (x * e).log_closed();
+        let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
+        {bn}::from_coeffs(core::array::from_fn(|i| {{
+            T::select_lt(limit, r0, closed[i], turned.c[i] + quarter * z[i])
+        }}))
         }})
     }}
 }}
@@ -1177,6 +1285,7 @@ fn emit_log_6d(
         list(4),
         list(4 + n),
         list(4 + 2 * n),
+        embed.join(", "),
     );
 }
 

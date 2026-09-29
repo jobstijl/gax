@@ -30,7 +30,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] exp/log for 5D algebras (CGA3D, STAP): Study functions with a general 4-vector direction
 - [x] exp for 6D and up (CSTA): scaling and squaring in the product closure
 - [x] exp and log of CSTA Poincaré motors (`Twist` to `Motor`): closed forms, since `Q²` is a scalar there
-- [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): in closed form through the cubic invariants (ADR-033, docs/log6d.md), 17x faster than inverse scaling and squaring, which remains the fallback near a half turn; for every 6D algebra (tested: R(6,0), R(3,3), R(5,0,1)) and in WGSL (`unit_even_log`)
+- [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): in closed form through the cubic invariants (ADR-033, docs/log6d.md), 17x faster than inverse scaling and squaring; near a half turn it turns planes first (see Phase 5); for every 6D algebra (tested: R(6,0), R(3,3), R(5,0,1)) and in WGSL (`unit_even_log`)
 - [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
 - [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees
@@ -95,7 +95,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Solver agreement: LU bit-identical scalar vs lanes on nearly singular maps; eigh/svd within gap-scaled bounds
 - [x] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series (2026-09-29, idle machine: native runs of every benchmark)
 - [x] Solver agreement on the native SIMD lane types: LU bit-identical on every level (`tests/solver_levels.rs`, through `batch::map`), eigh and svd within `c · n · ε · ‖A‖`
-- [ ] 6D log fallback that stays in the spin group: inverse scaling and squaring misses by a central element (±1, ±I) when rotation angles add up past a half turn and `⟨R⟩₀ ≤ 1/16` (docs/log6d.md §4, §9)
+- [x] 6D log near and past half turns: planes near a half turn are turned by a quarter turn before the closed form (`log_turn_6d`), replacing inverse scaling and squaring, which missed by a central element (±1, ±I) or found no root (docs/log6d.md §5)
 
 ## Phase 6: shaders (WGSL/WESL)
 - [x] WGSL target for the straight-line-program printer (`fma`, reversed `select`, abstract-float constants), golden tests

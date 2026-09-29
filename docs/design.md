@@ -860,7 +860,8 @@ files in `gax/src/algebras/`, behind cargo features.
   `cga2d`/`cga3d`, spheres, and a round point's PGA point.
 
 ## ADR-033: The logarithm of a 6D even versor in closed form
-*Status: accepted, implemented (`gax_core::study::log_coeffs_6d`; derivation in log6d.md).*
+*Status: accepted, implemented (`gax_core::study::log_coeffs_6d`, `log_turn_6d`; derivation
+in log6d.md).*
 
 * **The problem.** CSTA's even versors had a logarithm only by inverse scaling and squaring
   (50 µs, loops). Published closed forms stop below six dimensions: a 6D bivector splits into
@@ -877,20 +878,23 @@ files in `gax/src/algebras/`, behind cargo features.
   roots go through the most isolated real root and the remaining pair's sum and product.
 * **What the generator emits.** The invariants and the three bivectors as one straight-line
   program from exact polynomials, the interpolant from `log_coeffs_6d`, and the combination.
-  Below `⟨R⟩₀ = 1/16` (a half turn, where the formula loses `ε/⟨R⟩₀`), the lanes there use
-  inverse scaling and squaring, kept as `Even::log_by_scaling`, and computed only when some
-  lane needs it.
-* **The branch.** Every invariant plane below a half turn (`cⱼ` with non-negative real part):
-  the geometric principal logarithm, right wherever `⟨R⟩₀ > 0`. Inverse scaling and squaring
-  takes principal roots per algebraic channel. When several planes' angles add up past a half
-  turn, such a root leaves the spin group, and its log misses `R` by a central element
-  (`±1`, `±I`). This is a 6D effect, and it is limited to the fallback's domain; the fix is open
-  (log6d.md §4, §9).
-* **Everywhere.** The generator emits the closed form for every 6D algebra's full even kind
-  (tested for `R(6,0)`, `R(3,3)`, `R(5,0,1)` besides CSTA), and in WGSL as `unit_even_log`: a
-  recorded kernel with the Study helper `study_log6`, and the fallback as a loop.
-* **Result.** 2.9 µs against 50.7 µs, and within `5·10⁻¹⁵` where the old one was within
-  `10⁻⁹` (tests/csta_log.rs, log6d.md).
+* **Near and past a half turn** (`⟨R⟩₀ ≤ 1/16`), where the formula loses `ε/⟨R⟩₀`, or is wrong
+  for `⟨R⟩₀ < 0`, the lanes there first turn the planes near a half turn by a quarter turn:
+  `log R = log(R E) + (π/2) Z`. `Z` is the sum of those planes' unit bivectors, an interpolant
+  applied to the same bivectors. `E = ∏(−b̂)` is a polynomial in `Z`. The planes are chosen by
+  an error estimate among those making `⟨R E⟩₀` positive (`log_turn_6d`). Orienting each
+  plane by its weight in `⟨R⟩₂` makes that positive for one or three turned planes.
+* **Not inverse scaling and squaring**, the earlier fallback. In 6D its channel-principal
+  square root can leave the spin group, where rotation angles add up past a half turn; its log
+  then misses `R` by a central element (`±1`, `±I`). With boosts it can also find no real root.
+* **The branch.** Every invariant plane below a half turn (`cⱼ` with non-negative real part)
+  where `⟨R⟩₀ > 0`: the geometric principal logarithm, idempotent under `log ∘ exp`.
+* **Everywhere.** The generator emits it for every 6D algebra's full even kind (tested for
+  `R(6,0)`, `R(3,3)`, `R(5,0,1)` besides CSTA). In WGSL it is `unit_even_log`: recorded kernels
+  with the Study helpers `study_log6` and `study_log6_turn`.
+* **Result.** 2.6 µs (6.6 µs turned) against 50.7 µs. Within `5·10⁻¹⁵` where the old one was
+  within `10⁻⁹`, and right near and past half turns, where the old fallback was wrong or NaN
+  for 7% of such versors (tests/csta_log.rs, log6d.md).
 
 ---
 

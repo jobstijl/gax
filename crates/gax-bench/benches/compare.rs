@@ -282,7 +282,7 @@ fn conformal(c: &mut Criterion) {
     g.finish();
 
     // The 6D conformal group's logarithm (f64): the closed form through the invariant
-    // decomposition against inverse scaling and squaring (docs/log6d.md).
+    // decomposition, and near a half turn, where it first turns that plane (docs/log6d.md).
     let mut g = c.benchmark_group("compare: CSTA log (f64)");
     let biv = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
         0.3 * ((i as f64 * 0.7).sin())
@@ -291,10 +291,14 @@ fn conformal(c: &mut Criterion) {
     g.bench_function("gax Unit<Even>::log (closed form)", |b| {
         b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(r).log() })
     });
-    g.bench_function(
-        "gax Even::log_by_scaling (inverse scaling and squaring)",
-        |b| b.iter(|| black_box(r).into_inner().log_by_scaling()),
-    );
+    // A rotation towards a half turn (e12) with a boost (e43).
+    let mut near = [0.0; 15];
+    near[2] = core::f64::consts::FRAC_PI_2 - 0.01;
+    near[5] = 0.5;
+    let near = gax::csta::Bivector::<(), f64>::from_coeffs(near).exp();
+    g.bench_function("gax Unit<Even>::log near a half turn (turned)", |b| {
+        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() })
+    });
     g.finish();
 }
 
