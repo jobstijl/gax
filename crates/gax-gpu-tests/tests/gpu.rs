@@ -230,6 +230,9 @@ fn every_kernel_on_the_gpu() {
         ("vga3d", gax::wgsl::VGA3D.source),
         ("sta", gax::wgsl::STA.source),
         ("cga2d", gax::wgsl::CGA2D.source),
+        ("cga3d", gax::wgsl::CGA3D.source),
+        ("stap", gax::wgsl::STAP.source),
+        ("csta", gax::wgsl::CSTA.source),
     ] {
         let (n, worst, rel) = check_algebra(&gpu, name, committed);
         println!(

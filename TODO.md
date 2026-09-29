@@ -103,7 +103,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `Tracer::wgsl`: traced kernels as WGSL (`FUSED_WESL`); `Traceable` WGSL spellings (kinds, units, scalars, arrays, tuples)
 - [x] Tests: naga validation, WESL imports with stripping, CPU evaluation within error bounds, wgpu execution (lavapipe in CI)
 - [x] `examples/wgpu`: instanced motors, traced particle kernel, GPU/CPU cross-check, benchmarks; ADR-028, docs/shaders.md, guide section
-- [ ] Kernels for kinds over 16 coefficients; the 5D Study functions and the scaling-and-squaring `exp` in WGSL
+- [x] WGSL kernels for kinds over 16 coefficients (every kind; all nine modules evaluated on the CPU and eight on the GPU, within their error bounds)
+- [ ] The 5D Study functions and the scaling-and-squaring `exp` in WGSL
 - [ ] WGSL modules for `algebra!` algebras (and WGSL forms of their traced kernels)
 - [ ] `f16` variants
 - [ ] Re-measure the CPU columns of the GPU benchmark on an idle machine

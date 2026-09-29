@@ -56,8 +56,10 @@ pub struct Stats {
     pub kernels: Vec<crate::kernel::Kernel>,
 }
 
-/// The largest kind (in coefficients) that the WGSL modules have kernels for.
-pub const WGSL_MAX: usize = 16;
+/// The largest kind (in coefficients) that the WGSL modules have kernels for: every kind of the
+/// standard algebras (CSTA's multivector has 64). Unused functions cost nothing at run time,
+/// since WESL linking strips them (docs/shaders.md).
+pub const WGSL_MAX: usize = 64;
 
 /// Emit the module source for an algebra.
 #[allow(clippy::too_many_lines)]

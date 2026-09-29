@@ -175,7 +175,6 @@ Run it with:
 
 ## Not included yet
 
-* Kernels for kinds over 16 coefficients (multivectors, the larger CGA versors).
 * The 5D Study functions (CGA3D and STAP `exp` and `log`), and the scaling-and-squaring `exp`
   (CSTA).
 * `f16`.

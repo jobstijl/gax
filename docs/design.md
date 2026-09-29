@@ -732,7 +732,6 @@ files in `gax/src/algebras/`, behind cargo features.
   5. A wgpu harness runs every kernel on a GPU (lavapipe in CI), and checks the matrix
      orientation, a layout round trip and a traced kernel.
 * **Not included, yet.**
-  * Kinds over 16 coefficients.
   * The 5D Study functions and the scaling-and-squaring `exp`.
   * `f16`.
   * Modules for algebras declared with `algebra!`.

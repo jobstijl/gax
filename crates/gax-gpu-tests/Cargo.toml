@@ -10,7 +10,7 @@ publish = false
 [workspace]
 
 [dependencies]
-gax = { path = "../gax", default-features = false, features = ["std", "wgsl", "bytemuck", "pga2d", "pga3d", "vga3d", "sta", "cga2d"] }
+gax = { path = "../gax", default-features = false, features = ["std", "wgsl", "bytemuck", "pga2d", "pga3d", "vga3d", "sta", "cga2d", "cga3d", "stap", "csta"] }
 gax-gen = { path = "../gax-gen" }
 gax-example-traced = { path = "../../examples/traced" }
 bytemuck = "1.25"

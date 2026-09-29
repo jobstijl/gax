@@ -188,6 +188,10 @@ fn every_kernel_evaluates_within_its_bound() {
         ("vga2d", gax::wgsl::VGA2D.source),
         ("vga3d", gax::wgsl::VGA3D.source),
         ("sta", gax::wgsl::STA.source),
+        ("cga2d", gax::wgsl::CGA2D.source),
+        ("cga3d", gax::wgsl::CGA3D.source),
+        ("stap", gax::wgsl::STAP.source),
+        ("csta", gax::wgsl::CSTA.source),
     ] {
         let (n, worst, rel) = check(name, committed);
         println!(
