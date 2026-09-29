@@ -22,6 +22,16 @@ use crate::slots::{Cat, SlotArr, SplitFirst};
     message = "cannot fill the first slot of `{Self}` with `{X}`",
     note = "the argument's kind must be the slot's kind (move another slot to the front with `.at::<I>()`)"
 )]
+/// ```
+/// use gax::Of;
+/// use gax::ApproxEq;
+/// use gax::pga3d::{Motor, Point};
+/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.4);
+/// // The motor's action as a map with an open `Point` slot, filled later.
+/// let map = m >> Point::slot();
+/// let p = Point::xyz(1.0, 2.0, 3.0);
+/// assert!(map.of(p).approx_eq(&(m >> p), 1e-12));
+/// ```
 pub trait Of<X> {
     /// The result type.
     type Output;

@@ -67,7 +67,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] clippy (pedantic) clean; cargo-deny config; miri on core
 - [x] CI workflow: stable plus MSRV on Linux/macOS/Windows, regen check, tests, clippy, deny, miri, fuzz, the example game (green on GitHub Actions)
 - [x] README, guide (doctested)
-- [ ] Runnable rustdoc examples on more public items
+- [x] Runnable rustdoc examples on more public items: every helper in `extras` (PGA2D, PGA3D), `Unit`'s methods, `NewtonStep`, `Prepare`, `Of`, `Log`, `Outermorphism`, the Study functions (75 doctests between gax-core and extras)
 - [x] Examples: scene graph and camera; rigid body inertia and vibration modes; CGA/STA; spacetime (STAP, CSTA); inverse kinematics; batch particles
 - [x] A small windowed game (`examples/asteroids`, its own crate)
 - [x] `docs/performance.md` (first version)

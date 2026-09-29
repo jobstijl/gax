@@ -76,6 +76,16 @@ where
 impl<M> crate::unit::Unit<M> {
     /// Prepare this versor's action on kind `X`, for applying it to many objects:
     /// `let t = m.prepare::<Point>(); for p in points { t >> p }`.
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga3d::{Motor, Point};
+    /// let m = Motor::<(), f64>::rotation_about(1.0, 1.0, 0.0, 0.7);
+    /// let t = m.prepare::<Point>();
+    /// for p in [Point::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, -1.0)] {
+    ///     assert!((t >> p).approx_eq(&(m >> p), 1e-12));
+    /// }
+    /// ```
     #[inline(always)]
     pub fn prepare<X>(self) -> <Self as Prepare<X>>::Output
     where
@@ -88,6 +98,14 @@ impl<M> crate::unit::Unit<M> {
 impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
     /// The dense map of this action (for composing it with other maps): the entries written in
     /// place, without multiplying through an identity map.
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga3d::{Motor, Point};
+    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.3);
+    /// let map: Point<(Point,), f64> = m.prepare::<Point>().to_map();
+    /// assert!(map.approx_eq(&(m >> Point::slot()), 1e-12));
+    /// ```
     #[inline(always)]
     pub fn to_map<M>(self) -> M
     where

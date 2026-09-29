@@ -435,6 +435,16 @@ pub fn exp_coeffs<T: Real>(isq: i8, lambda: T, mu: T) -> [T; 4] {
 
 /// `(h0, h1)` with `log(R) = (h0 + h1 I) ⟨R⟩₂` for a unit versor `R` whose scalar and
 /// pseudoscalar parts are `c = c0 + c1 I` and whose bivector part squares to `u0 + u1 I`.
+///
+/// ```
+/// use gax_core::study::{exp_coeffs, log_coeffs};
+/// // A rotation R = exp(B) with B² = -θ²: its scalar part c0 = cos θ, and its bivector part
+/// // P = s0 B squares to s0² B². The logarithm recovers B = h0 P.
+/// let th = 0.6f64;
+/// let [c0, _, s0, _] = exp_coeffs(-1, -th * th, 0.0);
+/// let [h0, _] = log_coeffs(-1, (c0, 0.0), (s0 * s0 * -th * th, 0.0));
+/// assert!((h0 * s0 - 1.0).abs() < 1e-12);
+/// ```
 #[inline(always)]
 pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
     let (h0, h1) = study2(isq, c, u, log_factor);
@@ -442,6 +452,12 @@ pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
 }
 
 /// `(a + b I)^(-1/2)` as a Study number `[r0, r1]`.
+///
+/// ```
+/// use gax_core::study::rsqrt;
+/// // (4 + I)^(-1/2) with I² = 0: 4^(-1/2) - (1/2) 4^(-3/2) I = 1/2 - I/16.
+/// assert_eq!(rsqrt(0, 4.0f64, 1.0), [0.5, -0.0625]);
+/// ```
 #[inline(always)]
 pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     let (r0, r1) = study1(isq, a, b, |z| {

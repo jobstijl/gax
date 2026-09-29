@@ -149,6 +149,14 @@ unary_trait!(
 
 /// The logarithm of a unit versor, a bivector (implemented by the generated algebras for
 /// `Unit<K>`; call it as `unit.log()`).
+///
+/// ```
+/// use gax::pga3d::{Line, Motor};
+/// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 1.2);
+/// let b: Line<(), f64> = m.log();
+/// // Half the angle, about the z axis (the line through the origin along z).
+/// assert!((b.norm() - 0.6).abs() < 1e-12);
+/// ```
 pub trait Log<Out> {
     /// The logarithm: `exp(self.log()) == self`.
     fn log(self) -> Out;
@@ -158,6 +166,22 @@ pub trait Log<Out> {
 /// `B` of higher (or lower) grade, `M(a ∧ b) = T(a) ∧ T(b)` (for antivectors, with `∨`).
 /// On the top grade it is the determinant. Implemented by the generated algebras for maps
 /// `V <- V` on grade-1 and grade-(n-1) kinds.
+///
+/// ```
+/// use gax::Outermorphism;
+/// use gax::pga3d::{Line, Plane};
+/// // A linear map on PGA3D's vectors (planes), extended to its bivectors (lines).
+/// let t = Plane::<(Plane,), f64>::from_coeffs([
+///     [2.0, 1.0, 0.0, 0.0],
+///     [0.0, 3.0, 0.0, 1.0],
+///     [1.0, 0.0, 4.0, 0.0],
+///     [0.0, 0.0, 1.0, 1.0],
+/// ]);
+/// let t2 = Outermorphism::<Line>::outermorphism(t);
+/// let (a, b) = (Plane::new(1.0, 2.0, 0.0, 1.0), Plane::new(0.0, 1.0, -1.0, 2.0));
+/// // The extension maps a wedge to the wedge of the images.
+/// assert_eq!(t2.of(a ^ b), t.of(a) ^ t.of(b));
+/// ```
 pub trait Outermorphism<B> {
     /// The extended map `B <- B`.
     type Output;

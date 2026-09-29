@@ -24,12 +24,27 @@ pub struct Unit<M>(M);
 impl<M> Unit<M> {
     /// Certify `m` as a unit versor without checking. If `m ~m` is not 1, results of
     /// operations that rely on the certificate are unspecified (but memory safe).
+    ///
+    /// ```
+    /// use gax::pga3d::{Motor, Point};
+    /// use gax::Unit;
+    /// // A motor known to be unit: its scalar part squared is 1, and it has no other part.
+    /// let identity = Unit::new_unchecked(Motor::<(), f64>::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0));
+    /// assert_eq!(identity >> Point::xyz(1.0, 2.0, 3.0), Point::xyz(1.0, 2.0, 3.0));
+    /// ```
     #[inline(always)]
     pub const fn new_unchecked(m: M) -> Self {
         Unit(m)
     }
 
     /// The underlying versor.
+    ///
+    /// ```
+    /// use gax::pga3d::Motor;
+    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5);
+    /// let plain: Motor<(), f64> = m.into_inner();
+    /// assert!((plain.norm_squared() - 1.0).abs() < 1e-12);
+    /// ```
     #[inline(always)]
     pub fn into_inner(self) -> M {
         self.0
@@ -65,6 +80,16 @@ pub trait Widen<N> {}
 /// One Newton step towards the unit condition, `x (3 − x ~x) / 2` (implemented by the
 /// generated algebras for the kinds whose norm is a Study number). For `x ~x = 1 + e` the result
 /// is off by `O(e²)`, with no square root. See [`Unit::renormalize_fast`].
+///
+/// ```
+/// use gax::NewtonStep;
+/// use gax::pga3d::Motor;
+/// let drifted = Motor::<(), f64>::rotation_about(1.0, 2.0, 3.0, 0.9).into_inner().gp(1.001);
+/// let fixed = drifted.newton_step();
+/// // The drift e = 0.002 in the norm becomes about 3/4 e².
+/// assert!((drifted.norm_squared() - 1.0).abs() > 1e-3);
+/// assert!((fixed.norm_squared() - 1.0).abs() < 1e-5);
+/// ```
 pub trait NewtonStep {
     /// `x (3 − x ~x) / 2`.
     fn newton_step(self) -> Self;
@@ -103,6 +128,16 @@ impl<M: NewtonStep + core::ops::Mul<Output = M>> Unit<M> {
     /// The product of two unit versors, renormalized with one Newton step
     /// ([`renormalize_fast`](Unit::renormalize_fast)). `*` keeps the certificate without
     /// renormalizing, like nalgebra and glam; use this in long chains of compositions.
+    ///
+    /// ```
+    /// use gax::pga3d::Motor;
+    /// let step = Motor::<(), f64>::rotation_about(0.3, 0.4, 0.5, 0.01);
+    /// let mut m = step;
+    /// for _ in 0..10_000 {
+    ///     m = m.mul_renormalized(step);
+    /// }
+    /// assert!((m.into_inner().norm_squared() - 1.0).abs() < 1e-12);
+    /// ```
     #[inline(always)]
     #[must_use]
     pub fn mul_renormalized(self, other: Self) -> Self {
@@ -143,6 +178,14 @@ where
 
 impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
     /// The inverse of a unit versor: its reverse (no arithmetic).
+    ///
+    /// ```
+    /// use gax::pga3d::{Motor, Point};
+    /// let m = Motor::<(), f64>::rotation_about(0.0, 1.0, 0.0, 0.8);
+    /// let p = Point::xyz(1.0, 2.0, 3.0);
+    /// let back = (m.inverse() >> (m >> p)).to_euclidean();
+    /// assert!(back.iter().zip([1.0, 2.0, 3.0]).all(|(a, b)| (a - b).abs() < 1e-12));
+    /// ```
     #[inline(always)]
     pub fn inverse(self) -> Unit<M> {
         Unit(self.0.reverse())
@@ -157,6 +200,13 @@ impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
 
 impl<M> Unit<M> {
     /// The logarithm, a bivector `B` with `B.exp() == self`.
+    ///
+    /// ```
+    /// use gax::pga3d::{Line, Motor};
+    /// let twist = Line::<(), f64>::new(0.1, -0.2, 0.3, 0.4, 0.5, -0.6);
+    /// let back: Line<(), f64> = twist.exp().log();
+    /// assert!(back.c.iter().zip(twist.c).all(|(a, b)| (a - b).abs() < 1e-12));
+    /// ```
     #[inline(always)]
     pub fn log<B>(self) -> B
     where
