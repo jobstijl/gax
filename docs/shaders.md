@@ -51,8 +51,6 @@ the Rust code has them, in every algebra: rotations and motions through real tri
 and general versors (STA, CGA, STAP, CSTA) through the general Study functions, and CSTA's
 bivector `exp` by scaling and squaring, as in Rust.
 
-STA boosts and the 5D and 6D paths are not included.
-
 ## Using a module
 
 **With the `wesl` crate (0.5 and later)** register the modules and import from them. In
@@ -102,9 +100,21 @@ from the same verified program as the Rust function:
 * it writes `fused.wesl` next to `fused.rs`;
 * `fused.rs` gets `pub const FUSED_WESL: &str`.
 
-Arguments and results can be kinds of the standard algebras (WESL paths such as
-`gax::pga3d::Point`), `Unit`s of them, scalars (`f32`), and arrays and tuples of these. Register
-`FUSED_WESL` as a module of your package, next to gax's modules. Game logic on the CPU and
+Arguments and results can be kinds (WESL paths such as `gax::pga3d::Point`), `Unit`s of them,
+scalars (`f32`), and arrays and tuples of these. Register `FUSED_WESL` as a module of your
+package, next to gax's modules.
+
+**Algebras of your own.** With gax's `wgsl` feature, `algebra!` also generates the algebra's
+modules, `WGSL_MODULE` and `WGSL_MODULE_F16` (the same functions as the standard modules), with
+the paths `package::{algebra}` and `package::{algebra}_f16`. A kernel traced over its kinds names
+them `package::{algebra}::Point`, so register the module under its path:
+
+```rust,ignore
+gax::algebra! { algebra plane "…"; basis e0 = 0, e1 = 1, e2 = 1; /* kinds */ }
+
+r.add_module(plane::WGSL_MODULE.path.parse()?, plane::WGSL_MODULE.source.into());
+r.add_module("package::fused".parse()?, FUSED_WESL.into());
+``` Game logic on the CPU and
 effects on the GPU then run one kernel, and cannot drift apart.
 
 A traced kernel sees a `Unit` argument as certified. The simplifier then uses `m ~m = 1`, and a
@@ -188,8 +198,8 @@ Run it with:
 
 ## Not included yet
 
-* WGSL modules for algebras declared with `algebra!`. Their traced kernels have no WGSL form
-  either.
+Nothing that the Rust side has: every kind, product, sandwich, `exp` and `log` of every algebra,
+standard or declared, has a WGSL form in `f32` and `f16`. Traced kernels are `f32`.
 
 [`Module::source`]: https://docs.rs/gax/latest/gax/wgsl/struct.Module.html
 [`Module::path`]: https://docs.rs/gax/latest/gax/wgsl/struct.Module.html

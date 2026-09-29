@@ -39,8 +39,9 @@ deterministic = ["gax-core/deterministic"]
 ## Plain GPU layouts: a `{Kind}Gpu` type per kind (the layout of the WGSL modules) and
 ## `GpuMat`, all `bytemuck::Pod` (ADR-028).
 bytemuck = ["gax-core/bytemuck", "gax-macros?/bytemuck"]
-## The WGSL modules of the standard algebras as source strings (`gax::wgsl`, ADR-028).
-wgsl = []
+## The WGSL modules of the standard algebras as source strings (`gax::wgsl`, ADR-028), and
+## of algebras declared with `algebra!` (their `WGSL_MODULE`).
+wgsl = ["gax-macros?/wgsl"]
 ## Build-time tracing of user kernels (`gax::trace`), for use from `build.rs`.
 trace = ["dep:gax-gen"]
 ## The `algebra!` macro for declaring algebras of any signature.

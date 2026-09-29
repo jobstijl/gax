@@ -74,15 +74,17 @@ pub trait Traceable: Sized {
     }
 }
 
-/// The WESL path of a kind of a standard algebra, `gax::pga3d::Point`; an error for other
-/// algebras (which have no generated WGSL module).
+/// The WESL path of a kind: `gax::pga3d::Point` for the standard algebras, and
+/// `package::{algebra}::Point` for an algebra declared with `algebra!`, whose `WGSL_MODULE` is
+/// registered under that path.
 fn write_wgsl_kind<K: Kind>(w: &mut dyn Write) -> fmt::Result {
     let module = K::MODULE;
     let (first, rest) = module.split_once("::").unwrap_or((module, ""));
-    if first != "gax" || rest.is_empty() {
-        return Err(fmt::Error);
+    if first == "gax" && !rest.is_empty() {
+        return write!(w, "gax::{rest}::{}", K::NAME);
     }
-    write!(w, "gax::{rest}::{}", K::NAME)
+    let algebra = module.rsplit("::").next().unwrap_or(module);
+    write!(w, "package::{algebra}::{}", K::NAME)
 }
 
 fn write_wgsl_kind_coeff(w: &mut dyn Write, name: &str, i: usize) -> fmt::Result {

@@ -9,7 +9,7 @@ license.workspace = true
 publish = false
 
 [dev-dependencies]
-gax = { path = "../gax", features = ["wgsl", "bytemuck", "all-algebras"] }
+gax = { path = "../gax", features = ["wgsl", "bytemuck", "all-algebras", "trace"] }
 gax-gen = { workspace = true }
 gax-example-traced = { path = "../../examples/traced" }
 naga = { version = "30", features = ["wgsl-in"] }

@@ -557,7 +557,7 @@ fn wgsl_form(
         .enumerate()
         .map(|(k, sh)| {
             let ty = (sh.wgsl_ty)(&mut decls, &format!("{name}_a{k}")).unwrap_or_else(|| {
-                panic!("gax::trace: `{name}`: argument {k} has no WGSL form (only kinds of the standard algebras, units of them, scalars, arrays and tuples have one)")
+                panic!("gax::trace: `{name}`: argument {k} has no WGSL form (only kinds, units of them, scalars, arrays and tuples have one)")
             });
             format!("a{k}: {ty}")
         })

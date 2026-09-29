@@ -105,7 +105,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `examples/wgpu`: instanced motors, traced particle kernel, GPU/CPU cross-check, benchmarks; ADR-028, docs/shaders.md, guide section
 - [x] WGSL kernels for kinds over 16 coefficients (every kind; all nine modules evaluated on the CPU and eight on the GPU, within their error bounds)
 - [x] Every `exp` and `log` in WGSL: the general and 5D Study functions, and CSTA's scaling-and-squaring `exp`; a cancellation in the complex square root fixed on the way (numerics.md)
-- [ ] WGSL modules for `algebra!` algebras (and WGSL forms of their traced kernels)
+- [x] WGSL modules for `algebra!` algebras (`WGSL_MODULE`, `WGSL_MODULE_F16`), and WGSL forms of their traced kernels (`package::{algebra}::Kind`)
 - [x] `f16` variants: every WGSL module in `f16` (`gax::pga3d_f16`), `{Kind}Gpu16` with correctly rounded conversion, Study functions and norms in `f32`; every kernel checked on the GPU
 - [ ] Re-measure the CPU columns of the GPU benchmark on an idle machine
 

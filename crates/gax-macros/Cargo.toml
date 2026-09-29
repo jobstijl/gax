@@ -17,6 +17,8 @@ batch = []
 check-units = []
 ## Emit the GPU layout types (enabled by `gax/bytemuck`).
 bytemuck = []
+## Emit the algebra's WGSL modules, `WGSL_MODULE` and `WGSL_MODULE_F16` (enabled by `gax/wgsl`).
+wgsl = []
 
 [dependencies]
 gax-gen = { workspace = true }

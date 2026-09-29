@@ -742,8 +742,10 @@ files in `gax/src/algebras/`, behind cargo features.
   them (norms) stay in `f32`, converted at the boundary, because `f16`'s range (2⁻¹⁴ to 65504)
   cannot hold a sum of squares. Tested on the GPU: the straight-line kernels against their
   error bound at unit roundoff `2⁻¹¹`, the others within `2⁻⁷` relative.
-* **Not included, yet.**
-  * Modules for algebras declared with `algebra!`.
+* **Declared algebras.** `algebra!` emits the same modules (`WGSL_MODULE`, `WGSL_MODULE_F16`,
+  paths `package::{algebra}`), and the tracer names their kinds `package::{algebra}::Kind`
+  (`Kind::MODULE` tells a standard algebra from a declared one). Tested by linking a traced
+  kernel over a declared algebra and validating it (`gax-wesl-tests/tests/user_algebra.rs`).
 
 ## ADR-029: Division, embeddings, and the motor between two elements
 *Status: accepted, implemented.*

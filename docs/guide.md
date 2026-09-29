@@ -332,6 +332,8 @@ gax::algebra! {
   `Multivector` are added if you leave them out.
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
   with `opt-level = 3` to your `Cargo.toml`, or large algebras expand slowly.
+* **Shaders.** With gax's `wgsl` feature, the algebra also has WGSL modules, `WGSL_MODULE` and
+  `WGSL_MODULE_F16`, and kernels traced over its kinds link against them (section 11).
 
 ## 10. Laws you can rely on
 

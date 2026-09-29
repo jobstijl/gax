@@ -14,6 +14,7 @@
 //! ```
 
 use proc_macro::TokenStream;
+use std::fmt::Write as _;
 
 /// Declare a geometric algebra. The generated items are placed in a module named after the
 /// `algebra` line.
@@ -34,7 +35,7 @@ pub fn algebra(input: TokenStream) -> TokenStream {
         Ok(s) => s,
         Err(e) => return compile_error(&format!("gax::algebra!: {e}")),
     };
-    let (code, _) = gax_gen::emit::emit(
+    let (mut code, stats) = gax_gen::emit::emit(
         &spec,
         &gax_gen::emit::Config {
             core: "::gax".into(),
@@ -45,6 +46,26 @@ pub fn algebra(input: TokenStream) -> TokenStream {
             gpu: cfg!(feature = "bytemuck").then(String::new),
         },
     );
+    // The algebra's WGSL modules, for shaders and for its traced kernels, which name its kinds
+    // `package::{name}::Kind` (enabled by gax's `wgsl` feature).
+    if cfg!(feature = "wgsl") {
+        let name = &spec.name;
+        for (constant, prec, path) in [
+            ("WGSL_MODULE", gax_gen::kernel::Precision::F32, name.clone()),
+            (
+                "WGSL_MODULE_F16",
+                gax_gen::kernel::Precision::F16,
+                format!("{name}_f16"),
+            ),
+        ] {
+            let source = gax_gen::emit_wgsl::module_in(&spec, &stats, true, prec);
+            let _ = write!(
+                code,
+                "/// The WGSL module of this algebra ({}): register it under its `path`,\n/// `package::{path}`, next to shaders that import it (see gax's docs/shaders.md).\npub const {constant}: ::gax::wgsl::Module = ::gax::wgsl::Module {{ path: \"package::{path}\", source: {source:?} }};\n",
+                prec.scalar()
+            );
+        }
+    }
     let doc = if spec.doc.is_empty() {
         format!("The `{}` algebra.", spec.name)
     } else {
