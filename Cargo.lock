@@ -382,8 +382,6 @@ name = "gax-example-traced"
 version = "0.0.0"
 dependencies = [
  "gax",
- "naga",
- "wesl",
 ]
 
 [[package]]

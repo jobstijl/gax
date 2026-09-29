@@ -10,11 +10,5 @@ publish = false
 [dependencies]
 gax = { path = "../../crates/gax", features = ["batch"] }
 
-[dev-dependencies]
-gax = { path = "../../crates/gax", features = ["batch", "wgsl"] }
-# The traced WGSL is linked against gax's modules and validated, as a game would use it.
-wesl = "0.5"
-naga = { version = "30", features = ["wgsl-in"] }
-
 [build-dependencies]
 gax = { path = "../../crates/gax", features = ["trace"] }

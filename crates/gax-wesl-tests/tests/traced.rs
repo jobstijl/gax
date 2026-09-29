@@ -1,4 +1,4 @@
-//! The WGSL forms of the traced kernels link against gax's modules and validate with naga,
+//! The WGSL forms of the traced example's kernels link against gax's modules and validate with naga,
 //! as a shader that imports them would.
 
 use gax_example_traced::FUSED_WESL;
