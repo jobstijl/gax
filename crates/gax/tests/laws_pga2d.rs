@@ -1924,4 +1924,12 @@ law_suite::law_suite! {
         (Flector, Flector, Flector),
         (Multivector, Flector, Multivector),
     ],
+    sampled: [
+    ],
+    sampled_unit: [
+    ],
+    sampled_actions: [
+    ],
+    sampled_equivariant: [
+    ],
 }

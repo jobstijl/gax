@@ -241,6 +241,125 @@ pub fn law(holds: bool, name: &str) {
     assert!(holds, "law failed: {name}");
 }
 
+/// The sign relating two spellings of one blade (`e31` against `e13`: `-1`), or `None` for
+/// different blades. The scalar is `1` (or `s`).
+fn blade_sign(a: &str, b: &str) -> Option<i64> {
+    let factors = |x: &str| -> Vec<char> {
+        if x == "1" || x == "s" {
+            Vec::new()
+        } else {
+            x.trim_start_matches('e').chars().collect()
+        }
+    };
+    let (fa, fb) = (factors(a), factors(b));
+    let mut sa = fa.clone();
+    let mut sb = fb.clone();
+    sa.sort_unstable();
+    sb.sort_unstable();
+    if sa != sb {
+        return None;
+    }
+    // The parity of the permutation taking `fa` to `fb`: count inversions of `fb`'s positions.
+    let order: Vec<usize> = fa
+        .iter()
+        .map(|c| fb.iter().position(|d| d == c).expect("same set"))
+        .collect();
+    let mut inversions = 0;
+    for i in 0..order.len() {
+        for j in i + 1..order.len() {
+            if order[i] > order[j] {
+                inversions += 1;
+            }
+        }
+    }
+    Some(if inversions % 2 == 0 { 1 } else { -1 })
+}
+
+/// `m` as a value of the kind of `N`, blade by blade; `false` if a nonzero coefficient of `m`
+/// has no place in `N`.
+pub fn project<M, N>(m: &M) -> (N, bool)
+where
+    M: Extensor<Slots = (), Coef = Sym>,
+    N: Extensor<Slots = (), Coef = Sym>,
+{
+    let (from, to) = (<M::Kind as Kind>::BLADES, <N::Kind as Kind>::BLADES);
+    let c = m.coeffs().as_ref();
+    let out = N::from_coeffs(<N::Kind as Kind>::arr_from_fn(|j| {
+        from.iter()
+            .enumerate()
+            .find_map(|(i, b)| blade_sign(b, to[j]).map(|s| c[i] * Sym::from_i64(s)))
+            .unwrap_or_else(Sym::zero)
+    }));
+    let fits = from
+        .iter()
+        .enumerate()
+        .all(|(i, b)| c[i] == Sym::zero() || to.iter().any(|t| blade_sign(b, t).is_some()));
+    (out, fits)
+}
+
+/// An exact rational as a coefficient.
+pub fn exact(r: gax_gen::poly::Rational) -> Sym {
+    Sym::from_poly(Poly::constant(r))
+}
+
+/// An exact unit versor of kind `$bv`: the product of `$count` rational unit vectors of kind
+/// `$vec`, formed in the full multivector kind `$mv`. Each vector is the basis vector at
+/// `$pos` (of square +1) reflected in a pseudo-random rational vector, `u0 - 2 (u0·w)/(w·w) w`,
+/// so it is unit exactly whatever the metric (law L in docs/laws.md).
+macro_rules! sample_versor {
+    ($vec:ident, $mv:ident, $bv:ident, $count:literal, $pos:literal, $sign:literal, $seed:expr) => {{
+        use gax_gen::poly::Rational;
+        let u0 = $vec::<(), T>::from_coeffs(<$vec as gax::Kind>::arr_from_fn(|i| {
+            if i == $pos {
+                T::from_i64($sign)
+            } else {
+                T::zero()
+            }
+        }));
+        let mut state: u64 = 0x9e37_79b9_7f4a_7c15 ^ (($seed as u64) << 8);
+        let mut unit_vector = || -> $vec<(), T> {
+            loop {
+                let w = $vec::<(), T>::from_coeffs(<$vec as gax::Kind>::arr_from_fn(|_| {
+                    state = state
+                        .wrapping_mul(6_364_136_223_846_793_005)
+                        .wrapping_add(1_442_695_040_888_963_407);
+                    T::from_i64(((state >> 33) % 7) as i64 - 3)
+                }));
+                let d = (u0 | w).s().as_constant().expect("rational");
+                let n = (w | w).s().as_constant().expect("rational");
+                if n == Rational::ZERO || d == Rational::ZERO {
+                    continue;
+                }
+                return u0 - w.gp(law_suite::exact(d * n.recip() * Rational::int(2)));
+            }
+        };
+        let mut p: $mv<(), T> = unit_vector().into();
+        for _ in 1..$count {
+            let q: $mv<(), T> = unit_vector().into();
+            p = p * q;
+        }
+        let (v, fits): ($bv<(), T>, bool) = law_suite::project(&p);
+        law(
+            fits,
+            concat!("a product of vectors lies in ", stringify!($bv)),
+        );
+        // Not a degenerate sample (the identity, say, would make every law trivial).
+        let nonzero = v
+            .coeffs()
+            .as_ref()
+            .iter()
+            .filter(|c| **c != T::zero())
+            .count();
+        law(
+            2 * nonzero >= <$bv as gax::Kind>::N,
+            concat!("a sampled ", stringify!($bv), " is generic"),
+        );
+        v
+    }};
+}
+
+pub(crate) use sample_versor;
+
 /// The law suite of an algebra. The lists are generated from what the generator emitted.
 macro_rules! law_suite {
     (
@@ -258,8 +377,72 @@ macro_rules! law_suite {
         top: [$(($tv:ident, $tb:ident)),* $(,)?],
         unit_det: [$(($dv:ident, $dx:ident, $dt:ident, $de:literal)),* $(,)?],
         pairings: [$(($rtr:ident, $rm:ident, $ra:ident, $rb:ident)),* $(,)?],
-        divisions: [$(($divnum:ident, $divden:ident, $divback:ident)),* $(,)?] $(,)?
+        divisions: [$(($divnum:ident, $divden:ident, $divback:ident)),* $(,)?],
+        sampled: [$(($zv:ident, $zvec:ident, $zmv:ident, $zk:literal, $zp:literal, $zs:literal, $zx:ident)),* $(,)?],
+        sampled_unit: [$(($uv:ident, $uvec:ident, $umv:ident, $uk:literal, $up:literal, $us:literal, $ux:ident)),* $(,)?],
+        sampled_actions: [$(($av2:ident, $avec:ident, $amv:ident, $ak:literal, $ap:literal, $as2:literal, $ax2:ident)),* $(,)?],
+        sampled_equivariant: [$(($wv:ident, $wvec:ident, $wmv:ident, $wk:literal, $wp:literal, $ws:literal, $wtr:ident, $wm:ident, $wa:ident, $wb:ident)),* $(,)?] $(,)?
     ) => {
+        /// L: versors with more than 8 coefficients, on exact unit versors sampled as products of
+        /// rational unit vectors (three samples each; exact rational arithmetic, no ideal).
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn sampled_versors() {
+            $((|| {
+                for seed in 0..3u64 {
+                    reset();
+                    let v: $zv<(), T> = law_suite::sample_versor!($zvec, $zmv, $zv, $zk, $zp, $zs, seed);
+                    let x: $zx<(), T> = fresh();
+                    let name = concat!("sampled ", stringify!($zv), " >> ", stringify!($zx));
+                    let y = v >> x;
+                    law(projects_to(&y, &((v * x) * v.reverse()), &[]), name);
+                    law((v >> $zx::slot()).of(x) == y, name);
+                }
+            })();)*
+            $((|| {
+                for seed in 0..3u64 {
+                    reset();
+                    let v: $uv<(), T> = law_suite::sample_versor!($uvec, $umv, $uv, $uk, $up, $us, seed);
+                    let x: $ux<(), T> = fresh();
+                    let name = concat!("sampled Unit<", stringify!($uv), "> >> ", stringify!($ux));
+                    let u = Unit::new_unchecked(v);
+                    let y = u >> x;
+                    law(projects_to(&y, &((v * x) * v.reverse()), &[]), name);
+                    law((u >> $ux::slot()).of(x) == y, name);
+                    law((u.prepare::<$ux>() >> x) == y, name);
+                    law(u << y == x, name);
+                }
+            })();)*
+            $((|| {
+                for seed in 0..3u64 {
+                    reset();
+                    let a: $av2<(), T> = law_suite::sample_versor!($avec, $amv, $av2, $ak, $ap, $as2, seed);
+                    let b: $av2<(), T> = law_suite::sample_versor!($avec, $amv, $av2, $ak, $ap, $as2, seed + 10);
+                    let x: $ax2<(), T> = fresh();
+                    let (a, b) = (Unit::new_unchecked(a), Unit::new_unchecked(b));
+                    law(
+                        (a * b) >> x == a >> (b >> x),
+                        concat!("sampled ", stringify!($av2), " composes on ", stringify!($ax2)),
+                    );
+                }
+            })();)*
+            $((|| {
+                for seed in 0..3u64 {
+                    reset();
+                    let v: $wv<(), T> = law_suite::sample_versor!($wvec, $wmv, $wv, $wk, $wp, $ws, seed);
+                    let (a, b): ($wa<(), T>, $wb<(), T>) = (fresh(), fresh());
+                    let u = Unit::new_unchecked(v);
+                    let lhs = gax::$wtr::$wm(u >> a, u >> b);
+                    let rhs = u >> gax::$wtr::$wm(a, b);
+                    // A unit versor's factor is `±1`.
+                    law(
+                        lhs == rhs || lhs == -rhs,
+                        concat!("sampled Unit<", stringify!($wv), "> ", stringify!($wm), " ", stringify!($wa), " ", stringify!($wb)),
+                    );
+                }
+            })();)*
+        }
+
         /// K: division undoes the product, `(a / v) v = a`, modulo the relations of the
         /// reciprocals in the inverse (`r N = 1`).
         #[test]

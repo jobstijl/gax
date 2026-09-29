@@ -321,4 +321,12 @@ law_suite::law_suite! {
         (Quintvector, Vector, Odd),
         (Pseudoscalar, Vector, Even),
     ],
+    sampled: [
+    ],
+    sampled_unit: [
+    ],
+    sampled_actions: [
+    ],
+    sampled_equivariant: [
+    ],
 }

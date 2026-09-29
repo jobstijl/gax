@@ -638,6 +638,95 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
             .map(|(a, v, back)| format!("({a}, {v}, {back})"))
             .collect(),
     );
+    // Versors with more than LAW_VERSOR coefficients (law L): their free symbolic laws are out
+    // of reach, so they are checked on exact unit versors sampled as products of rational unit
+    // vectors. Only for versor kinds that are a whole parity (the product of vectors lands in
+    // them), with a vector kind, a full multivector kind, and a basis vector of square +1.
+    let n = alg.dim();
+    let parity_blades = |odd: bool| -> BTreeSet<u32> {
+        (0..alg.blade_count() as u32)
+            .filter(|m| m.count_ones() % 2 == u32::from(odd))
+            .collect()
+    };
+    let full = spec
+        .kinds
+        .iter()
+        .find(|k| k.layout.len() == alg.blade_count());
+    let vector = spec
+        .kinds
+        .iter()
+        .find(|k| k.layout.len() == n && k.layout.blades.iter().all(|(m, _)| m.is_power_of_two()));
+    let u0 = vector.and_then(|vk| {
+        vk.layout
+            .blades
+            .iter()
+            .enumerate()
+            .find_map(|(pos, &(m, sign))| {
+                let i = m.trailing_zeros() as usize;
+                let row = &alg.metric()[i];
+                (row[i] == 1 && (0..n).all(|j| j == i || row[j] == 0)).then_some((pos, sign))
+            })
+    });
+    let mut sampled = Vec::new();
+    let mut sampled_unit = Vec::new();
+    let mut sampled_actions = Vec::new();
+    let mut sampled_equivariant = Vec::new();
+    if let (Some(full), Some(vector), Some((pos, sign))) = (full, vector, u0) {
+        for v in spec
+            .kinds
+            .iter()
+            .filter(|k| k.versor && k.layout.len() > LAW_VERSOR)
+        {
+            let blades: BTreeSet<u32> = v.layout.blades.iter().map(|(m, _)| *m).collect();
+            let odd = if blades == parity_blades(false) {
+                false
+            } else if blades == parity_blades(true) {
+                true
+            } else {
+                continue;
+            };
+            let count = if odd { 3 } else { 4 };
+            let head = format!(
+                "{}, {}, {}, {count}, {pos}, {sign}",
+                v.name, vector.name, full.name
+            );
+            // A plain sandwich of a big even element leaves the passenger's kind (other grades
+            // appear); the law compares it with the projection of `(v x) ~v` whatever its kind.
+            // The unit kernels keep it, and carry the action and equivariance laws.
+            let plain = |x: &str| {
+                stats
+                    .sandwiches
+                    .iter()
+                    .any(|(sv, sx, su, _)| sv == &v.name && sx == x && !*su)
+            };
+            for x in &law_kinds {
+                if plain(&x.name) {
+                    sampled.push(format!("({head}, {})", x.name));
+                }
+                if keeps(&v.name, &x.name, true) {
+                    sampled_unit.push(format!("({head}, {})", x.name));
+                    if gp_out(&v.name, &v.name).as_deref() == Some(v.name.as_str()) {
+                        sampled_actions.push(format!("({head}, {})", x.name));
+                    }
+                }
+            }
+            for (op, a, b, o) in &products {
+                if single_grade(kind(a))
+                    && single_grade(kind(b))
+                    && keeps(&v.name, a, true)
+                    && keeps(&v.name, b, true)
+                    && keeps(&v.name, o, true)
+                {
+                    let (t, m, _) = trait_of(*op);
+                    sampled_equivariant.push(format!("({head}, {t}, {m}, {a}, {b})"));
+                }
+            }
+        }
+    }
+    list(&mut s, "sampled", sampled);
+    list(&mut s, "sampled_unit", sampled_unit);
+    list(&mut s, "sampled_actions", sampled_actions);
+    list(&mut s, "sampled_equivariant", sampled_equivariant);
     Laws {
         invocation: s,
         equivariance,

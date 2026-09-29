@@ -510,4 +510,12 @@ law_suite::law_suite! {
         (Rotor, Rotor, Rotor),
         (Multivector, Rotor, Multivector),
     ],
+    sampled: [
+    ],
+    sampled_unit: [
+    ],
+    sampled_actions: [
+    ],
+    sampled_equivariant: [
+    ],
 }

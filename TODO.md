@@ -81,7 +81,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Suites for all standard algebras, STAP/CSTA behind features, PGA4D through `algebra!` (test-only spec)
 - [x] `docs/laws.md` (each law linked to its test or marked [doc]), ADR-025, guide section "Laws you can rely on"
 - [x] Law-based rewrites in the tracer measured (performance.md: none pays off)
-- [ ] Laws for versors with more than 8 coefficients (the free polynomials explode; needs a structured approach)
+- [x] Laws for versors with more than 8 coefficients: checked exactly on sampled unit versors (products of rational unit vectors), law L in laws.md; symbolic proofs over all of them stay out of reach
 
 ## Phase 5: numerics
 - [x] `docs/numerics.md`: the guarantee per tier, drift, determinism, transcendental edges, solvers, what is documented rather than fixed

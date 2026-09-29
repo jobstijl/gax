@@ -6,7 +6,9 @@ fusion, drift) is in [numerics.md](numerics.md).
 
 Tags: **[sym]** is an exact proof on symbolic coefficients, **[sym/ideal]** is an exact proof modulo
 the ideal of a condition, **[gen]** is an exact proof the generator runs before it emits the
-code, **[prop]** is an f64 property test, **[doc]** is documentation only. The
+code, **[sample]** is exact arithmetic on sampled exact inputs (a randomized identity test, for
+what symbolic proofs cannot reach), **[prop]** is an f64 property test, **[doc]** is
+documentation only. The
 proofs are the test functions of the `law_suite!` macro in
 [`crates/gax/tests/law_suite/mod.rs`](../crates/gax/tests/law_suite/mod.rs). Each algebra
 instantiates it in a generated `crates/gax/tests/laws_{algebra}.rs`.
@@ -211,6 +213,26 @@ generator finds.
   values of every pair of source kinds, before it emits the `From` impls, and proves
   `φ(~a) == ~φ(a)` for the kinds it lets `Unit::widen` convert. `tests/homs.rs` checks the
   emitted code on random values.
+
+### L. Versors with more than 8 coefficients (`sampled_versors`)
+
+The free symbolic laws of a 16-coefficient versor (CGA3D's `Even` and `Odd`, STAP's `Motor`, a
+5D PGA's `Motor`) are out of reach: the Gröbner bases of their conditions explode. Every
+versor is a product of vectors, though, so these are checked on exact ones:
+
+* **Sampling.** A rational unit vector is a basis vector `u₀` of square +1 reflected in a
+  pseudo-random rational vector `w`, `u₀ − 2 (u₀·w)/(w·w) w`: unit exactly, in any metric,
+  degenerate and null bases included. The product of four (three for an odd versor), formed in
+  the full multivector, is an exact unit versor, and is checked to lie in the versor's kind and to
+  be generic (at least half its coefficients nonzero).
+* [sample] **On three such versors each**, with the passenger symbolic:
+  * the plain and `Unit` sandwich kernels equal the projection of `(v x) ~v`, the map path equals
+    them, and `u << (u >> x) == x`;
+  * `Unit` versors compose: `(a b) >> x == a >> (b >> x)`;
+  * the single-grade products are equivariant, up to the sign that a unit versor's factor can be.
+
+The arithmetic is exact (rationals), so a failure is a real one. A pass is a randomized identity
+test: a wrong kernel would have to agree with the law at every sampled versor by coincidence.
 
 ## 4. Licensed rewrites
 

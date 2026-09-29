@@ -1085,4 +1085,12 @@ law_suite::law_suite! {
         (Odd, Odd, Odd),
         (Multivector, Odd, Multivector),
     ],
+    sampled: [
+    ],
+    sampled_unit: [
+    ],
+    sampled_actions: [
+    ],
+    sampled_equivariant: [
+    ],
 }

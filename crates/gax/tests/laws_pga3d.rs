@@ -2425,4 +2425,12 @@ law_suite::law_suite! {
         (Motor, Flector, Motor),
         (Flector, Flector, Flector),
     ],
+    sampled: [
+    ],
+    sampled_unit: [
+    ],
+    sampled_actions: [
+    ],
+    sampled_equivariant: [
+    ],
 }
