@@ -87,6 +87,17 @@ fn batch_forms_match_the_fused_kernels() {
                 screw_apply_fused_batch(&bs, &ps, &mut out);
                 let want: Vec<Point> = (0..n).map(|i| screw_apply_fused(bs[i], ps[i])).collect();
                 assert_close(&out, &want, &format!("screw_apply n={n}"));
+
+                // `Motor::between` on lanes: logarithms, exponentials and selects per lane.
+                let qs: Vec<Point> = (0..n).map(|_| rng.point()).collect();
+                let mut motors = vec![Motor::zero(); n];
+                between_points_fused_batch(&ps, &qs, &mut motors);
+                let want: Vec<Motor> = (0..n).map(|i| between_points_fused(ps[i], qs[i])).collect();
+                assert_close(&motors, &want, &format!("between_points n={n}"));
+                let cs: Vec<Line> = (0..n).map(|_| rng.line()).collect();
+                between_lines_fused_batch(&bs, &cs, &mut motors);
+                let want: Vec<Motor> = (0..n).map(|i| between_lines_fused(bs[i], cs[i])).collect();
+                assert_close(&motors, &want, &format!("between_lines n={n}"));
             }
         });
     }

@@ -10,10 +10,25 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 gax-gen = { path = "../crates/gax-gen" }
+gax = { path = "../crates/gax", default-features = false, features = ["std", "pga3d", "trace"] }
 
 [[bin]]
 name = "spec_parse"
 path = "fuzz_targets/spec_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "trace_programs"
+path = "fuzz_targets/trace_programs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "solve"
+path = "fuzz_targets/solve.rs"
 test = false
 doc = false
 bench = false

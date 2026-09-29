@@ -192,6 +192,28 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
 
+  bench:
+    # Timings on shared runners are noisy, so this job never fails a build: it records a quick
+    # criterion run of every benchmark for the trend (the artifact of each run on main). The
+    # regressions that count are caught deterministically by the `generated` job: every
+    # kernel's operation count is in docs/kernel-costs.md, regenerated and checked.
+    name: benchmarks (quick, recorded, not gating)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo bench -p gax-bench -- --quick --noplot 2>&1 | tee bench.txt
+      - run: grep -B1 "time:" bench.txt | grep -v "^--" | tee -a "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-${{ github.sha }}
+          path: |
+            bench.txt
+            target/criterion
+
   deny:
     runs-on: ubuntu-latest
     steps:
@@ -211,12 +233,18 @@ jobs:
           RUSTFLAGS: ""
 
   fuzz:
-    name: fuzz the spec parser (short)
+    name: fuzz the spec parser, the solvers and the tracer (short)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - run: cargo install cargo-fuzz --locked
       - run: cd fuzz && cargo fuzz run spec_parse -- -max_total_time=120 -max_len=512
+        env:
+          RUSTFLAGS: ""
+      - run: cd fuzz && cargo fuzz run solve -- -max_total_time=120 -max_len=166
+        env:
+          RUSTFLAGS: ""
+      - run: cd fuzz && cargo fuzz run trace_programs -- -max_total_time=180 -max_len=40
         env:
           RUSTFLAGS: ""

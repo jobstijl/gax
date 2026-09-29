@@ -47,3 +47,20 @@ pub fn shadow_on_floor<S: Slots, T: Real>(
 pub fn screw_apply<T: Real>(b: Line<(), T>, p: Point<(), T>) -> Point<(), T> {
     b.exp() >> p
 }
+
+/// The motor that carries line `a` onto line `b` (`Motor::between`, the square root of
+/// `b / a`): a logarithm, a halving and an exponential, with the branches as selects, so it
+/// traces to Rust, SIMD lanes and WGSL alike.
+pub fn between_lines<T: Real>(a: Line<(), T>, b: Line<(), T>) -> Motor<(), T> {
+    Motor::between(a, b).into_inner()
+}
+
+/// The motor that carries plane `a` onto plane `b`.
+pub fn between_planes<T: Real>(a: Plane<(), T>, b: Plane<(), T>) -> Motor<(), T> {
+    Motor::between(a, b).into_inner()
+}
+
+/// The translation that carries point `a` onto point `b`.
+pub fn between_points<T: Real>(a: Point<(), T>, b: Point<(), T>) -> Motor<(), T> {
+    Motor::between(a, b).into_inner()
+}

@@ -35,6 +35,18 @@ fn main() {
         "screw_apply_fused",
         |b: Line<(), Sym>, p: Point<(), Sym>| kernels::screw_apply(b, p),
     );
+    t.kernel(
+        "between_lines_fused",
+        |a: Line<(), Sym>, b: Line<(), Sym>| kernels::between_lines(a, b),
+    );
+    t.kernel(
+        "between_planes_fused",
+        |a: Plane<(), Sym>, b: Plane<(), Sym>| kernels::between_planes(a, b),
+    );
+    t.kernel(
+        "between_points_fused",
+        |a: Point<(), Sym>, b: Point<(), Sym>| kernels::between_points(a, b),
+    );
     t.write_out_dir("fused.rs");
     for r in t.reports() {
         println!(

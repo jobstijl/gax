@@ -255,12 +255,32 @@ pub fn compile_staged(
         Reduction::NormalForm => crate::groebner::groebner(relations, 2000),
         _ => None,
     };
+    compile_staged_with(
+        outputs,
+        stages,
+        relations,
+        basis.as_deref(),
+        reduction,
+        kernels,
+    )
+}
+
+/// [`compile_staged`] with the Gröbner basis of the relations already computed (it is only
+/// used by `Reduction::NormalForm`).
+fn compile_staged_with(
+    outputs: &[Poly],
+    stages: &[Stage],
+    relations: &[Poly],
+    basis: Option<&[Poly]>,
+    reduction: Reduction,
+    kernels: bool,
+) -> (Program, HashMap<Var, Operand>) {
     let reduce = |p: &Poly| match reduction {
         Reduction::None => p.clone(),
         Reduction::Greedy => reduce_by_relations(p, relations),
-        Reduction::NormalForm => basis
-            .as_ref()
-            .map_or_else(|| p.clone(), |g| crate::groebner::normal_form(p, g)),
+        Reduction::NormalForm => {
+            basis.map_or_else(|| p.clone(), |g| crate::groebner::normal_form(p, g))
+        }
     };
     let mut b = Builder::default();
     let mut env: HashMap<Var, Operand> = HashMap::new();
@@ -310,6 +330,10 @@ pub fn compile_staged(
     (prog, env)
 }
 
+/// The Gröbner work budget for a traced kernel's relations (see
+/// `groebner::groebner_within`): a tenth of a second at most, per strategy.
+const TRACE_BASIS_BUDGET: usize = 1_000_000;
+
 /// Compile staged outputs with every strategy and keep the cheapest program that is verified
 /// exact: its outputs equal the given polynomials modulo the relations.
 pub fn compile_staged_best(
@@ -317,20 +341,51 @@ pub fn compile_staged_best(
     stages: &[Stage],
     relations: &[Poly],
 ) -> (Program, HashMap<Var, Operand>) {
-    let basis = crate::groebner::groebner(relations, 2000);
+    let profile = std::env::var_os("GAX_GEN_PROFILE").is_some();
+    let clock = std::time::Instant::now();
+    // Inconsistent relations (the ideal holds 1, so every expression would reduce to zero)
+    // are no basis at all: a reciprocal of something that is zero only under the other
+    // relations can bring them in.
+    let basis = crate::groebner::groebner_within(relations, 2000, TRACE_BASIS_BUDGET).filter(|g| {
+        !g.iter()
+            .any(|p| p.as_constant().is_some_and(|c| !c.is_zero()))
+    });
+    if profile {
+        eprintln!(
+            "        basis: {:.2} s ({:?} polynomials)",
+            clock.elapsed().as_secs_f64(),
+            basis.as_ref().map(Vec::len)
+        );
+    }
     let mut best: Option<(Program, HashMap<Var, Operand>)> = None;
-    let reductions: &[Reduction] = if relations.is_empty() {
+    // Without a basis the relations cannot be checked, so only the strategy that does not use
+    // them runs, and it is checked as an exact identity: nothing goes out unverified.
+    let reductions: &[Reduction] = if relations.is_empty() || basis.is_none() {
         &[Reduction::None]
     } else {
         &[Reduction::None, Reduction::Greedy, Reduction::NormalForm]
     };
+    let check: &[Poly] = basis.as_deref().unwrap_or(&[]);
     for &reduction in reductions {
         for kernels in [false, true] {
-            let (prog, env) = compile_staged(outputs, stages, relations, reduction, kernels);
-            if let Some(g) = &basis {
-                assert!(
-                    verify_staged(&prog, &env, outputs, g),
-                    "simplifier produced a program that differs from its input ({reduction:?}, kernels {kernels})"
+            let clock = std::time::Instant::now();
+            let (prog, env) = compile_staged_with(
+                outputs,
+                stages,
+                relations,
+                basis.as_deref(),
+                reduction,
+                kernels,
+            );
+            let compiled = clock.elapsed().as_secs_f64();
+            assert!(
+                verify_staged(&prog, &env, outputs, check),
+                "simplifier produced a program that differs from its input ({reduction:?}, kernels {kernels})"
+            );
+            if profile {
+                eprintln!(
+                    "        {reduction:?}, kernels {kernels}: compiled {compiled:.2} s, verified {:.2} s",
+                    clock.elapsed().as_secs_f64() - compiled
                 );
             }
             let better = best

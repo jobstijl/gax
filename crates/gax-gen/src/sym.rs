@@ -109,6 +109,10 @@ struct Arena {
     renormalized: bool,
 }
 
+/// The most term operations one expansion may take (see `Sym::binary`): a million, a few
+/// milliseconds; beyond it the result is a node, or the unlimited strategy gives up.
+const MAX_EXPANSION_WORK: usize = 1_000_000;
+
 thread_local! {
     static ARENA: RefCell<Arena> = RefCell::new(Arena::default());
 }
@@ -399,7 +403,9 @@ impl Sym {
                     r = &r - &x;
                     a.relations.push(r);
                 }
-                Func::Recip => {
+                // The reciprocal of zero (a branch a select discards at run time) has no
+                // relation: `r 0 = 1` is inconsistent, and would make every expression equal.
+                Func::Recip if !x.is_zero() => {
                     let r = &(&Poly::var(v) * &x) - &Poly::constant(Rational::ONE);
                     a.relations.push(r);
                 }
@@ -444,6 +450,27 @@ impl Sym {
             let y = &a.polys[o.0 as usize];
             // Scaling by a constant never grows a polynomial; keep it expanded.
             let trivial = x.as_constant().is_some() || y.as_constant().is_some();
+            // The work of expanding, known before doing it: a product of two large polynomials
+            // can take gigabytes. Under a limit it becomes a node unexpanded (always correct);
+            // with no limit the strategy is abandoned (the tracer catches this and keeps the
+            // best of the others).
+            let work = match op {
+                NodeOp::Mul => x.len().saturating_mul(y.len()),
+                NodeOp::Add | NodeOp::Sub => x.len() + y.len(),
+            };
+            if !trivial && work > MAX_EXPANSION_WORK {
+                assert!(
+                    a.limit.is_some(),
+                    "gax::trace: an expansion needs over {MAX_EXPANSION_WORK} term operations"
+                );
+                let key = (op, self, o);
+                if let Some(&v) = a.node_index.get(&key) {
+                    return R::Node(v);
+                }
+                let v = a.new_var(VarDef::Node { op, a: self, b: o });
+                a.node_index.insert(key, v);
+                return R::Node(v);
+            }
             let p = f(x, y);
             let over = |limit: usize| a.opaque_constants || p.len() > limit;
             match a.limit {
