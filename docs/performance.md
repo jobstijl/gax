@@ -116,19 +116,29 @@ renormalization), with the body's constants known at build time:
 
 | | arithmetic | one body (f32) | eight bodies (`f32x8` lanes) |
 |---|---|---|---|
-| generic code | 113 mul, 70 add, 5 div | **20.8 ns** | 28.6 ns |
-| fused at build time | 98 mul, 70 add, 1 div | 24.3 ns | **24.1 ns** |
+| generic code | 113 mul, 70 add, 5 div | 20.8 ns | 28.6 ns |
+| fused at build time | 98 mul, 70 add, 1 div | 24.3 ns | 24.1 ns |
+| fused, without `mul_add` (`Tracer::fma(false)`) | the same | **15.5 ns** | **23.1 ns** |
 
 * **Batches.** In SoA lanes the arithmetic count is what runs, and the fused kernel is 16% faster
   (26% in the earlier measurement).
-* **Single values.** Here LLVM's SLP vectorizer turns the *more regular* generic code into better SIMD
-  than the leaner but irregular fused program: 169 against 191 instructions, with more shuffles in the
-  fused one. The fused kernel is slower.
+* **Single values.** The fused kernel was slower than the generic code here, and the cause turned
+  out to be `mul_add` (investigated 2026-09-29). With FMA, each single-use product feeding a sum
+  becomes a scalar `vfmadd`, and LLVM's SLP vectorizer does not pack those chains into SIMD; the
+  generic code, with plain products and sums, it does. Emitted without `mul_add`
+  (`Tracer::fma(false)`), the same verified program takes 15.5 ns: 35% faster than the generic
+  code and 40% faster than with `mul_add`. (The last three rows were measured together on a machine
+  that became busier during the run; the generic code took 23.9 ns in it, against 20.8 ns in the
+  full suite.)
+* **Loops and lanes.** There `mul_add` wins: 1024 steps in a scalar loop take 14.1 µs with it and
+  16.3 µs without, and the SoA lanes 2.57 µs against 2.91 µs (`benches/batch.rs`), because the
+  loop and the lanes already give the hardware parallelism, and a fused multiply-add is one
+  instruction instead of two.
 * **What it means:**
-  * tracing pays off for batches and for scalar-only targets, and whenever constants remove work;
-  * for single values on a SIMD target, measure first.
-
-  Emitting fused code in a shape the SLP vectorizer handles well is open work (TODO).
+  * `mul_add` stays the default, for kernels in loops and on lanes;
+  * for a kernel called once per frame on a SIMD target, try `Tracer::fma(false)`;
+  * tracing pays off whenever constants remove work, and a fused kernel's operation count is what
+    runs on lanes.
 
 ## Fused sandwich kernels (op counts from the generator)
 

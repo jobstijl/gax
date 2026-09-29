@@ -39,7 +39,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Better line sandwich kernel: investigated, kept at 58 mul (the rotate-then-translate factorization breaks the degree-2 homogeneity of drift-tolerant kernels, and restoring it costs the saving; performance.md)
 - [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)
 - [x] A cheaper map inverse: scalar LU pivots with branches (`Real::SCALAR`), shared pivot reciprocals (now 0.6x nalgebra)
-- [ ] Emit fused code in a shape LLVM's SLP vectorizer handles well (fused single-value kernels can lose to generic code)
+- [x] Emit fused code in a shape LLVM's SLP vectorizer handles well: the cause was `mul_add` (scalar FMA chains are not packed); `Tracer::fma(false)` emits plain products and sums, 15.5 ns against 24 ns fused and 21 ns generic for the rigid step; `mul_add` stays the default for loops and lanes (performance.md)
 - [x] Division `a / b` (`DivBy`), embeddings between kinds (`From`, `Unit::widen`), `Motor::between` as `sqrt(b / a)` (ADR-029)
 - [x] The generator runs its jobs in parallel: regenerating went from about 8 minutes to 34 s (ADR-030)
 - [x] Compile time: one closure per product (CSTA 16.3 s to 13.9 s, release code unchanged), line tables in dev builds of gax (ADR-031)

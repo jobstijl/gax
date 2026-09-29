@@ -29,6 +29,12 @@ fn main() {
         "rigid_step_fixed_fused",
         |m: Motor<(), Sym>, b: Line<(), Sym>, f: Line<(), Sym>| kernels::rigid_step_fixed(m, b, f),
     );
+    // The same kernel without `mul_add`, for single calls (`Tracer::fma`, performance.md).
+    t.fma(false);
+    t.kernel(
+        "rigid_step_fixed_plain",
+        |m: Motor<(), Sym>, b: Line<(), Sym>, f: Line<(), Sym>| kernels::rigid_step_fixed(m, b, f),
+    );
     t.write_out_dir("fused.rs");
     for r in t.reports() {
         println!(

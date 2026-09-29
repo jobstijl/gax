@@ -462,13 +462,14 @@ impl Program {
         let r = |o: &Operand| render_to(target, o, var, prefix);
         let fuse = match target {
             Target::Rust => true,
+            Target::RustPlain => false,
             Target::Wgsl { fma } => fma,
         };
         // `x * y + z`, with the negations `nx` (of `x`) and `nz` (of `z`).
         let mul_add = |x: &Operand, y: &Operand, z: &Operand, nx: bool, nz: bool| {
             let n = |neg: bool, e: String| if neg { format!("-{e}") } else { e };
             match target {
-                Target::Rust => {
+                Target::Rust | Target::RustPlain => {
                     let x = if nx { format!("(-{})", r(x)) } else { r(x) };
                     format!("{x}.mul_add({}, {})", r(y), n(nz, r(z)))
                 }
@@ -513,11 +514,11 @@ impl Program {
                 (None, Instr::Neg(a)) => format!("-{}", r(a)),
                 (None, Instr::Div(a, b)) => format!("{} / {}", r(a), r(b)),
                 (None, Instr::Atan2(a, b)) => match target {
-                    Target::Rust => format!("{}.atan2({})", r(a), r(b)),
+                    Target::Rust | Target::RustPlain => format!("{}.atan2({})", r(a), r(b)),
                     Target::Wgsl { .. } => format!("atan2({}, {})", r(a), r(b)),
                 },
                 (None, Instr::Select(a, b, x, y)) => match target {
-                    Target::Rust => {
+                    Target::Rust | Target::RustPlain => {
                         format!("T::select_lt({}, {}, {}, {})", r(a), r(b), r(x), r(y))
                     }
                     // WGSL's select takes the false value first.
@@ -526,12 +527,12 @@ impl Program {
                     }
                 },
                 (None, Instr::Call(f, a)) => match target {
-                    Target::Rust => format!("{}.{}()", r(a), f.method()),
+                    Target::Rust | Target::RustPlain => format!("{}.{}()", r(a), f.method()),
                     Target::Wgsl { .. } => f.wgsl(&r(a)),
                 },
             };
             match target {
-                Target::Rust => {
+                Target::Rust | Target::RustPlain => {
                     let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
                 }
                 Target::Wgsl { .. } => {
@@ -545,8 +546,12 @@ impl Program {
 /// The language of emitted code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Target {
-    /// Rust, generic over a coefficient type `T: Real`.
+    /// Rust, generic over a coefficient type `T: Real`, with single-use products feeding a sum
+    /// fused into `mul_add` (a hardware fused multiply-add where the target has one).
     Rust,
+    /// The same Rust without `mul_add`: plain products and sums, which LLVM's SLP vectorizer
+    /// packs into SIMD more readily for a kernel called once (performance.md).
+    RustPlain,
     /// WGSL, in `f32`. With `fma`, single-use products feeding a sum become `fma(a, b, c)`;
     /// without it they stay `a * b + c`.
     Wgsl {

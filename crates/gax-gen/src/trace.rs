@@ -249,6 +249,8 @@ pub struct Tracer {
     programs: Vec<(String, crate::slp::Program, Vec<VarDef>)>,
     batch: bool,
     wgsl: bool,
+    /// Emit plain products and sums instead of `mul_add` (see [`Tracer::fma`]).
+    plain: bool,
 }
 
 impl Tracer {
@@ -265,11 +267,22 @@ impl Tracer {
         self
     }
 
+    /// Whether the Rust form fuses single-use products into `mul_add` (on by default). Fusing
+    /// is faster where a kernel runs in a loop or on SIMD lanes; off, plain products and sums
+    /// let LLVM's SLP vectorizer pack a kernel called once per frame into SIMD, which can be
+    /// much faster (the traced rigid-body step: 15 ns against 24 ns; performance.md). Measure
+    /// both for kernels on the hot path. The WGSL form is not affected.
+    pub fn fma(&mut self, on: bool) -> &mut Tracer {
+        self.plain = !on;
+        self
+    }
+
     /// Also emit every kernel as a WGSL function, printed from the same verified program
     /// (ADR-028). [`Tracer::write_out_dir`] then writes the functions to a `.wesl` file next to
-    /// the Rust file and adds a constant with its source. Arguments and results must be kinds of
-    /// the standard algebras (as WESL paths such as `gax::pga3d::Point`, resolved against
-    /// `gax::wgsl`), units of them, scalars (`f32`), arrays or tuples of these.
+    /// the Rust file and adds a constant with its source. Arguments and results must be kinds
+    /// (as WESL paths: `gax::pga3d::Point` for the standard algebras, resolved against
+    /// `gax::wgsl`, and `package::{algebra}::Point` for declared ones), units of them, scalars
+    /// (`f32`), arrays or tuples of these.
     pub fn wgsl(&mut self, on: bool) -> &mut Tracer {
         self.wgsl = on;
         self
@@ -423,7 +436,12 @@ impl Tracer {
             let _ = writeln!(s, "    let a{k} = {coeffs};");
         }
         let mut body = String::new();
-        prog.emit_lets(&var_name, "t", &mut body);
+        let target = if self.plain {
+            crate::slp::Target::RustPlain
+        } else {
+            crate::slp::Target::Rust
+        };
+        prog.emit_lets_to(target, &var_name, "t", &mut body);
         for line in body.lines() {
             let _ = writeln!(s, "{}", line.replacen("        ", "    ", 1));
         }

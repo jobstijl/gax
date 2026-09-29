@@ -8,7 +8,7 @@ use criterion::{Criterion, criterion_group, criterion_main};
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
 use gax::simd::wide::f32x8;
-use gax_bench::fused::{rigid_step_fixed_fused, rigid_step_fused};
+use gax_bench::fused::{rigid_step_fixed_fused, rigid_step_fixed_plain, rigid_step_fused};
 use gax_bench::kernels::{rigid_step, rigid_step_fixed};
 use gax_bench::motor;
 use std::hint::black_box;
@@ -229,6 +229,9 @@ fn rigid_body(c: &mut Criterion) {
     g.bench_function("gax fused, constants traced", |bch| {
         bch.iter(|| rigid_step_fixed_fused(black_box(m), black_box(b), black_box(f)))
     });
+    g.bench_function("gax fused without mul_add, constants traced", |bch| {
+        bch.iter(|| rigid_step_fixed_plain(black_box(m), black_box(b), black_box(f)))
+    });
     // Eight bodies at once (SoA lanes): here the arithmetic count is what runs.
     let m8 = Motor::<(), f32x8>::from_coeffs(m.c.map(f32x8::splat));
     let b8 = Line::<(), f32x8>::from_coeffs(b.c.map(f32x8::splat));
@@ -239,6 +242,10 @@ fn rigid_body(c: &mut Criterion) {
     g.bench_function("x8 lanes: gax fused, constants traced", |bch| {
         bch.iter(|| rigid_step_fixed_fused(black_box(m8), black_box(b8), black_box(f8)))
     });
+    g.bench_function(
+        "x8 lanes: gax fused without mul_add, constants traced",
+        |bch| bch.iter(|| rigid_step_fixed_plain(black_box(m8), black_box(b8), black_box(f8))),
+    );
     g.finish();
 }
 
