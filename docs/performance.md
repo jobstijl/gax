@@ -135,6 +135,16 @@ renormalization), with the body's constants known at build time:
 The full list, for every algebra and both paths, is generated into
 [kernel-costs.md](kernel-costs.md) and checked by CI.
 
+**Why the line sandwich stays at 58 mul.** A unit PGA3D motor factors as `m = T r`: its rotor
+part `r` (the blades without `e0`) is itself unit, and `T = m ~r` is a translator with scalar
+part exactly 1. Rotating a line and then translating it would cost about 52 mul: 34 to rotate
+(a rotation matrix shared by the direction and the moment), 12 to extract `T`, 6 for the cross
+product. But a `Unit` kernel must be homogeneous of degree 2 in the versor, so that a drifted
+motor scales results uniformly instead of distorting them (ADR-020). The factored form is of
+degree 4 once reduced, and restoring degree 2 costs a division or about 10 multiplications for
+the norm, which is the whole saving. Plain motors cannot factor at all without dividing by
+`r ~r`. The generator's single-expression kernel is therefore kept (investigated 2026-09-29).
+
 | kernel | gax | reference |
 |---|---|---|
 | `Unit<Rotor> >> Point` (PGA3D) | 26 mul, 15 add (18 mul, 12 add before) | the quaternion formula (not homogeneous): 18 mul, 12 add |

@@ -36,7 +36,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Prepared sparse sandwich maps; balanced summation trees
 - [x] `mul_add` fusion in emitted programs (hardware FMA when available)
 - [x] Multi-slot `trace_at::<I>`; outermorphism (wedge and vee, symbolic minors)
-- [ ] Better line sandwich kernel (58 mul now; a rotate-then-translate factorization would save about 10)
+- [x] Better line sandwich kernel: investigated, kept at 58 mul (the rotate-then-translate factorization breaks the degree-2 homogeneity of drift-tolerant kernels, and restoring it costs the saving; performance.md)
 - [x] Early exit in the Jacobi solvers and cheaper pivoting (eigh and SVD now faster than nalgebra)
 - [x] A cheaper map inverse: scalar LU pivots with branches (`Real::SCALAR`), shared pivot reciprocals (now 0.6x nalgebra)
 - [ ] Emit fused code in a shape LLVM's SLP vectorizer handles well (fused single-value kernels can lose to generic code)
