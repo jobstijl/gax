@@ -17,46 +17,45 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 
 | operation | gax | glam 0.30 |
 |---|---|---|
-| transform one point: `Unit<Motor> >> Point` (fused, FMA) | 5.3 ns | `Affine3A::transform_point3a`: 2.2 ns; `Quat * Vec3A` (rotation only): 3.2 ns |
-| transform one point: prepared sparse map `m.prepare::<Point>() >> p` | 4.2 ns | |
-| transform one point: dense map `Point<(Point,)>::of` | 3.9 ns | |
-| transform 1024 points, AoS: direct / prepared / dense map | 1.87 / 1.39 / 1.48 µs | `Affine3A` loop: 1.18 µs |
-| transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.51 / **0.43 µs** | (2.7x faster than glam) |
-| compose motors `Unit<Motor> * Unit<Motor>` | 7.6 ns | `Affine3A * Affine3A`: 5.3 ns; `Quat * Quat`: 2.0 ns |
-| invert a unit motor (the reverse) | **1.9 ns** | `Affine3A::inverse`: 8.6–13.7 ns |
-| normalize a motor (Study-number `rsqrt`) | 5.8 ns | `Quat::normalize`: 2.4 ns |
-| motor exponential `Line::exp` (rotation and translation) | 24 ns | `Quat::from_scaled_axis` (rotation only, the same work of finding the angle): 9.5 ns; `Quat::from_axis_angle` (angle given): 5.6 ns |
-| motor logarithm `Unit<Motor>::log` | 24 ns | — |
-| build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 7.1 / 11.9 ns | `Affine3A::from_rotation_translation`: 2.9–4.1 ns |
+| transform one point: `Unit<Motor> >> Point` (fused, FMA) | 3.9 ns | `Affine3A::transform_point3a`: 1.3 ns; `Quat * Vec3A` (rotation only): 2.3 ns |
+| transform one point: prepared sparse map `m.prepare::<Point>() >> p` | 3.5 ns | |
+| transform one point: dense map `Point<(Point,)>::of` | 3.1 ns | |
+| transform 1024 points, AoS: direct / prepared / dense map | 1.50 / 1.14 / 1.11 µs | `Affine3A` loop: 0.68 µs |
+| transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.46 / **0.24 µs** | (2.8x faster than glam) |
+| compose motors `Unit<Motor> * Unit<Motor>` | 6.6 ns | `Affine3A * Affine3A`: 3.1 ns; `Quat * Quat`: 1.2 ns |
+| invert a unit motor (the reverse) | **1.5 ns** | `Affine3A::inverse`: 11.9 ns |
+| normalize a motor (Study-number `rsqrt`) | 6.3 ns | `Quat::normalize`: 1.8 ns |
+| motor exponential `Line::exp` (rotation and translation) | 15 ns | `Quat::from_scaled_axis` (rotation only, the same work of finding the angle): 5.0 ns; `Quat::from_axis_angle` (angle given): 2.8 ns |
+| motor logarithm `Unit<Motor>::log` | 20 ns | — |
+| build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 4.3 / 9.1 ns | `Affine3A::from_rotation_translation`: 2.6 ns |
 
-These timings predate two changes: the drift-tolerant `Unit` kernels (8 more multiplications on
-motor-on-point; see "Fused sandwich kernels" below), and the longer series near the boundaries of
-`exp` and `log` (numerics.md). Re-measuring them is open (TODO).
-
-Ranges show run-to-run variation, measured in separate runs of the suite.
+Measured on 2026-09-29 on an idle machine (load average 1), after the drift-tolerant `Unit`
+kernels and the longer series near the boundaries of `exp` and `log` (numerics.md). The earlier
+numbers were higher throughout, glam's included, so part of the difference is the machine's
+load then, not gax.
 
 ### Where gax is faster
 
 * **Batches in struct-of-arrays form.** A `Point<(), f32x8>` holds eight points, and every generated
   kernel runs on it unchanged. The prepared action of a unit motor needs 12 multiplications per
-  eight points, with no structural zeros. That transforms 1024 points 2.7x faster than a glam
+  eight points, with no structural zeros. That transforms 1024 points 2.8x faster than a glam
   `Affine3A` loop (hypotheses 6 and 9).
 * **Inverting a unit motor** costs only negations: the certificate in `Unit` makes the inverse the
   reverse.
 
 ### Where gax is slower, and why
 
-* **Single operations in array-of-structs form** take 1.4–3x as long as glam:
+* **Single operations in array-of-structs form** take 2–3.5x as long as glam:
   * gax's kernels are generic over the coefficient type, so they are scalar code, and LLVM only partly
     recovers SIMD from them;
   * glam writes the same operations by hand with SSE shuffles on 4-lane registers, and stores
     matrices column-major for broadcasts.
 * **A motor holds a rotation and a translation in 8 numbers.** Composing, normalizing and
   exponentiating it do more work than the quaternion alone, which is what glam's `Quat` timings
-  measure. `Affine3A` is the fair comparison for rigid motions: gax is at 1.4x for composition and
-  faster for inversion.
-* **exp and log** go through closed forms with a series near zero (ADR-019). They take 24 ns, against
-  glam's 3–6 ns for building a quaternion from an axis and angle. A motor's exponential also produces
+  measure. `Affine3A` is the fair comparison for rigid motions: gax is at 2.1x for composition and
+  8x faster for inversion.
+* **exp and log** go through closed forms with a series near zero (ADR-019). They take 15 and 20 ns,
+  against glam's 3–5 ns for building a quaternion from an axis and angle. A motor's exponential also produces
   its translation part and needs the square root of the bivector's norm.
 
 **Changes that closed part of the gap:**
@@ -79,17 +78,17 @@ otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA d
 
 | operation | gax | others |
 |---|---|---|
-| transform a point by a rigid motion (f32) | **6.3 ns** | `geometric_algebra` 0.3 `Motor::transformation`: 10.9 ns; nalgebra `Isometry3 * Point3`: 13.5 ns |
-| eight points at once (SoA `f32x8`) | 8.4 ns (rotation and translation) | ultraviolet `Rotor3x8 * Vec3x8` (rotation only): 8.0 ns |
-| compose a chain of 5 rigid motions | 43 ns | glam `Affine3A`: 13 ns; nalgebra `Isometry3`: 26 ns |
-| 6x6 map inverse (f64) | **118 ns** | nalgebra `Matrix6::try_inverse`: 202 ns |
-| 6x6 solve | **109 ns** | nalgebra LU solve: 149 ns |
-| 6x6 generalized eigenproblem (vibration modes) | **1.18 µs** | nalgebra Cholesky + `SymmetricEigen`: 1.30 µs |
-| 4x4 SVD | **0.62 µs** | nalgebra `Matrix4::svd`: 0.91 µs |
-| CGA3D `Unit<Motor> >> point` (f32) | 6.96 ns | — |
-| CGA3D general even versor `>> point` | 38.7 ns | — |
-| CGA3D `Twist::exp` | 15.2 ns | — |
-| CSTA (6D) vector product | 13.2 ns | — |
+| transform a point by a rigid motion (f32) | **3.9 ns** | `geometric_algebra` 0.3 `Motor::transformation`: 7.4 ns; nalgebra `Isometry3 * Point3`: 11.5 ns |
+| eight points at once (SoA `f32x8`) | 4.9 ns (rotation and translation) | ultraviolet `Rotor3x8 * Vec3x8` (rotation only): 4.6 ns |
+| compose a chain of 5 rigid motions | 28 ns | glam `Affine3A`: 9.5 ns; nalgebra `Isometry3`: 20 ns |
+| 6x6 map inverse (f64) | **106 ns** | nalgebra `Matrix6::try_inverse`: 190 ns |
+| 6x6 solve | **101 ns** | nalgebra LU solve: 139 ns |
+| 6x6 generalized eigenproblem (vibration modes) | **1.13 µs** | nalgebra Cholesky + `SymmetricEigen`: 1.25 µs |
+| 4x4 SVD | **0.61 µs** | nalgebra `Matrix4::svd`: 0.88 µs |
+| CGA3D `Unit<Motor> >> point` (f32) | 8.0 ns (drift-tolerant: 7.0 ns before) | — |
+| CGA3D general even versor `>> point` | 27.5 ns | — |
+| CGA3D `Twist::exp` | 11.0 ns | — |
+| CSTA (6D) vector product | 10.6 ns | — |
 
 **The solvers are branch free per lane** (ADR-017), so they run unchanged on SIMD lanes. Two
 lane-wide exits, `Real::all_lt`, keep them competitive for single matrices:
@@ -117,10 +116,11 @@ renormalization), with the body's constants known at build time:
 
 | | arithmetic | one body (f32) | eight bodies (`f32x8` lanes) |
 |---|---|---|---|
-| generic code | 113 mul, 70 add, 5 div | **20.7 ns** | 43.6 ns |
-| fused at build time | 98 mul, 70 add, 1 div | 28.0 ns | **32.0 ns** |
+| generic code | 113 mul, 70 add, 5 div | **20.8 ns** | 28.6 ns |
+| fused at build time | 98 mul, 70 add, 1 div | 24.3 ns | **24.1 ns** |
 
-* **Batches.** In SoA lanes the arithmetic count is what runs, and the fused kernel is 26% faster.
+* **Batches.** In SoA lanes the arithmetic count is what runs, and the fused kernel is 16% faster
+  (26% in the earlier measurement).
 * **Single values.** Here LLVM's SLP vectorizer turns the *more regular* generic code into better SIMD
   than the leaner but irregular fused program: 169 against 191 instructions, with more shuffles in the
   fused one. The fused kernel is slower.
@@ -217,21 +217,25 @@ gives `wide`, glam and scalar gax AVX2 and FMA too. "wide" is the same generic k
 | operation | build | scalar gax | wide f32x8 (SoA) | glam | batch AoS | batch SoA |
 |---|---|---|---|---|---|---|
 | one motor, 1024 points | default | 1.20 µs | 0.54 µs | 0.74 µs | 0.91 µs | **0.27 µs** |
-| | native | 1.09 µs | 0.26 µs | 0.69 µs | 0.95 µs | **0.26 µs** |
+| | native | 1.06 µs | **0.24 µs** | 0.67 µs | 0.94 µs | 0.27 µs |
 | 1024 motor-point pairs | default | 2.80 µs | 1.11 µs | 0.79 µs¹ | 1.98 µs | **0.54 µs** |
-| | native | 2.24 µs | **0.46 µs** | 0.82 µs¹ | 1.94 µs | 0.49 µs |
+| | native | 2.48 µs | **0.48 µs** | 0.80 µs¹ | 2.41 µs | 0.53 µs |
 | exp of 1024 twists | default | 29.8 µs | 4.03 µs | 26.3 µs² | 3.64 µs | **1.58 µs** |
-| | native | 13.5 µs | 1.83 µs | 7.15 µs² | 3.75 µs | **1.63 µs** |
+| | native | 14.4 µs | 1.93 µs | 6.95 µs² | 3.53 µs | **1.83 µs** |
 | rigid-body step, traced (1024 bodies) | default | 17.3 µs | 7.24 µs | — | 7.59 µs | — |
-| | native | 15.0 µs | **2.63 µs** | — | 7.21 µs | — |
+| | native | 14.0 µs | **2.49 µs** | — | 7.11 µs | — |
 | rigid-body rate, traced (1024 bodies)³ | default | 4.97 µs | 2.09 µs | — | 3.20 µs | **1.13 µs** |
-| | native | 5.00 µs | **0.68 µs** | — | 3.03 µs | 0.84 µs |
+| | native | 4.78 µs | **0.66 µs** | — | 2.87 µs | 0.94 µs |
 
 ¹ `Affine3A::transform_point3a` per pair, with the affines built beforehand (9 multiply-adds,
 against the motor sandwich's 24 multiplies and 14 adds per point).
 ² `Quat::from_scaled_axis`: rotations only, where the motor exponential includes translations.
 ³ The velocity half of the step, `Line` to `Line`, which has a struct-of-arrays form (`name_batch_soa`);
 the full step returns a tuple and is batched in AoS form only.
+
+The native rows were measured again on 2026-09-29 (idle machine), the default rows earlier. In a
+native build the "portable" batch path is compiled for AVX2 and FMA too, so it matches the AVX2
+dispatch (SoA with one motor: 0.23 µs portable, 0.25 µs AVX2, 0.41 µs on SSE2 and SSE4.2).
 
 A built map applied to many values (`BatchOf`) runs at the same speed as the prepared
 motor action: the dense 4x4 of `m >> Point::slot()` takes 1.06 µs in AoS form and 0.30 µs in SoA

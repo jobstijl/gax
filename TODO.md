@@ -93,7 +93,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Edge-case property tests for exp, log and normalize; fixed the `log` series (second-order error), the cancellation at the series boundaries, and the branch near a full turn
 - [x] CSTA `exp`: squarings chosen from the norm, Newton renormalization; measured across norms
 - [x] Solver agreement: LU bit-identical scalar vs lanes on nearly singular maps; eigh/svd within gap-scaled bounds
-- [ ] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series
+- [x] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series (2026-09-29, idle machine: native runs of every benchmark)
 - [x] Solver agreement on the native SIMD lane types: LU bit-identical on every level (`tests/solver_levels.rs`, through `batch::map`), eigh and svd within `c · n · ε · ‖A‖`
 
 ## Phase 6: shaders (WGSL/WESL)
