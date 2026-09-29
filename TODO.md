@@ -94,7 +94,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] CSTA `exp`: squarings chosen from the norm, Newton renormalization; measured across norms
 - [x] Solver agreement: LU bit-identical scalar vs lanes on nearly singular maps; eigh/svd within gap-scaled bounds
 - [ ] Re-measure the timings in performance.md after the drift-tolerant kernels and the longer series
-- [ ] Solver agreement on the native SIMD lane types (the tests use the portable lanes)
+- [x] Solver agreement on the native SIMD lane types: LU bit-identical on every level (`tests/solver_levels.rs`, through `batch::map`), eigh and svd within `c · n · ε · ‖A‖`
 
 ## Phase 6: shaders (WGSL/WESL)
 - [x] WGSL target for the straight-line-program printer (`fma`, reversed `select`, abstract-float constants), golden tests
