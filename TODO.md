@@ -107,7 +107,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Every `exp` and `log` in WGSL: the general and 5D Study functions, and CSTA's scaling-and-squaring `exp`; a cancellation in the complex square root fixed on the way (numerics.md)
 - [x] WGSL modules for `algebra!` algebras (`WGSL_MODULE`, `WGSL_MODULE_F16`), and WGSL forms of their traced kernels (`package::{algebra}::Kind`)
 - [x] `f16` variants: every WGSL module in `f16` (`gax::pga3d_f16`), `{Kind}Gpu16` with correctly rounded conversion, Study functions and norms in `f32`; every kernel checked on the GPU
-- [ ] Re-measure the CPU columns of the GPU benchmark on an idle machine
+- [x] Re-measure the CPU columns of the GPU benchmark on an idle machine (2026-09-29, load 0.4)
 
 ## Phase 7: warp, the game (examples/warp)
 - [x] M0: Bevy as plumbing (dependency contract script, clippy disallowed types), own wgpu surface, fixed-step pure simulation, input boundary, CI job
