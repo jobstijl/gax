@@ -7042,6 +7042,61 @@ impl<T: gx::Real> Even<(), T> {
 
 }
 
+impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
+    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is
+    /// generated for `Even` in this algebra): square roots until `R` is within 1/16 of the
+    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each
+    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made
+    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to
+    /// within 64 Îµ on every lane. The principal logarithm: rotations below a half turn in each
+    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).
+    #[inline]
+    fn log(self) -> Bivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let mut one = Even::<(), T>::zero();
+        one.c[0] = T::one();
+        let (half, three) = (T::from_ratio(1, 2), one.gp(T::from_i64(3)));
+        let dist = |x: Even<(), T>| {
+            let mut d = T::zero();
+            for (a, b) in x.c.iter().zip(one.c) {
+                d = d + (*a - b).abs();
+            }
+            d
+        };
+        let tol = T::epsilon() * T::from_i64(64);
+        let mut x = self.into_inner();
+        let mut s = 0u32;
+        while s < 64 && !T::all_lt(dist(x), T::from_ratio(1, 16)) {
+            let mut y = one + x;
+            // Scale so that every invariant part of y ~y is at most 1 (they are positive, and
+            // there are at most four distinct ones, averaging to the scalar part).
+            let n = (y.reverse() * y).c[0];
+            y = y.gp((n * T::from_i64(4)).sqrt().recip());
+            let mut k = 0;
+            while k < 200 && !T::all_lt(dist(y.reverse() * y), tol) {
+                y = y * (three - y.reverse() * y).gp(half);
+                k += 1;
+            }
+            x = y;
+            s += 1;
+        }
+        // log(1 + z) = z (1 - z/2 + zÂ²/3 - ...), by Horner, for |z| <= 1/16.
+        let z = x - one;
+        let mut q = one.gp(T::from_ratio(-1, 16));
+        for k in (1..16).rev() {
+            let a = if k % 2 == 1 { T::from_ratio(1, k) } else { T::from_ratio(-1, k) };
+            q = one.gp(a) + z * q;
+        }
+        let l = z * q;
+        let mut f = T::one();
+        for _ in 0..s {
+            f = f + f;
+        }
+        Bivector::from_coeffs([l.c[1] * f, l.c[2] * f, l.c[3] * f, l.c[4] * f, l.c[5] * f, l.c[6] * f, l.c[7] * f, l.c[8] * f, l.c[9] * f, l.c[10] * f, l.c[11] * f, l.c[12] * f, l.c[13] * f, l.c[14] * f, l.c[15] * f])
+        })
+    }
+}
+
 #[doc = "The odd subalgebra."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3, e4, eo, ei, e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi, e234oi, e314oi, e124oi, e123oi, e1234o, e1234i]`.

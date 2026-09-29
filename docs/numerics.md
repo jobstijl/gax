@@ -156,6 +156,19 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
   asserts exactly that bound.
 * **At a half turn of the motion** (`θ = π/2`) nothing is special.
 * **The general `log`** (STA, CGA3D) is stable up to, but not including, `θ = π`.
+* **CSTA's `Even`** (the full 6D conformal group, whose bivectors split into three commuting
+  parts) has no closed form in gax. Its `log` is inverse scaling and squaring, the counterpart of
+  its `exp`:
+  * square roots until the versor is within `1/16` of the identity. Each is `(1 + R)`, scaled so
+    that every invariant part is at most 1, then made unit by Newton steps `y (3 − ~y y)/2` (a
+    polar decomposition, which needs no general inverse);
+  * the series of `log(1 + z)` to degree 16;
+  * the scaling undone.
+
+  Tested: `exp(log R) = R` for random versors, and `log(exp B) = B` on the principal branch and for
+  boosts and dilations up to rapidity 5, all within `10⁻⁹` (`tests/csta_log.rs`). It is
+  iterative, so it is slow next to a closed form. The closed form through the invariant
+  decomposition (the roots of a cubic) remains possible future work.
 
 **`normalized`.**
 

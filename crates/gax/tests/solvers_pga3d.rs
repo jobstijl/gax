@@ -1,5 +1,7 @@
 //! Methods of maps and forms: inverse, solve, det, trace, SVD, eigenproblems (PGA3D).
 
+#![cfg(feature = "pga3d")]
+
 mod common;
 use common::{Rng, assert_close, flat, random, random_map};
 use gax::Unit;

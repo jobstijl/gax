@@ -1,5 +1,7 @@
 //! Values, maps and forms through one API (PGA2D). The algebraic laws are proved in `laws_pga2d.rs`.
 
+#![cfg(feature = "pga2d")]
+
 mod common;
 use common::{Rng, assert_close, flat, random};
 use gax::Slots;

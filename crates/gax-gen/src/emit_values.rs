@@ -316,6 +316,9 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if meta.log.is_none() {
         meta.log = emit_log_general(spec, k, &x, &mut traits, &mut meta.kernels);
     }
+    if meta.log.is_none() {
+        meta.log = emit_log_fallback(spec, k, &mut traits);
+    }
 
     // sqrt of a unit versor: normalize(1 + R).
     let scalar_idx = k.layout.position(0);
@@ -893,6 +896,118 @@ fn emit_log_general(
         outs.join(", ")
     );
     Some(on.clone())
+}
+
+/// The logarithm of a unit versor by inverse scaling and squaring, for even kinds without a
+/// closed form (CSTA's `Even`, whose bivectors split into three commuting parts): the
+/// counterpart of [`emit_exp_fallback`]. Emitted for a kind of even grades, with a scalar and
+/// the whole grade 2, closed under the product, whose bivector part is a kind of its own.
+fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> Option<String> {
+    let alg = &spec.algebra;
+    let blades: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
+    if !blades.contains(&0) || blades.iter().any(|m| m.count_ones() % 2 == 1) {
+        return None;
+    }
+    let grade2: BTreeSet<u32> = (0..alg.blade_count() as u32)
+        .filter(|m| m.count_ones() == 2)
+        .collect();
+    if !grade2.is_subset(&blades) {
+        return None;
+    }
+    for &a in &blades {
+        for &b in &blades {
+            if alg
+                .blade_product(a, b)
+                .iter()
+                .any(|(m, _)| !blades.contains(m))
+            {
+                return None;
+            }
+        }
+    }
+    let bv = spec.kind_for_support(&grade2)?;
+    if bv.layout.len() != grade2.len() {
+        return None;
+    }
+    let (en, bn) = (&k.name, &bv.name);
+    let (one_pos, one_sign) = k.layout.position(0)?;
+    let one = if one_sign > 0 {
+        "T::one()"
+    } else {
+        "-T::one()"
+    };
+    let project: Vec<String> = bv
+        .layout
+        .blades
+        .iter()
+        .map(|&(m, sb)| {
+            let (pos, se) = k.layout.position(m).expect("grade 2 is in the kind");
+            let sign = if sb * se > 0 { "" } else { "-" };
+            format!("{sign}l.c[{pos}] * f")
+        })
+        .collect();
+    let _ = write!(
+        traits,
+        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is
+    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the
+    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each
+    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made
+    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to
+    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each
+    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).
+    #[inline]
+    fn log(self) -> {bn}<(), T> {{
+        T::vectorize(#[inline(always)] move || {{
+        let mut one = {en}::<(), T>::zero();
+        one.c[{one_pos}] = {one};
+        let (half, three) = (T::from_ratio(1, 2), one.gp(T::from_i64(3)));
+        let dist = |x: {en}<(), T>| {{
+            let mut d = T::zero();
+            for (a, b) in x.c.iter().zip(one.c) {{
+                d = d + (*a - b).abs();
+            }}
+            d
+        }};
+        let tol = T::epsilon() * T::from_i64(64);
+        let mut x = self.into_inner();
+        let mut s = 0u32;
+        while s < 64 && !T::all_lt(dist(x), T::from_ratio(1, 16)) {{
+            let mut y = one + x;
+            // Scale so that every invariant part of y ~y is at most 1 (they are positive, and
+            // there are at most four distinct ones, averaging to the scalar part).
+            let n = {one_sign_mul}(y.reverse() * y).c[{one_pos}];
+            y = y.gp((n * T::from_i64(4)).sqrt().recip());
+            let mut k = 0;
+            while k < 200 && !T::all_lt(dist(y.reverse() * y), tol) {{
+                y = y * (three - y.reverse() * y).gp(half);
+                k += 1;
+            }}
+            x = y;
+            s += 1;
+        }}
+        // log(1 + z) = z (1 - z/2 + z²/3 - ...), by Horner, for |z| <= 1/16.
+        let z = x - one;
+        let mut q = one.gp(T::from_ratio(-1, 16));
+        for k in (1..16).rev() {{
+            let a = if k % 2 == 1 {{ T::from_ratio(1, k) }} else {{ T::from_ratio(-1, k) }};
+            q = one.gp(a) + z * q;
+        }}
+        let l = z * q;
+        let mut f = T::one();
+        for _ in 0..s {{
+            f = f + f;
+        }}
+        {bn}::from_coeffs([{}])
+        }})
+    }}
+}}
+
+",
+        project.join(", "),
+        one_sign_mul = if one_sign > 0 { "" } else { "-" },
+    );
+    Some(bn.clone())
 }
 
 /// The exponential by scaling and squaring, for bivector kinds without a closed form (the

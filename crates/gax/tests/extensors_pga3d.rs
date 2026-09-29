@@ -1,5 +1,7 @@
 //! Filling slots, induced maps and outermorphisms on concrete geometry (PGA3D). The algebraic laws are proved in `laws_pga3d.rs`.
 
+#![cfg(feature = "pga3d")]
+
 mod common;
 use common::{Rng, assert_close, flat, random, random_map};
 use gax::Unit;

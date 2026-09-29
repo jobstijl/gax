@@ -1256,6 +1256,7 @@ fn value_methods() {
     common::inverse::<Vector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::exp_log::<Twist<(), f64>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::exp_log::<Bivector<(), f64>, Even<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
     common::inverse::<Quintvector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Quintvector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Pseudoscalar<(), f64>, _>(&o, &mut rng, |x| x.inverse());
