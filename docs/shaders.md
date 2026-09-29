@@ -6,8 +6,10 @@ computes the same polynomial as `m >> p` on the CPU. The design is in ADR-028 of
 [design record](design.md).
 
 * **Features.**
-  * `wgsl` gives the module sources, `gax::wgsl::{PGA2D, PGA3D, …}`.
-  * `bytemuck` gives the matching Rust types, `{Kind}Gpu` and `GpuMat`, with `bytemuck::Pod`.
+  * `wgsl` gives the module sources, `gax::wgsl::{PGA2D, PGA3D, …}`, and their `f16`
+    versions, `gax::wgsl::{PGA2D_F16, …}`.
+  * `bytemuck` gives the matching Rust types, `{Kind}Gpu`, `{Kind}Gpu16` and `GpuMat`, with
+    `bytemuck::Pod`.
 * **No runtime dependencies.** The modules are text, so gax does not depend on `wesl`, `naga`
   or `wgpu`, and cannot conflict with your engine's versions of them.
 
@@ -118,8 +120,20 @@ pub fn particle_step<T: Real>(m: Motor<(), T>, rate: Point<(), T>, dt: T) -> Mot
 
 ## Numerics on the GPU
 
-* **`f32` only.** WGSL has no `f64`; `f16` may come later. Positions far from the origin lose
-  accuracy as they do on the CPU (see [numerics.md](numerics.md)).
+* **`f32`, or `f16`.** WGSL has no `f64`. Positions far from the origin lose accuracy as they
+  do on the CPU (see [numerics.md](numerics.md)).
+* **The `f16` modules** (`gax::pga3d_f16`, device feature `shader-f16`) have the same functions
+  on structs of `vec4<f16>`, half the memory and bandwidth. The Rust types are `{Kind}Gpu16`,
+  converted with correct rounding (`gax::gpu::f16_bits`, tested on every `f16`).
+  * Straight-line kernels compute in `f16`, within their computed error bound for `f16`'s unit
+    roundoff `2⁻¹¹` (on the RX 6900 XT, at most 0.4 of the allowance, which adds `2⁻¹³`
+    absolute for flushed subnormals).
+  * `exp`, `log` and `normalized` compute their norms and Study functions in `f32`, and only
+    the final combination in `f16`: within `1.2·10⁻³` relative, about one `f16` ulp. A sum of
+    squares in `f16` would underflow below coefficients of `1/128` and overflow above 256.
+  * `f16` holds about three decimal digits and values up to 65504: positions in metres are
+    good to millimetres only within a few metres of the origin. Keep positions in `f32`, and
+    use `f16` for directions, rotations, normals and colours.
 * **Arithmetic.** `+`, `-` and `*` are correctly rounded, and whether `fma` fuses is up to the
   implementation. Either way, a straight-line kernel is within its computed forward error
   bound. On an RX 6900 XT, the worst output over every kernel of five algebras reached 0.98
@@ -174,7 +188,6 @@ Run it with:
 
 ## Not included yet
 
-* `f16`.
 * WGSL modules for algebras declared with `algebra!`. Their traced kernels have no WGSL form
   either.
 

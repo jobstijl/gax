@@ -10,8 +10,10 @@
 //! * with plain WGSL, prepend the source to your shader.
 //!
 //! Each kind is a struct of `ceil(N/4)` `vec4<f32>` fields, the layout of the `{Kind}Gpu` Rust
-//! types (feature `bytemuck`). The kernels are printed from the same verified programs as the
-//! Rust kernels; see `docs/shaders.md` for the list and the naming scheme.
+//! types (feature `bytemuck`). Every module also exists in `f16` (such as `PGA3D_F16`, path
+//! `gax::pga3d_f16`), with the layout of the `{Kind}Gpu16` types. The kernels are printed from
+//! the same verified programs as the Rust kernels; see `docs/shaders.md` for the list and the
+//! naming scheme.
 //!
 //! ```
 //! # #[cfg(feature = "pga3d")] {
@@ -51,32 +53,48 @@ impl Module {
 }
 
 macro_rules! modules {
-    ($($feature:literal $name:ident $file:literal $doc:literal;)*) => {
+    ($($feature:literal $name:ident $name16:ident $file:literal $doc:literal;)*) => {
         $(
             #[doc = $doc]
             #[cfg(feature = $feature)]
             pub const $name: Module = Module {
                 path: concat!("gax::", $feature),
-                source: include_str!(concat!("wgsl/", $file)),
+                source: include_str!(concat!("wgsl/", $file, ".wgsl")),
+            };
+
+            #[doc = concat!("The same module in `f16`, `gax::", $feature, "_f16`: the same functions on")]
+            /// structs of `vec4<f16>`. It starts with `enable f16;`, so the device needs the
+            /// `shader-f16` feature. Its `exp`, `log` and `normalized` compute in `f32` inside.
+            #[cfg(feature = $feature)]
+            pub const $name16: Module = Module {
+                path: concat!("gax::", $feature, "_f16"),
+                source: include_str!(concat!("wgsl/", $file, "_f16.wgsl")),
             };
         )*
 
-        /// Every module of the enabled algebras.
+        /// Every `f32` module of the enabled algebras.
         pub const ALL: &[Module] = &[$(
             #[cfg(feature = $feature)]
             $name,
+        )*];
+
+        /// Every `f16` module of the enabled algebras (separate from [`ALL`]: they need the
+        /// device's `shader-f16` feature).
+        pub const ALL_F16: &[Module] = &[$(
+            #[cfg(feature = $feature)]
+            $name16,
         )*];
     };
 }
 
 modules! {
-    "pga2d" PGA2D "pga2d.wgsl" "The PGA2D module, `gax::pga2d`.";
-    "pga3d" PGA3D "pga3d.wgsl" "The PGA3D module, `gax::pga3d`.";
-    "vga2d" VGA2D "vga2d.wgsl" "The VGA2D module, `gax::vga2d`.";
-    "vga3d" VGA3D "vga3d.wgsl" "The VGA3D module, `gax::vga3d`.";
-    "sta" STA "sta.wgsl" "The STA module, `gax::sta`.";
-    "cga2d" CGA2D "cga2d.wgsl" "The CGA2D module, `gax::cga2d`.";
-    "cga3d" CGA3D "cga3d.wgsl" "The CGA3D module, `gax::cga3d`.";
-    "stap" STAP "stap.wgsl" "The STAP module, `gax::stap`.";
-    "csta" CSTA "csta.wgsl" "The CSTA module, `gax::csta`.";
+    "pga2d" PGA2D PGA2D_F16 "pga2d" "The PGA2D module, `gax::pga2d`.";
+    "pga3d" PGA3D PGA3D_F16 "pga3d" "The PGA3D module, `gax::pga3d`.";
+    "vga2d" VGA2D VGA2D_F16 "vga2d" "The VGA2D module, `gax::vga2d`.";
+    "vga3d" VGA3D VGA3D_F16 "vga3d" "The VGA3D module, `gax::vga3d`.";
+    "sta" STA STA_F16 "sta" "The STA module, `gax::sta`.";
+    "cga2d" CGA2D CGA2D_F16 "cga2d" "The CGA2D module, `gax::cga2d`.";
+    "cga3d" CGA3D CGA3D_F16 "cga3d" "The CGA3D module, `gax::cga3d`.";
+    "stap" STAP STAP_F16 "stap" "The STAP module, `gax::stap`.";
+    "csta" CSTA CSTA_F16 "csta" "The CSTA module, `gax::csta`.";
 }

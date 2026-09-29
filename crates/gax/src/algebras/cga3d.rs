@@ -108674,6 +108674,51 @@ impl From<ScalarGpu> for Scalar<(), f32> {
     }
 }
 
+/// [`Scalar`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 1
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ScalarGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Scalar { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<ScalarGpu16>() == 8);
+    assert!(core::mem::align_of::<ScalarGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for ScalarGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for ScalarGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Scalar<(), f32>> for ScalarGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Scalar<(), f32>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        ScalarGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<ScalarGpu16> for Scalar<(), f32> {
+    #[inline]
+    fn from(g: ScalarGpu16) -> Self {
+        Scalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// [`Vector`] in the GPU layout of the `gax::wgsl` modules: its 5 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Vector`).
@@ -108725,6 +108770,51 @@ impl From<VectorGpu> for Vector<(), f32> {
     #[inline]
     fn from(g: VectorGpu) -> Self {
         Vector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Vector`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 5
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct VectorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 2],
+}
+
+// The WGSL layout of `struct Vector { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<VectorGpu16>() == 16);
+    assert!(core::mem::align_of::<VectorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 2]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for VectorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for VectorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Vector<(), f32>> for VectorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Vector<(), f32>) -> Self {
+        let mut c = [[0; 4]; 2];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        VectorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<VectorGpu16> for Vector<(), f32> {
+    #[inline]
+    fn from(g: VectorGpu16) -> Self {
+        Vector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -108782,6 +108872,51 @@ impl From<TwistGpu> for Twist<(), f32> {
     }
 }
 
+/// [`Twist`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 6
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TwistGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 2],
+}
+
+// The WGSL layout of `struct Twist { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TwistGpu16>() == 16);
+    assert!(core::mem::align_of::<TwistGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 2]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TwistGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TwistGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Twist<(), f32>> for TwistGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Twist<(), f32>) -> Self {
+        let mut c = [[0; 4]; 2];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        TwistGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<TwistGpu16> for Twist<(), f32> {
+    #[inline]
+    fn from(g: TwistGpu16) -> Self {
+        Twist::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// [`Bivector`] in the GPU layout of the `gax::wgsl` modules: its 10 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Bivector`).
@@ -108833,6 +108968,51 @@ impl From<BivectorGpu> for Bivector<(), f32> {
     #[inline]
     fn from(g: BivectorGpu) -> Self {
         Bivector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Bivector`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 10
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct BivectorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 3],
+}
+
+// The WGSL layout of `struct Bivector { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<BivectorGpu16>() == 24);
+    assert!(core::mem::align_of::<BivectorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 3]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for BivectorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for BivectorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Bivector<(), f32>> for BivectorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Bivector<(), f32>) -> Self {
+        let mut c = [[0; 4]; 3];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        BivectorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<BivectorGpu16> for Bivector<(), f32> {
+    #[inline]
+    fn from(g: BivectorGpu16) -> Self {
+        Bivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -108890,6 +109070,51 @@ impl From<TrivectorGpu> for Trivector<(), f32> {
     }
 }
 
+/// [`Trivector`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 10
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TrivectorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 3],
+}
+
+// The WGSL layout of `struct Trivector { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<TrivectorGpu16>() == 24);
+    assert!(core::mem::align_of::<TrivectorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 3]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for TrivectorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for TrivectorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Trivector<(), f32>> for TrivectorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Trivector<(), f32>) -> Self {
+        let mut c = [[0; 4]; 3];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        TrivectorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<TrivectorGpu16> for Trivector<(), f32> {
+    #[inline]
+    fn from(g: TrivectorGpu16) -> Self {
+        Trivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// [`Quadvector`] in the GPU layout of the `gax::wgsl` modules: its 5 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Quadvector`).
@@ -108941,6 +109166,51 @@ impl From<QuadvectorGpu> for Quadvector<(), f32> {
     #[inline]
     fn from(g: QuadvectorGpu) -> Self {
         Quadvector::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Quadvector`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 5
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct QuadvectorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 2],
+}
+
+// The WGSL layout of `struct Quadvector { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<QuadvectorGpu16>() == 16);
+    assert!(core::mem::align_of::<QuadvectorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 2]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for QuadvectorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for QuadvectorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Quadvector<(), f32>> for QuadvectorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Quadvector<(), f32>) -> Self {
+        let mut c = [[0; 4]; 2];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        QuadvectorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<QuadvectorGpu16> for Quadvector<(), f32> {
+    #[inline]
+    fn from(g: QuadvectorGpu16) -> Self {
+        Quadvector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -108998,6 +109268,51 @@ impl From<PseudoscalarGpu> for Pseudoscalar<(), f32> {
     }
 }
 
+/// [`Pseudoscalar`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 1
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PseudoscalarGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Pseudoscalar { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<PseudoscalarGpu16>() == 8);
+    assert!(core::mem::align_of::<PseudoscalarGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for PseudoscalarGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for PseudoscalarGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Pseudoscalar<(), f32>> for PseudoscalarGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Pseudoscalar<(), f32>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        PseudoscalarGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<PseudoscalarGpu16> for Pseudoscalar<(), f32> {
+    #[inline]
+    fn from(g: PseudoscalarGpu16) -> Self {
+        Pseudoscalar::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// [`Motor`] in the GPU layout of the `gax::wgsl` modules: its 8 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Motor`).
@@ -109049,6 +109364,51 @@ impl From<MotorGpu> for Motor<(), f32> {
     #[inline]
     fn from(g: MotorGpu) -> Self {
         Motor::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Motor`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 8
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MotorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 2],
+}
+
+// The WGSL layout of `struct Motor { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<MotorGpu16>() == 16);
+    assert!(core::mem::align_of::<MotorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 2]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for MotorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for MotorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Motor<(), f32>> for MotorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Motor<(), f32>) -> Self {
+        let mut c = [[0; 4]; 2];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        MotorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<MotorGpu16> for Motor<(), f32> {
+    #[inline]
+    fn from(g: MotorGpu16) -> Self {
+        Motor::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -109106,6 +109466,51 @@ impl From<EvenGpu> for Even<(), f32> {
     }
 }
 
+/// [`Even`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 16
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct EvenGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 4],
+}
+
+// The WGSL layout of `struct Even { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<EvenGpu16>() == 32);
+    assert!(core::mem::align_of::<EvenGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 4]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for EvenGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for EvenGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Even<(), f32>> for EvenGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Even<(), f32>) -> Self {
+        let mut c = [[0; 4]; 4];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        EvenGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<EvenGpu16> for Even<(), f32> {
+    #[inline]
+    fn from(g: EvenGpu16) -> Self {
+        Even::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// [`Odd`] in the GPU layout of the `gax::wgsl` modules: its 16 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Odd`).
@@ -109157,6 +109562,51 @@ impl From<OddGpu> for Odd<(), f32> {
     #[inline]
     fn from(g: OddGpu) -> Self {
         Odd::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Odd`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 16
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct OddGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 4],
+}
+
+// The WGSL layout of `struct Odd { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<OddGpu16>() == 32);
+    assert!(core::mem::align_of::<OddGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 4]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for OddGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for OddGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Odd<(), f32>> for OddGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Odd<(), f32>) -> Self {
+        let mut c = [[0; 4]; 4];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        OddGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<OddGpu16> for Odd<(), f32> {
+    #[inline]
+    fn from(g: OddGpu16) -> Self {
+        Odd::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -109214,13 +109664,66 @@ impl From<MultivectorGpu> for Multivector<(), f32> {
     }
 }
 
+/// [`Multivector`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::cga3d_f16`): its 32
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MultivectorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 8],
+}
+
+// The WGSL layout of `struct Multivector { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<MultivectorGpu16>() == 64);
+    assert!(core::mem::align_of::<MultivectorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 8]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for MultivectorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for MultivectorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Multivector<(), f32>> for MultivectorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Multivector<(), f32>) -> Self {
+        let mut c = [[0; 4]; 8];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        MultivectorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<MultivectorGpu16> for Multivector<(), f32> {
+    #[inline]
+    fn from(g: MultivectorGpu16) -> Self {
+        Multivector::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
 #[cfg(feature = "bytemuck")]
 /// Alias of [`VectorGpu`].
 pub type PointGpu = VectorGpu;
 
 #[cfg(feature = "bytemuck")]
+/// Alias of [`VectorGpu16`].
+pub type PointGpu16 = VectorGpu16;
+
+#[cfg(feature = "bytemuck")]
 /// Alias of [`VectorGpu`].
 pub type SphereGpu = VectorGpu;
+
+#[cfg(feature = "bytemuck")]
+/// Alias of [`VectorGpu16`].
+pub type SphereGpu16 = VectorGpu16;
 
 #[cfg(feature = "bytemuck")]
 /// The Rust layout of each `{gx::Kind}Gpu`: `(kind, size, align, offset of c, stride of c)`,
@@ -109237,5 +109740,21 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Even", core::mem::size_of::<EvenGpu>(), core::mem::align_of::<EvenGpu>(), core::mem::offset_of!(EvenGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu>(), core::mem::align_of::<OddGpu>(), core::mem::offset_of!(OddGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
+];
+
+#[cfg(feature = "bytemuck")]
+/// [`GPU_LAYOUTS`] for the `{gx::Kind}Gpu16` types of the `f16` modules.
+pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
+    ("Scalar", core::mem::size_of::<ScalarGpu16>(), core::mem::align_of::<ScalarGpu16>(), core::mem::offset_of!(ScalarGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Vector", core::mem::size_of::<VectorGpu16>(), core::mem::align_of::<VectorGpu16>(), core::mem::offset_of!(VectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Twist", core::mem::size_of::<TwistGpu16>(), core::mem::align_of::<TwistGpu16>(), core::mem::offset_of!(TwistGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Bivector", core::mem::size_of::<BivectorGpu16>(), core::mem::align_of::<BivectorGpu16>(), core::mem::offset_of!(BivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Trivector", core::mem::size_of::<TrivectorGpu16>(), core::mem::align_of::<TrivectorGpu16>(), core::mem::offset_of!(TrivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Quadvector", core::mem::size_of::<QuadvectorGpu16>(), core::mem::align_of::<QuadvectorGpu16>(), core::mem::offset_of!(QuadvectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Pseudoscalar", core::mem::size_of::<PseudoscalarGpu16>(), core::mem::align_of::<PseudoscalarGpu16>(), core::mem::offset_of!(PseudoscalarGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Motor", core::mem::size_of::<MotorGpu16>(), core::mem::align_of::<MotorGpu16>(), core::mem::offset_of!(MotorGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Even", core::mem::size_of::<EvenGpu16>(), core::mem::align_of::<EvenGpu16>(), core::mem::offset_of!(EvenGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Odd", core::mem::size_of::<OddGpu16>(), core::mem::align_of::<OddGpu16>(), core::mem::offset_of!(OddGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
 ];
 

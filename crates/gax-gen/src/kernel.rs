@@ -9,6 +9,44 @@ use crate::poly::Var;
 use crate::slp::{Program, Target, render_to};
 use std::fmt::Write as _;
 
+/// The floating-point type of a WGSL module: `f32`, or `f16` (the `shader-f16` feature). An
+/// `f16` module computes its straight-line kernels in `f16`; its Study helpers stay in `f32`,
+/// with conversions at each call, so `exp`, `log` and `normalized` keep their accuracy.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Precision {
+    /// `f32`.
+    #[default]
+    F32,
+    /// `f16`.
+    F16,
+}
+
+impl Precision {
+    /// The scalar type's name.
+    pub fn scalar(self) -> &'static str {
+        match self {
+            Precision::F32 => "f32",
+            Precision::F16 => "f16",
+        }
+    }
+
+    /// An expression converting the `f32` expression `e` to this precision.
+    fn convert(self, e: &str) -> String {
+        match self {
+            Precision::F32 => e.to_string(),
+            Precision::F16 => format!("f16({e})"),
+        }
+    }
+
+    /// An expression converting `e`, of this precision, to `f32`.
+    fn to_f32(self, e: &str) -> String {
+        match self {
+            Precision::F32 => e.to_string(),
+            Precision::F16 => format!("f32({e})"),
+        }
+    }
+}
+
 /// A kernel parameter or result type.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Ty {
@@ -165,23 +203,30 @@ pub fn wgsl_coeff(name: &str, i: usize) -> String {
 
 /// WGSL expression constructing a kind value from its coefficient expressions (zero-padded).
 pub fn wgsl_construct(kind: &str, parts: &[String]) -> String {
+    wgsl_construct_in(Precision::F32, kind, parts)
+}
+
+/// [`wgsl_construct`] in the given precision.
+pub fn wgsl_construct_in(p: Precision, kind: &str, parts: &[String]) -> String {
+    let t = p.scalar();
     let fields: Vec<String> = parts
         .chunks(4)
         .map(|c| {
             let mut v: Vec<String> = c.to_vec();
             v.resize(4, "0.0".into());
-            format!("vec4<f32>({})", v.join(", "))
+            format!("vec4<{t}>({})", v.join(", "))
         })
         .collect();
     format!("{kind}({})", fields.join(", "))
 }
 
 impl Ty {
-    fn wgsl(&self) -> String {
+    fn wgsl(&self, p: Precision) -> String {
+        let t = p.scalar();
         match self {
-            Ty::Scalar => "f32".into(),
+            Ty::Scalar => t.into(),
             Ty::Kind(k) => k.clone(),
-            Ty::Mat { cols, rows } => format!("mat{cols}x{rows}<f32>"),
+            Ty::Mat { cols, rows } => format!("mat{cols}x{rows}<{t}>"),
         }
     }
 }
@@ -193,28 +238,43 @@ impl Kernel {
     /// # Panics
     /// If the steps do not end with a `Lets` step, or a matrix result has no entries.
     pub fn wgsl(&self, fma: bool, vis: &str) -> String {
+        self.wgsl_in(Precision::F32, fma, vis)
+    }
+
+    /// [`Kernel::wgsl`] in the given precision.
+    ///
+    /// # Panics
+    /// As [`Kernel::wgsl`].
+    pub fn wgsl_in(&self, prec: Precision, fma: bool, vis: &str) -> String {
         let target = Target::Wgsl { fma };
         let mut s = String::new();
         let _ = writeln!(s, "// {}", self.doc);
         let params: Vec<String> = self
             .params
             .iter()
-            .map(|(n, t)| format!("{n}: {}", t.wgsl()))
+            .map(|(n, t)| format!("{n}: {}", t.wgsl(prec)))
             .collect();
         let _ = writeln!(
             s,
             "{vis}fn {}({}) -> {} {{",
             self.name,
             params.join(", "),
-            self.result.wgsl()
+            self.result.wgsl(prec)
         );
-        let var_of = |vars: &[(Var, Source)], v: Var| -> String {
+        let last = self.steps.len() - 1;
+        // In an `f16` module, the programs before the last (which feed the `f32` Study helpers:
+        // norms, squares) run in `f32` too, reading their arguments converted: a sum of squares
+        // in `f16` underflows for coefficients below 1/128 and overflows above 256.
+        let var_at = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
             let (_, src) = vars
                 .iter()
                 .find(|(w, _)| *w == v)
                 .unwrap_or_else(|| panic!("{}: variable {v} has no source", self.name));
             match src {
-                Source::Arg { param, index } => wgsl_coeff(&self.params[*param].0, *index),
+                Source::Arg { param, index } => {
+                    let e = wgsl_coeff(&self.params[*param].0, *index);
+                    if k < last { prec.to_f32(&e) } else { e }
+                }
                 Source::Local(n) => n.clone(),
             }
         };
@@ -222,52 +282,53 @@ impl Kernel {
             match step {
                 Step::Lets { prog, prefix, vars } => {
                     // Rendered even when last: its outputs may read the temporaries.
-                    let _ = k;
-                    prog.emit_lets_to(target, &|v| var_of(vars, v), prefix, &mut s);
+                    prog.emit_lets_to(target, &|v| var_at(k, vars, v), prefix, &mut s);
                 }
                 Step::Study { func, args, outs } => {
+                    // The helpers are `f32`, as are the programs before them.
                     let a: Vec<String> = args
                         .iter()
-                        .map(|(st, o)| self.output(*st, *o, target, &var_of))
+                        .map(|(st, o)| {
+                            self.output(*st, *o, target, &|vars, v| var_at(*st, vars, v))
+                        })
                         .collect();
                     if outs.len() == 1 {
-                        let _ = writeln!(
-                            s,
-                            "    let {} = {}({});",
-                            outs[0],
-                            func.wgsl_name(),
-                            a.join(", ")
-                        );
+                        let call = format!("{}({})", func.wgsl_name(), a.join(", "));
+                        let _ = writeln!(s, "    let {} = {};", outs[0], prec.convert(&call));
                     } else {
                         let _ =
                             writeln!(s, "    let r{k} = {}({});", func.wgsl_name(), a.join(", "));
                         for (j, o) in outs.iter().enumerate() {
-                            let _ = writeln!(s, "    let {o} = r{k}[{j}];");
+                            let _ = writeln!(
+                                s,
+                                "    let {o} = {};",
+                                prec.convert(&format!("r{k}[{j}]"))
+                            );
                         }
                     }
                 }
             }
         }
-        let last = self.steps.len() - 1;
         let Step::Lets { prog, .. } = &self.steps[last] else {
             panic!("{}: a kernel ends with straight-line code", self.name);
         };
         let outs: Vec<String> = (0..prog.outputs.len())
-            .map(|o| self.output(last, o, target, &var_of))
+            .map(|o| self.output(last, o, target, &|vars, v| var_at(last, vars, v)))
             .collect();
         let value = match (&self.result, &self.entries) {
             (Ty::Scalar, _) => outs[0].clone(),
-            (Ty::Kind(k), _) => wgsl_construct(k, &outs),
+            (Ty::Kind(k), _) => wgsl_construct_in(prec, k, &outs),
             (Ty::Mat { cols, rows }, Some(entries)) => {
                 let mut m = vec![vec!["0.0".to_string(); *rows]; *cols];
                 for (e, &(r, c)) in outs.iter().zip(entries) {
                     m[c][r].clone_from(e);
                 }
+                let t = prec.scalar();
                 let cols: Vec<String> = m
                     .iter()
-                    .map(|col| format!("vec{rows}<f32>({})", col.join(", ")))
+                    .map(|col| format!("vec{rows}<{t}>({})", col.join(", ")))
                     .collect();
-                format!("{}({})", self.result.wgsl(), cols.join(", "))
+                format!("{}({})", self.result.wgsl(prec), cols.join(", "))
             }
             (Ty::Mat { .. }, None) => panic!("{}: a matrix result needs its entries", self.name),
         };

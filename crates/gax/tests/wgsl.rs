@@ -48,6 +48,22 @@ fn every_module_validates() {
     }
 }
 
+#[test]
+fn every_f16_module_validates() {
+    assert_eq!(gax::wgsl::ALL_F16.len(), gax::wgsl::ALL.len());
+    for (m, m32) in gax::wgsl::ALL_F16.iter().zip(gax::wgsl::ALL) {
+        assert!(m.source.starts_with("enable f16;"), "{}", m.path);
+        let module = parse(m);
+        // The same functions as the f32 module.
+        assert_eq!(
+            module.functions.len(),
+            parse(m32).functions.len(),
+            "{}",
+            m.path
+        );
+    }
+}
+
 /// An algebra's `GPU_LAYOUTS`.
 type Layouts = &'static [(&'static str, usize, usize, usize, usize)];
 
@@ -76,9 +92,34 @@ fn layouts() -> Vec<(Module, Layouts)> {
     v
 }
 
+/// `(f16 module, the algebra's GPU_LAYOUTS_F16)` for the enabled algebras.
+#[allow(clippy::vec_init_then_push)] // one push per enabled algebra
+fn layouts16() -> Vec<(Module, Layouts)> {
+    let mut v: Vec<(Module, Layouts)> = Vec::new();
+    #[cfg(feature = "pga2d")]
+    v.push((gax::wgsl::PGA2D_F16, gax::pga2d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "pga3d")]
+    v.push((gax::wgsl::PGA3D_F16, gax::pga3d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "vga2d")]
+    v.push((gax::wgsl::VGA2D_F16, gax::vga2d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "vga3d")]
+    v.push((gax::wgsl::VGA3D_F16, gax::vga3d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "sta")]
+    v.push((gax::wgsl::STA_F16, gax::sta::GPU_LAYOUTS_F16));
+    #[cfg(feature = "cga2d")]
+    v.push((gax::wgsl::CGA2D_F16, gax::cga2d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "cga3d")]
+    v.push((gax::wgsl::CGA3D_F16, gax::cga3d::GPU_LAYOUTS_F16));
+    #[cfg(feature = "stap")]
+    v.push((gax::wgsl::STAP_F16, gax::stap::GPU_LAYOUTS_F16));
+    #[cfg(feature = "csta")]
+    v.push((gax::wgsl::CSTA_F16, gax::csta::GPU_LAYOUTS_F16));
+    v
+}
+
 #[test]
 fn struct_layouts_match_the_rust_types() {
-    for (m, rust) in layouts() {
+    for (m, rust) in layouts().into_iter().chain(layouts16()) {
         let module = parse(&m);
         for &(kind, size, align, offset, stride) in rust {
             let (s, a, members) = layout(&module, kind);

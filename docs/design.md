@@ -737,8 +737,12 @@ files in `gax/src/algebras/`, behind cargo features.
   no discarded branch divides by zero. CSTA's bivector `exp` has no closed form; it is scaling
   and squaring as in Rust, a loop, emitted as text (`fallback_exp`) and tested against the Rust
   `exp`, within `2⁻¹²` on the CPU evaluator (each squaring doubles the relative error).
+* **`f16`.** Every module has an `f16` twin (`gax::pga3d_f16`, `{Kind}Gpu16`), printed from
+  the same programs with a precision parameter. Its Study helpers and the programs that feed
+  them (norms) stay in `f32`, converted at the boundary, because `f16`'s range (2⁻¹⁴ to 65504)
+  cannot hold a sum of squares. Tested on the GPU: the straight-line kernels against their
+  error bound at unit roundoff `2⁻¹¹`, the others within `2⁻⁷` relative.
 * **Not included, yet.**
-  * `f16`.
   * Modules for algebras declared with `algebra!`.
 
 ## ADR-029: Division, embeddings, and the motor between two elements

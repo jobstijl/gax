@@ -1365,8 +1365,55 @@ impl From<{name}Gpu> for {name}<(), f32> {{
     }}
 }}
 
+/// [`{name}`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::{alg}_f16`): its {n}
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct {name}Gpu16 {{
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; {m}],
+}}
+
+// The WGSL layout of `struct {name} {{ c0: vec4<f16>, ... }}`: size 8 per field, align 8.
+{gate}
+const _: () = {{
+    assert!(core::mem::size_of::<{name}Gpu16>() == {size16});
+    assert!(core::mem::align_of::<{name}Gpu16>() == 8);
+}};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; {m}]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+{gate}
+unsafe impl gx::bytemuck::Zeroable for {name}Gpu16 {{}}
+// SAFETY: as above.
+{gate}
+unsafe impl gx::bytemuck::Pod for {name}Gpu16 {{}}
+
+{gate}
+impl From<{name}<(), f32>> for {name}Gpu16 {{
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: {name}<(), f32>) -> Self {{
+        let mut c = [[0; 4]; {m}];
+        for (i, v) in x.c.iter().enumerate() {{
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }}
+        {name}Gpu16 {{ c }}
+    }}
+}}
+
+{gate}
+impl From<{name}Gpu16> for {name}<(), f32> {{
+    #[inline]
+    fn from(g: {name}Gpu16) -> Self {{
+        {name}::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }}
+}}
+
 ",
-                size = 16 * m
+                size = 16 * m,
+                size16 = 8 * m,
+                alg = spec.name
             );
         }
         for (alias, kind) in &spec.aliases {
@@ -1375,6 +1422,10 @@ impl From<{name}Gpu> for {name}<(), f32> {{
                 "{gate}
 /// Alias of [`{kind}Gpu`].
 pub type {alias}Gpu = {kind}Gpu;
+
+{gate}
+/// Alias of [`{kind}Gpu16`].
+pub type {alias}Gpu16 = {kind}Gpu16;
 "
             );
         }
@@ -1393,6 +1444,22 @@ pub type {alias}Gpu = {kind}Gpu;
             self.out,
             "{gate}\n/// The Rust layout of each `{{Kind}}Gpu`: `(kind, size, align, offset of c, stride of c)`,\n/// to check against a shader compiler's layout of the WGSL structs.\npub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[\n{}\n];\n",
             rows.join("\n")
+        );
+        let rows16: Vec<String> = spec
+            .kinds
+            .iter()
+            .map(|k| {
+                let t = format!("{}Gpu16", k.name);
+                format!(
+                    "    (\"{}\", core::mem::size_of::<{t}>(), core::mem::align_of::<{t}>(), core::mem::offset_of!({t}, c), core::mem::size_of::<[u16; 4]>()),",
+                    k.name
+                )
+            })
+            .collect();
+        let _ = writeln!(
+            self.out,
+            "{gate}\n/// [`GPU_LAYOUTS`] for the `{{Kind}}Gpu16` types of the `f16` modules.\npub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[\n{}\n];\n",
+            rows16.join("\n")
         );
         let small: Vec<&KindSpec> = spec
             .kinds

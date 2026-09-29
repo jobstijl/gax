@@ -14,6 +14,8 @@ pub struct Gpu {
     pub queue: wgpu::Queue,
     /// What the adapter is.
     pub info: wgpu::AdapterInfo,
+    /// Whether the device has `shader-f16` (the `f16` modules need it).
+    pub f16: bool,
 }
 
 impl Gpu {
@@ -25,9 +27,15 @@ impl Gpu {
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .ok()?;
         let info = adapter.get_info();
+        let f16 = adapter.features().contains(wgpu::Features::SHADER_F16);
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("gax-gpu-tests"),
             required_limits: adapter.limits(),
+            required_features: if f16 {
+                wgpu::Features::SHADER_F16
+            } else {
+                wgpu::Features::empty()
+            },
             ..Default::default()
         }))
         .ok()?;
@@ -35,6 +43,7 @@ impl Gpu {
             device,
             queue,
             info,
+            f16,
         })
     }
 
@@ -151,5 +160,10 @@ impl Gpu {
 
 /// `f32`s from little-endian bytes.
 pub fn floats(bytes: &[u8]) -> Vec<f32> {
-    bytes.as_chunks::<4>().0.iter().map(|b| f32::from_le_bytes(*b)).collect()
+    bytes
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|b| f32::from_le_bytes(*b))
+        .collect()
 }

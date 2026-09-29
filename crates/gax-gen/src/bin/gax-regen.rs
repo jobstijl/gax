@@ -136,6 +136,8 @@ fn main() -> ExitCode {
                 &format!("use gax::{}::*;", spec.name),
             );
             let wgsl = gax_gen::emit_wgsl::module(spec, &stats, true);
+            let wgsl16 =
+                gax_gen::emit_wgsl::module_in(spec, &stats, true, gax_gen::kernel::Precision::F16);
             log.push(format!(
                 "{}: {} lines, {} product impls, {} sandwich kernels",
                 spec.name,
@@ -167,6 +169,11 @@ fn main() -> ExitCode {
                 (
                     root.join("src/wgsl").join(format!("{}.wgsl", spec.name)),
                     wgsl,
+                ),
+                (
+                    root.join("src/wgsl")
+                        .join(format!("{}_f16.wgsl", spec.name)),
+                    wgsl16,
                 ),
             ];
             let gp: Vec<(String, String, String)> = stats

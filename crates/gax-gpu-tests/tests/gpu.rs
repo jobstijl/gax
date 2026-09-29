@@ -16,7 +16,7 @@
 
 use gax_gen::emit::{Config, emit};
 use gax_gen::emit_wgsl;
-use gax_gen::kernel::{Kernel, Ty};
+use gax_gen::kernel::{Kernel, Precision, Ty};
 use gax_gen::spec::AlgebraSpec;
 use gax_gpu_tests::{Gpu, floats};
 use std::fmt::Write as _;
@@ -63,6 +63,23 @@ fn harness(
     in_stride: usize,
     out_stride: usize,
 ) -> String {
+    harness_in(Precision::F32, module, spec, kernels, in_stride, out_stride)
+}
+
+/// [`harness`] for a module in the given precision: inputs and outputs stay `f32` in the
+/// buffers, converted at the call.
+fn harness_in(
+    prec: Precision,
+    module: &str,
+    spec: &AlgebraSpec,
+    kernels: &[&Kernel],
+    in_stride: usize,
+    out_stride: usize,
+) -> String {
+    let (to, from) = match prec {
+        Precision::F32 => ("", ""),
+        Precision::F16 => ("f16", "f32"),
+    };
     let mut s = String::from(module);
     let _ = write!(
         s,
@@ -82,11 +99,13 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
         let mut args = Vec::new();
         for (_, t) in &k.params {
             let n = len(spec, t);
-            let e: Vec<String> = (0..n).map(|j| format!("inp[i + {}u]", ip + j)).collect();
+            let e: Vec<String> = (0..n)
+                .map(|j| format!("{to}(inp[i + {}u])", ip + j))
+                .collect();
             ip += n;
             args.push(match t {
                 Ty::Scalar => e[0].clone(),
-                Ty::Kind(name) => gax_gen::kernel::wgsl_construct(name, &e),
+                Ty::Kind(name) => gax_gen::kernel::wgsl_construct_in(prec, name, &e),
                 Ty::Mat { .. } => unreachable!(),
             });
         }
@@ -98,14 +117,14 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
         );
         match &k.result {
             Ty::Scalar => {
-                let _ = writeln!(s, "        outp[o + {op}u] = r;");
+                let _ = writeln!(s, "        outp[o + {op}u] = {from}(r);");
                 op += 1;
             }
             Ty::Kind(name) => {
                 for j in 0..len(spec, &Ty::Kind(name.clone())) {
                     let _ = writeln!(
                         s,
-                        "        outp[o + {}u] = {};",
+                        "        outp[o + {}u] = {from}({});",
                         op + j,
                         gax_gen::kernel::wgsl_coeff("r", j)
                     );
@@ -115,8 +134,11 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
             Ty::Mat { cols, rows } => {
                 for c in 0..*cols {
                     for r in 0..*rows {
-                        let _ =
-                            writeln!(s, "        outp[o + {}u] = r[{c}][{r}];", op + c * rows + r);
+                        let _ = writeln!(
+                            s,
+                            "        outp[o + {}u] = {from}(r[{c}][{r}]);",
+                            op + c * rows + r
+                        );
                     }
                 }
                 op += cols * rows;
@@ -130,6 +152,19 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
 
 /// `(kernels, worst ratio to the bound, worst relative error of Study kernels)`.
 fn check_algebra(gpu: &Gpu, name: &str, committed: &str) -> (usize, f64, f64) {
+    check_algebra_in(gpu, name, committed, Precision::F32)
+}
+
+/// [`check_algebra`] for the module in the given precision. For `f16`, the inputs are rounded
+/// to `f16` first (so the exact value is of the same inputs), the bounds use `f16`'s unit
+/// roundoff `2⁻¹¹` plus an absolute `2⁻¹³` (a GPU may flush `f16` subnormals, below `2⁻¹⁴`, to
+/// zero), and the elementary-function kernels must be within a relative `2⁻⁷`.
+#[allow(clippy::too_many_lines)]
+fn check_algebra_in(gpu: &Gpu, name: &str, committed: &str, prec: Precision) -> (usize, f64, f64) {
+    let (unit, slack, rel_tol) = match prec {
+        Precision::F32 => (1.0 / f64::from(1u32 << 24), 1e-30, 1.0 / 1024.0),
+        Precision::F16 => (1.0 / 2048.0, 1.0 / 8192.0, 1.0 / 128.0),
+    };
     let spec = spec(name);
     let (_, stats) = emit(
         &spec,
@@ -140,7 +175,7 @@ fn check_algebra(gpu: &Gpu, name: &str, committed: &str) -> (usize, f64, f64) {
             gpu: None,
         },
     );
-    let module = emit_wgsl::module(&spec, &stats, true);
+    let module = emit_wgsl::module_in(&spec, &stats, true, prec);
     assert_eq!(
         module, committed,
         "{name}: the committed module is what the generator emits"
@@ -155,8 +190,16 @@ fn check_algebra(gpu: &Gpu, name: &str, committed: &str) -> (usize, f64, f64) {
             .flat_map(|k| k.params.iter().map(|(_, t)| len(&spec, t)))
             .sum();
         let out_stride: usize = kernels.iter().map(|k| len(&spec, &k.result)).sum();
-        let src = harness(&module, &spec, &kernels, in_stride, out_stride);
-        let inputs: Vec<f32> = (0..SAMPLES * in_stride).map(|_| rng.next()).collect();
+        let src = harness_in(prec, &module, &spec, &kernels, in_stride, out_stride);
+        let inputs: Vec<f32> = (0..SAMPLES * in_stride)
+            .map(|_| {
+                let x = rng.next();
+                match prec {
+                    Precision::F32 => x,
+                    Precision::F16 => gax::gpu::f16_to_f32(gax::gpu::f16_bits(x)),
+                }
+            })
+            .collect();
         let out = floats(&gpu.run(
             &src,
             "main",
@@ -189,30 +232,25 @@ fn check_algebra(gpu: &Gpu, name: &str, committed: &str) -> (usize, f64, f64) {
                 if exact.iter().any(|x| !x.is_finite()) {
                     continue;
                 }
-                match k.error_bound(&args, 1.0 / f64::from(1u32 << 24)) {
+                match k.error_bound(&args, unit) {
                     Some(bound) => {
                         for (o, (g, e)) in got.iter().zip(&exact).enumerate() {
                             let d = (f64::from(*g) - e).abs();
                             assert!(
-                                d <= 2.0 * bound[o] + 1e-30,
+                                d <= 2.0 * bound[o] + slack,
                                 "{name}: {} output {o}: {g} vs {e}, bound {:e}",
                                 k.name,
                                 bound[o]
                             );
-                            if bound[o] > 0.0 {
-                                worst = worst.max(d / bound[o]);
-                            }
+                            // The share of what is allowed (twice the bound, plus the slack).
+                            worst = worst.max(d / (2.0 * bound[o] + slack));
                         }
                     }
                     None => {
                         let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
                         for (o, (g, e)) in got.iter().zip(&exact).enumerate() {
                             let rel = (f64::from(*g) - e).abs() / scale;
-                            assert!(
-                                rel < 1.0 / 1024.0,
-                                "{name}: {} output {o}: {g} vs {e}",
-                                k.name
-                            );
+                            assert!(rel < rel_tol, "{name}: {} output {o}: {g} vs {e}", k.name);
                             worst_rel = worst_rel.max(rel);
                         }
                     }
@@ -238,7 +276,31 @@ fn every_kernel_on_the_gpu() {
     ] {
         let (n, worst, rel) = check_algebra(&gpu, name, committed);
         println!(
-            "{name}: {n} kernels x {SAMPLES} samples, worst {worst:.3} of the bound, elementary-function kernels within {rel:.1e}"
+            "{name}: {n} kernels x {SAMPLES} samples, worst {worst:.3} of the allowance, elementary-function kernels within {rel:.1e}"
+        );
+    }
+}
+
+#[test]
+fn every_f16_kernel_on_the_gpu() {
+    let Some(gpu) = Gpu::or_skip() else { return };
+    if !gpu.f16 {
+        eprintln!("the adapter has no shader-f16: skipping the f16 modules");
+        return;
+    }
+    for (name, committed) in [
+        ("pga2d", gax::wgsl::PGA2D_F16.source),
+        ("pga3d", gax::wgsl::PGA3D_F16.source),
+        ("vga3d", gax::wgsl::VGA3D_F16.source),
+        ("sta", gax::wgsl::STA_F16.source),
+        ("cga2d", gax::wgsl::CGA2D_F16.source),
+        ("cga3d", gax::wgsl::CGA3D_F16.source),
+        ("stap", gax::wgsl::STAP_F16.source),
+        ("csta", gax::wgsl::CSTA_F16.source),
+    ] {
+        let (n, worst, rel) = check_algebra_in(&gpu, name, committed, Precision::F16);
+        println!(
+            "{name} (f16): {n} kernels x {SAMPLES} samples, worst {worst:.3} of the allowance, elementary-function kernels within {rel:.1e}"
         );
     }
 }
@@ -290,7 +352,11 @@ fn fallback_exponentials_on_the_gpu() {
             for (o, e) in exact.iter().enumerate() {
                 let g = f64::from(out[n * n_out + o]);
                 let rel = (g - e).abs() / scale;
-                assert!(rel < 1.0 / 1024.0, "csta: {} output {o}: {g} vs {e}", call.name);
+                assert!(
+                    rel < 1.0 / 1024.0,
+                    "csta: {} output {o}: {g} vs {e}",
+                    call.name
+                );
                 worst = worst.max(rel);
             }
         }
