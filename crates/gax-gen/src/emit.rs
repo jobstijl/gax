@@ -36,8 +36,9 @@ pub struct Stats {
     pub binary_impls: usize,
     /// Number of generated sandwich kernels.
     pub sandwich_impls: usize,
-    /// Op counts of the value path of each sandwich kernel: `(versor, target, unit, cost)`.
-    pub sandwich_costs: Vec<(String, String, bool, crate::slp::Cost)>,
+    /// Op counts of each sandwich kernel: `(versor, target, unit, value path, building the
+    /// matrix of the map path)`.
+    pub sandwich_costs: Vec<(String, String, bool, crate::slp::Cost, crate::slp::Cost)>,
     /// Every generated binary impl: `(op, left, right)`.
     pub binary: Vec<(BinOp, String, String)>,
     /// Every generated binary impl with its output kind: `(op, left, right, output)`.
@@ -1281,7 +1282,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         self.stats.sandwich_impls += 1;
         self.stats
             .sandwich_costs
-            .push((vn.clone(), xn.clone(), unit, direct.cost()));
+            .push((vn.clone(), xn.clone(), unit, direct.cost(), matrix.cost()));
         self.stats
             .sandwiches
             .push((vn.clone(), xn.clone(), unit, on.clone()));
@@ -1701,7 +1702,7 @@ pub fn emit_tests(spec: &AlgebraSpec, stats: &Stats, module: &str, spec_path: &s
     }
     t.push_str("}\n\n");
     t.push_str("#[test]\nfn sandwiches() {\n    let o = Oracle::from_spec(SPEC);\n    let mut rng = Rng::new(99);\n");
-    for (v, x, unit, _) in &stats.sandwich_costs {
+    for (v, x, unit, ..) in &stats.sandwich_costs {
         if *unit {
             let _ = writeln!(
                 t,

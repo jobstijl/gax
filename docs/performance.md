@@ -132,6 +132,9 @@ renormalization), with the body's constants known at build time:
 
 ## Fused sandwich kernels (op counts from the generator)
 
+The full list, for every algebra and both paths, is generated into
+[kernel-costs.md](kernel-costs.md) and checked by CI.
+
 | kernel | gax | reference |
 |---|---|---|
 | `Unit<Rotor> >> Point` (PGA3D) | 26 mul, 15 add (18 mul, 12 add before) | the quaternion formula (not homogeneous): 18 mul, 12 add |
