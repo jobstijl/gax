@@ -10,7 +10,7 @@
 
 use gax::batch::{self, Map};
 use gax::pga3d::{Multivector, Point, Scalar};
-use gax::{Extensor, Form, Real, SquareMap};
+use gax::{Form, Real};
 
 /// The 4x4 map on points held in a multivector's 16 coefficients.
 fn matrix<T: Real>(x: Multivector<(), T>) -> Point<(Point,), T> {
