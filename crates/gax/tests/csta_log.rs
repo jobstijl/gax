@@ -87,3 +87,115 @@ fn large_boosts_and_dilations() {
         }
     }
 }
+
+fn plane(parts: &[(&str, f64)]) -> Bivector<(), f64> {
+    use gax::Kind;
+    let names = <Bivector as Kind>::BLADES;
+    Bivector::from_coeffs(core::array::from_fn(|i| {
+        parts
+            .iter()
+            .find(|(n, _)| names[i] == *n)
+            .map_or(0.0, |(_, v)| *v)
+    }))
+}
+
+/// Coinciding invariants, where a formula through the individual roots would divide by their
+/// differences: one plane (two roots at 1), a translation (null: all three at 1), isoclinic
+/// planes, and near the identity. The closed form takes them through a series at the roots'
+/// mean, with no division.
+#[test]
+fn coinciding_invariants() {
+    for (name, parts) in [
+        ("one plane", vec![("e12", 0.7)]),
+        ("one boost", vec![("e41", 0.9)]),
+        ("translation", vec![("e1i", 0.8)]),
+        ("transversion", vec![("e2o", 0.6)]),
+        ("rotation and translation", vec![("e12", 0.5), ("e3i", 0.4)]),
+        ("isoclinic", vec![("e23", 0.5), ("e1i", 0.3), ("e1o", -0.3)]),
+        ("near the identity", vec![("e12", 1e-7), ("e41", 2e-7)]),
+    ] {
+        let b = plane(&parts);
+        let back: Bivector<(), f64> = b.exp().log();
+        assert!(close(&back.c, &b.c, 1e-13), "{name}: {back:?} vs {b:?}");
+    }
+}
+
+/// Towards a half turn the closed form would lose `ε/⟨R⟩₀`; below `⟨R⟩₀ = 1/16` the log
+/// switches to inverse scaling and squaring, and stays accurate.
+#[test]
+fn towards_a_half_turn() {
+    for delta in [0.2, 1e-2, 1e-4, 1e-6, 1e-8] {
+        let b = plane(&[("e12", core::f64::consts::FRAC_PI_2 - delta), ("e3i", 0.3)]);
+        let back: Bivector<(), f64> = b.exp().log();
+        assert!(close(&back.c, &b.c, 1e-12), "half turn - {delta}");
+    }
+}
+
+/// Larger random versors, rotations and boosts coupled (loxodromic planes). The log is a log
+/// of `R`, and a fixed point: `log(exp(log R)) = log R`, as a principal log is.
+#[test]
+fn larger_versors() {
+    let mut rng = Rng(0x0006_d106);
+    let mut checked = 0;
+    for _ in 0..400 {
+        let r = rng.bivector(1.0).exp();
+        if r.into_inner().c[0] <= 0.1 {
+            continue; // near or past a half turn in some plane
+        }
+        let b: Bivector<(), f64> = r.log();
+        let again = b.exp();
+        assert!(
+            close(&again.into_inner().c, &r.into_inner().c, 1e-11),
+            "exp(log R) differs from R"
+        );
+        let b2: Bivector<(), f64> = again.log();
+        assert!(
+            close(&b2.c, &b.c, 1e-11),
+            "log(exp(log R)) differs from log R"
+        );
+        checked += 1;
+    }
+    assert!(checked > 300);
+}
+
+/// On SIMD lanes, a lane near a half turn takes the fallback and the others the closed form,
+/// each equal to its scalar result.
+#[cfg(feature = "batch")]
+#[test]
+fn lanes_mix_the_closed_form_and_the_fallback() {
+    type L = gax::batch::Lanes<f64, 4>;
+    let bs = [
+        plane(&[("e12", 0.4), ("e41", 0.3)]),
+        plane(&[("e12", core::f64::consts::FRAC_PI_2 - 1e-5)]),
+        plane(&[("e1i", 0.8)]),
+        plane(&[("e23", 0.5), ("e1i", 0.3), ("e1o", -0.3)]),
+    ];
+    let rs: Vec<Even<(), f64>> = bs.iter().map(|b| b.exp().into_inner()).collect();
+    let lanes = Even::<(), L>::from_coeffs(core::array::from_fn(|i| {
+        L::new([rs[0].c[i], rs[1].c[i], rs[2].c[i], rs[3].c[i]])
+    }));
+    let got: Bivector<(), L> = Unit::new_unchecked(lanes).log();
+    for (l, b) in bs.iter().enumerate() {
+        let lane: [f64; 15] = core::array::from_fn(|i| got.c[i].v[l]);
+        assert!(close(&lane, &b.c, 1e-11), "lane {l}");
+    }
+}
+
+/// In `f32`: within `f32`'s accuracy of the `f64` log, on random versors and the degenerate
+/// cases (the `f64` guards underflow to zero in `f32`; only discarded branches meet them).
+#[test]
+fn in_f32() {
+    let mut rng = Rng(0x00f3_2f32);
+    let mut cases: Vec<Bivector<(), f64>> = (0..100).map(|_| rng.bivector(0.5)).collect();
+    cases.push(plane(&[("e1i", 0.8)]));
+    cases.push(plane(&[("e12", 0.7)]));
+    cases.push(plane(&[("e23", 0.5), ("e1i", 0.3), ("e1o", -0.3)]));
+    cases.push(plane(&[("e12", core::f64::consts::FRAC_PI_2 - 1e-3)]));
+    for b in cases {
+        let r = b.exp().into_inner();
+        let r32 = Even::<(), f32>::from_coeffs(core::array::from_fn(|i| r.c[i] as f32));
+        let got: Bivector<(), f32> = Unit::new_unchecked(r32).log();
+        let got: [f64; 15] = core::array::from_fn(|i| f64::from(got.c[i]));
+        assert!(close(&got, &b.c, 2e-4), "{got:?} vs {:?}", b.c);
+    }
+}

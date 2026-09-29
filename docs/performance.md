@@ -89,6 +89,7 @@ otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA d
 | CGA3D general even versor `>> point` | 27.5 ns | — |
 | CGA3D `Twist::exp` | 11.0 ns | — |
 | CSTA (6D) vector product | 10.6 ns | — |
+| CSTA `Unit<Even>::log` (f64): closed form (log6d.md) / inverse scaling and squaring | **2.9 µs** / 50.7 µs | — |
 
 **The solvers are branch free per lane** (ADR-017), so they run unchanged on SIMD lanes. Two
 lane-wide exits, `Real::all_lt`, keep them competitive for single matrices:

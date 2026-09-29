@@ -157,18 +157,14 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
 * **At a half turn of the motion** (`θ = π/2`) nothing is special.
 * **The general `log`** (STA, CGA3D) is stable up to, but not including, `θ = π`.
 * **CSTA's `Even`** (the full 6D conformal group, whose bivectors split into three commuting
-  parts) has no closed form in gax. Its `log` is inverse scaling and squaring, the counterpart of
-  its `exp`:
-  * square roots until the versor is within `1/16` of the identity. Each is `(1 + R)`, scaled so
-    that every invariant part is at most 1, then made unit by Newton steps `y (3 − ~y y)/2` (a
-    polar decomposition, which needs no general inverse);
-  * the series of `log(1 + z)` to degree 16;
-  * the scaling undone.
-
-  Tested: `exp(log R) = R` for random versors, and `log(exp B) = B` on the principal branch and for
-  boosts and dilations up to rapidity 5, all within `10⁻⁹` (`tests/csta_log.rs`). It is
-  iterative, so it is slow next to a closed form. The closed form through the invariant
-  decomposition (the roots of a cubic) remains possible future work.
+  parts) has its `log` in closed form: the invariants `cosh² μⱼ` of the three planes are the
+  roots of a cubic in scalar parts of `R`'s grade parts squared, and the log is a quadratic
+  interpolant of one scalar function at those roots applied to three bivectors built from `R`.
+  The derivation, how coinciding roots are handled, the branch and the validation are in
+  [log6d.md](log6d.md). Near a half turn (`⟨R⟩₀ < 1/16`), where the closed form loses
+  `ε/⟨R⟩₀`, it falls back to inverse scaling and squaring (square roots until within `1/16` of
+  the identity, each made unit by Newton steps `y (3 − ~y y)/2`, then the series of
+  `log(1 + z)`).
 
 **`normalized`.**
 

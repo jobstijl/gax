@@ -7042,16 +7042,13 @@ impl<T: gx::Real> Even<(), T> {
 
 }
 
-impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
-    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is
-    /// generated for `Even` in this algebra): square roots until `R` is within 1/16 of the
-    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each
-    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made
-    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to
-    /// within 64 Îµ on every lane. The principal logarithm: rotations below a half turn in each
-    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).
+impl<T: gx::Real> Even<(), T> {
+    /// The logarithm of a unit `Even` by inverse scaling and squaring (the fallback of
+    /// `log` near a half turn, where the closed form loses `Îµ/â¨Râ©â`): square roots until
+    /// `R` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone.
+    #[doc(hidden)]
     #[inline]
-    fn log(self) -> Bivector<(), T> {
+    pub fn log_by_scaling(self) -> Bivector<(), T> {
         T::vectorize(#[inline(always)] move || {
         let mut one = Even::<(), T>::zero();
         one.c[0] = T::one();
@@ -7064,7 +7061,7 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
             d
         };
         let tol = T::epsilon() * T::from_i64(64);
-        let mut x = self.into_inner();
+        let mut x = self;
         let mut s = 0u32;
         while s < 64 && !T::all_lt(dist(x), T::from_ratio(1, 16)) {
             let mut y = one + x;
@@ -7093,6 +7090,221 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
             f = f + f;
         }
         Bivector::from_coeffs([l.c[1] * f, l.c[2] * f, l.c[3] * f, l.c[4] * f, l.c[5] * f, l.c[6] * f, l.c[7] * f, l.c[8] * f, l.c[9] * f, l.c[10] * f, l.c[11] * f, l.c[12] * f, l.c[13] * f, l.c[14] * f, l.c[15] * f])
+        })
+    }
+}
+
+impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
+    /// The logarithm of a unit versor, in closed form through the invariant decomposition
+    /// (docs/log6d.md): `u_j = coshÂ²(Î¼_j)` of the three commuting planes are the roots of a
+    /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
+    /// `r0â»Â¹ (Î±2 Q2 + Î±1 Q1 + Î±0 â¨Râ©â)` for bivectors `Q` from `R`'s grade parts and the
+    /// quadratic `Î±` interpolating `Ï(u) = âu asinh(â(uâ1))/â(uâ1)` at the roots
+    /// (`gx::study::log_coeffs_6d`). Near a half turn (`â¨Râ©â < 1/16`), where it loses `Îµ/â¨Râ©â`,
+    /// the lanes there use inverse scaling and squaring instead. The principal logarithm:
+    /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> Bivector<(), T> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.into_inner().c;
+        let p0 = x[0] * x[31];
+        let p1 = x[0] * x[1];
+        let p2 = x[0] * x[2];
+        let p3 = x[0] * x[3];
+        let p4 = x[0] * x[4];
+        let p5 = x[0] * x[5];
+        let p6 = x[0] * x[6];
+        let p7 = x[0] * x[7];
+        let p8 = x[0] * x[8];
+        let p9 = x[0] * x[9];
+        let p10 = x[0] * x[10];
+        let p11 = x[0] * x[11];
+        let p12 = x[0] * x[12];
+        let p13 = x[0] * x[13];
+        let p14 = x[0] * x[14];
+        let p15 = x[0] * x[15];
+        let p16 = x[0] * x[0];
+        let p18 = x[2] * x[2];
+        let p19 = x[3] * x[3];
+        let p22 = x[6] * x[6];
+        let p24 = x[8] * x[12];
+        let p25 = x[9] * x[13];
+        let p30 = x[18] * x[22];
+        let p31 = x[19] * x[23];
+        let p34 = x[26] * x[26];
+        let p37 = x[29] * x[29];
+        let p38 = x[30] * x[30];
+        let p41 = x[21] * p10;
+        let p42 = x[20] * p11;
+        let p47 = x[22] * p10;
+        let p48 = x[20] * p12;
+        let p53 = x[23] * p10;
+        let p54 = x[20] * p13;
+        let p58 = x[23] * p8;
+        let p62 = x[28] * p15;
+        let p65 = x[21] * p9;
+        let p68 = x[29] * p15;
+        let p70 = x[22] * p7;
+        let p74 = x[30] * p15;
+        let p78 = x[27] * p8;
+        let p79 = x[26] * p9;
+        let p84 = x[27] * p7;
+        let p85 = x[25] * p9;
+        let p90 = x[26] * p7;
+        let p91 = x[25] * p8;
+        let p94 = x[18] * p2;
+        let p97 = x[29] * p8;
+        let p100 = x[23] * p5;
+        let p102 = x[27] * p12;
+        let p107 = x[21] * p6;
+        let p109 = x[25] * p13;
+        let p112 = x[22] * p4;
+        let p114 = x[26] * p11;
+        let p118 = x[22] * p2;
+        let p121 = x[29] * p12;
+        let p124 = x[26] * p2;
+        let p127 = x[29] * p5;
+        let p129 = x[28] * p0;
+        let p130 = x[29] * p0;
+        let p131 = x[30] * p0;
+        let p132 = x[25] * p0;
+        let p133 = x[26] * p0;
+        let p134 = x[27] * p0;
+        let p135 = x[17] * p0;
+        let p136 = x[18] * p0;
+        let p137 = x[19] * p0;
+        let p138 = x[20] * p0;
+        let p139 = x[21] * p0;
+        let p140 = x[22] * p0;
+        let p141 = x[23] * p0;
+        let p142 = x[24] * p0;
+        let p143 = x[16] * p0;
+        let p144 = x[1].mul_add(x[1], p18);
+        let p145 = (-x[4]).mul_add(x[4], p19);
+        let p146 = x[5].mul_add(x[5], p22);
+        let p147 = x[7].mul_add(x[11], p24);
+        let p148 = (-x[10]).mul_add(x[14], p25);
+        let p149 = x[15].mul_add(x[15], -p144);
+        let p150 = p145 - p146;
+        let p151 = p147 + p148;
+        let p152 = p149 - p150;
+        let p154 = p152.mul_add(T::from_ratio(1, 2), p151);
+        let p155 = x[28].mul_add(x[28], p37);
+        let p156 = (-x[16]).mul_add(x[16], p38);
+        let p157 = p155 + p156;
+        let p158 = x[25].mul_add(x[25], p34);
+        let p159 = x[27].mul_add(x[27], p158);
+        let p160 = p157 - p159;
+        let p161 = x[17].mul_add(x[21], p30);
+        let p162 = (-x[20]).mul_add(x[24], p31);
+        let p163 = p161 + p162;
+        let p165 = p16 * T::from_i64(3);
+        let p167 = p163.mul_add(T::from_i64(2), p160);
+        let p168 = (-p154).mul_add(T::from_i64(4), p165);
+        let p169 = p167 + p168;
+        let p171 = (-p154).mul_add(T::from_i64(2), p165);
+        let p172 = x[24].mul_add(p7, p42);
+        let p173 = x[25].mul_add(p15, p172);
+        let p174 = x[16].mul_add(p4, p41);
+        let p175 = x[17].mul_add(p14, p174);
+        let p176 = p173 - p175;
+        let p177 = x[24].mul_add(p8, p48);
+        let p178 = x[26].mul_add(p15, p177);
+        let p179 = x[16].mul_add(p5, p47);
+        let p180 = x[18].mul_add(p14, p179);
+        let p181 = p178 - p180;
+        let p182 = x[24].mul_add(p9, p54);
+        let p183 = x[27].mul_add(p15, p182);
+        let p184 = x[16].mul_add(p6, p53);
+        let p185 = x[19].mul_add(p14, p184);
+        let p186 = p183 - p185;
+        let p187 = x[16].mul_add(p1, p58);
+        let p188 = x[19].mul_add(p12, p187);
+        let p189 = (-x[22]).mul_add(p9, p62);
+        let p190 = (-x[18]).mul_add(p13, p189);
+        let p191 = p188 + p190;
+        let p192 = x[16].mul_add(p2, p65);
+        let p193 = x[17].mul_add(p13, p192);
+        let p194 = (-x[23]).mul_add(p7, p68);
+        let p195 = (-x[19]).mul_add(p11, p194);
+        let p196 = p193 + p195;
+        let p197 = x[16].mul_add(p3, p70);
+        let p198 = x[18].mul_add(p11, p197);
+        let p199 = (-x[21]).mul_add(p8, p74);
+        let p200 = (-x[17]).mul_add(p12, p199);
+        let p201 = p198 + p200;
+        let p202 = x[18].mul_add(p6, p79);
+        let p203 = (-x[20]).mul_add(p1, p202);
+        let p204 = x[19].mul_add(p5, p78);
+        let p205 = x[28].mul_add(p10, p204);
+        let p206 = p203 - p205;
+        let p207 = x[19].mul_add(p4, p84);
+        let p208 = (-x[20]).mul_add(p2, p207);
+        let p209 = x[17].mul_add(p6, p85);
+        let p210 = x[29].mul_add(p10, p209);
+        let p211 = p208 - p210;
+        let p212 = x[17].mul_add(p5, p91);
+        let p213 = (-x[20]).mul_add(p3, p212);
+        let p214 = x[18].mul_add(p4, p90);
+        let p215 = x[30].mul_add(p10, p214);
+        let p216 = p213 - p215;
+        let p217 = x[17].mul_add(p1, p94);
+        let p218 = x[19].mul_add(p3, p217);
+        let p219 = x[28].mul_add(p7, p97);
+        let p220 = x[30].mul_add(p9, p219);
+        let p221 = p218 + p220;
+        let p222 = -p221;
+        let p223 = x[22].mul_add(p6, p102);
+        let p224 = x[28].mul_add(p14, p223);
+        let p225 = x[24].mul_add(p1, p100);
+        let p226 = x[26].mul_add(p13, p225);
+        let p227 = p224 - p226;
+        let p228 = x[23].mul_add(p4, p109);
+        let p229 = x[29].mul_add(p14, p228);
+        let p230 = x[24].mul_add(p2, p107);
+        let p231 = x[27].mul_add(p11, p230);
+        let p232 = p229 - p231;
+        let p233 = x[21].mul_add(p5, p114);
+        let p234 = x[30].mul_add(p14, p233);
+        let p235 = x[24].mul_add(p3, p112);
+        let p236 = x[25].mul_add(p12, p235);
+        let p237 = p234 - p236;
+        let p238 = x[28].mul_add(p11, p121);
+        let p239 = x[30].mul_add(p13, p238);
+        let p240 = x[21].mul_add(p1, p118);
+        let p241 = x[23].mul_add(p3, p240);
+        let p242 = p239 - p241;
+        let p243 = x[28].mul_add(p4, p127);
+        let p244 = x[30].mul_add(p6, p243);
+        let p245 = x[25].mul_add(p1, p124);
+        let p246 = x[27].mul_add(p3, p245);
+        let p247 = p244 - p246;
+        let p248 = -p129;
+        let p249 = -p130;
+        let p250 = -p131;
+        let p251 = -p135;
+        let p252 = -p136;
+        let p253 = -p137;
+        let p254 = -p138;
+        let p255 = -p143;
+        let (r0, p1, p2, p3) = (x[0], p169, p171, p16);
+        let g1: [T; 15] = [x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15]];
+        let g2: [T; 15] = [p176, p181, p186, p191, p196, p201, p206, p211, p216, p222, p227, p232, p237, p242, p247];
+        let g3: [T; 15] = [p248, p249, p250, p132, p133, p134, p251, p252, p253, p254, p139, p140, p141, p142, p255];
+        let [a0, a1, a2] = gx::study::log_coeffs_6d(p1, p2, p3);
+        let rinv = r0.recip();
+        let closed = Bivector::from_coeffs(core::array::from_fn(|i| {
+            let q1 = g3[i] - g2[i] + p3 * g1[i];
+            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
+            (a2 * q2 + a1 * q1 + a0 * g1[i]) * rinv
+        }));
+        let limit = T::from_ratio(1, 16);
+        if T::all_lt(limit, r0) {
+            return closed;
+        }
+        let numeric = self.into_inner().log_by_scaling();
+        Bivector::from_coeffs(core::array::from_fn(|i| T::select_lt(limit, r0, closed.c[i], numeric.c[i])))
         })
     }
 }

@@ -859,6 +859,34 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Not homomorphisms, so functions.** The round point `up` (quadratic) and `down` in
   `cga2d`/`cga3d`, spheres, and a round point's PGA point.
 
+## ADR-033: The logarithm of a 6D even versor in closed form
+*Status: accepted, implemented (`gax_core::study::log_coeffs_6d`; derivation in log6d.md).*
+
+* **The problem.** CSTA's even versors had a logarithm only by inverse scaling and squaring
+  (50 µs, loops). Published closed forms stop below six dimensions: a 6D bivector splits into
+  three commuting parts, and a cubic enters.
+* **The closed form.** The invariants `uⱼ = cosh² μⱼ` of the three planes are the roots of
+  `t³ − p₁t² + p₂t − p₃`, with the `p`s from the scalar parts of `R`'s grade parts squared.
+  `log R = r₀⁻¹ (α₂Q₂ + α₁Q₁ + α₀⟨R⟩₂)`, with bivectors `Q` from products of `R`'s grade parts
+  and the quadratic `α` interpolating `φ(u) = √u · asinh(√(u−1))/√(u−1)` at the roots. The
+  planes are never separated.
+* **Why it is robust.** Coinciding roots (one plane, translations, isoclinic planes, the
+  identity) are the common case, and divided differences through them would divide by zero.
+  The interpolant is a symmetric function of the roots, so for close roots it comes from
+  `φ`'s Taylor series at their mean reduced modulo the cubic, from the `p`s alone. Spread
+  roots go through the most isolated real root and the remaining pair's sum and product.
+* **What the generator emits.** The invariants and the three bivectors as one straight-line
+  program from exact polynomials, the interpolant from `log_coeffs_6d`, and the combination.
+  Below `⟨R⟩₀ = 1/16` (a half turn, where the formula loses `ε/⟨R⟩₀`), the lanes there use
+  inverse scaling and squaring, kept as `Even::log_by_scaling`, and computed only when some
+  lane needs it.
+* **The branch.** Every invariant plane below a half turn (`cⱼ` with non-negative real part):
+  the geometric principal logarithm. Inverse scaling and squaring picks principal values per
+  algebraic channel, which differs only when several planes' half-angles add up past a half
+  turn, so only near the fallback can the two branches meet.
+* **Result.** 2.9 µs against 50.7 µs, and within `5·10⁻¹⁵` where the old one was within
+  `10⁻⁹` (tests/csta_log.rs, log6d.md).
+
 ---
 
 ## Hypotheses

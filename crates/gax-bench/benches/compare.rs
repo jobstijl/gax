@@ -280,6 +280,22 @@ fn conformal(c: &mut Criterion) {
         b.iter(|| black_box(a) * black_box(bb))
     });
     g.finish();
+
+    // The 6D conformal group's logarithm (f64): the closed form through the invariant
+    // decomposition against inverse scaling and squaring (docs/log6d.md).
+    let mut g = c.benchmark_group("compare: CSTA log (f64)");
+    let biv = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+        0.3 * ((i as f64 * 0.7).sin())
+    }));
+    let r = biv.exp();
+    g.bench_function("gax Unit<Even>::log (closed form)", |b| {
+        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(r).log() })
+    });
+    g.bench_function(
+        "gax Even::log_by_scaling (inverse scaling and squaring)",
+        |b| b.iter(|| black_box(r).into_inner().log_by_scaling()),
+    );
+    g.finish();
 }
 
 criterion_group!(benches, transforms, chains, solvers, rigid_body, conformal);

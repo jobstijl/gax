@@ -30,7 +30,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] exp/log for 5D algebras (CGA3D, STAP): Study functions with a general 4-vector direction
 - [x] exp for 6D and up (CSTA): scaling and squaring in the product closure
 - [x] exp and log of CSTA Poincaré motors (`Twist` to `Motor`): closed forms, since `Q²` is a scalar there
-- [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): inverse scaling and squaring with polar-decomposition square roots, tested on rotations, boosts and dilations (numerics.md); the closed form through the cubic invariant decomposition stays possible future work
+- [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): in closed form through the cubic invariants (ADR-033, docs/log6d.md), 17x faster than inverse scaling and squaring, which remains the fallback near a half turn
 - [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
 - [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees

@@ -902,6 +902,7 @@ fn emit_log_general(
 /// closed form (CSTA's `Even`, whose bivectors split into three commuting parts): the
 /// counterpart of [`emit_exp_fallback`]. Emitted for a kind of even grades, with a scalar and
 /// the whole grade 2, closed under the product, whose bivector part is a kind of its own.
+#[allow(clippy::too_many_lines)]
 fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> Option<String> {
     let alg = &spec.algebra;
     let blades: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
@@ -946,18 +947,26 @@ fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> O
             format!("{sign}l.c[{pos}] * f")
         })
         .collect();
+    // In 6D the closed form is the logarithm, and this is its fallback near a half turn.
+    let six = alg.dim() == 6;
+    let (head, start) = if six {
+        (
+            format!(
+                "impl<T: gx::Real> {en}<(), T> {{\n    /// The logarithm of a unit `{en}` by inverse scaling and squaring (the fallback of\n    /// `log` near a half turn, where the closed form loses `ε/⟨R⟩₀`): square roots until\n    /// `R` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone.\n    #[doc(hidden)]\n    #[inline]\n    pub fn log_by_scaling(self) -> {bn}<(), T> {{"
+            ),
+            "self",
+        )
+    } else {
+        (
+            format!(
+                "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{\n    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is\n    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the\n    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each\n    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made\n    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to\n    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each\n    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).\n    #[inline]\n    fn log(self) -> {bn}<(), T> {{"
+            ),
+            "self.into_inner()",
+        )
+    };
     let _ = write!(
         traits,
-        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
-    /// The logarithm of a unit versor, by inverse scaling and squaring (no closed form is
-    /// generated for `{en}` in this algebra): square roots until `R` is within 1/16 of the
-    /// identity (1-norm), a series of `log(1 + z)` to degree 16, and the scaling undone. Each
-    /// square root is `(1 + R)` scaled so that every invariant part is at most 1, then made
-    /// unit by Newton steps `y (3 - ~y y) / 2` (a polar decomposition), until `~y y` is 1 to
-    /// within 64 ε on every lane. The principal logarithm: rotations below a half turn in each
-    /// invariant plane, and boosts and dilations of large rapidity (tested up to 5).
-    #[inline]
-    fn log(self) -> {bn}<(), T> {{
+        "{head}
         T::vectorize(#[inline(always)] move || {{
         let mut one = {en}::<(), T>::zero();
         one.c[{one_pos}] = {one};
@@ -970,7 +979,7 @@ fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> O
             d
         }};
         let tol = T::epsilon() * T::from_i64(64);
-        let mut x = self.into_inner();
+        let mut x = {start};
         let mut s = 0u32;
         while s < 64 && !T::all_lt(dist(x), T::from_ratio(1, 16)) {{
             let mut y = one + x;
@@ -1007,7 +1016,111 @@ fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> O
         project.join(", "),
         one_sign_mul = if one_sign > 0 { "" } else { "-" },
     );
+    if six {
+        emit_log_6d(spec, k, bv, traits);
+    }
     Some(bn.clone())
+}
+
+/// The closed-form logarithm of a 6D even versor (docs/log6d.md): the invariants and the three
+/// bivectors `G1 = ⟨R⟩₂`, `G2 = r0 ⟨R₄ R₂⟩₂`, `G3 = r0 ⟨R₆ R₄⟩₂` as one straight-line program,
+/// the interpolant from `gx::study::log_coeffs_6d`, and `log_by_scaling` near a half turn.
+fn emit_log_6d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut String) {
+    let alg = &spec.algebra;
+    let x = symbolic::variables(&k.layout, 0);
+    let grade = |g: u32| -> SymMv {
+        x.iter()
+            .filter(|(m, _)| m.count_ones() == g)
+            .map(|(m, c)| (*m, c.clone()))
+            .collect()
+    };
+    let (r2, r4, r6) = (grade(2), grade(4), grade(6));
+    let r0 = coef(&x, 0);
+    let a2 = coef(&symbolic::binop(alg, BinOp::Gp, &r2, &r2), 0);
+    let a4 = coef(&symbolic::binop(alg, BinOp::Gp, &r4, &r4), 0);
+    let three = Poly::constant(Rational::int(3));
+    let p3 = &r0 * &r0;
+    let p2 = &(&three * &p3) - &a2;
+    let p1 = &(&a4 + &(&three * &p3)) - &a2.scale(Rational::int(2));
+    let two = |mv: &SymMv| -> SymMv {
+        mv.iter()
+            .filter(|(m, _)| m.count_ones() == 2)
+            .map(|(m, c)| (*m, c.clone()))
+            .collect()
+    };
+    let g1 = symbolic::to_coeffs(&bv.layout, &r2).expect("the bivectors");
+    let g2 = symbolic::to_coeffs(
+        &bv.layout,
+        &scale_mv(&two(&symbolic::binop(alg, BinOp::Gp, &r4, &r2)), &r0),
+    )
+    .expect("the bivectors");
+    let g3 = symbolic::to_coeffs(
+        &bv.layout,
+        &scale_mv(&two(&symbolic::binop(alg, BinOp::Gp, &r6, &r4)), &r0),
+    )
+    .expect("the bivectors");
+    let n = bv.layout.len();
+    let mut outs = vec![r0, p1, p2, p3];
+    outs.extend(g1);
+    outs.extend(g2);
+    outs.extend(g3);
+    let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let mut lets = String::new();
+    prog.emit_lets(&xvar, "p", &mut lets);
+    let o: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|op| render(op, &xvar, "p"))
+        .collect();
+    let list = |from: usize| o[from..from + n].join(", ");
+    let (en, bn) = (&k.name, &bv.name);
+    let _ = write!(
+        traits,
+        "impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+    /// The logarithm of a unit versor, in closed form through the invariant decomposition
+    /// (docs/log6d.md): `u_j = cosh²(μ_j)` of the three commuting planes are the roots of a
+    /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
+    /// `r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂)` for bivectors `Q` from `R`'s grade parts and the
+    /// quadratic `α` interpolating `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots
+    /// (`gx::study::log_coeffs_6d`). Near a half turn (`⟨R⟩₀ < 1/16`), where it loses `ε/⟨R⟩₀`,
+    /// the lanes there use inverse scaling and squaring instead. The principal logarithm:
+    /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
+    #[inline]
+    #[allow(unused_variables)]
+    fn log(self) -> {bn}<(), T> {{
+        T::vectorize(#[inline(always)] move || {{
+        let x = self.into_inner().c;
+{lets}        let (r0, p1, p2, p3) = ({}, {}, {}, {});
+        let g1: [T; {n}] = [{}];
+        let g2: [T; {n}] = [{}];
+        let g3: [T; {n}] = [{}];
+        let [a0, a1, a2] = gx::study::log_coeffs_6d(p1, p2, p3);
+        let rinv = r0.recip();
+        let closed = {bn}::from_coeffs(core::array::from_fn(|i| {{
+            let q1 = g3[i] - g2[i] + p3 * g1[i];
+            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
+            (a2 * q2 + a1 * q1 + a0 * g1[i]) * rinv
+        }}));
+        let limit = T::from_ratio(1, 16);
+        if T::all_lt(limit, r0) {{
+            return closed;
+        }}
+        let numeric = self.into_inner().log_by_scaling();
+        {bn}::from_coeffs(core::array::from_fn(|i| T::select_lt(limit, r0, closed.c[i], numeric.c[i])))
+        }})
+    }}
+}}
+
+",
+        o[0],
+        o[1],
+        o[2],
+        o[3],
+        list(4),
+        list(4 + n),
+        list(4 + 2 * n),
+    );
 }
 
 /// The exponential by scaling and squaring, for bivector kinds without a closed form (the

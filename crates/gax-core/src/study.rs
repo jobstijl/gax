@@ -635,6 +635,316 @@ pub fn rsqrt_nil<T: Real>(a: T, b: T) -> [T; 2] {
     [r, -(b * r * r * r) * T::from_f64(0.5)]
 }
 
+// ---------------------------------------------------------------------------------------------
+// The logarithm of a 6D even versor in closed form (docs/log6d.md).
+//
+// A unit versor R = exp(B) with B = b1 + b2 + b3 (commuting simple bivectors) has
+// u_j = cosh²(μ_j) (μ_j² = b_j²) as the roots of t³ − p1 t² + p2 t − p3, with p1, p2, p3 from the
+// scalar parts of its grade parts' squares, and B = r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂) for the
+// quadratic α2 u² + α1 u + α0 that interpolates φ(u) = √u · asinh(√(u−1))/√(u−1) at the roots.
+// The interpolant is computed without the individual roots where they are close: φ's Taylor
+// series at their mean, reduced modulo the cubic.
+
+/// Terms of the Taylor series used for the interpolants: the regimes keep the ratio of the
+/// nodes' spread to the distance to φ's singularity (u = 0) below 1/4, so 26 terms reach
+/// `4⁻²⁶ ≈ 2·10⁻¹⁶`.
+const LOG6_TERMS: usize = 26;
+
+type Series<T> = [T; LOG6_TERMS];
+
+fn series_mul<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
+    let mut out = [T::zero(); LOG6_TERMS];
+    for i in 0..LOG6_TERMS {
+        for j in 0..LOG6_TERMS - i {
+            out[i + j] = out[i + j] + a[i] * b[j];
+        }
+    }
+    out
+}
+
+fn series_div<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
+    let mut q = [T::zero(); LOG6_TERMS];
+    let inv = b[0].recip();
+    for k in 0..LOG6_TERMS {
+        let mut s = a[k];
+        for j in 1..=k {
+            s = s - b[j] * q[k - j];
+        }
+        q[k] = s * inv;
+    }
+    q
+}
+
+/// `(c + σ t)^(1/2)` or `(c + σ t)^(−1/2)` as a series in `t` (`σ = ±1`, `c > 0`).
+fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool) -> Series<T> {
+    let e = if inverse { -0.5 } else { 0.5 };
+    let root = c.sqrt();
+    let lead = if inverse { root.recip() } else { root };
+    let step = T::from_f64(sigma) * c.recip();
+    let mut out = [T::zero(); LOG6_TERMS];
+    let (mut binom, mut power) = (T::one(), T::one());
+    for (k, o) in out.iter_mut().enumerate() {
+        *o = lead * binom * power;
+        binom = binom * T::from_f64((e - k as f64) / (k as f64 + 1.0));
+        power = power * step;
+    }
+    out
+}
+
+/// The Taylor series of `φ(u) = √u · F(u − 1)` at `u = m`, `F(x) = asinh(√x)/√x`.
+fn phi_series<T: Real>(m: T) -> Series<T> {
+    let one = T::one();
+    let x0 = m - one;
+    let zero = [T::zero(); LOG6_TERMS];
+    // |x0| < 1/4: F's Maclaurin series (90 terms; its radius is 1) shifted to x0 by repeated
+    // Horner, the first LOG6_TERMS coefficients (skipped when no lane needs it). Nearer the
+    // radius the truncation would cost the higher coefficients their accuracy.
+    let quarter = T::from_f64(0.25);
+    let near = if T::all_lt(quarter, x0.abs()) {
+        zero
+    } else {
+        let mut c = [T::zero(); 90];
+        let mut b = 1.0f64;
+        for (n, f) in c.iter_mut().enumerate() {
+            let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
+            *f = T::from_f64(sign * b / (2.0 * n as f64 + 1.0));
+            b *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
+        }
+        let x = T::select_lt(x0.abs(), quarter, x0, T::zero());
+        let mut out = [T::zero(); LOG6_TERMS];
+        for (i, o) in out.iter_mut().enumerate() {
+            for j in (i..c.len() - 1).rev() {
+                c[j] = c[j] + x * c[j + 1];
+            }
+            *o = c[i];
+        }
+        out
+    };
+    // x0 > 0: v = √(x0 + t), asinh(v)' = v' / √(m + t), F = asinh(v) / v.
+    let skip_above = T::all_lt(x0, quarter);
+    let above = if skip_above {
+        zero
+    } else {
+        let x = x0.max(T::from_f64(0.25));
+        let mm = x + one;
+        let v = series_sqrt(x, 1.0, false);
+        let r = series_sqrt(mm, 1.0, true);
+        let mut dv = [T::zero(); LOG6_TERMS];
+        for k in 1..LOG6_TERMS {
+            dv[k - 1] = v[k] * T::from_i64(k as i64);
+        }
+        let d = series_mul(&dv, &r);
+        let mut a = [T::zero(); LOG6_TERMS];
+        a[0] = (v[0] + (v[0] * v[0] + one).sqrt()).ln();
+        for k in 1..LOG6_TERMS {
+            a[k] = d[k - 1] * T::from_i64(k as i64).recip();
+        }
+        series_div(&a, &v)
+    };
+    // x0 < 0: w = √(−x0 − t), asin(w)' = w' / √(m + t), F = asin(w) / w.
+    let skip_below = T::all_lt(-quarter, x0);
+    let below = if skip_below {
+        zero
+    } else {
+        let x = (-x0).max(T::from_f64(0.25));
+        let mm = (one - x).max(T::from_f64(1e-300));
+        let w = series_sqrt(x, -1.0, false);
+        let r = series_sqrt(mm, 1.0, true);
+        let mut dw = [T::zero(); LOG6_TERMS];
+        for k in 1..LOG6_TERMS {
+            dw[k - 1] = w[k] * T::from_i64(k as i64);
+        }
+        let d = series_mul(&dw, &r);
+        let mut a = [T::zero(); LOG6_TERMS];
+        a[0] = w[0].atan2(mm.sqrt());
+        for k in 1..LOG6_TERMS {
+            a[k] = d[k - 1] * T::from_i64(k as i64).recip();
+        }
+        series_div(&a, &w)
+    };
+    let f: Series<T> = core::array::from_fn(|k| {
+        let far = T::select_lt(x0, T::zero(), below[k], above[k]);
+        T::select_lt(x0.abs(), quarter, near[k], far)
+    });
+    series_mul(&series_sqrt(m, 1.0, false), &f)
+}
+
+/// `φ(u)` at a real `u > 0`.
+fn phi_real<T: Real>(u: T) -> T {
+    let one = T::one();
+    let x = u - one;
+    let ax = x.abs();
+    let r = ax.max(T::from_f64(1e-300)).sqrt();
+    let above = (r + (ax + one).sqrt()).ln() / r;
+    let below = r.atan2((one - ax).max(T::zero()).sqrt()) / r;
+    // |x| < 1/20: 13 terms of the series (20^-13 < 1e-16).
+    let mut series = T::zero();
+    let mut c = 1.0f64;
+    let mut coef = [0.0f64; 13];
+    for (n, f) in coef.iter_mut().enumerate() {
+        let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
+        *f = sign * c / (2.0 * n as f64 + 1.0);
+        c *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
+    }
+    for f in coef.iter().rev() {
+        series = series * x + T::from_f64(*f);
+    }
+    let far = T::select_lt(x, T::zero(), below, above);
+    u.max(T::zero()).sqrt() * T::select_lt(ax, T::from_f64(0.05), series, far)
+}
+
+/// `φ(u)` at a complex `u` (a conjugate pair of roots far apart).
+fn phi_complex<T: Real>(u: Cx<T>) -> Cx<T> {
+    let one = Cx::real(T::one());
+    let s = (u - one).sqrt();
+    let asinh = (s + (s * s + one).sqrt()).ln();
+    u.sqrt() * asinh / s
+}
+
+/// The interpolant `[α0, α1, α2]` of a series at centre `c`, reduced modulo
+/// `t³ + e2 t − e3` (three nodes with mean `c`).
+fn reduce3<T: Real>(ph: &Series<T>, c: T, e2: T, e3: T) -> [T; 3] {
+    let (mut a, mut b, mut d) = (T::zero(), T::zero(), T::one());
+    let (mut sa, mut sb, mut sd) = (T::zero(), T::zero(), T::zero());
+    for p in ph {
+        sa = sa + *p * a;
+        sb = sb + *p * b;
+        sd = sd + *p * d;
+        // t (a t² + b t + d) = a t³ + b t² + d t, with t³ = −e2 t + e3.
+        let (na, nb, nd) = (b, d - a * e2, a * e3);
+        a = na;
+        b = nb;
+        d = nd;
+    }
+    // a t² + b t + d with t = u − c.
+    [sa * c * c - sb * c + sd, sb - (sa + sa) * c, sa]
+}
+
+/// The line `[l0, l1]` of a series at centre `c`, reduced modulo `t² − d2` (two nodes).
+fn reduce2<T: Real>(ph: &Series<T>, c: T, d2: T) -> [T; 2] {
+    let (mut b, mut d) = (T::zero(), T::one());
+    let (mut sb, mut sd) = (T::zero(), T::zero());
+    for p in ph {
+        sb = sb + *p * b;
+        sd = sd + *p * d;
+        // t (b t + d) = b t² + d t = b d2 + d t.
+        let (nb, nd) = (d, b * d2);
+        b = nb;
+        d = nd;
+    }
+    [sd - sb * c, sb]
+}
+
+/// `sign(x) |x|^(1/3)`.
+fn cbrt<T: Real>(x: T) -> T {
+    let a = x.abs();
+    let r = (a.max(T::from_f64(1e-300)).ln() * T::from_f64(1.0 / 3.0)).exp();
+    let r = T::select_lt(a, T::from_f64(1e-300), T::zero(), r);
+    T::select_lt(x, T::zero(), -r, r)
+}
+
+/// The coefficients `[α0, α1, α2]` of the quadratic interpolating
+/// `φ(u) = √u · asinh(√(u−1))/√(u−1)` at the roots of `t³ − p1 t² + p2 t − p3`, the three
+/// invariants `cosh²(μ_j)` of a 6D even versor: `log R = r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂)`
+/// (docs/log6d.md). Branch free: close roots through φ's Taylor series at their mean (no
+/// individual roots, so coinciding ones are exact), spread roots through an isolated real root
+/// and the remaining pair.
+///
+/// ```
+/// // A rotation in one plane by half-angle θ: roots cos²θ, 1, 1.
+/// let th = 0.7f64;
+/// let c2 = th.cos() * th.cos();
+/// let [a0, a1, a2] = gax_core::study::log_coeffs_6d(c2 + 2.0, 2.0 * c2 + 1.0, c2);
+/// // At u = cos²θ the interpolant is φ = cos θ · θ / sin θ.
+/// let at = a2 * c2 * c2 + a1 * c2 + a0;
+/// assert!((at - th.cos() * th / th.sin()).abs() < 1e-14);
+/// ```
+#[inline]
+pub fn log_coeffs_6d<T: Real>(p1: T, p2: T, p3: T) -> [T; 3] {
+    let three = T::from_i64(3);
+    let m = p1 * three.recip();
+    // The cubic in t = u − m: t³ + e2 t − e3.
+    let e2 = p2 - (m + m) * p1 + three * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+
+    // The regime: the roots' spread (bounded from the cubic) against their distance to u = 0.
+    let bound = (e2.abs().sqrt()).max(cbrt(e3.abs())) * T::from_i64(2);
+    let limit = m * T::from_f64(0.25);
+
+    // Close roots: the series at their mean (skipped when no lane has close roots).
+    let jet = if T::all_lt(limit, bound) {
+        [T::zero(); 3]
+    } else {
+        reduce3(&phi_series(m), m, e2, e3)
+    };
+    if T::all_lt(bound, limit) {
+        return jet;
+    }
+
+    // Spread roots: an isolated real root r, then the pair (sum s, product q).
+    let (pp, qq) = (e2, -e3);
+    let disc = qq * qq * T::from_f64(0.25) + pp * pp * pp * T::from_f64(1.0 / 27.0);
+    // One real root (Cardano) where disc >= 0.
+    let sq = disc.max(T::zero()).sqrt();
+    let cardano = cbrt(-qq * T::from_f64(0.5) + sq) + cbrt(-qq * T::from_f64(0.5) - sq);
+    // Three real roots (trigonometric) where disc < 0: the most isolated one.
+    let rad = (-pp * three.recip()).max(T::zero()).sqrt();
+    let arg = qq * T::from_f64(1.5) / pp.min(T::from_f64(-1e-300))
+        * (-three / pp.min(T::from_f64(-1e-300))).sqrt();
+    let arg = arg.max(-T::one()).min(T::one());
+    let ang = (T::one() - arg * arg).max(T::zero()).sqrt().atan2(arg) * three.recip();
+    let third = T::from_f64(2.0 * core::f64::consts::PI / 3.0);
+    let s: [T; 3] = [0, 1, 2].map(|k| (rad + rad) * (ang - third * T::from_i64(k)).cos());
+    let gap = |k: usize| {
+        let (i, j) = ((k + 1) % 3, (k + 2) % 3);
+        (s[k] - s[i]).abs().min((s[k] - s[j]).abs())
+    };
+    let (g0, g1, g2) = (gap(0), gap(1), gap(2));
+    let best01 = T::select_lt(g0, g1, s[1], s[0]);
+    let gbest01 = g0.max(g1);
+    let trig = T::select_lt(gbest01, g2, s[2], best01);
+    let mut r = T::select_lt(disc, T::zero(), trig, cardano) + m;
+    // A Newton step on the original cubic.
+    let f = ((r - p1) * r + p2) * r - p3;
+    let df = (three * r - (p1 + p1)) * r + p2;
+    let df_safe = T::select_lt(df.abs(), T::from_f64(1e-300), T::one(), df);
+    r = r - T::select_lt(df.abs(), T::from_f64(1e-300), T::zero(), f / df_safe);
+    let sum = p1 - r;
+    let prod = p2 - r * sum;
+    let mid = sum * T::from_f64(0.5);
+    let d2 = mid * mid - prod;
+    // The pair's line: its series at the midpoint when close, else through the two values
+    // (real, or a conjugate pair).
+    let d = d2.abs().sqrt();
+    let quarter_mid = mid.abs() * T::from_f64(0.25);
+    let close = if T::all_lt(quarter_mid, d) {
+        [T::zero(); 2]
+    } else {
+        reduce2(&phi_series(mid), mid, d2)
+    };
+    let real_far = {
+        let (a, b) = (mid + d, mid - d);
+        let (fa, fb) = (phi_real(a), phi_real(b));
+        let slope = (fa - fb) / (a - b).max(T::from_f64(1e-300));
+        [fa - slope * a, slope]
+    };
+    let conj_far = {
+        let f = phi_complex(Cx { re: mid, im: d });
+        let slope = f.im / d.max(T::from_f64(1e-300));
+        [f.re - slope * mid, slope]
+    };
+    let pair: [T; 2] = core::array::from_fn(|k| {
+        let far = T::select_lt(d2, T::zero(), conj_far[k], real_far[k]);
+        T::select_lt(d, quarter_mid, close[k], far)
+    });
+    let at_r = pair[1] * r + pair[0];
+    let denom = (r - sum) * r + prod;
+    let kk = (phi_real(r) - at_r) / denom;
+    let spread = [pair[0] + prod * kk, pair[1] - sum * kk, kk];
+
+    core::array::from_fn(|k| T::select_lt(bound, limit, jet[k], spread[k]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
