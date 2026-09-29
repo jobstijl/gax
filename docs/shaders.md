@@ -27,7 +27,7 @@ blades in a comment.
 A PGA2D motor or point is one `vec4`. The layout works in uniform, storage and vertex buffers:
 in a vertex buffer, each field is one attribute location.
 
-**Functions**, for kinds of at most 16 coefficients:
+**Functions**, for every kind:
 
 | name | what |
 |---|---|

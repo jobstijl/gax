@@ -702,7 +702,7 @@ files in `gax/src/algebras/`, behind cargo features.
   * Shaders apply it as `m * x`, and the generated `{v}_matrix_{x}` functions return it in the
     same orientation.
 * **What is emitted, and its names.** WGSL has no overloading, and the full product set is
-  large, so each algebra gets a curated set of functions for kinds of at most 16 coefficients:
+  large, so each algebra gets a curated set of functions, for every kind:
   * `motor_new` and `motor_from_rotor` (embeddings between versor kinds);
   * `motor_reverse`, and `motor_mul_point` (geometric products of versor kinds);
   * `motor_sandwich_point` and `unit_motor_sandwich_point`;
