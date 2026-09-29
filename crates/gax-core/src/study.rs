@@ -635,6 +635,22 @@ pub fn rsqrt_nil<T: Real>(a: T, b: T) -> [T; 2] {
     [r, -(b * r * r * r) * T::from_f64(0.5)]
 }
 
+/// The weights `[w1, w2, w3]` with `log R = w1 G1 + w2 G2 + w3 G3` for a 6D even versor, with
+/// `G1 = ⟨R⟩₂`, `G2 = r0 ⟨R₄ R₂⟩₂`, `G3 = r0 ⟨R₆ R₄⟩₂` and `r0 = ⟨R⟩₀`: the interpolant of
+/// [`log_coeffs_6d`] folded with `Q1 = G3 − G2 + p3 G1`, `Q2 = G2 + p1 Q1 − 2 p3 G1` and the
+/// division by `r0` (docs/log6d.md).
+#[inline]
+pub fn log_weights_6d<T: Real>(p1: T, p2: T, p3: T, r0: T) -> [T; 3] {
+    let [a0, a1, a2] = log_coeffs_6d(p1, p2, p3);
+    let rinv = r0.recip();
+    // a2 Q2 + a1 Q1 + a0 G1 = a2 G2 + b Q1 + (a0 - 2 p3 a2) G1, b = a2 p1 + a1.
+    let b = a2 * p1 + a1;
+    let w1 = (a0 - (p3 + p3) * a2 + b * p3) * rinv;
+    let w2 = (a2 - b) * rinv;
+    let w3 = b * rinv;
+    [w1, w2, w3]
+}
+
 // ---------------------------------------------------------------------------------------------
 // The logarithm of a 6D even versor in closed form (docs/log6d.md).
 //

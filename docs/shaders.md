@@ -48,8 +48,9 @@ in a vertex buffer, each field is one attribute location.
 
 The names are `snake_case` kind names joined by the operation. `exp` and `log` exist wherever
 the Rust code has them, in every algebra: rotations and motions through real trigonometry, boosts
-and general versors (STA, CGA, STAP, CSTA) through the general Study functions, and CSTA's
-bivector `exp` by scaling and squaring, as in Rust.
+and general versors (STA, CGA, STAP, CSTA) through the general Study functions, CSTA's
+bivector `exp` by scaling and squaring, and the log of CSTA's `Even` in closed form (with its
+fallback near a half turn), as in Rust (log6d.md §7).
 
 ## Using a module
 

@@ -180,6 +180,222 @@ fn study_acosh_sq(y: StudyDual) -> StudyDual {
 }
 ";
 
+/// The WGSL helper `study_log6` and its series functions (a port of
+/// `gax_core::study::log_weights_6d`).
+const LOG6: &str = r"// The closed-form logarithm of a 6D even versor (docs/log6d.md), a port of
+// gax_core::study::log_weights_6d in f32: the invariants cosh²(μ_j) are the roots of
+// t³ − p1 t² + p2 t − p3, and φ(u) = √u asinh(√(u−1))/√(u−1) is interpolated at them through its
+// Taylor series at their mean (close roots) or an isolated real root and the remaining pair
+// (spread roots). Series have 16 terms: the regimes keep the nodes' spread below a quarter of
+// their distance to φ's singularity, so 4^-16 ≈ 2e-10. Returns `[w1, w2, w3, 0]` with
+// `log R = w1 G1 + w2 G2 + w3 G3`.
+fn log6_mul(a_in: array<f32, 16>, b_in: array<f32, 16>) -> array<f32, 16> {
+    var a = a_in;
+    var b = b_in;
+    var out: array<f32, 16>;
+    for (var i = 0; i < 16; i++) {
+        for (var j = 0; j < 16 - i; j++) {
+            out[i + j] += a[i] * b[j];
+        }
+    }
+    return out;
+}
+
+fn log6_div(a_in: array<f32, 16>, b_in: array<f32, 16>) -> array<f32, 16> {
+    var a = a_in;
+    var b = b_in;
+    var q: array<f32, 16>;
+    let inv = 1.0 / b[0];
+    for (var k = 0; k < 16; k++) {
+        var s = a[k];
+        for (var j = 1; j <= k; j++) {
+            s -= b[j] * q[k - j];
+        }
+        q[k] = s * inv;
+    }
+    return q;
+}
+
+// `(c + sigma t)^e` as a series in `t`, `e = ±1/2`, `c > 0`.
+fn log6_pow(c: f32, sigma: f32, e: f32) -> array<f32, 16> {
+    var out: array<f32, 16>;
+    var binom = select(sqrt(c), inverseSqrt(c), e < 0.0);
+    let step = sigma / c;
+    for (var k = 0; k < 16; k++) {
+        out[k] = binom;
+        binom *= (e - f32(k)) / (f32(k) + 1.0) * step;
+    }
+    return out;
+}
+
+// `F(x) = asinh(√x)/√x` (or `asin(√−x)/√−x`) as a series in `t` at `x0 = s x`, `s = ±1`,
+// `x >= 1/4`, from `v = √(x0 + t)` and `asinh(v)' = v'/√(1 + x0 + t)`.
+fn log6_far(x: f32, s: f32) -> array<f32, 16> {
+    let m = max(1.0 + s * x, 1e-30);
+    var v = log6_pow(x, s, 0.5);
+    let r = log6_pow(m, 1.0, -0.5);
+    var dv: array<f32, 16>;
+    for (var k = 1; k < 16; k++) {
+        dv[k - 1] = v[k] * f32(k);
+    }
+    var d = log6_mul(dv, r);
+    var a: array<f32, 16>;
+    a[0] = select(atan2(v[0], sqrt(m)), log(v[0] + sqrt(v[0] * v[0] + 1.0)), s > 0.0);
+    for (var k = 1; k < 16; k++) {
+        a[k] = d[k - 1] / f32(k);
+    }
+    return log6_div(a, v);
+}
+
+// The Taylor series of `φ(u) = √u F(u − 1)` at `u = m`.
+fn log6_phi_series(m: f32) -> array<f32, 16> {
+    let x0 = m - 1.0;
+    var f: array<f32, 16>;
+    if abs(x0) < 0.25 {
+        // F's Maclaurin series (48 terms) shifted to x0 by repeated Horner.
+        var c: array<f32, 48>;
+        var b = 1.0;
+        for (var n = 0; n < 48; n++) {
+            c[n] = select(-b, b, n % 2 == 0) / (2.0 * f32(n) + 1.0);
+            b *= (2.0 * f32(n) + 1.0) / (2.0 * f32(n) + 2.0);
+        }
+        for (var i = 0; i < 16; i++) {
+            for (var j = 46; j >= i; j--) {
+                c[j] += x0 * c[j + 1];
+            }
+            f[i] = c[i];
+        }
+    } else if x0 > 0.0 {
+        f = log6_far(x0, 1.0);
+    } else {
+        f = log6_far(-x0, -1.0);
+    }
+    return log6_mul(log6_pow(m, 1.0, 0.5), f);
+}
+
+// `φ(u)` at a real `u > 0`.
+fn log6_phi(u: f32) -> f32 {
+    let x = u - 1.0;
+    let ax = abs(x);
+    let r = sqrt(ax);
+    var f: f32;
+    if ax < 0.05 {
+        // The Maclaurin series of F, 8 terms (0.05^8 < 1e-10).
+        f = ((((((-143.0 / 10240.0 * x + 231.0 / 13312.0) * x - 63.0 / 2816.0) * x + 35.0 / 1152.0) * x - 5.0 / 112.0) * x + 3.0 / 40.0) * x - 1.0 / 6.0) * x + 1.0;
+    } else if x > 0.0 {
+        f = log(r + sqrt(ax + 1.0)) / r;
+    } else {
+        f = atan2(r, sqrt(max(1.0 - ax, 0.0))) / r;
+    }
+    return sqrt(max(u, 0.0)) * f;
+}
+
+// `φ(u)` at a complex `u` (a conjugate pair of roots far apart).
+fn log6_phi_cx(u: vec2<f32>) -> vec2<f32> {
+    let s = cx_sqrt(u - vec2<f32>(1.0, 0.0));
+    let ash = cx_ln(s + cx_sqrt(cx_mul(s, s) + vec2<f32>(1.0, 0.0)));
+    return cx_div(cx_mul(cx_sqrt(u), ash), s);
+}
+
+// The interpolant `[α0, α1, α2]` of a series at centre `c`, reduced modulo `t³ + e2 t − e3`.
+fn log6_reduce3(ph_in: array<f32, 16>, c: f32, e2: f32, e3: f32) -> vec3<f32> {
+    var ph = ph_in;
+    var q = vec3<f32>(0.0, 0.0, 1.0);
+    var sum = vec3<f32>(0.0, 0.0, 0.0);
+    for (var k = 0; k < 16; k++) {
+        sum += ph[k] * q;
+        q = vec3<f32>(q.y, q.z - q.x * e2, q.x * e3);
+    }
+    return vec3<f32>(sum.x * c * c - sum.y * c + sum.z, sum.y - 2.0 * sum.x * c, sum.x);
+}
+
+// The line `[l0, l1]` of a series at centre `c`, reduced modulo `t² − d2`.
+fn log6_reduce2(ph_in: array<f32, 16>, c: f32, d2: f32) -> vec2<f32> {
+    var ph = ph_in;
+    var q = vec2<f32>(0.0, 1.0);
+    var sum = vec2<f32>(0.0, 0.0);
+    for (var k = 0; k < 16; k++) {
+        sum += ph[k] * q;
+        q = vec2<f32>(q.y, q.x * d2);
+    }
+    return vec2<f32>(sum.y - sum.x * c, sum.x);
+}
+
+// `sign(x) |x|^(1/3)`.
+fn log6_cbrt(x: f32) -> f32 {
+    let a = abs(x);
+    if a < 1e-30 {
+        return 0.0;
+    }
+    return sign(x) * exp(log(a) / 3.0);
+}
+
+fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
+    let m = p1 / 3.0;
+    let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+    let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
+    var al: vec3<f32>;
+    if bound < 0.25 * m {
+        al = log6_reduce3(log6_phi_series(m), m, e2, e3);
+    } else {
+        // An isolated real root r (Cardano, or the most isolated of three), a Newton step.
+        let disc = e3 * e3 * 0.25 + e2 * e2 * e2 / 27.0;
+        var r: f32;
+        if disc >= 0.0 {
+            let sq = sqrt(disc);
+            r = log6_cbrt(e3 * 0.5 + sq) + log6_cbrt(e3 * 0.5 - sq);
+        } else {
+            let rad = sqrt(max(-e2 / 3.0, 0.0));
+            let pn = min(e2, -1e-30);
+            let arg = clamp(-e3 * 1.5 / pn * sqrt(-3.0 / pn), -1.0, 1.0);
+            let ang = atan2(sqrt(max(1.0 - arg * arg, 0.0)), arg) / 3.0;
+            let third = 2.0943951;
+            let s = 2.0 * rad * vec3<f32>(cos(ang), cos(ang - third), cos(ang - 2.0 * third));
+            let g = vec3<f32>(
+                min(abs(s.x - s.y), abs(s.x - s.z)),
+                min(abs(s.y - s.z), abs(s.y - s.x)),
+                min(abs(s.z - s.x), abs(s.z - s.y)),
+            );
+            r = select(select(s.x, s.y, g.x < g.y), s.z, max(g.x, g.y) < g.z);
+        }
+        r += m;
+        let f = ((r - p1) * r + p2) * r - p3;
+        let df = (3.0 * r - 2.0 * p1) * r + p2;
+        if abs(df) >= 1e-30 {
+            r -= f / df;
+        }
+        // The remaining pair by its sum and product; its line through its series at the
+        // midpoint (close) or its two values (real, or a conjugate pair).
+        let sum = p1 - r;
+        let prod = p2 - r * sum;
+        let mid = sum * 0.5;
+        let d2 = mid * mid - prod;
+        let d = sqrt(abs(d2));
+        var pair: vec2<f32>;
+        if d < 0.25 * abs(mid) {
+            pair = log6_reduce2(log6_phi_series(mid), mid, d2);
+        } else if d2 < 0.0 {
+            let fc = log6_phi_cx(vec2<f32>(mid, d));
+            let slope = fc.y / max(d, 1e-30);
+            pair = vec2<f32>(fc.x - slope * mid, slope);
+        } else {
+            let a = mid + d;
+            let b = mid - d;
+            let fa = log6_phi(a);
+            let slope = (fa - log6_phi(b)) / max(a - b, 1e-30);
+            pair = vec2<f32>(fa - slope * a, slope);
+        }
+        let kk = (log6_phi(r) - (pair.y * r + pair.x)) / ((r - sum) * r + prod);
+        al = vec3<f32>(pair.x + prod * kk, pair.y - sum * kk, kk);
+    }
+    // log R = r0⁻¹ (α2 Q2 + α1 Q1 + α0 G1) = w1 G1 + w2 G2 + w3 G3.
+    let b = al.z * p1 + al.y;
+    let rinv = 1.0 / r0;
+    return vec4<f32>((al.x - 2.0 * p3 * al.z + b * p3) * rinv, (al.z - b) * rinv, b * rinv, 0.0);
+}
+";
+
 /// A WGSL function `f(a, q) -> vec2<f32>`: the Study function `inner` of `a + X` with `X² = q`
 /// (`gax_core::study::study_q`), as `(f0, f1)` with `f(a + X) = f0 + f1 X`.
 fn study_q_source(name: &str, inner: &str) -> String {
@@ -397,6 +613,7 @@ fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {{
 ",
             study_q_source("study_q_acosh_sq", "study_acosh_sq")
         ),
+        StudyFn::Log6 => LOG6.into(),
         StudyFn::RsqrtAbs => "// `1 / sqrt(|a|)`.
 fn study_rsqrt_abs(a: f32) -> f32 {
     return 1.0 / sqrt(abs(a));
@@ -506,11 +723,41 @@ fn unary(k: &KindSpec, out: &KindSpec, coeffs: &[Poly], name: &str, doc: &str) -
     }
 }
 
+/// The componentwise helpers of the loops ([`fallback_exp`], [`fallback_log`]) for kind `e`:
+/// `{e}_add`, `{e}_sub`, `{e}_scale`.
+pub fn arithmetic(e: &KindSpec, prec: Precision) -> String {
+    let t = prec.scalar();
+    let (es, en) = (snake(&e.name), &e.name);
+    let fields = vec4s(e.layout.len());
+    let each = |f: &dyn Fn(usize) -> String| -> String {
+        (0..fields).map(f).collect::<Vec<_>>().join(", ")
+    };
+    format!(
+        "// `a + b` for `{en}`.
+fn {es}_add(a: {en}, b: {en}) -> {en} {{
+    return {en}({});
+}}
+
+// `a - b` for `{en}`.
+fn {es}_sub(a: {en}, b: {en}) -> {en} {{
+    return {en}({});
+}}
+
+// `a k` for `{en}` and a scalar `k`.
+fn {es}_scale(a: {en}, k: {t}) -> {en} {{
+    return {en}({});
+}}
+",
+        each(&|f| format!("a.c{f} + b.c{f}")),
+        each(&|f| format!("a.c{f} - b.c{f}")),
+        each(&|f| format!("a.c{f} * k")),
+    )
+}
+
 /// The exponential of bivector kind `k` by scaling and squaring in kind `e` (the Rust
 /// fallback of `emit_values`, for kinds without a closed form: CSTA's bivectors), as WGSL text.
-/// It loops, so it is not a straight-line [`Kernel`]; it uses the module's `{e}_mul_{e}` and
-/// `{e}_reverse`, and adds the componentwise helpers it needs. `None` if `k` does not embed in
-/// `e`.
+/// It loops, so it is not a straight-line [`Kernel`]; it uses the module's `{e}_mul_{e}`,
+/// `{e}_reverse` and [`arithmetic`]. `None` if `k` does not embed in `e`.
 pub fn fallback_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
     let t = prec.scalar();
     let (ks, es) = (snake(&k.name), snake(&e.name));
@@ -536,22 +783,7 @@ pub fn fallback_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<Strin
         "{es}_mul_{es}(r, {es}_scale({es}_sub(three, {es}_mul_{es}({es}_reverse(r), r)), 0.5))"
     );
     Some(format!(
-        "// `a + b` for `{en}`.
-fn {es}_add(a: {en}, b: {en}) -> {en} {{
-    return {en}({});
-}}
-
-// `a - b` for `{en}`.
-fn {es}_sub(a: {en}, b: {en}) -> {en} {{
-    return {en}({});
-}}
-
-// `a k` for `{en}` and a scalar `k`.
-fn {es}_scale(a: {en}, k: {t}) -> {en} {{
-    return {en}({});
-}}
-
-// The exponential of a `{kn}`, a unit `{en}`, by scaling and squaring (gax's Rust `exp` for this
+        "// The exponential of a `{kn}`, a unit `{en}`, by scaling and squaring (gax's Rust `exp` for this
 // kind): `B` is halved `s` times until its 1-norm is at most 1/16, a Taylor series of degree 10
 // gives `exp(B / 2^s)`, a Newton step renormalizes it, `s` squarings undo the scaling, and a
 // second Newton step renormalizes the result where it is small (1-norm below 4).
@@ -582,15 +814,137 @@ fn {ks}_exp(x: {kn}) -> {en} {{
     return {en}({});
 }}
 ",
-        each(&|f| format!("a.c{f} + b.c{f}")),
-        each(&|f| format!("a.c{f} - b.c{f}")),
-        each(&|f| format!("a.c{f} * k")),
         abs_sum("x", k.layout.len()),
         wgsl_construct_in(prec, en, &scaled),
         wgsl_construct_in(prec, en, &one),
         abs_sum("r", e.layout.len()),
         each(&|f| format!("select(r.c{f}, fixed.c{f}, size < 4.0)")),
     ))
+}
+
+/// The logarithm of a unit `e` (a 6D algebra's full even kind) into bivector kind `k`, as WGSL
+/// text: `unit_{e}_log` takes the recorded closed form `unit_{e}_log_closed` for `⟨x⟩₀ > 1/16`
+/// and otherwise `{e}_log_by_scaling`, inverse scaling and squaring (the Rust fallback of
+/// `emit_values`: square roots `normalize(1 + x)` by Newton steps of the polar decomposition
+/// until `x` is within 1/16 of the identity, a series of `log(1 + z)`, the scaling undone). It
+/// uses the module's `{e}_mul_{e}`, `{e}_reverse` and [`arithmetic`]. `None` if `e` has no
+/// scalar or lacks one of `k`'s blades.
+pub fn fallback_log(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
+    let t = prec.scalar();
+    let es = snake(&e.name);
+    let (kn, en) = (&k.name, &e.name);
+    let (one_pos, one_sign) = e.layout.position(0)?;
+    let scalar = |x: &str| {
+        let c = wgsl_coeff(x, one_pos);
+        if one_sign > 0 { c } else { format!("-{c}") }
+    };
+    let mut one = vec!["0.0".to_string(); e.layout.len()];
+    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
+    let dist = |x: &str| -> String {
+        (0..e.layout.len())
+            .map(|i| {
+                let c = wgsl_coeff(x, i);
+                if i == one_pos {
+                    format!("abs({c} - ({}))", one[one_pos])
+                } else {
+                    format!("abs({c})")
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" + ")
+    };
+    let project: Vec<String> = k
+        .layout
+        .blades
+        .iter()
+        .map(|&(m, sk)| {
+            let (pos, se) = e.layout.position(m)?;
+            let sign = if sk * se > 0 { "" } else { "-" };
+            Some(format!("{sign}{} * f", wgsl_coeff("l", pos)))
+        })
+        .collect::<Option<_>>()?;
+    // Newton stops at 64 ε of the precision (8 ε in `f16`, whose 64 ε is 1/16).
+    let tol = match prec {
+        Precision::F32 => "7.6e-6",
+        Precision::F16 => "0.008",
+    };
+    Some(format!(
+        "// The logarithm of a unit `{en}` by inverse scaling and squaring (the fallback of
+// `unit_{es}_log` near a half turn, where the closed form loses `ε/<x>_0`): square roots
+// `normalize(1 + x)` until `x` is within 1/16 of the identity, each `1 + x` scaled so that its
+// invariant parts are at most 1 and made unit by Newton steps `y (3 - ~y y) / 2`, then a series
+// of `log(1 + z)` to degree 16, and the scaling undone.
+fn {es}_log_by_scaling(r: {en}) -> {kn} {{
+    let one = {};
+    let three = {es}_scale(one, 3.0);
+    var x = r;
+    var s = 0u;
+    loop {{
+        if s >= 64u || {} < 0.0625 {{
+            break;
+        }}
+        var y = {es}_add(one, x);
+        let yy = {es}_mul_{es}({es}_reverse(y), y);
+        y = {es}_scale(y, 1.0 / sqrt(4.0 * {}));
+        for (var k = 0; k < 200; k++) {{
+            let n = {es}_mul_{es}({es}_reverse(y), y);
+            if {} < {tol} {{
+                break;
+            }}
+            y = {es}_mul_{es}(y, {es}_scale({es}_sub(three, n), 0.5));
+        }}
+        x = y;
+        s = s + 1u;
+    }}
+    let z = {es}_sub(x, one);
+    var q = {es}_scale(one, -1.0 / 16.0);
+    for (var k = 15; k >= 1; k--) {{
+        q = {es}_add({es}_scale(one, select({t}(-1.0), {t}(1.0), k % 2 == 1) / {t}(k)), {es}_mul_{es}(z, q));
+    }}
+    let l = {es}_mul_{es}(z, q);
+    let f = exp2({t}(s));
+    return {};
+}}
+
+// The logarithm of a unit `{en}`: the `{kn}` B with `exp(B) = x`, principal (every invariant
+// plane below a half turn). In closed form (`unit_{es}_log_closed`, docs/log6d.md) where
+// `<x>_0 > 1/16`, else by inverse scaling and squaring.
+fn unit_{es}_log(x: {en}) -> {kn} {{
+    if {} > 0.0625 {{
+        return unit_{es}_log_closed(x);
+    }}
+    return {es}_log_by_scaling(x);
+}}
+",
+        wgsl_construct_in(prec, en, &one),
+        dist("x"),
+        scalar("yy"),
+        dist("n"),
+        wgsl_construct_in(prec, kn, &project),
+        scalar("x"),
+    ))
+}
+
+/// The even kinds whose `log` is the closed form with a fallback ([`fallback_log`]), with their
+/// bivector kind: those with a recorded `unit_{e}_log_closed` kernel.
+pub fn fallback_logs<'a>(
+    spec: &'a AlgebraSpec,
+    stats: &Stats,
+) -> Vec<(&'a KindSpec, &'a KindSpec)> {
+    stats
+        .values
+        .iter()
+        .filter_map(|v| {
+            let name = format!("unit_{}_log_closed", snake(&v.kind));
+            v.kernels.iter().find(|k| k.name == name)?;
+            let e = spec.kinds.iter().find(|x| x.name == v.kind)?;
+            let b = spec
+                .kinds
+                .iter()
+                .find(|x| Some(&x.name) == v.log.as_ref())?;
+            Some((b, e))
+        })
+        .collect()
 }
 
 /// The kinds whose `exp` is the scaling-and-squaring fallback, with the kind it lands in: those
@@ -726,8 +1080,21 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
             }
         }
     }
+    let logs = fallback_logs(spec, stats);
+    let mut arith: Vec<&str> = Vec::new();
+    for (_, e) in fallbacks.iter().chain(&logs) {
+        if !arith.contains(&e.name.as_str()) {
+            arith.push(&e.name);
+            let _ = writeln!(s, "{}", arithmetic(e, prec));
+        }
+    }
     for (k, e) in &fallbacks {
         if let Some(text) = fallback_exp(k, e, prec) {
+            let _ = writeln!(s, "{text}");
+        }
+    }
+    for (k, e) in &logs {
+        if let Some(text) = fallback_log(k, e, prec) {
             let _ = writeln!(s, "{text}");
         }
     }
@@ -786,8 +1153,11 @@ pub fn kernels(spec: &AlgebraSpec, stats: &Stats) -> Vec<Kernel> {
     }
     kernels.extend(stats.values.iter().flat_map(|v| v.kernels.iter().cloned()));
     kernels.extend(stats.kernels.iter().cloned());
-    // The scaling-and-squaring exponentials (`fallback_exp`) need their kind's product.
-    for (_, e) in fallback_exps(spec, stats) {
+    // The scaling-and-squaring loops (`fallback_exp`, `fallback_log`) need their kind's product.
+    for (_, e) in fallback_exps(spec, stats)
+        .into_iter()
+        .chain(fallback_logs(spec, stats))
+    {
         let name = format!("{}_mul_{}", snake(&e.name), snake(&e.name));
         if !kernels.iter().any(|k| k.name == name) {
             kernels.extend(product(

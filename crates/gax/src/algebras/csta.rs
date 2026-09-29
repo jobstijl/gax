@@ -7100,8 +7100,9 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
     /// `r0â»Â¹ (Î±2 Q2 + Î±1 Q1 + Î±0 â¨Râ©â)` for bivectors `Q` from `R`'s grade parts and the
     /// quadratic `Î±` interpolating `Ï(u) = âu asinh(â(uâ1))/â(uâ1)` at the roots
-    /// (`gx::study::log_coeffs_6d`). Near a half turn (`â¨Râ©â < 1/16`), where it loses `Îµ/â¨Râ©â`,
-    /// the lanes there use inverse scaling and squaring instead. The principal logarithm:
+    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Near a half
+    /// turn (`â¨Râ©â < 1/16`), where it loses `Îµ/â¨Râ©â`, the lanes there use inverse scaling and
+    /// squaring instead. The principal logarithm:
     /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
     #[inline]
     #[allow(unused_variables)]
@@ -7292,13 +7293,8 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Even<(), T>> {
         let g1: [T; 15] = [x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14], x[15]];
         let g2: [T; 15] = [p176, p181, p186, p191, p196, p201, p206, p211, p216, p222, p227, p232, p237, p242, p247];
         let g3: [T; 15] = [p248, p249, p250, p132, p133, p134, p251, p252, p253, p254, p139, p140, p141, p142, p255];
-        let [a0, a1, a2] = gx::study::log_coeffs_6d(p1, p2, p3);
-        let rinv = r0.recip();
-        let closed = Bivector::from_coeffs(core::array::from_fn(|i| {
-            let q1 = g3[i] - g2[i] + p3 * g1[i];
-            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
-            (a2 * q2 + a1 * q1 + a0 * g1[i]) * rinv
-        }));
+        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        let closed = Bivector::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]));
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {
             return closed;

@@ -317,7 +317,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.log = emit_log_general(spec, k, &x, &mut traits, &mut meta.kernels);
     }
     if meta.log.is_none() {
-        meta.log = emit_log_fallback(spec, k, &mut traits);
+        meta.log = emit_log_fallback(spec, k, &mut traits, &mut meta.kernels);
     }
 
     // sqrt of a unit versor: normalize(1 + R).
@@ -903,7 +903,12 @@ fn emit_log_general(
 /// counterpart of [`emit_exp_fallback`]. Emitted for a kind of even grades, with a scalar and
 /// the whole grade 2, closed under the product, whose bivector part is a kind of its own.
 #[allow(clippy::too_many_lines)]
-fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> Option<String> {
+fn emit_log_fallback(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    traits: &mut String,
+    kernels: &mut Vec<Kernel>,
+) -> Option<String> {
     let alg = &spec.algebra;
     let blades: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
     if !blades.contains(&0) || blades.iter().any(|m| m.count_ones() % 2 == 1) {
@@ -1017,7 +1022,7 @@ fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> O
         one_sign_mul = if one_sign > 0 { "" } else { "-" },
     );
     if six {
-        emit_log_6d(spec, k, bv, traits);
+        emit_log_6d(spec, k, bv, traits, kernels);
     }
     Some(bn.clone())
 }
@@ -1025,7 +1030,14 @@ fn emit_log_fallback(spec: &AlgebraSpec, k: &KindSpec, traits: &mut String) -> O
 /// The closed-form logarithm of a 6D even versor (docs/log6d.md): the invariants and the three
 /// bivectors `G1 = ⟨R⟩₂`, `G2 = r0 ⟨R₄ R₂⟩₂`, `G3 = r0 ⟨R₆ R₄⟩₂` as one straight-line program,
 /// the interpolant from `gx::study::log_coeffs_6d`, and `log_by_scaling` near a half turn.
-fn emit_log_6d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut String) {
+#[allow(clippy::too_many_lines)]
+fn emit_log_6d(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    bv: &KindSpec,
+    traits: &mut String,
+    kernels: &mut Vec<Kernel>,
+) {
     let alg = &spec.algebra;
     let x = symbolic::variables(&k.layout, 0);
     let grade = |g: u32| -> SymMv {
@@ -1065,6 +1077,55 @@ fn emit_log_6d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     outs.extend(g2);
     outs.extend(g3);
     let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
+    // The WGSL kernel: this program, the weights (`study_log6`), and their combination, which
+    // reads the `G`s as outputs of the first program. The module's `unit_{even}_log` calls it
+    // above `⟨R⟩₀ = 1/16` (`emit_wgsl::fallback_log`).
+    let base = k.layout.len() as Var;
+    let w = |j: usize| Poly::var(base + j as Var);
+    let g = |j: usize, i: usize| Poly::var(base + 3 + (j * n + i) as Var);
+    let combined: Vec<Poly> = (0..n)
+        .map(|i| &(&(&w(0) * &g(0, i)) + &(&w(1) * &g(1, i))) + &(&w(2) * &g(2, i)))
+        .collect();
+    let post = cse::compile_best(&combined, &BTreeSet::new(), &[]);
+    let mut post_vars: Vec<(Var, Source)> = (0..3)
+        .map(|j| (base + j, Source::Local(format!("w{}", j + 1))))
+        .collect();
+    post_vars.extend((0..3 * n).map(|o| {
+        (
+            base + 3 + o as Var,
+            Source::Output {
+                step: 0,
+                index: 4 + o,
+            },
+        )
+    }));
+    kernels.extend(value_kernel(
+        k,
+        &format!("unit_{}_log_closed", snake(&k.name)),
+        &format!(
+            "The logarithm of a unit `{}` in closed form (docs/log6d.md), for `<x>_0 > 1/16`: `unit_{}_log` calls it there.",
+            k.name,
+            snake(&k.name)
+        ),
+        Ty::Kind(bv.name.clone()),
+        vec![
+            Step::Lets {
+                prog: prog.clone(),
+                prefix: "p".into(),
+                vars: arg_vars(k.layout.len()),
+            },
+            Step::Study {
+                func: StudyFn::Log6,
+                args: vec![(0, 1), (0, 2), (0, 3), (0, 0)],
+                outs: vec!["w1".into(), "w2".into(), "w3".into()],
+            },
+            Step::Lets {
+                prog: post,
+                prefix: "t".into(),
+                vars: post_vars,
+            },
+        ],
+    ));
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "p", &mut lets);
@@ -1083,8 +1144,9 @@ fn emit_log_6d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     /// cubic in the scalar parts of `R`'s grade parts squared, and `log R` is
     /// `r0⁻¹ (α2 Q2 + α1 Q1 + α0 ⟨R⟩₂)` for bivectors `Q` from `R`'s grade parts and the
     /// quadratic `α` interpolating `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots
-    /// (`gx::study::log_coeffs_6d`). Near a half turn (`⟨R⟩₀ < 1/16`), where it loses `ε/⟨R⟩₀`,
-    /// the lanes there use inverse scaling and squaring instead. The principal logarithm:
+    /// (`gx::study::log_coeffs_6d`, folded into three weights by `log_weights_6d`). Near a half
+    /// turn (`⟨R⟩₀ < 1/16`), where it loses `ε/⟨R⟩₀`, the lanes there use inverse scaling and
+    /// squaring instead. The principal logarithm:
     /// rotations below a half turn in each invariant plane, boosts and dilations of any size.
     #[inline]
     #[allow(unused_variables)]
@@ -1095,13 +1157,8 @@ fn emit_log_6d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
         let g1: [T; {n}] = [{}];
         let g2: [T; {n}] = [{}];
         let g3: [T; {n}] = [{}];
-        let [a0, a1, a2] = gx::study::log_coeffs_6d(p1, p2, p3);
-        let rinv = r0.recip();
-        let closed = {bn}::from_coeffs(core::array::from_fn(|i| {{
-            let q1 = g3[i] - g2[i] + p3 * g1[i];
-            let q2 = g2[i] + p1 * q1 - (p3 + p3) * g1[i];
-            (a2 * q2 + a1 * q1 + a0 * g1[i]) * rinv
-        }}));
+        let [w1, w2, w3] = gx::study::log_weights_6d(p1, p2, p3, r0);
+        let closed = {bn}::from_coeffs(core::array::from_fn(|i| w1 * g1[i] + w2 * g2[i] + w3 * g3[i]));
         let limit = T::from_ratio(1, 16);
         if T::all_lt(limit, r0) {{
             return closed;

@@ -881,9 +881,14 @@ files in `gax/src/algebras/`, behind cargo features.
   inverse scaling and squaring, kept as `Even::log_by_scaling`, and computed only when some
   lane needs it.
 * **The branch.** Every invariant plane below a half turn (`cⱼ` with non-negative real part):
-  the geometric principal logarithm. Inverse scaling and squaring picks principal values per
-  algebraic channel, which differs only when several planes' half-angles add up past a half
-  turn, so only near the fallback can the two branches meet.
+  the geometric principal logarithm, right wherever `⟨R⟩₀ > 0`. Inverse scaling and squaring
+  takes principal roots per algebraic channel. When several planes' angles add up past a half
+  turn, such a root leaves the spin group, and its log misses `R` by a central element
+  (`±1`, `±I`). This is a 6D effect, and it is limited to the fallback's domain; the fix is open
+  (log6d.md §4, §9).
+* **Everywhere.** The generator emits the closed form for every 6D algebra's full even kind
+  (tested for `R(6,0)`, `R(3,3)`, `R(5,0,1)` besides CSTA), and in WGSL as `unit_even_log`: a
+  recorded kernel with the Study helper `study_log6`, and the fallback as a loop.
 * **Result.** 2.9 µs against 50.7 µs, and within `5·10⁻¹⁵` where the old one was within
   `10⁻⁹` (tests/csta_log.rs, log6d.md).
 

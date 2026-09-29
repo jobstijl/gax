@@ -7,6 +7,9 @@
 //!   specified accuracy is loose (`sin` and `cos` to an absolute `2⁻¹¹`).
 //! * The scaling-and-squaring exponentials (loops, not straight-line kernels) against gax's Rust
 //!   `exp`, within a relative `2⁻¹⁰`.
+//! * CSTA's `unit_even_log` (the closed form, or near a half turn inverse scaling and squaring)
+//!   against gax's Rust `log`, within a relative `2⁻¹⁰`; the closed-form kernel, defined on unit
+//!   versors only, gets `exp` of random bivectors in the kernel sweep.
 //! * The matrix orientation: a map uploaded as `GpuMat` and applied as `m * x` in the shader
 //!   equals the map applied in Rust.
 //! * A layout round trip: kinds written by Rust are read field by field by the shader.
@@ -191,15 +194,24 @@ fn check_algebra_in(gpu: &Gpu, name: &str, committed: &str, prec: Precision) -> 
             .sum();
         let out_stride: usize = kernels.iter().map(|k| len(&spec, &k.result)).sum();
         let src = harness_in(prec, &module, &spec, &kernels, in_stride, out_stride);
-        let inputs: Vec<f32> = (0..SAMPLES * in_stride)
-            .map(|_| {
-                let x = rng.next();
-                match prec {
-                    Precision::F32 => x,
-                    Precision::F16 => gax::gpu::f16_to_f32(gax::gpu::f16_bits(x)),
+        let mut inputs: Vec<f32> = Vec::with_capacity(SAMPLES * in_stride);
+        for _ in 0..SAMPLES {
+            for k in &kernels {
+                match versor_input(name, &k.name, &mut rng) {
+                    Some(v) => inputs.extend(v),
+                    None => {
+                        for (_, t) in &k.params {
+                            inputs.extend((0..len(&spec, t)).map(|_| rng.next()));
+                        }
+                    }
                 }
-            })
-            .collect();
+            }
+        }
+        if prec == Precision::F16 {
+            for x in &mut inputs {
+                *x = gax::gpu::f16_to_f32(gax::gpu::f16_bits(*x));
+            }
+        }
         let out = floats(&gpu.run(
             &src,
             "main",
@@ -362,6 +374,86 @@ fn fallback_exponentials_on_the_gpu() {
         }
         println!("csta: {} x {SAMPLES} samples within {worst:.1e}", call.name);
     }
+}
+
+/// A CSTA unit versor `exp(B)` rounded to `f32`, `B` random with entries up to `size`, redrawn
+/// until `⟨R⟩₀ > min` (clear of a half turn).
+fn csta_versor(rng: &mut Rng, size: f64, min: f64) -> Vec<f32> {
+    loop {
+        let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| {
+            size * f64::from(rng.next())
+        }));
+        let r = b.exp().into_inner().c;
+        if r[0] > min {
+            return r.iter().map(|x| *x as f32).collect();
+        }
+    }
+}
+
+/// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
+/// `⟨R⟩₀ > 1/16`), or `None` for the others.
+fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
+    match (algebra, kernel) {
+        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125)),
+        _ => None,
+    }
+}
+
+#[test]
+fn csta_log_on_the_gpu() {
+    use gax::Kind;
+    type B = gax::csta::Bivector<(), f64>;
+    let Some(gpu) = Gpu::or_skip() else { return };
+    let spec = spec("csta");
+    let module = gax::wgsl::CSTA.source;
+    let call = Kernel {
+        name: "unit_even_log".into(),
+        doc: String::new(),
+        params: vec![("x".into(), Ty::Kind("Even".into()))],
+        result: Ty::Kind("Bivector".into()),
+        steps: Vec::new(),
+        entries: None,
+    };
+    let (n_in, n_out) = (32, 15);
+    let src = harness(module, &spec, &[&call], n_in, n_out);
+    let mut rng = Rng(0x0106_5d6d);
+    // Every fourth sample a rotation towards a half turn, where the fallback takes over.
+    let e12 = <gax::csta::Bivector as Kind>::BLADES.iter().position(|n| *n == "e12").expect("e12");
+    let mut inputs: Vec<f32> = Vec::with_capacity(SAMPLES * n_in);
+    for n in 0..SAMPLES {
+        if n % 4 == 3 {
+            let mut b = [0.0f64; 15];
+            for x in &mut b {
+                *x = 0.05 * f64::from(rng.next());
+            }
+            b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
+            inputs.extend(B::from_coeffs(b).exp().into_inner().c.iter().map(|x| *x as f32));
+        } else {
+            inputs.extend(csta_versor(&mut rng, 0.3, -1.0));
+        }
+    }
+    let out = floats(&gpu.run(
+        &src,
+        "main",
+        &[bytemuck::cast_slice(&inputs)],
+        SAMPLES * n_out * 4,
+        SAMPLES as u32,
+    ));
+    let mut worst = 0.0f64;
+    for n in 0..SAMPLES {
+        let r = gax::csta::Even::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+            f64::from(inputs[n * n_in + i])
+        }));
+        let exact: B = gax::Unit::new_unchecked(r).log();
+        let scale = exact.c.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+        for (o, e) in exact.c.iter().enumerate() {
+            let g = f64::from(out[n * n_out + o]);
+            let rel = (g - e).abs() / scale;
+            assert!(rel < 1.0 / 1024.0, "csta: unit_even_log sample {n} output {o}: {g} vs {e}");
+            worst = worst.max(rel);
+        }
+    }
+    println!("csta: unit_even_log x {SAMPLES} samples within {worst:.1e}");
 }
 
 #[test]

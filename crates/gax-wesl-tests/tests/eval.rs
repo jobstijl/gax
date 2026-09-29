@@ -7,6 +7,10 @@
 //!   must agree within a relative `2⁻¹⁴` (the evaluator uses Rust's `f32` functions; a GPU's
 //!   WGSL built-ins are looser, see the GPU tests).
 //!
+//! * The closed-form 6D logarithm is defined on unit versors only; it gets `exp` of random
+//!   bivectors, and the module's `unit_even_log` (the closed form or, near a half turn, inverse
+//!   scaling and squaring) is checked against gax's Rust `log`.
+//!
 //! The evaluator implements neither `fma` nor calls of non-`@const` functions, so the module
 //! is evaluated with every function marked `@const` and `fma(a, b, c)` as `a * b + c`. That
 //! changes rounding only, which the bounds cover; it does not test that a GPU fuses.
@@ -138,11 +142,14 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
             continue;
         }
         for _ in 0..samples {
-            let args: Vec<Vec<f32>> = k
-                .params
-                .iter()
-                .map(|(_, t)| (0..len(&spec, t)).map(|_| rng.next()).collect())
-                .collect();
+            let args: Vec<Vec<f32>> = match versor_input(name, &k.name, &mut rng) {
+                Some(v) => vec![v],
+                None => k
+                    .params
+                    .iter()
+                    .map(|(_, t)| (0..len(&spec, t)).map(|_| rng.next()).collect())
+                    .collect(),
+            };
             let wide: Vec<Vec<f64>> = args
                 .iter()
                 .map(|a| a.iter().map(|x| f64::from(*x)).collect())
@@ -221,7 +228,87 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
         }
         count += 1;
     }
+    // The logarithms with a fallback near a half turn, against gax's Rust `log`.
+    for (_, e) in emit_wgsl::fallback_logs(&spec, &stats) {
+        let name_fn = format!("unit_{}_log", gax_gen::kernel::snake(&e.name));
+        for case in 0..samples.max(8) {
+            let (c, exact) = reference_log(name, &e.name, &mut rng, case);
+            let expr = format!("{name_fn}({})", literal(&Ty::Kind(e.name.clone()), &c));
+            let mut v = res
+                .eval(&expr)
+                .unwrap_or_else(|e| panic!("{name}: {expr}: {e}"));
+            let bytes = v.to_buffer().expect("bytes");
+            let got: Vec<f32> = bytes
+                .chunks(4)
+                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                .collect();
+            let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+            for (o, (g, e)) in got.iter().zip(&exact).enumerate() {
+                let rel = (f64::from(*g) - e).abs() / scale;
+                assert!(
+                    rel < 1.0 / 4096.0,
+                    "{name}: {name_fn} output {o}: {g} vs {e} at {c:?}"
+                );
+                worst_rel = worst_rel.max(rel);
+            }
+        }
+        count += 1;
+    }
     (count, worst, worst_rel)
+}
+
+/// A CSTA unit versor `exp(B)` rounded to `f32`, `B` random with entries up to `size`, redrawn
+/// until `⟨R⟩₀ > min` (clear of a half turn).
+fn csta_versor(rng: &mut Rng, size: f64, min: f64) -> Vec<f32> {
+    loop {
+        let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| {
+            size * f64::from(rng.next())
+        }));
+        let r = b.exp().into_inner().c;
+        if r[0] > min {
+            return r.iter().map(|x| *x as f32).collect();
+        }
+    }
+}
+
+/// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
+/// `⟨R⟩₀ > 1/16`), or `None` for the others.
+fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
+    match (algebra, kernel) {
+        ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125)),
+        _ => None,
+    }
+}
+
+/// A unit versor (every fourth one a rotation towards a half turn, where the fallback takes
+/// over) and gax's Rust `log` of it.
+fn reference_log(algebra: &str, kind: &str, rng: &mut Rng, case: usize) -> (Vec<f32>, Vec<f64>) {
+    use gax::Kind;
+    match (algebra, kind) {
+        ("csta", "Even") => {
+            type B = gax::csta::Bivector<(), f64>;
+            let c = if case % 4 == 3 {
+                let e12 = <gax::csta::Bivector as Kind>::BLADES
+                    .iter()
+                    .position(|n| *n == "e12")
+                    .expect("e12");
+                let mut b = [0.0f64; 15];
+                for x in &mut b {
+                    *x = 0.05 * f64::from(rng.next());
+                }
+                b[e12] = core::f64::consts::FRAC_PI_2 - 0.01 * (1.0 + f64::from(rng.next()));
+                let r = B::from_coeffs(b).exp().into_inner().c;
+                r.iter().map(|x| *x as f32).collect()
+            } else {
+                csta_versor(rng, 0.3, -1.0)
+            };
+            let r =
+                gax::csta::Even::<(), f64>::from_coeffs(core::array::from_fn(|i| f64::from(c[i])));
+            let l: B = gax::Unit::new_unchecked(r).log();
+            (c, l.c.to_vec())
+        }
+        _ => panic!("no reference log for {algebra}::{kind}"),
+    }
 }
 
 /// gax's Rust `exp` of a kind whose WGSL `exp` is the scaling-and-squaring fallback.

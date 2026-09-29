@@ -75,6 +75,13 @@ pub enum Source {
     },
     /// A local produced by an earlier step, such as `c0` from a Study helper.
     Local(String),
+    /// Output `index` of the earlier `Lets` step `step` (which reads no such outputs itself).
+    Output {
+        /// The step.
+        step: usize,
+        /// The output.
+        index: usize,
+    },
 }
 
 /// A Study-number helper called between two programs (see `gax_core::study`).
@@ -99,6 +106,8 @@ pub enum StudyFn {
     ExpQ,
     /// `[h0, h1] = log_coeffs_q(c0, qc)`: 5D algebras.
     LogQ,
+    /// `[w1, w2, w3] = log_weights_6d(p1, p2, p3, r0)`: 6D even versors (docs/log6d.md).
+    Log6,
 }
 
 impl StudyFn {
@@ -119,6 +128,7 @@ impl StudyFn {
             StudyFn::Log(_) => "study_log_complex",
             StudyFn::ExpQ => "study_exp_q",
             StudyFn::LogQ => "study_log_q",
+            StudyFn::Log6 => "study_log6",
         }
     }
 
@@ -127,7 +137,7 @@ impl StudyFn {
     pub fn needs_channels(self) -> bool {
         matches!(
             self,
-            StudyFn::Exp(_) | StudyFn::Log(_) | StudyFn::ExpQ | StudyFn::LogQ
+            StudyFn::Exp(_) | StudyFn::Log(_) | StudyFn::ExpQ | StudyFn::LogQ | StudyFn::Log6
         )
     }
 }
@@ -265,7 +275,7 @@ impl Kernel {
         // In an `f16` module, the programs before the last (which feed the `f32` Study helpers:
         // norms, squares) run in `f32` too, reading their arguments converted: a sum of squares
         // in `f16` underflows for coefficients below 1/128 and overflows above 256.
-        let var_at = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
+        let leaf = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
             let (_, src) = vars
                 .iter()
                 .find(|(w, _)| *w == v)
@@ -276,6 +286,17 @@ impl Kernel {
                     if k < last { prec.to_f32(&e) } else { e }
                 }
                 Source::Local(n) => n.clone(),
+                Source::Output { .. } => panic!("{}: an output read by an output", self.name),
+            }
+        };
+        let var_at = |k: usize, vars: &[(Var, Source)], v: Var| -> String {
+            match vars.iter().find(|(w, _)| *w == v) {
+                Some((_, Source::Output { step, index })) => {
+                    // Earlier programs are `f32`.
+                    let e = self.output(*step, *index, target, &|vs, w| leaf(*step, vs, w));
+                    if k < last { e } else { prec.convert(&e) }
+                }
+                _ => leaf(k, vars, v),
             }
         };
         for (k, step) in self.steps.iter().enumerate() {
@@ -355,6 +376,7 @@ impl Kernel {
                             Source::Local(n) => {
                                 locals.iter().find(|(m, _)| m == n).expect("a local").1
                             }
+                            Source::Output { step, index } => outs[*step][*index],
                         }
                     };
                     outs.push(prog.eval(&get));
@@ -379,6 +401,7 @@ impl Kernel {
                         }
                         StudyFn::ExpQ => study::exp_coeffs_q(x[0], x[1]).to_vec(),
                         StudyFn::LogQ => study::log_coeffs_q(x[0], x[1]).to_vec(),
+                        StudyFn::Log6 => study::log_weights_6d(x[0], x[1], x[2], x[3]).to_vec(),
                     };
                     for (n, v) in names.iter().zip(r) {
                         locals.push((n.clone(), v));
@@ -401,7 +424,7 @@ impl Kernel {
             let (_, src) = vars.iter().find(|(w, _)| *w == v).expect("a source");
             match src {
                 Source::Arg { param, index } => args[*param][*index].abs(),
-                Source::Local(_) => f64::INFINITY,
+                Source::Local(_) | Source::Output { .. } => f64::INFINITY,
             }
         };
         Some(prog.error_bound(&mag, u))

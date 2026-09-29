@@ -1390,6 +1390,240 @@ fn even_norm_squared(x: Even) -> f16 {
     return t47;
 }
 
+// The logarithm of a unit `Even` in closed form (docs/log6d.md), for `<x>_0 > 1/16`: `unit_even_log` calls it there.
+fn unit_even_log_closed(x: Even) -> Bivector {
+    let p0 = f32(x.c0.x) * f32(x.c7.w);
+    let p1 = f32(x.c0.x) * f32(x.c0.y);
+    let p2 = f32(x.c0.x) * f32(x.c0.z);
+    let p3 = f32(x.c0.x) * f32(x.c0.w);
+    let p4 = f32(x.c0.x) * f32(x.c1.x);
+    let p5 = f32(x.c0.x) * f32(x.c1.y);
+    let p6 = f32(x.c0.x) * f32(x.c1.z);
+    let p7 = f32(x.c0.x) * f32(x.c1.w);
+    let p8 = f32(x.c0.x) * f32(x.c2.x);
+    let p9 = f32(x.c0.x) * f32(x.c2.y);
+    let p10 = f32(x.c0.x) * f32(x.c2.z);
+    let p11 = f32(x.c0.x) * f32(x.c2.w);
+    let p12 = f32(x.c0.x) * f32(x.c3.x);
+    let p13 = f32(x.c0.x) * f32(x.c3.y);
+    let p14 = f32(x.c0.x) * f32(x.c3.z);
+    let p15 = f32(x.c0.x) * f32(x.c3.w);
+    let p16 = f32(x.c0.x) * f32(x.c0.x);
+    let p18 = f32(x.c0.z) * f32(x.c0.z);
+    let p19 = f32(x.c0.w) * f32(x.c0.w);
+    let p22 = f32(x.c1.z) * f32(x.c1.z);
+    let p24 = f32(x.c2.x) * f32(x.c3.x);
+    let p25 = f32(x.c2.y) * f32(x.c3.y);
+    let p30 = f32(x.c4.z) * f32(x.c5.z);
+    let p31 = f32(x.c4.w) * f32(x.c5.w);
+    let p34 = f32(x.c6.z) * f32(x.c6.z);
+    let p37 = f32(x.c7.y) * f32(x.c7.y);
+    let p38 = f32(x.c7.z) * f32(x.c7.z);
+    let p41 = f32(x.c5.y) * p10;
+    let p42 = f32(x.c5.x) * p11;
+    let p47 = f32(x.c5.z) * p10;
+    let p48 = f32(x.c5.x) * p12;
+    let p53 = f32(x.c5.w) * p10;
+    let p54 = f32(x.c5.x) * p13;
+    let p58 = f32(x.c5.w) * p8;
+    let p62 = f32(x.c7.x) * p15;
+    let p65 = f32(x.c5.y) * p9;
+    let p68 = f32(x.c7.y) * p15;
+    let p70 = f32(x.c5.z) * p7;
+    let p74 = f32(x.c7.z) * p15;
+    let p78 = f32(x.c6.w) * p8;
+    let p79 = f32(x.c6.z) * p9;
+    let p84 = f32(x.c6.w) * p7;
+    let p85 = f32(x.c6.y) * p9;
+    let p90 = f32(x.c6.z) * p7;
+    let p91 = f32(x.c6.y) * p8;
+    let p94 = f32(x.c4.z) * p2;
+    let p97 = f32(x.c7.y) * p8;
+    let p100 = f32(x.c5.w) * p5;
+    let p102 = f32(x.c6.w) * p12;
+    let p107 = f32(x.c5.y) * p6;
+    let p109 = f32(x.c6.y) * p13;
+    let p112 = f32(x.c5.z) * p4;
+    let p114 = f32(x.c6.z) * p11;
+    let p118 = f32(x.c5.z) * p2;
+    let p121 = f32(x.c7.y) * p12;
+    let p124 = f32(x.c6.z) * p2;
+    let p127 = f32(x.c7.y) * p5;
+    let p129 = f32(x.c7.x) * p0;
+    let p130 = f32(x.c7.y) * p0;
+    let p131 = f32(x.c7.z) * p0;
+    let p132 = f32(x.c6.y) * p0;
+    let p133 = f32(x.c6.z) * p0;
+    let p134 = f32(x.c6.w) * p0;
+    let p135 = f32(x.c4.y) * p0;
+    let p136 = f32(x.c4.z) * p0;
+    let p137 = f32(x.c4.w) * p0;
+    let p138 = f32(x.c5.x) * p0;
+    let p139 = f32(x.c5.y) * p0;
+    let p140 = f32(x.c5.z) * p0;
+    let p141 = f32(x.c5.w) * p0;
+    let p142 = f32(x.c6.x) * p0;
+    let p143 = f32(x.c4.x) * p0;
+    let p144 = fma(f32(x.c0.y), f32(x.c0.y), p18);
+    let p145 = fma(-f32(x.c1.x), f32(x.c1.x), p19);
+    let p146 = fma(f32(x.c1.y), f32(x.c1.y), p22);
+    let p147 = fma(f32(x.c1.w), f32(x.c2.w), p24);
+    let p148 = fma(-f32(x.c2.z), f32(x.c3.z), p25);
+    let p149 = fma(f32(x.c3.w), f32(x.c3.w), -p144);
+    let p150 = p145 - p146;
+    let p151 = p147 + p148;
+    let p152 = p149 - p150;
+    let p154 = fma(p152, (1.0 / 2.0), p151);
+    let p155 = fma(f32(x.c7.x), f32(x.c7.x), p37);
+    let p156 = fma(-f32(x.c4.x), f32(x.c4.x), p38);
+    let p157 = p155 + p156;
+    let p158 = fma(f32(x.c6.y), f32(x.c6.y), p34);
+    let p159 = fma(f32(x.c6.w), f32(x.c6.w), p158);
+    let p160 = p157 - p159;
+    let p161 = fma(f32(x.c4.y), f32(x.c5.y), p30);
+    let p162 = fma(-f32(x.c5.x), f32(x.c6.x), p31);
+    let p163 = p161 + p162;
+    let p165 = p16 * 3.0;
+    let p167 = fma(p163, 2.0, p160);
+    let p168 = fma(-p154, 4.0, p165);
+    let p169 = p167 + p168;
+    let p171 = fma(-p154, 2.0, p165);
+    let p172 = fma(f32(x.c6.x), p7, p42);
+    let p173 = fma(f32(x.c6.y), p15, p172);
+    let p174 = fma(f32(x.c4.x), p4, p41);
+    let p175 = fma(f32(x.c4.y), p14, p174);
+    let p176 = p173 - p175;
+    let p177 = fma(f32(x.c6.x), p8, p48);
+    let p178 = fma(f32(x.c6.z), p15, p177);
+    let p179 = fma(f32(x.c4.x), p5, p47);
+    let p180 = fma(f32(x.c4.z), p14, p179);
+    let p181 = p178 - p180;
+    let p182 = fma(f32(x.c6.x), p9, p54);
+    let p183 = fma(f32(x.c6.w), p15, p182);
+    let p184 = fma(f32(x.c4.x), p6, p53);
+    let p185 = fma(f32(x.c4.w), p14, p184);
+    let p186 = p183 - p185;
+    let p187 = fma(f32(x.c4.x), p1, p58);
+    let p188 = fma(f32(x.c4.w), p12, p187);
+    let p189 = fma(-f32(x.c5.z), p9, p62);
+    let p190 = fma(-f32(x.c4.z), p13, p189);
+    let p191 = p188 + p190;
+    let p192 = fma(f32(x.c4.x), p2, p65);
+    let p193 = fma(f32(x.c4.y), p13, p192);
+    let p194 = fma(-f32(x.c5.w), p7, p68);
+    let p195 = fma(-f32(x.c4.w), p11, p194);
+    let p196 = p193 + p195;
+    let p197 = fma(f32(x.c4.x), p3, p70);
+    let p198 = fma(f32(x.c4.z), p11, p197);
+    let p199 = fma(-f32(x.c5.y), p8, p74);
+    let p200 = fma(-f32(x.c4.y), p12, p199);
+    let p201 = p198 + p200;
+    let p202 = fma(f32(x.c4.z), p6, p79);
+    let p203 = fma(-f32(x.c5.x), p1, p202);
+    let p204 = fma(f32(x.c4.w), p5, p78);
+    let p205 = fma(f32(x.c7.x), p10, p204);
+    let p206 = p203 - p205;
+    let p207 = fma(f32(x.c4.w), p4, p84);
+    let p208 = fma(-f32(x.c5.x), p2, p207);
+    let p209 = fma(f32(x.c4.y), p6, p85);
+    let p210 = fma(f32(x.c7.y), p10, p209);
+    let p211 = p208 - p210;
+    let p212 = fma(f32(x.c4.y), p5, p91);
+    let p213 = fma(-f32(x.c5.x), p3, p212);
+    let p214 = fma(f32(x.c4.z), p4, p90);
+    let p215 = fma(f32(x.c7.z), p10, p214);
+    let p216 = p213 - p215;
+    let p217 = fma(f32(x.c4.y), p1, p94);
+    let p218 = fma(f32(x.c4.w), p3, p217);
+    let p219 = fma(f32(x.c7.x), p7, p97);
+    let p220 = fma(f32(x.c7.z), p9, p219);
+    let p221 = p218 + p220;
+    let p222 = -p221;
+    let p223 = fma(f32(x.c5.z), p6, p102);
+    let p224 = fma(f32(x.c7.x), p14, p223);
+    let p225 = fma(f32(x.c6.x), p1, p100);
+    let p226 = fma(f32(x.c6.z), p13, p225);
+    let p227 = p224 - p226;
+    let p228 = fma(f32(x.c5.w), p4, p109);
+    let p229 = fma(f32(x.c7.y), p14, p228);
+    let p230 = fma(f32(x.c6.x), p2, p107);
+    let p231 = fma(f32(x.c6.w), p11, p230);
+    let p232 = p229 - p231;
+    let p233 = fma(f32(x.c5.y), p5, p114);
+    let p234 = fma(f32(x.c7.z), p14, p233);
+    let p235 = fma(f32(x.c6.x), p3, p112);
+    let p236 = fma(f32(x.c6.y), p12, p235);
+    let p237 = p234 - p236;
+    let p238 = fma(f32(x.c7.x), p11, p121);
+    let p239 = fma(f32(x.c7.z), p13, p238);
+    let p240 = fma(f32(x.c5.y), p1, p118);
+    let p241 = fma(f32(x.c5.w), p3, p240);
+    let p242 = p239 - p241;
+    let p243 = fma(f32(x.c7.x), p4, p127);
+    let p244 = fma(f32(x.c7.z), p6, p243);
+    let p245 = fma(f32(x.c6.y), p1, p124);
+    let p246 = fma(f32(x.c6.w), p3, p245);
+    let p247 = p244 - p246;
+    let p248 = -p129;
+    let p249 = -p130;
+    let p250 = -p131;
+    let p251 = -p135;
+    let p252 = -p136;
+    let p253 = -p137;
+    let p254 = -p138;
+    let p255 = -p143;
+    let r1 = study_log6(p169, p171, p16, f32(x.c0.x));
+    let w1 = f16(r1[0]);
+    let w2 = f16(r1[1]);
+    let w3 = f16(r1[2]);
+    let t1 = w2 * f16(p176);
+    let t4 = w2 * f16(p181);
+    let t7 = w2 * f16(p186);
+    let t10 = w2 * f16(p191);
+    let t13 = w2 * f16(p196);
+    let t16 = w2 * f16(p201);
+    let t19 = w2 * f16(p206);
+    let t22 = w2 * f16(p211);
+    let t25 = w2 * f16(p216);
+    let t28 = w2 * f16(p222);
+    let t31 = w2 * f16(p227);
+    let t34 = w2 * f16(p232);
+    let t37 = w2 * f16(p237);
+    let t40 = w2 * f16(p242);
+    let t43 = w2 * f16(p247);
+    let t45 = fma(w1, f16(f32(x.c0.y)), t1);
+    let t46 = fma(w3, f16(p248), t45);
+    let t47 = fma(w1, f16(f32(x.c0.z)), t4);
+    let t48 = fma(w3, f16(p249), t47);
+    let t49 = fma(w1, f16(f32(x.c0.w)), t7);
+    let t50 = fma(w3, f16(p250), t49);
+    let t51 = fma(w1, f16(f32(x.c1.x)), t10);
+    let t52 = fma(w3, f16(p132), t51);
+    let t53 = fma(w1, f16(f32(x.c1.y)), t13);
+    let t54 = fma(w3, f16(p133), t53);
+    let t55 = fma(w1, f16(f32(x.c1.z)), t16);
+    let t56 = fma(w3, f16(p134), t55);
+    let t57 = fma(w1, f16(f32(x.c1.w)), t19);
+    let t58 = fma(w3, f16(p251), t57);
+    let t59 = fma(w1, f16(f32(x.c2.x)), t22);
+    let t60 = fma(w3, f16(p252), t59);
+    let t61 = fma(w1, f16(f32(x.c2.y)), t25);
+    let t62 = fma(w3, f16(p253), t61);
+    let t63 = fma(w1, f16(f32(x.c2.z)), t28);
+    let t64 = fma(w3, f16(p254), t63);
+    let t65 = fma(w1, f16(f32(x.c2.w)), t31);
+    let t66 = fma(w3, f16(p139), t65);
+    let t67 = fma(w1, f16(f32(x.c3.x)), t34);
+    let t68 = fma(w3, f16(p140), t67);
+    let t69 = fma(w1, f16(f32(x.c3.y)), t37);
+    let t70 = fma(w3, f16(p141), t69);
+    let t71 = fma(w1, f16(f32(x.c3.z)), t40);
+    let t72 = fma(w3, f16(p142), t71);
+    let t73 = fma(w1, f16(f32(x.c3.w)), t43);
+    let t74 = fma(w3, f16(p255), t73);
+    return Bivector(vec4<f16>(t46, t48, t50, t52), vec4<f16>(t54, t56, t58, t60), vec4<f16>(t62, t64, t66, t68), vec4<f16>(t70, t72, t74, 0.0));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn odd_norm_squared(x: Odd) -> f16 {
     let t1 = x.c0.y * x.c0.y;
@@ -19078,6 +19312,53 @@ fn bivector_exp(x: Bivector) -> Even {
     return Even(select(r.c0, fixed.c0, size < 4.0), select(r.c1, fixed.c1, size < 4.0), select(r.c2, fixed.c2, size < 4.0), select(r.c3, fixed.c3, size < 4.0), select(r.c4, fixed.c4, size < 4.0), select(r.c5, fixed.c5, size < 4.0), select(r.c6, fixed.c6, size < 4.0), select(r.c7, fixed.c7, size < 4.0));
 }
 
+// The logarithm of a unit `Even` by inverse scaling and squaring (the fallback of
+// `unit_even_log` near a half turn, where the closed form loses `ε/<x>_0`): square roots
+// `normalize(1 + x)` until `x` is within 1/16 of the identity, each `1 + x` scaled so that its
+// invariant parts are at most 1 and made unit by Newton steps `y (3 - ~y y) / 2`, then a series
+// of `log(1 + z)` to degree 16, and the scaling undone.
+fn even_log_by_scaling(r: Even) -> Bivector {
+    let one = Even(vec4<f16>(1.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+    let three = even_scale(one, 3.0);
+    var x = r;
+    var s = 0u;
+    loop {
+        if s >= 64u || abs(x.c0.x - (1.0)) + abs(x.c0.y) + abs(x.c0.z) + abs(x.c0.w) + abs(x.c1.x) + abs(x.c1.y) + abs(x.c1.z) + abs(x.c1.w) + abs(x.c2.x) + abs(x.c2.y) + abs(x.c2.z) + abs(x.c2.w) + abs(x.c3.x) + abs(x.c3.y) + abs(x.c3.z) + abs(x.c3.w) + abs(x.c4.x) + abs(x.c4.y) + abs(x.c4.z) + abs(x.c4.w) + abs(x.c5.x) + abs(x.c5.y) + abs(x.c5.z) + abs(x.c5.w) + abs(x.c6.x) + abs(x.c6.y) + abs(x.c6.z) + abs(x.c6.w) + abs(x.c7.x) + abs(x.c7.y) + abs(x.c7.z) + abs(x.c7.w) < 0.0625 {
+            break;
+        }
+        var y = even_add(one, x);
+        let yy = even_mul_even(even_reverse(y), y);
+        y = even_scale(y, 1.0 / sqrt(4.0 * yy.c0.x));
+        for (var k = 0; k < 200; k++) {
+            let n = even_mul_even(even_reverse(y), y);
+            if abs(n.c0.x - (1.0)) + abs(n.c0.y) + abs(n.c0.z) + abs(n.c0.w) + abs(n.c1.x) + abs(n.c1.y) + abs(n.c1.z) + abs(n.c1.w) + abs(n.c2.x) + abs(n.c2.y) + abs(n.c2.z) + abs(n.c2.w) + abs(n.c3.x) + abs(n.c3.y) + abs(n.c3.z) + abs(n.c3.w) + abs(n.c4.x) + abs(n.c4.y) + abs(n.c4.z) + abs(n.c4.w) + abs(n.c5.x) + abs(n.c5.y) + abs(n.c5.z) + abs(n.c5.w) + abs(n.c6.x) + abs(n.c6.y) + abs(n.c6.z) + abs(n.c6.w) + abs(n.c7.x) + abs(n.c7.y) + abs(n.c7.z) + abs(n.c7.w) < 0.008 {
+                break;
+            }
+            y = even_mul_even(y, even_scale(even_sub(three, n), 0.5));
+        }
+        x = y;
+        s = s + 1u;
+    }
+    let z = even_sub(x, one);
+    var q = even_scale(one, -1.0 / 16.0);
+    for (var k = 15; k >= 1; k--) {
+        q = even_add(even_scale(one, select(f16(-1.0), f16(1.0), k % 2 == 1) / f16(k)), even_mul_even(z, q));
+    }
+    let l = even_mul_even(z, q);
+    let f = exp2(f16(s));
+    return Bivector(vec4<f16>(l.c0.y * f, l.c0.z * f, l.c0.w * f, l.c1.x * f), vec4<f16>(l.c1.y * f, l.c1.z * f, l.c1.w * f, l.c2.x * f), vec4<f16>(l.c2.y * f, l.c2.z * f, l.c2.w * f, l.c3.x * f), vec4<f16>(l.c3.y * f, l.c3.z * f, l.c3.w * f, 0.0));
+}
+
+// The logarithm of a unit `Even`: the `Bivector` B with `exp(B) = x`, principal (every invariant
+// plane below a half turn). In closed form (`unit_even_log_closed`, docs/log6d.md) where
+// `<x>_0 > 1/16`, else by inverse scaling and squaring.
+fn unit_even_log(x: Even) -> Bivector {
+    if x.c0.x > 0.0625 {
+        return unit_even_log_closed(x);
+    }
+    return even_log_by_scaling(x);
+}
+
 // Complex numbers as `vec2<f32>` (re, im) and dual numbers over them (value `p`, derivative
 // `d`): the channel arithmetic of gax_core::study, for the general Study helpers below.
 struct StudyDual {
@@ -19256,6 +19537,219 @@ fn study_exp_q(lambda: f32, q: f32) -> vec4<f32> {
     let c = study_q_exp_c(lambda, q);
     let s = study_q_exp_s(lambda, q);
     return vec4<f32>(c.x, c.y, s.x, s.y);
+}
+
+// The closed-form logarithm of a 6D even versor (docs/log6d.md), a port of
+// gax_core::study::log_weights_6d in f32: the invariants cosh²(μ_j) are the roots of
+// t³ − p1 t² + p2 t − p3, and φ(u) = √u asinh(√(u−1))/√(u−1) is interpolated at them through its
+// Taylor series at their mean (close roots) or an isolated real root and the remaining pair
+// (spread roots). Series have 16 terms: the regimes keep the nodes' spread below a quarter of
+// their distance to φ's singularity, so 4^-16 ≈ 2e-10. Returns `[w1, w2, w3, 0]` with
+// `log R = w1 G1 + w2 G2 + w3 G3`.
+fn log6_mul(a_in: array<f32, 16>, b_in: array<f32, 16>) -> array<f32, 16> {
+    var a = a_in;
+    var b = b_in;
+    var out: array<f32, 16>;
+    for (var i = 0; i < 16; i++) {
+        for (var j = 0; j < 16 - i; j++) {
+            out[i + j] += a[i] * b[j];
+        }
+    }
+    return out;
+}
+
+fn log6_div(a_in: array<f32, 16>, b_in: array<f32, 16>) -> array<f32, 16> {
+    var a = a_in;
+    var b = b_in;
+    var q: array<f32, 16>;
+    let inv = 1.0 / b[0];
+    for (var k = 0; k < 16; k++) {
+        var s = a[k];
+        for (var j = 1; j <= k; j++) {
+            s -= b[j] * q[k - j];
+        }
+        q[k] = s * inv;
+    }
+    return q;
+}
+
+// `(c + sigma t)^e` as a series in `t`, `e = ±1/2`, `c > 0`.
+fn log6_pow(c: f32, sigma: f32, e: f32) -> array<f32, 16> {
+    var out: array<f32, 16>;
+    var binom = select(sqrt(c), inverseSqrt(c), e < 0.0);
+    let step = sigma / c;
+    for (var k = 0; k < 16; k++) {
+        out[k] = binom;
+        binom *= (e - f32(k)) / (f32(k) + 1.0) * step;
+    }
+    return out;
+}
+
+// `F(x) = asinh(√x)/√x` (or `asin(√−x)/√−x`) as a series in `t` at `x0 = s x`, `s = ±1`,
+// `x >= 1/4`, from `v = √(x0 + t)` and `asinh(v)' = v'/√(1 + x0 + t)`.
+fn log6_far(x: f32, s: f32) -> array<f32, 16> {
+    let m = max(1.0 + s * x, 1e-30);
+    var v = log6_pow(x, s, 0.5);
+    let r = log6_pow(m, 1.0, -0.5);
+    var dv: array<f32, 16>;
+    for (var k = 1; k < 16; k++) {
+        dv[k - 1] = v[k] * f32(k);
+    }
+    var d = log6_mul(dv, r);
+    var a: array<f32, 16>;
+    a[0] = select(atan2(v[0], sqrt(m)), log(v[0] + sqrt(v[0] * v[0] + 1.0)), s > 0.0);
+    for (var k = 1; k < 16; k++) {
+        a[k] = d[k - 1] / f32(k);
+    }
+    return log6_div(a, v);
+}
+
+// The Taylor series of `φ(u) = √u F(u − 1)` at `u = m`.
+fn log6_phi_series(m: f32) -> array<f32, 16> {
+    let x0 = m - 1.0;
+    var f: array<f32, 16>;
+    if abs(x0) < 0.25 {
+        // F's Maclaurin series (48 terms) shifted to x0 by repeated Horner.
+        var c: array<f32, 48>;
+        var b = 1.0;
+        for (var n = 0; n < 48; n++) {
+            c[n] = select(-b, b, n % 2 == 0) / (2.0 * f32(n) + 1.0);
+            b *= (2.0 * f32(n) + 1.0) / (2.0 * f32(n) + 2.0);
+        }
+        for (var i = 0; i < 16; i++) {
+            for (var j = 46; j >= i; j--) {
+                c[j] += x0 * c[j + 1];
+            }
+            f[i] = c[i];
+        }
+    } else if x0 > 0.0 {
+        f = log6_far(x0, 1.0);
+    } else {
+        f = log6_far(-x0, -1.0);
+    }
+    return log6_mul(log6_pow(m, 1.0, 0.5), f);
+}
+
+// `φ(u)` at a real `u > 0`.
+fn log6_phi(u: f32) -> f32 {
+    let x = u - 1.0;
+    let ax = abs(x);
+    let r = sqrt(ax);
+    var f: f32;
+    if ax < 0.05 {
+        // The Maclaurin series of F, 8 terms (0.05^8 < 1e-10).
+        f = ((((((-143.0 / 10240.0 * x + 231.0 / 13312.0) * x - 63.0 / 2816.0) * x + 35.0 / 1152.0) * x - 5.0 / 112.0) * x + 3.0 / 40.0) * x - 1.0 / 6.0) * x + 1.0;
+    } else if x > 0.0 {
+        f = log(r + sqrt(ax + 1.0)) / r;
+    } else {
+        f = atan2(r, sqrt(max(1.0 - ax, 0.0))) / r;
+    }
+    return sqrt(max(u, 0.0)) * f;
+}
+
+// `φ(u)` at a complex `u` (a conjugate pair of roots far apart).
+fn log6_phi_cx(u: vec2<f32>) -> vec2<f32> {
+    let s = cx_sqrt(u - vec2<f32>(1.0, 0.0));
+    let ash = cx_ln(s + cx_sqrt(cx_mul(s, s) + vec2<f32>(1.0, 0.0)));
+    return cx_div(cx_mul(cx_sqrt(u), ash), s);
+}
+
+// The interpolant `[α0, α1, α2]` of a series at centre `c`, reduced modulo `t³ + e2 t − e3`.
+fn log6_reduce3(ph_in: array<f32, 16>, c: f32, e2: f32, e3: f32) -> vec3<f32> {
+    var ph = ph_in;
+    var q = vec3<f32>(0.0, 0.0, 1.0);
+    var sum = vec3<f32>(0.0, 0.0, 0.0);
+    for (var k = 0; k < 16; k++) {
+        sum += ph[k] * q;
+        q = vec3<f32>(q.y, q.z - q.x * e2, q.x * e3);
+    }
+    return vec3<f32>(sum.x * c * c - sum.y * c + sum.z, sum.y - 2.0 * sum.x * c, sum.x);
+}
+
+// The line `[l0, l1]` of a series at centre `c`, reduced modulo `t² − d2`.
+fn log6_reduce2(ph_in: array<f32, 16>, c: f32, d2: f32) -> vec2<f32> {
+    var ph = ph_in;
+    var q = vec2<f32>(0.0, 1.0);
+    var sum = vec2<f32>(0.0, 0.0);
+    for (var k = 0; k < 16; k++) {
+        sum += ph[k] * q;
+        q = vec2<f32>(q.y, q.x * d2);
+    }
+    return vec2<f32>(sum.y - sum.x * c, sum.x);
+}
+
+// `sign(x) |x|^(1/3)`.
+fn log6_cbrt(x: f32) -> f32 {
+    let a = abs(x);
+    if a < 1e-30 {
+        return 0.0;
+    }
+    return sign(x) * exp(log(a) / 3.0);
+}
+
+fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
+    let m = p1 / 3.0;
+    let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+    let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
+    var al: vec3<f32>;
+    if bound < 0.25 * m {
+        al = log6_reduce3(log6_phi_series(m), m, e2, e3);
+    } else {
+        // An isolated real root r (Cardano, or the most isolated of three), a Newton step.
+        let disc = e3 * e3 * 0.25 + e2 * e2 * e2 / 27.0;
+        var r: f32;
+        if disc >= 0.0 {
+            let sq = sqrt(disc);
+            r = log6_cbrt(e3 * 0.5 + sq) + log6_cbrt(e3 * 0.5 - sq);
+        } else {
+            let rad = sqrt(max(-e2 / 3.0, 0.0));
+            let pn = min(e2, -1e-30);
+            let arg = clamp(-e3 * 1.5 / pn * sqrt(-3.0 / pn), -1.0, 1.0);
+            let ang = atan2(sqrt(max(1.0 - arg * arg, 0.0)), arg) / 3.0;
+            let third = 2.0943951;
+            let s = 2.0 * rad * vec3<f32>(cos(ang), cos(ang - third), cos(ang - 2.0 * third));
+            let g = vec3<f32>(
+                min(abs(s.x - s.y), abs(s.x - s.z)),
+                min(abs(s.y - s.z), abs(s.y - s.x)),
+                min(abs(s.z - s.x), abs(s.z - s.y)),
+            );
+            r = select(select(s.x, s.y, g.x < g.y), s.z, max(g.x, g.y) < g.z);
+        }
+        r += m;
+        let f = ((r - p1) * r + p2) * r - p3;
+        let df = (3.0 * r - 2.0 * p1) * r + p2;
+        if abs(df) >= 1e-30 {
+            r -= f / df;
+        }
+        // The remaining pair by its sum and product; its line through its series at the
+        // midpoint (close) or its two values (real, or a conjugate pair).
+        let sum = p1 - r;
+        let prod = p2 - r * sum;
+        let mid = sum * 0.5;
+        let d2 = mid * mid - prod;
+        let d = sqrt(abs(d2));
+        var pair: vec2<f32>;
+        if d < 0.25 * abs(mid) {
+            pair = log6_reduce2(log6_phi_series(mid), mid, d2);
+        } else if d2 < 0.0 {
+            let fc = log6_phi_cx(vec2<f32>(mid, d));
+            let slope = fc.y / max(d, 1e-30);
+            pair = vec2<f32>(fc.x - slope * mid, slope);
+        } else {
+            let a = mid + d;
+            let b = mid - d;
+            let fa = log6_phi(a);
+            let slope = (fa - log6_phi(b)) / max(a - b, 1e-30);
+            pair = vec2<f32>(fa - slope * a, slope);
+        }
+        let kk = (log6_phi(r) - (pair.y * r + pair.x)) / ((r - sum) * r + prod);
+        al = vec3<f32>(pair.x + prod * kk, pair.y - sum * kk, kk);
+    }
+    // log R = r0⁻¹ (α2 Q2 + α1 Q1 + α0 G1) = w1 G1 + w2 G2 + w3 G3.
+    let b = al.z * p1 + al.y;
+    let rinv = 1.0 / r0;
+    return vec4<f32>((al.x - 2.0 * p3 * al.z + b * p3) * rinv, (al.z - b) * rinv, b * rinv, 0.0);
 }
 
 // `study_acosh_sq` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).

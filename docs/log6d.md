@@ -7,7 +7,8 @@ bivector splits into at most two commuting parts ("less than 6D": De Keninck and
 of less than 6D*, 2022). In 6D a bivector has three parts, and a cubic enters. This note
 derives the closed form, shows how it is evaluated without its singularities, and records how
 it was validated. The code is `gax_core::study::log_coeffs_6d` and the generated
-`Log<Bivector> for Unit<Even>` in `gax::csta`.
+`Log<Bivector> for Unit<Even>` in `gax::csta` and in every 6D algebra declared with `algebra!`,
+and `unit_even_log` in the WGSL modules.
 
 ## 1. Invariants of a versor: a cubic
 
@@ -111,11 +112,19 @@ analytic there: `v = √(x₀ + t)`, `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/
 * **The branch.** The closed form takes `cⱼ = √uⱼ` with a non-negative real part: every
   invariant plane's rotation is below a half turn (for a loxodromic pair, the principal value
   of the pair). That is the geometric principal logarithm, and it is idempotent:
-  `log(exp(log R)) = log R`. Inverse scaling and squaring takes principal square roots of the
-  algebra's channels instead. The two agree unless the rotation half-angles of several planes
-  add up past a half turn. There the closed form still returns `B` itself (to `2·10⁻¹⁴` in the
-  tests), and the channel form another valid logarithm. So only the fallback, near a half turn
-  in some plane, can land on the other branch.
+  `log(exp(log R)) = log R`. It is right wherever `⟨R⟩₀ > 0`: then an even number of the
+  `cⱼ` are negative, and turning two planes by a half turn each leaves `R` unchanged.
+* **The fallback's limit.** Inverse scaling and squaring takes the square root
+  `normalize(1 + R)`, which is the principal root in each of the even algebra's four
+  eigen-channels (in `R(6,0)`, `Spin(6) = SU(4)`, whose channels have the phases
+  `±θ₁ ± θ₂ ± θ₃` with an even number of minus signs). When the rotation angles add up past a
+  half turn, one channel's phase wraps around. The "root" is then unitary but leaves the spin
+  group (its determinant is `−1`), and the logarithm misses `R` by a central element, `±1` or
+  the pseudoscalar `±I`. Below six dimensions this cannot happen; in 6D it does, for
+  `⟨R⟩₀ < 0` in `R(6,0)` for example (§6). The closed form is used wherever `⟨R⟩₀ > 1/16`, so
+  the limit concerns only the fallback's domain, and there only versors with large rotations in
+  several planes. A fix needs the planes of the result, to add the missing quarter or half
+  turns (§8).
 
 ## 5. Validation and cost
 
@@ -129,17 +138,70 @@ Checked in `f64` against `exp` (itself scaling and squaring, independent of the 
 | translation (null), rotation and translation, isoclinic, near the identity | `0` to `10⁻¹⁶` |
 | towards a half turn, `π/2 − 10⁻⁸` (fallback) | `7·10⁻¹⁶` |
 
-At random entries up to 1, where some planes pass a half turn, every log is a log of `R` and a
-fixed point of `log ∘ exp` (`tests/csta_log.rs`), and it holds on portable SIMD lanes (lanes
-mixing the closed form and the fallback) and in `f32` (within `2·10⁻⁴`).
+At random entries up to 1, where some planes pass a half turn, every log with `⟨R⟩₀ > 0.1` is a
+log of `R` and a fixed point of `log ∘ exp` (`tests/csta_log.rs`). This holds on portable SIMD
+lanes (lanes mixing the closed form and the fallback) and in `f32` (within `2·10⁻⁴`).
 
 The closed form takes 2.9 µs against 50.7 µs for inverse scaling and squaring (f64, Ryzen 7
 5800X, `benches/compare.rs`).
 
-## 6. Open
+## 6. Other 6D algebras
 
-* A WGSL form: the interpolant is straight-line code with fixed-length loops and would port as
-  a Study helper; the fallback loops, as the scaling-and-squaring `exp` does in WGSL.
-* The same construction for other 6D algebras (any `R(p, q)` with `p + q = 6` has three
-  commuting planes). Nothing in it is specific to CSTA's signature, and the generator emits it
-  for every 6D algebra's full even kind; only CSTA is tested.
+Nothing in the construction is specific to CSTA's signature. The generator emits it for the full
+even kind of every 6D algebra, standard or declared with `algebra!`. `tests/log6d_algebras.rs`
+declares three more and checks each against `exp` and against inverse scaling and squaring:
+Euclidean `R(6,0)` (rotations only), split `R(3,3)` (rotations, boosts and loxodromic planes)
+and degenerate `R(5,0,1)` (5D PGA: rotations and translations, null planes). `log(exp B) = B`
+holds to `10⁻¹¹` for bivector entries up to 0.25, each basis plane alone (two or three
+coinciding invariants) to `10⁻¹³`, and larger versors with `⟨R⟩₀ > 0.1` are fixed points. In
+`R(6,0)`, versors with `⟨R⟩₀ < 0` (random entries up to 0.8) show the fallback's limit of §4:
+the closed form is not used there, and inverse scaling and squaring misses by a central element.
+
+## 7. In WGSL
+
+The WGSL modules (`gax::wgsl::CSTA`, and those of declared 6D algebras) have
+`unit_even_log(x: Even) -> Bivector`:
+
+* `unit_even_log_closed` is a recorded kernel like the others: `r₀`, the `p`s and the three
+  bivectors as one verified straight-line program, the weights from `study_log6`, and their
+  combination. `study_log6` ports `log_coeffs_6d` to `f32` with the same two regimes, but
+  16 series terms (the regimes keep the ratio at most 1/4, so 16 reach `2·10⁻¹⁰`, below
+  `f32`'s precision) and branches instead of selects.
+* Below `⟨x⟩₀ = 1/16`, `unit_even_log` calls `even_log_by_scaling`, a WGSL port of the fallback
+  (loops, like the scaling-and-squaring `exp`).
+
+In the `f16` module the helpers and the programs feeding them compute in `f32`. Checked with
+`wesl`'s CPU evaluator: `unit_even_log_closed` agrees with its `f64` evaluation, and
+`unit_even_log` agrees with the Rust `log` on unit versors, a quarter of them near a half turn,
+within `4·10⁻⁵` relative; on a GPU (`gax-gpu-tests`), `unit_even_log` agrees within `3·10⁻⁶`.
+
+## 8. Higher dimensions
+
+The construction carries over to `n` dimensions, where a bivector has `k = ⌊n/2⌋` commuting
+planes.
+
+* **The invariants.** `uⱼ = cosh² μⱼ` are the roots of a polynomial of degree `k`, whose
+  coefficients are again the scalar parts of `R`'s grade parts squared. There is one per grade
+  `0, 2, …`, and `R ~R = 1` makes the last one redundant.
+* **The separation.** It takes `k` bivectors from products of grade parts, with weights
+  `1, u, …, u^(k−1)` after recombination (`⟨R₈R₆⟩₂` and so on), and the interpolant has degree
+  `k − 1`.
+* **Close roots need no roots.** The series of `φ` at the mean, reduced modulo the polynomial,
+  works in any degree. So one plane, translations and isoclinic planes stay exact.
+* **Spread roots need the individual roots.** 7D still has three planes, so the cubic carries
+  over unchanged, as long as the grade-part identities hold there (not tested; the generator
+  emits the closed form only in 6D). 8D and 9D give a quartic, which still has roots in
+  closed form. From 10D on (five planes), Abel–Ruffini rules out a formula in radicals, and the
+  spread regime would find roots numerically: closed form except for a polynomial root.
+
+The costs grow quickly: the even kind has `2ⁿ⁻¹` coefficients (128 in 8D), and the bivectors
+of the separation are polynomials of degree up to `k + 1` in them. The fallback's limit (§4)
+grows with the dimension too: more channels, whose phases can wrap.
+
+## 9. Open
+
+* **A fallback that stays in the spin group.** The limit of §4: the fallback needs the planes of
+  its result, to add the quarter or half turns that the central element takes away. The plane
+  projectors are Lagrange polynomials in `Q₁, Q₂` through the roots. Alternatively, the closed
+  form could extend to `⟨R⟩₀ < 0`, by interpolating `−√u (π − acos √u)/√(1−u)` at an
+  isolated root instead of `φ`. Only near `⟨R⟩₀ = 0` would a fallback remain.
