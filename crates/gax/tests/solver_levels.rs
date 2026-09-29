@@ -8,9 +8,9 @@
 //!   may get extra tiny rotations: the values agree within `c · n · ε · ‖A‖`.
 #![cfg(all(feature = "batch", feature = "pga3d"))]
 
+use gax::Real;
 use gax::batch::{self, Map};
 use gax::pga3d::{Multivector, Point, Scalar};
-use gax::{Form, Real};
 
 /// The 4x4 map on points held in a multivector's 16 coefficients.
 fn matrix<T: Real>(x: Multivector<(), T>) -> Point<(Point,), T> {
