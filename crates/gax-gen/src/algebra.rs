@@ -12,8 +12,9 @@ use std::fmt;
 /// A sparse multivector with exact integer coefficients, keyed by blade mask.
 pub type Sparse = BTreeMap<u32, i64>;
 
-/// Maximum supported dimension of the generating vector space (256 blades; CSTA is 6).
-pub const MAX_DIM: usize = 8;
+/// Maximum supported dimension of the generating vector space (512 blades; CSTA is 6). From 7D
+/// on the generator writes plain sandwiches and table-driven products (ADR-034).
+pub const MAX_DIM: usize = 9;
 
 /// Largest magnitude of a metric entry. Products of blades multiply metric entries, so a
 /// bound keeps every table coefficient far from `i64` overflow.

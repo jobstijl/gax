@@ -48,9 +48,10 @@ fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
     a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol * scale)
 }
 
-/// The same checks on each algebra, whose kinds share names.
+/// The same checks on each algebra, whose kinds share names; `$planes` are three disjoint basis
+/// planes (positions in `Bivector`), rotations first.
 macro_rules! log6d_checks {
-    ($alg:ident, $checks:ident) => {
+    ($alg:ident, $checks:ident, $planes:expr) => {
         mod $checks {
             use super::$alg::{Bivector, Even};
             use super::{Rng, close};
@@ -129,6 +130,33 @@ macro_rules! log6d_checks {
                 }
             }
 
+            /// Two rotation planes within `delta` of a half turn together and a third plane:
+            /// the pair's invariants are tiny, and its product is taken from `p3` (from `p2`
+            /// it would be lost to rounding, and the turned planes' sum with it). The planes
+            /// themselves are fixed by `R` only to about `ε/δ`, and turning them costs
+            /// `ε/δ²` (docs/log6d.md §5).
+            #[test]
+            fn two_planes_near_a_half_turn() {
+                let planes: [usize; 3] = $planes;
+                for delta in [1e-2, 1e-4, 1e-6] {
+                    let tol = 1e-9 + 1e-16 / (delta * delta);
+                    for third in [0.3, 1.1] {
+                        let mut c = [0.0f64; 15];
+                        c[planes[0]] = core::f64::consts::FRAC_PI_2 - delta;
+                        c[planes[1]] = core::f64::consts::FRAC_PI_2 - delta;
+                        c[planes[2]] = third;
+                        let b = Bivector::from_coeffs(c);
+                        let r = b.exp();
+                        let got: Bivector<(), f64> = r.log();
+                        let again = got.exp();
+                        assert!(
+                            close(&again.into_inner().c, &r.into_inner().c, tol),
+                            "delta {delta}, third {third}: {got:?}"
+                        );
+                    }
+                }
+            }
+
             #[test]
             fn in_f32() {
                 let mut rng = Rng(0x6d_f32f);
@@ -145,6 +173,8 @@ macro_rules! log6d_checks {
     };
 }
 
-log6d_checks!(r60, r60_log);
-log6d_checks!(r33, r33_log);
-log6d_checks!(pga5d, pga5d_log);
+// Planes: R(6,0) e12, e34, e56; R(3,3) e12 (positive), e45 (negative), e36 (a boost);
+// R(5,0,1) e12, e34 and e05 (a translation).
+log6d_checks!(r60, r60_log, [0, 9, 14]);
+log6d_checks!(r33, r33_log, [0, 12, 11]);
+log6d_checks!(pga5d, pga5d_log, [5, 12, 4]);

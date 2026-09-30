@@ -332,6 +332,10 @@ gax::algebra! {
   `Multivector` are added if you leave them out.
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
   with `opt-level = 3` to your `Cargo.toml`, or large algebras expand slowly.
+* **Size.** Up to 9 dimensions. From 7D on the kinds are large (a 9D even versor has 256
+  coefficients): sandwiches are plain `(v x) ~v` rather than simplified, the largest products
+  are loops over tables, and compiling takes 30 to 60 s and 2.5 to 4.5 GB (ADR-034). The full
+  even kind of a 6D to 9D algebra has its `log` in closed form ([log6d.md](log6d.md)).
 * **Shaders.** With gax's `wgsl` feature, the algebra also has WGSL modules, `WGSL_MODULE` and
   `WGSL_MODULE_F16`, and kernels traced over its kinds link against them (section 11).
 

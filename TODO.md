@@ -31,6 +31,9 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] exp for 6D and up (CSTA): scaling and squaring in the product closure
 - [x] exp and log of CSTA Poincaré motors (`Twist` to `Motor`): closed forms, since `Q²` is a scalar there
 - [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): in closed form through the cubic invariants (ADR-033, docs/log6d.md), 17x faster than inverse scaling and squaring; near a half turn it turns planes first (see Phase 5); for every 6D algebra (tested: R(6,0), R(3,3), R(5,0,1)) and in WGSL (`unit_even_log`)
+- [x] Algebras up to 9D (ADR-034): plain sandwiches for versors over 32 coefficients, products over 4096 terms as table loops, long programs in blocks (rustc's debug info overflowed its stack), GPU layouts up to 64 coefficients
+- [x] log in closed form in 7D (the cubic of 6D) and 8D/9D (a quartic: four groupings of the roots from the resolvent cubic, Newton steps on the factors, Chinese remaindering; turning up to four planes), tested on three algebras each in `gax-highdim-tests`, 7D in WGSL
+- [x] Fixes found on the way: the 6D pair's product from the stable side (two planes near a half turn and a third gave a wrong log), series in a scaled variable (they overflowed f32 near a half turn, in Rust and WGSL)
 - [x] Faster PGA3D exp/log: a real-trig path when the scalar part of `B²` is provably ≤ 0
 - [x] Compact principal-inertia representation (`pga3d::PrincipalInertia`)
 - [x] Prepared sparse sandwich maps; balanced summation trees

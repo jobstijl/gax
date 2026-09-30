@@ -6,5 +6,6 @@
 /examples/asteroids/target
 /examples/wgpu/target
 /crates/gax-gpu-tests/target
+/crates/gax-highdim-tests/target
 /examples/warp/target
 /examples/warp/shots

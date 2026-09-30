@@ -731,7 +731,7 @@ fn extract_sums(b: &mut Builder, sums: &mut [Vec<(Rational, Operand)>]) {
 }
 
 /// Emit `Σ c_k p_k`, grouping equal coefficient magnitudes.
-fn emit_sum(b: &mut Builder, s: &[(Rational, Operand)]) -> Operand {
+pub fn emit_sum(b: &mut Builder, s: &[(Rational, Operand)]) -> Operand {
     if s.is_empty() {
         return Operand::Const(Rational::ZERO);
     }

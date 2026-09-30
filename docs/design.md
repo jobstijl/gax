@@ -439,7 +439,7 @@ files in `gax/src/algebras/`, behind cargo features.
     * a branch switch near a full turn.
   * The series now reach far enough that both branches are within a few ulps at the boundary.
     See [numerics.md](numerics.md), "Transcendental functions".
-* **6D log:** at first by inverse scaling and squaring, now in closed form (ADR-033).
+* **6D log:** at first by inverse scaling and squaring, now in closed form up to 9D (ADR-033).
 
 ## ADR-020: Certification by a wrapper type, `Unit<M>`
 *Status: accepted.*
@@ -858,42 +858,82 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Not homomorphisms, so functions.** The round point `up` (quadratic) and `down` in
   `cga2d`/`cga3d`, spheres, and a round point's PGA point.
 
-## ADR-033: The logarithm of a 6D even versor in closed form
-*Status: accepted, implemented (`gax_core::study::log_coeffs_6d`, `log_turn_6d`; derivation
-in log6d.md).*
+## ADR-033: The logarithm of a 6D to 9D even versor in closed form
+*Status: accepted, implemented (`gax_core::study::{log_coeffs_6d, log_turn_6d}` for three
+invariant planes, `{log_coeffs_8d, log_turn_8d}` for four; derivation in log6d.md).*
 
 * **The problem.** CSTA's even versors had a logarithm only by inverse scaling and squaring
-  (50 µs, loops). Published closed forms stop below six dimensions: a 6D bivector splits into
-  three commuting parts, and a cubic enters.
-* **The closed form.** The invariants `uⱼ = cosh² μⱼ` of the three planes are the roots of
-  `t³ − p₁t² + p₂t − p₃`, with the `p`s from the scalar parts of `R`'s grade parts squared.
-  `log R = r₀⁻¹ (α₂Q₂ + α₁Q₁ + α₀⟨R⟩₂)`, with bivectors `Q` from products of `R`'s grade parts
-  and the quadratic `α` interpolating `φ(u) = √u · asinh(√(u−1))/√(u−1)` at the roots. The
-  planes are never separated.
+  (50 µs, loops). Robust closed forms were published below six dimensions; in any dimension,
+  Roelfs and De Keninck factor a rotor root by root through its tangent decomposition. A 6D
+  bivector splits into three commuting parts (a cubic), an 8D or 9D one into four (a quartic).
+* **The closed form.** The invariants `uⱼ = cosh² μⱼ` of the planes are the roots of a
+  polynomial whose coefficients are the scalar parts of `R`'s grade parts squared.
+  `log R = r₀⁻¹ Σ αᵢ Qᵢ`, with bivectors `Q` from products of consecutive grade parts (through
+  a matrix of determinant ±1) and `α` interpolating `φ(u) = √u · asinh(√(u−1))/√(u−1)` at the
+  roots. The planes are never separated.
 * **Why it is robust.** Coinciding roots (one plane, translations, isoclinic planes, the
   identity) are the common case, and divided differences through them would divide by zero.
-  The interpolant is a symmetric function of the roots, so for close roots it comes from
-  `φ`'s Taylor series at their mean reduced modulo the cubic, from the `p`s alone. Spread
-  roots go through the most isolated real root and the remaining pair's sum and product.
-* **What the generator emits.** The invariants and the three bivectors as one straight-line
-  program from exact polynomials, the interpolant from `log_coeffs_6d`, and the combination.
+  The interpolant is built from factors of the polynomial whose roots are apart, each through
+  `φ`'s Taylor series at its roots' mean (a symmetric function of them, exact where they
+  coincide) or its roots' values, joined by Chinese remaindering. Three planes: the most
+  isolated root and the remaining pair. Four: whichever of all four, an isolated root and a
+  cubic, two real pairs or two conjugate pairs separates best, from the resolvent cubic with
+  Euler's form of the roots, refined by Newton steps in `u` and deflated from the stable side.
+  Series are computed in a scaled variable, so they do not overflow `f32` near a half turn.
+* **What the generator emits.** The invariants and the bivectors as one straight-line program
+  from exact polynomials, the interpolant, and the combination.
 * **Near and past a half turn** (`⟨R⟩₀ ≤ 1/16`), where the formula loses `ε/⟨R⟩₀`, or is wrong
   for `⟨R⟩₀ < 0`, the lanes there first turn the planes near a half turn by a quarter turn:
   `log R = log(R E) + (π/2) Z`. `Z` is the sum of those planes' unit bivectors, an interpolant
-  applied to the same bivectors. `E = ∏(−b̂)` is a polynomial in `Z`. The planes are chosen by
-  an error estimate among those making `⟨R E⟩₀` positive (`log_turn_6d`). Orienting each
-  plane by its weight in `⟨R⟩₂` makes that positive for one or three turned planes.
+  applied to the same bivectors. `E = ∏(−b̂)` is a polynomial in `Z` (degree up to 4). The
+  planes are chosen by an error estimate among those making `⟨R E⟩₀` positive
+  (`log_turn_6d`, `log_turn_8d`). Orienting each plane by its weight in `⟨R⟩₂` makes that
+  positive for any odd number of turned planes.
 * **Not inverse scaling and squaring**, the earlier fallback. In 6D its channel-principal
   square root can leave the spin group, where rotation angles add up past a half turn; its log
   then misses `R` by a central element (`±1`, `±I`). With boosts it can also find no real root.
 * **The branch.** Every invariant plane below a half turn (`cⱼ` with non-negative real part)
   where `⟨R⟩₀ > 0`: the geometric principal logarithm, idempotent under `log ∘ exp`.
-* **Everywhere.** The generator emits it for every 6D algebra's full even kind (tested for
-  `R(6,0)`, `R(3,3)`, `R(5,0,1)` besides CSTA). In WGSL it is `unit_even_log`: recorded kernels
-  with the Study helpers `study_log6` and `study_log6_turn`.
-* **Result.** 2.6 µs (6.6 µs turned) against 50.7 µs. Within `5·10⁻¹⁵` where the old one was
-  within `10⁻⁹`, and right near and past half turns, where the old fallback was wrong or NaN
-  for 7% of such versors (tests/csta_log.rs, log6d.md).
+* **Everywhere.** The generator emits it for the full even kind of every 6D to 9D algebra
+  (tested for CSTA, `R(6,0)`, `R(3,3)`, `R(5,0,1)`, and in `gax-highdim-tests` for three algebras
+  each in 7D, 8D and 9D). In WGSL (kinds up to 64 coefficients: 6D and 7D) it is
+  `unit_even_log`: recorded kernels with the Study helpers `study_log6` and `study_log6_turn`.
+* **Result.** 2.6 µs (6.6 µs turned) in CSTA against 50.7 µs; 2.5 to 3.8 µs (7 to 31 µs
+  turned) in 7D to 9D. Right near and past half turns, where the old fallback was wrong or NaN
+  for 7% of such versors; on 175,000 random versors in 6D to 9D, no NaN and no log that misses
+  `R` (log6d.md §6).
+
+## ADR-034: Algebras of 7 to 9 dimensions
+*Status: accepted, implemented (`gax_gen::emit`: `FUSED_MAX`, `PLAIN_MAX_TERMS`, `MAP_MAX`,
+`UNROLL_MAX`, `INLINE_MAX`; `gax_gen::slp::LETS_MAX`; `algebra::MAX_DIM` = 9).*
+
+The generator's approach (every product unrolled, every sandwich simplified symbolically) was
+built for the standard algebras, whose largest kinds have 64 coefficients. A 7D algebra's even
+kind has 64, 8D's 128, 9D's 256, and its full multivector 512: the symbolic sandwiches ran out
+of memory (16 GB) in 7D, and the generated code overflowed rustc's stack and a debug build's.
+Four changes make them work, each above a size no standard algebra reaches, so the standard
+algebras' kernels are unchanged:
+
+* **Plain sandwiches for versors over 32 coefficients.** `(v x) ~v` as two products straight
+  from the tables, without symbolic simplification (whose cost grows with the cube of the
+  versor's size), and the map computed at run time by applying the kernel to the passenger's
+  basis. A `Unit` kernel keeps the passenger's grades and is homogeneous of degree 2, so
+  drift-tolerant (ADR-020) with nothing to repair. A sandwich is not generated where its kernel
+  has more than 2¹⁶ terms or its map more than 2¹⁴ entries (a 9D even versor on another):
+  `v * x * v.reverse()` remains.
+* **Products over 4096 terms as loops** over a static table of their terms, grouped by output
+  and accumulated in a register (8D's even product: 11 µs; unrolled it is megabytes of code).
+  The unrolled products over 1024 terms are `#[inline]` rather than `#[inline(always)]`, so a
+  debug build does not give every inlined copy its own stack slots.
+* **Long straight-line programs in blocks.** Every `let` opens a scope that lasts to the end of
+  the function, and rustc's debug info recurses once per level: a few thousand overflowed its
+  stack. Programs over 512 statements are written in blocks that hand their live values on as
+  one tuple; the expressions and their order are unchanged (this also changed the layout of
+  CGA3D's, STAP's and CSTA's largest kernels).
+* **GPU layouts only up to 64 coefficients,** the WGSL modules' limit.
+
+Compiling a 7D, 8D or 9D algebra takes 30 to 60 s and 2.5 to 4.5 GB in a release build. `exp`
+there is still scaling and squaring (0.24 ms in 8D, 0.95 ms in 9D).
 
 ---
 

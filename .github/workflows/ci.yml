@@ -97,6 +97,26 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo run --release -p gax-gen --bin gax-regen -- --check
 
+  highdim:
+    name: 7D, 8D and 9D algebras (the closed-form log, plain sandwiches, 7D WGSL)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/gax-highdim-tests
+      # One algebra per test binary, two built at a time: each takes 2-4.5 GB to compile.
+      - name: every feature (batch kernels, check-units, GPU layouts, WGSL modules)
+        shell: bash
+        working-directory: crates/gax-highdim-tests
+        run: |
+          set -o pipefail
+          cargo test -j2 --no-fail-fast --features check-units,bytemuck,wgsl 2>&1 | tee test.log || {
+            grep -E -A3 "panicked|^error|FAILED" test.log | head -40 | sed 's/^/::error::/'
+            exit 1
+          }
+
   gpu:
     name: WGSL kernels on a GPU (lavapipe)
     runs-on: ubuntu-latest

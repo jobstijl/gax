@@ -49,8 +49,9 @@ in a vertex buffer, each field is one attribute location.
 The names are `snake_case` kind names joined by the operation. `exp` and `log` exist wherever
 the Rust code has them, in every algebra: rotations and motions through real trigonometry, boosts
 and general versors (STA, CGA, STAP, CSTA) through the general Study functions, CSTA's
-bivector `exp` by scaling and squaring, and the log of CSTA's `Even` in closed form (turning
-planes near a half turn first), as in Rust (log6d.md §8).
+bivector `exp` by scaling and squaring, and the log of the full even kind in closed form for CSTA
+and every 6D and 7D algebra (turning planes near a half turn first), as in Rust (log6d.md §8).
+Kinds of more than 64 coefficients (from 8D on) have no WGSL kernels.
 
 ## Using a module
 

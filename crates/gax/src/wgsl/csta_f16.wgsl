@@ -19793,11 +19793,12 @@ fn log6_div(a_in: array<f32, 16>, b_in: array<f32, 16>) -> array<f32, 16> {
     return q;
 }
 
-// `(c + sigma t)^e` as a series in `t`, `e = ±1/2`, `c > 0`.
-fn log6_pow(c: f32, sigma: f32, e: f32) -> array<f32, 16> {
+// `(c + sigma rho s)^e` as a series in `s`, `e = ±1/2`, `c > 0`, the scale `rho` at most
+// about `c`.
+fn log6_pow(c: f32, sigma: f32, e: f32, rho: f32) -> array<f32, 16> {
     var out: array<f32, 16>;
     var binom = select(sqrt(c), inverseSqrt(c), e < 0.0);
-    let step = sigma / c;
+    let step = sigma * rho / c;
     for (var k = 0; k < 16; k++) {
         out[k] = binom;
         binom *= (e - f32(k)) / (f32(k) + 1.0) * step;
@@ -19805,12 +19806,12 @@ fn log6_pow(c: f32, sigma: f32, e: f32) -> array<f32, 16> {
     return out;
 }
 
-// `F(x) = asinh(√x)/√x` (or `asin(√−x)/√−x`) as a series in `t` at `x0 = s x`, `s = ±1`,
+// `F(x) = asinh(√x)/√x` (or `asin(√−x)/√−x`) as a series in `t/rho` at `x0 = s x`, `s = ±1`,
 // `x >= 1/4`, from `v = √(x0 + t)` and `asinh(v)' = v'/√(1 + x0 + t)`.
-fn log6_far(x: f32, s: f32) -> array<f32, 16> {
+fn log6_far(x: f32, s: f32, rho: f32) -> array<f32, 16> {
     let m = max(1.0 + s * x, 1e-30);
-    var v = log6_pow(x, s, 0.5);
-    let r = log6_pow(m, 1.0, -0.5);
+    var v = log6_pow(x, s, 0.5, rho);
+    let r = log6_pow(m, 1.0, -0.5, rho);
     var dv: array<f32, 16>;
     for (var k = 1; k < 16; k++) {
         dv[k - 1] = v[k] * f32(k);
@@ -19824,8 +19825,10 @@ fn log6_far(x: f32, s: f32) -> array<f32, 16> {
     return log6_div(a, v);
 }
 
-// The Taylor series of `φ(u) = √u F(u − 1)` at `u = m`.
-fn log6_phi_series(m: f32) -> array<f32, 16> {
+// The Taylor series of `φ(u) = √u F(u − 1)` at `u = m`, in `s = (u − m)/rho`: with `rho` the
+// distance to φ's singularity (`m`), the coefficients stay bounded (in `u − m` they grow like
+// `m^-k`, which overflows f32 near a half turn).
+fn log6_phi_series(m: f32, rho: f32) -> array<f32, 16> {
     let x0 = m - 1.0;
     var f: array<f32, 16>;
     if abs(x0) < 0.25 {
@@ -19836,18 +19839,20 @@ fn log6_phi_series(m: f32) -> array<f32, 16> {
             c[n] = select(-b, b, n % 2 == 0) / (2.0 * f32(n) + 1.0);
             b *= (2.0 * f32(n) + 1.0) / (2.0 * f32(n) + 2.0);
         }
+        var power = 1.0;
         for (var i = 0; i < 16; i++) {
             for (var j = 46; j >= i; j--) {
                 c[j] += x0 * c[j + 1];
             }
-            f[i] = c[i];
+            f[i] = c[i] * power;
+            power *= rho;
         }
     } else if x0 > 0.0 {
-        f = log6_far(x0, 1.0);
+        f = log6_far(x0, 1.0, rho);
     } else {
-        f = log6_far(-x0, -1.0);
+        f = log6_far(-x0, -1.0, rho);
     }
-    return log6_mul(log6_pow(m, 1.0, 0.5), f);
+    return log6_mul(log6_pow(m, 1.0, 0.5, rho), f);
 }
 
 // `φ(u)` at a real `u > 0`.
@@ -19874,28 +19879,54 @@ fn log6_phi_cx(u: vec2<f32>) -> vec2<f32> {
     return cx_div(cx_mul(cx_sqrt(u), ash), s);
 }
 
-// The interpolant `[α0, α1, α2]` of a series at centre `c`, reduced modulo `t³ + e2 t − e3`.
-fn log6_reduce3(ph_in: array<f32, 16>, c: f32, e2: f32, e3: f32) -> vec3<f32> {
+// The interpolant `[α0, α1, α2]` of a series at centre `c` in `s = t/rho`, reduced modulo
+// `t³ + e2 t − e3`.
+fn log6_reduce3(ph_in: array<f32, 16>, c: f32, rho: f32, e2: f32, e3: f32) -> vec3<f32> {
     var ph = ph_in;
+    let e2s = e2 / (rho * rho);
+    let e3s = e3 / (rho * rho * rho);
     var q = vec3<f32>(0.0, 0.0, 1.0);
     var sum = vec3<f32>(0.0, 0.0, 0.0);
     for (var k = 0; k < 16; k++) {
         sum += ph[k] * q;
-        q = vec3<f32>(q.y, q.z - q.x * e2, q.x * e3);
+        q = vec3<f32>(q.y, q.z - q.x * e2s, q.x * e3s);
     }
-    return vec3<f32>(sum.x * c * c - sum.y * c + sum.z, sum.y - 2.0 * sum.x * c, sum.x);
+    let sa = sum.x / (rho * rho);
+    let sb = sum.y / rho;
+    return vec3<f32>(sa * c * c - sb * c + sum.z, sb - 2.0 * sa * c, sa);
 }
 
-// The line `[l0, l1]` of a series at centre `c`, reduced modulo `t² − d2`.
-fn log6_reduce2(ph_in: array<f32, 16>, c: f32, d2: f32) -> vec2<f32> {
+// The line `[l0, l1]` of a series at centre `c` in `s = t/rho`, reduced modulo `t² − d2`.
+fn log6_reduce2(ph_in: array<f32, 16>, c: f32, rho: f32, d2: f32) -> vec2<f32> {
     var ph = ph_in;
+    let d2s = d2 / (rho * rho);
     var q = vec2<f32>(0.0, 1.0);
     var sum = vec2<f32>(0.0, 0.0);
     for (var k = 0; k < 16; k++) {
         sum += ph[k] * q;
-        q = vec2<f32>(q.y, q.x * d2);
+        q = vec2<f32>(q.y, q.x * d2s);
     }
-    return vec2<f32>(sum.y - sum.x * c, sum.x);
+    let sb = sum.x / rho;
+    return vec2<f32>(sum.y - sb * c, sb);
+}
+
+// The pair left by the isolated root `r` of t³ − p1 t² + p2 t − p3, as `(sum, product)`, each
+// from the side with the smaller error: forward from p1 (for a small r) or backward from p3
+// (for a large one, where the pair's small product would lose to p2's rounding).
+fn log6_pair(p1: f32, p2: f32, p3: f32, r: f32) -> vec2<f32> {
+    let ar = abs(r);
+    let sum_f = p1 - r;
+    let prod_f = p2 - r * sum_f;
+    let e1f = abs(p1) + ar;
+    let e2f = abs(p2) + ar * (abs(sum_f) + e1f);
+    if ar < 1e-30 {
+        return vec2<f32>(sum_f, prod_f);
+    }
+    let prod_b = p3 / r;
+    let sum_b = (p2 - prod_b) / r;
+    let e2b = abs(prod_b);
+    let e1b = (abs(p2) + abs(prod_b) + e2b) / ar;
+    return vec2<f32>(select(sum_f, sum_b, e1b < e1f), select(prod_f, prod_b, e2b < e2f));
 }
 
 // `sign(x) |x|^(1/3)`.
@@ -19945,13 +19976,15 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
     var al: vec3<f32>;
     if bound < 0.25 * m {
-        al = log6_reduce3(log6_phi_series(m), m, e2, e3);
+        let rho = max(m, 1e-30);
+        al = log6_reduce3(log6_phi_series(m, rho), m, rho, e2, e3);
     } else {
         let r = log6_root(p1, p2, p3, m, e2, e3);
         // The remaining pair by its sum and product; its line through its series at the
         // midpoint (close) or its two values (real, or a conjugate pair).
-        let sum = p1 - r;
-        let prod = p2 - r * sum;
+        let pr = log6_pair(p1, p2, p3, r);
+        let sum = pr.x;
+        let prod = pr.y;
         let mid = sum * 0.5;
         let d2 = mid * mid - prod;
         let d = sqrt(abs(d2));
@@ -19959,7 +19992,8 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
         // Only right of the branch point u = 0 (a pair with a negative midpoint straddles the
         // branch cut).
         if d < 0.25 * mid {
-            pair = log6_reduce2(log6_phi_series(mid), mid, d2);
+            let rho = max(mid, 1e-30);
+            pair = log6_reduce2(log6_phi_series(mid, rho), mid, rho, d2);
         } else if d2 < 0.0 {
             let fc = log6_phi_cx(vec2<f32>(mid, d));
             let slope = fc.y / max(d, 1e-30);
@@ -19984,8 +20018,13 @@ fn study_log6(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
 // The planes to turn by a quarter turn near a half turn (gax_core::study::log_turn_6d in f32):
 // `[α0, α1, α2, n]`, `Z = α2 Q2 + α1 Q1 + α0 G1` the sum of the `n` turned unit bivectors, the
 // set with the smallest error estimate among those with a positive scalar part after turning.
-fn log6_g_series(m: f32) -> array<f32, 16> {
-    return log6_mul(log6_pow(max(m, 1e-30), 1.0, 0.5), log6_pow(max(1.0 - m, 1e-30), -1.0, -0.5));
+// The series of `g(u) = √(u/(1−u))` at `u = m` in `s = (u − m)/rho`, `rho = min(m, 1 − m)`.
+fn log6_g_series(m: f32, rho: f32) -> array<f32, 16> {
+    return log6_mul(log6_pow(max(m, 1e-30), 1.0, 0.5, rho), log6_pow(max(1.0 - m, 1e-30), -1.0, -0.5, rho));
+}
+
+fn log6_g_scale(m: f32) -> f32 {
+    return max(min(m, 1.0 - m), 1e-30);
 }
 
 // The error estimate 1/<R'>_0 + extra of turning with scalar part `v` after, or 1e30 for
@@ -20011,8 +20050,9 @@ fn study_log6_turn(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     let series_ok = bound < 0.25 * min(m, 1.0 - m) && all > 0.0;
     // The isolated root r and the pair (a, b) = mid ± d.
     let r = log6_root(p1, p2, p3, m, e2, e3);
-    let sum = p1 - r;
-    let prod = p2 - r * sum;
+    let pr = log6_pair(p1, p2, p3, r);
+    let sum = pr.x;
+    let prod = pr.y;
     let mid = sum * 0.5;
     let d2 = mid * mid - prod;
     let d = sqrt(abs(d2));
@@ -20108,14 +20148,16 @@ fn study_log6_turn(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
     }
     let n = t.x + t.y + t.z;
     if t.w > 0.5 {
-        return vec4<f32>(log6_reduce3(log6_g_series(m), m, e2, e3) / ar0, n);
+        let rho = log6_g_scale(m);
+        return vec4<f32>(log6_reduce3(log6_g_series(m, rho), m, rho, e2, e3) / ar0, n);
     }
     let h_r = t.x / sqrt(max((1.0 - r) * prod, 1e-30));
     let h_a = t.y / sqrt(max((1.0 - a) * b * r, 1e-30));
     let h_b = t.z / sqrt(max((1.0 - b) * a * r, 1e-30));
     var pair: vec2<f32>;
     if close && t.y > 0.5 && t.z > 0.5 {
-        pair = log6_reduce2(log6_g_series(mid), mid, d2) / ar0;
+        let rho = log6_g_scale(mid);
+        pair = log6_reduce2(log6_g_series(mid, rho), mid, rho, d2) / ar0;
     } else {
         let slope = (h_a - h_b) / max(a - b, 1e-30);
         pair = vec2<f32>(h_a - slope * a, slope);

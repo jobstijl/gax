@@ -502,6 +502,7 @@ impl Program {
                 plan[k] = Some(e);
             }
         }
+        let mut stmts: Vec<(usize, String)> = Vec::new();
         for (k, i) in self.instrs.iter().enumerate() {
             if !live[k] || fused[k] {
                 continue;
@@ -531,17 +532,81 @@ impl Program {
                     Target::Wgsl { .. } => f.wgsl(&r(a)),
                 },
             };
-            match target {
-                Target::Rust | Target::RustPlain => {
-                    let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
-                }
-                Target::Wgsl { .. } => {
-                    let _ = writeln!(out, "    let {prefix}{k} = {rhs};");
+            stmts.push((k, rhs));
+        }
+        if matches!(target, Target::Wgsl { .. }) {
+            for (k, rhs) in &stmts {
+                let _ = writeln!(out, "    let {prefix}{k} = {rhs};");
+            }
+            return;
+        }
+        if stmts.len() <= LETS_MAX {
+            for (k, rhs) in &stmts {
+                let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
+            }
+            return;
+        }
+        // Long programs in blocks of at most `LETS_MAX` statements, each handing the values
+        // later ones use to the rest as one tuple: every `let` opens a scope that lasts to the
+        // end of the function, and rustc's debug info recurses once per level (thousands of
+        // levels overflow its stack).
+        let refs = |k: usize| -> Vec<usize> {
+            let mut r = Vec::new();
+            for o in operands(&self.instrs[k]) {
+                if let Operand::Temp(j) = o {
+                    if fused[j] {
+                        for p in operands(&self.instrs[j]) {
+                            if let Operand::Temp(q) = p {
+                                r.push(q);
+                            }
+                        }
+                    } else {
+                        r.push(j);
+                    }
                 }
             }
+            r
+        };
+        // The last statement that reads each temporary (outputs read it after all).
+        let mut last_use = vec![0usize; self.instrs.len()];
+        for (at, (k, _)) in stmts.iter().enumerate() {
+            for j in refs(*k) {
+                last_use[j] = last_use[j].max(at);
+            }
+        }
+        for o in &self.outputs {
+            if let Operand::Temp(j) = o {
+                last_use[*j] = usize::MAX;
+            }
+        }
+        let chunks: Vec<&[(usize, String)]> = stmts.chunks(LETS_MAX).collect();
+        let last = chunks.len() - 1;
+        for (c, chunk) in chunks.iter().enumerate() {
+            let end = (c + 1) * LETS_MAX;
+            let names: Vec<String> = chunk
+                .iter()
+                .filter(|(k, _)| last_use[*k] >= end)
+                .map(|(k, _)| format!("{prefix}{k}"))
+                .collect();
+            if c == last || names.is_empty() {
+                for (k, rhs) in *chunk {
+                    let _ = writeln!(out, "        let {prefix}{k} = {rhs};");
+                }
+                continue;
+            }
+            let tuple = format!("({},)", names.join(", "));
+            let _ = writeln!(out, "        let {tuple} = {{");
+            for (k, rhs) in *chunk {
+                let _ = writeln!(out, "            let {prefix}{k} = {rhs};");
+            }
+            let _ = writeln!(out, "            {tuple}\n        }};");
         }
     }
 }
+
+/// The most `let` statements a Rust program is written with in one block (see
+/// [`Program::emit_lets_to`]).
+pub const LETS_MAX: usize = 512;
 
 /// The language of emitted code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

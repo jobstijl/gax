@@ -157,16 +157,17 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
 * **At a half turn of the motion** (`θ = π/2`) nothing is special.
 * **The general `log`** (STA, CGA3D) is stable up to, but not including, `θ = π`.
 * **CSTA's `Even`** (the full 6D conformal group, whose bivectors split into three commuting
-  parts) has its `log` in closed form: the invariants `cosh² μⱼ` of the three planes are the
-  roots of a cubic in scalar parts of `R`'s grade parts squared, and the log is a quadratic
-  interpolant of one scalar function at those roots applied to three bivectors built from `R`.
-  The derivation, how coinciding roots are handled, the branch and the validation are in
-  [log6d.md](log6d.md). Near and past a half turn (`⟨R⟩₀ ≤ 1/16`), where the closed form
-  loses `ε/⟨R⟩₀` (or, for `⟨R⟩₀ < 0`, returns a log of `−R`), it first turns the planes near a
-  half turn by a quarter turn, and applies the closed form to the result. The same holds for
-  every 6D algebra's full even kind. What stays ill-conditioned is so in itself: two or three
-  planes at a half turn together, where `R` fixes only their product, and a plane near a full
-  turn.
+  parts), and the full even kind of every 6D to 9D algebra, has its `log` in closed form: the
+  invariants `cosh² μⱼ` of the three or four planes are the roots of a cubic or quartic in scalar
+  parts of `R`'s grade parts squared, and the log is an interpolant of one scalar function at
+  those roots applied to bivectors built from `R`. The derivation, how coinciding roots are
+  handled, the branch and the validation are in [log6d.md](log6d.md). Near and past a half turn
+  (`⟨R⟩₀ ≤ 1/16`), where the closed form loses `ε/⟨R⟩₀` (or, for `⟨R⟩₀ < 0`, returns a log of
+  `−R`), it first turns the planes near a half turn by a quarter turn, and applies the closed
+  form to the result. What stays ill-conditioned is so largely in itself: two or three planes
+  near a half turn together, where `R` fixes only their product (within `δ` of it, `exp(log R)`
+  is within about `10⁻¹⁶/δ²` of `R`), a plane near a full turn, and a loxodromic pair of
+  invariants on the branch cut of `√u` (log6d.md §11).
 
 **`normalized`.**
 

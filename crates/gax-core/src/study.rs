@@ -17,6 +17,9 @@
 use crate::coef::Real;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
+mod log8;
+pub use log8::{log_coeffs_8d, log_turn_8d, log_weights_8d, q_weights_8d, turn_polynomial_8d};
+
 /// A complex number.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Cx<T> {
@@ -691,12 +694,13 @@ fn series_div<T: Real>(a: &Series<T>, b: &Series<T>) -> Series<T> {
     q
 }
 
-/// `(c + σ t)^(1/2)` or `(c + σ t)^(−1/2)` as a series in `t` (`σ = ±1`, `c > 0`).
-fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool) -> Series<T> {
+/// `(c + σ ρ s)^(1/2)` or `(c + σ ρ s)^(−1/2)` as a series in `s` (`σ = ±1`, `c > 0`, the
+/// scale `ρ` at most about `c`).
+fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool, rho: T) -> Series<T> {
     let e = if inverse { -0.5 } else { 0.5 };
     let root = c.sqrt();
     let lead = if inverse { root.recip() } else { root };
-    let step = T::from_f64(sigma) * c.recip();
+    let step = T::from_f64(sigma) * rho / c;
     let mut out = [T::zero(); LOG6_TERMS];
     let (mut binom, mut power) = (T::one(), T::one());
     for (k, o) in out.iter_mut().enumerate() {
@@ -707,8 +711,11 @@ fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool) -> Series<T> {
     out
 }
 
-/// The Taylor series of `φ(u) = √u · F(u − 1)` at `u = m`, `F(x) = asinh(√x)/√x`.
-fn phi_series<T: Real>(m: T) -> Series<T> {
+/// The Taylor series of `φ(u) = √u · F(u − 1)` at `u = m`, `F(x) = asinh(√x)/√x`, in the scaled
+/// variable `s = (u − m)/ρ`. With `ρ` the distance to φ's singularity (`m` itself), its
+/// coefficients stay bounded: in `u − m` they grow like `m⁻ᵏ`, which overflows `f32` for a
+/// centre near a half turn.
+fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
     let one = T::one();
     let x0 = m - one;
     let zero = [T::zero(); LOG6_TERMS];
@@ -728,11 +735,13 @@ fn phi_series<T: Real>(m: T) -> Series<T> {
         }
         let x = T::select_lt(x0.abs(), quarter, x0, T::zero());
         let mut out = [T::zero(); LOG6_TERMS];
+        let mut power = T::one();
         for (i, o) in out.iter_mut().enumerate() {
             for j in (i..c.len() - 1).rev() {
                 c[j] = c[j] + x * c[j + 1];
             }
-            *o = c[i];
+            *o = c[i] * power;
+            power = power * rho;
         }
         out
     };
@@ -743,8 +752,8 @@ fn phi_series<T: Real>(m: T) -> Series<T> {
     } else {
         let x = x0.max(T::from_f64(0.25));
         let mm = x + one;
-        let v = series_sqrt(x, 1.0, false);
-        let r = series_sqrt(mm, 1.0, true);
+        let v = series_sqrt(x, 1.0, false, rho);
+        let r = series_sqrt(mm, 1.0, true, rho);
         let mut dv = [T::zero(); LOG6_TERMS];
         for k in 1..LOG6_TERMS {
             dv[k - 1] = v[k] * T::from_i64(k as i64);
@@ -764,8 +773,8 @@ fn phi_series<T: Real>(m: T) -> Series<T> {
     } else {
         let x = (-x0).max(T::from_f64(0.25));
         let mm = (one - x).max(T::from_f64(1e-300));
-        let w = series_sqrt(x, -1.0, false);
-        let r = series_sqrt(mm, 1.0, true);
+        let w = series_sqrt(x, -1.0, false, rho);
+        let r = series_sqrt(mm, 1.0, true, rho);
         let mut dw = [T::zero(); LOG6_TERMS];
         for k in 1..LOG6_TERMS {
             dw[k - 1] = w[k] * T::from_i64(k as i64);
@@ -782,7 +791,7 @@ fn phi_series<T: Real>(m: T) -> Series<T> {
         let far = T::select_lt(x0, T::zero(), below[k], above[k]);
         T::select_lt(x0.abs(), quarter, near[k], far)
     });
-    series_mul(&series_sqrt(m, 1.0, false), &f)
+    series_mul(&series_sqrt(m, 1.0, false, rho), &f)
 }
 
 /// `φ(u)` at a real `u > 0`.
@@ -817,9 +826,10 @@ fn phi_complex<T: Real>(u: Cx<T>) -> Cx<T> {
     u.sqrt() * asinh / s
 }
 
-/// The interpolant `[α0, α1, α2]` of a series at centre `c`, reduced modulo
+/// The interpolant `[α0, α1, α2]` of a series at centre `c` in `s = t/ρ`, reduced modulo
 /// `t³ + e2 t − e3` (three nodes with mean `c`).
-fn reduce3<T: Real>(ph: &Series<T>, c: T, e2: T, e3: T) -> [T; 3] {
+fn reduce3<T: Real>(ph: &Series<T>, c: T, rho: T, e2: T, e3: T) -> [T; 3] {
+    let (e2, e3) = (e2 / (rho * rho), e3 / (rho * rho * rho));
     let (mut a, mut b, mut d) = (T::zero(), T::zero(), T::one());
     let (mut sa, mut sb, mut sd) = (T::zero(), T::zero(), T::zero());
     for p in ph {
@@ -832,12 +842,15 @@ fn reduce3<T: Real>(ph: &Series<T>, c: T, e2: T, e3: T) -> [T; 3] {
         b = nb;
         d = nd;
     }
-    // a t² + b t + d with t = u − c.
+    // a s² + b s + d with s = (u − c)/ρ.
+    let (sa, sb) = (sa / (rho * rho), sb / rho);
     [sa * c * c - sb * c + sd, sb - (sa + sa) * c, sa]
 }
 
-/// The line `[l0, l1]` of a series at centre `c`, reduced modulo `t² − d2` (two nodes).
-fn reduce2<T: Real>(ph: &Series<T>, c: T, d2: T) -> [T; 2] {
+/// The line `[l0, l1]` of a series at centre `c` in `s = t/ρ`, reduced modulo `t² − d2` (two
+/// nodes).
+fn reduce2<T: Real>(ph: &Series<T>, c: T, rho: T, d2: T) -> [T; 2] {
+    let d2 = d2 / (rho * rho);
     let (mut b, mut d) = (T::zero(), T::one());
     let (mut sb, mut sd) = (T::zero(), T::zero());
     for p in ph {
@@ -848,6 +861,7 @@ fn reduce2<T: Real>(ph: &Series<T>, c: T, d2: T) -> [T; 2] {
         b = nb;
         d = nd;
     }
+    let sb = sb / rho;
     [sd - sb * c, sb]
 }
 
@@ -884,7 +898,8 @@ pub fn log_coeffs_6d<T: Real>(p1: T, p2: T, p3: T) -> [T; 3] {
     let jet = if T::all_lt(limit, bound) {
         [T::zero(); 3]
     } else {
-        reduce3(&phi_series(m), m, e2, e3)
+        let rho = m.max(T::from_f64(1e-30));
+        reduce3(&phi_series(m, rho), m, rho, e2, e3)
     };
     if T::all_lt(bound, limit) {
         return jet;
@@ -899,14 +914,23 @@ pub fn log_coeffs_6d<T: Real>(p1: T, p2: T, p3: T) -> [T; 3] {
         d2,
         d,
     } = split6(&c, p1, p2, p3);
-    // The pair's line: its series at the midpoint when close, else through the two values
-    // (real, or a conjugate pair). Only right of φ's branch point u = 0: a conjugate pair
-    // with a negative midpoint straddles the branch cut, where the series does not reach.
+    let spread = add_isolated(phi_pair(mid, d2, d), phi_real(r), r, sum, prod);
+
+    core::array::from_fn(|k| T::select_lt(bound, limit, jet[k], spread[k]))
+}
+
+/// The line `[l0, l1]` through `φ` at a pair of roots with midpoint `mid` and half-difference
+/// `d` (`d2 = d²`, negative for a conjugate pair): its series at the midpoint when close, else
+/// through the two values (real, or a conjugate pair). Only right of φ's branch point u = 0: a
+/// conjugate pair with a negative midpoint straddles the branch cut, where the series does not
+/// reach.
+fn phi_pair<T: Real>(mid: T, d2: T, d: T) -> [T; 2] {
     let quarter_mid = mid.max(T::zero()) * T::from_f64(0.25);
     let close = if T::all_lt(quarter_mid, d) {
         [T::zero(); 2]
     } else {
-        reduce2(&phi_series(mid), mid, d2)
+        let rho = mid.max(T::from_f64(1e-30));
+        reduce2(&phi_series(mid, rho), mid, rho, d2)
     };
     let real_far = {
         let (a, b) = (mid + d, mid - d);
@@ -919,13 +943,10 @@ pub fn log_coeffs_6d<T: Real>(p1: T, p2: T, p3: T) -> [T; 3] {
         let slope = f.im / d.max(T::from_f64(1e-300));
         [f.re - slope * mid, slope]
     };
-    let pair: [T; 2] = core::array::from_fn(|k| {
+    core::array::from_fn(|k| {
         let far = T::select_lt(d2, T::zero(), conj_far[k], real_far[k]);
         T::select_lt(d, quarter_mid, close[k], far)
-    });
-    let spread = add_isolated(pair, phi_real(r), r, sum, prod);
-
-    core::array::from_fn(|k| T::select_lt(bound, limit, jet[k], spread[k]))
+    })
 }
 
 /// The cubic `t³ + e2 t − e3` of the invariants in `t = u − m` (`m = p1/3`, their mean), and its
@@ -995,8 +1016,23 @@ fn split6<T: Real>(c: &Cubic6<T>, p1: T, p2: T, p3: T) -> Split6<T> {
     let df = (three * r - (p1 + p1)) * r + p2;
     let df_safe = T::select_lt(df.abs(), T::from_f64(1e-300), T::one(), df);
     r = r - T::select_lt(df.abs(), T::from_f64(1e-300), T::zero(), f / df_safe);
-    let sum = p1 - r;
-    let prod = p2 - r * sum;
+    // The pair's sum and product, each from the side with the smaller error: forward from p1
+    // (for a small r), or backward from p3 (for a large one: two planes near a half turn and
+    // a third, whose tiny product p2 − r·sum would lose to p2's rounding).
+    let ar = r.abs();
+    let sum_f = p1 - r;
+    let prod_f = p2 - r * sum_f;
+    let e1f = p1.abs() + ar;
+    let e2f = p2.abs() + ar * (sum_f.abs() + e1f);
+    let tiny = T::from_f64(1e-30);
+    let rinv = T::select_lt(ar, tiny, T::one(), r).recip();
+    let prod_b = p3 * rinv;
+    let sum_b = (p2 - prod_b) * rinv;
+    let big = T::from_f64(1e30);
+    let e2b = T::select_lt(ar, tiny, big, prod_b.abs());
+    let e1b = T::select_lt(ar, tiny, big, (p2.abs() + prod_b.abs() + e2b) * rinv.abs());
+    let sum = T::select_lt(e1b, e1f, sum_b, sum_f);
+    let prod = T::select_lt(e2b, e2f, prod_b, prod_f);
     let mid = sum * T::from_f64(0.5);
     let d2 = mid * mid - prod;
     Split6 {
@@ -1018,13 +1054,16 @@ fn add_isolated<T: Real>(pair: [T; 2], fr: T, r: T, sum: T, prod: T) -> [T; 3] {
     [pair[0] + prod * kk, pair[1] - sum * kk, kk]
 }
 
-/// The Taylor series of `g(u) = √(u/(1−u))` at `u = m`, `0 < m < 1`.
-fn g_series<T: Real>(m: T) -> Series<T> {
+/// The Taylor series of `g(u) = √(u/(1−u))` at `u = m`, `0 < m < 1`, in `s = (u − m)/ρ`
+/// with `ρ = min(m, 1 − m)` (its distance to the singularities): the series and `ρ`.
+fn g_series<T: Real>(m: T) -> (Series<T>, T) {
     let tiny = T::from_f64(1e-30);
-    series_mul(
-        &series_sqrt(m.max(tiny), 1.0, false),
-        &series_sqrt((T::one() - m).max(tiny), -1.0, true),
-    )
+    let rho = m.min(T::one() - m).max(tiny);
+    let series = series_mul(
+        &series_sqrt(m.max(tiny), 1.0, false, rho),
+        &series_sqrt((T::one() - m).max(tiny), -1.0, true, rho),
+    );
+    (series, rho)
 }
 
 /// Which planes of a 6D even versor to turn by a quarter turn before [`log_weights_6d`], and
@@ -1057,7 +1096,7 @@ pub fn log_turn_6d<T: Real>(p1: T, p2: T, p3: T, r0: T) -> [T; 4] {
     let gated =
         |ok: T, v: T, extra: T| T::select_lt(zero, ok * positive(v), inv(v) + extra, invalid);
     let c = cubic6(p1, p2, p3);
-    let (m, e2, e3) = (c.m, c.e2, c.e3);
+    let m = c.m;
     let pos_r0 = positive(r0);
     // A cluster's `1/|w| = √(u/(1−u))/|r₀|` at its centre.
     let cluster = |u: T| (u.max(zero) / (one - u).max(tiny)).sqrt() / ar0;
@@ -1193,22 +1232,48 @@ pub fn log_turn_6d<T: Real>(p1: T, p2: T, p3: T, r0: T) -> [T; 4] {
         choose(strict.4, loose.4),
     );
 
+    // Otherwise h at the roots: 1/|w| for the turned ones.
+    let h = [
+        t_r / ((one - r) * prod).max(tiny).sqrt(),
+        t_a / ((one - a) * b * r).max(tiny).sqrt(),
+        t_b / ((one - b) * a * r).max(tiny).sqrt(),
+    ];
+    let alpha = turn_alpha3(&c, &sp, close, [t_r, t_a, t_b, t_all], h, ar0);
+    [alpha[0], alpha[1], alpha[2], t_r + t_a + t_b]
+}
+
+/// The quadratic interpolating `h` at three roots split as in [`split6`], for the turned
+/// planes' flags `[t_r, t_a, t_b, t_all]` (1 or 0; `t_all`: all three as one cluster) and `h`
+/// at the roots `[h_r, h_a, h_b]` (`1/|w|` where turned, else 0): all three through the series
+/// of `√(u/(1−u))/|r₀|` at their mean, or the isolated root added to the pair's line (its series
+/// at the midpoint for a turned close pair, else the chord).
+fn turn_alpha3<T: Real>(
+    c: &Cubic6<T>,
+    sp: &Split6<T>,
+    close: T,
+    t: [T; 4],
+    h: [T; 3],
+    ar0: T,
+) -> [T; 3] {
+    let (zero, one, half) = (T::zero(), T::one(), T::from_f64(0.5));
+    let tiny = T::from_f64(1e-30);
+    let [_, t_a, t_b, t_all] = t;
+    let [h_r, h_a, h_b] = h;
+    let (a, b) = (sp.mid + sp.d, (sp.mid - sp.d).max(zero));
     // All three through the series at the mean.
     let series_all = if T::all_lt(t_all, half) {
         [zero; 3]
     } else {
-        reduce3(&g_series(m), m, e2, e3).map(|x| x / ar0)
+        let (g, rho) = g_series(c.m);
+        reduce3(&g, c.m, rho, c.e2, c.e3).map(|x| x / ar0)
     };
-    // Otherwise h at the roots: 1/|w| for the turned ones.
-    let h_r = t_r / ((one - r) * prod).max(tiny).sqrt();
-    let h_a = t_a / ((one - a) * b * r).max(tiny).sqrt();
-    let h_b = t_b / ((one - b) * a * r).max(tiny).sqrt();
     // The pair's line: a turned close pair through the series, else the chord.
     let use_series = close * t_a * t_b * (one - t_all);
     let series = if T::all_lt(use_series, half) {
         [zero; 2]
     } else {
-        reduce2(&g_series(mid), mid, d2).map(|x| x / ar0)
+        let (g, rho) = g_series(sp.mid);
+        reduce2(&g, sp.mid, rho, sp.d2).map(|x| x / ar0)
     };
     let slope = (h_a - h_b) / (a - b).max(tiny);
     let chord = [h_a - slope * a, slope];
@@ -1216,10 +1281,8 @@ pub fn log_turn_6d<T: Real>(p1: T, p2: T, p3: T, r0: T) -> [T; 4] {
         T::select_lt(half, use_series, series[0], chord[0]),
         T::select_lt(half, use_series, series[1], chord[1]),
     ];
-    let spread = add_isolated(pair, h_r, r, sum, prod);
-    let alpha: [T; 3] =
-        core::array::from_fn(|k| T::select_lt(half, t_all, series_all[k], spread[k]));
-    [alpha[0], alpha[1], alpha[2], t_r + t_a + t_b]
+    let spread = add_isolated(pair, h_r, sp.r, sp.sum, sp.prod);
+    core::array::from_fn(|k| T::select_lt(half, t_all, series_all[k], spread[k]))
 }
 
 /// `[e0, e1, e2, e3]` with `∏(−b̂) = e0 + e1 Z + e2 Z² + e3 Z³` for `Z` the sum of `n` commuting

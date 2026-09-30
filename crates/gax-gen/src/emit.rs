@@ -61,6 +61,88 @@ pub struct Stats {
 /// since WESL linking strips them (docs/shaders.md).
 pub const WGSL_MAX: usize = 64;
 
+/// Products with more terms than this are loops over a static table of their terms rather than
+/// unrolled (ADR-034). Every product of the standard algebras is below (CSTA's largest has
+/// 64 x 64); from 7D on, the full kinds' are not.
+pub const UNROLL_MAX: usize = 4096;
+
+/// Unrolled products and plain sandwich kernels with more terms than this are `#[inline]`
+/// rather than `#[inline(always)]` (among the standard algebras only CSTA's multivector
+/// product).
+pub const INLINE_MAX: usize = 1024;
+
+/// `static` tables of `(output, left, right, coefficient)` terms, grouped by output, as the
+/// statements declaring them: `{name}` holds `(left, right, coefficient)`, indices as `u16`
+/// and coefficients as `i8` where they fit (else `i64`), and output `o`'s terms are
+/// `{name}[{name}_START[o]..{name}_START[o + 1]]`.
+fn term_table(name: &str, terms: &[(usize, usize, usize, i64)], outputs: usize) -> String {
+    let mut terms = terms.to_vec();
+    terms.sort_unstable();
+    let small = terms.iter().all(|t| i8::try_from(t.3).is_ok());
+    let ty = if small { "i8" } else { "i64" };
+    let mut start = vec![0usize; outputs + 1];
+    for t in &terms {
+        start[t.0 + 1] += 1;
+    }
+    for o in 0..outputs {
+        start[o + 1] += start[o];
+    }
+    let mut s = format!(
+        "        /// Where each output's terms start in `{name}` (and the last one ends).\n        static {name}_START: [u32; {}] = [",
+        outputs + 1
+    );
+    for (k, x) in start.iter().enumerate() {
+        if k % 16 == 0 {
+            s.push_str("\n            ");
+        } else {
+            s.push(' ');
+        }
+        let _ = write!(s, "{x},");
+    }
+    let _ = write!(
+        s,
+        "\n        ];\n        /// `(left, right, coefficient)` of each term, by output.\n        static {name}: [(u16, u16, {ty}); {}] = [",
+        terms.len()
+    );
+    for (k, (_, i, j, c)) in terms.iter().enumerate() {
+        if k % 8 == 0 {
+            s.push_str("\n            ");
+        } else {
+            s.push(' ');
+        }
+        let _ = write!(s, "({i}, {j}, {c}),");
+    }
+    s.push_str("\n        ];\n");
+    s
+}
+
+/// A loop over the tables of [`term_table`]: `out[o] = Σ k · left[i] ⊗ right[j]`, each output
+/// accumulated in a register; `mul` combines a left and a right coefficient and `scale` a
+/// product and a coefficient `T`.
+fn term_loop(name: &str, out: &str, zero: &str, product: &str, scale: &str) -> String {
+    format!(
+        "        for (o, out) in {out}.iter_mut().enumerate() {{\n            let mut acc = {zero};\n            for &(i, j, k) in &{name}[{name}_START[o] as usize..{name}_START[o + 1] as usize] {{\n                let (i, j) = (usize::from(i), usize::from(j));\n                let k = T::from_i64(i64::from(k));\n                acc = acc + {};\n            }}\n            *out = acc;\n        }}\n",
+        scale.replace("{p}", product)
+    )
+}
+
+/// Versors with more coefficients than this (the even kinds from 7D on) get plain sandwich
+/// kernels: the two products `(v x) ~v` straight from the tables, without symbolic
+/// simplification, and the map computed from the kernel's columns (ADR-034). Symbolic
+/// simplification grows with the cube of the versor's size, and runs out of memory there.
+pub const FUSED_MAX: usize = 32;
+
+/// A plain sandwich is generated when its kernel has at most this many terms (products in
+/// its two stages); beyond that (a 9D even versor on another, say), the sandwich is left to
+/// `v * x * v.reverse()`.
+pub const PLAIN_MAX_TERMS: usize = 1 << 16;
+
+/// A sandwich is generated when its map has at most this many entries (output coefficients
+/// times passenger coefficients): the map is a kind of its own, written out entry by entry.
+/// Every standard algebra is far below (CSTA's largest map is 64 x 64); an 8D or 9D
+/// multivector is not.
+pub const MAP_MAX: usize = 1 << 14;
+
 /// Emit the module source for an algebra.
 #[allow(clippy::too_many_lines)]
 pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
@@ -69,6 +151,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         cfg,
         out: String::new(),
         stats: Stats::default(),
+        helpers: BTreeSet::new(),
     };
     e.header();
     let phase = std::time::Instant::now();
@@ -144,7 +227,16 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
                             x.name
                         )
                     },
-                    || sandwich_math(spec, v, x, unit),
+                    || {
+                        let out = sandwich_out(spec, v, x, unit)?;
+                        if out.layout.len() * x.layout.len() > MAP_MAX {
+                            None
+                        } else if v.layout.len() > FUSED_MAX {
+                            sandwich_plain(spec, v, x, unit)
+                        } else {
+                            sandwich_math(spec, v, x, unit)
+                        }
+                    },
                 )
             })
         },
@@ -271,8 +363,151 @@ struct SandwichMath {
     out: KindSpec,
     relations: Vec<Poly>,
     direct: Program,
-    matrix: Program,
-    entries: Vec<(usize, usize, Poly)>,
+    map: MapPath,
+    /// The map's structurally nonzero entries, `(output, passenger)`.
+    entries: Vec<(usize, usize)>,
+    /// A plain sandwich's two products as term tables (see [`sandwich_plain`]).
+    plain: Option<Plain>,
+}
+
+/// The two products of a plain sandwich, `m = v x` and `out = m ~v`, as tables of
+/// `(output, left, right, coefficient)` terms, the size of `m`, and the blades where
+/// `v ~v − 1` is not identically zero (for `check-units`).
+struct Plain {
+    first: Vec<(usize, usize, usize, i64)>,
+    second: Vec<(usize, usize, usize, i64)>,
+    mid: usize,
+    norm: Vec<u32>,
+}
+
+/// How a sandwich's map (its matrix in the passenger) is computed.
+enum MapPath {
+    /// A straight-line program in the versor, one output per entry.
+    Program(Program),
+    /// At run time: the value kernel applied to each basis element of the passenger.
+    Columns,
+}
+
+/// The kind of `v >> x` from the tables alone: every blade of `(v x) ~v`, only the passenger's
+/// grades for a `Unit` versor. It contains the kind the symbolic path finds (modulo the unit
+/// relations), and is it for plain sandwiches.
+fn sandwich_out(spec: &AlgebraSpec, vk: &KindSpec, xk: &KindSpec, unit: bool) -> Option<KindSpec> {
+    let alg = &spec.algebra;
+    let mid = crate::table::Layout {
+        blades: binop_support(alg, BinOp::Gp, &vk.layout, &xk.layout)
+            .into_iter()
+            .map(|m| (m, 1))
+            .collect(),
+    };
+    let grades = xk.layout.grades();
+    let support: BTreeSet<u32> = binop_support(alg, BinOp::Gp, &mid, &vk.layout)
+        .into_iter()
+        .filter(|m| !unit || grades.contains(&m.count_ones()))
+        .collect();
+    spec.kind_for_support(&support).cloned()
+}
+
+/// A plain sandwich (see [`FUSED_MAX`]): `(v x) ~v` as two products from the exact tables,
+/// every output blade of the result's kind computed. For a `Unit` versor the result's kind
+/// holds the passenger's grades, which a versor's sandwich keeps; it is homogeneous of
+/// degree 2 in the versor, so drift scales it uniformly (ADR-020), with nothing to repair.
+fn sandwich_plain(
+    spec: &AlgebraSpec,
+    vk: &KindSpec,
+    xk: &KindSpec,
+    unit: bool,
+) -> Option<SandwichMath> {
+    use crate::table::Layout;
+    let alg = &spec.algebra;
+    let nv = vk.layout.len();
+    let out = sandwich_out(spec, vk, xk, unit)?;
+    let relations = if unit {
+        symbolic::unit_relations(alg, &symbolic::variables(&vk.layout, 0))
+    } else {
+        Vec::new()
+    };
+    if unit && relations.is_empty() {
+        return None;
+    }
+    let full = |s: BTreeSet<u32>| Layout {
+        blades: s.into_iter().map(|m| (m, 1)).collect(),
+    };
+    let mid = full(binop_support(alg, BinOp::Gp, &vk.layout, &xk.layout));
+    let res = full(binop_support(alg, BinOp::Gp, &mid, &vk.layout));
+    let first = binop_table(alg, BinOp::Gp, &vk.layout, &xk.layout, &mid);
+    let rev: Vec<i64> = vk
+        .layout
+        .blades
+        .iter()
+        .map(|&(m, _)| if m.count_ones() % 4 >= 2 { -1 } else { 1 })
+        .collect();
+    let second: Vec<_> = binop_table(alg, BinOp::Gp, &mid, &vk.layout, &res)
+        .into_iter()
+        .filter_map(|t| {
+            let (o, so) = out.layout.position(res.blades[t.o].0)?;
+            Some((o, t.i, t.j, t.coef * rev[t.j] * so))
+        })
+        .collect();
+    // The entries of the map: output `o` depends on passenger `i` through the middle blades.
+    let mut through: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); mid.len()];
+    for t in &first {
+        through[t.o].insert(t.j);
+    }
+    let mut entries = BTreeSet::new();
+    for &(o, m, _, _) in &second {
+        for &i in &through[m] {
+            entries.insert((o, i));
+        }
+    }
+    if first.len() + second.len() > PLAIN_MAX_TERMS {
+        return None;
+    }
+    let norm: Vec<u32> = {
+        let v = symbolic::variables(&vk.layout, 0);
+        let n = symbolic::binop(alg, BinOp::Gp, &v, &symbolic::unop(alg, UnOp::Reverse, &v));
+        n.into_iter()
+            .filter(|(m, p)| {
+                if *m == 0 {
+                    p != &Poly::constant(Rational::ONE)
+                } else {
+                    !p.is_zero()
+                }
+            })
+            .map(|(m, _)| m)
+            .collect()
+    };
+    let plain = Plain {
+        first: first.iter().map(|t| (t.o, t.i, t.j, t.coef)).collect(),
+        second: second.iter().map(|&(o, m, j, c)| (o, m, j, c)).collect(),
+        mid: mid.len(),
+        norm,
+    };
+    let mut b = cse::Builder::default();
+    let var = |k: usize| Operand::Var(k as Var);
+    let int = |c: i64| Rational::new(i128::from(c), 1);
+    let mut sums: Vec<Vec<(Rational, Operand)>> = vec![Vec::new(); mid.len()];
+    for t in &first {
+        let p = b.mul(var(t.i), var(nv + t.j));
+        sums[t.o].push((int(t.coef), p));
+    }
+    let middle: Vec<Operand> = sums.iter().map(|s| cse::emit_sum(&mut b, s)).collect();
+    let mut sums: Vec<Vec<(Rational, Operand)>> = vec![Vec::new(); out.layout.len()];
+    for &(o, m, j, c) in &second {
+        let p = b.mul(middle[m], var(j));
+        sums[o].push((int(c), p));
+    }
+    let outputs: Vec<Operand> = sums.iter().map(|s| cse::emit_sum(&mut b, s)).collect();
+    let mut direct = b.prog;
+    direct.outputs = outputs;
+    direct.compact();
+    Some(SandwichMath {
+        out,
+        relations,
+        direct,
+        map: MapPath::Columns,
+        entries: entries.into_iter().collect(),
+        plain: Some(plain),
+    })
 }
 
 #[allow(clippy::too_many_lines)]
@@ -404,8 +639,9 @@ fn sandwich_math(
         out,
         relations,
         direct,
-        matrix,
-        entries,
+        map: MapPath::Program(matrix),
+        entries: entries.into_iter().map(|e| (e.0, e.1)).collect(),
+        plain: None,
     })
 }
 
@@ -414,6 +650,8 @@ struct Emitter<'a> {
     cfg: &'a Config,
     out: String,
     stats: Stats,
+    /// The plain sandwich kernels emitted so far, by name.
+    helpers: BTreeSet<String>,
 }
 
 /// Rust identifier for a blade accessor (`1` becomes `s`).
@@ -995,6 +1233,26 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let (tr, m) = trait_of(op);
         let (an, bn, on) = (&a.name, &b.name, &out.name);
         let mut body = String::new();
+        if table.len() > UNROLL_MAX {
+            // A loop over a static table of the terms, by output: unrolled, one such product
+            // is megabytes of code, and a debug build gives each of its temporaries a stack
+            // slot (ADR-034).
+            let terms: Vec<_> = table.iter().map(|t| (t.o, t.i, t.j, t.coef)).collect();
+            let nout = out.layout.len();
+            let _ = write!(
+                body,
+                "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n{}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n        let zero = SlotArr::<Cat<S1, S2>, T>(<Cat<S1, S2> as Slots>::from_flat(&mut |_| T::zero(), 0));\n        let mut c = [zero; {nout}];\n{}        {on} {{ c: c.map(|x| x.0) }}\n    }}\n}}\n\n",
+                term_table("TERMS", &terms, nout),
+                term_loop("TERMS", "c", "zero", "a[i] * b[j]", "({p}).scale(k)"),
+            );
+            self.w(&body);
+            self.stats.binary_impls += 1;
+            self.stats.binary.push((op, a.name.clone(), b.name.clone()));
+            self.stats
+                .products
+                .push((op, a.name.clone(), b.name.clone(), out.name.clone()));
+            return;
+        }
         let mut exprs = Vec::new();
         for o in 0..out.layout.len() {
             let terms: Vec<_> = table.iter().filter(|t| t.o == o).collect();
@@ -1023,9 +1281,16 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         // takes a third off type checking. `move`: it captures the two small arrays by copy,
         // which is cheaper to borrow-check than borrowing them.
         let ops = "        let p = move |i: usize, j: usize| a[i] * b[j];\n";
+        // A large product is not forced inline: in a debug build every inlined copy keeps its
+        // own stack slots (an exponential's loop holds several).
+        let inline = if table.len() > INLINE_MAX {
+            "#[inline]"
+        } else {
+            "#[inline(always)]"
+        };
         let _ = write!(
             body,
-            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    #[inline(always)]\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
+            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    {inline}\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
         );
         for e in exprs {
             let _ = writeln!(body, "                {e},");
@@ -1074,20 +1339,44 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
 
     /// Fused `v x ~v` with `v` a value of versor kind `vk` and `x` of kind `xk` with any slots.
     #[allow(clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines)]
     fn sandwich(&mut self, vk: &KindSpec, xk: &KindSpec, unit: bool, math: SandwichMath) {
         let SandwichMath {
             out,
             relations,
             direct,
-            matrix,
+            map,
             entries,
+            plain,
         } = math;
         let nv = vk.layout.len() as Var;
         let (vn, xn, on) = (&vk.name, &xk.name, &out.name);
-        self.record_sandwich(vk, xk, &out, unit, &direct, &matrix, &entries);
+        self.record_sandwich(vk, xk, &out, unit, &direct, &map, &entries);
         // check-units: the parts of v ~v - 1, handed to Coef::check_unit.
-        let check = match (&self.cfg.check_units, unit) {
-            (Some(gate), true) => {
+        let check = match (&self.cfg.check_units, unit, &plain) {
+            // A plain sandwich's versor is large: v ~v by the product (a table loop).
+            (Some(gate), true, Some(plain)) => {
+                let alg = &self.spec.algebra;
+                let nk = self
+                    .spec
+                    .kind_for_support(&binop_support(alg, BinOp::Gp, &vk.layout, &vk.layout))
+                    .expect("a full kind exists");
+                let parts: Vec<String> = plain
+                    .norm
+                    .iter()
+                    .map(|&m| {
+                        let (pos, sign) = nk.layout.position(m).expect("in the product");
+                        let neg = if sign < 0 { "-" } else { "" };
+                        let one = if m == 0 { " - T::one()" } else { "" };
+                        format!("{neg}n[{pos}]{one}")
+                    })
+                    .collect();
+                format!(
+                    "        {gate}\n        {{\n            let w = {vn}::<(), T>::from_coeffs(v);\n            let n = (w * w.reverse()).c;\n            T::check_unit(&[{}]);\n        }}\n",
+                    parts.join(", ")
+                )
+            }
+            (Some(gate), true, _) => {
                 let prog = cse::compile_best(&relations, &BTreeSet::new(), &[]);
                 let vname = |var: Var| format!("v[{var}]");
                 let mut lets = String::new();
@@ -1124,48 +1413,136 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             }
         };
         let mut s = String::new();
-        let _ = write!(
-            s,
-            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n{check}        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n"
-        );
-        direct.emit_lets(&var_name, "t", &mut s);
+        let mut lets = String::new();
+        direct.emit_lets(&var_name, "t", &mut lets);
         let outs: Vec<String> = direct
             .outputs
             .iter()
             .map(|o| render(o, &var_name, "t"))
             .collect();
+        // A plain sandwich's kernel is a function of its own: the map applies it to each basis
+        // element of the passenger.
+        let helper = format!(
+            "sandwich_{}_{}_{}",
+            crate::kernel::snake(vn),
+            crate::kernel::snake(xn),
+            crate::kernel::snake(on)
+        );
+        let value = match map {
+            MapPath::Program(_) => format!(
+                "{lets}            return {on} {{ c: gx::slots::from_values::<S, T, {nout}>([{}]) }};\n",
+                outs.join(", ")
+            ),
+            MapPath::Columns => {
+                // The same for a `Unit` versor and a plain one when their results agree.
+                if self.helpers.insert(helper.clone()) {
+                    let doc = format!(
+                        "/// `v x ~v` on coefficient arrays, for `{vn}` v and `{xn}` x, as `{on}`."
+                    );
+                    match &plain {
+                        Some(t) if t.first.len() + t.second.len() > UNROLL_MAX => {
+                            let _ = write!(
+                                s,
+                                "{doc}\n#[inline]\nfn {helper}<T: Coef>(v: &[T; {nv}], xv: &[T; {nxv}]) -> [T; {nout}] {{\n{}{}        let mut m = [T::zero(); {}];\n{}        let mut out = [T::zero(); {nout}];\n{}        out\n}}\n\n",
+                                term_table("FIRST", &t.first, t.mid),
+                                term_table("SECOND", &t.second, nout),
+                                t.mid,
+                                term_loop("FIRST", "m", "T::zero()", "v[i] * xv[j]", "{p} * k"),
+                                term_loop("SECOND", "out", "T::zero()", "m[i] * v[j]", "{p} * k"),
+                            );
+                        }
+                        _ => {
+                            let inline = match &plain {
+                                Some(t) if t.first.len() + t.second.len() > INLINE_MAX => {
+                                    "#[inline]"
+                                }
+                                _ => "#[inline(always)]",
+                            };
+                            let _ = write!(
+                                s,
+                                "{doc}\n{inline}\nfn {helper}<T: Coef>(v: &[T; {nv}], xv: &[T; {nxv}]) -> [T; {nout}] {{\n{lets}    [{}]\n}}\n\n",
+                                outs.join(", ")
+                            );
+                        }
+                    }
+                }
+                format!(
+                    "            return {on} {{ c: gx::slots::from_values::<S, T, {nout}>({helper}(&v, &xv)) }};\n"
+                )
+            }
+        };
         let _ = write!(
             s,
-            "            return {on} {{ c: gx::slots::from_values::<S, T, {nout}>([{}]) }};\n        }}\n",
-            outs.join(", ")
+            "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let v = {vexpr};\n{check}        if let Some(xv) = gx::slots::values::<S, T, {nxv}>(&x.c) {{\n{value}        }}\n"
         );
+        // The map's entries: exact constants, or values computed from `v` by `map_lets`.
         let mat_name = move |var: Var| format!("v[{var}]");
-        matrix.emit_lets(&mat_name, "m", &mut s);
-        let _ = writeln!(s, "        let x = x.c.map(SlotArr::<S, T>);");
-        let mut cols = Vec::new();
-        for o in 0..nout {
-            let mut e = String::new();
-            for (k, (_, i, _)) in entries.iter().enumerate().filter(|(_, e)| e.0 == o) {
-                let coef = matrix.outputs[k];
-                let term = match coef {
-                    Operand::Const(c) if c == Rational::ONE => format!("x[{i}]"),
-                    Operand::Const(c) if c == -Rational::ONE => format!("-x[{i}]"),
-                    other => format!("x[{i}].scale({})", render(&other, &mat_name, "m")),
-                };
-                if e.is_empty() {
-                    e = term;
-                } else if let Some(stripped) = term.strip_prefix('-') {
-                    e = format!("{e} - {stripped}");
-                } else {
-                    e = format!("{e} + {term}");
-                }
+        let mut map_lets = String::new();
+        let vals: Vec<Result<Rational, String>> = match &map {
+            MapPath::Program(matrix) => {
+                matrix.emit_lets(&mat_name, "m", &mut map_lets);
+                matrix
+                    .outputs
+                    .iter()
+                    .map(|o| match o {
+                        Operand::Const(c) => Ok(*c),
+                        other => Err(render(other, &mat_name, "m")),
+                    })
+                    .collect()
             }
-            if e.is_empty() {
-                cols.push("S::from_flat(&mut |_| T::zero(), 0)".to_string());
-            } else {
-                cols.push(format!("({e}).0"));
+            MapPath::Columns => {
+                let _ = write!(
+                    map_lets,
+                    "        let mut cols = [[T::zero(); {nout}]; {nxv}];\n        let mut e = [T::zero(); {nxv}];\n        for (i, col) in cols.iter_mut().enumerate() {{\n            e[i] = T::one();\n            *col = {helper}(&v, &e);\n            e[i] = T::zero();\n        }}\n"
+                );
+                entries
+                    .iter()
+                    .map(|&(o, i)| Err(format!("cols[{i}][{o}]")))
+                    .collect()
+            }
+        };
+        let mut stored: Vec<&str> = Vec::new();
+        for v in &vals {
+            if let Err(e) = v
+                && !stored.contains(&e.as_str())
+            {
+                stored.push(e);
             }
         }
+        let stored_at = |e: &str| stored.iter().position(|s| *s == e).expect("stored");
+        s.push_str(&map_lets);
+        let _ = writeln!(s, "        let x = x.c.map(SlotArr::<S, T>);");
+        let sum = |term: &dyn Fn(usize, &Result<Rational, String>) -> String| -> Vec<String> {
+            (0..nout)
+                .map(|o| {
+                    let mut e = String::new();
+                    for (k, &(_, i)) in entries.iter().enumerate().filter(|(_, e)| e.0 == o) {
+                        let t = match &vals[k] {
+                            Ok(c) if *c == Rational::ONE => format!("x[{i}]"),
+                            Ok(c) if *c == -Rational::ONE => format!("-x[{i}]"),
+                            v => term(i, v),
+                        };
+                        if e.is_empty() {
+                            e = t;
+                        } else if let Some(stripped) = t.strip_prefix('-') {
+                            e = format!("{e} - {stripped}");
+                        } else {
+                            e = format!("{e} + {t}");
+                        }
+                    }
+                    if e.is_empty() {
+                        "S::from_flat(&mut |_| T::zero(), 0)".to_string()
+                    } else {
+                        format!("({e}).0")
+                    }
+                })
+                .collect()
+        };
+        let constant = |c: Rational| render(&Operand::Const(c), &mat_name, "m");
+        let cols = sum(&|i, v| match v {
+            Ok(c) => format!("x[{i}].scale({})", constant(*c)),
+            Err(e) => format!("x[{i}].scale({e})"),
+        });
         let _ = write!(
             s,
             "        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
@@ -1182,13 +1559,6 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             "impl<S: Slots, T: Coef> TransformInv<{xn}<S, T>> for {self_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform_inv(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        Transform::transform({rev_self}, x)\n    }}\n}}\n\n"
         );
         // Prepared action: the non-constant matrix entries, applied sparsely.
-        let mut stored: Vec<Operand> = Vec::new();
-        for (k, _) in entries.iter().enumerate() {
-            let op = matrix.outputs[k];
-            if !matches!(op, Operand::Const(_)) && !stored.contains(&op) {
-                stored.push(op);
-            }
-        }
         let nst = stored.len();
         let vkind = if unit {
             format!("gx::Unit<{vn}>")
@@ -1196,63 +1566,30 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             vn.clone()
         };
         let prep_ty = format!("gx::Prepared<{vkind}, {xn}, T, {nst}>");
-        let mut lets = String::new();
-        matrix.emit_lets(&mat_name, "m", &mut lets);
-        let vals: Vec<String> = stored.iter().map(|o| render(o, &mat_name, "m")).collect();
         let _ = write!(
             s,
-            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
-            vals.join(", ")
+            "impl<T: Coef> gx::Prepare<{xn}> for {self_ty} {{\n    type Output = {prep_ty};\n    #[inline]\n    fn prepare(self) -> {prep_ty} {{\n        let v = {vexpr};\n{check}{map_lets}        gx::Prepared::from_entries([{}])\n    }}\n}}\n\n",
+            stored.join(", ")
         );
-        let mut cols = Vec::new();
-        for o in 0..nout {
-            let mut e = String::new();
-            for (k, (_, i, _)) in entries.iter().enumerate().filter(|(_, e)| e.0 == o) {
-                let term = match matrix.outputs[k] {
-                    Operand::Const(c) if c == Rational::ONE => format!("x[{i}]"),
-                    Operand::Const(c) if c == -Rational::ONE => format!("-x[{i}]"),
-                    Operand::Const(c) => format!(
-                        "x[{i}].scale({})",
-                        render(&Operand::Const(c), &mat_name, "m")
-                    ),
-                    other => {
-                        let idx = stored.iter().position(|s| *s == other).expect("stored");
-                        format!("x[{i}].scale(m[{idx}])")
-                    }
-                };
-                if e.is_empty() {
-                    e = term;
-                } else if let Some(stripped) = term.strip_prefix('-') {
-                    e = format!("{e} - {stripped}");
-                } else {
-                    e = format!("{e} + {term}");
-                }
-            }
-            cols.push(if e.is_empty() {
-                "S::from_flat(&mut |_| T::zero(), 0)".to_string()
-            } else {
-                format!("({e}).0")
-            });
-        }
+        let cols = sum(&|i, v| match v {
+            Ok(c) => format!("x[{i}].scale({})", constant(*c)),
+            Err(e) => format!("x[{i}].scale(m[{}])", stored_at(e)),
+        });
         let _ = write!(
             s,
             "impl<S: Slots, T: Coef> Transform<{xn}<S, T>> for {prep_ty} {{\n    type Output = {on}<S, T>;\n    #[inline(always)]\n    fn transform(self, x: {xn}<S, T>) -> {on}<S, T> {{\n        let m = self.m;\n        let x = x.c.map(SlotArr::<S, T>);\n        {on} {{ c: [{}] }}\n    }}\n}}\n\n",
             cols.join(", ")
         );
         // The dense map, written entry by entry (no multiplication by an identity's zeros).
-        let nx = xk.layout.len();
         let mut rows = Vec::new();
         for o in 0..nout {
-            let row: Vec<String> = (0..nx)
+            let row: Vec<String> = (0..nxv)
                 .map(
                     |i| match entries.iter().position(|e| e.0 == o && e.1 == i) {
                         None => "T::zero()".to_string(),
-                        Some(k) => match matrix.outputs[k] {
-                            Operand::Const(c) => render(&Operand::Const(c), &mat_name, "m"),
-                            other => format!(
-                                "m[{}]",
-                                stored.iter().position(|s| *s == other).expect("stored")
-                            ),
+                        Some(k) => match &vals[k] {
+                            Ok(c) => constant(*c),
+                            Err(e) => format!("m[{}]", stored_at(e)),
                         },
                     },
                 )
@@ -1287,7 +1624,19 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             xn.clone(),
             unit,
             direct.cost(),
-            matrix.cost(),
+            match &map {
+                MapPath::Program(matrix) => matrix.cost(),
+                MapPath::Columns => {
+                    let c = direct.cost();
+                    crate::slp::Cost {
+                        muls: c.muls * nxv,
+                        adds: c.adds * nxv,
+                        divs: c.divs * nxv,
+                        negs: c.negs * nxv,
+                        calls: c.calls * nxv,
+                    }
+                }
+            },
         ));
         self.stats
             .sandwiches
@@ -1306,7 +1655,9 @@ impl Emitter<'_> {
     #[allow(clippy::too_many_lines)]
     fn gpu_types(&mut self, gate: &str) {
         let spec = self.spec;
-        for k in &spec.kinds {
+        // The WGSL modules take kinds up to `WGSL_MAX` coefficients; larger ones (from 8D on)
+        // have no GPU layout either.
+        for k in spec.kinds.iter().filter(|k| k.layout.len() <= WGSL_MAX) {
             let (name, n) = (&k.name, k.layout.len());
             let m = n.div_ceil(4);
             let _ = write!(
@@ -1416,7 +1767,12 @@ impl From<{name}Gpu16> for {name}<(), f32> {{
                 alg = spec.name
             );
         }
-        for (alias, kind) in &spec.aliases {
+        let small = |kind: &str| {
+            spec.kinds
+                .iter()
+                .any(|k| k.name == kind && k.layout.len() <= WGSL_MAX)
+        };
+        for (alias, kind) in spec.aliases.iter().filter(|(_, k)| small(k)) {
             let _ = writeln!(
                 self.out,
                 "{gate}
@@ -1432,6 +1788,7 @@ pub type {alias}Gpu16 = {kind}Gpu16;
         let rows: Vec<String> = spec
             .kinds
             .iter()
+            .filter(|k| k.layout.len() <= WGSL_MAX)
             .map(|k| {
                 let t = format!("{}Gpu", k.name);
                 format!(
@@ -1448,6 +1805,7 @@ pub type {alias}Gpu16 = {kind}Gpu16;
         let rows16: Vec<String> = spec
             .kinds
             .iter()
+            .filter(|k| k.layout.len() <= WGSL_MAX)
             .map(|k| {
                 let t = format!("{}Gpu16", k.name);
                 format!(
@@ -1512,8 +1870,8 @@ impl From<gx::GpuMat<{c}>> for {xn}<({yn},), f32> {{
         out: &KindSpec,
         unit: bool,
         direct: &Program,
-        matrix: &Program,
-        entries: &[(usize, usize, Poly)],
+        map: &MapPath,
+        entries: &[(usize, usize)],
     ) {
         use crate::kernel::{Kernel, Source, Step, Ty, snake};
         let (nv, nx, nout) = (vk.layout.len(), xk.layout.len(), out.layout.len());
@@ -1548,7 +1906,10 @@ impl From<gx::GpuMat<{c}>> for {xn}<({yn},), f32> {{
             }],
             entries: None,
         });
-        if (3..=4).contains(&nx) && (3..=4).contains(&nout) {
+        if let MapPath::Program(matrix) = map
+            && (3..=4).contains(&nx)
+            && (3..=4).contains(&nout)
+        {
             self.stats.kernels.push(Kernel {
                 name: format!("{u}{vs}_matrix_{xs}"),
                 doc: format!(
@@ -1565,7 +1926,7 @@ impl From<gx::GpuMat<{c}>> for {xn}<({yn},), f32> {{
                     prefix: "m".into(),
                     vars: (0..nv).map(|i| (i as Var, arg(0, i))).collect(),
                 }],
-                entries: Some(entries.iter().map(|e| (e.0, e.1)).collect()),
+                entries: Some(entries.to_vec()),
             });
         }
     }

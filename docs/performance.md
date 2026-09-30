@@ -90,6 +90,8 @@ otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA d
 | CGA3D `Twist::exp` | 11.0 ns | — |
 | CSTA (6D) vector product | 10.6 ns | — |
 | CSTA `Unit<Even>::log` (f64): closed form (log6d.md) / near a half turn (turned) / inverse scaling and squaring (before) | **2.6 µs** / 6.6 µs / 50.7 µs | — |
+| 7D / 8D / 9D `Unit<Even>::log` (f64, `R(4,3)`, `R(4,4)`, `R(5,4)` declared with `algebra!`): closed form / turned | 2.5 / 2.9 / 3.8 µs; 7.0 / 10 / 31 µs | — |
+| 7D / 8D / 9D even product (4096 terms unrolled; 16384 and 65536 as table loops, ADR-034) | 1.7 / 11 / 44 µs | — |
 
 **The solvers are branch free per lane** (ADR-017), so they run unchanged on SIMD lanes. Two
 lane-wide exits, `Real::all_lt`, keep them competitive for single matrices:
@@ -162,7 +164,7 @@ the norm, which is the whole saving. Plain motors cannot factor at all without d
 | `Unit<Motor> >> Point` (PGA3D, general weight) | 33 mul, 21 add (25 mul, 18 add before) | GAmphetamine, weight fixed at 1: 21 mul, 18 add |
 | `Motor >> Point` (not unit) | 38 mul, 32 add | GAmphetamine, weight fixed at 1: 28 mul, 21 add |
 | `Unit<Motor> >> Plane` | 36 mul, 21 add (28 mul, 18 add before) | — |
-| `Unit<Motor> >> Line` | 58 mul, 45 add | open: the line kernel is not yet as good as the point kernel |
+| `Unit<Motor> >> Line` | 58 mul, 45 add | rotating, then translating: about 52 mul, but not homogeneous (above) |
 | `Unit<Motor> >> Point` (PGA2D) | 16 mul, 8 add (15 mul, 7 add before) | hand-derived: 16 mul, 7 add |
 
 **The `Unit` kernels are drift-tolerant** (ADR-020, [numerics.md](numerics.md)). The simplifier

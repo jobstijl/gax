@@ -935,10 +935,18 @@ fn emit_log_fallback(
     if bv.layout.len() != grade2.len() {
         return None;
     }
-    // In 6D the logarithm is in closed form, turning planes near a half turn (log6d.md).
-    if alg.dim() == 6 {
-        emit_log_6d(spec, k, bv, traits, kernels);
-        return Some(bv.name.clone());
+    // From 6D to 9D the logarithm is in closed form, turning planes near a half turn
+    // (log6d.md): three invariant planes in 6D and 7D, four in 8D and 9D.
+    match alg.dim() {
+        6 | 7 => {
+            emit_log_6d(spec, k, bv, traits, kernels);
+            return Some(bv.name.clone());
+        }
+        8 | 9 => {
+            emit_log_8d(spec, k, bv, traits);
+            return Some(bv.name.clone());
+        }
+        _ => {}
     }
     let (en, bn) = (&k.name, &bv.name);
     let (one_pos, one_sign) = k.layout.position(0)?;
@@ -1286,6 +1294,147 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
         list(4 + n),
         list(4 + 2 * n),
         embed.join(", "),
+    );
+}
+
+/// The closed-form logarithm of an 8D or 9D even versor (four invariant planes;
+/// docs/log6d.md §9): `log R = Σ wₘ Gₘ` with `G1 = ⟨R⟩₂` and `Gₘ = r0 ⟨R₂ₘ R₂ₘ₋₂⟩₂`, the
+/// weights from `gx::study::log_weights_8d`, and planes near a half turn turned first
+/// (`log_turn_8d`). Rust only: the even kind has more coefficients than the WGSL modules take.
+#[allow(clippy::too_many_lines)]
+fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut String) {
+    let alg = &spec.algebra;
+    let x = symbolic::variables(&k.layout, 0);
+    let grade = |g: u32| -> SymMv {
+        x.iter()
+            .filter(|(m, _)| m.count_ones() == g)
+            .map(|(m, c)| (*m, c.clone()))
+            .collect()
+    };
+    let parts = [grade(2), grade(4), grade(6), grade(8)];
+    let r0 = coef(&x, 0);
+    let square = |mv: &SymMv| coef(&symbolic::binop(alg, BinOp::Gp, mv, mv), 0);
+    let (a1, a2, a3) = (square(&parts[0]), square(&parts[1]), square(&parts[2]));
+    let int = |i: i128| Poly::constant(Rational::int(i));
+    // p₄₋ⱼ = Σₘ₌₀..ⱼ (−1)ᵐ C(4−m, j−m) Aₘ with Aₘ = ⟨R₂ₘ²⟩₀ and A₀ = r0².
+    let p4 = &r0 * &r0;
+    let p3 = &(&int(4) * &p4) - &a1;
+    let p2 = &(&(&int(6) * &p4) - &(&int(3) * &a1)) + &a2;
+    let p1 = &(&(&(&int(4) * &p4) - &(&int(3) * &a1)) + &(&int(2) * &a2)) - &a3;
+    let bivectors = |mv: &SymMv| -> Vec<Poly> {
+        let two: SymMv = mv
+            .iter()
+            .filter(|(m, _)| m.count_ones() == 2)
+            .map(|(m, c)| (*m, c.clone()))
+            .collect();
+        symbolic::to_coeffs(&bv.layout, &two).expect("the bivectors")
+    };
+    let mut outs = vec![r0.clone(), p1, p2, p3, p4];
+    outs.extend(bivectors(&parts[0]));
+    for m in 1..4 {
+        let prod = symbolic::binop(alg, BinOp::Gp, &parts[m], &parts[m - 1]);
+        outs.extend(bivectors(&scale_mv(&prod, &r0)));
+    }
+    let prog = cse::compile_best(&outs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let mut lets = String::new();
+    prog.emit_lets(&xvar, "p", &mut lets);
+    let o: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|op| render(op, &xvar, "p"))
+        .collect();
+    let nb = bv.layout.len();
+    let list = |j: usize| o[5 + j * nb..5 + (j + 1) * nb].join(", ");
+    let (en, bn) = (&k.name, &bv.name);
+    let sum = |w: &str| {
+        (0..4)
+            .map(|j| format!("{w}[{j}] * g[{j}][i]"))
+            .collect::<Vec<_>>()
+            .join(" + ")
+    };
+    let (closed_sum, z_sum) = (sum("w"), sum("wz"));
+    let _ = write!(
+        traits,
+        "impl<T: gx::Real> {en}<(), T> {{
+    /// The invariants `[r0, p1, p2, p3, p4]` and bivectors `[G1, G2, G3, G4]` of the
+    /// closed-form logarithm (docs/log6d.md §9), as one straight-line program.
+    #[doc(hidden)]
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn log_invariants(self) -> ([T; 5], [[T; {nb}]; 4]) {{
+        let x = self.c;
+{lets}        (
+            [{}, {}, {}, {}, {}],
+            [[{}], [{}], [{}], [{}]],
+        )
+    }}
+
+    /// The logarithm of a unit `{en}` in closed form (docs/log6d.md §9), right where
+    /// `⟨R⟩₀ > 0` and accurate to `ε/⟨R⟩₀`.
+    #[doc(hidden)]
+    #[inline]
+    pub fn log_closed(self) -> {bn}<(), T> {{
+        let ([r0, p1, p2, p3, p4], g) = self.log_invariants();
+        let w = gx::study::log_weights_8d([p1, p2, p3, p4], r0);
+        {bn}::from_coeffs(core::array::from_fn(|i| {closed_sum}))
+    }}
+}}
+
+impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
+    /// The logarithm of a unit versor, in closed form through the invariant decomposition
+    /// (docs/log6d.md §9): `u_j = cosh²(μ_j)` of the four commuting planes are the roots of a
+    /// quartic in the scalar parts of `R`'s grade parts squared, and `log R` is
+    /// `r0⁻¹ Σ αᵢ Qᵢ` for bivectors `Q` from `R`'s grade parts and the cubic `α` interpolating
+    /// `φ(u) = √u asinh(√(u−1))/√(u−1)` at the roots (`gx::study::log_coeffs_8d`, folded into
+    /// four weights by `log_weights_8d`). Below `⟨R⟩₀ = 1/16` (near or past a half turn in some
+    /// plane), the lanes there first turn the planes near a half turn by a quarter turn
+    /// (`gx::study::log_turn_8d`): `log R = log(R E) + (π/2) Z`, with `Z` the sum of their unit
+    /// bivectors and `E = ∏(−b̂)`. The principal logarithm: rotations below a half turn in each
+    /// invariant plane where `⟨R⟩₀ > 0`, boosts and dilations of any size.
+    #[inline]
+    fn log(self) -> {bn}<(), T> {{
+        T::vectorize(#[inline(always)] move || {{
+        let x = self.into_inner();
+        let ([r0, p1, p2, p3, p4], g) = x.log_invariants();
+        let p = [p1, p2, p3, p4];
+        let w = gx::study::log_weights_8d(p, r0);
+        let closed: [T; {nb}] = core::array::from_fn(|i| {closed_sum});
+        let limit = T::from_ratio(1, 16);
+        if T::all_lt(limit, r0) {{
+            return {bn}::from_coeffs(closed);
+        }}
+        let [a0, a1, a2, a3, n] = gx::study::log_turn_8d(p, r0);
+        let wz = gx::study::q_weights_8d([a0, a1, a2, a3], p, T::one());
+        let z: [T; {nb}] = core::array::from_fn(|i| {z_sum});
+        let zb = {bn}::<(), T>::from_coeffs(z);
+        // R E = Σ eₖ R Zᵏ, E = ∏(−b̂) as a polynomial in Z: products by the bivector only.
+        let e = gx::study::turn_polynomial_8d(n);
+        let mut power = x;
+        let mut turned = x.gp(e[0]);
+        for ek in &e[1..] {{
+            power = power * zb;
+            turned = turned + power.gp(*ek);
+        }}
+        let turned = turned.log_closed();
+        let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
+        {bn}::from_coeffs(core::array::from_fn(|i| {{
+            T::select_lt(limit, r0, closed[i], turned.c[i] + quarter * z[i])
+        }}))
+        }})
+    }}
+}}
+
+",
+        o[0],
+        o[1],
+        o[2],
+        o[3],
+        o[4],
+        list(0),
+        list(1),
+        list(2),
+        list(3),
     );
 }
 

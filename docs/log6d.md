@@ -1,119 +1,192 @@
-# The logarithm of a 6D even versor, in closed form
+# The logarithm of an even versor in 6 to 9 dimensions, in closed form
 
-gax computes `log R` for CSTA's even versors (the conformal group of spacetime, `R(4,2)`) in
-closed form. Below six dimensions a bivector splits into at most two commuting parts, and De
+A unit even versor `R` in a geometric algebra of dimension 6 to 9 is the exponential of a
+bivector, `R = exp(B)`, and `B` splits into three (6D, 7D) or four (8D, 9D) commuting simple
+parts. This note computes `log R = B` in closed form, for any signature, degenerate metrics
+included. The method never separates the invariant planes. It is exact where planes coincide, it
+has no branches (so it runs per SIMD lane and on a GPU), and it handles rotations near and past
+a half turn. It is implemented in the Rust library [gax](https://github.com/jobstijl/gax), for
+CSTA (the conformal model of spacetime, `R(4,2)`) and for every 6D to 9D algebra a user declares.
+
+**Prior art.** Below six dimensions a bivector splits into at most two commuting parts, and De
 Keninck and Roelfs give robust closed forms for `exp` and `log` (*Normalization, square roots,
 and the exponential and logarithmic maps in geometric algebras of less than 6D*, 2022). In any
 dimension, Roelfs and De Keninck factor a rotor into commuting simple rotors through its
-tangent decomposition (*Graded symmetry groups: plane and simple*, 2021, §8–9). The planes'
-tangents follow from `R`'s grade parts and the roots of a polynomial, one root at a time, and
-the logarithm is the sum of the factors' logarithms. In 6D a bivector has three parts, and
-that polynomial is a cubic.
+tangent decomposition (*Graded symmetry groups: plane and simple*, 2021, §8–9). There the
+planes' tangents follow from `R`'s grade parts and the roots of a polynomial, one root at a
+time, and the logarithm is the sum of the factors' logarithms. This note reaches the same
+polynomial, the cubic of 6D and 7D and the quartic of 8D and 9D, but takes a different route:
 
-This note reaches the same cubic but never separates the planes. The logarithm is three
-bivectors built from `R`'s grade parts, weighted by an interpolant of one function at the
-cubic's roots (§2). That keeps it exact where roots coincide (one plane, translations,
-isoclinic planes), which is where individual roots are ill-conditioned and factors are not
-unique (§3). It is also branch free, so it runs per SIMD lane and in shaders, and it turns
-planes near a half turn out of the way first (§5). The note derives the closed form, shows how
-it is evaluated without its singularities, and records how it was validated. The code is `gax_core::study::log_coeffs_6d` and the generated
-`Log<Bivector> for Unit<Even>` in `gax::csta` and in every 6D algebra declared with `algebra!`,
-and `unit_even_log` in the WGSL modules.
+* **The planes are never separated.** The logarithm is `k` bivectors built from products of
+  `R`'s grade parts, weighted by an interpolant of one scalar function at the polynomial's roots
+  (§2). The weights of the bivectors come from a matrix whose determinant is ±1, so nothing is
+  divided by a difference of roots there.
+* **Coinciding roots are exact** (one plane, translations, isoclinic planes, the identity), where
+  individual roots are ill-conditioned and factors are not unique. The interpolant is built from
+  factors of the polynomial whose roots are apart, each through a series or its roots' values,
+  joined by Chinese remaindering (§3).
+* **Half turns.** Near a half turn in some plane the formula divides by `⟨R⟩₀ → 0`, and past
+  one it returns a logarithm of `−R`. Planes near a half turn are first turned by a quarter
+  turn (§5), exactly and branch free.
 
-## 1. Invariants of a versor: a cubic
+Results (§6, §7): on 175,000 random versors of seven algebras in 6D to 9D, each a logarithm of
+`R` and (but for one) a fixed point of `log ∘ exp`, with no NaN; within `10⁻¹³` of `R` for versors that are not
+near a half turn, and within `10⁻⁶` to `10⁻⁹` for large boosts and planes near half turns. A
+logarithm takes 2.6 to 3.8 µs (6.6 to 31 µs when planes are turned).
 
-A unit even versor is `R = exp(B)`, and `B = b₁ + b₂ + b₃` with commuting simple bivectors
-(the invariant decomposition; Roelfs and De Keninck, *Graded symmetry groups: plane and
-simple*, 2021). With `μⱼ² = bⱼ²` (complex in general: imaginary for rotations, real for boosts,
-zero for translations) and `b̂ⱼ = bⱼ/μⱼ`, so `b̂ⱼ² = 1`:
+## 1. Invariants of a versor: a polynomial
+
+A unit even versor is `R = exp(B)` with `B = b₁ + … + b_k` commuting simple bivectors, `k = ⌊n/2⌋`
+(the invariant decomposition; Roelfs and De Keninck 2021). With `μⱼ² = bⱼ²` (complex in general:
+imaginary for rotations, real for boosts, zero for translations) and `b̂ⱼ = bⱼ/μⱼ`, so
+`b̂ⱼ² = 1`:
 
 ```
 R = ∏ⱼ (cⱼ + sⱼ b̂ⱼ),   cⱼ = cosh μⱼ,  sⱼ = sinh μⱼ.
 ```
 
-The `b̂ⱼ` commute and their products are blades of higher grade, so the grade parts of `R` are
+The `b̂ⱼ` commute, and a product of distinct ones is a blade of higher grade. So `R`'s grade-`2m`
+part collects the products of `m` of them:
 
 ```
-⟨R⟩₀ = c₁c₂c₃          ⟨R⟩₂ = Σ sⱼ cₖ cₗ b̂ⱼ
-⟨R⟩₄ = Σ sᵢ sⱼ cₖ b̂ᵢb̂ⱼ   ⟨R⟩₆ = s₁s₂s₃ b̂₁b̂₂b̂₃
+⟨R⟩₂ₘ = Σ_{|S| = m} ∏_{j∈S} sⱼ ∏_{j∉S} cⱼ · b̂_S,     b̂_S = ∏_{j∈S} b̂ⱼ.
 ```
 
-(`{i, j, k, l}` ranging over the planes; `k, l` are the others). Square each part and keep the
-scalar: with `uⱼ = cⱼ² = cosh² μⱼ` and `sⱼ² = uⱼ − 1`, only symmetric functions of the `uⱼ`
-remain. With `p₁, p₂, p₃` the elementary symmetric functions of `u₁, u₂, u₃`:
+Square each part and keep the scalar. With `uⱼ = cⱼ² = cosh² μⱼ` and `sⱼ² = uⱼ − 1`,
+`Aₘ = ⟨R₂ₘ R₂ₘ⟩₀ = Σ_{|S|=m} ∏_S (uⱼ − 1) ∏_{S̄} uⱼ`, a symmetric function of the `uⱼ`, and
+`A₀ = ⟨R⟩₀²`. Their generating function is `∏ⱼ (uⱼ − y) = Σₘ Aₘ yᵐ (1 − y)^{k−m}`, so **the
+invariants are the roots of a polynomial whose coefficients come from `R` alone**:
 
 ```
-⟨R⟩₀²      = p₃
-⟨R₂ R₂⟩₀   = 3p₃ − p₂
-⟨R₄ R₄⟩₀   = 3p₃ − 2p₂ + p₁
+uⱼ = cosh² μⱼ  are the roots of  tᵏ − p₁ tᵏ⁻¹ + p₂ tᵏ⁻² − … ± p_k,
+p_{k−j} = Σ_{m=0..j} (−1)ᵐ C(k−m, j−m) Aₘ.
 ```
 
-so the invariants are **the roots of a cubic whose coefficients come from `R` alone**:
+For three planes (6D, 7D) and four (8D, 9D):
 
 ```
-uⱼ = cosh² μⱼ  are the roots of  t³ − p₁t² + p₂t − p₃,
-p₃ = ⟨R⟩₀²,   p₂ = 3p₃ − ⟨R₂²⟩₀,   p₁ = ⟨R₄²⟩₀ + 3p₃ − 2⟨R₂²⟩₀.
+k = 3:  p₃ = A₀,  p₂ = 3A₀ − A₁,  p₁ = 3A₀ − 2A₁ + A₂
+k = 4:  p₄ = A₀,  p₃ = 4A₀ − A₁,  p₂ = 6A₀ − 3A₁ + A₂,  p₁ = 4A₀ − 3A₁ + 2A₂ − A₃
 ```
 
-(`⟨R₆²⟩₀ = p₃ − p₂ + p₁ − 1` holds too; with the others it is `R ~R = 1`.)
+(`A_k` is redundant: with the others it is `R ~R = 1`.) 7D has the same three planes as 6D and 9D
+the same four as 8D; the planes then span a subspace of dimension `2k`, and nothing changes.
 
 ## 2. Separating the planes
 
-`B = Σ μⱼ b̂ⱼ`, and `⟨R⟩₂ = Σ wⱼ b̂ⱼ` with `wⱼ = sⱼcₖcₗ`. Products of grade parts give two more
-bivectors with other weights on the same planes. Using `b̂ᵢb̂ᵢ = 1`, with `r₀ = ⟨R⟩₀`:
+`B = Σ μⱼ b̂ⱼ`, and `⟨R⟩₂ = Σ wⱼ b̂ⱼ` with `wⱼ = sⱼ ∏_{i≠j} cᵢ`. Products of consecutive grade
+parts give more bivectors on the same planes, with other weights. With `r₀ = ⟨R⟩₀`:
 
 ```
-G₁ = ⟨R⟩₂               weight 1
-G₂ = r₀ ⟨R₄ R₂⟩₂         weight uⱼ² − p₁uⱼ + 2p₃
-G₃ = r₀ ⟨R₆ R₄⟩₂         weight uⱼ² + (1 − p₁)uⱼ + p₃
+G₁ = ⟨R⟩₂,   Gₘ = r₀ ⟨R₂ₘ R₂ₘ₋₂⟩₂  (m = 2 … k),
+weight of plane j in Gₘ:  wⱼ · uⱼ · Σ_{S ⊆ others, |S| = m−1} ∏_S (uᵢ − 1) ∏_{others∖S} uᵢ.
 ```
 
-(each times `wⱼ b̂ⱼ`). Hence `Q₁ = G₃ − G₂ + p₃G₁` weighs plane `j` by `uⱼ`, and
-`Q₂ = G₂ + p₁Q₁ − 2p₃G₁` by `uⱼ²`. Since `μⱼ/wⱼ = (μⱼ/sⱼ)(cⱼ/r₀)`,
+(The grade-2 part of `b̂_S b̂_{S'}` with `|S| = |S'| + 1` is nonzero only for `S = S' ∪ {j}`, where
+it is `b̂ⱼ`.) Reduced modulo the polynomial, each weight is `wⱼ` times a polynomial in `uⱼ` of
+degree below `k`, with coefficients in the `p`s: rows of a matrix `M` in the basis `1, u, u², …`:
 
 ```
-B = r₀⁻¹ (α₂Q₂ + α₁Q₁ + α₀G₁),
+k = 3:  G₁: [1, 0, 0]          k = 4:  G₁: [1, 0, 0, 0]
+        G₂: [2p₃, −p₁, 1]              G₂: [3p₄, −p₂, p₁, −1]
+        G₃: [p₃, 1 − p₁, 1]            G₃: [3p₄, p₁ − 2p₂, 2p₁ − 1, −2]
+                                       G₄: [p₄, p₁ − p₂ − 1, p₁ − 1, −1]
 ```
 
-where `α₂u² + α₁u + α₀` is **the quadratic interpolating** `φ(uⱼ) = cⱼ μⱼ/sⱼ` at the three
+`det M = ±1` in both cases, so the bivectors `Qᵢ` of weight `wⱼ uⱼⁱ` are integer polynomial
+combinations of the `G`s, `Q = M⁻¹ G`:
+
+```
+k = 3:  Q₁ = p₃G₁ − G₂ + G₃,   Q₂ = p₃(p₁ − 2)G₁ + (1 − p₁)G₂ + p₁G₃
+k = 4:  Q₁ = p₄G₁ − G₂ + G₃ − G₄
+        Q₂ = p₄(p₁ − 3)G₁ + (2 − p₁)G₂ + (p₁ − 1)G₃ − p₁G₄
+        Q₃ = p₄(p₁² − 3p₁ − p₂ + 3)G₁ + (2p₁ + p₂ − p₁² − 1)G₂ + (p₁² − p₁ − p₂)G₃ + (p₂ − p₁²)G₄
+```
+
+Since `μⱼ/wⱼ = (μⱼ/sⱼ)(cⱼ/r₀)`,
+
+```
+B = r₀⁻¹ Σᵢ αᵢ Qᵢ,
+```
+
+where `Σ αᵢ uⁱ` is **the polynomial of degree `k − 1` interpolating** `φ(uⱼ) = cⱼ μⱼ/sⱼ` at the
 roots. As a function of `u`,
 
 ```
 φ(u) = √u · asinh(√(u−1)) / √(u−1),
 ```
 
-analytic at `u = 1` (where `φ = 1`) and singular only at `u = 0`, a half turn. The planes are
-never separated explicitly: everything is products of `R`'s grade parts and three numbers.
+analytic at `u = 1` (where `φ = 1`), singular only at `u = 0` (a half turn), with its branch
+cut on `u ≤ 0`. Everything is products of `R`'s grade parts and `k + 1` numbers; the planes are
+never found.
 
 ## 3. Evaluating the interpolant without its singularities
 
-Through the roots, the interpolant is a combination of divided differences, and those divide
-by differences of roots. Roots coincide in the commonest cases: a rotation in one plane
-(roots `cos²θ, 1, 1`), a translation (null planes: `1, 1, 1`), isoclinic planes, the identity.
-The individual roots are also ill-conditioned there (a double root moves like the square root
-of a perturbation). gax evaluates the interpolant in two regimes, chosen per lane:
+Through the roots, an interpolant is a combination of divided differences, which divide by
+differences of roots. Roots coincide in the commonest cases: a rotation in one plane (roots
+`cos²θ, 1, 1, …`), translations (null planes: `u = 1`), isoclinic planes, the identity. The
+individual roots are ill-conditioned there too (a double root moves like the square root of a
+perturbation). The interpolant is instead built from **factors of the polynomial whose roots are
+apart**: for each factor, the interpolant of `φ` modulo that factor, which depends on the factor's
+roots only symmetrically; then the factors are joined by Chinese remaindering, which divides by
+the factors' resultants, products of differences between roots that are apart.
 
-* **Close roots: no roots at all.** The interpolant's coefficients are symmetric functions of
-  the roots, so they follow from `p₁, p₂, p₃` directly. Expand `φ` in its Taylor series at the
-  roots' mean `m = p₁/3`. In `t = u − m` the roots satisfy `t³ + e₂t − e₃ = 0` (`e₂, e₃` from
-  the `p`s), and `tᵏ` reduced modulo that cubic is `aₖt² + bₖt + dₖ` by a three-term
-  recurrence. The interpolant is `Σ φₖ (aₖt² + bₖt + dₖ)`. Coinciding roots need nothing
-  special: the reduction is exact. This is used while the roots' spread (bounded from `e₂` and
-  `e₃`) is under a quarter of `m`, the distance to `φ`'s singularity, so 26 terms reach `10⁻¹⁶`.
-* **Spread roots.** One real root always exists. Take the most isolated root `r` (Cardano, or
-  the trigonometric form for three real roots, then a Newton step), and the remaining pair by
-  its sum `S = p₁ − r` and product `P = p₂ − rS`, never the individual pair. The pair's line is
-  `φ`'s series at its midpoint reduced modulo `t² − d²` when the pair is close, and the chord
-  through its two values otherwise (a conjugate pair's chord is real). "Close" needs a positive
-  midpoint: a loxodromic pair can have invariants with a negative real part, and then it
-  straddles the branch cut of `√u`, which the series cannot cross. The quadratic adds the
-  isolated root: `L(u) + (u² − Su + P)(φ(r) − L(r))/(r² − Sr + P)`.
+**A factor of close roots: `φ`'s series at their mean, reduced modulo the factor.** The
+interpolant's coefficients are symmetric functions of the roots, so they follow from the factor's
+coefficients alone. In `t = u − m` (`m` the mean), `tᵏ` reduced modulo the factor is a
+polynomial of lower degree by a short recurrence, and the interpolant is `Σ φₖ tᵏ` reduced.
+Coinciding roots need nothing special. This is used while the roots' spread (bounded from the
+coefficients, Fujiwara's bound) is under a quarter of `m`, the distance to `φ`'s singularity, so
+26 terms reach `10⁻¹⁶`. The series is computed in `s = t/m`: in `t`, its coefficients grow like
+`m⁻ᵏ`, which overflows `f32` for a centre near a half turn.
 
 `φ`'s Taylor coefficients at any centre come without cancellation from `φ(u) = √u · F(u−1)`,
-`F(x) = asinh(√x)/√x`. Near `x = 0` (`|x| < 1/4`), `F`'s Maclaurin series (90 terms) is
-shifted to the centre by repeated Horner. Elsewhere it is composed from series that are
-analytic there: `v = √(x₀ + t)`, `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/v` (or `asin` for
-`x₀ < 0`). Real arithmetic throughout, except `φ` at a far conjugate pair.
+`F(x) = asinh(√x)/√x`: near `x = 0` (`|x| < 1/4`), `F`'s Maclaurin series (90 terms) is shifted
+to the centre by repeated Horner; elsewhere it is composed from series that are analytic there:
+`v = √(x₀ + t)`, `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/v` (or `asin` for `x₀ < 0`).
+
+**Three planes (6D, 7D).** One real root always exists. Where the roots are not all close, the
+most isolated real root `r` (Cardano, or the trigonometric form for three real roots, then a
+Newton step) and the remaining pair by its sum `S` and product `P`, never the individual pair.
+The pair's line is `φ`'s series at its midpoint reduced modulo `t² − d²` when the pair is close,
+and the chord through its two values otherwise (a conjugate pair's chord is real). "Close" needs
+a positive midpoint: a loxodromic pair can have invariants with a negative real part, and then it
+straddles the branch cut of `√u`, which the series cannot cross. The quadratic adds the isolated
+root: `L(u) + (u² − Su + P)(φ(r) − L(r))/(r² − Sr + P)`.
+
+`S` and `P` come from whichever side is stable: forward (`S = p₁ − r`, `P = p₂ − rS`) for a small
+`r`, backward (`P = p₃/r`, `S = (p₂ − P)/r`) for a large one, each by its error bound. Two planes
+near a half turn and a third, say, have a pair of invariants near `10⁻⁸`, whose product
+`p₂ − rS` would be lost to the rounding of `p₂` (whose absolute error is `ε`), and the pair would
+look far apart.
+
+**Four planes (8D, 9D).** The roots can group in more ways: all four close; one apart and three
+(close or not); two and two; or, with two loxodromic pairs whose invariants nearly coincide
+(possible in `R(4,4)` and `R(5,4)`), two complex conjugate clusters. The interpolant takes, per
+lane, whichever grouping separates its factors best:
+
+* **All four close:** the series at their mean, reduced modulo the quartic.
+* **An isolated real root `r` and a cubic:** the three-plane interpolant of the cubic (above),
+  and `r` added as in 6D. The cubic comes from deflation by `r`, each coefficient from the stable
+  side.
+* **Two real quadratics:** each pair's line (series or chord, as in 6D), joined by
+  `La + qa·K`, `K = (Lb − La) qa⁻¹ mod qb`; the inverse of `qa ≡ g₁u + g₀` modulo `qb` is
+  `(−g₁u + g₁Sb + g₀)/N` with `N = qa(b₁) qa(b₂)` (the resultant).
+* **Two conjugate complex quadratics:** the same in complex arithmetic, with `φ`'s series at a
+  complex midpoint; the result is real.
+
+The groupings come from the resolvent cubic of the shifted quartic `t⁴ + a t² + b t + c`,
+`y³ + 2a y² + (a² − 4c) y − b² = 0`: one root per way of pairing the four roots, `y = (t₁ + t₂)²`,
+real and non-negative for a pairing into real factors, negative for one into conjugate factors.
+Approximate roots come from Euler's form `t = ½(±√y₁ ± √y₂ ± √y₃)` with `√y₁√y₂√y₃ = −b`,
+which holds up where roots cluster (a multiple resolvent root; the textbook route through one
+resolvent root divides by a pair sum that is then zero). Each grouping's gap (the least distance
+between its factors' roots) picks the grouping; a conjugate grouping must also pair each root
+with the other factor's conjugate. The chosen factors are then refined in `u` (not `t`, where a
+small root loses its relative accuracy): a quadratic by three Newton steps on the factorization
+(Bairstow's method, quadratically convergent exactly where the factors are apart), an isolated
+root by Newton steps kept only where they lower the residual (at a multiple root the derivative
+vanishes). The other factor follows by deflation, from the stable side.
 
 ## 4. Conditioning and the branch
 
@@ -126,8 +199,8 @@ analytic there: `v = √(x₀ + t)`, `asinh(v)' = v'/√(m + t)`, `F = asinh(v)/
   are negative, and turning two planes by a half turn each leaves `R` unchanged. Where
   `r₀ < 0` an odd number are, and the formula returns a logarithm of `−R`.
 
-So the formula alone serves `r₀ > 1/16`. Below, gax first turns the planes near a half turn
-out of the way (§5).
+So the formula alone serves `r₀ > 1/16`. Below, the planes near a half turn are first turned out
+of the way (§5).
 
 ## 5. Turning planes near a half turn
 
@@ -142,29 +215,33 @@ R' = R E,   ⟨R'⟩₀ = ∏_T sⱼ ∏_rest cⱼ,   log R = log R' + (π/2) Σ
 
 since the `b̂ⱼ` commute with `R`'s planes. The closed form then serves `R'`.
 
-* **The sign comes for free.** Orient each `b̂ⱼ` so that its weight `wⱼ = sⱼ cₖ cₗ` in `⟨R⟩₂`
-  is positive. Then `sign(sⱼ) = sign(cₖ cₗ)`, and `⟨R'⟩₀` is positive when `T` has one plane or
-  three, and has the sign of `r₀` when it has two. So turning one plane repairs `r₀ < 0` too.
-* **Which planes.** `|⟨R'⟩₀| = ∏_T √(1 − uⱼ) ∏_rest √uⱼ` follows from the roots, and so do
-  the planes' weights `|wⱼ|` in `⟨R⟩₂` (below). A plane's direction is read from its weight,
-  so turning it costs `ε/|wⱼ|`, and the closed form on `R'` costs `ε/⟨R'⟩₀`. Among the sets
-  with a positive `⟨R'⟩₀`, none included, gax picks the one with the smallest
-  `1/⟨R'⟩₀ + Σ_T 1/|wⱼ|` (`gax_core::study::log_turn_6d`). For example, with one plane at a
-  half turn and another at `u = 0.26`, turning both gives the larger `⟨R'⟩₀`. But the second
-  plane's weight contains the first one's cosine and is `3·10⁻⁴`, so only the first is turned.
+* **The sign comes for free.** Orient each `b̂ⱼ` so that its weight `wⱼ` in `⟨R⟩₂` is
+  positive. Then `sign(sⱼ) = sign(∏_{i≠j} cᵢ)`, and `sign ⟨R'⟩₀ = sign(r₀)^{|T|+1}`: positive
+  when `T` has an odd number of planes, the sign of `r₀` for an even one. So turning one plane
+  repairs `r₀ < 0` too, in any dimension.
+* **Which planes.** `|⟨R'⟩₀| = ∏_T √(1 − uⱼ) ∏_rest √uⱼ` follows from the roots, and so do the
+  planes' weights `|wⱼ| = √((1 − uⱼ) ∏_{i≠j} uᵢ)`. A plane's direction is read from its weight,
+  so turning it costs `ε/|wⱼ|`, and the closed form on `R'` costs `ε/⟨R'⟩₀`. Among the sets with a
+  positive `⟨R'⟩₀`, none included, the one with the smallest `1/⟨R'⟩₀ + Σ_T 1/|wⱼ|` is turned. For
+  example, with one plane at a half turn and another at `u = 0.26`, turning both gives the larger
+  `⟨R'⟩₀`; but the second plane's weight contains the first one's cosine and is `3·10⁻⁴`, so only
+  the first is turned.
+* **The candidates follow the grouping of the roots (§3):** close roots are turned together (a
+  cluster), or apart roots one by one. In 6D, none, all three through the series at their mean,
+  and unions of the isolated root, the pair and each of the pair; in 8D, the same for the cubic
+  with the isolated root in or out, or none, both or either one of each pair, and all four
+  together. Sets that separate groups are preferred where the groups are apart (a gap of at least
+  1/64, relative). The split is computed even where all roots are close: with `r₀ < 0` only an
+  odd set can be turned, and four close but distinct invariants (0.56 to 0.69, say) leave a
+  single plane apart enough.
 * **The planes' sum** `Z = Σ_T b̂ⱼ` is again an interpolant applied to the bivectors of §2:
-  `Z = α₂Q₂ + α₁Q₁ + α₀G₁` with `α` interpolating `h(u) = [u ∈ T]/|w(u)|`,
-  `|wⱼ| = √((1 − uⱼ) ∏_{k≠j} uₖ)`, at the roots. Coinciding roots must be turned together (a
-  cluster); on a cluster, `h` is the smooth `√(u/(1−u))/|r₀|`, taken through its series as in
-  §3. The candidates are none, all three through the series at their mean, and unions of the
-  isolated root, the pair and each of the pair. Sets that separate the isolated root from the
-  pair are preferred where its gap is at least 1/64 (relative).
+  `Z = Σ αᵢ Qᵢ` with `α` interpolating `h(u) = [u ∈ T]/|w(u)|` at the roots, through the same
+  factors and joins as `φ`. On a cluster `h` is the smooth `√(u/(1−u))/|r₀|`, taken through its
+  series (in `s = t/ρ`, `ρ = min(m, 1 − m)`).
 * **The product `E`** is a polynomial in `Z`: for `n` commuting orthogonal unit rotation
-  bivectors, `∏(−b̂ⱼ)` is `−Z`, `1 + Z²/2` or `−(Z³ + 7Z)/6` (`turn_polynomial`).
-* **What remains ill-conditioned is so in itself.** Where two or three planes are at a half
-  turn together (`R = b̂₁b̂₂(…)`, or `R = ±I`), `R` fixes only their product, and the log is not
-  unique. Where a plane is near a full turn (`R ≈ −1` in it), its direction is barely
-  determined. Near those points any logarithm moves by `1/δ` per unit change of `R`.
+  bivectors, the elementary symmetric functions of the `b̂ⱼ` follow from the power sums
+  `Σ b̂ⱼᵏ` by Newton's identities, and `∏(−b̂ⱼ)` is `−Z`, `1 + Z²/2`, `−(Z³ + 7Z)/6` or
+  `1 + 2Z²/3 + Z⁴/24` for `n = 1 … 4`. `R E` is formed by products with the bivector `Z` only.
 
 **Why not inverse scaling and squaring.** gax used it as the fallback before, and it fails in
 6D in two ways:
@@ -182,9 +259,11 @@ since the `b̂ⱼ` commute with `R`'s planes. The closed form then serves `R'`.
 At random CSTA bivector entries up to 1.2, one versor in five is below `r₀ = 1/16`. Of those,
 inverse scaling and squaring got 7% wrong or NaN.
 
-## 6. Validation and cost
+## 6. Validation
 
-Checked in `f64` against `exp` (itself scaling and squaring, independent of the log):
+Checked in `f64` against `exp` (itself scaling and squaring, independent of the log).
+
+**CSTA** (`R(4,2)`):
 
 | case | `max |log(exp B) − B|` |
 |---|---|
@@ -195,83 +274,120 @@ Checked in `f64` against `exp` (itself scaling and squaring, independent of the 
 | towards a half turn, `π/2 − 10⁻⁸` (turned) | `10⁻¹⁶` |
 | past a half turn (`r₀ < 0`), and towards one with a boost or dilation (turned) | `10⁻¹²` or better |
 
-Random CSTA versors, 5000 per size, checked for `exp(log R) = R` (relative):
+**Random versors** `exp(B)`, 5000 per size and algebra, checked for `exp(log R) = R` (the largest
+coefficient difference, relative to the largest coefficient). "Turned" counts the versors with
+`⟨R⟩₀ < 1/16`:
 
-| bivector entries up to | below `r₀ = 1/16` | worst | not fixed points of `log ∘ exp` |
+| algebra | entries up to | turned | worst `exp(log R) − R` |
 |---|---|---|---|
-| 0.5 | 0 | `2·10⁻¹⁴` | 0 |
-| 1.0 | 303 | `3·10⁻¹²` | 0 |
-| 1.5 | 1991 | `10⁻⁷` | 0 |
-| 2.0 | 2987 | `1.4·10⁻⁶` | 1 |
-| 2.5 | 3418 | `4·10⁻⁶` | 2 |
+| CSTA `R(4,2)` | 0.5 / 1.0 / 1.5 / 2.0 / 2.5 | 0 / 303 / 1991 / 2987 / 3418 | `2·10⁻¹⁴` / `2·10⁻¹³` / `1.4·10⁻⁷` / `1.4·10⁻⁶` / `5·10⁻⁸` |
+| 7D `R(4,3)` | 0.25 / 0.5 / 0.75 / 1.0 / 1.5 | 0 / 0 / 0 / 52 / 690 | `1.5·10⁻¹⁴` / `3·10⁻¹⁴` / `6·10⁻¹⁴` / `2·10⁻¹³` / `4·10⁻⁸` |
+| 8D `R(8,0)` | same | 0 / 79 / 4929 / 3637 / 2180 | `2·10⁻¹⁴` / `3·10⁻¹⁴` / `7·10⁻¹⁰` / `4·10⁻¹¹` / `1.5·10⁻⁹` |
+| 8D `R(4,4)` | same | 0 / 0 / 0 / 25 / 277 | `2·10⁻¹⁴` / `8·10⁻¹⁴` / `4·10⁻¹³` / `2·10⁻⁹` / `7·10⁻⁸` |
+| 9D `R(9,0)` | same | 0 / 751 / 4966 / 2919 / 4254 | `5·10⁻¹⁴` / `6·10⁻¹⁴` / `3·10⁻¹⁰` / `1.3·10⁻¹⁰` / `9·10⁻⁷` |
+| 9D `R(5,4)` | same | 0 / 0 / 6 / 218 / 1024 | `4·10⁻¹⁴` / `1.5·10⁻¹³` / `6·10⁻¹³` / `5·10⁻⁸` / `1.5·10⁻⁷` |
+| 9D PGA `R(8,0,1)` | same | 0 / 80 / 4933 / 3651 / 2198 | `4·10⁻¹⁴` / `5·10⁻¹⁴` / `7·10⁻¹⁰` / `8·10⁻¹⁰` / `2·10⁻⁹` |
 
-No log is NaN, and none misses `R`. The least accurate ones combine boosts of `cosh² μ` in the
-hundreds to thousands (`|R|` up to 200) with a plane near a full turn (`u ≈ 1`, `r₀ < 0`),
-whose direction is barely determined (§5). The tests (`tests/csta_log.rs`) also cover
-portable SIMD lanes (lanes mixing the closed form and turning, each equal to its scalar result)
-and `f32` (within `2·10⁻⁴`).
+No log is NaN, and none misses `R`. Every log is a fixed point of `log ∘ exp` (within `10⁻⁶`)
+except one CSTA versor at entries up to 2.0, a loxodromic pair on `φ`'s branch cut (§11). The
+least accurate ones combine large boosts (`cosh² μ` in the hundreds to thousands) with planes
+near a half turn or a full turn, where `exp` itself is ill-conditioned.
 
-The closed form takes 2.6 µs, and 6.6 µs near a half turn (turned: the closed form twice and
-four products). Inverse scaling and squaring took 50.7 µs (f64, Ryzen 7 5800X,
-`benches/compare.rs`; the timings of this section on a loaded machine).
+The four-plane interpolant alone (`p`s from chosen roots, checked against `φ` at every root) was
+stressed on 180,000 root sets in `f64` and 27,000 in `f32`: rotations and boosts, clusters of two,
+three and four at distances from `0` to `10⁻²`, two pairs, conjugate pairs with real roots, two
+conjugate pairs, and two nearly equal conjugate pairs. In `f64` it is within `5·10⁻¹²` of `φ`
+except near `u = 0` (a half turn, where `φ ~ √u` and turning takes over). In `f32` it has no NaN,
+and is within `2·10⁻⁷` wherever the roots are away from `u = 0` and from `φ`'s branch cut (§11).
 
-## 7. Other 6D algebras
+The tests: `tests/csta_log.rs` (CSTA, portable SIMD lanes mixing the closed form and turning,
+`f32` within `2·10⁻⁴`), `tests/log6d_algebras.rs` (`R(6,0)`, `R(3,3)`, 5D PGA `R(5,0,1)`), and
+the crate `gax-highdim-tests`: `R(7,0)`, `R(4,3)`, 6D PGA `R(6,0,1)`, `R(8,0)`, `R(4,4)`, 7D PGA
+`R(7,0,1)`, `R(9,0)`, `R(5,4)` and 8D PGA `R(8,0,1)`, each for `log(exp B) = B`, random versors
+past half turns, single planes, clusters of two to four coinciding planes near and past half
+turns, lanes and `f32`.
 
-Nothing in the construction is specific to CSTA's signature. The generator emits it for the full
-even kind of every 6D algebra, standard or declared with `algebra!`. `tests/log6d_algebras.rs`
-declares three more and checks each against `exp`:
-- Euclidean `R(6,0)` (rotations only);
-- split `R(3,3)` (rotations, boosts and loxodromic planes);
-- degenerate `R(5,0,1)` (5D PGA: rotations and translations, null planes).
+## 7. Cost
 
-For each:
-- `log(exp B) = B` holds to `10⁻¹¹` for bivector entries up to 0.25.
-- Each basis plane alone (two or three coinciding invariants) is exact to `10⁻¹³`, and to
-  `10⁻¹²` towards and past a half turn.
-- Random versors with entries up to 0.8, `r₀` of either sign, are logs of `R` and fixed points.
+| algebra | `log` (closed form) | `log` (planes turned) | `exp` (scaling and squaring) |
+|---|---|---|---|
+| CSTA (6D, 32 coefficients) | 2.6 µs | 6.6 µs | — |
+| 7D `R(4,3)` (64) | 2.5 µs | 7.0 µs | 35 µs |
+| 8D `R(4,4)` (128) | 2.9 µs | 10 µs | 0.24 ms |
+| 9D `R(5,4)` (256) | 3.8 µs | 31 µs | 0.95 ms |
+
+(f64, Ryzen 7 5800X, one core, release builds; the machine was not idle.) The closed form is
+dominated by one straight-line program for `r₀`, the `p`s and the `G`s. Turning adds `k`
+products by the bivector `Z` and a second closed form. Inverse scaling and squaring took 50.7 µs
+in CSTA.
 
 ## 8. In WGSL
 
-The WGSL modules (`gax::wgsl::CSTA`, and those of declared 6D algebras) have
-`unit_even_log(x: Even) -> Bivector`:
+The WGSL modules take kinds of up to 64 coefficients: CSTA's and every 6D and 7D algebra's
+(declared with `algebra!`). They have `unit_even_log(x: Even) -> Bivector`:
 
-* `unit_even_log_closed` is a recorded kernel like the others: `r₀`, the `p`s and the three
-  bivectors as one verified straight-line program, the weights from `study_log6`, and their
-  combination. `study_log6` ports `log_coeffs_6d` to `f32` with the same two regimes, but
-  16 series terms (the regimes keep the ratio at most 1/4, so 16 reach `2·10⁻¹⁰`, below
-  `f32`'s precision) and branches instead of selects.
-* `unit_even_log_turning` is another: the same program, `study_log6_turn` (a port of
-  `log_turn_6d`), and `Z`.
+* `unit_even_log_closed` is a recorded kernel: `r₀`, the `p`s and the three bivectors as one
+  verified straight-line program, the weights from `study_log6`, and their combination.
+  `study_log6` ports the three-plane interpolant to `f32` with the same regimes, but 16 series
+  terms (the regimes keep the ratio at most 1/4, so 16 reach `2·10⁻¹⁰`, below `f32`'s precision)
+  and branches instead of selects.
+* `unit_even_log_turning` is another: the same program, `study_log6_turn` (the turning), and `Z`.
 * `unit_even_log` takes the closed form above `⟨x⟩₀ = 1/16`. Below, it recovers the number of
   turned planes as `n = −⟨Z²⟩₀`, forms `E` from `Z`, and returns
   `unit_even_log_closed(x E) + (π/2) Z`.
 
-In the `f16` module the helpers and the programs feeding them compute in `f32`. Checked with
-`wesl`'s CPU evaluator: both kernels agree with their `f64` evaluations. `unit_even_log`
-agrees with the Rust `log` within `6·10⁻⁵` relative, on unit versors of which a quarter are near
-a half turn and a quarter below `⟨x⟩₀ = 1/16`. On a GPU (`gax-gpu-tests`) it agrees within
-`3·10⁻⁶`.
+In the `f16` modules the helpers and the programs feeding them compute in `f32`. Checked with
+`wesl`'s CPU evaluator: both kernels agree with their `f64` evaluations, and `unit_even_log`
+agrees with the Rust `log` within `6·10⁻⁵` relative in CSTA and `4·10⁻⁷` in 7D. On a GPU
+(`gax-gpu-tests`) CSTA's agrees within `3·10⁻⁶`.
 
-## 9. Higher dimensions
+## 9. Beyond 9D
 
-The construction carries over to `n` dimensions, where a bivector has `k = ⌊n/2⌋` commuting
-planes.
+From 10D on (five planes) the same construction holds (§1, §2), but the polynomial has degree 5
+and more, so Abel–Ruffini rules out roots in radicals. The groupings would then come from
+numerical roots (and the factors from Newton steps on the factorization, as for the quartic),
+and turning carries over as it is (`E` a polynomial of degree up to `k` in `Z`). The cost grows
+quickly: the even kind has `2ⁿ⁻¹` coefficients (512 in 10D), and gax's generator stops at 9D.
 
-* **The invariants.** `uⱼ = cosh² μⱼ` are the roots of a polynomial of degree `k`, whose
-  coefficients are again the scalar parts of `R`'s grade parts squared. There is one per grade
-  `0, 2, …`, and `R ~R = 1` makes the last one redundant.
-* **The separation.** It takes `k` bivectors from products of grade parts, with weights
-  `1, u, …, u^(k−1)` after recombination (`⟨R₈R₆⟩₂` and so on), and the interpolant has degree
-  `k − 1`.
-* **Close roots need no roots.** The series of `φ` at the mean, reduced modulo the polynomial,
-  works in any degree. So one plane, translations and isoclinic planes stay exact.
-* **Spread roots need the individual roots.** 7D still has three planes, so the cubic carries
-  over unchanged, as long as the grade-part identities hold there (not tested; the generator
-  emits the closed form only in 6D). 8D and 9D give a quartic, which still has roots in
-  closed form. From 10D on (five planes), Abel–Ruffini rules out a formula in radicals, and the
-  spread regime would find roots numerically: closed form except for a polynomial root.
-* **Turning** carries over as it is: `⟨R'⟩₀` is positive for an odd number of turned planes,
-  and `E` is a polynomial in `Z` of degree up to `k`.
+## 10. Implementation
 
-The costs grow quickly: the even kind has `2ⁿ⁻¹` coefficients (128 in 8D), and the bivectors
-of the separation are polynomials of degree up to `k + 1` in them.
+In gax, `gax_core::study::{log_coeffs_6d, log_turn_6d}` (three planes) and
+`gax_core::study::{log_coeffs_8d, log_turn_8d, q_weights_8d, turn_polynomial_8d}` (four planes)
+compute the interpolants; the generator emits `Log<Bivector> for Unit<Even>` for the full even
+kind of every 6D to 9D algebra: the invariants and the `G`s as one straight-line program,
+compiled and verified symbolically, then the weights. Algebras from 7D on also need the
+generator itself to scale (sandwiches without symbolic simplification, products as loops over
+tables of terms); see ADR-034 in [design.md](design.md).
+
+## 11. Limitations
+
+* **Two or three planes near a half turn together.** `R` fixes only their product at a half
+  turn, so near one the planes are determined to about `ε/δ` (`δ` the distance to the half turn).
+  Turning them loses more: the pair's `Z` needs the slope of `h` across two roots near `u = 0`,
+  and `exp(log R)` is within about `10⁻¹⁶/δ²` of `R` (`10⁻¹⁰` at `δ = 10⁻⁴`, `10⁻⁵` at `10⁻⁶`),
+  where an exact method would reach `ε`. Reading their product from `⟨R⟩₄` would avoid this.
+* **A loxodromic pair on the branch cut.** A pair of conjugate invariants with a negative real
+  part and a small imaginary part (the rotation part of a `(2,2)` block near a half turn) has
+  `φ` values across the cut of `√u`: the chord through them divides by the small imaginary part.
+  In `f64` this costs little (the one CSTA versor above, within `1.4·10⁻⁶`); in `f32` it can cost
+  all digits. Turning covers rotation planes only.
+* **Four coinciding invariants with `⟨R⟩₀ < 0`** (three planes at one angle and the fourth at its
+  supplement): the planes are not determined by the invariants, the logarithm is not unique, and
+  no set can be turned. The closed form then returns a logarithm of `−R`.
+* **`exp` from 8D on** is still scaling and squaring in the full even algebra (0.24 ms in 8D,
+  0.95 ms in 9D); a closed form through the same invariants would be much faster.
+
+## Appendix: the algorithm
+
+For a unit even versor `R` with `k` invariant planes (`k = 3` in 6D and 7D, 4 in 8D and 9D):
+
+1. `r₀ = ⟨R⟩₀`, `Aₘ = ⟨R₂ₘ²⟩₀`, the `p`s by §1; `G₁ = ⟨R⟩₂`, `Gₘ = r₀⟨R₂ₘR₂ₘ₋₂⟩₂`.
+2. If `r₀ > 1/16`: `α` = the interpolant of `φ` at the roots (§3), and
+   `log R = r₀⁻¹ Σ αᵢ Qᵢ` with `Q = M⁻¹G` (§2), folded into `k` weights of the `G`s.
+3. Else: the set `T` of planes to turn and the interpolant `α'` of `h` (§5); `Z = Σ α'ᵢ Qᵢ`;
+   `n = |T|`; `E = e(n, Z)`; `R' = R E`; `log R = (step 2 on R') + (π/2) Z`.
+
+The interpolant (§3): if the roots are close, the series at their mean modulo the polynomial.
+Otherwise, factors that are apart (an isolated root and the rest; two pairs; conjugate pairs),
+refined by Newton steps and deflated from the stable side, each factor's part from its series
+(close roots) or its roots' values, joined by Chinese remaindering.

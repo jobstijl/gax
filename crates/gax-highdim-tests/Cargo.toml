@@ -1,0 +1,38 @@
+[package]
+name = "gax-highdim-tests"
+description = "gax's 7D, 8D and 9D algebras, declared with algebra!: the closed-form logarithm and the plain sandwiches"
+version = "0.0.0"
+edition = "2024"
+# The `wesl` crate needs a newer Rust than gax's MSRV; this crate is only tested, never used.
+rust-version = "1.97.1"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate: its algebras take minutes to compile, which stays out of gax's workspace
+# tests (CI runs it as a job of its own).
+[workspace]
+
+[features]
+default = ["batch"]
+batch = ["gax/batch"]
+check-units = ["gax/check-units"]
+bytemuck = ["gax/bytemuck"]
+wgsl = ["gax/wgsl"]
+
+[dependencies]
+gax = { path = "../gax", default-features = false, features = ["std", "macros"] }
+
+[dev-dependencies]
+naga = { version = "30", features = ["wgsl-in"] }
+wesl = { version = "0.5", features = ["eval"] }
+
+# The algebra! macro runs the generator: optimized, like in gax's workspace.
+[profile.dev.build-override]
+opt-level = 3
+
+# naga's validation and wesl's evaluator of the large 7D modules take minutes unoptimized.
+[profile.dev.package.naga]
+opt-level = 3
+
+[profile.dev.package.wesl]
+opt-level = 3
