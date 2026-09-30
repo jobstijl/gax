@@ -565,6 +565,7 @@ macro_rules! law_suite {
         /// (docs/laws.md, law L).
         #[test]
         #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        #[allow(unused_imports, unused_mut, unused_variables)] // an algebra without such versors
         fn sampled_versors_mod_p() {
             use law_suite::{F, FieldRng, projects_exactly, random_field};
             let mut rng = FieldRng(0x9a11_0f11_d00d);

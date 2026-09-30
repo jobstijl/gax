@@ -184,7 +184,9 @@ mod tests {
         // f64 constants exactly, including fractions and large and tiny exponents.
         assert_eq!(Fp::from_f64(0.5) + Fp::from_f64(0.5), Fp::one());
         assert_eq!(Fp::from_f64(-1.25) * Fp::from_i64(4), Fp::from_i64(-5));
-        assert_eq!(Fp::from_f64(2f64.powi(70)), Fp(2).pow(70));
-        assert_eq!(Fp::from_f64(2f64.powi(-60)) * Fp(2).pow(60), Fp::one());
+        // Powers of two from their bits (Miri perturbs `powi`).
+        let two_to = |e: i64| f64::from_bits(((1023 + e) as u64) << 52);
+        assert_eq!(Fp::from_f64(two_to(70)), Fp(2).pow(70));
+        assert_eq!(Fp::from_f64(two_to(-60)) * Fp(2).pow(60), Fp::one());
     }
 }
