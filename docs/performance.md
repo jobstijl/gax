@@ -72,7 +72,27 @@ multiply-add when the target has FMA (for example with `-C target-cpu=native`), 
 otherwise. It took the single fused sandwich from 6.3 ns to 5.3 ns and the SoA direct batch from
 0.66 µs to 0.51 µs.
 
-**Still open:** SIMD-friendly layouts for single values.
+**SIMD-friendly layouts for single values: investigated, not adopted (2026-09-30).** glam's
+kernels are written per operation on 4-lane registers. The generator's analogue would emit a
+product "lane-grouped": each group of four outputs sums the same number of isomorphic terms, a
+broadcast of one left coefficient times a shuffle of the right, as elementwise code for LLVM's
+SLP vectorizer. The PGA3D motor product has that shape exactly (outputs 0–3 take one term per
+left coefficient 0–3, outputs 4–7 one per 0–7, each slot one shuffle of one register), so it is
+the best case:
+
+| `Motor * Motor` (f32) | default target | `-C target-cpu=native` |
+|---|---|---|
+| generated (balanced sums, as now) | 12.2 ns | 6.6 ns |
+| lane-grouped, signs as a factor | 18.6 ns | **5.3 ns** |
+| lane-grouped, signs as add/sub | 17.2 ns | 14.7 ns |
+| glam `Affine3A * Affine3A` | 4.3 ns | 4.2 ns |
+
+With FMA and AVX2 it saves a fifth; without them LLVM does not pack it well and it costs half as
+much again. Adopting it would take per-target code paths (`cfg(target_feature)`) for products,
+while the kernels that matter most for single values, the simplified sandwiches, are
+straight-line programs without this structure. glam's remaining lead comes from layouts chosen
+per type (a 3×4 matrix, whose product is broadcast-shaped) and hand-written shuffles; the batch
+kernels (struct of arrays) are where gax is faster instead.
 
 ## Against nalgebra, ultraviolet and `geometric_algebra` (`benches/compare.rs`)
 
