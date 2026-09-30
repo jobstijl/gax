@@ -6,7 +6,8 @@
 //! * [`Slots`] (tuples of kinds) and [`Kind`]: the type-level structure of values, maps and forms.
 //! * [`Extensor`]: the interface every generated type implements; [`Of`], [`MoveToFront`],
 //!   [`FillList`] for binding and composition.
-//! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`).
+//! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`, and
+//!   [`fp::Fp`], a prime field for exact randomized identity checks).
 //! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`]: solving, eigenproblems and pairings on
 //!   maps and forms, built on [`linalg`].
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
@@ -32,6 +33,7 @@ pub mod bind;
 pub mod coef;
 pub mod extensor;
 pub mod fill;
+pub mod fp;
 pub mod gpu;
 pub mod kind;
 pub mod linalg;

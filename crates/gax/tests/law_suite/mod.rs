@@ -360,6 +360,120 @@ macro_rules! sample_versor {
 
 pub(crate) use sample_versor;
 
+/// Law L over a prime field: coefficients in `ℤ/p`, `p = 2⁶¹ − 1` (`gax::fp::Fp`), exact.
+pub use gax::fp::Fp as F;
+
+/// Uniform elements of `ℤ/p` (splitmix64; reducing a 64-bit word biases them by less than
+/// `2⁻⁶⁰`).
+pub struct FieldRng(pub u64);
+
+impl FieldRng {
+    pub fn next(&mut self) -> F {
+        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        F::new(z ^ (z >> 31))
+    }
+}
+
+/// A value whose coefficients are uniform in `ℤ/p`.
+pub fn random_field<M: Extensor<Slots = (), Coef = F>>(rng: &mut FieldRng) -> M {
+    M::from_coeffs(<M::Kind as Kind>::arr_from_fn(|_| rng.next()))
+}
+
+/// [`projects_to`] for exact coefficients (no ideal): `y` equals `z` on the blades of `y`, and
+/// `z` vanishes on the others.
+pub fn projects_exactly<Y, Z, C: Coef>(y: &Y, z: &Z) -> bool
+where
+    Y: Extensor<Slots = (), Coef = C>,
+    Z: Extensor<Slots = (), Coef = C>,
+{
+    let yb: Vec<(String, i64)> = <Y::Kind as Kind>::BLADES
+        .iter()
+        .map(|b| canonical(b))
+        .collect();
+    let (yc, zc) = (y.coeffs().as_ref(), z.coeffs().as_ref());
+    let mut covered = vec![false; yb.len()];
+    for (zb, zv) in <Z::Kind as Kind>::BLADES.iter().zip(zc) {
+        let (zn, zs) = canonical(zb);
+        match yb.iter().position(|(n, _)| *n == zn) {
+            Some(i) => {
+                covered[i] = true;
+                if *zv != yc[i] * C::from_i64(yb[i].1 * zs) {
+                    return false;
+                }
+            }
+            None => {
+                if *zv != C::zero() {
+                    return false;
+                }
+            }
+        }
+    }
+    covered.iter().zip(yc).all(|(c, v)| *c || *v == C::zero())
+}
+
+/// [`project`] for any exact coefficients.
+pub fn project_exactly<M, N, C: Coef>(m: &M) -> (N, bool)
+where
+    M: Extensor<Slots = (), Coef = C>,
+    N: Extensor<Slots = (), Coef = C>,
+{
+    let (from, to) = (<M::Kind as Kind>::BLADES, <N::Kind as Kind>::BLADES);
+    let c = m.coeffs().as_ref();
+    let out = N::from_coeffs(<N::Kind as Kind>::arr_from_fn(|j| {
+        from.iter()
+            .enumerate()
+            .find_map(|(i, b)| blade_sign(b, to[j]).map(|s| c[i] * C::from_i64(s)))
+            .unwrap_or_else(C::zero)
+    }));
+    let fits = from
+        .iter()
+        .enumerate()
+        .all(|(i, b)| c[i] == C::zero() || to.iter().any(|t| blade_sign(b, t).is_some()));
+    (out, fits)
+}
+
+/// An exact unit versor of kind `$bv` over `ℤ/p`: the product of `$count` unit vectors, the
+/// basis vector at `$pos` reflected in uniform random vectors (law L over a prime field).
+macro_rules! sample_versor_field {
+    ($vec:ident, $mv:ident, $bv:ident, $count:literal, $pos:literal, $sign:literal, $rng:expr) => {{
+        use law_suite::F;
+        let rng: &mut law_suite::FieldRng = $rng;
+        let u0 = $vec::<(), F>::from_coeffs(<$vec as gax::Kind>::arr_from_fn(|i| {
+            if i == $pos {
+                F::from_i64($sign)
+            } else {
+                F::zero()
+            }
+        }));
+        let mut unit_vector = || -> $vec<(), F> {
+            loop {
+                let w: $vec<(), F> = law_suite::random_field(rng);
+                let (d, n) = ((u0 | w).s(), (w | w).s());
+                if n == F::zero() || d == F::zero() {
+                    continue;
+                }
+                return u0 - w.gp(d * n.inv() * F::from_i64(2));
+            }
+        };
+        let mut p: $mv<(), F> = unit_vector().into();
+        for _ in 1..$count {
+            let q: $mv<(), F> = unit_vector().into();
+            p = p * q;
+        }
+        let (v, fits): ($bv<(), F>, bool) = law_suite::project_exactly(&p);
+        law(
+            fits,
+            concat!("a product of vectors lies in ", stringify!($bv)),
+        );
+        v
+    }};
+}
+
+pub(crate) use sample_versor_field;
+
 /// The law suite of an algebra. The lists are generated from what the generator emitted.
 macro_rules! law_suite {
     (
@@ -438,6 +552,67 @@ macro_rules! law_suite {
                     law(
                         lhs == rhs || lhs == -rhs,
                         concat!("sampled Unit<", stringify!($wv), "> ", stringify!($wm), " ", stringify!($wa), " ", stringify!($wb)),
+                    );
+                }
+            })();)*
+        }
+
+        /// L over a prime field: the same laws with versors and passengers drawn uniformly
+        /// from `ℤ/p`, `p = 2⁶¹ − 1`, exactly (eight samples each). A law that fails over ℚ
+        /// is, in the reflections' parameters, a nonzero polynomial of degree below 70; a
+        /// sample is one of its roots with probability below `2⁻⁵⁵` (the Schwartz–Zippel
+        /// lemma), so the eight together miss the failure with probability below `2⁻⁴⁴⁰`
+        /// (docs/laws.md, law L).
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn sampled_versors_mod_p() {
+            use law_suite::{F, FieldRng, projects_exactly, random_field};
+            let mut rng = FieldRng(0x9a11_0f11_d00d);
+            $((|| {
+                for _ in 0..8 {
+                    let v: $zv<(), F> = law_suite::sample_versor_field!($zvec, $zmv, $zv, $zk, $zp, $zs, &mut rng);
+                    let x: $zx<(), F> = random_field(&mut rng);
+                    let name = concat!("mod p: sampled ", stringify!($zv), " >> ", stringify!($zx));
+                    let y = v >> x;
+                    law(projects_exactly(&y, &((v * x) * v.reverse())), name);
+                    law((v >> $zx::slot()).of(x) == y, name);
+                }
+            })();)*
+            $((|| {
+                for _ in 0..8 {
+                    let v: $uv<(), F> = law_suite::sample_versor_field!($uvec, $umv, $uv, $uk, $up, $us, &mut rng);
+                    let x: $ux<(), F> = random_field(&mut rng);
+                    let name = concat!("mod p: sampled Unit<", stringify!($uv), "> >> ", stringify!($ux));
+                    let u = Unit::new_unchecked(v);
+                    let y = u >> x;
+                    law(projects_exactly(&y, &((v * x) * v.reverse())), name);
+                    law((u >> $ux::slot()).of(x) == y, name);
+                    law((u.prepare::<$ux>() >> x) == y, name);
+                    law(u << y == x, name);
+                }
+            })();)*
+            $((|| {
+                for _ in 0..8 {
+                    let a: $av2<(), F> = law_suite::sample_versor_field!($avec, $amv, $av2, $ak, $ap, $as2, &mut rng);
+                    let b: $av2<(), F> = law_suite::sample_versor_field!($avec, $amv, $av2, $ak, $ap, $as2, &mut rng);
+                    let x: $ax2<(), F> = random_field(&mut rng);
+                    let (a, b) = (Unit::new_unchecked(a), Unit::new_unchecked(b));
+                    law(
+                        (a * b) >> x == a >> (b >> x),
+                        concat!("mod p: sampled ", stringify!($av2), " composes on ", stringify!($ax2)),
+                    );
+                }
+            })();)*
+            $((|| {
+                for _ in 0..8 {
+                    let v: $wv<(), F> = law_suite::sample_versor_field!($wvec, $wmv, $wv, $wk, $wp, $ws, &mut rng);
+                    let (a, b): ($wa<(), F>, $wb<(), F>) = (random_field(&mut rng), random_field(&mut rng));
+                    let u = Unit::new_unchecked(v);
+                    let lhs = gax::$wtr::$wm(u >> a, u >> b);
+                    let rhs = u >> gax::$wtr::$wm(a, b);
+                    law(
+                        lhs == rhs || lhs == -rhs,
+                        concat!("mod p: sampled Unit<", stringify!($wv), "> ", stringify!($wm), " ", stringify!($wa), " ", stringify!($wb)),
                     );
                 }
             })();)*

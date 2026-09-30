@@ -13,6 +13,18 @@ impl Rng {
     }
 }
 
+/// Uniform elements of the prime field `gax::fp::Fp` (splitmix64).
+pub struct FieldRng(pub u64);
+impl FieldRng {
+    pub fn next(&mut self) -> gax::fp::Fp {
+        self.0 = self.0.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = self.0;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        gax::fp::Fp::new(z ^ (z >> 31))
+    }
+}
+
 /// Every coefficient within `tol` of the other, relative to the largest (at least 1).
 pub fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
     worst(a, b) <= tol
@@ -217,6 +229,56 @@ macro_rules! checks {
                     let got: [f64; <Bivector as gax::kind::Kind>::N] =
                         core::array::from_fn(|i| f64::from(got.c[i]));
                     assert!(close(&got, &b.c, 5e-4), "{got:?} vs {:?}", b.c);
+                }
+            }
+
+            /// Exactly, over the prime field `ℤ/p` (`gax::fp::Fp`, `p = 2⁶¹ − 1`): unit even
+            /// versors as products of reflections of a basis vector in uniform random vectors.
+            /// The plain sandwich kernels equal the projection of `(v x) ~v`, their prepared map
+            /// agrees, and unit versors compose. A law that fails is a nonzero polynomial of
+            /// degree below `36 n` in the samples, so each sample misses the failure with
+            /// probability below `2⁻⁵²` (Schwartz–Zippel; docs/laws.md, law L).
+            #[test]
+            fn exact_mod_p() {
+                use gax::Coef;
+                use gax::fp::Fp as F;
+                let mut rng = $crate::common::FieldRng(0x7d_f1e1_d5eed);
+                let n = <Vector as gax::kind::Kind>::N;
+                let basis = |i: usize| {
+                    Vector::<(), F>::from_coeffs(core::array::from_fn(|k| {
+                        if k == i { F::one() } else { F::zero() }
+                    }))
+                };
+                let u0 = (0..n)
+                    .map(basis)
+                    .find(|e| (*e | *e).s() == F::one())
+                    .expect("a basis vector of square 1");
+                let unit = |rng: &mut $crate::common::FieldRng| loop {
+                    let w = Vector::<(), F>::from_coeffs(core::array::from_fn(|_| rng.next()));
+                    let (d, q) = ((u0 | w).s(), (w | w).s());
+                    if d != F::zero() && q != F::zero() {
+                        break u0 - w.gp(d * q.inv() * F::from_i64(2));
+                    }
+                };
+                // An even versor of the algebra: the product of 2 ⌊n/2⌋ unit vectors.
+                let versor = |rng: &mut $crate::common::FieldRng| -> Unit<Even<(), F>> {
+                    let mut v: Even<(), F> = unit(rng) * unit(rng);
+                    for _ in 1..n / 2 {
+                        v = v * (unit(rng) * unit(rng));
+                    }
+                    Unit::new_unchecked(v)
+                };
+                for _ in 0..4 {
+                    let (a, b) = (versor(&mut rng), versor(&mut rng));
+                    let x = Vector::<(), F>::from_coeffs(core::array::from_fn(|_| rng.next()));
+                    let y = Bivector::<(), F>::from_coeffs(core::array::from_fn(|_| rng.next()));
+                    let v = a.into_inner();
+                    let want = v * x * v.reverse();
+                    assert_eq!(like(a >> x, &want), want, "a >> x");
+                    assert_eq!(gax::Prepare::<Vector>::prepare(a) >> x, a >> x, "prepared");
+                    let want = v * y * v.reverse();
+                    assert_eq!(like(a >> y, &want), want, "a >> y");
+                    assert_eq!((a * b) >> x, a >> (b >> x), "composition");
                 }
             }
 

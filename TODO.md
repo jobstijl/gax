@@ -85,6 +85,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] `docs/laws.md` (each law linked to its test or marked [doc]), ADR-025, guide section "Laws you can rely on"
 - [x] Law-based rewrites in the tracer measured (performance.md: none pays off)
 - [x] Laws for versors with more than 8 coefficients: checked exactly on sampled unit versors (products of rational unit vectors), law L in laws.md; symbolic proofs over all of them stay out of reach
+- [x] ...and proved by randomized identity testing over the prime field ℤ/(2⁶¹ − 1) (`gax::fp::Fp`, Schwartz–Zippel): eight uniform samples per law leave a failure unnoticed with probability below 2⁻⁴⁴⁰; the same for the plain sandwiches and composition of the 7D to 9D test algebras
 
 ## Phase 5: numerics
 - [x] `docs/numerics.md`: the guarantee per tier, drift, determinism, transcendental edges, solvers, what is documented rather than fixed

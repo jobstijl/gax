@@ -7,7 +7,8 @@ fusion, drift) is in [numerics.md](numerics.md).
 Tags: **[sym]** is an exact proof on symbolic coefficients, **[sym/ideal]** is an exact proof modulo
 the ideal of a condition, **[gen]** is an exact proof the generator runs before it emits the
 code, **[sample]** is exact arithmetic on sampled exact inputs (a randomized identity test, for
-what symbolic proofs cannot reach), **[prop]** is an f64 property test, **[doc]** is
+what symbolic proofs cannot reach; over a 61-bit prime field it is a proof up to a probability
+below `2⁻⁴⁴⁰`, law L), **[prop]** is an f64 property test, **[doc]** is
 documentation only. The
 proofs are the test functions of the `law_suite!` macro in
 [`crates/gax/tests/law_suite/mod.rs`](../crates/gax/tests/law_suite/mod.rs). Each algebra
@@ -214,25 +215,44 @@ generator finds.
   `φ(~a) == ~φ(a)` for the kinds it lets `Unit::widen` convert. `tests/homs.rs` checks the
   emitted code on random values.
 
-### L. Versors with more than 8 coefficients (`sampled_versors`)
+### L. Versors with more than 8 coefficients (`sampled_versors`, `sampled_versors_mod_p`)
 
 The free symbolic laws of a 16-coefficient versor (CGA3D's `Even` and `Odd`, STAP's `Motor`, a
 5D PGA's `Motor`) are out of reach: the Gröbner bases of their conditions explode. Every
-versor is a product of vectors, though, so these are checked on exact ones:
+versor is a product of vectors, though, so these laws are proved on products of reflections,
+by randomized identity testing:
 
-* **Sampling.** A rational unit vector is a basis vector `u₀` of square +1 reflected in a
-  pseudo-random rational vector `w`, `u₀ − 2 (u₀·w)/(w·w) w`: unit exactly, in any metric,
-  degenerate and null bases included. The product of four (three for an odd versor), formed in
-  the full multivector, is an exact unit versor, and is checked to lie in the versor's kind and to
-  be generic (at least half its coefficients nonzero).
-* [sample] **On three such versors each**, with the passenger symbolic:
+* **Sampling.** A unit vector is a basis vector `u₀` of square +1 reflected in a vector `w`,
+  `u₀ − 2 (u₀·w)/(w·w) w`: unit exactly, in any metric, degenerate and null bases included. The
+  product of four (three for an odd versor), formed in the full multivector, is a unit versor,
+  and is checked to lie in the versor's kind.
+* **Over ℚ** (`sampled_versors`): `w` with small integer coordinates and the passenger
+  symbolic, so each law is an identity in the passenger, at three versors (checked to be
+  generic: at least half their coefficients nonzero).
+* **Over ℤ/p** (`sampled_versors_mod_p`, `p = 2⁶¹ − 1`, the coefficient type `gax::fp::Fp`):
+  `w` and the passenger uniform in `ℤ/p`, eight samples per law. The generated code is generic
+  over the coefficient ring, so it runs unchanged there, exactly.
+* [sample] **The laws:**
   * the plain and `Unit` sandwich kernels equal the projection of `(v x) ~v`, the map path equals
     them, and `u << (u >> x) == x`;
   * `Unit` versors compose: `(a b) >> x == a >> (b >> x)`;
   * the single-grade products are equivariant, up to the sign that a unit versor's factor can be.
 
-The arithmetic is exact (rationals), so a failure is a real one. A pass is a randomized identity
-test: a wrong kernel would have to agree with the law at every sampled versor by coincidence.
+**Why the samples prove the laws.** Written in the reflections' parameters `w` and the
+passenger's coefficients `x`, each law is `N(w, x) = 0` for a polynomial `N` with integer
+coefficients (the denominators `w·w` are nonzero at the samples). A versor of four reflections
+has coefficients of degree 8 in `w`, a sandwich is quadratic in the versor, and the laws above
+have degree below 70 in all. If `N ≢ 0` over ℚ, and `p` does not divide all its coefficients,
+then over `ℤ/p` a uniform sample is a root with probability at most `deg N / p < 2⁻⁵⁵` (the
+Schwartz–Zippel lemma); eight independent samples all miss with probability below `2⁻⁴⁴⁰`. So a
+passing run proves `N ≡ 0` (up to that probability, and to `p` dividing every coefficient of a
+nonzero `N`). An identity in the reflections holds for every product of reflections, and, being
+polynomial, on their Zariski closure: over ℂ, reflections of `u₀` reach every vector of square 1,
+and their products every versor of the kind (Cartan–Dieudonné). The ℚ check adds exactness in
+the passenger with no probability at all, at few points.
+
+The same test runs on the 7D, 8D and 9D algebras of `gax-highdim-tests` (`exact_mod_p`), whose
+even versors (64 to 256 coefficients) have plain sandwich kernels (ADR-034).
 
 ## 4. Licensed rewrites
 
