@@ -439,8 +439,7 @@ files in `gax/src/algebras/`, behind cargo features.
     * a branch switch near a full turn.
   * The series now reach far enough that both branches are within a few ulps at the boundary.
     See [numerics.md](numerics.md), "Transcendental functions".
-* **Still open: 6D log.** It needs either the cubic invariant decomposition or square roots of
-  versors, and the normalization those need is not closed form in 6D.
+* **6D log:** at first by inverse scaling and squaring, now in closed form (ADR-033).
 
 ## ADR-020: Certification by a wrapper type, `Unit<M>`
 *Status: accepted.*

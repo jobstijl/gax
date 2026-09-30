@@ -1,12 +1,22 @@
 # The logarithm of a 6D even versor, in closed form
 
 gax computes `log R` for CSTA's even versors (the conformal group of spacetime, `R(4,2)`) in
-closed form. Published closed forms for `exp` and `log` stop below six dimensions, where a
-bivector splits into at most two commuting parts ("less than 6D": De Keninck and Roelfs,
-*Normalization, square roots, and the exponential and logarithmic maps in geometric algebras
-of less than 6D*, 2022). In 6D a bivector has three parts, and a cubic enters. This note
-derives the closed form, shows how it is evaluated without its singularities, and records how
-it was validated. The code is `gax_core::study::log_coeffs_6d` and the generated
+closed form. Below six dimensions a bivector splits into at most two commuting parts, and De
+Keninck and Roelfs give robust closed forms for `exp` and `log` (*Normalization, square roots,
+and the exponential and logarithmic maps in geometric algebras of less than 6D*, 2022). In any
+dimension, Roelfs and De Keninck factor a rotor into commuting simple rotors through its
+tangent decomposition (*Graded symmetry groups: plane and simple*, 2021, §8–9). The planes'
+tangents follow from `R`'s grade parts and the roots of a polynomial, one root at a time, and
+the logarithm is the sum of the factors' logarithms. In 6D a bivector has three parts, and
+that polynomial is a cubic.
+
+This note reaches the same cubic but never separates the planes. The logarithm is three
+bivectors built from `R`'s grade parts, weighted by an interpolant of one function at the
+cubic's roots (§2). That keeps it exact where roots coincide (one plane, translations,
+isoclinic planes), which is where individual roots are ill-conditioned and factors are not
+unique (§3). It is also branch free, so it runs per SIMD lane and in shaders, and it turns
+planes near a half turn out of the way first (§5). The note derives the closed form, shows how
+it is evaluated without its singularities, and records how it was validated. The code is `gax_core::study::log_coeffs_6d` and the generated
 `Log<Bivector> for Unit<Even>` in `gax::csta` and in every 6D algebra declared with `algebra!`,
 and `unit_even_log` in the WGSL modules.
 
@@ -197,8 +207,9 @@ Random CSTA versors, 5000 per size, checked for `exp(log R) = R` (relative):
 
 No log is NaN, and none misses `R`. The least accurate ones combine boosts of `cosh² μ` in the
 hundreds to thousands (`|R|` up to 200) with a plane near a full turn (`u ≈ 1`, `r₀ < 0`),
-whose direction is barely determined (§5). The tests (`tests/csta_log.rs`) also cover portable SIMD lanes (lanes mixing
-the closed form and turning, each equal to its scalar result) and `f32` (within `2·10⁻⁴`).
+whose direction is barely determined (§5). The tests (`tests/csta_log.rs`) also cover
+portable SIMD lanes (lanes mixing the closed form and turning, each equal to its scalar result)
+and `f32` (within `2·10⁻⁴`).
 
 The closed form takes 2.6 µs, and 6.6 µs near a half turn (turned: the closed form twice and
 four products). Inverse scaling and squaring took 50.7 µs (f64, Ryzen 7 5800X,
