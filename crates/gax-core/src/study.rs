@@ -17,7 +17,11 @@
 use crate::coef::Real;
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
+mod expk;
 mod log8;
+pub use expk::{
+    exp_reach_6d, exp_reach_8d, exp_turn_6d, exp_turn_8d, exp_weights_6d, exp_weights_8d, h_weights,
+};
 pub use log8::{log_coeffs_8d, log_turn_8d, log_weights_8d, q_weights_8d, turn_polynomial_8d};
 
 /// A complex number.
@@ -1011,11 +1015,13 @@ fn split6<T: Real>(c: &Cubic6<T>, p1: T, p2: T, p3: T) -> Split6<T> {
     let gbest01 = g0.max(g1);
     let trig = T::select_lt(gbest01, g2, s[2], best01);
     let mut r = T::select_lt(disc, T::zero(), trig, cardano) + m;
-    // A Newton step on the original cubic.
-    let f = ((r - p1) * r + p2) * r - p3;
+    // A Newton step on the original cubic, kept only where it lowers the residual: at a
+    // multiple root the derivative vanishes, and the step would throw the root off.
+    let f = |r: T| ((r - p1) * r + p2) * r - p3;
     let df = (three * r - (p1 + p1)) * r + p2;
     let df_safe = T::select_lt(df.abs(), T::from_f64(1e-300), T::one(), df);
-    r = r - T::select_lt(df.abs(), T::from_f64(1e-300), T::zero(), f / df_safe);
+    let next = r - f(r) / df_safe;
+    r = T::select_lt(f(next).abs(), f(r).abs(), next, r);
     // The pair's sum and product, each from the side with the smaller error: forward from p1
     // (for a small r), or backward from p3 (for a large one: two planes near a half turn and
     // a third, whose tiny product p2 − r·sum would lose to p2's rounding).
@@ -1031,8 +1037,17 @@ fn split6<T: Real>(c: &Cubic6<T>, p1: T, p2: T, p3: T) -> Split6<T> {
     let big = T::from_f64(1e30);
     let e2b = T::select_lt(ar, tiny, big, prod_b.abs());
     let e1b = T::select_lt(ar, tiny, big, (p2.abs() + prod_b.abs() + e2b) * rinv.abs());
-    let sum = T::select_lt(e1b, e1f, sum_b, sum_f);
-    let prod = T::select_lt(e2b, e2f, prod_b, prod_f);
+    // Backward only where r is larger than the pair (not, say, a zero root rounded to 10⁻¹⁵,
+    // whose quotient p3/r = 0 would claim no error).
+    let larger = T::select_lt(
+        sum_f.abs().max(prod_f.abs().sqrt()),
+        ar,
+        T::one(),
+        T::zero(),
+    );
+    let half = T::from_f64(0.5);
+    let sum = T::select_lt(e1b, e1f, T::select_lt(half, larger, sum_b, sum_f), sum_f);
+    let prod = T::select_lt(e2b, e2f, T::select_lt(half, larger, prod_b, prod_f), prod_f);
     let mid = sum * T::from_f64(0.5);
     let d2 = mid * mid - prod;
     Split6 {

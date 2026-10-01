@@ -418,10 +418,10 @@ files in `gax/src/algebras/`, behind cargo features.
   `Twist ↔ Motor`, and STAP.
 * **Rotation fast paths.** When the generator proves the scalar part of `B²` is non-positive (minus a
   sum of squares), it emits real-trigonometric closed forms instead. See performance.md.
-* **6D and up (CSTA).** A bivector there splits into three commuting parts, so no closed form is
-  generated. `exp` falls back to scaling and squaring in the smallest kind closed under the product.
-  It is correct in any algebra, and the CSTA test checks it against the exact rotation and for
-  `exp(B)·exp(−B) = 1`.
+* **6D and up (CSTA).** A bivector there splits into three or four commuting parts. At first `exp`
+  fell back to scaling and squaring in the smallest kind closed under the product; for the full
+  bivector of a 6D to 9D algebra it is now a closed form (ADR-035). The fallback remains for
+  other kinds of bivectors and is correct in any algebra.
   * **Amended.** The first version used a fixed `B / 256`, 8 Taylor terms and no renormalization,
     so its unit error grew with `‖B‖` (to `10⁻¹⁰` at `‖B‖₁ = 64`).
   * Now the number of halvings is chosen from `‖B‖₁` (Higham's scheme), the series has degree 10,
@@ -733,8 +733,8 @@ files in `gax/src/algebras/`, behind cargo features.
 * **Every `exp` and `log`.** The general Study helpers (`study_exp_split`, `study_log_q`, …)
   are ports of `gax_core::study` over a small complex and dual-number library (`CHANNELS`),
   with their direct forms evaluated at a stand-in argument wherever the series is selected, so
-  no discarded branch divides by zero. CSTA's bivector `exp` has no closed form; it is scaling
-  and squaring as in Rust, a loop, emitted as text (`fallback_exp`) and tested against the Rust
+  no discarded branch divides by zero. CSTA's bivector `exp` is scaling and squaring there (the
+  closed form of ADR-035 is Rust only), a loop, emitted as text (`fallback_exp`) and tested against the Rust
   `exp`, within `2⁻¹²` on the CPU evaluator (each squaring doubles the relative error).
 * **`f16`.** Every module has an `f16` twin (`gax::pga3d_f16`, `{Kind}Gpu16`), printed from
   the same programs with a precision parameter. Its Study helpers and the programs that feed
@@ -933,7 +933,37 @@ algebras' kernels are unchanged:
 * **GPU layouts only up to 64 coefficients,** the WGSL modules' limit.
 
 Compiling a 7D, 8D or 9D algebra takes 30 to 60 s and 2.5 to 4.5 GB in a release build. `exp`
-there is still scaling and squaring (0.24 ms in 8D, 0.95 ms in 9D).
+there was scaling and squaring (0.24 ms in 8D, 0.95 ms in 9D) until ADR-035.
+
+## ADR-035: The exponential of a 6D to 9D bivector in closed form
+*Status: accepted, implemented (`gax_core::study::{exp_weights_6d, exp_turn_6d, exp_reach_6d}`
+and their `_8d` twins, `h_weights`; derivation in log6d.md §12).*
+
+* **The problem.** `exp` of a 6D to 9D bivector was scaling and squaring in the even kind: fine
+  in CSTA (4.1 µs, 32 coefficients), but 35 µs in 7D, 0.24 ms in 8D and 0.95 ms in 9D, where an
+  even product has up to 65,536 terms.
+* **The closed form.** `exp B = C (1 + T + T∧T/2 + …)` with `T = Σ tanh(μⱼ) b̂ⱼ` and
+  `C = ∏ cosh μⱼ`. The `μⱼ²` are the roots of a polynomial whose coefficients are `⟨Wₘ²⟩₀`,
+  `Wₘ = B^∧m/m!`; `T` is an interpolant of `tanh(√λ)/√λ` at the roots applied to bivectors
+  `⟨Wₘ Wₘ₋₁⟩₂` (through a triangular matrix with ±1 on its diagonal), and `ln C` the trace of
+  an interpolant of `ln cosh √λ` (`∏(1 − tⱼ²)^(−1/2)` cancels for large boosts). The planes are
+  never separated.
+* **Shared with the log.** The interpolants reuse ADR-033's groupings of the roots, rewritten
+  over a trait of analytic data (values, a Taylor series at a centre, the distance to a
+  singularity), so `exp` and `log` cannot drift apart in how they treat coinciding roots.
+* **Rotations near a half turn**, where `tanh` has a pole: rotation planes beyond a quarter turn
+  are turned back by one, `exp B = exp(B − (π/2) Z) · ∏ êⱼ` (ADR-033's polynomial in `Z`), only
+  where some rotation is beyond `1.1 π/4`. A rotation beyond `3π/4`, or a loxodromic pair's
+  beyond `π/4`, halves `B` and squares the result.
+* **Fixes found on the way,** in the log too: a root divided out backward only when it is larger
+  than its cofactor (a quotient `0/tiny` made the 8D PGA `exp` wrong by `10⁴⁶`, and an `f32`
+  turn count 1.55), and a Newton step on the cubic's root kept only when it lowers the residual
+  (at a triple root it created a fake separation: 8D PGA's log was wrong at three planes of
+  1.2 rad plus a translation; regression test `equal_planes_below_a_sixteenth`).
+* **Not done: WGSL.** The shader modules keep scaling and squaring for `exp`.
+* **Result.** 3.5 µs in CSTA (4.3 µs turned), 4.0 / 6.8 / 10 µs in 7D / 8D / 9D: 9x to 90x
+  faster from 7D on. Within `5·10⁻¹³` of a Taylor series in `f64` on random bivectors of seven
+  algebras, no NaN (log6d.md §12).
 
 ---
 

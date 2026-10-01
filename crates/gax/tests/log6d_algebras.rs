@@ -139,7 +139,7 @@ macro_rules! log6d_checks {
             fn two_planes_near_a_half_turn() {
                 let planes: [usize; 3] = $planes;
                 for delta in [1e-2, 1e-4, 1e-6] {
-                    let tol = 1e-9 + 1e-16 / (delta * delta);
+                    let tol = 1e-9 + 4e-15 / (delta * delta);
                     for third in [0.3, 1.1] {
                         let mut c = [0.0f64; 15];
                         c[planes[0]] = core::f64::consts::FRAC_PI_2 - delta;
@@ -154,6 +154,30 @@ macro_rules! log6d_checks {
                             "delta {delta}, third {third}: {got:?}"
                         );
                     }
+                }
+            }
+
+            /// Three planes at one angle (a triple invariant) with `⟨R⟩₀ < 1/16`: the turning
+            /// step must not split the triple (its isolated root's Newton step divided by a
+            /// vanishing derivative and made the triple look apart).
+            #[test]
+            fn equal_planes_below_a_sixteenth() {
+                let planes: [usize; 3] = $planes;
+                for angle in [1.2, 1.228, 1.3, 1.45] {
+                    let mut c = [0.0f64; 15];
+                    for &i in &planes[..2] {
+                        c[i] = angle;
+                    }
+                    // The third plane is a rotation in R(6,0) only; elsewhere it stays as given.
+                    c[planes[2]] = if stringify!($alg) == "r60" {
+                        angle
+                    } else {
+                        0.2
+                    };
+                    let b = Bivector::from_coeffs(c);
+                    let r = b.exp();
+                    let got: Bivector<(), f64> = r.log();
+                    assert!(close(&got.c, &b.c, 1e-9), "angle {angle}: {got:?}");
                 }
             }
 

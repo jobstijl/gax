@@ -1,4 +1,4 @@
-# The logarithm of an even versor in 6 to 9 dimensions, in closed form
+# The logarithm and exponential of an even versor in 6 to 9 dimensions, in closed form
 
 A unit even versor `R` in a geometric algebra of dimension 6 to 9 is the exponential of a
 bivector, `R = exp(B)`, and `B` splits into three (6D, 7D) or four (8D, 9D) commuting simple
@@ -30,9 +30,16 @@ polynomial, the cubic of 6D and 7D and the quartic of 8D and 9D, but takes a dif
   turn (§5), exactly and branch free.
 
 Results (§6, §7): on 175,000 random versors of seven algebras in 6D to 9D, each a logarithm of
-`R` and (but for one) a fixed point of `log ∘ exp`, with no NaN; within `10⁻¹³` of `R` for versors that are not
+`R` and a fixed point of `log ∘ exp`, with no NaN; within `10⁻¹³` of `R` for versors that are not
 near a half turn, and within `10⁻⁶` to `10⁻⁹` for large boosts and planes near half turns. A
 logarithm takes 2.6 to 3.8 µs (6.6 to 31 µs when planes are turned).
+
+**The exponential** (§12) runs the same construction backwards: the invariants of `B` (the
+squared wedge powers) give the planes' `μⱼ²` as the roots of a polynomial of the same degree, and
+`exp B` is a polynomial in one bivector `T = Σ tanh(μⱼ) b̂ⱼ`, again an interpolant applied to
+bivectors from products of `B`'s wedge powers. It is within `5·10⁻¹³` of a Taylor series on
+random bivectors in 6D to 9D, and takes 3.5 to 10 µs, against 35 µs to 0.95 ms for scaling and
+squaring in 7D to 9D.
 
 ## 1. Invariants of a versor: a polynomial
 
@@ -261,7 +268,9 @@ inverse scaling and squaring got 7% wrong or NaN.
 
 ## 6. Validation
 
-Checked in `f64` against `exp` (itself scaling and squaring, independent of the log).
+Checked in `f64` against `exp`. The CSTA table was measured against scaling and squaring,
+independent of the log; the random versors against the closed-form `exp` of §12, which shares
+the root groupings with the log but was itself checked against a Taylor series (§12).
 
 **CSTA** (`R(4,2)`):
 
@@ -280,18 +289,17 @@ coefficient difference, relative to the largest coefficient). "Turned" counts th
 
 | algebra | entries up to | turned | worst `exp(log R) − R` |
 |---|---|---|---|
-| CSTA `R(4,2)` | 0.5 / 1.0 / 1.5 / 2.0 / 2.5 | 0 / 303 / 1991 / 2987 / 3418 | `2·10⁻¹⁴` / `2·10⁻¹³` / `1.4·10⁻⁷` / `1.4·10⁻⁶` / `5·10⁻⁸` |
-| 7D `R(4,3)` | 0.25 / 0.5 / 0.75 / 1.0 / 1.5 | 0 / 0 / 0 / 52 / 690 | `1.5·10⁻¹⁴` / `3·10⁻¹⁴` / `6·10⁻¹⁴` / `2·10⁻¹³` / `4·10⁻⁸` |
-| 8D `R(8,0)` | same | 0 / 79 / 4929 / 3637 / 2180 | `2·10⁻¹⁴` / `3·10⁻¹⁴` / `7·10⁻¹⁰` / `4·10⁻¹¹` / `1.5·10⁻⁹` |
-| 8D `R(4,4)` | same | 0 / 0 / 0 / 25 / 277 | `2·10⁻¹⁴` / `8·10⁻¹⁴` / `4·10⁻¹³` / `2·10⁻⁹` / `7·10⁻⁸` |
-| 9D `R(9,0)` | same | 0 / 751 / 4966 / 2919 / 4254 | `5·10⁻¹⁴` / `6·10⁻¹⁴` / `3·10⁻¹⁰` / `1.3·10⁻¹⁰` / `9·10⁻⁷` |
-| 9D `R(5,4)` | same | 0 / 0 / 6 / 218 / 1024 | `4·10⁻¹⁴` / `1.5·10⁻¹³` / `6·10⁻¹³` / `5·10⁻⁸` / `1.5·10⁻⁷` |
-| 9D PGA `R(8,0,1)` | same | 0 / 80 / 4933 / 3651 / 2198 | `4·10⁻¹⁴` / `5·10⁻¹⁴` / `7·10⁻¹⁰` / `8·10⁻¹⁰` / `2·10⁻⁹` |
+| CSTA `R(4,2)` | 0.5 / 1.0 / 1.5 / 2.0 / 2.5 | 0 / 303 / 1991 / 2987 / 3418 | `1.2·10⁻¹⁵` / `10⁻¹³` / `6·10⁻⁹` / `1.7·10⁻⁶` / `3·10⁻⁹` |
+| 7D `R(4,3)` | 0.25 / 0.5 / 0.75 / 1.0 / 1.5 | 0 / 0 / 0 / 52 / 690 | `3·10⁻¹⁶` / `1.7·10⁻¹⁵` / `4·10⁻¹⁴` / `7·10⁻¹⁴` / `1.8·10⁻⁹` |
+| 8D `R(8,0)` | same | 0 / 79 / 4929 / 3637 / 2180 | `6·10⁻¹⁶` / `1.3·10⁻¹³` / `7·10⁻¹¹` / `4·10⁻¹¹` / `10⁻¹⁰` |
+| 8D `R(4,4)` | same | 0 / 0 / 0 / 25 / 277 | `4·10⁻¹⁶` / `1.4·10⁻¹⁵` / `1.5·10⁻¹³` / `2.4·10⁻¹⁰` / `8·10⁻⁹` |
+| 9D `R(9,0)` | same | 0 / 751 / 4966 / 2919 / 4254 | `10⁻¹⁵` / `4·10⁻¹³` / `5·10⁻¹¹` / `1.1·10⁻¹¹` / `5·10⁻⁷` |
+| 9D `R(5,4)` | same | 0 / 0 / 6 / 218 / 1024 | `4·10⁻¹⁶` / `3·10⁻¹⁵` / `1.4·10⁻¹³` / `7·10⁻⁹` / `4·10⁻⁷` |
+| 9D PGA `R(8,0,1)` | same | 0 / 80 / 4933 / 3651 / 2198 | `7·10⁻¹⁶` / `1.5·10⁻¹³` / `7·10⁻¹¹` / `4·10⁻¹¹` / `3·10⁻¹⁰` |
 
-No log is NaN, and none misses `R`. Every log is a fixed point of `log ∘ exp` (within `10⁻⁶`)
-except one CSTA versor at entries up to 2.0, a loxodromic pair on `φ`'s branch cut (§11). The
-least accurate ones combine large boosts (`cosh² μ` in the hundreds to thousands) with planes
-near a half turn or a full turn, where `exp` itself is ill-conditioned.
+No log is NaN, none misses `R`, and every one is a fixed point of `log ∘ exp` (within `10⁻⁶`).
+The least accurate ones combine large boosts (`cosh² μ` in the hundreds to thousands) with
+planes near a half turn or a full turn, where `exp` itself is ill-conditioned.
 
 The four-plane interpolant alone (`p`s from chosen roots, checked against `φ` at every root) was
 stressed on 180,000 root sets in `f64` and 27,000 in `f32`: rotations and boosts, clusters of two,
@@ -309,17 +317,19 @@ turns, lanes and `f32`.
 
 ## 7. Cost
 
-| algebra | `log` (closed form) | `log` (planes turned) | `exp` (scaling and squaring) |
-|---|---|---|---|
-| CSTA (6D, 32 coefficients) | 2.6 µs | 6.6 µs | — |
-| 7D `R(4,3)` (64) | 2.5 µs | 7.0 µs | 35 µs |
-| 8D `R(4,4)` (128) | 2.9 µs | 10 µs | 0.24 ms |
-| 9D `R(5,4)` (256) | 3.8 µs | 31 µs | 0.95 ms |
+| algebra | `log` (closed form) | `log` (planes turned) | `exp` (closed form, §12) | `exp` (scaling and squaring, before) |
+|---|---|---|---|---|
+| CSTA (6D, 32 coefficients) | 2.6 µs | 6.6 µs | 3.5 µs (4.3 µs turned) | 4.1 µs |
+| 7D `R(4,3)` (64) | 2.5 µs | 7.0 µs | 4.0 µs | 35 µs |
+| 8D `R(4,4)` (128) | 2.9 µs | 10 µs | 6.8 µs | 0.24 ms |
+| 9D `R(5,4)` (256) | 3.8 µs | 31 µs | 10 µs | 0.95 ms |
 
 (f64, Ryzen 7 5800X, one core, release builds; the machine was not idle.) The closed form is
 dominated by one straight-line program for `r₀`, the `p`s and the `G`s. Turning adds `k`
 products by the bivector `Z` and a second closed form. Inverse scaling and squaring took 50.7 µs
-in CSTA.
+in CSTA. Scaling and squaring in CSTA works in the 32-coefficient even kind, where a product is
+cheap; from 7D on its products (up to 65,536 terms) dominate, and the closed form, whose cost is
+one straight-line program over the bivector, wins by 9x to 90x.
 
 ## 8. In WGSL
 
@@ -355,8 +365,11 @@ In gax, `gax_core::study::{log_coeffs_6d, log_turn_6d}` (three planes) and
 `gax_core::study::{log_coeffs_8d, log_turn_8d, q_weights_8d, turn_polynomial_8d}` (four planes)
 compute the interpolants; the generator emits `Log<Bivector> for Unit<Even>` for the full even
 kind of every 6D to 9D algebra: the invariants and the `G`s as one straight-line program,
-compiled and verified symbolically, then the weights. Algebras from 7D on also need the
-generator itself to scale (sandwiches without symbolic simplification, products as loops over
+compiled and verified symbolically, then the weights. `exp` (§12) is
+`gax_core::study::{exp_weights_6d, exp_turn_6d, exp_reach_6d}` and their `_8d` twins, with
+`h_weights`; the generator emits `Bivector::exp` from them for the same algebras, the wedge
+powers and the `H`s as one straight-line program (`exp_invariants`). Algebras from 7D on also
+need the generator itself to scale (sandwiches without symbolic simplification, products as loops over
 tables of terms); see ADR-034 in [design.md](design.md).
 
 ## 11. Limitations
@@ -364,7 +377,7 @@ tables of terms); see ADR-034 in [design.md](design.md).
 * **Two or three planes near a half turn together.** `R` fixes only their product at a half
   turn, so near one the planes are determined to about `ε/δ` (`δ` the distance to the half turn).
   Turning them loses more: the pair's `Z` needs the slope of `h` across two roots near `u = 0`,
-  and `exp(log R)` is within about `10⁻¹⁶/δ²` of `R` (`10⁻¹⁰` at `δ = 10⁻⁴`, `10⁻⁵` at `10⁻⁶`),
+  and `exp(log R)` is within about `2·10⁻¹⁵/δ²` of `R` (`10⁻⁷` at `δ = 10⁻⁴`, `10⁻³` at `10⁻⁶`),
   where an exact method would reach `ε`. Reading their product from `⟨R⟩₄` would avoid this.
 * **A loxodromic pair on the branch cut.** A pair of conjugate invariants with a negative real
   part and a small imaginary part (the rotation part of a `(2,2)` block near a half turn) has
@@ -374,8 +387,92 @@ tables of terms); see ADR-034 in [design.md](design.md).
 * **Four coinciding invariants with `⟨R⟩₀ < 0`** (three planes at one angle and the fourth at its
   supplement): the planes are not determined by the invariants, the logarithm is not unique, and
   no set can be turned. The closed form then returns a logarithm of `−R`.
-* **`exp` from 8D on** is still scaling and squaring in the full even algebra (0.24 ms in 8D,
-  0.95 ms in 9D); a closed form through the same invariants would be much faster.
+* **`exp` in `f32`** is within `10⁻⁴` of the `f64` result for most bivectors, but up to `10⁻³`
+  for large boosts (entries up to 2.5 in `R(4,3)`), where `C` and `T` are large and the wedge
+  powers of `T` cancel against each other. In `f64` the same cases are within `3·10⁻¹²`.
+* **`exp` in WGSL** is still scaling and squaring. A port would reuse `study_log6`'s three-plane
+  groupings with `τ` and `ln cosh` as data.
+
+## 12. The exponential
+
+The construction runs backwards for `exp B`. Write `B = Σ μⱼ b̂ⱼ` with commuting simple
+`b̂ⱼ`, `b̂ⱼ² = 1` (so `μⱼ` is imaginary for a rotation, real for a boost, complex for a
+loxodromic pair, and a null plane has `μⱼ b̂ⱼ` with `λⱼ = 0`), and `λⱼ = μⱼ²`.
+
+**The invariants.** The wedge powers `Wₘ = B^∧m/m!` are the sums over `m` planes of the
+products `∏ μⱼ b̂ⱼ`, so `eₘ = ⟨Wₘ²⟩₀` is the `m`-th elementary symmetric function of the
+`λ`s: they are the roots of
+
+```text
+λᵏ − e₁ λᵏ⁻¹ + e₂ λᵏ⁻² − … ± eₖ = 0,
+```
+
+a polynomial of the degree of §1's, in `λ` rather than `u`. The bivectors `Hₘ = ⟨Wₘ Wₘ₋₁⟩₂`
+weigh plane `j` by `μⱼ eₘ₋₁(λ without λⱼ) = Σₜ (−1)ᵗ eₘ₋₁₋ₜ λⱼᵗ μⱼ`. In terms of
+`Bᵢ = Σ λⱼⁱ μⱼ b̂ⱼ` this is a triangular matrix with `±1` on its diagonal, so every `Bᵢ` is an
+integer polynomial combination of `H₁ = B, H₂, …, Hₖ` in the `e`s (`h_weights`), as the `Q`s of
+the log are combinations of the `G`s.
+
+**The formula.** The planes commute, so
+
+```text
+exp B = ∏ (cosh μⱼ + sinh μⱼ b̂ⱼ) = C ∏ (1 + tⱼ b̂ⱼ) = C (1 + T + T∧T/2 + … + T^∧k/k!),
+T = Σ tⱼ b̂ⱼ,   tⱼ = tanh μⱼ,   C = ∏ cosh μⱼ.
+```
+
+`T = Σ τ(λⱼ) μⱼ b̂ⱼ` with `τ(λ) = tanh(√λ)/√λ`, which is even in `√λ` and so a function of
+`λ`, analytic but for poles at the half turns `λ = −(π/2 + nπ)²`. With `P(λ) = Σ αᵢ λⁱ`
+interpolating `τ` at the roots, `T = Σ αᵢ Bᵢ`, a combination of the `H`s. The wedge powers of `T`
+come from the same straight-line program as `B`'s. `C` is `exp` of the trace of `ln cosh √λ`
+over the roots: `Σⱼ Q(λⱼ) = Σ βᵢ pᵢ` for its interpolant `Q = Σ βᵢ λⁱ`, with the power sums `pᵢ`
+from the `e`s by Newton's identities. This avoids `C = ∏ (1 − tⱼ²)^(−1/2)`, which cancels for
+large boosts (`tⱼ → 1`) and made `f32` (and, less, `f64`) inaccurate there. Null planes need nothing special
+(`τ(0) = 1`, `ln cosh 0 = 0`), nor do coinciding planes: the interpolants come from the groupings
+of §2 and §3 (series at a cluster's centre, the isolated root and a pair, the quartic's
+groupings from Euler's resolvent, Chinese remaindering), written once for any data with values,
+complex values, a Taylor series at a centre, and a distance to its nearest singularity. `τ` and
+`ln cosh √λ` have Maclaurin series of radius `π²/4`, shifted to the centre; far out, `ln cosh`
+is `z + ln(1 + e⁻²ᶻ) − ln 2`.
+
+**Turning and halving.** `τ`'s pole at a half turn makes the interpolant ill-conditioned for
+rotations near one, so rotation planes beyond a quarter turn (`λ < −π²/16`) are turned back by a
+quarter turn first, as the log turns its planes (§5):
+
+```text
+B = B' + (π/2) Z,   exp B = exp B' · ∏ êⱼ = exp B' · (−1)ⁿ ∏(−êⱼ),
+```
+
+with `Z = Σ êⱼ` the sum of the turned planes' unit bivectors (`êⱼ² = −1`, along `B`), an
+interpolant of `1/θ` (0 on the other planes) applied to the `H`s, and `n` their number, the trace
+of their indicator. `∏(−êⱼ)` is the log's polynomial in `Z` (degree up to `k`). A cluster within
+a quarter of its reach of the threshold is turned or not as a whole, by its centre; roots
+further apart use a chord, whose slope is bounded. Turning only happens where some rotation is
+beyond `1.1 π/4` (`τ` is still accurate a little past `π/4`), so the common case is one
+closed form. Turned rotations end within `π/4` of zero, but a rotation beyond `3π/4`, or a
+loxodromic pair whose rotation part is beyond `π/4` (turning covers rotation planes only), is
+left near a pole: there `B` is halved until it is not, and the result squared as often. So is
+a boost of rapidity over 8: the interpolant's terms grow like `λ` while `τ(λ) ~ 1/√λ`, so it
+cancels about `|λ|^(3/2)` ulps (at rapidity 37, `exp B` was unit only to `4·10⁻¹²`; halved, to
+`2·10⁻¹⁶`).
+
+**Accuracy.** Against a Taylor series of `exp B` (degree 30, after enough halvings, then
+squared back), on 1000 to 5000 random bivectors per size, relative to the largest coefficient:
+
+| algebra | entries up to 0.5 / 1.0 / 1.5 / 2.5 | `f32` against `f64` |
+|---|---|---|
+| CSTA `R(4,2)` | `1.6·10⁻¹⁴` / `4·10⁻¹⁴` / `1.5·10⁻¹³` / `7·10⁻¹⁴` | `7·10⁻⁷` / `2.5·10⁻⁵` / `5·10⁻⁵` / `7·10⁻⁵` |
+| 7D `R(4,3)` | `1.4·10⁻¹⁴` / `1.5·10⁻¹³` / `1.1·10⁻¹³` / `3·10⁻¹²` | `3·10⁻⁷` / `10⁻⁴` / `4·10⁻⁴` / `1.2·10⁻³` |
+| 8D `R(8,0)` | `3·10⁻¹⁴` / `8·10⁻¹⁴` / `2·10⁻¹³` / `2·10⁻¹³` | `1.7·10⁻⁵` / `9·10⁻⁵` / `1.5·10⁻⁴` / `1.6·10⁻⁴` |
+| 8D `R(4,4)` | `8·10⁻¹⁴` / `1.3·10⁻¹³` / `1.7·10⁻¹³` / `3·10⁻¹³` | `2·10⁻⁷` / `9·10⁻⁶` / `3·10⁻⁵` / `1.2·10⁻⁴` |
+| 9D `R(9,0)` | `5·10⁻¹⁴` / `1.2·10⁻¹³` / `2·10⁻¹³` / `5·10⁻¹³` | `3·10⁻⁵` / `6·10⁻⁵` / `1.4·10⁻⁴` / `1.8·10⁻⁴` |
+| 9D `R(5,4)` | `1.2·10⁻¹³` / `2.6·10⁻¹³` / `2.7·10⁻¹³` / `5·10⁻¹³` | `10⁻⁶` / `2.5·10⁻⁵` / `3.5·10⁻⁵` / `4·10⁻⁵` |
+| 9D PGA `R(8,0,1)` | `4·10⁻¹⁴` / `1.5·10⁻¹³` / `4·10⁻¹³` / `6·10⁻¹³` | `1.7·10⁻⁵` / `8·10⁻⁵` / `1.4·10⁻⁴` / `3·10⁻⁴` |
+
+No result is NaN. In `gax-highdim-tests`, every 7D to 9D algebra checks `exp` of sums of basis
+planes against the product of their exponentials (rotations within a quarter turn, beyond one,
+and beyond three quarters; boosts; null planes), against the series, in SIMD lanes and in `f32`;
+every `log` test there and in `tests/csta_log.rs` and `tests/log6d_algebras.rs` goes through
+`exp`. Cost: §7.
 
 ## Appendix: the algorithm
 

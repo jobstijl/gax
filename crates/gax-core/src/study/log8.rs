@@ -25,15 +25,15 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 /// regime: close roots where `bound < limit` (their spread, bounded from `a`, `b` and `c`,
 /// against a quarter of their distance to `u = 0`).
 pub(super) struct Quartic8<T> {
-    m: T,
-    a: T,
-    b: T,
-    c: T,
-    bound: T,
-    limit: T,
+    pub(super) m: T,
+    pub(super) a: T,
+    pub(super) b: T,
+    pub(super) c: T,
+    pub(super) bound: T,
+    pub(super) limit: T,
 }
 
-fn quartic8<T: Real>(p: [T; 4]) -> Quartic8<T> {
+pub(super) fn quartic8<T: Real>(p: [T; 4]) -> Quartic8<T> {
     let [p1, p2, p3, p4] = p;
     let (two, three, four, six) = (
         T::from_i64(2),
@@ -74,7 +74,7 @@ fn shift<T: Real, const N: usize>(mut c: [T; N], m: T) -> [T; N] {
 
 /// The interpolant `[α0, α1, α2, α3]` (in `u`) of a series at the quartic's centre `m` in
 /// `s = t/ρ`, reduced modulo `t⁴ + a t² + b t + c`.
-fn reduce4<T: Real>(ph: &Series<T>, q: &Quartic8<T>, rho: T) -> [T; 4] {
+pub(super) fn reduce4<T: Real>(ph: &Series<T>, q: &Quartic8<T>, rho: T) -> [T; 4] {
     let (zero, one) = (T::zero(), T::one());
     let r2 = rho * rho;
     let (qa, qb, qc) = (q.a / r2, q.b / (r2 * rho), q.c / (r2 * r2));
@@ -121,7 +121,7 @@ impl<F> Field for F where
 /// roots of `u² − sb u + pb` (Chinese remaindering: `la + qa K`, `K = (lb − la) qa⁻¹` modulo
 /// `qb`). It divides by the resultant `qa(b₁) qa(b₂)`, the product of the four differences
 /// between the two pairs' roots.
-fn crt22<F: Field>(la: [F; 2], sa: F, pa: F, lb: [F; 2], sb: F, pb: F) -> [F; 4] {
+pub(super) fn crt22<F: Field>(la: [F; 2], sa: F, pa: F, lb: [F; 2], sb: F, pb: F) -> [F; 4] {
     // qa ≡ g1 u + g0 modulo qb, and its inverse (−g1 u + g1 sb + g0) / n.
     let (g1, g0) = (sb - sa, pa - pb);
     let n = g0 * g0 + g0 * g1 * sb + g1 * g1 * pb;
@@ -134,7 +134,7 @@ fn crt22<F: Field>(la: [F; 2], sa: F, pa: F, lb: [F; 2], sb: F, pb: F) -> [F; 4]
 
 /// The cubic through the quadratic `l3` at the roots of `u³ − q1 u² + q2 u − q3` and the value
 /// `fr` at `r`.
-fn add_root<T: Real>(l3: [T; 3], q: [T; 3], fr: T, r: T) -> [T; 4] {
+pub(super) fn add_root<T: Real>(l3: [T; 3], q: [T; 3], fr: T, r: T) -> [T; 4] {
     let [q1, q2, q3] = q;
     let at = (l3[2] * r + l3[1]) * r + l3[0];
     let qr = ((r - q1) * r + q2) * r - q3;
@@ -228,47 +228,57 @@ fn resolvent<T: Real>(b2: T, b1: T, b0: T) -> [Cx<T>; 3] {
     core::array::from_fn(|k| Cx::select(disc, zero, trig[k], one_real[k]))
 }
 
-/// The groupings of a quartic's roots (see the module documentation), each with how far apart
-/// its factors are (`gap`, 0 where it does not exist).
-pub(super) struct Split8<T> {
-    /// An isolated real root `r` (in `u`) and the cubic of the others, `[q1, q2, q3]`.
-    r: T,
-    cubic: [T; 3],
-    gap_r: T,
-    /// Two real quadratics `u² − s u + p`: `(s, p)` each.
-    pair_a: (T, T),
-    pair_b: (T, T),
-    gap_pairs: T,
-    /// A complex quadratic (with its conjugate): `(s, p)`.
-    conj: (Cx<T>, Cx<T>),
-    gap_conj: T,
-    /// 1 where all four roots are (nearly) real.
-    real: T,
-}
-
-#[allow(clippy::too_many_lines)]
-fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
-    let (zero, one, half) = (T::zero(), T::one(), T::from_f64(0.5));
-    // Guards that hold in f32 as well (1e-300 would underflow to zero there).
-    let (tiny, big) = (T::from_f64(1e-30), T::from_f64(1e30));
-    let (a, b, c, m) = (q.a, q.b, q.c, q.m);
-    let safe = |x: T| T::select_lt(x.abs(), tiny, one, x);
-    let finite = |x: T| T::select_lt(x.abs(), big, x, zero);
-    // The resolvent y³ + 2a y² + (a² − 4c) y − b² has one root per way of pairing the roots,
-    // (t₁ + t₂)²: real and non-negative for a pairing into real factors, negative for one into
-    // complex conjugate factors. Euler: the roots are (±√y₁ ± √y₂ ± √y₃)/2 with
-    // √y₁ √y₂ √y₃ = −b, which holds up where roots coincide (a multiple resolvent root).
+/// The resolvent roots `[y₁, y₂, y₃]` (one per pairing of the roots, `(t₁ + t₂)²`) and the roots
+/// `t` of the shifted quartic `t⁴ + a t² + b t + c` by Euler's form
+/// `t = (±√y₁ ± √y₂ ± √y₃)/2` with `√y₁ √y₂ √y₃ = −b`, which holds up where roots coincide (a
+/// multiple resolvent root).
+pub(super) fn euler<T: Real>(q: &Quartic8<T>) -> ([Cx<T>; 3], [Cx<T>; 4]) {
+    let (a, b, c) = (q.a, q.b, q.c);
     let y = resolvent(a + a, a * a - T::from_i64(4) * c, -(b * b));
     let mut s = y.map(Channel::sqrt);
     let prod = s[0] * s[1] * s[2];
-    s[0] = Cx::select(prod.re * b, zero, s[0], -s[0]);
-    let h = Cx::real(half);
+    s[0] = Cx::select(prod.re * b, T::zero(), s[0], -s[0]);
+    let h = Cx::real(T::from_f64(0.5));
     let t = [
         (s[0] + s[1] + s[2]) * h,
         (s[0] - s[1] - s[2]) * h,
         (s[1] - s[0] - s[2]) * h,
         (s[2] - s[0] - s[1]) * h,
     ];
+    (y, t)
+}
+
+/// The groupings of a quartic's roots (see the module documentation), each with how far apart
+/// its factors are (`gap`, 0 where it does not exist).
+pub(super) struct Split8<T> {
+    /// An isolated real root `r` (in `u`) and the cubic of the others, `[q1, q2, q3]`.
+    pub(super) r: T,
+    pub(super) cubic: [T; 3],
+    pub(super) gap_r: T,
+    /// Two real quadratics `u² − s u + p`: `(s, p)` each.
+    pub(super) pair_a: (T, T),
+    pub(super) pair_b: (T, T),
+    pub(super) gap_pairs: T,
+    /// A complex quadratic (with its conjugate): `(s, p)`.
+    pub(super) conj: (Cx<T>, Cx<T>),
+    pub(super) gap_conj: T,
+    /// 1 where all four roots are (nearly) real.
+    pub(super) real: T,
+}
+
+#[allow(clippy::too_many_lines)]
+pub(super) fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
+    let (zero, one, half) = (T::zero(), T::one(), T::from_f64(0.5));
+    // Guards that hold in f32 as well (1e-300 would underflow to zero there).
+    let (tiny, big) = (T::from_f64(1e-30), T::from_f64(1e30));
+    let (a, m) = (q.a, q.m);
+    let safe = |x: T| T::select_lt(x.abs(), tiny, one, x);
+    let finite = |x: T| T::select_lt(x.abs(), big, x, zero);
+    // The resolvent y³ + 2a y² + (a² − 4c) y − b² has one root per way of pairing the roots,
+    // (t₁ + t₂)²: real and non-negative for a pairing into real factors, negative for one into
+    // complex conjugate factors. Euler: the roots are (±√y₁ ± √y₂ ± √y₃)/2 with
+    // √y₁ √y₂ √y₃ = −b, which holds up where roots coincide (a multiple resolvent root).
+    let (y, t) = euler(q);
     let mc = Cx::real(m);
     let roots = t.map(|x| x + mc);
     let dist = |x: Cx<T>, y: Cx<T>| {
@@ -325,8 +335,9 @@ fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
         quot = (q1, q0);
     }
     // The cofactor x² − sb x + pb, from the quotient, or (where this factor has the larger
-    // product) backward from p4 and p3: pb = p4 / v, sb = (p3 + u pb) / v.
-    let backward = T::select_lt(p4.abs().sqrt(), v.abs(), one, zero);
+    // product) backward from p4 and p3: pb = p4 / v, sb = (p3 + u pb) / v. (Not by comparing
+    // v with √p4: where p4 = 0, a root at zero, a tiny v would pass.)
+    let backward = T::select_lt(quot.1.abs(), v.abs(), one, zero);
     let pb = T::select_lt(half, backward, p4 / safe(v), quot.1);
     let sb = T::select_lt(half, backward, (p3 + u * pb) / safe(v), -quot.0);
     let coef_cx = coef.map(Cx::real);
@@ -383,10 +394,15 @@ fn split8<T: Real>(q: &Quartic8<T>, p: [T; 4]) -> Split8<T> {
     let e3b = T::select_lt(ar, tiny, big, q3b.abs());
     let e2b = T::select_lt(ar, tiny, big, (p3.abs() + q3b.abs() + e3b) * rinv.abs());
     let e1b = T::select_lt(ar, tiny, big, (p2.abs() + q2b.abs() + e2b) * rinv.abs());
+    // Backward only where r is larger than the cubic's roots (their bound from its
+    // coefficients): not a zero root rounded to 10⁻¹⁵, whose quotients would claim no error.
+    let scale = q1f.abs().max(q2f.abs().sqrt()).max(super::cbrt(q3f.abs()));
+    let larger = T::select_lt(scale, ar, one, zero);
+    let pick = |eb: T, ef: T, b: T, f: T| T::select_lt(eb, ef, T::select_lt(half, larger, b, f), f);
     let cubic = [
-        T::select_lt(e1b, e1f, q1b, q1f),
-        T::select_lt(e2b, e2f, q2b, q2f),
-        T::select_lt(e3b, e3f, q3b, q3f),
+        pick(e1b, e1f, q1b, q1f),
+        pick(e2b, e2f, q2b, q2f),
+        pick(e3b, e3f, q3b, q3f),
     ];
 
     Split8 {
@@ -411,7 +427,7 @@ fn grouping<T: Real>(q: &Quartic8<T>, sp: &Split8<T>) -> (T, T, T) {
 }
 
 /// The grouping whose factors are farthest apart, whether or not the roots are close.
-fn grouping_apart<T: Real>(sp: &Split8<T>) -> (T, T, T) {
+pub(super) fn grouping_apart<T: Real>(sp: &Split8<T>) -> (T, T, T) {
     let (zero, one) = (T::zero(), T::one());
     let conj = T::select_lt(sp.gap_r.max(sp.gap_pairs), sp.gap_conj, one, zero);
     let pairs = (one - conj) * T::select_lt(sp.gap_r, sp.gap_pairs, one, zero);
@@ -421,9 +437,9 @@ fn grouping_apart<T: Real>(sp: &Split8<T>) -> (T, T, T) {
 // ---------------------------------------------------------------------------------------------
 // Complex series, for a pair of close complex roots.
 
-type CxSeries<T> = [Cx<T>; LOG6_TERMS];
+pub(super) type CxSeries<T> = [Cx<T>; LOG6_TERMS];
 
-fn cx_mul<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
+pub(super) fn cx_mul<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
     let mut out = [Cx::real(T::zero()); LOG6_TERMS];
     for i in 0..LOG6_TERMS {
         for j in 0..LOG6_TERMS - i {
@@ -433,7 +449,7 @@ fn cx_mul<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
     out
 }
 
-fn cx_div<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
+pub(super) fn cx_div<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
     let mut q = [Cx::real(T::zero()); LOG6_TERMS];
     let inv = Cx::real(T::one()) / b[0];
     for k in 0..LOG6_TERMS {
@@ -447,7 +463,7 @@ fn cx_div<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
 }
 
 /// `(c + ρ s)^(1/2)` or `(c + ρ s)^(−1/2)` as a series in `s`, principal at `c`.
-fn cx_sqrt<T: Real>(c: Cx<T>, inverse: bool, rho: T) -> CxSeries<T> {
+pub(super) fn cx_sqrt<T: Real>(c: Cx<T>, inverse: bool, rho: T) -> CxSeries<T> {
     let e = if inverse { -0.5 } else { 0.5 };
     let root = c.sqrt();
     let one = Cx::real(T::one());

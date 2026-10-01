@@ -166,7 +166,7 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
   `−R`), it first turns the planes near a half turn by a quarter turn, and applies the closed
   form to the result. What stays ill-conditioned is so largely in itself: two or three planes
   near a half turn together, where `R` fixes only their product (within `δ` of it, `exp(log R)`
-  is within about `10⁻¹⁶/δ²` of `R`), a plane near a full turn, and a loxodromic pair of
+  is within about `2·10⁻¹⁵/δ²` of `R`), a plane near a full turn, and a loxodromic pair of
   invariants on the branch cut of `√u` (log6d.md §11).
 
 **`normalized`.**
@@ -177,8 +177,14 @@ other as `b/(2t)`, without cancellation, in Rust and in WGSL alike.
   exact in form (`s^(−1/2) − (p/2) s^(−3/2) I`). So normalizing `R (s + pI)` returns `R` with an
   error that grows only with `p/s`, the size of the input (tested up to `p/s = 10⁶`).
 
-**The CSTA exponential.** No closed form covers the full conformal group of CSTA
-(`Bivector` to `Even`), so `exp` is scaling and squaring in the product closure:
+**The 6D to 9D exponential** of a full bivector is a closed form (log6d.md §12, ADR-035):
+within `5·10⁻¹³` of a Taylor series in `f64`, and of the `f64` result within `10⁻⁴` in `f32`
+(up to `10⁻³` for large boosts). Its `C = ∏ cosh μⱼ` is the exponential of a trace of
+`ln cosh √λ`, since `∏(1 − tanh² μⱼ)^(−1/2)` cancels for large boosts and made `f32`
+inaccurate there.
+
+**Scaling and squaring** remains for other bivector kinds from 6D on and for `exp` in WGSL. It
+was CSTA's `exp` before the closed form, in the product closure:
 
 * It halves `B` `s` times, until `‖B/2^s‖₁ ≤ 1/16`. The count is chosen from the norm, per
   call.

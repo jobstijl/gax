@@ -349,7 +349,9 @@ fn log6_pair(p1: f32, p2: f32, p3: f32, r: f32) -> vec2<f32> {
     let sum_b = (p2 - prod_b) / r;
     let e2b = abs(prod_b);
     let e1b = (abs(p2) + abs(prod_b) + e2b) / ar;
-    return vec2<f32>(select(sum_f, sum_b, e1b < e1f), select(prod_f, prod_b, e2b < e2f));
+    // Backward only where r is larger than the pair (not a zero root rounded off zero).
+    let larger = max(abs(sum_f), sqrt(abs(prod_f))) < ar;
+    return vec2<f32>(select(sum_f, sum_b, larger && e1b < e1f), select(prod_f, prod_b, larger && e2b < e2f));
 }
 
 // `sign(x) |x|^(1/3)`.
@@ -384,10 +386,15 @@ fn log6_root(p1: f32, p2: f32, p3: f32, m: f32, e2: f32, e3: f32) -> f32 {
         r = select(select(s.x, s.y, g.x < g.y), s.z, max(g.x, g.y) < g.z);
     }
     r += m;
+    // A Newton step, kept only where it lowers the residual (at a multiple root the derivative
+    // vanishes and the step would throw the root off).
     let f = ((r - p1) * r + p2) * r - p3;
     let df = (3.0 * r - 2.0 * p1) * r + p2;
     if abs(df) >= 1e-30 {
-        r -= f / df;
+        let next = r - f / df;
+        if abs(((next - p1) * next + p2) * next - p3) < abs(f) {
+            r = next;
+        }
     }
     return r;
 }

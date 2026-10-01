@@ -32,7 +32,7 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 | [`crates/gax-bench`](crates/gax-bench) | benchmarks against glam, ultraviolet, nalgebra (not published) |
 | [`crates/gax-wesl-tests`](crates/gax-wesl-tests) | the WGSL modules through the `wesl` crate: imports, stripping, CPU evaluation of every kernel (not published) |
 | [`crates/gax-gpu-tests`](crates/gax-gpu-tests) | every WGSL kernel on a GPU through wgpu (its own crate; lavapipe in CI) |
-| [`crates/gax-highdim-tests`](crates/gax-highdim-tests) | 7D, 8D and 9D algebras declared with `algebra!`: the closed-form log, plain sandwiches, 7D WGSL (its own crate) |
+| [`crates/gax-highdim-tests`](crates/gax-highdim-tests) | 7D, 8D and 9D algebras declared with `algebra!`: the closed-form log and exp, plain sandwiches, 7D WGSL (its own crate) |
 | [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
 | [`examples/wgpu`](examples/wgpu) | PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel shared with the CPU (its own crate) |
 | [`examples/warp`](examples/warp) | a neon twin-stick shooter on warping space: gax motors, traced kernels on CPU and GPU, the WGSL modules, synthesized audio (its own crate) |

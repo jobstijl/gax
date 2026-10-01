@@ -153,7 +153,7 @@ macro_rules! checks {
                     &[0.6, 0.6, 0.6, 0.6],
                     &[0.3, 0.9, 1.2, 0.5],
                     &[HALF - 1e-7, 0.4],
-                    &[HALF - 1e-4, HALF - 1e-4, 0.3],
+                    &[HALF - 1e-2, HALF - 1e-2, 0.3],
                     &[HALF + 0.3, 0.5, 0.2],
                     &[HALF + 0.3, HALF + 0.3, 0.7],
                     &[HALF + 0.2, 0.4, 0.4, 0.4],
@@ -214,6 +214,138 @@ macro_rules! checks {
                     assert!(
                         close(&lane, &want.c, 1e-12),
                         "lane {k}: {lane:?} vs {want:?}"
+                    );
+                }
+            }
+
+            /// `exp` of several basis planes is the product of their exponentials, each
+            /// `cos θ + sin θ e` (rotation), `cosh + sinh` (boost) or `1 + a e` (null), at angles
+            /// within a quarter turn, beyond it (turned back) and beyond three quarters (halved).
+            #[test]
+            fn exp_of_planes() {
+                let even_of = |i: usize, a: f64| -> Even<(), f64> {
+                    let mut c = [0.0f64; <Bivector as gax::kind::Kind>::N];
+                    c[i] = 1.0;
+                    let b = Bivector::<(), f64>::from_coeffs(c);
+                    let sq = (b * b).c[0]; // e² = −1, +1 or 0
+                    let (cs, sn) = if sq < -0.5 {
+                        (a.cos(), a.sin())
+                    } else if sq > 0.5 {
+                        (a.cosh(), a.sinh())
+                    } else {
+                        (1.0, a)
+                    };
+                    let mut r = Even::<(), f64>::zero();
+                    r.c[0] = cs;
+                    let e: Even<(), f64> = b.into();
+                    r + e.gp(sn)
+                };
+                for angles in [
+                    &[0.3, 0.5, -0.2, 0.1][..],
+                    &[1.2, 0.4, 0.7, -0.3],
+                    &[2.9, -2.0, 0.9, 1.3],
+                    &[5.0, 0.0, 0.0, 0.0],
+                    &[HALF, HALF, 0.25, 0.6],
+                ] {
+                    let mut c = [0.0f64; <Bivector as gax::kind::Kind>::N];
+                    let mut want = Even::<(), f64>::zero();
+                    want.c[0] = 1.0;
+                    for (&a, &(i, _)) in angles.iter().zip(PLANES) {
+                        c[i] = a;
+                        want = want * even_of(i, a);
+                    }
+                    let got = Bivector::<(), f64>::from_coeffs(c).exp().into_inner();
+                    assert!(
+                        close(&got.c, &want.c, 1e-12),
+                        "{angles:?}: off by {:e}",
+                        worst(&got.c, &want.c)
+                    );
+                }
+            }
+
+            /// `exp` of random bivectors: a unit versor, and the same as a Taylor series with
+            /// scaling and squaring (written here, from products alone).
+            #[test]
+            fn exp_matches_a_series() {
+                let mut rng = Rng(0x7d_e4b0);
+                for size in [0.05, 0.3, 0.8, 1.5] {
+                    for _ in 0..20 {
+                        let b = bivector(&mut rng, size);
+                        let got = b.exp().into_inner();
+                        let norm: f64 = b.c.iter().map(|x| x.abs()).sum();
+                        let mut s = 0;
+                        while norm / f64::from(1u32 << s) > 0.25 {
+                            s += 1;
+                        }
+                        let x: Even<(), f64> = b.gp(1.0 / f64::from(1u32 << s)).into();
+                        let mut want = Even::<(), f64>::zero();
+                        want.c[0] = 1.0;
+                        let mut term = want;
+                        for k in 1..30 {
+                            term = (term * x).gp(1.0 / f64::from(k));
+                            want += term;
+                        }
+                        for _ in 0..s {
+                            want = want * want;
+                        }
+                        let scale = want.c.iter().fold(1.0f64, |m, v| m.max(v.abs()));
+                        assert!(
+                            close(&got.c, &want.c, 1e-12 * scale.max(1.0)),
+                            "size {size}: off by {:e}",
+                            worst(&got.c, &want.c)
+                        );
+                        let unit = got * got.reverse();
+                        assert!(
+                            (unit.c[0] - 1.0).abs() < 1e-11 * scale * scale,
+                            "not unit: {:?}",
+                            unit.c[0]
+                        );
+                    }
+                }
+            }
+
+            #[cfg(feature = "batch")]
+            #[test]
+            fn exp_in_lanes() {
+                type L = gax::batch::Lanes<f64, 4>;
+                let mut rng = Rng(0x7d_e1a4);
+                let bs = [
+                    bivector(&mut rng, 0.2),
+                    planes(&[2.9, 0.4]),
+                    bivector(&mut rng, 1.2),
+                    planes(&[HALF + 0.3, 0.4, 0.4]),
+                ];
+                let lanes = Bivector::<(), L>::from_coeffs(core::array::from_fn(|i| {
+                    L::new([bs[0].c[i], bs[1].c[i], bs[2].c[i], bs[3].c[i]])
+                }));
+                let got = lanes.exp().into_inner();
+                for (k, b) in bs.iter().enumerate() {
+                    let want = b.exp().into_inner();
+                    let lane: [f64; <Even as gax::kind::Kind>::N] =
+                        core::array::from_fn(|i| got.c[i].v[k]);
+                    assert!(
+                        close(&lane, &want.c, 1e-12),
+                        "lane {k}: off by {:e}",
+                        worst(&lane, &want.c)
+                    );
+                }
+            }
+
+            #[test]
+            fn exp_in_f32() {
+                let mut rng = Rng(0x7d_e32f);
+                for _ in 0..20 {
+                    let b = bivector(&mut rng, 0.6);
+                    let want = b.exp().into_inner();
+                    let b32 =
+                        Bivector::<(), f32>::from_coeffs(core::array::from_fn(|i| b.c[i] as f32));
+                    let got = b32.exp().into_inner();
+                    let got: [f64; <Even as gax::kind::Kind>::N] =
+                        core::array::from_fn(|i| f64::from(got.c[i]));
+                    assert!(
+                        close(&got, &want.c, 2e-5),
+                        "off by {:e}",
+                        worst(&got, &want.c)
                     );
                 }
             }

@@ -299,6 +299,16 @@ fn conformal(c: &mut Criterion) {
     g.bench_function("gax Unit<Even>::log near a half turn (turned)", |b| {
         b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() })
     });
+    // The exponential (docs/log6d.md §12): in closed form, and with a rotation beyond a quarter
+    // turn (turned back by one first).
+    g.bench_function("gax Bivector::exp", |b| b.iter(|| black_box(biv).exp()));
+    let mut far = [0.0; 15];
+    far[2] = 1.3;
+    far[5] = 0.5;
+    let far = gax::csta::Bivector::<(), f64>::from_coeffs(far);
+    g.bench_function("gax Bivector::exp beyond a quarter turn (turned)", |b| {
+        b.iter(|| black_box(far).exp())
+    });
     g.finish();
 }
 

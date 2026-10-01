@@ -2763,66 +2763,426 @@ impl<T: gx::Real> Bivector<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The exponential, a unit versor, by scaling and squaring in `Even`: `B` is halved `s` times
-    /// until `âB / 2^sââ â¤ 1/16` (the sum of absolute coefficients), a Taylor series of degree 10
-    /// gives `exp(B / 2^s)` to below `10â»Â²â°` relative, a Newton step renormalizes it while it is
-    /// near 1, `s` squarings undo the scaling, and a second Newton step renormalizes the result
-    /// where it is small (a large boost is left as squared: there `~r r â 1` cancels). (No closed form is generated for
-    /// `Bivector` in this algebra.)
+    /// The invariants of the closed-form exponential (docs/log6d.md Â§12): `[e1, â¦]` with
+    /// `eâ = â¨WâÂ²â©â`, the bivectors `Hâ = â¨Wâ Wââââ©â`, and the wedge powers `Wâ = B^â§m/m!`
+    /// (`m â¥ 2`, the blades of grade `2m` in mask order), as one straight-line program.
+    #[doc(hidden)]
+    #[inline]
+    #[allow(unused_variables, clippy::type_complexity)]
+    pub fn exp_invariants(self) -> ([T; 3], [[T; 15]; 3], [T; 15], [T; 1]) {
+        let x = self.c;
+        let p0 = -x[1];
+        let p1 = -x[3];
+        let p2 = -x[4];
+        let p3 = -x[5];
+        let p4 = x[2] * p3;
+        let p5 = x[2] * x[8];
+        let p6 = x[2] * x[9];
+        let p7 = x[2] * x[12];
+        let p8 = x[2] * x[13];
+        let p9 = x[2] * x[14];
+        let p10 = p0 * p2;
+        let p11 = x[7] * p0;
+        let p12 = x[9] * p0;
+        let p13 = x[11] * p0;
+        let p14 = x[13] * p0;
+        let p15 = x[14] * p0;
+        let p16 = x[0] * p1;
+        let p17 = x[0] * x[6];
+        let p18 = x[0] * x[9];
+        let p19 = x[0] * x[10];
+        let p20 = x[0] * x[13];
+        let p21 = x[0] * x[14];
+        let p22 = x[7] * p1;
+        let p23 = x[8] * p1;
+        let p24 = x[11] * p1;
+        let p25 = x[12] * p1;
+        let p26 = x[14] * p1;
+        let p27 = x[6] * p2;
+        let p28 = x[8] * p2;
+        let p29 = x[10] * p2;
+        let p30 = x[12] * p2;
+        let p31 = x[14] * p2;
+        let p32 = x[6] * p3;
+        let p33 = x[7] * p3;
+        let p34 = x[10] * p3;
+        let p35 = x[11] * p3;
+        let p36 = x[14] * p3;
+        let p37 = x[6] * x[11];
+        let p38 = x[6] * x[12];
+        let p39 = x[6] * x[13];
+        let p40 = x[7] * x[10];
+        let p41 = x[7] * x[12];
+        let p42 = x[7] * x[13];
+        let p43 = x[8] * x[10];
+        let p44 = x[8] * x[11];
+        let p45 = x[8] * x[13];
+        let p46 = x[9] * x[10];
+        let p47 = x[9] * x[11];
+        let p48 = x[9] * x[12];
+        let p49 = p4 + p16;
+        let p50 = p16 + p49;
+        let p51 = p4 - p10;
+        let p52 = p51 - p10;
+        let p53 = p50 + p52;
+        let p54 = p53 * T::from_ratio(1, 2);
+        let p55 = p5 + p17;
+        let p56 = p17 + p55;
+        let p57 = p5 - p11;
+        let p58 = p57 - p11;
+        let p59 = p56 + p58;
+        let p60 = p59 * T::from_ratio(1, 2);
+        let p61 = p6 + p27;
+        let p62 = p27 + p61;
+        let p63 = p6 - p22;
+        let p64 = p63 - p22;
+        let p65 = p62 + p64;
+        let p66 = p65 * T::from_ratio(1, 2);
+        let p67 = p12 + p32;
+        let p68 = p32 + p67;
+        let p69 = p12 - p23;
+        let p70 = p69 - p23;
+        let p71 = p68 + p70;
+        let p72 = p71 * T::from_ratio(1, 2);
+        let p73 = p18 + p33;
+        let p74 = p33 + p73;
+        let p75 = p18 - p28;
+        let p76 = p75 - p28;
+        let p77 = p74 + p76;
+        let p78 = p77 * T::from_ratio(1, 2);
+        let p79 = p7 + p19;
+        let p80 = p19 + p79;
+        let p81 = p7 - p13;
+        let p82 = p81 - p13;
+        let p83 = p80 + p82;
+        let p84 = p83 * T::from_ratio(1, 2);
+        let p85 = p8 + p29;
+        let p86 = p29 + p85;
+        let p87 = p8 - p24;
+        let p88 = p87 - p24;
+        let p89 = p86 + p88;
+        let p90 = p89 * T::from_ratio(1, 2);
+        let p91 = p14 + p34;
+        let p92 = p34 + p91;
+        let p93 = p14 - p25;
+        let p94 = p93 - p25;
+        let p95 = p92 + p94;
+        let p96 = p95 * T::from_ratio(1, 2);
+        let p97 = p20 + p35;
+        let p98 = p35 + p97;
+        let p99 = p20 - p30;
+        let p100 = p99 - p30;
+        let p101 = p98 + p100;
+        let p102 = p101 * T::from_ratio(1, 2);
+        let p103 = p9 + p40;
+        let p104 = p40 + p103;
+        let p105 = p9 - p37;
+        let p106 = p105 - p37;
+        let p107 = p104 + p106;
+        let p108 = p107 * T::from_ratio(1, 2);
+        let p109 = p15 + p43;
+        let p110 = p43 + p109;
+        let p111 = p15 - p38;
+        let p112 = p111 - p38;
+        let p113 = p110 + p112;
+        let p114 = p113 * T::from_ratio(1, 2);
+        let p115 = p21 + p44;
+        let p116 = p44 + p115;
+        let p117 = p21 - p41;
+        let p118 = p117 - p41;
+        let p119 = p116 + p118;
+        let p120 = p119 * T::from_ratio(1, 2);
+        let p121 = p26 + p46;
+        let p122 = p46 + p121;
+        let p123 = p26 - p39;
+        let p124 = p123 - p39;
+        let p125 = p122 + p124;
+        let p126 = p125 * T::from_ratio(1, 2);
+        let p127 = p31 + p47;
+        let p128 = p47 + p127;
+        let p129 = p31 - p42;
+        let p130 = p129 - p42;
+        let p131 = p128 + p130;
+        let p132 = p131 * T::from_ratio(1, 2);
+        let p133 = p36 + p48;
+        let p134 = p48 + p133;
+        let p135 = p36 - p45;
+        let p136 = p135 - p45;
+        let p137 = p134 + p136;
+        let p138 = p137 * T::from_ratio(1, 2);
+        let p141 = x[12] * p66;
+        let p144 = x[9] * p84;
+        let p145 = x[8] * p90;
+        let p148 = p3 * p108;
+        let p149 = p2 * p114;
+        let p151 = x[0] * p126;
+        let p153 = x[2] * p138;
+        let p154 = x[14].mul_add(p54, p141);
+        let p155 = x[10].mul_add(p78, p144);
+        let p156 = p154 + p155;
+        let p157 = x[7].mul_add(p96, p148);
+        let p158 = p1.mul_add(p120, p151);
+        let p159 = p157 + p158;
+        let p160 = p156 + p159;
+        let p161 = (-x[13]).mul_add(p60, p153);
+        let p162 = x[11].mul_add(p72, p145);
+        let p163 = p161 - p162;
+        let p164 = x[6].mul_add(p102, p149);
+        let p165 = p0.mul_add(p132, p164);
+        let p166 = p163 - p165;
+        let p167 = p160 + p166;
+        let p168 = p167 * T::from_ratio(1, 3);
+        let p170 = p0 * p0;
+        let p173 = p2 * p2;
+        let p175 = x[6] * x[10];
+        let p176 = x[7] * x[11];
+        let p177 = x[8] * x[12];
+        let p178 = x[9] * x[13];
+        let p180 = p1.mul_add(p1, p173);
+        let p181 = p3.mul_add(p3, p175);
+        let p182 = p180 + p181;
+        let p183 = p176 + p177;
+        let p184 = p175 + p176;
+        let p185 = p183 + p184;
+        let p186 = p182 + p185;
+        let p187 = x[14].mul_add(x[14], p177);
+        let p188 = x[2].mul_add(x[2], p170);
+        let p189 = p187 - p188;
+        let p190 = x[0].mul_add(x[0], p178);
+        let p191 = p178 + p190;
+        let p192 = p189 - p191;
+        let p193 = p186 + p192;
+        let p195 = p60 * p84;
+        let p196 = p66 * p90;
+        let p197 = p72 * p96;
+        let p198 = p78 * p102;
+        let p200 = p114 * p114;
+        let p203 = p132 * p132;
+        let p204 = p138 * p138;
+        let p205 = p196 + p197;
+        let p206 = p196 + p198;
+        let p207 = p205 + p206;
+        let p208 = p197 + p198;
+        let p209 = p126.mul_add(p126, p203);
+        let p210 = p208 + p209;
+        let p211 = p207 + p210;
+        let p212 = (-p54).mul_add(p54, p204);
+        let p213 = p195 + p195;
+        let p214 = p212 - p213;
+        let p215 = p108.mul_add(p108, p200);
+        let p216 = p120.mul_add(p120, p215);
+        let p217 = p214 - p216;
+        let p218 = p211 + p217;
+        let p219 = p168 * p168;
+        let p220 = -p219;
+        let p221 = -p0;
+        let p222 = -p1;
+        let p223 = -p2;
+        let p224 = -p3;
+        let p234 = x[10] * p60;
+        let p236 = x[12] * p60;
+        let p240 = x[10] * p66;
+        let p243 = p0 * p72;
+        let p244 = p1 * p72;
+        let p245 = p3 * p72;
+        let p251 = p3 * p78;
+        let p252 = x[11] * p78;
+        let p259 = x[7] * p84;
+        let p265 = x[7] * p90;
+        let p267 = p0 * p96;
+        let p268 = p1 * p96;
+        let p269 = p3 * p96;
+        let p275 = p3 * p102;
+        let p281 = x[7] * p108;
+        let p282 = x[10] * p108;
+        let p284 = x[14] * p108;
+        let p285 = p0 * p114;
+        let p289 = x[12] * p114;
+        let p290 = x[14] * p114;
+        let p292 = x[7] * p120;
+        let p294 = x[11] * p120;
+        let p296 = x[14] * p120;
+        let p302 = x[14] * p126;
+        let p303 = p2 * p132;
+        let p304 = x[7] * p132;
+        let p305 = x[9] * p132;
+        let p306 = x[11] * p132;
+        let p308 = x[14] * p132;
+        let p314 = x[14] * p138;
+        let p315 = p3.mul_add(p54, p236);
+        let p316 = x[8].mul_add(p84, p315);
+        let p317 = (-x[13]).mul_add(p66, p284);
+        let p318 = (-x[9]).mul_add(p90, p317);
+        let p319 = p316 + p318;
+        let p320 = (-p2).mul_add(p54, p290);
+        let p321 = (-x[11]).mul_add(p60, p320);
+        let p322 = x[13].mul_add(p72, p259);
+        let p323 = x[9].mul_add(p96, p322);
+        let p324 = p321 - p323;
+        let p325 = p1.mul_add(p54, p234);
+        let p326 = x[6].mul_add(p84, p325);
+        let p327 = (-x[13]).mul_add(p78, p296);
+        let p328 = (-x[9]).mul_add(p102, p327);
+        let p329 = p326 + p328;
+        let p330 = (-x[0]).mul_add(p54, p302);
+        let p331 = (-x[11]).mul_add(p66, p330);
+        let p332 = x[12].mul_add(p72, p265);
+        let p333 = x[8].mul_add(p96, p332);
+        let p334 = p331 - p333;
+        let p335 = p0.mul_add(p54, p240);
+        let p336 = x[6].mul_add(p90, p335);
+        let p337 = (-x[12]).mul_add(p78, p308);
+        let p338 = (-x[8]).mul_add(p102, p337);
+        let p339 = p336 + p338;
+        let p340 = x[10].mul_add(p72, p252);
+        let p341 = x[6].mul_add(p96, p340);
+        let p342 = x[7].mul_add(p102, p314);
+        let p343 = (-x[2]).mul_add(p54, p342);
+        let p344 = p341 + p343;
+        let p345 = p2.mul_add(p66, p245);
+        let p346 = x[9].mul_add(p126, p345);
+        let p347 = x[0].mul_add(p60, p281);
+        let p348 = x[8].mul_add(p114, p347);
+        let p349 = p346 - p348;
+        let p350 = p0.mul_add(p60, p251);
+        let p351 = x[6].mul_add(p108, p350);
+        let p352 = (-p1).mul_add(p66, p305);
+        let p353 = (-x[8]).mul_add(p120, p352);
+        let p354 = p351 + p353;
+        let p355 = x[6].mul_add(p114, p292);
+        let p356 = x[9].mul_add(p138, p355);
+        let p357 = x[2].mul_add(p60, p244);
+        let p358 = p2.mul_add(p78, p357);
+        let p359 = p356 - p358;
+        let p360 = x[6].mul_add(p126, p304);
+        let p361 = x[8].mul_add(p138, p360);
+        let p362 = x[2].mul_add(p66, p243);
+        let p363 = x[0].mul_add(p78, p362);
+        let p364 = p361 - p363;
+        let p365 = p2.mul_add(p90, p269);
+        let p366 = x[11].mul_add(p108, p365);
+        let p367 = (-x[0]).mul_add(p84, p289);
+        let p368 = (-x[13]).mul_add(p126, p367);
+        let p369 = p366 + p368;
+        let p370 = p0.mul_add(p84, p275);
+        let p371 = x[12].mul_add(p120, p370);
+        let p372 = p1.mul_add(p90, p282);
+        let p373 = x[13].mul_add(p132, p372);
+        let p374 = p371 - p373;
+        let p375 = x[2].mul_add(p84, p268);
+        let p376 = p2.mul_add(p102, p375);
+        let p377 = x[10].mul_add(p114, p294);
+        let p378 = x[13].mul_add(p138, p377);
+        let p379 = p376 + p378;
+        let p380 = -p379;
+        let p381 = x[2].mul_add(p90, p267);
+        let p382 = x[0].mul_add(p102, p381);
+        let p383 = x[10].mul_add(p126, p306);
+        let p384 = x[12].mul_add(p138, p383);
+        let p385 = p382 + p384;
+        let p386 = -p385;
+        let p387 = p1.mul_add(p126, p303);
+        let p388 = p3.mul_add(p138, p387);
+        let p389 = x[2].mul_add(p108, p285);
+        let p390 = x[0].mul_add(p120, p389);
+        let p391 = p388 - p390;
+        let p392 = -p324;
+        let p393 = -p334;
+        let p394 = -p339;
+        let p395 = -p344;
+        let p396 = p54 * p168;
+        let p397 = p60 * p168;
+        let p398 = p66 * p168;
+        let p399 = p72 * p168;
+        let p400 = p78 * p168;
+        let p401 = p84 * p168;
+        let p402 = p90 * p168;
+        let p403 = p96 * p168;
+        let p404 = p102 * p168;
+        let p405 = p108 * p168;
+        let p406 = p114 * p168;
+        let p407 = p120 * p168;
+        let p408 = p126 * p168;
+        let p409 = p132 * p168;
+        let p410 = p138 * p168;
+        let p411 = -p409;
+        let p412 = -p407;
+        let p413 = -p405;
+        let p414 = -p400;
+        let p415 = -p398;
+        let p416 = -p397;
+        let p417 = -p403;
+        let p418 = -p396;
+        let p419 = -p411;
+        let p420 = -p412;
+        let p421 = -p406;
+        let p422 = -p413;
+        ([p193, p218, p220], [[x[0], p221, x[2], p222, p223, p224, x[6], x[7], x[8], x[9], x[10], x[11], x[12], x[13], x[14]], [p329, p392, p319, p393, p394, p395, p349, p354, p359, p364, p369, p374, p380, p386, p391], [p408, p419, p410, p420, p421, p422, p414, p399, p415, p416, p404, p417, p402, p401, p418]], [p54, p60, p66, p72, p78, p84, p90, p96, p102, p108, p114, p120, p126, p132, p138], [p168])
+    }
+
+    /// `exp` in closed form from this bivector's invariants (`exp_invariants`), for rotations
+    /// within about a quarter turn: `C (1 + T + Wâ(T) + â¦)` with `T = Î£ tanh(Î¼â±¼) bÌâ±¼`.
+    #[doc(hidden)]
+    #[inline]
+    pub fn exp_from(e: [T; 3], h: [[T; 15]; 3]) -> Even<(), T> {
+        // T and C = â cosh Î¼â±¼ (from the trace of ln cosh âÎ»: no cancellation for boosts).
+        let wt = gx::study::exp_weights_6d(e);
+        let c = wt[3];
+        let t = Bivector::<(), T>::from_coeffs(core::array::from_fn(|i| wt[0] * h[0][i] + wt[1] * h[1][i] + wt[2] * h[2][i]));
+        let (_, _, w2, w3) = t.exp_invariants();
+        Even::from_coeffs([c, c * t.c[0], c * t.c[1], c * t.c[2], c * t.c[3], c * t.c[4], c * t.c[5], c * t.c[6], c * t.c[7], c * t.c[8], c * t.c[9], c * t.c[10], c * t.c[11], c * t.c[12], c * t.c[13], c * t.c[14], c * w2[0], c * w2[4], -c * w2[3], c * w2[2], c * w2[1], c * w2[8], -c * w2[7], c * w2[6], c * w2[5], c * w2[11], -c * w2[10], c * w2[9], -c * w2[12], -c * w2[13], -c * w2[14], c * w3[0]])
+    }
+
+    /// The exponential, a unit versor, in closed form (docs/log6d.md Â§12): the invariants
+    /// `Î»â±¼ = Î¼â±¼Â²` of the 3 commuting planes are the roots of a polynomial whose
+    /// coefficients are `â¨WâÂ²â©â`, `Wâ = B^â§m/m!`, and `exp B = C (1 + T + Tâ§T/2 + â¦)` with
+    /// `T = Î£ tanh(Î¼â±¼) bÌâ±¼`, an interpolant of `tanh(âÎ»)/âÎ»` at the roots applied to
+    /// bivectors from `B`'s wedge powers (`gax::study::exp_weights_6d`), and
+    /// `C = â cosh Î¼â±¼` from the trace of `ln cosh âÎ»`. Rotations beyond a quarter turn are
+    /// turned back by one first (`exp_turn_6d`: `exp B = exp B' Â· â Ãªâ±¼`, a polynomial in
+    /// their sum), and beyond three quarters `B` is halved and the result squared.
     #[inline]
     pub fn exp(self) -> gx::Unit<Even<(), T>> {
         T::vectorize(#[inline(always)] move || {
-        let mut norm = T::zero();
-        for c in self.c {
-            norm = norm + c.abs();
-        }
-        let (limit, half) = (T::from_ratio(1, 16), T::from_ratio(1, 2));
-        let (mut h, mut s) = (T::one(), 0u32);
-        while s < 64 && !T::all_lt(norm * h, limit) {
-            h = h * half;
+        let half = T::from_ratio(1, 2);
+        let (e, h, ..) = self.exp_invariants();
+        let [reach, turn] = gx::study::exp_reach_6d(e);
+        let (mut scale, mut s) = (T::one(), 0u32);
+        while s < 64 && !T::all_lt(reach * scale, T::one()) {
+            scale = scale * half;
             s += 1;
         }
-        let mut x = Even::<(), T>::zero();
-        x.c[1] = self.c[0] * h;
-        x.c[2] = self.c[1] * h;
-        x.c[3] = self.c[2] * h;
-        x.c[4] = self.c[3] * h;
-        x.c[5] = self.c[4] * h;
-        x.c[6] = self.c[5] * h;
-        x.c[7] = self.c[6] * h;
-        x.c[8] = self.c[7] * h;
-        x.c[9] = self.c[8] * h;
-        x.c[10] = self.c[9] * h;
-        x.c[11] = self.c[10] * h;
-        x.c[12] = self.c[11] * h;
-        x.c[13] = self.c[12] * h;
-        x.c[14] = self.c[13] * h;
-        x.c[15] = self.c[14] * h;
-        let mut one = Even::<(), T>::zero();
-        one.c[0] = T::one();
-        // Horner: 1 + x (1 + x/2 (1 + x/3 (... (1 + x/10))))
-        let mut r = one;
-        for k in (1..=10).rev() {
-            r = one + (x * r).gp(T::from_ratio(1, k));
-        }
-        // A Newton step r (3 - ~r r) / 2 while r is near 1, where ~r r - 1 has no cancellation.
-        let three = one.gp(T::from_i64(3));
-        let m = r.reverse() * r;
-        r = r * (three - m).gp(half);
+        let (b, e, h) = if s == 0 {
+            (self, e, h)
+        } else {
+            let b = self.gp(scale);
+            let (e, h, ..) = b.exp_invariants();
+            (b, e, h)
+        };
+        let mut r = if T::all_lt(turn * scale, T::one()) {
+            Self::exp_from(e, h)
+        } else {
+            let tz = gx::study::exp_turn_6d(e);
+            let n = tz[3];
+            let wz = [tz[0], tz[1], tz[2]];
+            let z = Bivector::<(), T>::from_coeffs(core::array::from_fn(|i| wz[0] * h[0][i] + wz[1] * h[1][i] + wz[2] * h[2][i]));
+            let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
+            let (e, h, ..) = (b - z.gp(quarter)).exp_invariants();
+            let r = Self::exp_from(e, h);
+            // â Ãªâ±¼ = (â1)â¿ â(âÃªâ±¼), a polynomial in Z, applied by products with Z.
+            let one = T::one();
+            let odd = T::select_lt(n, half, one, T::select_lt(n, T::from_f64(1.5), -one, T::select_lt(n, T::from_f64(2.5), one, T::select_lt(n, T::from_f64(3.5), -one, one))));
+            let coeffs = gx::study::turn_polynomial(n);
+            let mut power = r;
+            let mut out = r.gp(coeffs[0] * odd);
+            for ck in &coeffs[1..] {
+                power = power * z;
+                out = out + power.gp(*ck * odd);
+            }
+            out
+        };
         for _ in 0..s {
             r = r * r;
-        }
-        // Another after squaring, lane by lane, only where r is small (ârââ < 4, compact
-        // motions): for a large boost ~r r - 1 cancels at the scale of ârâÂ², and the step
-        // would add error rather than remove it.
-        let mut size = T::zero();
-        for c in r.c {
-            size = size + c.abs();
-        }
-        let m = r.reverse() * r;
-        let fixed = r * (three - m).gp(half);
-        for (c, f) in r.c.iter_mut().zip(fixed.c) {
-            *c = T::select_lt(size, T::from_i64(4), f, *c);
         }
         gx::Unit::new_unchecked(r)
         })

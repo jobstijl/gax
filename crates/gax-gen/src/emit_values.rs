@@ -306,7 +306,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     if all_grade2 && meta.exp.is_none() {
         meta.exp = emit_exp_general(spec, k, &x, &mut body, &mut meta.kernels);
     }
-    // exp in any dimension: scaling and squaring in the product closure (6D and up).
+    // exp in closed form from 6D to 9D (three or four invariant planes, docs/log6d.md §12).
+    if all_grade2 && meta.exp.is_none() {
+        meta.exp = emit_exp_closed(spec, k, &mut body);
+    }
+    // exp in any dimension: scaling and squaring in the product closure.
     if all_grade2 && meta.exp.is_none() {
         meta.exp = emit_exp_fallback(spec, k, &mut body);
     }
@@ -1436,6 +1440,283 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
         list(2),
         list(3),
     );
+}
+
+/// The exponential of a bivector in closed form from 6D to 9D (three or four invariant planes;
+/// docs/log6d.md §12), for the full grade-2 kind of an algebra with a full even kind. The
+/// invariants are one straight-line program from the product tables: the wedge powers
+/// `Wₘ = B^∧m/m!`, `eₘ = ⟨Wₘ²⟩₀` and `Hₘ = ⟨Wₘ Wₘ₋₁⟩₂`. Then `exp B = C (1 + T + W₂(T) + …)`
+/// with `T = Σ wₘ Hₘ` (`gax::study::exp_weights_6d`), turning rotations beyond a quarter turn
+/// back by one and halving beyond three quarters.
+#[allow(clippy::too_many_lines)]
+fn emit_exp_closed(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
+    use crate::slp::Operand;
+    use crate::table::{Layout, blade_binop};
+    let alg = &spec.algebra;
+    let n = alg.dim();
+    if !(6..=9).contains(&n) {
+        return None;
+    }
+    let planes = n / 2;
+    let grade = |g: u32| -> Layout {
+        Layout {
+            blades: (0..alg.blade_count() as u32)
+                .filter(|m| m.count_ones() == g)
+                .map(|m| (m, 1))
+                .collect(),
+        }
+    };
+    let even_blades: BTreeSet<u32> = (0..alg.blade_count() as u32)
+        .filter(|m| m.count_ones() % 2 == 0)
+        .collect();
+    let e = spec.kind_for_support(&even_blades)?.clone();
+    if e.layout.len() != even_blades.len() {
+        return None;
+    }
+    let nb = k.layout.len();
+    if nb != grade(2).blades.len() {
+        return None;
+    }
+    let mut b = cse::Builder::default();
+    let int = |c: i64, d: i64| Rational::new(i128::from(c), i128::from(d));
+    // W₁ = B on the grade-2 blades in mask order.
+    let l2 = grade(2);
+    let w1: Vec<Operand> = l2
+        .blades
+        .iter()
+        .map(|&(m, _)| {
+            let (pos, sign) = k.layout.position(m).expect("a bivector blade");
+            b.mul(Operand::Const(int(sign, 1)), Operand::Var(pos as Var))
+        })
+        .collect();
+    // A product of two graded values, kept on the blades of grade `out` (in mask order).
+    let product = |b: &mut cse::Builder,
+                   op: BinOp,
+                   (la, xa): (&Layout, &[Operand]),
+                   (lb, xb): (&Layout, &[Operand]),
+                   out: &Layout,
+                   scale: Rational|
+     -> Vec<Operand> {
+        let mut sums: Vec<Vec<(Rational, Operand)>> = vec![Vec::new(); out.blades.len()];
+        for (i, &(ma, _)) in la.blades.iter().enumerate() {
+            for (j, &(mb, _)) in lb.blades.iter().enumerate() {
+                for (m, c) in blade_binop(alg, op, ma, mb) {
+                    if c == 0 {
+                        continue;
+                    }
+                    if let Some((o, _)) = out.position(m) {
+                        let t = b.mul(xa[i], xb[j]);
+                        sums[o].push((scale * int(c, 1), t));
+                    }
+                }
+            }
+        }
+        sums.iter().map(|s| cse::emit_sum(b, s)).collect()
+    };
+    let mut layouts = vec![grade(0), l2.clone()];
+    let mut w = vec![vec![Operand::Const(Rational::ONE)], w1.clone()];
+    for m in 2..=planes {
+        let lm = grade(2 * m as u32);
+        let wm = product(
+            &mut b,
+            BinOp::Wedge,
+            (&layouts[m - 1], &w[m - 1]),
+            (&l2, &w1),
+            &lm,
+            int(1, m as i64),
+        );
+        layouts.push(lm);
+        w.push(wm);
+    }
+    let l0 = grade(0);
+    let mut outs: Vec<Operand> = Vec::new();
+    for m in 1..=planes {
+        let sq = product(
+            &mut b,
+            BinOp::Gp,
+            (&layouts[m], &w[m]),
+            (&layouts[m], &w[m]),
+            &l0,
+            Rational::ONE,
+        );
+        outs.push(sq[0]);
+    }
+    for m in 1..=planes {
+        let h = if m == 1 {
+            w1.clone()
+        } else {
+            product(
+                &mut b,
+                BinOp::Gp,
+                (&layouts[m], &w[m]),
+                (&layouts[m - 1], &w[m - 1]),
+                &l2,
+                Rational::ONE,
+            )
+        };
+        // In the bivector kind's layout.
+        for &(mb, sb) in &k.layout.blades {
+            let (pos, _) = l2.position(mb).expect("a grade-2 blade");
+            outs.push(b.mul(Operand::Const(int(sb, 1)), h[pos]));
+        }
+    }
+    for wm in &w[2..=planes] {
+        outs.extend(wm.iter().copied());
+    }
+    let mut prog = b.prog;
+    prog.outputs = outs;
+    let xvar = |v: Var| format!("x[{v}]");
+    let mut lets = String::new();
+    prog.emit_lets(&xvar, "p", &mut lets);
+    let o: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|op| render(op, &xvar, "p"))
+        .collect();
+    let mut at = 0;
+    let mut take = |len: usize| {
+        let v = o[at..at + len].join(", ");
+        at += len;
+        v
+    };
+    let e_list = take(planes);
+    let h_list: Vec<String> = (0..planes).map(|_| format!("[{}]", take(nb))).collect();
+    let w_lens: Vec<usize> = (2..=planes).map(|m| layouts[m].blades.len()).collect();
+    let w_lists: Vec<String> = w_lens
+        .iter()
+        .map(|&len| format!("[{}]", take(len)))
+        .collect();
+    let w_types: Vec<String> = w_lens.iter().map(|len| format!("[T; {len}]")).collect();
+    let w_names: Vec<String> = (2..=planes).map(|m| format!("w{m}")).collect();
+    // Even from the grade parts: 1, T, W₂(T), …, scaled by C.
+    let assemble: Vec<String> = e
+        .layout
+        .blades
+        .iter()
+        .map(|&(m, sign)| {
+            let g = m.count_ones() as usize / 2;
+            let neg = if sign < 0 { "-" } else { "" };
+            match g {
+                0 => format!("{neg}c"),
+                1 => {
+                    let (pos, sb) = k.layout.position(m).expect("a bivector blade");
+                    let neg = if sign * sb < 0 { "-" } else { "" };
+                    format!("{neg}c * t.c[{pos}]")
+                }
+                _ => {
+                    let (pos, _) = layouts[g].position(m).expect("a blade of that grade");
+                    format!("{neg}c * w{g}[{pos}]")
+                }
+            }
+        })
+        .collect();
+    let (en, bn) = (&e.name, &k.name);
+    let suffix = if planes == 3 { "6d" } else { "8d" };
+    let tp = if planes == 3 {
+        "gx::study::turn_polynomial(n)"
+    } else {
+        "gx::study::turn_polynomial_8d(n)"
+    };
+    let sum_h = |w: &str| {
+        (0..planes)
+            .map(|m| format!("{w}[{m}] * h[{m}][i]"))
+            .collect::<Vec<_>>()
+            .join(" + ")
+    };
+    let (t_sum, z_sum) = (sum_h("wt"), sum_h("wz"));
+    let zw = (0..planes)
+        .map(|m| format!("tz[{m}]"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let _ = write!(
+        body,
+        "    /// The invariants of the closed-form exponential (docs/log6d.md §12): `[e1, …]` with
+    /// `eₘ = ⟨Wₘ²⟩₀`, the bivectors `Hₘ = ⟨Wₘ Wₘ₋₁⟩₂`, and the wedge powers `Wₘ = B^∧m/m!`
+    /// (`m ≥ 2`, the blades of grade `2m` in mask order), as one straight-line program.
+    #[doc(hidden)]
+    #[inline]
+    #[allow(unused_variables, clippy::type_complexity)]
+    pub fn exp_invariants(self) -> ([T; {planes}], [[T; {nb}]; {planes}], {}) {{
+        let x = self.c;
+{lets}        ([{e_list}], [{}], {})
+    }}
+
+    /// `exp` in closed form from this bivector's invariants (`exp_invariants`), for rotations
+    /// within about a quarter turn: `C (1 + T + W₂(T) + …)` with `T = Σ tanh(μⱼ) b̂ⱼ`.
+    #[doc(hidden)]
+    #[inline]
+    pub fn exp_from(e: [T; {planes}], h: [[T; {nb}]; {planes}]) -> {en}<(), T> {{
+        // T and C = ∏ cosh μⱼ (from the trace of ln cosh √λ: no cancellation for boosts).
+        let wt = gx::study::exp_weights_{suffix}(e);
+        let c = wt[{planes}];
+        let t = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {t_sum}));
+        let (_, _, {}) = t.exp_invariants();
+        {en}::from_coeffs([{}])
+    }}
+
+    /// The exponential, a unit versor, in closed form (docs/log6d.md §12): the invariants
+    /// `λⱼ = μⱼ²` of the {planes} commuting planes are the roots of a polynomial whose
+    /// coefficients are `⟨Wₘ²⟩₀`, `Wₘ = B^∧m/m!`, and `exp B = C (1 + T + T∧T/2 + …)` with
+    /// `T = Σ tanh(μⱼ) b̂ⱼ`, an interpolant of `tanh(√λ)/√λ` at the roots applied to
+    /// bivectors from `B`'s wedge powers (`gax::study::exp_weights_{suffix}`), and
+    /// `C = ∏ cosh μⱼ` from the trace of `ln cosh √λ`. Rotations beyond a quarter turn are
+    /// turned back by one first (`exp_turn_{suffix}`: `exp B = exp B' · ∏ êⱼ`, a polynomial in
+    /// their sum), and beyond three quarters `B` is halved and the result squared.
+    #[inline]
+    pub fn exp(self) -> gx::Unit<{en}<(), T>> {{
+        T::vectorize(#[inline(always)] move || {{
+        let half = T::from_ratio(1, 2);
+        let (e, h, ..) = self.exp_invariants();
+        let [reach, turn] = gx::study::exp_reach_{suffix}(e);
+        let (mut scale, mut s) = (T::one(), 0u32);
+        while s < 64 && !T::all_lt(reach * scale, T::one()) {{
+            scale = scale * half;
+            s += 1;
+        }}
+        let (b, e, h) = if s == 0 {{
+            (self, e, h)
+        }} else {{
+            let b = self.gp(scale);
+            let (e, h, ..) = b.exp_invariants();
+            (b, e, h)
+        }};
+        let mut r = if T::all_lt(turn * scale, T::one()) {{
+            Self::exp_from(e, h)
+        }} else {{
+            let tz = gx::study::exp_turn_{suffix}(e);
+            let n = tz[{planes}];
+            let wz = [{zw}];
+            let z = {bn}::<(), T>::from_coeffs(core::array::from_fn(|i| {z_sum}));
+            let quarter = T::from_f64(core::f64::consts::FRAC_PI_2);
+            let (e, h, ..) = (b - z.gp(quarter)).exp_invariants();
+            let r = Self::exp_from(e, h);
+            // ∏ êⱼ = (−1)ⁿ ∏(−êⱼ), a polynomial in Z, applied by products with Z.
+            let one = T::one();
+            let odd = T::select_lt(n, half, one, T::select_lt(n, T::from_f64(1.5), -one, T::select_lt(n, T::from_f64(2.5), one, T::select_lt(n, T::from_f64(3.5), -one, one))));
+            let coeffs = {tp};
+            let mut power = r;
+            let mut out = r.gp(coeffs[0] * odd);
+            for ck in &coeffs[1..] {{
+                power = power * z;
+                out = out + power.gp(*ck * odd);
+            }}
+            out
+        }};
+        for _ in 0..s {{
+            r = r * r;
+        }}
+        gx::Unit::new_unchecked(r)
+        }})
+    }}
+
+",
+        w_types.join(", "),
+        h_list.join(", "),
+        w_lists.join(", "),
+        w_names.join(", "),
+        assemble.join(", "),
+    );
+    Some(en.clone())
 }
 
 /// The exponential by scaling and squaring, for bivector kinds without a closed form (the
