@@ -1051,7 +1051,10 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   of the first slot's kind (`at::<I>()` for another slot).
 * **Checks.** The four Penrose conditions on random, rank-deficient and badly scaled square,
   tall and wide maps (`support/solver_checks.rs`, shared with the `solve` fuzz target), per-lane
-  agreement with the scalar path, and on every SIMD level. Cost: 0.93 µs for the pseudo-inverse of a 6 × 4 map (Jacobi sweeps until every column pair is orthogonal), against 0.17 µs for LU on a 6 × 6 map; a map whose columns are already orthogonal stops after the first convergence test.
+  agreement with the scalar path, and on every SIMD level. The fuzz target found that a summed
+  convergence test stops too early when singular values spread from `10⁶` to `10⁻²` (large
+  columns hide a small pair that is not yet orthogonal; `A⁺ A` was off by `10⁻³`): each pair is
+  now tested against its own lengths, and the input is a regression test. Cost: 0.93 µs for the pseudo-inverse of a 6 × 4 map (Jacobi sweeps until every column pair is orthogonal), against 0.17 µs for LU on a 6 × 6 map; a map whose columns are already orthogonal stops after the first convergence test.
 
 ## ADR-039: Dual numbers for derivatives
 *Status: accepted, implemented (`gax_core::dual`).*

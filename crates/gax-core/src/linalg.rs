@@ -684,16 +684,19 @@ where
             let tol = T::epsilon() * T::epsilon();
             let cols = w.as_mut();
             for _ in 0..sweeps {
-                // Converged when every pair is orthogonal relative to the columns' lengths.
-                let (mut off, mut scale) = (T::zero(), T::zero());
+                // Converged when every pair is orthogonal relative to its own lengths,
+                // `γ² ≤ ε² α β`: a test on sums would let large columns hide a small pair that is
+                // not (singular values from 10⁶ down to 10⁻² left `A⁺ A` wrong by 10⁻³). A zero
+                // column counts as orthogonal to everything.
+                let mut open = T::zero();
                 for p in 0..n {
                     for q in p + 1..n {
                         let g = cols[p].dot(&cols[q]);
-                        off = off + g * g;
-                        scale = scale + cols[p].dot(&cols[p]) * cols[q].dot(&cols[q]);
+                        let ab = cols[p].dot(&cols[p]) * cols[q].dot(&cols[q]);
+                        open = open + T::select_lt(tol * ab, g * g, T::one(), T::zero());
                     }
                 }
-                if T::all_lt(off, tol * scale) {
+                if T::all_lt(open, T::from_f64(0.5)) {
                     break;
                 }
                 for p in 0..n {
