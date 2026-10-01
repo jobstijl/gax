@@ -409,9 +409,10 @@ fn emit_inverse(
 /// multiplication, which needs only products and scalar parts, in the smallest kind closed under
 /// the product. Its degree is the dimension of a faithful representation in which the trace is
 /// that dimension times the scalar part: `2^⌈(p+q)/2⌉` for `R(p, q)` (both half-spinor modules
-/// in odd dimension). Null directions would multiply it by `2^r` and give the recursion
-/// repeated eigenvalues it cannot resolve, so where they are basis vectors the recursion runs on
-/// the part of `x` free of them, and a finite series adds the nilpotent rest. Newton–Schulz steps
+/// in odd dimension). Null directions can raise it (to at most `2^r` times; `R(2,0,2)` needs 8,
+/// not Shirokov's 4) and give the recursion repeated eigenvalues it cannot resolve, so where
+/// they are basis vectors the recursion runs on the part of `x` free of them, and a finite
+/// series adds the nilpotent rest. Newton–Schulz steps
 /// then restore the digits the recursion loses at high degree (ADR-037).
 fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
     let alg = &spec.algebra;

@@ -1015,10 +1015,12 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   so the scalars stay near 1.
 * **The degree, and null directions.** The recursion needs a faithful representation whose
   trace is its dimension times the scalar part: for `R(p, q)` both half-spinor modules,
-  `N = 2^⌈(p+q)/2⌉` (Shirokov's). With `r` null directions it would need `2^r` times that (the
-  Grassmann algebra acting on itself), and there left multiplication has repeated eigenvalues in
-  Jordan blocks, which cost the recursion every digit for 5 to 9% of random values in 7D and 8D
-  PGA (degree 32). So `x` is split instead: `x = a + n` with `a` free of null directions and `n`
+  `N = 2^⌈(p+q)/2⌉`. With `r` null directions Shirokov's degree `2^⌈n/2⌉` (counting them) is
+  not always enough: checked exactly on random values, it holds for PGA2D, PGA3D and STAP but
+  fails for `R(2,0,2)`, which needs 8, not 4. `2^r` times the non-degenerate degree always
+  suffices (the Grassmann algebra acting on itself), but there left multiplication has repeated
+  eigenvalues in Jordan blocks, which cost the recursion every digit for 5 to 9% of random values
+  in 7D and 8D PGA (degree 32). So `x` is split instead: `x = a + n` with `a` free of null directions and `n`
   nilpotent (`(a⁻¹ n)^(r+1) = 0`, a null direction squaring to zero), the recursion runs on `a`
   at degree `2^⌈(p+q)/2⌉`, and `x⁻¹ = Σₖ (−a⁻¹ n)ᵏ a⁻¹` for `k ≤ r` is exact. (Where the null
   directions are not basis vectors the full degree is used.) The signature comes from the

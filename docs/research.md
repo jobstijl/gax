@@ -157,6 +157,8 @@ Formulas and verification scripts are in [research/papers.md](research/papers.md
 * **Shirokov, Faddeev–LeVerrier inverse in Clifford algebras (arXiv:2005.04015).**
   * Contributes: an inverse in any dimension.
   * The appendix verified both of these inverses on degenerate metrics too (PGA3D, R(2,0,1), R(3,1,1)).
+    Not every degenerate metric: `R(2,0,2)` needs degree 8, not Shirokov's 4 (checked exactly;
+    ADR-037, which avoids the question by inverting the part free of null directions).
 * **De Keninck, Roelfs, Dorst & Eelbode, *Clean up your Mesh! Part 1: Plane and simplex*
   (arXiv:2511.08058, 2025).**
   * Contributes: simplices as joins of vertices, complexes as sums, and size and centre of mass
