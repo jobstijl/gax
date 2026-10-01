@@ -64,7 +64,7 @@ macro_rules! lane_map {
 }
 
 macro_rules! lanes {
-    ($e:ident, $sin_cos:expr, $sinh:expr, $cosh:expr, $atan2:expr, $ln:expr) => {
+    ($e:ident, $sin_cos:expr, $sinh:expr, $cosh:expr, $atan2:expr, $ln:expr, $exp:expr) => {
         binop!($e, Add, add, +=);
         binop!($e, Sub, sub, -=);
         binop!($e, Mul, mul, *=);
@@ -113,6 +113,8 @@ macro_rules! lanes {
             lane_map!(sinh, $sinh);
             lane_map!(cosh, $cosh);
             lane_map!(ln, $ln);
+            // The scalar type's `exp`, so a lane gives a scalar's bits.
+            lane_map!(exp, $exp);
             #[inline(always)]
             fn recip(self) -> Self {
                 Self::one() / self
@@ -196,7 +198,8 @@ lanes!(
     math::sinh,
     math::cosh,
     math::atan2,
-    math::ln
+    math::ln,
+    crate::coef::elementary::f32::exp
 );
 lanes!(
     f64,
@@ -207,5 +210,6 @@ lanes!(
     crate::coef::elementary::f64::sinh,
     crate::coef::elementary::f64::cosh,
     crate::coef::elementary::f64::atan2,
-    crate::coef::elementary::f64::ln
+    crate::coef::elementary::f64::ln,
+    crate::coef::elementary::f64::exp
 );

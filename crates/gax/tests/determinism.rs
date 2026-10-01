@@ -22,7 +22,8 @@ fn bits<M: Extensor<Slots = (), Coef = f32>>(m: &M) -> Vec<u32> {
     m.coeffs().as_ref().iter().map(|x| x.to_bits()).collect()
 }
 
-/// exp, then the motor's action on a point, then log: sin, cos, atan2, sqrt and many products.
+/// exp, then the motor's action on a point, then log: sin, cos, atan2, sqrt and many products;
+/// and `exp` of a coefficient (the lanes once built it from `sinh` and `cosh`, the scalars not).
 struct Pipeline;
 impl Map for Pipeline {
     type X = Line;
@@ -37,7 +38,8 @@ impl Map for Pipeline {
                 T::from_f64(2.0),
                 T::one(),
             );
-        gax::Log::log(m) + (p & Point::new(T::zero(), T::zero(), T::zero(), T::one()))
+        let k = (b.norm() * T::from_f64(0.5)).exp();
+        (gax::Log::log(m) + (p & Point::new(T::zero(), T::zero(), T::zero(), T::one()))).gp(k)
     }
 }
 
@@ -85,5 +87,26 @@ fn every_level_gives_the_scalar_bits() {
                 assert_eq!(bits(g), bits(w), "{name}: transform_slice");
             }
         });
+    }
+}
+
+/// The feature and `Strict` define the same deterministic result: plain `f32` with the feature
+/// gives the bits of `Strict<f32>`.
+#[test]
+fn the_feature_computes_as_strict() {
+    use gax::strict::Strict;
+    let mut rng = Rng(7);
+    for _ in 0..50 {
+        let b = Line::new(
+            rng.next(),
+            rng.next(),
+            rng.next(),
+            rng.next(),
+            rng.next(),
+            rng.next(),
+        );
+        let plain = Pipeline.call(b);
+        let strict: Line<(), f32> = Strict::unwrap(Pipeline.call(Strict::wrap(b)));
+        assert_eq!(bits(&plain), bits(&strict));
     }
 }

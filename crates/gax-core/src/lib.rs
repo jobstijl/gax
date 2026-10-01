@@ -9,7 +9,8 @@
 //!   projections, embeddings and grade parts between kinds.
 //! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`,
 //!   [`fp::Fp`], a prime field for exact randomized identity checks, and [`dual::Dual`], dual
-//!   numbers for forward-mode derivatives).
+//!   numbers for forward-mode derivatives, and [`strict::Strict`], coefficients that give the
+//!   same bits on every target and SIMD level).
 //! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`], [`LeastSquares`], [`PseudoInverse`]:
 //!   solving, eigenproblems, pairings and least squares on maps and forms, built on [`linalg`].
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
@@ -48,6 +49,7 @@ pub mod prepared;
 #[cfg(feature = "wide")]
 pub mod simd;
 pub mod slots;
+pub mod strict;
 pub mod study;
 pub mod trace;
 pub mod unit;

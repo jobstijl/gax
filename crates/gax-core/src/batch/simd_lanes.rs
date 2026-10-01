@@ -245,6 +245,12 @@ impl<P: Proven> Real for F32x8<P> {
     fn ln(self) -> Self {
         F32x8(math_simd::ln(self.0))
     }
+    /// `gax::math::exp` on every lane (the default would build it from `sinh` and `cosh`, and
+    /// differ from the scalar `f32` in the last bits).
+    #[inline(always)]
+    fn exp(self) -> Self {
+        F32x8(math_simd::exp(self.0))
+    }
     #[inline(always)]
     fn epsilon() -> Self {
         Self::splat(f32::EPSILON)
@@ -288,7 +294,72 @@ impl<P: Proven> Real for F64x4<P> {
         per_lane!(self, crate::coef::elementary::f64::ln)
     }
     #[inline(always)]
+    fn exp(self) -> Self {
+        per_lane!(self, crate::coef::elementary::f64::exp)
+    }
+    #[inline(always)]
     fn epsilon() -> Self {
         Self::splat(f64::EPSILON)
+    }
+}
+
+/// `f32` lanes: the vectorized `gax::math` polynomials, which the scalar `f32` of `Strict` uses
+/// too (no fused multiply-add inside them, so every level gives the scalar's bits).
+impl<P: Proven> crate::strict::StrictElementary for F32x8<P> {
+    #[inline(always)]
+    fn strict_sin_cos(self) -> (Self, Self) {
+        let (s, c) = math_simd::sin_cos(self.0);
+        (F32x8(s), F32x8(c))
+    }
+    #[inline(always)]
+    fn strict_sinh(self) -> Self {
+        F32x8(math_simd::sinh(self.0))
+    }
+    #[inline(always)]
+    fn strict_cosh(self) -> Self {
+        F32x8(math_simd::cosh(self.0))
+    }
+    #[inline(always)]
+    fn strict_atan2(self, x: Self) -> Self {
+        F32x8(math_simd::atan2(self.0, x.0))
+    }
+    #[inline(always)]
+    fn strict_ln(self) -> Self {
+        F32x8(math_simd::ln(self.0))
+    }
+    #[inline(always)]
+    fn strict_exp(self) -> Self {
+        F32x8(math_simd::exp(self.0))
+    }
+}
+
+/// `f64` lanes: `libm` lane by lane, as the scalar `f64` of `Strict`.
+impl<P: Proven> crate::strict::StrictElementary for F64x4<P> {
+    #[inline(always)]
+    fn strict_sin_cos(self) -> (Self, Self) {
+        (per_lane!(self, libm::sin), per_lane!(self, libm::cos))
+    }
+    #[inline(always)]
+    fn strict_sinh(self) -> Self {
+        per_lane!(self, libm::sinh)
+    }
+    #[inline(always)]
+    fn strict_cosh(self) -> Self {
+        per_lane!(self, libm::cosh)
+    }
+    #[inline(always)]
+    fn strict_atan2(self, x: Self) -> Self {
+        let (a, b) = (self.0, x.0);
+        F64x4(f64x4::from_fn(P::token(), |i| {
+            libm::atan2(a.as_slice()[i], b.as_slice()[i])
+        }))
+    }
+    #[inline(always)]
+    fn strict_ln(self) -> Self {
+        per_lane!(self, libm::log)
+    }
+    #[inline(always)]
+    fn strict_exp(self) -> Self {
+        per_lane!(self, libm::exp)
     }
 }

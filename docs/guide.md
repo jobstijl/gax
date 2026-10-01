@@ -592,8 +592,11 @@ exact.
     `10⁻³` at `10⁴`). Use `f64` or a floating origin.
   * `log` of a motor with a negative scalar part is the long way round; negate it for the
     shortest motion.
-  * Results can differ in the last bits between builds and between scalar and batch code, unless
-    the `deterministic` feature is on.
+  * Results can differ in the last bits between builds and between scalar and batch code. For
+    the same bits everywhere (lockstep simulations, replays), use `gax::strict::Strict<f32>`
+    coefficients for the parts that need them, `Strict::wrap(x)` and `Strict::unwrap(x)` at the
+    boundary; the rest keeps plain `f32` with fused multiply-adds. The `deterministic` feature
+    does the same for every `f32` and `f64` in the build.
 * **Degenerate metrics.** In PGA the metric pairing `|` of lines ignores the moment part, so energy
   forms built with it are singular. Build them with the regressive pairing `&`, as the modes example
   does.

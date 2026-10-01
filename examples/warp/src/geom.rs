@@ -1,7 +1,18 @@
 //! Constructions written once for both games: the Plane in PGA2D and the Tunnel and the colour
 //! space in PGA3D. The kinds in between, and the result's, follow from gax's product tables.
 
+use gax::pga2d;
 use gax::{Dot, Wedge};
+
+/// The origin of the plane: the centre of every turn in the Plane, the HUD and the phasors.
+pub const ORIGIN: pga2d::Point<(), f32> = pga2d::Point::new(0.0, 0.0, 1.0);
+
+/// The unit phasor at `angle`: the direction `(1, 0)` turned by a rotation motor about the
+/// origin. Its height is the sine, its width the cosine.
+#[inline]
+pub fn phasor(angle: f32) -> pga2d::Point<(), f32> {
+    pga2d::Motor::rotation(ORIGIN, angle) >> pga2d::Point::direction(1.0, 0.0)
+}
 
 /// The foot of `x` on the flat `onto`, up to weight: the meet of `onto` with the flat through
 /// `x` orthogonal to it, `(x | onto) ^ onto`. In PGA2D a point and a line give a line, then a

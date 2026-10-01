@@ -53,6 +53,7 @@ pub use soa::{BLOCK, Soa, load_block, soa_map, soa_map2, store_block};
 extern crate std;
 use crate::coef::Real;
 use crate::kind::Kind;
+use crate::strict::{Strict, StrictElementary};
 use core::cell::Cell;
 use std::vec::Vec;
 
@@ -81,9 +82,9 @@ pub trait Batch: Real {
 /// dispatcher has detected. Sealed.
 pub trait LevelMarker: sealed::Sealed + 'static {
     /// The `f32` lanes of the level.
-    type F32: Batch<Elem = f32>;
+    type F32: Batch<Elem = f32> + StrictElementary;
     /// The `f64` lanes of the level.
-    type F64: Batch<Elem = f64>;
+    type F64: Batch<Elem = f64> + StrictElementary;
 }
 
 mod sealed {
@@ -115,6 +116,45 @@ impl LaneElem for f32 {
 }
 impl LaneElem for f64 {
     type Lanes<P: LevelMarker> = P::F64;
+}
+impl LaneElem for Strict<f32> {
+    type Lanes<P: LevelMarker> = Strict<P::F32>;
+}
+impl LaneElem for Strict<f64> {
+    type Lanes<P: LevelMarker> = Strict<P::F64>;
+}
+
+/// The lanes of [`Strict`] coefficients: the level's lanes, computing as `Strict` does (no
+/// fused multiply-add, the scalar's elementary functions), so every level gives the bits of
+/// the scalar `Strict` path.
+impl<L: Batch + StrictElementary> Batch for Strict<L>
+where
+    Strict<L::Elem>: LaneElem,
+{
+    type Elem = Strict<L::Elem>;
+    const LANES: usize = L::LANES;
+    #[inline(always)]
+    fn splat(e: Strict<L::Elem>) -> Self {
+        Strict(L::splat(e.0))
+    }
+    #[inline(always)]
+    fn from_fn(mut f: impl FnMut(usize) -> Strict<L::Elem>) -> Self {
+        Strict(L::from_fn(|i| f(i).0))
+    }
+    #[inline(always)]
+    fn lane(&self, i: usize) -> Strict<L::Elem> {
+        Strict(self.0.lane(i))
+    }
+    #[inline(always)]
+    fn load(src: &[Strict<L::Elem>]) -> Self {
+        Strict(L::from_fn(|i| src[i].0))
+    }
+    #[inline(always)]
+    fn store(self, dst: &mut [Strict<L::Elem>]) {
+        for (i, d) in dst[..L::LANES].iter_mut().enumerate() {
+            *d = Strict(self.0.lane(i));
+        }
+    }
 }
 
 /// A computation that is generic over its lane type, for [`run`].

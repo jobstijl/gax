@@ -119,6 +119,11 @@ macro_rules! lanes {
             fn ln(self) -> Self {
                 $t::new(self.to_array().map(crate::coef::elementary::$s::ln))
             }
+            #[cfg(feature = "deterministic")]
+            #[inline(always)]
+            fn exp(self) -> Self {
+                $t::new(self.to_array().map(crate::coef::elementary::$s::exp))
+            }
             #[inline(always)]
             fn select_lt(a: Self, b: Self, x: Self, y: Self) -> Self {
                 a.simd_lt(b).select(x, y)

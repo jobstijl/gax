@@ -144,8 +144,7 @@ impl View {
     pub fn focal_for(fov_degrees: f32) -> f32 {
         let half = fov_degrees.to_radians() * 0.5;
         // tan = sin / cos: the phasor at the half angle, height over width.
-        let d =
-            gax::pga2d::Motor::rotation(Point2::xy(0.0, 0.0), half) >> Point2::direction(1.0, 0.0);
+        let d = crate::geom::phasor(half);
         18.0 * d.e20() / d.e01()
     }
 

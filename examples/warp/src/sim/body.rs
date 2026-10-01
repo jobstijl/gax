@@ -106,8 +106,7 @@ pub fn drift(m: Pose) -> f32 {
         .max(n.c[3].abs())
 }
 
-/// The origin.
-pub const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
+pub use crate::geom::ORIGIN;
 
 /// The direction of length `speed` at `angle` from the x axis: `(speed, 0)` turned by a
 /// rotation motor.

@@ -141,6 +141,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] General inverse (ADR-037): Shirokov's characteristic-polynomial method in the product closure, for every kind without a closed form that has invertible values (CGA's and CSTA's `Even`, every `Multivector`); its degree counts null directions (`Algebra::signature`) (law N)
 - [x] Least squares (ADR-038): `pinv` and `lstsq` on maps of any shape by one-sided Jacobi, and `lstsq` for the first slot of maps with several slots; Penrose conditions in the solver checks and fuzz target, per-lane and per-level agreement
 - [x] Dual numbers (ADR-039): `gax::dual::Dual<T, N>` as a coefficient type, with `derivative`, `gradient` and `jacobian`; through closed-form exp and log, solvers and sandwiches, exact over `Fp`
+- [x] Value methods as traits (`Exp`, `Inverse`, `Norm`, `Normalize`, `Sqrt`), so `extras` has one body for PGA2D and PGA3D
+- [x] Determinism per value (ADR-040): `Strict<T>` coefficients, on scalars and every SIMD level; the lanes' `exp` made the scalar's (a determinism bug with the feature)
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, complex coefficients, algebras beyond 9D
 
 ## Decisions for the project owner

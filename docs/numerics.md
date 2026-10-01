@@ -106,9 +106,23 @@ With the **`deterministic`** feature:
 
 `tests/determinism.rs` runs exp, sandwich and log through the `Map` pipeline, `transform_each`
 and `transform_slice`. The results must be bit-equal to the scalar path on every available
-level (portable, SSE2, SSE4.2, AVX2 here), and CI runs it. Use the feature for lockstep
-networking and replays. The cost is the lost FMA: the fused sandwich took 6.3 ns without FMA
-and 5.3 ns with it ([performance.md](performance.md)).
+level (portable, SSE2, SSE4.2, AVX2 here), and CI runs it. The cost is the lost FMA: the fused
+sandwich took 6.3 ns without FMA and 5.3 ns with it ([performance.md](performance.md)).
+
+**Per value: `Strict<T>`** (ADR-040). A cargo feature is on for the whole build, so the feature
+cannot make a simulation deterministic and leave the renderer fused. `gax::strict::Strict<f32>`
+and `Strict<f64>` are coefficient types that compute as the feature does (no fused
+multiply-add, `gax::math` and `libm` for the elementary functions), on scalars, `wide` lanes and
+the batch lanes of every level, while plain `f32` and `f64` beside them keep FMA and the
+platform's functions. `Strict::wrap` and `Strict::unwrap` convert values and maps at the
+boundary. `tests/strict.rs` requires every level to give the scalar `Strict` bits without the
+feature, and with the feature plain `f32` gives exactly the bits of `Strict<f32>`. Use `Strict`
+for lockstep networking and replays, the feature when the whole program must be deterministic.
+
+The lanes' `exp` is the scalar's: it was built from `sinh` and `cosh`, which differs from
+`gax::math::exp` in the last bits, so with the feature a kernel calling `exp` directly (the 6D
+to 9D closed forms do) gave other bits on SSE2 than on scalars. The determinism test now calls
+`exp`, and fails with the old lanes.
 
 ## Transcendental functions
 

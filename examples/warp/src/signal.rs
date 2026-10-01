@@ -1,11 +1,9 @@
 //! Signals in time: an oscillation is a phasor, a point going round the unit circle, and its
 //! value is the point's height. The turn is a rotation motor, as everywhere else.
 
-use gax::pga2d::{Motor, Point};
-
 /// The height of the unit phasor turned by `phase` from `(1, 0)`: a sine wave in time.
 pub fn wave(phase: f32) -> f32 {
-    (Motor::rotation(Point::xy(0.0, 0.0), phase) >> Point::direction(1.0, 0.0)).e01()
+    crate::geom::phasor(phase).e01()
 }
 
 #[cfg(test)]

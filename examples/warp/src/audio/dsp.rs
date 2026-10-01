@@ -13,14 +13,7 @@ use core::f32::consts::TAU;
 use gax::Unit;
 use gax::pga2d::{Motor, Point};
 
-/// The origin, the centre of every phasor's turn.
-const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
-
-/// The unit phasor at `angle`: `(1, 0)` turned by a rotation motor.
-#[inline]
-fn phasor(angle: f32) -> Point<(), f32> {
-    Motor::rotation(ORIGIN, angle) >> Point::direction(1.0, 0.0)
-}
+use crate::geom::{ORIGIN, phasor};
 
 /// MIDI note number to frequency.
 pub fn mtof(m: f32) -> f32 {

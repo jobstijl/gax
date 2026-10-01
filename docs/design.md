@@ -1075,6 +1075,28 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   holds coefficient for coefficient). `Dual<f64x4, N>` differentiates four problems per lane.
 * **Cost.** A unit-motor sandwich of a point with six derivatives takes 77 ns (12 ns in `f64`); the exponential of a line with its full 8 × 6 Jacobian 88 ns (16 ns): about `N + 1` times the arithmetic, as forward mode costs.
 
+## ADR-040: Determinism per value: `Strict<T>`
+*Status: accepted, implemented (`gax_core::strict`). Refines ADR-027.*
+
+* **The problem.** The `deterministic` feature (ADR-027) makes every `f32` and `f64` computation
+  in the build deterministic. Cargo features are additive across the dependency graph, so a
+  program cannot keep a deterministic simulation and a fused renderer side by side, and one
+  dependency turning the feature on changes every other user's results.
+* **Not a second crate.** A `gax-deterministic` with its own generated types would duplicate
+  every algebra, and its values would not mix with `gax`'s.
+* **A coefficient type.** Everything is generic over the coefficient, as `Dual` (ADR-039)
+  already uses: `Strict<T>` wraps `f32`, `f64` or a lane type, never fuses a multiply-add, and
+  takes its elementary functions from `StrictElementary`, pure Rust per number type
+  (`gax::math` for `f32`, its vectorized twin for the `f32` SIMD lanes, `libm` for `f64`, lane by
+  lane). The batch kernels get `Strict` lanes from each level's, so `batch::map` and the batch
+  sandwiches run on `Strict` data at full width. `repr(transparent)`, with `wrap`/`unwrap` for
+  whole values and maps.
+* **The feature stays,** for programs that want everything deterministic without changing a
+  type; it and `Strict` compute the same bits (tested).
+* **Found on the way.** The batch lanes built `exp` from `sinh` and `cosh` while the scalars
+  called `gax::math::exp`: with the feature, kernels calling `exp` directly differed between
+  scalar and SIMD in the last bits. Every lane type's `exp` is now its scalar's.
+
 ---
 
 ## Hypotheses

@@ -41,17 +41,6 @@ pub struct Body {
     pub spin: f32,
 }
 
-/// The twist (a bivector: an ideal point) of a translation at velocity `v`: `exp(t B)` is
-/// the translation by `t v`.
-pub fn translation_twist(v: [f32; 2]) -> Point {
-    Point::new(0.5 * v[1], -0.5 * v[0], 0.0)
-}
-
-/// The twist of a rotation about the origin at `w` rad/s counterclockwise.
-pub fn rotation_twist(w: f32) -> Point {
-    Point::new(0.0, 0.0, -0.5 * w)
-}
-
 impl Body {
     /// A body at `(x, y)`, turned by `angle`, at rest.
     pub fn at(x: f32, y: f32, angle: f32) -> Body {
@@ -64,8 +53,9 @@ impl Body {
 
     /// Advance by `dt`: translate in the world frame, spin in the body frame, wrap around.
     pub fn step(&mut self, dt: f32) {
-        let travel = translation_twist(self.vel).gp(dt).exp();
-        let turn = rotation_twist(self.spin).gp(dt).exp();
+        // The twists (bivectors: in PGA2D, points) of the velocities; exp(t B) moves for time t.
+        let travel = Point::translation_twist(self.vel[0], self.vel[1]).gp(dt).exp();
+        let turn = Point::rotation_twist(Point::xy(0.0, 0.0), self.spin).gp(dt).exp();
         self.pose = travel * self.pose * turn;
         let [x, y] = self.position();
         let wrap = |p: f32, size: f32| {

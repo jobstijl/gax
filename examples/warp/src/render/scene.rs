@@ -126,8 +126,7 @@ pub const fn pt(x: f32, y: f32) -> Point<(), f32> {
     Point::new(x, y, 1.0)
 }
 
-/// The origin of a local frame.
-pub const ORIGIN: Point<(), f32> = pt(0.0, 0.0);
+pub use crate::geom::ORIGIN;
 
 /// `p` scaled by `s` about the origin: the same coordinates with weight `w / s`.
 pub fn scaled(p: Point<(), f32>, s: f32) -> Point<(), f32> {
