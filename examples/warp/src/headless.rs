@@ -609,7 +609,7 @@ mod tests {
         step(&mut g, &mut sound, start);
         assert_eq!((g.screen, g.table), (Screen::Scores, crate::Mode::Tunnel));
         assert_eq!(g.tunnel_scores.entries[0].score, score);
-        assert!(g.scores.entries.is_empty(), "the Plane's table is separate");
+        assert_eq!(g.scores.entries, [], "the Plane's table is separate");
         // Watch it, fast: the same score at the end, no divergence.
         step(&mut g, &mut sound, start);
         assert_eq!((g.mode, g.screen), (crate::Mode::Tunnel, Screen::Watch));

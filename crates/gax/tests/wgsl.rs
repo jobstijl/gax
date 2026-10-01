@@ -39,7 +39,7 @@ fn layout(module: &naga::Module, name: &str) -> (u32, u32, Vec<u32>) {
 
 #[test]
 fn every_module_validates() {
-    assert!(!gax::wgsl::ALL.is_empty());
+    assert_ne!(gax::wgsl::ALL, []);
     for m in gax::wgsl::ALL {
         let module = parse(m);
         let fns = module.functions.len();

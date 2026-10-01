@@ -19,6 +19,6 @@ fn renormalizing_a_unit_argument_warns() {
     });
     let r = t.reports();
     assert_eq!(r[0].warnings.len(), 1, "{:?}", r[0].warnings);
-    assert!(r[1].warnings.is_empty(), "{:?}", r[1].warnings);
+    assert_eq!(r[1].warnings, Vec::<String>::new());
     assert!(t.source().contains("**Warning:**"));
 }

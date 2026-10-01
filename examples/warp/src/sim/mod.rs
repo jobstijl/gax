@@ -1128,7 +1128,7 @@ mod tests {
         }
         assert!(killed, "the drifter survived");
         assert_eq!(w.score, 50);
-        assert!(!w.shards.is_empty());
+        assert_ne!(w.shards.len(), 0);
     }
 
     #[test]
@@ -1190,7 +1190,7 @@ mod tests {
             bomb: true,
             ..Input::default()
         });
-        assert!(w.enemies.is_empty());
+        assert_eq!(w.enemies.len(), 0);
         assert_eq!(w.bombs, 2);
     }
 

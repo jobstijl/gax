@@ -333,7 +333,7 @@ fn fallback_exponentials_on_the_gpu() {
     let module = gax::wgsl::CSTA.source;
     let mut rng = Rng(0x0dd_ba11);
     let fallbacks = emit_wgsl::fallback_exps(&spec, &stats);
-    assert!(!fallbacks.is_empty());
+    assert_ne!(fallbacks, []);
     for (k, e) in fallbacks {
         // The harness only needs the call's name and signature.
         let call = Kernel {

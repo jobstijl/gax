@@ -477,6 +477,6 @@ mod tests {
         let store = Store::new(None);
         store.save_settings(&Settings::default());
         assert_eq!(store.finish(&Replay::<Packed>::new(1), Some("AAA")), None);
-        assert!(store.scores::<Packed>().entries.is_empty());
+        assert_eq!(store.scores::<Packed>().entries, []);
     }
 }

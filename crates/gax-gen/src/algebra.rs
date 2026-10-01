@@ -474,7 +474,7 @@ mod tests {
         let a = pga3d();
         let e = |s: &str| a.parse_blade(s).unwrap().0;
         assert_eq!(a.blade_product(e("e1"), e("e1")), &[(0, 1)]);
-        assert!(a.blade_product(e("e0"), e("e0")).is_empty());
+        assert_eq!(a.blade_product(e("e0"), e("e0")), []);
         assert_eq!(a.blade_product(e("e2"), e("e1")), &[(e("e12"), -1)]);
         assert_eq!(a.blade_product(e("e12"), e("e12")), &[(0, -1)]);
     }
