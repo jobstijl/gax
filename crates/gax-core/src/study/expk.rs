@@ -699,7 +699,10 @@ fn reach_of<T: Real>(roots: &[Cx<T>]) -> [T; 2] {
     [worst, turn]
 }
 
-/// [`reach_of`] the roots of `λ³ − e₁λ² + e₂λ − e₃`.
+/// How far the roots of `λ³ − e₁λ² + e₂λ − e₃` are from what the closed form handles,
+/// `[reach, turn]`: above 1, `reach` asks the caller to halve `B` (a rotation beyond `3π/4`, a
+/// loxodromic pair's rotation beyond `π/4`, a rapidity over 8), and `turn` to turn rotations
+/// beyond a quarter turn back first ([`exp_turn_6d`]).
 #[inline]
 pub fn exp_reach_6d<T: Real>(e: [T; 3]) -> [T; 2] {
     let [e1, e2, e3] = e;
@@ -717,7 +720,7 @@ pub fn exp_reach_6d<T: Real>(e: [T; 3]) -> [T; 2] {
     reach_of(&[Cx::real(sp.r), a, b])
 }
 
-/// [`reach_of`] the roots of `λ⁴ − e₁λ³ + e₂λ² − e₃λ + e₄`.
+/// [`exp_reach_6d`] for the roots of `λ⁴ − e₁λ³ + e₂λ² − e₃λ + e₄`.
 #[inline]
 pub fn exp_reach_8d<T: Real>(e: [T; 4]) -> [T; 2] {
     let q: Quartic8<T> = quartic8(e);
