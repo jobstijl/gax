@@ -10,6 +10,10 @@ keywords = ["geometric-algebra", "clifford", "pga", "extensor", "math"]
 categories = ["mathematics", "graphics", "no-std"]
 readme = "README.md"
 
+[package.metadata.docs.rs]
+# Every algebra and the optional modules; `deterministic` and `check-units` change behaviour, not the API.
+features = ["all-algebras", "wide", "trace", "batch", "wgsl", "bytemuck"]
+
 [features]
 default = ["std", "macros", "pga2d", "pga3d"]
 ## Every standard algebra.

@@ -164,6 +164,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     for (k, (methods, meta)) in spec.kinds.iter().zip(values) {
         e.kind(k);
         e.out.push_str(&methods);
+        value_traits(&k.name, &meta, &mut e.out);
         e.stats.values.push(meta);
     }
     for a in &spec.kinds {
@@ -2309,5 +2310,40 @@ fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
                 render_shared(&shared)
             );
         }
+    }
+}
+
+/// The value methods of a kind as trait impls (`gax_core::ops::{Exp, Inverse, Norm, Normalize,
+/// Sqrt}`), forwarding to the inherent methods, so generic code can call them.
+fn value_traits(name: &str, meta: &crate::emit_values::ValueMethods, out: &mut String) {
+    if let Some(on) = &meta.exp {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Exp for {name}<(), T> {{\n    type Output = gx::Unit<{on}<(), T>>;\n    #[inline(always)]\n    fn exp(self) -> Self::Output {{\n        Self::exp(self)\n    }}\n}}\n"
+        );
+    }
+    if let Some(on) = &meta.inverse {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Inverse for {name}<(), T> {{\n    type Output = {on}<(), T>;\n    #[inline(always)]\n    fn inverse(self) -> Self::Output {{\n        Self::inverse(self)\n    }}\n}}\n"
+        );
+    }
+    if meta.norm {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Norm for {name}<(), T> {{\n    #[inline(always)]\n    fn norm_squared(self) -> T {{\n        Self::norm_squared(self)\n    }}\n    #[inline(always)]\n    fn norm(self) -> T {{\n        Self::norm(self)\n    }}\n}}\n"
+        );
+    }
+    if meta.normalized {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Normalize for {name}<(), T> {{\n    #[inline(always)]\n    fn normalized(self) -> gx::Unit<Self> {{\n        Self::normalized(self)\n    }}\n}}\n"
+        );
+    }
+    if meta.sqrt {
+        let _ = writeln!(
+            out,
+            "impl<T: gx::Real> gx::Sqrt for {name}<(), T> {{\n    type Output = gx::Unit<Self>;\n    #[inline(always)]\n    fn sqrt(self) -> Self::Output {{\n        Self::sqrt(self)\n    }}\n}}\n"
+        );
     }
 }

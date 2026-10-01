@@ -685,6 +685,40 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Scalar<(), T> {
+    type Output = Scalar<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Scalar<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Scalar<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Scalar<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
+    }
+}
+
 #[doc = "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e0]`.
@@ -1381,6 +1415,32 @@ impl<T: gx::Coef> gx::NewtonStep for Line<(), T> {
     #[inline(always)]
     fn note_renormalize() {
         T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Line<(), T> {
+    type Output = Line<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Line<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Line<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -2092,6 +2152,40 @@ impl<T: gx::Coef> gx::NewtonStep for Point<(), T> {
     #[inline(always)]
     fn note_renormalize() {
         T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Exp for Point<(), T> {
+    type Output = gx::Unit<Motor<(), T>>;
+    #[inline(always)]
+    fn exp(self) -> Self::Output {
+        Self::exp(self)
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Point<(), T> {
+    type Output = Point<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Point<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Point<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -3424,6 +3518,40 @@ impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Rotor<(), T>> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Rotor<(), T> {
+    type Output = Rotor<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Rotor<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Rotor<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Rotor<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
+    }
+}
+
 #[doc = "A translation, `1 + (dx e20 + dy e01) / 2`."]
 ///
 /// Blades, in coefficient order: `[1, e20, e01]`.
@@ -4141,6 +4269,40 @@ impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Translator<(), T>> {
         let t1 = x[2] * h0;
         Point::from_coeffs([t0, t1, T::from_i64(0)])
         })
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Translator<(), T> {
+    type Output = Translator<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Translator<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Translator<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Translator<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
     }
 }
 
@@ -4882,6 +5044,40 @@ impl<T: gx::Real> gx::Log<Point<(), T>> for gx::Unit<Motor<(), T>> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Motor<(), T> {
+    type Output = Motor<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Motor<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Motor<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Motor<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
+    }
+}
+
 #[doc = "An improper rigid motion (a glide reflection): the odd subalgebra."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e0, e012]`.
@@ -5589,6 +5785,32 @@ impl<T: gx::Coef> gx::NewtonStep for Flector<(), T> {
     #[inline(always)]
     fn note_renormalize() {
         T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Flector<(), T> {
+    type Output = Flector<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Flector<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Flector<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -6328,6 +6550,25 @@ impl<T: gx::Real> Multivector<(), T> {
         })
     }
 
+}
+
+impl<T: gx::Real> gx::Inverse for Multivector<(), T> {
+    type Output = Multivector<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Multivector<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
 }
 
 impl gx::KindEq<Scalar> for Scalar {

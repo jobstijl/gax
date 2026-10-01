@@ -685,6 +685,40 @@ impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Scalar<(), T> {
+    type Output = Scalar<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Scalar<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Scalar<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Scalar<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
+    }
+}
+
 #[doc = "A vector. As a versor it is a reflection in the plane perpendicular to it."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3]`.
@@ -1389,6 +1423,32 @@ impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
     #[inline(always)]
     fn note_renormalize() {
         T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Vector<(), T> {
+    type Output = Vector<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Vector<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Vector<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -2120,6 +2180,40 @@ impl<T: gx::Coef> gx::NewtonStep for Bivector<(), T> {
     }
 }
 
+impl<T: gx::Real> gx::Exp for Bivector<(), T> {
+    type Output = gx::Unit<Rotor<(), T>>;
+    #[inline(always)]
+    fn exp(self) -> Self::Output {
+        Self::exp(self)
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Bivector<(), T> {
+    type Output = Bivector<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Bivector<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Bivector<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
 #[doc = "The unit volume element `e123`."]
 ///
 /// Blades, in coefficient order: `[e123]`.
@@ -2789,6 +2883,32 @@ impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
     #[inline(always)]
     fn note_renormalize() {
         T::note_renormalize();
+    }
+}
+
+impl<T: gx::Real> gx::Inverse for Pseudoscalar<(), T> {
+    type Output = Pseudoscalar<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Pseudoscalar<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Pseudoscalar<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -3555,6 +3675,40 @@ impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Rotor<(), T>> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Rotor<(), T> {
+    type Output = Rotor<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Rotor<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Rotor<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Rotor<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
+    }
+}
+
 #[doc = "The odd subalgebra: rotoreflections."]
 ///
 /// Blades, in coefficient order: `[e1, e2, e3, e123]`.
@@ -4288,6 +4442,32 @@ impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
     }
 }
 
+impl<T: gx::Real> gx::Inverse for Odd<(), T> {
+    type Output = Odd<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Odd<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Odd<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
 #[doc = "A general multivector."]
 ///
 /// Blades, in coefficient order: `[1, e1, e2, e3, e23, e31, e12, e123]`.
@@ -5018,6 +5198,25 @@ impl<T: gx::Real> Multivector<(), T> {
         })
     }
 
+}
+
+impl<T: gx::Real> gx::Inverse for Multivector<(), T> {
+    type Output = Multivector<(), T>;
+    #[inline(always)]
+    fn inverse(self) -> Self::Output {
+        Self::inverse(self)
+    }
+}
+
+impl<T: gx::Real> gx::Norm for Multivector<(), T> {
+    #[inline(always)]
+    fn norm_squared(self) -> T {
+        Self::norm_squared(self)
+    }
+    #[inline(always)]
+    fn norm(self) -> T {
+        Self::norm(self)
+    }
 }
 
 impl gx::KindEq<Scalar> for Scalar {

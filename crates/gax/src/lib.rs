@@ -126,10 +126,10 @@ pub mod csta {
 
 /// The code blocks of `docs/guide.md` and the README, compiled and run as doctests.
 #[cfg(all(doctest, feature = "pga3d"))]
-#[doc = include_str!("../../../docs/guide.md")]
+#[doc = include_str!("../guide.md")]
 pub struct GuideDoctests;
 
 /// The code blocks of `docs/batch.md`, compiled and run as doctests.
 #[cfg(all(doctest, feature = "batch", feature = "pga3d"))]
-#[doc = include_str!("../../../docs/batch.md")]
+#[doc = include_str!("../batch.md")]
 pub struct BatchDoctests;

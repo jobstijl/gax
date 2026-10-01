@@ -63,6 +63,39 @@ between_points!(pga3d => Line);
 #[cfg(feature = "pga2d")]
 between_points!(pga2d => Point);
 
+/// Written once for PGA2D and PGA3D through the value traits: their kinds differ (a rotation is
+/// about a point in 2D and about a line in 3D), the expressions do not.
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+mod shared {
+    use crate::{Exp, Extensor, Gp, GradePart, Log, Normalize, Real, Reverse, Unit};
+
+    /// `−(rate/2) x̂`: the twist of a rotation at `rate` about the flat `x` (a line in PGA3D, a
+    /// point in PGA2D), normalized first.
+    #[inline]
+    pub fn rotation_twist<X: Normalize + Gp<T, Output = X>, T: Real>(x: X, rate: T) -> X {
+        x.normalized().into_inner().gp(rate * T::from_f64(-0.5))
+    }
+
+    /// The rigid motion from `a` to `b` at `t`, `a exp(t log(~a b))`, the shorter way: the
+    /// relative motor taken with its scalar part non-negative (`m` and `−m` are one motion).
+    #[inline]
+    pub fn interpolate<M, B, T>(a: Unit<M>, b: Unit<M>, t: T) -> Unit<M>
+    where
+        T: Real,
+        M: Extensor<Slots = (), Coef = T> + Reverse<Output = M> + Gp<M, Output = M>,
+        M: Gp<T, Output = M>,
+        M::Kind: GradePart<0>,
+        Unit<M>: Log<B>,
+        B: Gp<T, Output = B> + Exp<Output = Unit<M>>,
+    {
+        let rel = (a.reverse() * b).into_inner();
+        let s = crate::cast::grade::<M, 0>(&rel).coeffs().as_ref()[0];
+        let sign = T::select_lt(s, T::zero(), -T::one(), T::one());
+        let rel: Unit<M> = Unit::new_unchecked(rel.gp(sign));
+        a * rel.log().gp(t).exp()
+    }
+}
+
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
     use crate::pga3d::{Line, Motor, Plane, Point, Translator};
@@ -357,8 +390,7 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn rotation(axis: Line<(), T>, angle: T) -> Unit<Self> {
-            let l = axis.normalized().into_inner();
-            l.gp(angle * T::from_f64(-0.5)).exp()
+            crate::extras::shared::rotation_twist(axis, angle).exp()
         }
 
         /// The rotation by `angle` about the axis through the origin with direction `(x, y, z)`.
@@ -425,10 +457,7 @@ mod pga3d_extras {
         /// assert!((d.e013() - 0.2f64.sin()).abs() < 1e-12);
         /// ```
         pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
-            let rel = (a.reverse() * b).into_inner();
-            let sign = T::select_lt(rel.s(), T::zero(), -T::one(), T::one());
-            let rel = Unit::new_unchecked(rel.gp(sign));
-            a * (rel.log().gp(t)).exp()
+            crate::extras::shared::interpolate::<Self, Line<(), T>, T>(a, b, t)
         }
 
         /// The motor of a camera (or any frame) at `eye` whose forward axis `+z` points at
@@ -507,7 +536,7 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn rotation_twist(axis: Line<(), T>, omega: T) -> Self {
-            axis.normalized().into_inner().gp(omega * T::from_f64(-0.5))
+            crate::extras::shared::rotation_twist(axis, omega)
         }
     }
 }
@@ -611,10 +640,7 @@ mod pga2d_extras {
         /// ```
         #[inline]
         pub fn rotation_twist(center: Point<(), T>, omega: T) -> Self {
-            center
-                .normalized()
-                .into_inner()
-                .gp(omega * T::from_f64(-0.5))
+            crate::extras::shared::rotation_twist(center, omega)
         }
     }
 
@@ -680,8 +706,7 @@ mod pga2d_extras {
         /// ```
         #[inline]
         pub fn rotation(center: Point<(), T>, angle: T) -> Unit<Self> {
-            let c = center.normalized().into_inner();
-            c.gp(angle * T::from_f64(-0.5)).exp()
+            crate::extras::shared::rotation_twist(center, angle).exp()
         }
 
         /// The shortest rotation about the origin that turns the direction `from` into the
@@ -717,10 +742,7 @@ mod pga2d_extras {
         /// assert!((x - 2.0).abs() < 1e-12 && (y - 1.0).abs() < 1e-12);
         /// ```
         pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
-            let rel = (a.reverse() * b).into_inner();
-            let sign = T::select_lt(rel.s(), T::zero(), -T::one(), T::one());
-            let rel = Unit::new_unchecked(rel.gp(sign));
-            a * (rel.log().gp(t)).exp()
+            crate::extras::shared::interpolate::<Self, Point<(), T>, T>(a, b, t)
         }
     }
 

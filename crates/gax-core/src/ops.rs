@@ -147,6 +147,66 @@ unary_trait!(
     Undual, undual
 );
 
+/// The exponential of a bivector: a unit versor. Implemented by the generated algebras for the
+/// kinds that have `exp`, so generic code can call it.
+///
+/// ```
+/// use gax::{Exp, Gp, Normalize};
+/// use gax::{pga2d, pga3d};
+/// // The rotation by `angle` about a flat: a line in PGA3D, a point in PGA2D.
+/// fn rotation<X>(about: X, angle: f64) -> <X as Exp>::Output
+/// where
+///     X: Normalize + Exp + Gp<f64, Output = X>,
+/// {
+///     about.normalized().into_inner().gp(-0.5 * angle).exp()
+/// }
+/// let z = pga3d::Point::<(), f64>::xyz(0.0, 0.0, 0.0) & pga3d::Point::xyz(0.0, 0.0, 1.0);
+/// let r3 = rotation(z, 1.0);
+/// let r2 = rotation(pga2d::Point::<(), f64>::xy(0.0, 0.0), 1.0);
+/// assert!((r3.into_inner().s() - r2.into_inner().s()).abs() < 1e-15);
+/// ```
+pub trait Exp {
+    /// The result: a unit versor.
+    type Output;
+    /// The exponential.
+    fn exp(self) -> Self::Output;
+}
+
+/// The inverse under the geometric product, `x x⁻¹ = 1`: a closed form where a kind has one,
+/// else the general inverse. Implemented by the generated algebras for the kinds that have
+/// `inverse`. (Maps have their own `inverse`, `SquareMap::inverse`.)
+pub trait Inverse {
+    /// The kind of the inverse.
+    type Output;
+    /// The inverse.
+    fn inverse(self) -> Self::Output;
+}
+
+/// The norm of a value: `norm_squared` is the scalar part of `x ~x`, `norm` the square root of
+/// its absolute value. Implemented by the generated algebras for the kinds that have `norm`.
+pub trait Norm: crate::kind::Extensor {
+    /// The scalar part of `x ~x`.
+    fn norm_squared(self) -> Self::Coef;
+    /// `sqrt(|norm_squared|)`.
+    fn norm(self) -> Self::Coef;
+}
+
+/// Normalization to a certified unit versor. Implemented by the generated algebras for the
+/// kinds that have `normalized`.
+pub trait Normalize: Sized {
+    /// `self` scaled to unit norm, as a [`Unit`](crate::Unit).
+    fn normalized(self) -> crate::unit::Unit<Self>;
+}
+
+/// The square root of a value. Implemented by the generated algebras for the kinds that have
+/// `sqrt`.
+pub trait Sqrt {
+    /// The result.
+    type Output;
+    /// The square root.
+    fn sqrt(self) -> Self::Output;
+}
+
 /// The logarithm of a unit versor, a bivector (implemented by the generated algebras for
 /// `Unit<K>`; call it as `unit.log()`).
 ///
