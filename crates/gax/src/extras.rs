@@ -65,7 +65,7 @@ between_points!(pga2d => Point);
 
 #[cfg(feature = "pga3d")]
 mod pga3d_extras {
-    use crate::pga3d::{Line, Motor, Plane, Point};
+    use crate::pga3d::{Line, Motor, Plane, Point, Translator};
     use crate::{Real, Unit};
 
     impl<T: Real> Point<(), T> {
@@ -339,16 +339,9 @@ mod pga3d_extras {
         #[inline]
         pub fn translation(dx: T, dy: T, dz: T) -> Unit<Self> {
             let h = T::from_f64(-0.5);
-            Unit::new_unchecked(Motor::new(
-                T::one(),
-                T::zero(),
-                T::zero(),
-                T::zero(),
-                dx * h,
-                dy * h,
-                dz * h,
-                T::zero(),
-            ))
+            // A translator `1 − (d/2) e0`, as a motor.
+            let t = Translator::new(T::one(), dx * h, dy * h, dz * h);
+            Unit::new_unchecked(t.cast::<Motor>())
         }
 
         /// The rotation by `angle` (right-handed) about the `axis` line, which may be any line,
@@ -521,7 +514,7 @@ mod pga3d_extras {
 
 #[cfg(feature = "pga2d")]
 mod pga2d_extras {
-    use crate::pga2d::{Line, Motor, Point};
+    use crate::pga2d::{Line, Motor, Point, Translator};
     use crate::{Real, Unit};
 
     impl<T: Real> Point<(), T> {
@@ -671,7 +664,9 @@ mod pga2d_extras {
         #[inline]
         pub fn translation(dx: T, dy: T) -> Unit<Self> {
             let h = T::from_f64(0.5);
-            Unit::new_unchecked(Motor::new(T::one(), T::zero(), dy * h, -dx * h))
+            // A translator, as a motor.
+            let t = Translator::new(T::one(), dy * h, -dx * h);
+            Unit::new_unchecked(t.cast::<Motor>())
         }
 
         /// The rotation by `angle` (counterclockwise) about the point `center`.

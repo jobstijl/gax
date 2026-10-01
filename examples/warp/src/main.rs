@@ -7,6 +7,7 @@
 
 mod audio;
 mod fx;
+mod geom;
 mod headless;
 mod input;
 // The kernels run traced (below); the game uses the generic forms only for `colour_map`, the

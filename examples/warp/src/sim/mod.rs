@@ -324,7 +324,7 @@ fn outside(p: P, margin: f32) -> Option<Line<(), f32>> {
 
 /// The foot of `p` on the line `l`: the meet of `l` with the perpendicular through `p`.
 fn foot(l: Line<(), f32>, p: P) -> P {
-    ((l | p) ^ l).unitized()
+    crate::geom::foot(p, l).unitized()
 }
 
 impl World {

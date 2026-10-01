@@ -88,9 +88,7 @@ pub fn arc(p: P) -> f32 {
 /// The foot of `p` on the axis: the meet of the axis with the plane through `p` orthogonal to
 /// it (weight 1).
 pub fn foot(p: P) -> P {
-    let a = axis();
-    let f = (p | a) ^ a;
-    f.unitized()
+    crate::geom::foot(p, axis()).unitized()
 }
 
 /// The distance of `p` from the axis: the norm of their join (the axis is a unit line).

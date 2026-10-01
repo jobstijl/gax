@@ -1,32 +1,15 @@
 //! The fused kernels agree with the generic functions they were traced from.
 
 use gax::Unit;
-use gax::pga3d::{Motor, Plane, Point};
+use gax::pga3d::{Motor, Plane, Point, Rotor, Translator};
 use gax_example_traced::*;
 
 fn motor(angle: f64, axis: [f64; 3], t: [f64; 3]) -> Unit<Motor<(), f64>> {
     let n = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
     let (s, c) = (angle / 2.0).sin_cos();
-    let r = Motor::new(
-        c,
-        -s * axis[0] / n,
-        -s * axis[1] / n,
-        -s * axis[2] / n,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-    );
-    let tr = Motor::new(
-        1.0,
-        0.0,
-        0.0,
-        0.0,
-        -t[0] / 2.0,
-        -t[1] / 2.0,
-        -t[2] / 2.0,
-        0.0,
-    );
+    let r = Rotor::new(c, -s * axis[0] / n, -s * axis[1] / n, -s * axis[2] / n);
+    let tr = Translator::new(1.0, -t[0] / 2.0, -t[1] / 2.0, -t[2] / 2.0);
+    // A translator times a rotor is a motor (the product's kind).
     Unit::new_unchecked(tr * r)
 }
 

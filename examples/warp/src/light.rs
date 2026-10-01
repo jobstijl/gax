@@ -133,7 +133,7 @@ pub fn hue_shift(l: Light, angle: f32) -> Light {
 pub fn desaturate(l: Light, t: f32) -> Light {
     let axis = lightness_axis();
     let c = tint(l);
-    let foot = ((c | axis) ^ axis).unitized() * c.e123();
+    let foot = crate::geom::foot(c, axis).unitized() * c.e123();
     untint(c + (foot - c) * t)
 }
 
