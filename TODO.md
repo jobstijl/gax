@@ -143,6 +143,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Dual numbers (ADR-039): `gax::dual::Dual<T, N>` as a coefficient type, with `derivative`, `gradient` and `jacobian`; through closed-form exp and log, solvers and sandwiches, exact over `Fp`
 - [x] Value methods as traits (`Exp`, `Inverse`, `Norm`, `Normalize`, `Sqrt`), so `extras` has one body for PGA2D and PGA3D
 - [x] Determinism per value (ADR-040): `Strict<T>` coefficients, on scalars and every SIMD level; the lanes' `exp` made the scalar's (a determinism bug with the feature)
+- [x] Mass properties (ADR-041): `pga3d::Moments` and `pga2d::Moments` from boundary meshes and polygons, after *Clean up your Mesh!*; the asteroids example breaks rocks into the pieces of their outlines with momentum conserved
+- [x] Generated algebras as directories of parts under 400 KB (GitHub highlights them), `.gitattributes` for generated files
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, complex coefficients, algebras beyond 9D
 
 ## Decisions for the project owner

@@ -5,6 +5,8 @@
 pub use gax_core::*;
 
 mod extras;
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+mod moments;
 
 /// The homomorphisms between the standard algebras, as `From` impls (generated from
 /// `gax_gen::emit_homs::HOMS`; see the guide, "Between algebras").
@@ -37,6 +39,7 @@ pub use gax_gen::trace;
 pub mod pga2d {
     include!("algebras/pga2d.rs");
     pub use crate::extras::Between;
+    pub use crate::moments::Moments2 as Moments;
 }
 
 /// Plane-based projective geometric algebra of Euclidean space, `R(3,0,1)`.
@@ -48,6 +51,7 @@ pub mod pga2d {
 pub mod pga3d {
     include!("algebras/pga3d.rs");
     pub use crate::extras::{Between, PrincipalInertia};
+    pub use crate::moments::Moments3 as Moments;
 }
 
 /// Vector geometric algebra of the Euclidean plane, `R(2,0,0)`.

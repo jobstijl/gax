@@ -539,7 +539,37 @@ This is also how a narrower operand gives a narrower result: evaluate the expres
 Binding it into a map already built keeps the map's output kind, since a map's type does not
 record which of its coefficients are structurally zero.
 
-## 14. Derivatives
+## 14. Mass properties
+
+`pga3d::Moments` and `pga2d::Moments` compute the size, the centre of mass and the inertia of a
+solid from its boundary mesh (of a region from its boundary polygon), after De Keninck, Roelfs,
+Dorst and Eelbode, *Clean up your Mesh!* (2025). A triangle is a join of three points, and the
+body's moments are one form on planes, `M(P, Q) = ∫ (P & x)(Q & x) dV`, summed exactly over
+the cones from an apex to the boundary triangles:
+
+```rust
+use gax::pga3d::{Moments, Point};
+
+// A unit cube as twelve outward-facing triangles.
+let v: Vec<Point<(), f64>> = (0..8)
+    .map(|i| Point::xyz(f64::from(i & 1), f64::from(i >> 1 & 1), f64::from(i >> 2 & 1)))
+    .collect();
+let faces = [[0, 2, 1], [1, 2, 3], [4, 5, 6], [5, 7, 6], [0, 1, 4], [1, 5, 4],
+             [2, 6, 3], [3, 6, 7], [0, 4, 2], [2, 4, 6], [1, 3, 5], [3, 7, 5]];
+let m = Moments::of_mesh(&v, &faces);
+assert!((m.volume() - 1.0).abs() < 1e-12);
+let (inertia, frame) = m.inertia(1.0); // a PrincipalInertia, and the motor to its axes
+# let _ = (inertia, frame);
+```
+
+Because the moments are one extensor, those of parts add (`+`), and `m.moved(motor)` moves them
+with the body by composing the form's slots, with no new sum over the mesh. A mesh cut by a plane
+needs no cap: put the apex on the plane (`Moments::of_triangles(triangles_below, apex)`), as for
+the remaining fuel in a tank. In 2D, `Moments::of_polygon` gives the area, the centroid and the
+polar moment; the asteroids example uses it to break rocks into the pieces of their outlines,
+with momentum conserved.
+
+## 15. Derivatives
 
 `gax::dual::Dual<T, N>` is a coefficient type carrying `N` derivatives along with each value
 (forward-mode automatic differentiation). Every product, sandwich, map, solver, `exp` and `log`
@@ -573,7 +603,7 @@ the right derivative where plain forward mode gives `NaN`. `Dual<T, N>` over SIM
 differentiates a batch at once; over `gax::fp::Fp` the derivatives of polynomial kernels are
 exact.
 
-## 15. Conventions and pitfalls
+## 16. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

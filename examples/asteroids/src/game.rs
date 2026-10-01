@@ -1,9 +1,11 @@
 //! The game, without any windowing: bodies are PGA2D motors moved by twists, shapes are
-//! polygons of points, and hit tests are signs of `line ∧ point`.
+//! polygons of points, and hit tests are signs of `line ∧ point`. A shot cuts a rock along its
+//! path into the two pieces of its outline, with masses and inertias from their shapes
+//! (`gax::pga2d::Moments`).
 
 use gax::Unit;
 use gax::batch::BatchTransform;
-use gax::pga2d::{Line, Motor, Point};
+use gax::pga2d::{Line, Moments, Motor, Point};
 
 /// The width and height of the world (it wraps around at the edges).
 pub const WORLD: [f32; 2] = [160.0, 100.0];
@@ -15,6 +17,14 @@ const BULLET_SPEED: f32 = 70.0;
 const BULLET_LIFE: f32 = 1.1;
 const FIRE_DELAY: f32 = 0.18;
 const INVULNERABLE: f32 = 2.5;
+/// Rock mass per unit area.
+const DENSITY: f32 = 1.0;
+/// A bullet's mass: its momentum knocks a rock before it breaks.
+const BULLET_MASS: f32 = 6.0;
+/// The momentum with which a rock's two pieces fly apart, along the cut's normal.
+const SPLIT_MOMENTUM: f32 = 400.0;
+/// Pieces of a smaller area turn to dust.
+const MIN_PIECE_AREA: f32 = 8.0;
 
 /// Keys held (or pressed) this frame.
 #[derive(Clone, Copy, Debug, Default)]
@@ -54,8 +64,12 @@ impl Body {
     /// Advance by `dt`: translate in the world frame, spin in the body frame, wrap around.
     pub fn step(&mut self, dt: f32) {
         // The twists (bivectors: in PGA2D, points) of the velocities; exp(t B) moves for time t.
-        let travel = Point::translation_twist(self.vel[0], self.vel[1]).gp(dt).exp();
-        let turn = Point::rotation_twist(Point::xy(0.0, 0.0), self.spin).gp(dt).exp();
+        let travel = Point::translation_twist(self.vel[0], self.vel[1])
+            .gp(dt)
+            .exp();
+        let turn = Point::rotation_twist(Point::xy(0.0, 0.0), self.spin)
+            .gp(dt)
+            .exp();
         self.pose = travel * self.pose * turn;
         let [x, y] = self.position();
         let wrap = |p: f32, size: f32| {
@@ -94,6 +108,10 @@ pub struct Shape {
     pub points: Vec<Point>,
     /// The largest distance of a vertex from the origin.
     pub radius: f32,
+    /// Its mass (area times density).
+    pub mass: f32,
+    /// Its moment of inertia about its centre of mass.
+    pub inertia: f32,
 }
 
 impl Shape {
@@ -105,7 +123,27 @@ impl Shape {
                 x.hypot(y)
             })
             .fold(0.0, f32::max);
-        Shape { points, radius }
+        let m = Moments::<f32>::of_polygon(&points);
+        Shape {
+            points,
+            radius,
+            mass: m.area() * DENSITY,
+            inertia: m.polar_moment(DENSITY),
+        }
+    }
+
+    /// The shape of `points` moved so that its centre of mass is the body origin (a rigid body
+    /// spins about it), and that centre in the old coordinates.
+    fn centred(points: &[Point]) -> (Shape, Point) {
+        let c = Moments::<f32>::of_polygon(points).centroid();
+        let [x, y] = c.to_euclidean();
+        let back = Motor::translation(-x, -y);
+        (Shape::new(points.iter().map(|&p| back >> p).collect()), c)
+    }
+
+    /// Its area.
+    pub fn area(&self) -> f32 {
+        self.mass / DENSITY
     }
 
     /// The vertices placed by `pose` (all at once, on SIMD lanes).
@@ -113,6 +151,23 @@ impl Shape {
         out.resize(self.points.len(), Point::zero());
         pose.transform_slice(&self.points, out);
     }
+}
+
+/// The convex polygon `poly` cut by `line` into the parts on its two sides: each edge whose ends
+/// lie on different sides contributes the meet of its line with `line` to both.
+pub fn cut(poly: &[Point], line: Line) -> [Vec<Point>; 2] {
+    let side = |p: Point| (line ^ p).e012() * p.e12().signum();
+    let mut parts = [Vec::new(), Vec::new()];
+    for (&a, &b) in poly.iter().zip(poly.iter().cycle().skip(1)) {
+        let (sa, sb) = (side(a), side(b));
+        parts[usize::from(sa < 0.0)].push(a);
+        if (sa < 0.0) != (sb < 0.0) {
+            let x = ((a & b) ^ line).unitized();
+            parts[0].push(x);
+            parts[1].push(x);
+        }
+    }
+    parts
 }
 
 /// Whether `p` lies inside the convex polygon `poly` (world vertices, either orientation):
@@ -165,7 +220,7 @@ impl Asteroid {
     fn random(rng: &mut Rng, x: f32, y: f32, size: u8) -> Asteroid {
         let r = 3.5 * f32::from(size);
         let n = 7 + usize::from(size) * 2;
-        let points = (0..n)
+        let points: Vec<Point> = (0..n)
             .map(|i| {
                 let a = std::f32::consts::TAU * (i as f32 + rng.range(-0.3, 0.3)) / n as f32;
                 let d = r * rng.range(0.75, 1.1);
@@ -179,9 +234,64 @@ impl Asteroid {
         body.spin = rng.range(-1.2, 1.2);
         Asteroid {
             body,
-            shape: Shape::new(points),
+            shape: Shape::centred(&points).0,
             size,
         }
+    }
+
+    /// The pieces of this rock when a bullet at `hit` with velocity `bullet` strikes it. The
+    /// bullet's momentum first knocks the rock (through its mass and, about its centre of
+    /// mass, its inertia); then the rock is cut along the bullet's path, and each piece keeps
+    /// the rock's rigid motion at its own centre of mass, the two pushed apart with equal and
+    /// opposite momentum. Small rocks and slivers turn to dust.
+    pub fn shatter(&self, hit: [f32; 2], bullet: [f32; 2]) -> Vec<Asteroid> {
+        if self.size <= 1 {
+            return Vec::new();
+        }
+        let (pose, shape) = (self.body.pose, &self.shape);
+        // The knock: Δv = J / m, Δω = (r × J) / I, r from the centre of mass to the hit.
+        let j = [BULLET_MASS * bullet[0], BULLET_MASS * bullet[1]];
+        let c = self.body.position();
+        let r = [hit[0] - c[0], hit[1] - c[1]];
+        let vel = [
+            self.body.vel[0] + j[0] / shape.mass,
+            self.body.vel[1] + j[1] / shape.mass,
+        ];
+        let spin = self.body.spin + (r[0] * j[1] - r[1] * j[0]) / shape.inertia;
+        // The cut, in body coordinates: the line through the hit along the bullet.
+        let path =
+            (pose << Point::xy(hit[0], hit[1])) & (pose << Point::direction(bullet[0], bullet[1]));
+        let speed = bullet[0].hypot(bullet[1]).max(1e-6);
+        let normal = [-bullet[1] / speed, bullet[0] / speed];
+        cut(&shape.points, path)
+            .iter()
+            .filter_map(|part| {
+                let (piece, centre) = Shape::centred(part);
+                if piece.area() < MIN_PIECE_AREA {
+                    return None;
+                }
+                let [ox, oy] = centre.to_euclidean();
+                let mut body = self.body;
+                body.pose = pose * Motor::translation(ox, oy);
+                // The rock's velocity at the piece's centre, plus the push apart.
+                let [px, py] = body.position();
+                let (rx, ry) = (px - c[0], py - c[1]);
+                // Away from the cut: the side of the line through the hit the piece lies on.
+                let side = ((px - hit[0]) * normal[0] + (py - hit[1]) * normal[1]).signum();
+                let push = side * SPLIT_MOMENTUM / piece.mass;
+                body.vel = [
+                    vel[0] - spin * ry + push * normal[0],
+                    vel[1] + spin * rx + push * normal[1],
+                ];
+                body.spin = spin;
+                let size = (self.size - 1).min(if piece.area() >= 60.0 { 2 } else { 1 });
+                Some(Asteroid {
+                    body,
+                    shape: piece,
+                    size,
+                })
+            })
+            .collect()
     }
 }
 
@@ -350,7 +460,7 @@ impl Game {
 
     /// Bullets against asteroids, then the ship against asteroids.
     fn hits(&mut self) {
-        let mut split: Vec<usize> = Vec::new();
+        let mut split: Vec<(usize, Bullet)> = Vec::new();
         let [placed, ship] = &mut self.scratch;
         for (i, a) in self.asteroids.iter().enumerate() {
             let c = a.body.position();
@@ -361,8 +471,8 @@ impl Game {
                     && contains(placed, center, Point::xy(b.pos[0], b.pos[1]))
             });
             if let Some(j) = hit {
-                self.bullets.swap_remove(j);
-                split.push(i);
+                let b = self.bullets.swap_remove(j);
+                split.push((i, b));
             }
         }
         // The ship: a vertex of one polygon inside the other.
@@ -386,17 +496,11 @@ impl Game {
                 }
             }
         }
-        for &i in split.iter().rev() {
+        for &(i, b) in split.iter().rev() {
             let a = self.asteroids.swap_remove(i);
-            let [x, y] = a.body.position();
             self.score += [0, 100, 50, 20][usize::from(a.size)];
-            self.explode([x, y], 6 + 4 * usize::from(a.size), 25.0);
-            if a.size > 1 {
-                for _ in 0..2 {
-                    let child = Asteroid::random(&mut self.rng, x, y, a.size - 1);
-                    self.asteroids.push(child);
-                }
-            }
+            self.explode(b.pos, 6 + 4 * usize::from(a.size), 25.0);
+            self.asteroids.extend(a.shatter(b.pos, b.vel));
         }
         if crashed {
             let at = self.ship.position();
@@ -510,6 +614,41 @@ mod tests {
         }
         assert!(g.score > before, "no hit");
         assert!(g.asteroids.iter().all(|a| a.size == 2));
+    }
+
+    /// A shot cuts a rock into its two pieces: their areas add up to the rock's, the momentum
+    /// of rock and bullet is conserved, and the pieces move apart.
+    #[test]
+    fn shattering_conserves_area_and_momentum() {
+        let mut rng = Rng::new(3);
+        for k in 0..50 {
+            let mut rock = Asteroid::random(&mut rng, 5.0, -3.0, 3);
+            rock.body.spin = 0.7;
+            let c = rock.body.position();
+            // A bullet through a point near the centre, from below.
+            let hit = [c[0] + rng.range(-2.0, 2.0), c[1] + rng.range(-2.0, 2.0)];
+            let bullet = [rng.range(-20.0, 20.0), 70.0];
+            let pieces = rock.shatter(hit, bullet);
+            assert_eq!(pieces.len(), 2, "rock {k}");
+            let area: f32 = pieces.iter().map(|p| p.shape.area()).sum();
+            assert!((area - rock.shape.area()).abs() < 1e-3 * rock.shape.area());
+            let before = [
+                rock.shape.mass * rock.body.vel[0] + BULLET_MASS * bullet[0],
+                rock.shape.mass * rock.body.vel[1] + BULLET_MASS * bullet[1],
+            ];
+            for (i, want) in before.iter().enumerate() {
+                let after: f32 = pieces.iter().map(|p| p.shape.mass * p.body.vel[i]).sum();
+                assert!(
+                    (after - want).abs() < 1e-3 * want.abs().max(100.0),
+                    "{after} vs {want}"
+                );
+            }
+            // Apart: the relative velocity points from one centre to the other.
+            let (a, b) = (pieces[0].body.position(), pieces[1].body.position());
+            let (va, vb) = (pieces[0].body.vel, pieces[1].body.vel);
+            let separating = (b[0] - a[0]) * (vb[0] - va[0]) + (b[1] - a[1]) * (vb[1] - va[1]);
+            assert!(separating > 0.0, "rock {k}: the pieces close in");
+        }
     }
 
     #[test]

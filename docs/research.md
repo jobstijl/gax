@@ -157,6 +157,13 @@ Formulas and verification scripts are in [research/papers.md](research/papers.md
 * **Shirokov, Faddeev–LeVerrier inverse in Clifford algebras (arXiv:2005.04015).**
   * Contributes: an inverse in any dimension.
   * The appendix verified both of these inverses on degenerate metrics too (PGA3D, R(2,0,1), R(3,1,1)).
+* **De Keninck, Roelfs, Dorst & Eelbode, *Clean up your Mesh! Part 1: Plane and simplex*
+  (arXiv:2511.08058, 2025).**
+  * Contributes: simplices as joins of vertices, complexes as sums, and size and centre of mass
+    from the Euclidean and ideal norms of joins with an apex; the volume of a mesh cut by a plane
+    without its cap.
+  * We take: the construction, with the second moments as one extensor form on planes instead of
+    the paper's frame of vectors (ADR-041, `Moments`).
 * **De Keninck, *Look, Ma, No Matrices!* (SIGGRAPH 2024 talk).**
   * Contributes: op counts for the sandwich against a matrix (motor on point: 21 mul / 18 add against
     16/12 for a 4x4 matrix times a vector).

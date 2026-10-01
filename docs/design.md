@@ -1101,6 +1101,32 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   called `gax::math::exp`: with the feature, kernels calling `exp` directly differed between
   scalar and SIMD in the last bits. Every lane type's `exp` is now its scalar's.
 
+## ADR-041: Mass properties as one form (`Moments`)
+*Status: accepted, implemented (`gax::pga3d::Moments`, `gax::pga2d::Moments`).*
+
+* **The source.** De Keninck, Roelfs, Dorst and Eelbode (*Clean up your Mesh! Part 1*, 2025)
+  write a simplex as a join of its vertices and a mesh as a sum, and get size and centre of mass
+  from the Euclidean and ideal norms of joins with an apex. For the inertia they leave PGA: a
+  frame of three vectors, diagonalized by Jacobi rotations of their own.
+* **One form.** The second moments are a bilinear form on planes,
+  `M(P, Q) = ∫ (P & x)(Q & x) dV`, a `Scalar<(Plane, Plane)>`. It holds the zeroth and first
+  moments too (a point's pairing with the plane at infinity is its weight), so volume, centre of
+  mass and inertia are its pairings with four fixed planes, and the type is a plain extensor:
+  the moments of parts add, and a motion `m` moves them by composing both slots with
+  `m << Plane::slot()`.
+* **Exact from the boundary.** Over a simplex, the integral of a product of linear functions is
+  `V/((k+1)(k+2)) (Σᵢ f(vᵢ) g(vᵢ) + f(Σ vᵢ) g(Σ vᵢ))`, so each cone from the apex to a boundary
+  triangle contributes a sum of dyads `(P & x)(Q & x)` of its vertices. Written once
+  (`simplex_dyads`) for 2D and 3D; only the joins (two points or three) are per algebra. The
+  apex is arbitrary for a closed boundary, and closes a boundary cut by a plane through it.
+* **The principal frame** comes from the existing symmetric eigensolver, then a rotation from the
+  eigenvector frame (Shepperd's quaternion, then axis and angle into `Motor::rotation_about`),
+  into `PrincipalInertia` and the rigid-body dynamics.
+* **Checks.** Boxes, the unit tetrahedron and a triangulated sphere against closed forms; the
+  apex's independence; additivity; equivariance (`moved` against moving the mesh); a cut mesh;
+  the frame diagonalizing the inertia at half turns; polygons against the shoelace formula and
+  known polar moments; `f32`.
+
 ---
 
 ## Hypotheses
