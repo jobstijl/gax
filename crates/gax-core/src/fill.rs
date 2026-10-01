@@ -110,6 +110,10 @@ fill_list!(A0, A1, A2, A3, A4);
 fill_list!(A0, A1, A2, A3, A4, A5);
 fill_list!(A0, A1, A2, A3, A4, A5, A6);
 fill_list!(A0, A1, A2, A3, A4, A5, A6, A7);
+fill_list!(A0, A1, A2, A3, A4, A5, A6, A7, A8);
+fill_list!(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9);
+fill_list!(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+fill_list!(A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
 
 /// Non-empty slot lists: access to the last slot.
 pub trait SplitLast: Slots {
@@ -136,3 +140,7 @@ split_last!([A0, A1, A2, A3] A4);
 split_last!([A0, A1, A2, A3, A4] A5);
 split_last!([A0, A1, A2, A3, A4, A5] A6);
 split_last!([A0, A1, A2, A3, A4, A5, A6] A7);
+split_last!([A0, A1, A2, A3, A4, A5, A6, A7] A8);
+split_last!([A0, A1, A2, A3, A4, A5, A6, A7, A8] A9);
+split_last!([A0, A1, A2, A3, A4, A5, A6, A7, A8, A9] A10);
+split_last!([A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10] A11);

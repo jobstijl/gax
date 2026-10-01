@@ -1,15 +1,17 @@
-//! Methods of maps and forms: inverse, solve, determinant, trace, SVD, eigenproblems.
+//! Methods of maps and forms: inverse, solve, determinant, trace, SVD, eigenproblems, least
+//! squares and the pseudo-inverse.
 //!
 //! These are blanket traits over every generated kind, so they work for any algebra. The
 //! generated types expose them as inherent methods (`map.inverse()`, `form.eigh_with(m)`),
 //! which forward here. Results are typed: the inverse of a `B <- A` map is an `A <- B` map,
 //! singular vectors and eigenvectors are values of the slot kinds.
 
+use crate::cast::SubKind;
 use crate::coef::{Coef, Real};
 use crate::fill::SplitLast;
 use crate::kind::{Extensor, Kind};
-use crate::linalg::{self, SquareArr};
-use crate::slots::Slots;
+use crate::linalg::{self, Column, SquareArr};
+use crate::slots::{Slots, SplitFirst};
 
 /// A map `B <- A` between kinds with the same number of coefficients.
 ///
@@ -361,3 +363,300 @@ where
         ))
     }
 }
+
+/// One column of a least-squares problem in an extensor's layout: an output coefficient array
+/// over the slots `S` (the image of one input blade).
+pub struct Col<K: Kind, S: Slots, T: Coef>(pub K::Arr<S::Arr<T>>);
+
+#[allow(clippy::expl_impl_clone_on_copy)]
+impl<K: Kind, S: Slots, T: Coef> Clone for Col<K, S, T> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<K: Kind, S: Slots, T: Coef> Copy for Col<K, S, T> {}
+
+impl<K: Kind, S: Slots, T: Coef> PartialEq for Col<K, S, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<K: Kind, S: Slots, T: Coef> core::fmt::Debug for Col<K, S, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl<K: Kind, S: Slots, T: Real> Column<T> for Col<K, S, T> {
+    #[inline(always)]
+    fn dot(&self, other: &Self) -> T {
+        let (a, b) = (self.0.as_ref(), other.0.as_ref());
+        let mut s = T::zero();
+        for k in 0..K::N {
+            for f in 0..S::SIZE {
+                s = S::get_flat(&a[k], f).mul_add(S::get_flat(&b[k], f), s);
+            }
+        }
+        s
+    }
+
+    #[inline(always)]
+    fn rotate(a: &mut Self, b: &mut Self, c: T, s: T) {
+        let na = K::arr_zip(&a.0, &b.0, |x, y| S::zip(x, y, &mut |p, q| c * *p - s * *q));
+        let nb = K::arr_zip(&a.0, &b.0, |x, y| S::zip(x, y, &mut |p, q| s * *p + c * *q));
+        a.0 = na;
+        b.0 = nb;
+    }
+}
+
+/// `H × H` coefficient matrices.
+type Sq<H, T> = <H as Kind>::Arr<<H as Kind>::Arr<T>>;
+
+/// The least-squares factorization of a map's first slot `H` (columns: the images of `H`'s
+/// blades, each a `K` over the remaining slots `R`): the rotated columns, `V`, and the weights
+/// `1/σᵢ²` above the cutoff.
+#[allow(clippy::type_complexity)]
+#[inline]
+fn factor<K, H, R, S, T>(
+    m: &K::Arr<S::Arr<T>>,
+    rcond: Option<T>,
+) -> (
+    H::Arr<Col<K, R, T>>,
+    Sq<H, T>,
+    <Sq<H, T> as SquareArr<T>>::Vector,
+)
+where
+    K: Kind,
+    H: Kind,
+    R: Slots,
+    S: SplitFirst<Head = H, Tail = R>,
+    T: Real,
+    Sq<H, T>: SquareArr<T>,
+{
+    let rows = m.as_ref();
+    let cols: H::Arr<Col<K, R, T>> =
+        H::arr_from_fn(|h| Col(K::arr_from_fn(|k| S::split(&rows[k]).as_ref()[h])));
+    let n = H::N;
+    let (w, v): (H::Arr<Col<K, R, T>>, Sq<H, T>) = linalg::orthogonalize(&cols, sweeps(n));
+    // NumPy's default cutoff for `lstsq`: machine epsilon times the larger dimension.
+    let size = (K::N * R::SIZE).max(n);
+    let cut = rcond.unwrap_or_else(|| T::epsilon() * T::from_i64(size as i64));
+    let weights = linalg::pinv_weights::<T, Col<K, R, T>, _, Sq<H, T>>(&w, cut);
+    (w, v, weights)
+}
+
+/// The Moore–Penrose pseudo-inverse of a map `K <- (H,)` of any shape, by one-sided Jacobi:
+/// the map `H <- (K,)` that sends `b` to the minimum-norm least-squares solution of
+/// `self.of(x) ≈ b`. Norms are those of the coefficients (as in `numpy.linalg` and numga), not the
+/// algebra's metric.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// use gax::ApproxEq;
+/// // Points to the lines joining them to `q`: rank 3 of 4 (`q` itself maps to zero).
+/// let q = Point::<(), f64>::xyz(0.0, 0.0, 1.0);
+/// let through_q: Line<(Point,), f64> = q & Point::slot();
+/// let back: Point<(Line,), f64> = through_q.pinv();
+/// let l = through_q.of(Point::xyz(1.0, 2.0, 3.0));
+/// // The least-norm point whose line through `q` is `l`.
+/// let x = back.of(l);
+/// assert!(through_q.of(x).approx_eq(&l, 1e-12));
+/// ```
+pub trait PseudoInverse: Extensor<Coef: Real> {
+    /// The pseudo-inverse map, from the output kind back to the slot's.
+    type Output: Extensor;
+    /// With the default cutoff of `numpy.linalg.lstsq`: singular values at most `ε · max(rows, columns)` times the
+    /// largest are treated as zero.
+    fn pinv(self) -> Self::Output;
+    /// With the cutoff `rcond` relative to the largest singular value.
+    fn pinv_with(self, rcond: Self::Coef) -> Self::Output;
+}
+
+impl<M, H> PseudoInverse for M
+where
+    M: Extensor<Slots = (H,), Coef: Real>,
+    H: Kind,
+    Sq<H, M::Coef>: SquareArr<M::Coef>,
+{
+    type Output = H::Mv<(M::Kind,), M::Coef>;
+
+    fn pinv(self) -> Self::Output {
+        pinv_of(&self, None)
+    }
+
+    fn pinv_with(self, rcond: M::Coef) -> Self::Output {
+        pinv_of(&self, Some(rcond))
+    }
+}
+
+/// `P[h][k] = Σᵢ v[i][h] w_i[k] / σᵢ²`.
+fn pinv_of<M, H>(m: &M, rcond: Option<M::Coef>) -> H::Mv<(M::Kind,), M::Coef>
+where
+    M: Extensor<Slots = (H,), Coef: Real>,
+    H: Kind,
+    Sq<H, M::Coef>: SquareArr<M::Coef>,
+{
+    M::Coef::vectorize(
+        #[inline(always)]
+        || {
+            let (w, v, weights) = factor::<M::Kind, H, (), (H,), M::Coef>(m.coeffs(), rcond);
+            let cols = w.as_ref();
+            let p = H::arr_from_fn(|h| {
+                <M::Kind as Kind>::arr_from_fn(|k| {
+                    let mut s = M::Coef::zero();
+                    for (i, col) in cols.iter().enumerate() {
+                        s = (v[i][h] * weights[i]).mul_add(col.0.as_ref()[k], s);
+                    }
+                    s
+                })
+            });
+            <H::Mv<(M::Kind,), M::Coef> as Extensor>::from_coeffs(p)
+        },
+    )
+}
+
+/// Least squares: the `x` minimizing `‖self.of(x) − rhs‖` with the least norm (coefficient
+/// norms, as in `numpy.linalg` and numga).
+///
+/// * For a map `K <- (H,)` of any shape, `rhs` is a `K` (or a smaller kind, embedded) with any
+///   slots, which the solution keeps: `m.lstsq(m.of(y)) == y` for a map `y` of full rank too.
+/// * For a map with more slots, `K <- (H, R…)`, `rhs` has exactly the remaining slots `R…`, and
+///   `x` is the `H` with `self.of(x) ≈ rhs` as maps on `R…`: the least-squares version of a
+///   pairing's `solve` (`m.at::<I>()` solves for another slot).
+///
+/// ```
+/// use gax::pga3d::{Line, Plane, Point, Scalar};
+/// use gax::ApproxEq;
+/// // Planes meeting the floor `z = 0` in a given line: `x ^ floor ≈ l`, 6 equations for 4
+/// // unknowns, with the floor itself in the kernel. The least-norm answer is the plane
+/// // through `l` orthogonal to the floor.
+/// let floor = Plane::<(), f64>::new(0.0, 0.0, 1.0, 0.0);
+/// let meet: Line<(Plane,), f64> = Plane::slot() ^ floor;
+/// let l = Plane::new(1.0, 0.0, 0.0, -2.0) ^ floor; // the line x = 2 on the floor
+/// let x: Plane<(), f64> = meet.lstsq(l);
+/// assert!((x ^ floor).approx_eq(&l, 1e-12));
+/// assert!(x.approx_eq(&Plane::new(1.0, 0.0, 0.0, -2.0), 1e-12));
+///
+/// // Two slots: the plane `x` with `x & p == r(p)` for every point `p`.
+/// let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
+/// let target = Plane::new(0.0, 1.0, 0.0, 3.0);
+/// let found: Plane<(), f64> = pairing.lstsq(target & Point::slot());
+/// assert!(found.approx_eq(&target, 1e-12));
+/// ```
+pub trait LeastSquares<X>: Extensor<Coef: Real> {
+    /// The solution: a value of the first slot's kind, with `rhs`'s slots for a one-slot map.
+    type Solution: Extensor;
+    /// With the default cutoff (see [`PseudoInverse::pinv`]).
+    fn lstsq(self, rhs: X) -> Self::Solution;
+    /// With the cutoff `rcond` relative to the largest singular value.
+    fn lstsq_with(self, rhs: X, rcond: Self::Coef) -> Self::Solution;
+}
+
+/// The dispatch behind [`LeastSquares`] on the slot list `(H, R…)` of a map with output kind
+/// `K`: one slot takes a right-hand side with any slots, more slots one with exactly `R…`.
+pub trait LstsqSlots<K: Kind, T: Real, X>: Slots {
+    /// See [`LeastSquares::Solution`].
+    type Solution: Extensor;
+    /// See [`LeastSquares::lstsq_with`]; `None` for the default cutoff.
+    fn lstsq(m: &K::Arr<Self::Arr<T>>, rhs: &X, rcond: Option<T>) -> Self::Solution;
+}
+
+impl<M, X> LeastSquares<X> for M
+where
+    M: Extensor<Coef: Real>,
+    M::Slots: LstsqSlots<M::Kind, M::Coef, X>,
+{
+    type Solution = <M::Slots as LstsqSlots<M::Kind, M::Coef, X>>::Solution;
+
+    fn lstsq(self, rhs: X) -> Self::Solution {
+        <M::Slots as LstsqSlots<M::Kind, M::Coef, X>>::lstsq(self.coeffs(), &rhs, None)
+    }
+
+    fn lstsq_with(self, rhs: X, rcond: M::Coef) -> Self::Solution {
+        <M::Slots as LstsqSlots<M::Kind, M::Coef, X>>::lstsq(self.coeffs(), &rhs, Some(rcond))
+    }
+}
+
+impl<K, H, T, X> LstsqSlots<K, T, X> for (H,)
+where
+    K: Kind,
+    H: Kind,
+    T: Real,
+    X: Extensor<Coef = T>,
+    X::Kind: SubKind<K>,
+    Sq<H, T>: SquareArr<T>,
+{
+    type Solution = H::Mv<X::Slots, T>;
+
+    fn lstsq(m: &K::Arr<<(H,) as Slots>::Arr<T>>, rhs: &X, rcond: Option<T>) -> Self::Solution {
+        T::vectorize(
+            #[inline(always)]
+            || {
+                let p: H::Mv<(K,), T> = pinv_of::<K::Mv<(H,), T>, H>(
+                    &<K::Mv<(H,), T> as Extensor>::from_coeffs(*m),
+                    rcond,
+                );
+                let b = crate::cast::cast::<X, K>(rhs);
+                let (p, b) = (p.coeffs().as_ref(), b.coeffs().as_ref());
+                let x = H::arr_from_fn(|h| {
+                    <X::Slots as Slots>::from_flat(
+                        &mut |f| {
+                            let mut s = T::zero();
+                            for (k, bk) in b.iter().enumerate() {
+                                s = p[h].as_ref()[k]
+                                    .mul_add(<X::Slots as Slots>::get_flat(bk, f), s);
+                            }
+                            s
+                        },
+                        0,
+                    )
+                });
+                <H::Mv<X::Slots, T> as Extensor>::from_coeffs(x)
+            },
+        )
+    }
+}
+
+macro_rules! lstsq_slots {
+    ($($R:ident),+) => {
+        impl<K, H, $($R,)+ T, X> LstsqSlots<K, T, X> for (H, $($R,)+)
+        where
+            K: Kind,
+            H: Kind,
+            $($R: Kind,)+
+            T: Real,
+            X: Extensor<Coef = T, Slots = ($($R,)+)>,
+            X::Kind: SubKind<K>,
+            Sq<H, T>: SquareArr<T>,
+        {
+            type Solution = H::Mv<(), T>;
+
+            fn lstsq(m: &K::Arr<<Self as Slots>::Arr<T>>, rhs: &X, rcond: Option<T>) -> Self::Solution {
+                T::vectorize(
+                    #[inline(always)]
+                    || {
+                        let (w, v, weights) = factor::<K, H, ($($R,)+), Self, T>(m, rcond);
+                        let b = crate::cast::cast::<X, K>(rhs);
+                        let x = linalg::pinv_apply(&w, &v, &weights, &Col::<K, ($($R,)+), T>(*b.coeffs()));
+                        <H::Mv<(), T> as Extensor>::from_coeffs(H::arr_from_fn(|h| x[h]))
+                    },
+                )
+            }
+        }
+    };
+}
+
+lstsq_slots!(A1);
+lstsq_slots!(A1, A2);
+lstsq_slots!(A1, A2, A3);
+lstsq_slots!(A1, A2, A3, A4);
+lstsq_slots!(A1, A2, A3, A4, A5);
+lstsq_slots!(A1, A2, A3, A4, A5, A6);
+lstsq_slots!(A1, A2, A3, A4, A5, A6, A7);
+lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8);
+lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);

@@ -12,6 +12,8 @@
 //! * [`eigh`]: cyclic Jacobi eigen-decomposition of a symmetric matrix.
 //! * [`eigh_generalized`]: `A x = λ B x` with `B` positive definite, by Cholesky reduction.
 //! * [`svd`]: one-sided (Hestenes) Jacobi singular value decomposition.
+//! * [`orthogonalize`] and [`pinv_apply`]: least squares and the pseudo-inverse of a matrix of
+//!   any shape, by the same one-sided Jacobi on its columns ([`Column`]).
 //!
 //! Jacobi methods are chosen over QR for their accuracy on small symmetric problems (Demmel &
 //! Veselić) and because a fixed number of sweeps makes them branch free.
@@ -631,6 +633,138 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
     )
 }
 
+/// A column of a least-squares problem: a vector with the operations one-sided Jacobi needs.
+/// Implemented for `[T; N]`; gax implements it for an extensor's coefficients, so the
+/// columns of a map with several slots need not be flattened into one array.
+pub trait Column<T: Real>: Copy {
+    /// The dot product (the Euclidean one of the coefficients).
+    fn dot(&self, other: &Self) -> T;
+    /// The plane rotation `(a, b) ← (c a − s b, s a + c b)`.
+    fn rotate(a: &mut Self, b: &mut Self, c: T, s: T);
+}
+
+impl<T: Real, const N: usize> Column<T> for [T; N] {
+    #[inline(always)]
+    fn dot(&self, other: &Self) -> T {
+        let mut s = T::zero();
+        for k in 0..N {
+            s = self[k].mul_add(other[k], s);
+        }
+        s
+    }
+    #[inline(always)]
+    fn rotate(a: &mut Self, b: &mut Self, c: T, s: T) {
+        for k in 0..N {
+            let (x, y) = (a[k], b[k]);
+            a[k] = c * x - s * y;
+            b[k] = s * x + c * y;
+        }
+    }
+}
+
+/// One-sided (Hestenes) Jacobi on the columns `a` of a matrix of any shape (one column per
+/// row of `M`, so `M::N` columns): rotated pairwise until orthogonal, `W = A V`. Returns the
+/// rotated columns `W` and `V` with its columns as *rows* (`v[i]` is the `i`-th right
+/// singular vector, `‖W[i]‖` its singular value). Branch free but for the convergence test,
+/// which stops once every lane has converged.
+#[inline]
+pub fn orthogonalize<T, C, A, M>(a: &A, sweeps: usize) -> (A, M)
+where
+    T: Real,
+    C: Column<T>,
+    A: Copy + AsRef<[C]> + AsMut<[C]>,
+    M: SquareArr<T>,
+{
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let n = M::N;
+            let mut w = *a;
+            let mut v: M = identity();
+            let tol = T::epsilon() * T::epsilon();
+            let cols = w.as_mut();
+            for _ in 0..sweeps {
+                // Converged when every pair is orthogonal relative to the columns' lengths.
+                let (mut off, mut scale) = (T::zero(), T::zero());
+                for p in 0..n {
+                    for q in p + 1..n {
+                        let g = cols[p].dot(&cols[q]);
+                        off = off + g * g;
+                        scale = scale + cols[p].dot(&cols[p]) * cols[q].dot(&cols[q]);
+                    }
+                }
+                if T::all_lt(off, tol * scale) {
+                    break;
+                }
+                for p in 0..n {
+                    for q in p + 1..n {
+                        let alpha = cols[p].dot(&cols[p]);
+                        let beta = cols[q].dot(&cols[q]);
+                        let gamma = cols[p].dot(&cols[q]);
+                        let (c, s) = jacobi_rotation(alpha, beta, gamma);
+                        let (lo, hi) = cols.split_at_mut(q);
+                        C::rotate(&mut lo[p], &mut hi[0], c, s);
+                        for k in 0..n {
+                            let (x, y) = (v[p][k], v[q][k]);
+                            v[p][k] = c * x - s * y;
+                            v[q][k] = s * x + c * y;
+                        }
+                    }
+                }
+            }
+            (w, v)
+        },
+    )
+}
+
+/// The weights `1/σᵢ²` of the columns `W` of [`orthogonalize`], zero where
+/// `σᵢ ≤ rcond · σ_max` (the pseudo-inverse's cutoff, `rcond` as in `numpy.linalg`).
+#[inline]
+pub fn pinv_weights<T, C, A, M>(w: &A, rcond: T) -> M::Vector
+where
+    T: Real,
+    C: Column<T>,
+    A: AsRef<[C]>,
+    M: SquareArr<T>,
+{
+    let cols = w.as_ref();
+    let mut sq = M::zero_vector();
+    let mut largest = T::zero();
+    for i in 0..M::N {
+        sq[i] = cols[i].dot(&cols[i]);
+        largest = largest.max(sq[i]);
+    }
+    let cut = rcond * rcond * largest;
+    let mut weights = M::zero_vector();
+    for i in 0..M::N {
+        // A zero column (and with it the zero matrix) gets weight zero: `cut < 0` is false.
+        let safe = T::select_lt(cut, sq[i], sq[i], T::one());
+        weights[i] = T::select_lt(cut, sq[i], safe.recip(), T::zero());
+    }
+    weights
+}
+
+/// The minimum-norm least-squares solution `x = A⁺ b` for one right-hand side `b`, from
+/// [`orthogonalize`]'s `W` and `V` and [`pinv_weights`]: `x = Σᵢ vᵢ (wᵢ · b) / σᵢ²`.
+#[inline]
+pub fn pinv_apply<T, C, A, M>(w: &A, v: &M, weights: &M::Vector, b: &C) -> M::Vector
+where
+    T: Real,
+    C: Column<T>,
+    A: AsRef<[C]>,
+    M: SquareArr<T>,
+{
+    let cols = w.as_ref();
+    let mut x = M::zero_vector();
+    for i in 0..M::N {
+        let t = cols[i].dot(b) * weights[i];
+        for h in 0..M::N {
+            x[h] = v[i][h].mul_add(t, x[h]);
+        }
+    }
+    x
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -668,6 +802,31 @@ mod tests {
                 assert!(close(av[i], vals[k] * vecs[k][i]));
             }
         }
+    }
+
+    /// Least squares through the columns: a tall full-rank system against the normal
+    /// equations, and a rank-deficient one against its minimum-norm solution.
+    #[test]
+    fn least_squares() {
+        // 4 equations, 2 unknowns: columns (1,1,1,1) and (0,1,2,3), b = (1,2,2,4).
+        let a: [[f64; 4]; 2] = [[1.0, 1.0, 1.0, 1.0], [0.0, 1.0, 2.0, 3.0]];
+        let (w, v): (_, [[f64; 2]; 2]) = orthogonalize(&a, 10);
+        let weights = pinv_weights::<f64, [f64; 4], _, [[f64; 2]; 2]>(&w, 1e-15);
+        let x = pinv_apply(&w, &v, &weights, &[1.0, 2.0, 2.0, 4.0]);
+        // Normal equations: [[4, 6], [6, 14]] x = [9, 18] → x = (0.9, 0.9).
+        assert!(close(x[0], 0.9) && close(x[1], 0.9), "{x:?}");
+        // Two equal columns: the minimum-norm solution splits the weight evenly.
+        let a: [[f64; 3]; 2] = [[1.0, 2.0, 2.0], [1.0, 2.0, 2.0]];
+        let (w, v): (_, [[f64; 2]; 2]) = orthogonalize(&a, 10);
+        let weights = pinv_weights::<f64, [f64; 3], _, [[f64; 2]; 2]>(&w, 1e-12);
+        let x = pinv_apply(&w, &v, &weights, &[3.0, 6.0, 6.0]);
+        assert!(close(x[0], 1.5) && close(x[1], 1.5), "{x:?}");
+        // The zero matrix: the zero solution, no NaN.
+        let a = [[0.0f64; 3]; 2];
+        let (w, v): (_, [[f64; 2]; 2]) = orthogonalize(&a, 10);
+        let weights = pinv_weights::<f64, [f64; 3], _, [[f64; 2]; 2]>(&w, 1e-12);
+        let x = pinv_apply(&w, &v, &weights, &[1.0, 2.0, 3.0]);
+        assert!(x.iter().all(|v| v.abs() < f64::MIN_POSITIVE), "{x:?}");
     }
 
     #[test]

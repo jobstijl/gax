@@ -4,7 +4,9 @@
 //! * `solve` and `inverse`: small residuals, relative to the condition number;
 //! * `det`: `det(A) det(A⁻¹) = 1`;
 //! * the SVD: `A vᵢ = σᵢ uᵢ`, `σ` non-negative and descending, `u` and `v` orthonormal;
-//! * the symmetric eigenproblem: `A v = λ v`, `λ` ascending, `v` orthonormal.
+//! * the symmetric eigenproblem: `A v = λ v`, `λ` ascending, `v` orthonormal;
+//! * the pseudo-inverse `P` of square and rectangular maps: the four Penrose conditions
+//!   (`A P A = A`, `P A P = P`, `A P` and `P A` symmetric), and `lstsq` as `P b`.
 
 use gax::Extensor;
 use gax::pga3d::{Line, Point, Scalar};
@@ -67,7 +69,48 @@ macro_rules! square {
     }};
 }
 
-/// A 4×4 map on points, a 6×6 map on lines, and a symmetric 6×6 form on lines, from numbers.
+/// The Penrose conditions for the pseudo-inverse of `$a` (any shape), and `lstsq($b)`.
+macro_rules! pseudo {
+    ($a:expr, $b:expr) => {{
+        let (a, b) = ($a, $b);
+        // Never panics, whatever the input.
+        let p = a.pinv();
+        let x = a.lstsq(b);
+        let (am, pm) = (matrix(&a), matrix(&p));
+        let scale = am.iter().flatten().fold(0.0f64, |m, x| m.max(x.abs()));
+        let finite = |m: &[Vec<f64>]| m.iter().flatten().all(|x| x.is_finite());
+        if finite(&am) && (1e-100..1e100).contains(&scale) {
+            assert!(finite(&pm), "pinv of a finite matrix is not finite");
+            let pscale = pm.iter().flatten().fold(0.0f64, |m, x| m.max(x.abs()));
+            // The condition of the kept singular values; near the cutoff it is large.
+            let cond = scale * pscale;
+            if cond < 1e8 {
+                let tol = 1e-12 * cond.max(1.0);
+                let apa = mul(&mul(&am, &pm), &am);
+                assert!(close(&apa, &am, tol * scale), "A P A ≠ A (cond {cond:.1e})");
+                let pap = mul(&mul(&pm, &am), &pm);
+                assert!(
+                    close(&pap, &pm, tol * pscale),
+                    "P A P ≠ P (cond {cond:.1e})"
+                );
+                let ap = mul(&am, &pm);
+                assert!(close(&ap, &transpose(&ap), tol), "A P not symmetric");
+                let pa = mul(&pm, &am);
+                assert!(close(&pa, &transpose(&pa), tol), "P A not symmetric");
+                if b.c.iter().all(|v| v.is_finite()) {
+                    let want = p.of(b);
+                    let size = norm(&want.c).max(1e-300);
+                    let diff: Vec<f64> = x.c.iter().zip(want.c).map(|(u, v)| u - v).collect();
+                    assert!(norm(&diff) <= tol * size, "lstsq ≠ pinv · b");
+                }
+            }
+        }
+    }};
+}
+
+/// A 4×4 map on points, a 6×6 map on lines, a symmetric 6×6 form on lines, and the
+/// pseudo-inverses of the square maps and of a tall (points to lines) and a wide (lines to
+/// points) one, from numbers.
 pub fn check(x: &[f64]) {
     let get = |k: usize| x.get(k).copied().unwrap_or(0.0);
     let a = Point::<(Point,), f64>::from_coeffs(core::array::from_fn(|o| {
@@ -83,6 +126,39 @@ pub fn check(x: &[f64]) {
     symmetric(&core::array::from_fn(|o| {
         core::array::from_fn(|i| get(62 + 6 * o.min(i) + o.max(i)))
     }));
+    pseudo!(a, b);
+    pseudo!(l, r);
+    let tall = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|o| {
+        core::array::from_fn(|i| get(4 * o + i))
+    }));
+    pseudo!(tall, r);
+    let wide = Point::<(Line,), f64>::from_coeffs(core::array::from_fn(|o| {
+        core::array::from_fn(|i| get(24 + 6 * o + i))
+    }));
+    pseudo!(wide, b);
+}
+
+fn mul(a: &[Vec<f64>], b: &[Vec<f64>]) -> Vec<Vec<f64>> {
+    a.iter()
+        .map(|row| {
+            (0..b[0].len())
+                .map(|j| row.iter().zip(b).map(|(x, r)| x * r[j]).sum())
+                .collect()
+        })
+        .collect()
+}
+
+fn transpose(a: &[Vec<f64>]) -> Vec<Vec<f64>> {
+    (0..a[0].len())
+        .map(|j| a.iter().map(|r| r[j]).collect())
+        .collect()
+}
+
+fn close(a: &[Vec<f64>], b: &[Vec<f64>], tol: f64) -> bool {
+    a.iter()
+        .flatten()
+        .zip(b.iter().flatten())
+        .all(|(x, y)| (x - y).abs() <= tol)
 }
 
 fn norm(v: &[f64]) -> f64 {

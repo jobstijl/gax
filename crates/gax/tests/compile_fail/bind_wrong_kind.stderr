@@ -1,13 +1,24 @@
-error[E0271]: type mismatch resolving `<Plane as Extensor>::Kind == Point`
+error[E0277]: a `Plane` does not fit a slot of kind `gax::pga3d::Point`
  --> tests/compile_fail/bind_wrong_kind.rs:7:20
   |
 7 |     let _ = map.of(plane);
-  |                 -- ^^^^^ expected `Point`, found `Plane`
+  |                 -- ^^^^^ some blade of `Plane` is not a blade of `gax::pga3d::Point`
   |                 |
   |                 required by a bound introduced by this call
   |
-  = note: expected struct `gax::pga3d::Point`
-             found struct `Plane`
+  = help: the trait `SubKind<gax::pga3d::Point>` is not implemented for `Plane`
+  = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Point>()` if dropping blades is intended
+help: `Plane` implements trait `SubKind<K>`
+ --> src/algebras/pga3d.rs
+  |
+  | impl gx::SubKind<Plane> for Plane {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<Plane>`
+...
+  | impl gx::SubKind<Flector> for Plane {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Flector>`
+...
+  | impl gx::SubKind<Multivector> for Plane {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
   = note: required for `gax::pga3d::Line<(gax::pga3d::Point,)>` to implement `Of<Plane>`
 note: required by a bound in `gax::pga3d::Line::<S, T>::of`
  --> src/algebras/pga3d.rs

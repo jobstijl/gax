@@ -231,6 +231,31 @@ few extra, tiny rotations. So they are not bit-identical, but:
 This holds on spectra with gaps down to `10⁻¹⁴`. Singular vectors of a singular value within
 rounding of zero are arbitrary, and are not compared.
 
+**Least squares** (`pinv`, `lstsq`, ADR-038) run the same one-sided Jacobi on a map's columns,
+for any shape. Singular values at most `rcond · σ_max` count as zero (default: machine epsilon
+times the larger dimension, as `numpy.linalg.lstsq`), so the answer is continuous in the map
+except where a singular value crosses that cutoff: near it, a tiny change in the map can drop a
+direction from the solution. The Penrose conditions hold within `10⁻¹²` times the condition of
+the kept singular values; per lane, solutions agree with the scalar path within
+`10³ (m + n) ε κ²`, on exactly rank-deficient maps and on ones with singular values down to
+`10⁻⁶` (`solver_lanes`). A zero map gives zero, not `NaN`.
+
+**The general inverse** (Shirokov, ADR-037) is the Faddeev–LeVerrier recursion, which is not
+backward stable in general: its scalars `Cₖ` are sums of powers of the eigenvalues of left
+multiplication, and lose digits when those spread widely (`10⁻⁶` to `10⁻⁴` at degree 32, 9D) or
+repeat in Jordan blocks (every digit, for some values, with a null direction). The second is
+avoided by running the recursion on the part of `x` free of null directions and adding the
+nilpotent rest by a finite series; the first is repaired by Newton–Schulz steps. Random values
+come back within `10⁻⁹` times the condition `‖x‖ ‖x⁻¹‖` in the standard algebras (law N) and
+within `4·10⁻¹¹` in 7D to 9D. Kinds with a closed form keep it.
+
+**Derivatives** (`gax::dual`, ADR-039) are exact to rounding for the computation as written:
+`Dual<T, N>` differentiates every operation, so a series or a select differentiates as the
+series or the selected branch, not as the function it approximates. Where a closed form switches
+between a series and a direct formula, the derivative switches with it (both approximate the
+same derivative to the method's accuracy). A derivative that is exactly zero stays zero through a
+function singular at the value (`√x` at `0`), which plain forward mode turns into `NaN`.
+
 ## Documented, not fixed
 
 **`f32` with large coordinates.** A point's error grows with its distance from the origin,

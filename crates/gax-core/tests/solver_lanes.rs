@@ -167,6 +167,63 @@ fn check_svd<const N: usize>(v: &[f64], deltas: [f64; 4]) {
     }
 }
 
+/// Least squares on `C` columns of length `R` (tall or wide), per lane against the scalar
+/// path: a lane is rank-deficient (`delta = 0`, its last column a combination of the others)
+/// or has its smallest singular value near `delta`. The solution's error is within
+/// `c · n · ε · κ` of the scalar one, `κ` the condition of the kept singular values.
+fn check_lstsq<const R: usize, const C: usize>(v: &[f64], deltas: [f64; 4])
+where
+    [[f64; C]; C]: SquareArr<f64, Vector = [f64; C]>,
+    [[L; C]; C]: SquareArr<L, Vector = [L; C]>,
+{
+    let mats: [[[f64; R]; C]; 4] = core::array::from_fn(|l| {
+        let mut a: [[f64; R]; C] =
+            core::array::from_fn(|j| core::array::from_fn(|i| v[l + j * R + i]));
+        for i in 0..R {
+            let comb: f64 = (0..C - 1).map(|j| a[j][i] * v[60 + j]).sum();
+            a[C - 1][i] = comb + deltas[l] * v[65 + i % 5];
+        }
+        a
+    });
+    let b: [f64; R] = core::array::from_fn(|i| v[50 + i % 10]);
+    let lane_cols: [[L; R]; C] = core::array::from_fn(|j| {
+        core::array::from_fn(|i| L::new(core::array::from_fn(|l| mats[l][j][i])))
+    });
+    let lane_b: [L; R] = core::array::from_fn(|i| L::new([b[i]; 4]));
+    let (w, q): (_, [[L; C]; C]) = orthogonalize(&lane_cols, 14);
+    let weights = pinv_weights::<L, [L; R], _, [[L; C]; C]>(&w, L::new([1e-12; 4]));
+    let x = pinv_apply(&w, &q, &weights, &lane_b);
+    for l in 0..4 {
+        let (sw, sq): (_, [[f64; C]; C]) = orthogonalize(&mats[l], 14);
+        let sweights = pinv_weights::<f64, [f64; R], _, [[f64; C]; C]>(&sw, 1e-12);
+        let sx = pinv_apply(&sw, &sq, &sweights, &b);
+        // The kept spectrum's condition: the largest σ over the smallest kept one.
+        let sig: Vec<f64> = sw.iter().map(|c| c.dot(c).sqrt()).collect();
+        let top = sig.iter().fold(0.0f64, |m, s| m.max(*s));
+        let low = sig
+            .iter()
+            .filter(|s| **s > 1e-12 * top)
+            .fold(f64::INFINITY, |m, s| m.min(*s));
+        let kappa = top / low;
+        let size = sx.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+        for h in 0..C {
+            let d = (x[h].v[l] - sx[h]).abs();
+            assert!(
+                d <= 1e3 * (R + C) as f64 * EPS * kappa * kappa * size,
+                "x lane {l}: {d:e} (κ {kappa:.1e})"
+            );
+        }
+    }
+}
+
+/// Rank-deficient lanes (`0`) mixed with nearly singular ones, kept clear of the cutoff.
+fn deficiencies() -> impl Strategy<Value = [f64; 4]> {
+    prop::array::uniform4(prop_oneof![
+        Just(0.0),
+        (-6.0f64..0.0).prop_map(|x| 10f64.powf(x))
+    ])
+}
+
 fn exps() -> impl Strategy<Value = [f64; 4]> {
     prop::array::uniform4(-14.0f64..0.0).prop_map(|e| e.map(|x| 10f64.powf(x)))
 }
@@ -194,6 +251,13 @@ proptest! {
     ) {
         check_svd::<2>(&v, d); check_svd::<3>(&v, d); check_svd::<4>(&v, d);
         check_svd::<6>(&v, d);
+    }
+
+    #[test]
+    fn lstsq_agrees_on_rank_deficient_maps(
+        v in prop::collection::vec(-1.0f64..1.0, 72), d in deficiencies(),
+    ) {
+        check_lstsq::<6, 4>(&v, d); check_lstsq::<3, 5>(&v, d); check_lstsq::<4, 4>(&v, d);
     }
 }
 

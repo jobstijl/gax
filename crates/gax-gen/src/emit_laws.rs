@@ -727,6 +727,57 @@ pub fn laws(spec: &AlgebraSpec, stats: &Stats) -> Laws {
     list(&mut s, "sampled_unit", sampled_unit);
     list(&mut s, "sampled_actions", sampled_actions);
     list(&mut s, "sampled_equivariant", sampled_equivariant);
+    // M: the kind tables (gax_core::cast) for every pair of kinds sharing a blade, the strict
+    // inclusions, and every grade part.
+    let (mut casts, mut sub_kinds, mut grades) = (Vec::new(), Vec::new(), Vec::new());
+    for a in &spec.kinds {
+        for b in &spec.kinds {
+            let shared = a
+                .layout
+                .blades
+                .iter()
+                .filter(|(m, _)| b.layout.position(*m).is_some())
+                .count();
+            if shared == 0 {
+                continue;
+            }
+            casts.push(format!("({}, {})", a.name, b.name));
+            if shared == a.layout.len() && a.name != b.name {
+                sub_kinds.push(format!("({}, {})", a.name, b.name));
+            }
+        }
+        let by_grade: BTreeSet<u32> = a
+            .layout
+            .blades
+            .iter()
+            .map(|(m, _)| m.count_ones())
+            .collect();
+        for g in by_grade {
+            let support: BTreeSet<u32> = a
+                .layout
+                .blades
+                .iter()
+                .map(|(m, _)| *m)
+                .filter(|m| m.count_ones() == g)
+                .collect();
+            let out = spec
+                .kind_for_support(&support)
+                .expect("the kind itself holds it");
+            grades.push(format!("({}, {g}, {})", a.name, out.name));
+        }
+    }
+    // N: the general inverse (Shirokov's), with its output kind.
+    let inverses: Vec<String> = spec
+        .kinds
+        .iter()
+        .zip(&stats.values)
+        .filter(|(_, m)| m.inverse_general)
+        .map(|(k, m)| format!("({}, {})", k.name, m.inverse.as_deref().expect("emitted")))
+        .collect();
+    list(&mut s, "casts", casts);
+    list(&mut s, "sub_kinds", sub_kinds);
+    list(&mut s, "grades", grades);
+    list(&mut s, "inverses", inverses);
     Laws {
         invocation: s,
         equivariance,

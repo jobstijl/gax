@@ -15,6 +15,7 @@ use crate::slp::{Func, render};
 use crate::spec::{AlgebraSpec, KindSpec};
 use crate::symbolic::{self, SymMv};
 use crate::table::{BinOp, UnOp};
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
@@ -81,6 +82,7 @@ fn scale_mv(mv: &SymMv, p: &Poly) -> SymMv {
 
 /// Which value methods were emitted for a kind, and their output kinds.
 #[derive(Clone, Debug, Default)]
+#[allow(clippy::struct_excessive_bools)] // one flag per optional method, not a state machine
 pub struct ValueMethods {
     /// Kind name.
     pub kind: String,
@@ -88,6 +90,8 @@ pub struct ValueMethods {
     pub norm: bool,
     /// `inverse`, with its output kind.
     pub inverse: Option<String>,
+    /// Whether `inverse` is the general one (Shirokov's, ADR-037) rather than a closed form.
+    pub inverse_general: bool,
     /// `normalized`.
     pub normalized: bool,
     /// `exp`, with its output kind.
@@ -176,6 +180,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
         meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body, &mut meta.kernels);
         emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
+    }
+    // Every other kind: the inverse as a polynomial in x (Shirokov), in its product closure.
+    if meta.inverse.is_none() && !k.layout.blades.is_empty() {
+        meta.inverse = emit_inverse_general(spec, k, &mut body);
+        meta.inverse_general = meta.inverse.is_some();
     }
 
     // exp: for kinds made of bivectors, when B² is a Study number.
@@ -392,6 +401,171 @@ fn emit_inverse(
         outs.join(", ")
     );
     Some(on.clone())
+}
+
+/// The inverse of a kind without a closed form (no Study structure), by Shirokov's method
+/// (*On computing the determinant, other characteristic polynomial coefficients, and inverse in
+/// Clifford algebras of arbitrary dimension*, 2021): the Faddeev–LeVerrier recursion on left
+/// multiplication, which needs only products and scalar parts, in the smallest kind closed under
+/// the product. Its degree is the dimension of a faithful representation in which the trace is
+/// that dimension times the scalar part: `2^⌈(p+q)/2⌉` for `R(p, q)` (both half-spinor modules
+/// in odd dimension). Null directions would multiply it by `2^r` and give the recursion
+/// repeated eigenvalues it cannot resolve, so where they are basis vectors the recursion runs on
+/// the part of `x` free of them, and a finite series adds the nilpotent rest. Newton–Schulz steps
+/// then restore the digits the recursion loses at high degree (ADR-037).
+fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
+    let alg = &spec.algebra;
+    let mut closure: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
+    closure.insert(0);
+    loop {
+        let mut next = closure.clone();
+        for &a in &closure {
+            for &b in &closure {
+                for &(m, _) in alg.blade_product(a, b) {
+                    next.insert(m);
+                }
+            }
+        }
+        if next == closure {
+            break;
+        }
+        closure = next;
+    }
+    let e = spec.kind_for_support(&closure)?.clone();
+    let (p, q, r) = alg.signature();
+    if !some_invertible(alg, k, 1u32 << ((p + q).div_ceil(2) + r)) {
+        return None;
+    }
+    // The null basis vectors (zero rows of the metric). Where they span the metric's radical,
+    // `x = a + n` with `a` free of them and `n` nilpotent, and the recursion runs on `a` alone,
+    // at the non-degenerate degree: repeated eigenvalues in Jordan blocks, which a null
+    // direction gives left multiplication, cost it all its digits in 7D and 8D PGA.
+    let null: u32 = alg
+        .metric()
+        .iter()
+        .enumerate()
+        .filter(|(_, row)| row.iter().all(|&v| v == 0))
+        .fold(0, |m, (i, _)| m | (1 << i));
+    let split = null.count_ones() as usize == r && r > 0;
+    let degree = if split {
+        1u32 << (p + q).div_ceil(2)
+    } else {
+        1u32 << ((p + q).div_ceil(2) + r)
+    };
+    let (en, name) = (&e.name, &k.name);
+    let mut embed = String::new();
+    for (i, &(m, sb)) in k.layout.blades.iter().enumerate() {
+        let (pos, se) = e.layout.position(m)?;
+        let sign = if sb * se > 0 { "" } else { "-" };
+        let _ = writeln!(embed, "        x.c[{pos}] = {sign}self.c[{i}] * scale;");
+    }
+    let (one, one_sign) = e.layout.position(0)?;
+    // `⟨u⟩₀` and `u − c` in `e`'s layout, whose scalar blade may be stored negated.
+    let (get, put) = if one_sign > 0 { ("", "-") } else { ("-", "+") };
+    let two = if one_sign > 0 {
+        "+ T::from_i64(2)"
+    } else {
+        "- T::from_i64(2)"
+    };
+    // Refinement steps: one where the recursion is short, two at degree 32 (9D).
+    let steps = if degree <= 16 { 1 } else { 2 };
+    let (body_of, neumann) = if split {
+        let zeroed: Vec<String> = e
+            .layout
+            .blades
+            .iter()
+            .enumerate()
+            .filter(|(_, (m, _))| m & null != 0)
+            .map(|(i, _)| format!("a.c[{i}] = T::zero();"))
+            .collect();
+        (
+            format!(
+                "        // The body `a` (no null direction) and the nilpotent rest `n = x − a`.\n        let mut a = x;\n        {}\n        let n = x - a;\n",
+                zeroed.join(" ")
+            ),
+            format!(
+                "        // x⁻¹ = Σₖ (−a⁻¹ n)ᵏ a⁻¹, k = 0..={r}: (a⁻¹ n)^{} = 0, every term holding a null\n        // direction twice.\n        let m = -(y * n);\n        let mut term = y;\n        for _ in 0..{r} {{\n            term = m * term;\n            y = y + term;\n        }}\n",
+                r + 1
+            ),
+        )
+    } else {
+        ("        let a = x;\n".to_string(), String::new())
+    };
+    let what = if split {
+        format!(
+            "on the part of `x` free of the null direction(s), then a finite series for the\n    /// nilpotent rest ({r} term(s)), then {steps} Newton–Schulz step(s)"
+        )
+    } else {
+        format!("then {steps} Newton–Schulz step(s)")
+    };
+    let _ = write!(
+        body,
+        "    /// The inverse under the geometric product, by Shirokov's method in `{en}` (no closed form\n    /// for `{name}` here): the inverse as a polynomial of degree {d} whose coefficients come\n    /// from the scalar parts of powers (the Faddeev–LeVerrier recursion on left multiplication,\n    /// {d} products in `{en}`), {what} (docs/design.md, ADR-037). `x` is scaled to its largest\n    /// coefficient first. Not finite where `x` has no inverse.\n    #[inline]\n    pub fn inverse(self) -> {en}<(), T>\n    where\n        T: Real,\n    {{\n        T::vectorize(#[inline(always)] move || {{\n        let mut size = T::zero();\n        for c in self.c {{\n            size = size.max(c.abs());\n        }}\n        let scale = size.recip();\n        let mut x = {en}::<(), T>::zero();\n{embed}{body_of}        // U₁ = a, Cₖ = (N/k) ⟨Uₖ⟩₀, Uₖ₊₁ = a (Uₖ − Cₖ); then a⁻¹ = (U_{{N−1}} − C_{{N−1}}) / C_N.\n        let mut prev = a;\n        let c = {get}a.c[{one}] * T::from_i64({n});\n        prev.c[{one}] = prev.c[{one}] {put} c;\n        for k in 2..{n}i64 {{\n            let u = a * prev;\n            let c = {get}u.c[{one}] * T::from_ratio({n}, k);\n            prev = u;\n            prev.c[{one}] = prev.c[{one}] {put} c;\n        }}\n        let det = {get}(a * prev).c[{one}];\n        let mut y = prev.gp(det.recip());\n{neumann}        // Newton–Schulz, y ← y (2 − x y), squares the residual: the recursion loses digits as\n        // its degree grows (to 10⁻⁴ at degree 32), and the step(s) restore them.\n        for _ in 0..{steps} {{\n            let mut t = -(x * y);\n            t.c[{one}] = t.c[{one}] {two};\n            y = y * t;\n        }}\n        y.gp(scale)\n        }})\n    }}\n\n",
+        d = degree - 1,
+        n = degree,
+    );
+    Some(en.clone())
+}
+
+/// Whether some value of the kind has an inverse: Shirokov's last coefficient `C_N`, a
+/// polynomial in the coefficients that vanishes exactly where there is none, is nonzero at a
+/// random point (computed modulo `2⁶¹ − 1`; a nonzero residue proves `C_N ≢ 0`). It is
+/// identically zero for kinds of nilpotent values, such as a PGA pseudoscalar.
+fn some_invertible(alg: &Algebra, k: &KindSpec, degree: u32) -> bool {
+    const P: u128 = (1 << 61) - 1;
+    let modp = |v: i128| v.rem_euclid(P as i128) as u128;
+    let inv = |a: u128| {
+        // a^(P−2) mod P
+        let (mut base, mut e, mut acc) = (a % P, P - 2, 1u128);
+        while e > 0 {
+            if e & 1 == 1 {
+                acc = acc * base % P;
+            }
+            base = base * base % P;
+            e >>= 1;
+        }
+        acc
+    };
+    let product = |x: &BTreeMap<u32, u128>, y: &BTreeMap<u32, u128>| {
+        let mut out: BTreeMap<u32, u128> = BTreeMap::new();
+        for (&a, &ca) in x {
+            for (&b, &cb) in y {
+                for &(m, v) in alg.blade_product(a, b) {
+                    let t = ca * cb % P * modp(i128::from(v)) % P;
+                    let e = out.entry(m).or_default();
+                    *e = (*e + t) % P;
+                }
+            }
+        }
+        out
+    };
+    let mut state = 0x5eed_1e55_u64;
+    (0..2).any(|_| {
+        let x: BTreeMap<u32, u128> = k
+            .layout
+            .blades
+            .iter()
+            .map(|(m, _)| {
+                state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+                let mut z = state;
+                z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+                z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+                (*m, u128::from(z ^ (z >> 31)) % P)
+            })
+            .collect();
+        let n = u128::from(degree);
+        let scalar = |u: &BTreeMap<u32, u128>| u.get(&0).copied().unwrap_or(0);
+        let mut prev = x.clone();
+        let mut c = scalar(&x) * n % P;
+        *prev.entry(0).or_default() = (scalar(&prev) + P - c) % P;
+        for kk in 2..n {
+            let u = product(&x, &prev);
+            c = scalar(&u) * n % P * inv(kk) % P;
+            prev = u;
+            *prev.entry(0).or_default() = (scalar(&prev) + P - c) % P;
+        }
+        scalar(&product(&x, &prev)) != 0
+    })
 }
 
 fn emit_normalized(

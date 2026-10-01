@@ -146,6 +146,61 @@ impl Algebra {
         &self.metric
     }
 
+    /// The signature `(p, q, r)`: how many basis directions of the metric square to `+1`, to
+    /// `−1` and to `0` after diagonalizing it (Sylvester's law of inertia, by symmetric
+    /// elimination over the rationals; the metric need not be diagonal, as CGA's null basis).
+    #[must_use]
+    #[allow(clippy::needless_range_loop)] // row and column operations by index
+    pub fn signature(&self) -> (usize, usize, usize) {
+        use crate::poly::Rational;
+        let n = self.dim();
+        let mut a: Vec<Vec<Rational>> = self
+            .metric
+            .iter()
+            .map(|row| row.iter().map(|&x| Rational::int(i128::from(x))).collect())
+            .collect();
+        let (mut p, mut q) = (0, 0);
+        for k in 0..n {
+            // A nonzero pivot on the diagonal, or one made from an off-diagonal entry
+            // (`e_i + e_j` squares to `2 a_ij` when `a_ii = a_jj = 0`).
+            let pivot = (k..n).find(|&i| !a[i][i].is_zero()).or_else(|| {
+                let (i, j) = (k..n)
+                    .flat_map(|i| (i + 1..n).map(move |j| (i, j)))
+                    .find(|&(i, j)| !a[i][j].is_zero())?;
+                for c in 0..n {
+                    a[i][c] = a[i][c] + a[j][c];
+                }
+                for r in 0..n {
+                    a[r][i] = a[r][i] + a[r][j];
+                }
+                Some(i)
+            });
+            let Some(i) = pivot else {
+                return (p, q, n - k);
+            };
+            a.swap(k, i);
+            for row in &mut a {
+                row.swap(k, i);
+            }
+            let d = a[k][k];
+            for i in k + 1..n {
+                let f = a[i][k] * d.recip();
+                for c in 0..n {
+                    a[i][c] = a[i][c] - f * a[k][c];
+                }
+                for r in 0..n {
+                    a[r][i] = a[r][i] - f * a[r][k];
+                }
+            }
+            if Rational::ZERO.lt(d) {
+                p += 1;
+            } else {
+                q += 1;
+            }
+        }
+        (p, q, 0)
+    }
+
     /// Whether the metric is diagonal.
     pub fn is_diagonal(&self) -> bool {
         (0..self.dim()).all(|i| (0..self.dim()).all(|j| i == j || self.metric[i][j] == 0))
@@ -390,6 +445,28 @@ mod tests {
         assert_eq!(a.parse_blade("e0123").unwrap(), (0b1111, 1));
         assert!(a.parse_blade("e00").is_err());
         assert!(a.parse_blade("e4").is_err());
+    }
+
+    /// Inertia of diagonal, null-basis (CGA's `o`, `i`) and all-off-diagonal metrics.
+    #[test]
+    fn signatures() {
+        assert_eq!(pga3d().signature(), (3, 0, 1));
+        assert_eq!(
+            Algebra::diagonal("0123", &[1, -1, -1, -1])
+                .unwrap()
+                .signature(),
+            (1, 3, 0)
+        );
+        // CGA3D: e1, e2, e3 and the null pair o, i with o·i = −1, which is R(4,1).
+        let mut m = vec![vec![0i64; 5]; 5];
+        for (i, row) in m.iter_mut().enumerate().take(3) {
+            row[i] = 1;
+        }
+        (m[3][4], m[4][3]) = (-1, -1);
+        assert_eq!(Algebra::new("123oi", m).unwrap().signature(), (4, 1, 0));
+        // A hyperbolic plane with a null direction beside it: R(1,1,1).
+        let m = vec![vec![0, 1, 0], vec![1, 0, 0], vec![0, 0, 0]];
+        assert_eq!(Algebra::new("abc", m).unwrap().signature(), (1, 1, 1));
     }
 
     #[test]

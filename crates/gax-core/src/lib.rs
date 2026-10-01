@@ -5,11 +5,13 @@
 //!
 //! * [`Slots`] (tuples of kinds) and [`Kind`]: the type-level structure of values, maps and forms.
 //! * [`Extensor`]: the interface every generated type implements; [`Of`], [`MoveToFront`],
-//!   [`FillList`] for binding and composition.
-//! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`, and
-//!   [`fp::Fp`], a prime field for exact randomized identity checks).
-//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`]: solving, eigenproblems and pairings on
-//!   maps and forms, built on [`linalg`].
+//!   [`FillList`] for binding and composition; [`Cast`], [`SubKind`] and [`GradePart`] for
+//!   projections, embeddings and grade parts between kinds.
+//! * [`Coef`] and [`Real`]: coefficient types (`f32`, `f64`, SIMD lanes, the symbolic `Sym`,
+//!   [`fp::Fp`], a prime field for exact randomized identity checks, and [`dual::Dual`], dual
+//!   numbers for forward-mode derivatives).
+//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`], [`LeastSquares`], [`PseudoInverse`]:
+//!   solving, eigenproblems, pairings and least squares on maps and forms, built on [`linalg`].
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
 //! * [`study`]: functions of Study numbers, behind exp, log, normalization and inverses.
 //!
@@ -30,7 +32,9 @@
 #[cfg(feature = "batch")]
 pub mod batch;
 pub mod bind;
+pub mod cast;
 pub mod coef;
+pub mod dual;
 pub mod extensor;
 pub mod fill;
 pub mod fp;
@@ -49,8 +53,11 @@ pub mod trace;
 pub mod unit;
 
 pub use bind::Of;
+pub use cast::{Cast, GradePart, SubKind};
 pub use coef::{Coef, Elem, Real};
-pub use extensor::{Endomorphism, Form, Pairing, SquareMap, TraceFirst};
+pub use extensor::{
+    Endomorphism, Form, LeastSquares, Pairing, PseudoInverse, SquareMap, TraceFirst,
+};
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;
 pub use kind::{ApproxEq, Coeffs, Extensor, Kind, Retype, select_lt};

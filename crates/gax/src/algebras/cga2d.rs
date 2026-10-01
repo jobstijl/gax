@@ -106,6 +106,46 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Scalar: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Scalar as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Scalar: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Scalar<<S as gx::MoveToFront<I>>::Moved, T>
@@ -358,6 +398,25 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Scalar`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Scalar,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Scalar,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Scalar,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Scalar` to itself.
@@ -726,6 +785,46 @@ impl<S: gx::Slots, T: gx::Coef> Vector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Vector: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Vector as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Vector: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Vector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -996,6 +1095,25 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Vector`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Vector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Vector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Vector,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Vector` to itself.
@@ -1389,6 +1507,46 @@ impl<S: gx::Slots, T: gx::Coef> Twist<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Twist: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Twist as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Twist: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Twist<<S as gx::MoveToFront<I>>::Moved, T>
@@ -1653,6 +1811,25 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Twist`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Twist,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Twist,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Twist,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Twist` to itself.
@@ -2044,6 +2221,46 @@ impl<S: gx::Slots, T: gx::Coef> Bivector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Bivector: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Bivector as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Bivector: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Bivector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -2326,6 +2543,25 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Bivector`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Bivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Bivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Bivector,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Bivector` to itself.
@@ -2834,6 +3070,46 @@ impl<S: gx::Slots, T: gx::Coef> Trivector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Trivector: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Trivector as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Trivector: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Trivector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -3104,6 +3380,25 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Trivector`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Trivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Trivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Trivector,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Trivector` to itself.
@@ -3503,6 +3798,46 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Pseudoscalar: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Pseudoscalar as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Pseudoscalar: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T>
@@ -3755,6 +4090,25 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Pseudoscalar`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Pseudoscalar,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Pseudoscalar,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Pseudoscalar,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Pseudoscalar` to itself.
@@ -4118,6 +4472,46 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Motor: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Motor as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Motor: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Motor<<S as gx::MoveToFront<I>>::Moved, T>
@@ -4388,6 +4782,25 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Motor`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Motor,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Motor,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Motor,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Motor` to itself.
@@ -4797,6 +5210,46 @@ impl<S: gx::Slots, T: gx::Coef> Even<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Even: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Even as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Even: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Even<<S as gx::MoveToFront<I>>::Moved, T>
@@ -5091,6 +5544,25 @@ impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Even`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Even,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Even,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Even,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Even` to itself.
@@ -5694,6 +6166,46 @@ impl<S: gx::Slots, T: gx::Coef> Odd<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Odd: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Odd as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Odd: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Odd<<S as gx::MoveToFront<I>>::Moved, T>
@@ -5988,6 +6500,25 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
     {
         gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Odd`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Odd,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Odd,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Odd,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
     }
 
     /// The trace of a map from `Odd` to itself.
@@ -6550,6 +7081,46 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         gx::Of::of(self, x)
     }
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Multivector: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Multivector as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Multivector: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Multivector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -6894,6 +7465,25 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
         gx::SquareMap::svd(self)
     }
 
+    /// The MooreâPenrose pseudo-inverse, `A <- Multivector`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Multivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Multivector,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
+    }
+
     /// The trace of a map from `Multivector` to itself.
     #[inline]
     pub fn trace(self) -> T
@@ -7125,6 +7715,63 @@ impl<T: gx::Real> Multivector<(), T> {
     #[inline(always)]
     pub fn norm(self) -> T {
         self.norm_squared().abs().sqrt()
+    }
+
+    /// The inverse under the geometric product, by Shirokov's method in `Multivector` (no closed form
+    /// for `Multivector` here): the inverse as a polynomial of degree 3 whose coefficients come
+    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
+    /// 3 products in `Multivector`), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
+    /// coefficient first. Not finite where `x` has no inverse.
+    #[inline]
+    pub fn inverse(self) -> Multivector<(), T>
+    where
+        T: gx::Real,
+    {
+        T::vectorize(#[inline(always)] move || {
+        let mut size = T::zero();
+        for c in self.c {
+            size = size.max(c.abs());
+        }
+        let scale = size.recip();
+        let mut x = Multivector::<(), T>::zero();
+        x.c[0] = self.c[0] * scale;
+        x.c[1] = self.c[1] * scale;
+        x.c[2] = self.c[2] * scale;
+        x.c[3] = self.c[3] * scale;
+        x.c[4] = self.c[4] * scale;
+        x.c[5] = self.c[5] * scale;
+        x.c[6] = self.c[6] * scale;
+        x.c[7] = self.c[7] * scale;
+        x.c[8] = self.c[8] * scale;
+        x.c[9] = self.c[9] * scale;
+        x.c[10] = self.c[10] * scale;
+        x.c[11] = self.c[11] * scale;
+        x.c[12] = self.c[12] * scale;
+        x.c[13] = self.c[13] * scale;
+        x.c[14] = self.c[14] * scale;
+        x.c[15] = self.c[15] * scale;
+        let a = x;
+        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
+        let mut prev = a;
+        let c = a.c[0] * T::from_i64(4);
+        prev.c[0] = prev.c[0] - c;
+        for k in 2..4i64 {
+            let u = a * prev;
+            let c = u.c[0] * T::from_ratio(4, k);
+            prev = u;
+            prev.c[0] = prev.c[0] - c;
+        }
+        let det = (a * prev).c[0];
+        let mut y = prev.gp(det.recip());
+        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
+        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
+        for _ in 0..1 {
+            let mut t = -(x * y);
+            t.c[0] = t.c[0] + T::from_i64(2);
+            y = y * t;
+        }
+        y.gp(scale)
+        })
     }
 
 }
@@ -7527,6 +8174,354 @@ impl gx::KindEq<Odd> for Multivector {
 
 impl gx::KindEq<Multivector> for Multivector {
     type Out = gx::True;
+}
+
+impl gx::Cast<Scalar> for Scalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::SubKind<Scalar> for Scalar {}
+
+impl gx::Cast<Motor> for Scalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::SubKind<Motor> for Scalar {}
+
+impl gx::Cast<Even> for Scalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::SubKind<Even> for Scalar {}
+
+impl gx::Cast<Multivector> for Scalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::SubKind<Multivector> for Scalar {}
+
+impl gx::GradePart<0> for Scalar {
+    type Out = Scalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::Cast<Vector> for Vector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::SubKind<Vector> for Vector {}
+
+impl gx::Cast<Odd> for Vector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::SubKind<Odd> for Vector {}
+
+impl gx::Cast<Multivector> for Vector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false)];
+}
+
+impl gx::SubKind<Multivector> for Vector {}
+
+impl gx::GradePart<1> for Vector {
+    type Out = Vector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::Cast<Twist> for Twist {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
+}
+
+impl gx::SubKind<Twist> for Twist {}
+
+impl gx::Cast<Bivector> for Twist {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 3, false), (2, 4, false)];
+}
+
+impl gx::SubKind<Bivector> for Twist {}
+
+impl gx::Cast<Motor> for Twist {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false)];
+}
+
+impl gx::SubKind<Motor> for Twist {}
+
+impl gx::Cast<Even> for Twist {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 4, false), (2, 5, false)];
+}
+
+impl gx::SubKind<Even> for Twist {}
+
+impl gx::Cast<Multivector> for Twist {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 8, false), (2, 9, false)];
+}
+
+impl gx::SubKind<Multivector> for Twist {}
+
+impl gx::GradePart<2> for Twist {
+    type Out = Twist;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
+}
+
+impl gx::Cast<Twist> for Bivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (3, 1, false), (4, 2, false)];
+}
+
+impl gx::Cast<Bivector> for Bivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
+}
+
+impl gx::SubKind<Bivector> for Bivector {}
+
+impl gx::Cast<Motor> for Bivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (3, 2, false), (4, 3, false)];
+}
+
+impl gx::Cast<Even> for Bivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false)];
+}
+
+impl gx::SubKind<Even> for Bivector {}
+
+impl gx::Cast<Multivector> for Bivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 6, false), (2, 7, false), (3, 8, false), (4, 9, false), (5, 10, false)];
+}
+
+impl gx::SubKind<Multivector> for Bivector {}
+
+impl gx::GradePart<2> for Bivector {
+    type Out = Bivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
+}
+
+impl gx::Cast<Trivector> for Trivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::SubKind<Trivector> for Trivector {}
+
+impl gx::Cast<Odd> for Trivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 4, false), (1, 5, false), (2, 6, false), (3, 7, false)];
+}
+
+impl gx::SubKind<Odd> for Trivector {}
+
+impl gx::Cast<Multivector> for Trivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 11, false), (1, 12, false), (2, 13, false), (3, 14, false)];
+}
+
+impl gx::SubKind<Multivector> for Trivector {}
+
+impl gx::GradePart<3> for Trivector {
+    type Out = Trivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::Cast<Pseudoscalar> for Pseudoscalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::SubKind<Pseudoscalar> for Pseudoscalar {}
+
+impl gx::Cast<Even> for Pseudoscalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 7, false)];
+}
+
+impl gx::SubKind<Even> for Pseudoscalar {}
+
+impl gx::Cast<Multivector> for Pseudoscalar {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 15, false)];
+}
+
+impl gx::SubKind<Multivector> for Pseudoscalar {}
+
+impl gx::GradePart<4> for Pseudoscalar {
+    type Out = Pseudoscalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::Cast<Scalar> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::Cast<Twist> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
+}
+
+impl gx::Cast<Bivector> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 3, false), (3, 4, false)];
+}
+
+impl gx::Cast<Motor> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::SubKind<Motor> for Motor {}
+
+impl gx::Cast<Even> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 4, false), (3, 5, false)];
+}
+
+impl gx::SubKind<Even> for Motor {}
+
+impl gx::Cast<Multivector> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 5, false), (2, 8, false), (3, 9, false)];
+}
+
+impl gx::SubKind<Multivector> for Motor {}
+
+impl gx::GradePart<0> for Motor {
+    type Out = Scalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::GradePart<2> for Motor {
+    type Out = Twist;
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false)];
+}
+
+impl gx::Cast<Scalar> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::Cast<Twist> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (4, 1, false), (5, 2, false)];
+}
+
+impl gx::Cast<Bivector> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
+}
+
+impl gx::Cast<Pseudoscalar> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false)];
+}
+
+impl gx::Cast<Motor> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (4, 2, false), (5, 3, false)];
+}
+
+impl gx::Cast<Even> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false)];
+}
+
+impl gx::SubKind<Even> for Even {}
+
+impl gx::Cast<Multivector> for Even {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 5, false), (2, 6, false), (3, 7, false), (4, 8, false), (5, 9, false), (6, 10, false), (7, 15, false)];
+}
+
+impl gx::SubKind<Multivector> for Even {}
+
+impl gx::GradePart<0> for Even {
+    type Out = Scalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::GradePart<2> for Even {
+    type Out = Bivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
+}
+
+impl gx::GradePart<4> for Even {
+    type Out = Pseudoscalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false)];
+}
+
+impl gx::Cast<Vector> for Odd {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::Cast<Trivector> for Odd {
+    const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false), (6, 2, false), (7, 3, false)];
+}
+
+impl gx::Cast<Odd> for Odd {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false)];
+}
+
+impl gx::SubKind<Odd> for Odd {}
+
+impl gx::Cast<Multivector> for Odd {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 11, false), (5, 12, false), (6, 13, false), (7, 14, false)];
+}
+
+impl gx::SubKind<Multivector> for Odd {}
+
+impl gx::GradePart<1> for Odd {
+    type Out = Vector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false)];
+}
+
+impl gx::GradePart<3> for Odd {
+    type Out = Trivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(4, 0, false), (5, 1, false), (6, 2, false), (7, 3, false)];
+}
+
+impl gx::Cast<Scalar> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::Cast<Vector> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false)];
+}
+
+impl gx::Cast<Twist> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (8, 1, false), (9, 2, false)];
+}
+
+impl gx::Cast<Bivector> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false)];
+}
+
+impl gx::Cast<Trivector> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false)];
+}
+
+impl gx::Cast<Pseudoscalar> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
+}
+
+impl gx::Cast<Motor> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (5, 1, false), (8, 2, false), (9, 3, false)];
+}
+
+impl gx::Cast<Even> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (5, 1, false), (6, 2, false), (7, 3, false), (8, 4, false), (9, 5, false), (10, 6, false), (15, 7, false)];
+}
+
+impl gx::Cast<Odd> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (11, 4, false), (12, 5, false), (13, 6, false), (14, 7, false)];
+}
+
+impl gx::Cast<Multivector> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
+}
+
+impl gx::SubKind<Multivector> for Multivector {}
+
+impl gx::GradePart<0> for Multivector {
+    type Out = Scalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
+}
+
+impl gx::GradePart<1> for Multivector {
+    type Out = Vector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false)];
+}
+
+impl gx::GradePart<2> for Multivector {
+    type Out = Bivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(5, 0, false), (6, 1, false), (7, 2, false), (8, 3, false), (9, 4, false), (10, 5, false)];
+}
+
+impl gx::GradePart<3> for Multivector {
+    type Out = Trivector;
+    const SHARED: &'static [(usize, usize, bool)] = &[(11, 0, false), (12, 1, false), (13, 2, false), (14, 3, false)];
+}
+
+impl gx::GradePart<4> for Multivector {
+    type Out = Pseudoscalar;
+    const SHARED: &'static [(usize, usize, bool)] = &[(15, 0, false)];
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar<S1, T> {
@@ -24147,6 +25142,86 @@ impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Odd<(), T>>> for Multivector<
     #[inline(always)]
     fn div_by(self, rhs: gx::Unit<Odd<(), T>>) -> Self::Output {
         gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Twist<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Trivector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Motor<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Even<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
     }
 }
 

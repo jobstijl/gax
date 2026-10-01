@@ -767,9 +767,14 @@ fn value_methods() {
     common::normalized::<Scalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Vector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Bivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::exp_log::<Bivector<(), f64>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
+    common::inverse::<Trivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Quadvector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Quadvector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Motor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::inverse::<Odd<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
 }
 
 #[test]

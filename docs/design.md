@@ -965,6 +965,113 @@ and their `_8d` twins, `h_weights`; derivation in log6d.md §12).*
   faster from 7D on. Within `5·10⁻¹³` of a Taylor series in `f64` on random bivectors of seven
   algebras, no NaN (log6d.md §12).
 
+## ADR-036: Kind tables: casts, grade parts, and binding a smaller kind
+*Status: accepted, implemented (`gax_core::cast::{Cast, SubKind, GradePart}`, emitted per
+algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
+
+* **The problem.** numga's types are arbitrary sets of blades, so it projects onto any subspace
+  (`select_grade`, `cast`) and binds a vector into a slot of the full multivector by embedding it.
+  gax had `From` between kinds whose blades nest, but no projection, no grade part, and binding
+  required the slot's exact kind.
+* **Not a `Multivector` trait.** A trait on values ("anything that converts to the full
+  multivector") would route every bind through the largest kind and lose the zeros. The relation
+  that matters is between kinds, and kinds are a closed family per algebra, so the generator
+  emits it as tables: `Cast<B> for A` lists the blades `A` shares with `B` (positions and
+  orientation), `SubKind<B> for A` marks `A ⊆ B`, and `GradePart<G> for A` names the declared kind
+  holding `A`'s grade-`G` part (a kind of exactly that grade where one is declared). `cast`,
+  `grade` and binding are loops over these constant tables; nothing is searched at run time.
+* **Binding.** `Of<X>` requires `X::Kind: SubKind<Head>` instead of `X::Kind = Head`. For the
+  slot's own kind the table is the identity, decided in a `const` block, and the code is the
+  previous contraction unchanged (checked: same arithmetic, same timings, 21.8 ns for a CGA3D
+  even-versor slot). A smaller kind is first placed in the slot's layout. Composing a smaller
+  kind's slot into a larger one narrows the slot (`act.of(Rotor::slot())`).
+* **What stays exact.** A product's result is still the smallest declared kind holding its
+  support (ADR-007's zeros live in the code, not the type); declaring a kind gives a set of
+  blades a type of its own. Exact result types per expression would need kinds as const
+  bitmasks with computed result types (`generic_const_exprs`, unstable).
+* **More slots.** Slot lists go up to 12 (was 8; Rust has no variadic generics, so tuples are
+  expanded by macros). A dense extensor has the product of its slots' sizes per output
+  coefficient, so the practical limit is that product, not the count.
+* **Laws** (law M, every standard algebra, exact): a cast is the projection by blade name and
+  orientation (computed independently from the blade names), on values and maps; a sub-kind's
+  round trip is the identity and equals the generated `From`; binding a sub-kind equals binding
+  its embedding, and narrowing a slot composes; a grade part is the value with its other grades
+  zeroed. Compile-fail tests cover a cast with no shared blade, a missing grade, and a value
+  that does not fit a slot.
+
+## ADR-037: The inverse of any kind, by Shirokov's method
+*Status: accepted, implemented (`emit_inverse_general`; `Algebra::signature`).*
+
+* **The problem.** `inverse()` existed only where a kind's `x ~x` is a Study number (ADR-019),
+  so CGA's and CSTA's `Even`, every `Multivector`, and most mixed-grade kinds had none.
+* **The method.** Shirokov (2021): the Faddeev–LeVerrier recursion on left multiplication,
+  `U₁ = x`, `Cₖ = (N/k) ⟨Uₖ⟩₀`, `Uₖ₊₁ = x (Uₖ − Cₖ)`, and `x⁻¹ = (U_{N−1} − C_{N−1}) / C_N`.
+  It needs only products and scalar parts, and stays in the smallest kind closed under the
+  product (the inverse is a polynomial in `x`). `x` is scaled to its largest coefficient first,
+  so the scalars stay near 1.
+* **The degree, and null directions.** The recursion needs a faithful representation whose
+  trace is its dimension times the scalar part: for `R(p, q)` both half-spinor modules,
+  `N = 2^⌈(p+q)/2⌉` (Shirokov's). With `r` null directions it would need `2^r` times that (the
+  Grassmann algebra acting on itself), and there left multiplication has repeated eigenvalues in
+  Jordan blocks, which cost the recursion every digit for 5 to 9% of random values in 7D and 8D
+  PGA (degree 32). So `x` is split instead: `x = a + n` with `a` free of null directions and `n`
+  nilpotent (`(a⁻¹ n)^(r+1) = 0`, a null direction squaring to zero), the recursion runs on `a`
+  at degree `2^⌈(p+q)/2⌉`, and `x⁻¹ = Σₖ (−a⁻¹ n)ᵏ a⁻¹` for `k ≤ r` is exact. (Where the null
+  directions are not basis vectors the full degree is used.) The signature comes from the
+  metric by Sylvester's law of inertia over the rationals (CGA's null basis included).
+* **Only where something is invertible.** A kind whose values are all nilpotent (a degenerate
+  pseudoscalar) gets no method: the generator evaluates `C_N` at random points modulo
+  `2⁶¹ − 1`, and a nonzero residue proves the polynomial nonzero.
+* **Refinement.** The recursion still loses digits as its degree grows (`10⁻⁶` to `10⁻⁴` at
+  degree 32, 9D), so Newton–Schulz steps `y ← y (2 − x y)` follow, each squaring the residual:
+  one up to degree 16, two at 32.
+* **Accuracy and cost.** Within `10⁻⁹` times the condition `‖x‖ ‖x⁻¹‖` on random values in every
+  standard algebra (law N), and within `4·10⁻¹¹` on 200 random even values in each 7D to 9D test
+  algebra. PGA3D's `Multivector` takes 0.36 µs (degree 4, 7 products of 16 coefficients in all),
+  CGA3D's `Even` 0.43 µs and `Multivector` 2.2 µs, CSTA's `Even` 2.2 µs and `Multivector` 14 µs
+  (f64, Ryzen 7 5800X).
+* **Not done.** WGSL modules keep their closed-form inverses only.
+
+## ADR-038: Least squares and the pseudo-inverse on maps
+*Status: accepted, implemented (`gax_core::linalg::{orthogonalize, pinv_weights, pinv_apply}`,
+`gax_core::extensor::{LeastSquares, PseudoInverse}`).*
+
+* **The problem.** `solve` and `inverse` need square, regular maps. numga has `pinv` and `lstsq`
+  on maps and forms, including solving for one slot of a multi-slot map.
+* **One algorithm for every shape.** One-sided (Hestenes) Jacobi on the columns, as `svd`
+  already did for square maps: it works for tall and wide matrices alike, is accurate, and with
+  a fixed number of sweeps branch free. The columns are an extensor's coefficient arrays (the
+  `Column` trait), so a map with several slots is never flattened into one array (which would
+  need `generic_const_exprs` for its size).
+* **Semantics as numga's and NumPy's.** Coefficient norms, not the algebra's metric; singular
+  values at most `rcond` times the largest count as zero, by default machine epsilon times the
+  larger dimension (`numpy.linalg.lstsq`); `pinv_with`/`lstsq_with` take another. A one-slot
+  map's right-hand side may have slots (kept) and be of a smaller kind (embedded, ADR-036); a
+  multi-slot map's right-hand side has exactly the remaining slots, and the solution is a value
+  of the first slot's kind (`at::<I>()` for another slot).
+* **Checks.** The four Penrose conditions on random, rank-deficient and badly scaled square,
+  tall and wide maps (`support/solver_checks.rs`, shared with the `solve` fuzz target), per-lane
+  agreement with the scalar path, and on every SIMD level. Cost: 0.93 µs for the pseudo-inverse of a 6 × 4 map (Jacobi sweeps until every column pair is orthogonal), against 0.17 µs for LU on a 6 × 6 map; a map whose columns are already orthogonal stops after the first convergence test.
+
+## ADR-039: Dual numbers for derivatives
+*Status: accepted, implemented (`gax_core::dual`).*
+
+* **The problem.** numga differentiates through JAX. gax had no derivatives, though every
+  kernel is generic over its coefficient type.
+* **Forward mode as a coefficient.** `Dual<T, N>` carries `N` derivatives; it implements `Coef`
+  and `Real`, so products, sandwiches, maps, solvers, `exp` and `log` (the 6D–9D closed forms
+  included) run on it unchanged. `derivative`, `gradient` and `jacobian` set up the variables.
+  Forward mode suits gax's sizes: a motor has 8 coefficients, and the costs scale with the
+  number of inputs, which is small for rigid motions.
+* **Selects and zero tangents.** `select_lt` chooses on the values and carries the chosen
+  derivatives, so branch-free piecewise code differentiates the piece it uses. A derivative that
+  is exactly zero stays zero through a function singular at the value: the closed forms compute a
+  rotation's angle as `√(−B²)`, whose derivative is infinite at `B = 0` while its input's tangent
+  is zero there; plain forward mode gives `0 · ∞ = NaN` for the (smooth) `exp` at zero.
+* **Exactness.** `Dual<Fp, N>` differentiates polynomial kernels exactly (the product rule
+  holds coefficient for coefficient). `Dual<f64x4, N>` differentiates four problems per lane.
+* **Cost.** A unit-motor sandwich of a point with six derivatives takes 77 ns (12 ns in `f64`); the exponential of a line with its full 8 × 6 Jacobian 88 ns (16 ns): about `N + 1` times the arithmetic, as forward mode costs.
+
 ---
 
 ## Hypotheses

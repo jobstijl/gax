@@ -241,6 +241,15 @@ pub fn law(holds: bool, name: &str) {
     assert!(holds, "law failed: {name}");
 }
 
+/// The grade of a blade name (`1` and `s` are scalars).
+pub fn blade_grade(name: &str) -> usize {
+    if name == "1" || name == "s" {
+        0
+    } else {
+        name.trim_start_matches('e').chars().count()
+    }
+}
+
 /// The sign relating two spellings of one blade (`e31` against `e13`: `-1`), or `None` for
 /// different blades. The scalar is `1` (or `s`).
 fn blade_sign(a: &str, b: &str) -> Option<i64> {
@@ -495,8 +504,99 @@ macro_rules! law_suite {
         sampled: [$(($zv:ident, $zvec:ident, $zmv:ident, $zk:literal, $zp:literal, $zs:literal, $zx:ident)),* $(,)?],
         sampled_unit: [$(($uv:ident, $uvec:ident, $umv:ident, $uk:literal, $up:literal, $us:literal, $ux:ident)),* $(,)?],
         sampled_actions: [$(($av2:ident, $avec:ident, $amv:ident, $ak:literal, $ap:literal, $as2:literal, $ax2:ident)),* $(,)?],
-        sampled_equivariant: [$(($wv:ident, $wvec:ident, $wmv:ident, $wk:literal, $wp:literal, $ws:literal, $wtr:ident, $wm:ident, $wa:ident, $wb:ident)),* $(,)?] $(,)?
+        sampled_equivariant: [$(($wv:ident, $wvec:ident, $wmv:ident, $wk:literal, $wp:literal, $ws:literal, $wtr:ident, $wm:ident, $wa:ident, $wb:ident)),* $(,)?],
+        casts: [$(($ca:ident, $cb:ident)),* $(,)?],
+        sub_kinds: [$(($sa:ident, $sb:ident)),* $(,)?],
+        grades: [$(($gk:ident, $gg:literal, $go:ident)),* $(,)?],
+        inverses: [$(($ik:ident, $io:ident)),* $(,)?] $(,)?
     ) => {
+        /// N: the general inverse (Shirokov's, for kinds without a closed form), in `f64` on
+        /// random values: `x x⁻¹ = x⁻¹ x = 1`. A wrong degree of the characteristic polynomial,
+        /// or a null direction handled wrongly, misses by order 1; the error here is rounding,
+        /// relative to the condition `‖x‖ ‖x⁻¹‖`.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn general_inverses() {
+            $((|| {
+                let mut state = 0x0001_7e5e_u64;
+                let mut next = move || {
+                    state ^= state << 13;
+                    state ^= state >> 7;
+                    state ^= state << 17;
+                    (state >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
+                };
+                let name = concat!(stringify!($ik), "::inverse");
+                for _ in 0..50 {
+                    let x = $ik::<(), f64>::from_coeffs(core::array::from_fn(|_| next()));
+                    let inv: $io<(), f64> = x.inverse();
+                    let one = <$io<(), f64> as From<$scalar<(), f64>>>::from($scalar::from_coeffs([1.0]));
+                    let size = |m: &$io<(), f64>| m.c.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+                    let xs = x.c.iter().fold(0.0f64, |a, v| a.max(v.abs()));
+                    let cond = xs * size(&inv);
+                    let right: $io<(), f64> = (x.cast::<$io>() * inv).cast::<$io>();
+                    let left: $io<(), f64> = (inv * x.cast::<$io>()).cast::<$io>();
+                    let tol = 1e-9 * cond.max(1.0);
+                    law(size(&(right - one)) < tol && size(&(left - one)) < tol, name);
+                }
+            })();)*
+        }
+
+        /// M: casts between kinds. `x.cast::<B>()` is the projection of `x` onto `B`'s blades by
+        /// name and orientation (computed here from the blade names, not from the generated
+        /// tables), on values and on maps' outputs alike.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn casts() {
+            $((|| {
+                reset();
+                let name = concat!("cast ", stringify!($ca), " to ", stringify!($cb));
+                let x: $ca<(), T> = fresh();
+                let (want, _) = law_suite::project_exactly::<_, $cb<(), T>, T>(&x);
+                law(x.cast::<$cb>() == want, name);
+                let m: $ca<($slot,), T> = fresh();
+                let p: $slot<(), T> = fresh();
+                law(m.cast::<$cb>().of(p) == m.of(p).cast::<$cb>(), name);
+            })();)*
+        }
+
+        /// M: a kind whose blades all lie in another's embeds without loss (the cast back is the
+        /// identity), as the generated `From`, and fills a slot of the larger kind as its
+        /// embedding; composing its slot into the larger slot narrows it.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn sub_kinds() {
+            $((|| {
+                reset();
+                let name = concat!(stringify!($sa), " in ", stringify!($sb));
+                let x: $sa<(), T> = fresh();
+                law(x.cast::<$sb>().cast::<$sa>() == x, name);
+                law(x.cast::<$sb>() == $sb::from(x), name);
+                let m: $scalar<($sb,), T> = fresh();
+                law(m.of(x) == m.of(x.cast::<$sb>()), name);
+                let narrowed: $scalar<($sa,), T> = m.of($sa::slot());
+                law(narrowed.of(x) == m.of(x), name);
+            })();)*
+        }
+
+        /// M: `x.grade::<G>()`, cast back to `x`'s kind, is `x` with its other grades zeroed.
+        #[test]
+        #[allow(clippy::redundant_closure_call)] // each block is a closure call, to bound the stack frame
+        fn grades() {
+            $((|| {
+                reset();
+                let name = concat!(stringify!($gk), " grade ", stringify!($gg));
+                let x: $gk<(), T> = fresh();
+                let part: $go<(), T> = x.grade::<$gg>();
+                let mut want = x;
+                for (c, b) in want.c.iter_mut().zip(<$gk as gax::Kind>::BLADES) {
+                    if law_suite::blade_grade(b) != $gg {
+                        *c = <T as gax::Coef>::zero();
+                    }
+                }
+                law(part.cast::<$gk>() == want, name);
+            })();)*
+        }
+
         /// L: versors with more than 8 coefficients, on exact unit versors sampled as products of
         /// rational unit vectors (three samples each; exact rational arithmetic, no ideal).
         #[test]

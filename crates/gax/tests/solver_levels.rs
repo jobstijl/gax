@@ -76,6 +76,20 @@ impl Map for Spectra {
     }
 }
 
+/// The projection onto the range, `A A⁺`, by the pseudo-inverse with the cutoff `1e-8`.
+struct Projection;
+impl Map for Projection {
+    type X = Multivector;
+    type Y = Multivector;
+    #[inline(always)]
+    fn call<T: Real>(&self, x: Multivector<(), T>) -> Multivector<(), T> {
+        let a = matrix(x);
+        let p = a.pinv_with(T::from_f64(1e-8));
+        let ap = a.of(p);
+        Multivector::from_coeffs(core::array::from_fn(|k| ap.c[k / 4][k % 4]))
+    }
+}
+
 struct Rng(u64);
 impl Rng {
     fn next(&mut self) -> f64 {
@@ -156,6 +170,45 @@ fn spectra_agree_on_every_level() {
                     assert!(
                         (g.c[k] - w.c[k]).abs() <= tol,
                         "{} element {i}, value {k}: {} vs {}",
+                        batch::level_name(batch::level()),
+                        g.c[k],
+                        w.c[k]
+                    );
+                }
+            }
+        });
+    }
+}
+
+/// The pseudo-inverse on every level: random maps, and maps of rank exactly 3 (their last row a
+/// combination of the others), far from the cutoff either way, so every lane keeps the same
+/// singular values. `A A⁺` (the identity, or the projection onto the range) agrees with the
+/// scalar path within rounding.
+#[test]
+fn pseudo_inverse_agrees_on_every_level() {
+    let mut rng = Rng(0x9e17);
+    let xs: Vec<Multivector<(), f64>> = (0..101)
+        .map(|k| {
+            let mut a: [f64; 16] = core::array::from_fn(|_| rng.next());
+            if k % 2 == 1 {
+                let w = [rng.next(), rng.next(), rng.next()];
+                for j in 0..4 {
+                    a[12 + j] = (0..3).map(|i| a[4 * i + j] * w[i]).sum::<f64>();
+                }
+            }
+            Multivector::from_coeffs(a)
+        })
+        .collect();
+    let want: Vec<_> = xs.iter().map(|&x| Projection.call(x)).collect();
+    for level in batch::levels() {
+        batch::with_level(level, || {
+            let mut got = vec![Multivector::zero(); xs.len()];
+            batch::map(&Projection, &xs, &mut got);
+            for (i, (g, w)) in got.iter().zip(&want).enumerate() {
+                for k in 0..16 {
+                    assert!(
+                        (g.c[k] - w.c[k]).abs() <= 1e-9,
+                        "{} element {i}, entry {k}: {} vs {}",
                         batch::level_name(batch::level()),
                         g.c[k],
                         w.c[k]

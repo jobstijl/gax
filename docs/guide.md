@@ -69,12 +69,14 @@ the slots of `p`, and `(…) ^ ground` keeps them. The compiler checks all of th
 
 | call | effect |
 |---|---|
-| `m.of(x)` | fill the first slot with `x`; if `x` is itself a map, compose it in: its slots take the place of the filled one |
+| `m.of(x)` | fill the first slot with `x`; if `x` is itself a map, compose it in: its slots take the place of the filled one. `x` may be of a smaller kind whose blades all lie in the slot's (a rotor in a motor slot): it is embedded |
 | `m.at::<I>()` | move slot `I` to the front, so `m.at::<1>().of(x)` fills the second slot |
 | `form.swap()` | exchange the two slots of a two-slot extensor |
 | `m.fill(x)` | fill *every* slot of `x`'s kind with `x` |
 | `m.trace_at::<I>()` | contract the output with slot `I` (of the output's kind): a scalar with the other slots |
 | `t.outermorphism::<B>()` | extend a map on vectors (by `^`) or on antivectors such as PGA points (by `&`) to the kind `B` |
+| `x.cast::<K>()` | the blades `x` shares with `K`, as a `K` (other blades zero): a projection, an embedding, or both; on a map, of its output |
+| `x.grade::<G>()` | the grade-`G` part, as the declared kind that holds it |
 
 Composition is filling a slot with a map:
 
@@ -90,6 +92,28 @@ let [a, b, c] = move_then_turn.of(p).to_euclidean();
 let [x, y, z] = (r >> (t >> p)).to_euclidean();
 assert!((a - x).abs() < 1e-6 && (b - y).abs() < 1e-6 && (c - z).abs() < 1e-6);
 ```
+
+Binding a smaller kind embeds it, and composing a smaller kind's slot into a larger slot narrows
+the slot:
+
+```rust
+use gax::pga3d::{Flector, Line, Motor, Point, Rotor, Scalar};
+
+let act: Flector<(Motor,), f64> = Motor::slot() * Point::xyz(1.0, 2.0, 3.0);
+let r = Rotor::<(), f64>::from_coeffs([0.9, 0.1, 0.2, 0.3]);
+assert_eq!(act.of(r), act.of(r.cast::<Motor>())); // a rotor fills a motor slot
+let on_rotors: Flector<(Rotor,), f64> = act.of(Rotor::slot()); // the slot, narrowed
+assert_eq!(on_rotors.of(r), act.of(r));
+let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.5).into_inner();
+let (s, b): (Scalar<(), f64>, Line<(), f64>) = (m.grade::<0>(), m.grade::<2>());
+assert_eq!(s.cast::<Motor>() + b.cast::<Motor>() + m.grade::<4>().cast::<Motor>(), m);
+```
+
+Kinds are a closed family per algebra, so these are tables the generator emits (`Cast`,
+`SubKind`, `GradePart`), not a search at run time; a cast between kinds with no blade in common,
+or a grade a kind lacks, is a compile error. (numga's types are any set of blades, computed at run
+time. gax rounds a result up to the smallest declared kind that holds it, so declare a kind for a
+set of blades you want as a type of its own.)
 
 `fill` matches numga's *equality groups*: slots that receive the same value. A sandwich built with
 the motor left open has two motor slots, and filling them gives the transformed point:
@@ -186,6 +210,26 @@ Maps between kinds of the same size have `inverse`, `det`, `solve`, `svd` and, f
 to itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
 so. Right-hand sides keep their slots: solving against a map returns a map.
 
+Maps of any shape, singular ones included, have `pinv` (the Moore–Penrose pseudo-inverse) and
+`lstsq` (the least-norm least-squares solution), by one-sided Jacobi. On a map with several slots,
+`lstsq` solves for the first slot against a right-hand side on the others (`at::<I>()` picks
+another): the least-squares form of a pairing's `solve`. As in numga and NumPy, the norms are
+those of the coefficients, and singular values below `rcond` times the largest count as zero
+(`lstsq_with`, `pinv_with`; the default is machine epsilon times the larger dimension):
+
+```rust
+use gax::ApproxEq;
+use gax::pga3d::{Line, Plane};
+
+// Planes meeting the floor in a given line: 6 equations, 4 unknowns, the floor in the kernel.
+let floor = Plane::<(), f64>::new(0.0, 0.0, 1.0, 0.0);
+let meet: Line<(Plane,), f64> = Plane::slot() ^ floor;
+let l = Plane::new(1.0, 0.0, 0.0, -2.0) ^ floor;
+let x: Plane<(), f64> = meet.lstsq(l); // the least-norm one: the plane x = 2, upright
+assert!((x ^ floor).approx_eq(&l, 1e-12));
+let back: Plane<(Line,), f64> = meet.pinv();
+```
+
 Forms (`Scalar<(A, A)>`) have `eigh_with(metric)` for the generalized eigenproblem between two
 forms. The eigenvectors come back as values of the slot kind. For vibration modes of a rigid body
 they are twists, each one a rotation about a point
@@ -226,8 +270,11 @@ Values have closed-form methods where their type allows them:
 * `log` on `Unit` versors;
 * `sqrt`.
 
-A method is generated only for the kinds with the structure it needs. So `Multivector` has no
-`inverse()`, and a degenerate pseudoscalar has none either.
+A method is generated only for the kinds with the structure it needs. `inverse` has a general
+form for the other kinds (CGA's and CSTA's `Even`, every `Multivector`): Shirokov's method, the
+inverse as a polynomial in `x` from the scalar parts of its powers, refined by a Newton step
+(up to 9 products in the kind's product closure in the standard algebras; ADR-037). A kind none of whose values is
+invertible, such as a degenerate pseudoscalar, has no `inverse()`.
 
 ## 7. Performance: three tiers, and batching
 
@@ -348,6 +395,10 @@ Every rule below is proved exactly for every standard algebra, on symbolic coeff
 * **Filling and composing don't depend on the order you do them in.** `f.of(g.of(h))` is
   `f.of(g).of(h)`. Binding slot 0 and then slot 1 gives the same as binding slot 1 first
   (`at::<1>`). `K::slot()` is the identity.
+* **Casts are projections by blade.** `x.cast::<K>()` keeps exactly the blades `x` shares with
+  `K`, with their orientations converted. From a kind into one that holds all its blades and back
+  is the identity, and binding such a value is binding its embedding. `x.grade::<G>()` is `x` with
+  its other grades zeroed.
 * **Maps are linear.** `f.of(x + y) == f.of(x) + f.of(y)`, and scalars pull through.
 * **Operations work the same on maps and values.** Combining two maps and then filling them is
   the same as filling them and then combining: `(f ^ g).of(x).of(y) == f.of(x) ^ g.of(y)`.
@@ -450,7 +501,41 @@ assert!((x - 1.5).abs() < 1e-12 && (y - 2.5).abs() < 1e-12);
 What is not a homomorphism is spelled out as a function: a Euclidean point as a CGA round
 point (`cga3d::Vector::up`, which is quadratic) and back (`down`).
 
-## 13. Conventions and pitfalls
+## 13. Derivatives
+
+`gax::dual::Dual<T, N>` is a coefficient type carrying `N` derivatives along with each value
+(forward-mode automatic differentiation). Every product, sandwich, map, solver, `exp` and `log`
+runs on it unchanged, so the derivative of a whole geometric computation comes out exact to
+rounding in one pass. `derivative`, `gradient` and `jacobian` set up the variables:
+
+```rust
+use gax::dual::{Dual, gradient};
+use gax::pga3d::{Motor, Point};
+
+type D = Dual<f64, 2>;
+let c = D::constant;
+// The squared distance from a moved point to a target, and its gradient in the motion's
+// parameters: an angle about z, and a shift along x.
+let (d2, grad) = gradient(
+    |[a, tx]: [D; 2]| {
+        let m = Motor::translation(tx, c(0.0), c(0.0))
+            * Motor::rotation_about(c(0.0), c(0.0), c(1.0), a);
+        let [x, y, z] = (m >> Point::xyz(c(1.0), c(0.0), c(0.0))).to_euclidean();
+        (x - c(1.0)) * (x - c(1.0)) + (y - c(1.0)) * (y - c(1.0)) + z * z
+    },
+    [0.0, 0.0],
+);
+assert!((d2 - 1.0).abs() < 1e-12 && (grad[0] + 2.0).abs() < 1e-12 && grad[1].abs() < 1e-12);
+```
+
+Branch-free code differentiates the branch it selects (one-sided at a switch), and a derivative
+that is exactly zero stays zero through a function that is singular at the value (`√x` at `0`
+inside `cos √x`, as a rotation's closed form computes its angle), so `exp` of a zero bivector has
+the right derivative where plain forward mode gives `NaN`. `Dual<T, N>` over SIMD lanes
+differentiates a batch at once; over `gax::fp::Fp` the derivatives of polynomial kernels are
+exact.
+
+## 14. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

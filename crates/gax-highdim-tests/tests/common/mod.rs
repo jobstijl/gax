@@ -331,6 +331,23 @@ macro_rules! checks {
                 }
             }
 
+            /// The general inverse (Shirokov's): `x x⁻¹ = 1` for random even values with
+            /// coefficients in `[-1, 1)`. The recursion runs at degree 16 or 32 (9D), on the part
+            /// free of null directions where there are some (ADR-037); measured worst on 200
+            /// values per algebra: `4·10⁻¹¹` (9D).
+            #[test]
+            fn general_inverse() {
+                let mut rng = Rng(0x7d_1e7e);
+                for _ in 0..50 {
+                    let x = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
+                    let inv = x.inverse();
+                    let mut want = [0.0; <Even as gax::kind::Kind>::N];
+                    want[0] = 1.0;
+                    let got = (x * inv).c;
+                    assert!(close(&got, &want, 1e-9), "off by {:e}", worst(&got, &want));
+                }
+            }
+
             #[test]
             fn exp_in_f32() {
                 let mut rng = Rng(0x7d_e32f);

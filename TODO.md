@@ -136,5 +136,12 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Tracer: solvers fold on constants (`all_lt` answers when nothing depends on the inputs), and arithmetic on named constants folds before the expansion limit makes it a node
 - [x] gax friction: a tracer warning when a `Unit` argument's renormalization simplifies away (VERIFY.md 2); maps between algebras and `select_lt` (VERIFY.md 16, 17)
 
+## Phase 8: matching numga's reach
+- [x] Kind tables (ADR-036): `cast::<K>()` (projection and embedding by blade), `grade::<G>()`, and binding a smaller kind into a slot (`SubKind`), proved for every standard algebra (law M); slot lists up to 12
+- [x] General inverse (ADR-037): Shirokov's characteristic-polynomial method in the product closure, for every kind without a closed form that has invertible values (CGA's and CSTA's `Even`, every `Multivector`); its degree counts null directions (`Algebra::signature`) (law N)
+- [x] Least squares (ADR-038): `pinv` and `lstsq` on maps of any shape by one-sided Jacobi, and `lstsq` for the first slot of maps with several slots; Penrose conditions in the solver checks and fuzz target, per-lane and per-level agreement
+- [x] Dual numbers (ADR-039): `gax::dual::Dual<T, N>` as a coefficient type, with `derivative`, `gradient` and `jacobian`; through closed-form exp and log, solvers and sandwiches, exact over `Fp`
+- [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, complex coefficients, algebras beyond 9D
+
 ## Decisions for the project owner
 - Publishing to crates.io (later).

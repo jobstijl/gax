@@ -112,6 +112,9 @@ kernels (struct of arrays) are where gax is faster instead.
 | CSTA `Unit<Even>::log` (f64): closed form (log6d.md) / near a half turn (turned) / inverse scaling and squaring (before) | **2.6 µs** / 6.6 µs / 50.7 µs | — |
 | 7D / 8D / 9D `Unit<Even>::log` (f64, `R(4,3)`, `R(4,4)`, `R(5,4)` declared with `algebra!`): closed form / turned | 2.5 / 2.9 / 3.8 µs; 7.0 / 10 / 31 µs | — |
 | CSTA `Bivector::exp` (f64): closed form (log6d.md §12) / beyond a quarter turn (turned) / scaling and squaring (before) | **3.5 µs** / 4.3 µs / 4.1 µs | — |
+| general `inverse` (Shirokov, ADR-037): PGA3D `Multivector` / CGA3D `Even` / CGA3D `Multivector` / CSTA `Even` / CSTA `Multivector` | 0.36 / 0.43 / 2.2 / 2.2 / 14 µs | — |
+| `pinv` of a 6 × 4 map (one-sided Jacobi, ADR-038) / `lstsq` against a value / LU `inverse` of a 6 × 6 map for scale | 0.93 / 0.95 / 0.17 µs | — |
+| `Unit<Motor> >> Point` and `Line::exp`, `f64` / with six derivatives (`Dual<f64, 6>`, ADR-039) | 12 / 77 ns; 16 / 88 ns | — |
 | 7D / 8D / 9D `Bivector::exp` (f64): closed form / scaling and squaring (before) | **4.0 / 6.8 / 10 µs**; 35 µs / 0.24 ms / 0.95 ms | — |
 | 7D / 8D / 9D even product (4096 terms unrolled; 16384 and 65536 as table loops, ADR-034) | 1.7 / 11 / 44 µs | — |
 

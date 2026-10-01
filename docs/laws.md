@@ -254,6 +254,29 @@ the passenger with no probability at all, at few points.
 The same test runs on the 7D, 8D and 9D algebras of `gax-highdim-tests` (`exact_mod_p`), whose
 even versors (64 to 256 coefficients) have plain sandwich kernels (ADR-034).
 
+### M. Kind tables (`casts`, `sub_kinds`, `grades`)
+
+For every pair of kinds sharing a blade, every pair where one kind's blades all lie in the
+other's, and every grade of every kind (ADR-036), on symbolic coefficients:
+
+* [cast] `x.cast::<B>()` is the projection of `x` onto `B`'s blades by blade name and orientation,
+  computed in the test from the blade names alone, not from the generated tables; on a map,
+  `m.cast::<B>().of(p) == m.of(p).cast::<B>()`.
+* [sub] For `A ⊆ B`: `x.cast::<B>().cast::<A>() == x`, `x.cast::<B>() == B::from(x)` (the
+  independently generated embedding), `f.of(x) == f.of(x.cast::<B>())` for a form `f` on `B`, and
+  `f.of(A::slot()).of(x) == f.of(x)` (narrowing a slot composes).
+* [grade] `x.grade::<G>()`, cast back to `x`'s kind, is `x` with every blade of another grade
+  zeroed.
+
+### N. The general inverse (`general_inverses`)
+
+For every kind whose `inverse` is the general one (ADR-037), in `f64` on fifty random values:
+`x x⁻¹ = x⁻¹ x = 1` within `10⁻⁹` times the condition `‖x‖ ‖x⁻¹‖`. This one is numerical, not
+exact (the method divides by the recursion's scalars), but its failure modes are not subtle: a
+characteristic polynomial of the wrong degree, or a null direction handled wrongly, leaves
+`x x⁻¹ − 1` of order one. The 7D to 9D algebras of `gax-highdim-tests` check the same on their
+even kinds (`general_inverse`).
+
 ## 4. Licensed rewrites
 
 Each law licenses a transformation:

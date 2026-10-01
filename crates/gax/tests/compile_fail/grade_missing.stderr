@@ -1,0 +1,13 @@
+error[E0277]: `gax::pga3d::Point` has no blade of grade 1
+ --> tests/compile_fail/grade_missing.rs:6:15
+  |
+6 |     let _ = p.grade::<1>();
+  |               ^^^^^ the trait `GradePart<1>` is not implemented for `gax::pga3d::Point`
+  |
+  = note: `grade::<G>()` exists for the grades of the kind's blades
+help: the trait `GradePart<1>` is not implemented for `gax::pga3d::Point`
+      but trait `GradePart<3>` is implemented for it
+ --> src/algebras/pga3d.rs
+  |
+  | impl gx::GradePart<3> for Point {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

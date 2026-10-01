@@ -812,6 +812,7 @@ fn value_methods() {
     common::sqrt::<Motor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
     common::inverse::<Flector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Flector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
 }
 
 #[test]

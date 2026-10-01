@@ -176,6 +176,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
             );
         }
     }
+    kind_tables(spec, &mut e.out);
     crate::par::report(&format!("{} values", spec.name), phase);
     let phase = std::time::Instant::now();
     for op in BinOp::ALL {
@@ -801,6 +802,46 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         Of::of(self, x)
     }}
 
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        {name}: gx::Cast<K>,
+    {{
+        gx::cast::cast::<Self, K>(&self)
+    }}
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<{name} as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        {name}: gx::GradePart<G>,
+    {{
+        gx::cast::grade::<Self, G>(&self)
+    }}
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `‖self.of(x) − rhs‖` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {{
+        gx::LeastSquares::lstsq(self, rhs)
+    }}
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {{
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }}
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> {name}<<S as gx::MoveToFront<I>>::Moved, T>
@@ -968,6 +1009,25 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
     {{
         SquareMap::svd(self)
+    }}
+
+    /// The Moore–Penrose pseudo-inverse, `A <- {name}`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) ≈ b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<({name},), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name},), T>>,
+    {{
+        gx::PseudoInverse::pinv(self)
+    }}
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<({name},), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<({name},), T>>,
+    {{
+        gx::PseudoInverse::pinv_with(self, rcond)
     }}
 
     /// The trace of a map from `{name}` to itself.
@@ -2178,4 +2238,76 @@ fn balanced_sum(items: &[(bool, String)]) -> String {
     sorted.sort_by_key(|x| x.0);
     let (neg, e) = go(&sorted);
     if neg { format!("-{e}") } else { e }
+}
+
+/// The blades of `a` listed by `keep` (in `a`'s order) as `(i, j, flip)` entries of `b`'s
+/// layout, or `None` where a kept blade is not one of `b`'s.
+fn shared_blades(
+    a: &KindSpec,
+    b: &KindSpec,
+    keep: impl Fn(u32) -> bool,
+) -> Vec<(usize, usize, bool)> {
+    a.layout
+        .blades
+        .iter()
+        .enumerate()
+        .filter(|(_, (m, _))| keep(*m))
+        .filter_map(|(i, &(m, sa))| b.layout.position(m).map(|(j, sb)| (i, j, sa != sb)))
+        .collect()
+}
+
+fn render_shared(shared: &[(usize, usize, bool)]) -> String {
+    shared
+        .iter()
+        .map(|(i, j, f)| format!("({i}, {j}, {f})"))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// `Cast` for every pair of kinds sharing a blade, `SubKind` where one's blades all lie in
+/// the other's, and `GradePart` for every grade of every kind (`gax_core::cast`).
+fn kind_tables(spec: &AlgebraSpec, out: &mut String) {
+    for a in &spec.kinds {
+        for b in &spec.kinds {
+            let shared = shared_blades(a, b, |_| true);
+            if shared.is_empty() {
+                continue;
+            }
+            let (an, bn) = (&a.name, &b.name);
+            let _ = writeln!(
+                out,
+                "impl gx::Cast<{bn}> for {an} {{\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                render_shared(&shared)
+            );
+            if shared.len() == a.layout.len() {
+                let _ = writeln!(out, "impl gx::SubKind<{bn}> for {an} {{}}\n");
+            }
+        }
+        let grades: BTreeSet<u32> = a
+            .layout
+            .blades
+            .iter()
+            .map(|(m, _)| m.count_ones())
+            .collect();
+        for g in grades {
+            let support: BTreeSet<u32> = a
+                .layout
+                .blades
+                .iter()
+                .map(|(m, _)| *m)
+                .filter(|m| m.count_ones() == g)
+                .collect();
+            let o = spec
+                .kind_for_support(&support)
+                .expect("the kind itself holds it");
+            let shared = shared_blades(a, o, |m| m.count_ones() == g);
+            let _ = writeln!(
+                out,
+                "impl gx::GradePart<{g}> for {} {{\n    type Out = {};\n    const SHARED: &'static [(usize, usize, bool)] = &[{}];\n}}\n",
+                a.name,
+                o.name,
+                render_shared(&shared)
+            );
+        }
+    }
 }

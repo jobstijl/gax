@@ -13,6 +13,9 @@ use crate::coef::{Coef, Elem};
 use crate::kind::{Extensor, Kind, Retype};
 use core::ops::{Add, Mul, Neg, Sub};
 
+/// The most open slots an extensor can have.
+pub const MAX_SLOTS: usize = 12;
+
 /// Concatenation of slot lists. Implemented for every [`Slots`] type.
 pub trait HasCat {
     /// `Self` followed by `R`.
@@ -22,7 +25,7 @@ pub trait HasCat {
 /// The slot list `A` followed by `B`.
 pub type Cat<A, B> = <A as HasCat>::Cat<B>;
 
-/// A list of open slots. Implemented for `()` and tuples of up to 8 kinds.
+/// A list of open slots. Implemented for `()` and tuples of up to 12 kinds.
 ///
 /// A function generic over `S: Slots` works on values (`S = ()`) and on maps and forms alike:
 ///
@@ -165,7 +168,7 @@ impl Slots for () {
     }
 }
 
-/// Sentinel for a concatenation longer than 8 slots. Using it is a compile-time error.
+/// Sentinel for a concatenation longer than 12 slots. Using it is a compile-time error.
 #[derive(Clone, Copy, Debug)]
 pub struct TooManySlots;
 
@@ -180,7 +183,7 @@ impl Slots for TooManySlots {
     type Arr<X: Elem> = ();
 
     fn prepend_arr<H: Kind, X: Elem>(_: H::Arr<()>) {
-        const { panic!("gax: an extensor can have at most 8 open slots") }
+        const { panic!("gax: an extensor can have at most 12 open slots") }
     }
     fn from_flat<X: Elem>(_: &mut impl FnMut(usize) -> X, _: usize) {}
     fn get_flat<X: Elem>((): &(), _: usize) -> X {
@@ -291,7 +294,7 @@ macro_rules! tuple_slots {
     (@witness $a:ident; ) => { $a };
     (@witness $a:ident; $overflow:ident) => {{
         let _ = $a;
-        const { panic!("gax: an extensor can have at most 8 open slots") }
+        const { panic!("gax: an extensor can have at most 12 open slots") }
     }};
 }
 
@@ -302,7 +305,11 @@ tuple_slots!(4; A0, A1, A2, A3; );
 tuple_slots!(5; A0, A1, A2, A3, A4; );
 tuple_slots!(6; A0, A1, A2, A3, A4, A5; );
 tuple_slots!(7; A0, A1, A2, A3, A4, A5, A6; );
-tuple_slots!(8; A0, A1, A2, A3, A4, A5, A6, A7; overflow);
+tuple_slots!(8; A0, A1, A2, A3, A4, A5, A6, A7; );
+tuple_slots!(9; A0, A1, A2, A3, A4, A5, A6, A7, A8; );
+tuple_slots!(10; A0, A1, A2, A3, A4, A5, A6, A7, A8, A9; );
+tuple_slots!(11; A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10; );
+tuple_slots!(12; A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11; overflow);
 
 /// One output coefficient's array over the slots `S`, with arithmetic.
 ///
