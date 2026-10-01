@@ -30,7 +30,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] exp/log for 5D algebras (CGA3D, STAP): Study functions with a general 4-vector direction
 - [x] exp for 6D and up (CSTA): scaling and squaring in the product closure
 - [x] exp in closed form from 6D to 9D (ADR-035, docs/log6d.md §12): `C (1 + T + T∧T/2 + …)` with `T` an interpolant of `tanh(√λ)/√λ` at the invariants, the log's root groupings over any analytic data, rotations beyond a quarter turn turned back; 9x to 90x faster from 7D on
-- [ ] exp in closed form in WGSL (6D, 7D): port `exp_weights_6d`/`exp_turn_6d` next to `study_log6`
+- [x] exp in closed form in WGSL (6D, 7D): `study_exp6`, `study_exp6_turn` and `study_exp6_reach` next to `study_log6`, composed by `bivector_exp` (halving, turning, squaring); within `2·10⁻⁵` of the Rust `f64` exp for CSTA
 - [x] exp and log of CSTA Poincaré motors (`Twist` to `Motor`): closed forms, since `Q²` is a scalar there
 - [x] log for the full 6D conformal group (CSTA `Unit<Even>` to `Bivector`): in closed form through the cubic invariants (ADR-033, docs/log6d.md), 17x faster than inverse scaling and squaring; near a half turn it turns planes first (see Phase 5); for every 6D algebra (tested: R(6,0), R(3,3), R(5,0,1)) and in WGSL (`unit_even_log`)
 - [x] Algebras up to 9D (ADR-034): plain sandwiches for versors over 32 coefficients, products over 4096 terms as table loops, long programs in blocks (rustc's debug info overflowed its stack), GPU layouts up to 64 coefficients

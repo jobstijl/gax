@@ -390,8 +390,12 @@ tables of terms); see ADR-034 in [design.md](design.md).
 * **`exp` in `f32`** is within `10⁻⁴` of the `f64` result for most bivectors, but up to `10⁻³`
   for large boosts (entries up to 2.5 in `R(4,3)`), where `C` and `T` are large and the wedge
   powers of `T` cancel against each other. In `f64` the same cases are within `3·10⁻¹²`.
-* **`exp` in WGSL** is still scaling and squaring. A port would reuse `study_log6`'s three-plane
-  groupings with `τ` and `ln cosh` as data.
+* **`exp` in WGSL** is the same closed form (`bivector_exp`, from 6D and 7D bivectors): the
+  helpers `study_exp6`, `study_exp6_turn` and `study_exp6_reach` reuse `study_log6`'s root
+  finding and series arithmetic with `τ`, `ln cosh` and the turned planes as data, and the
+  module halves, turns and squares as the Rust `exp` does. In `f32` on the CPU evaluator it is
+  within `2·10⁻⁵` of the Rust `f64` `exp` for CSTA (rotations past a half turn, boosts of
+  rapidity 12), `1.5·10⁻⁵` on a GPU, and `3·10⁻⁷` for `R(4,3)`.
 
 ## 12. The exponential
 

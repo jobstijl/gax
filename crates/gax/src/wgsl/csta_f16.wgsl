@@ -1164,6 +1164,1364 @@ fn bivector_norm_squared(x: Bivector) -> f16 {
     return t21;
 }
 
+// `[reach, turn]` of the closed-form exponential (docs/log6d.md §12): above 1, `reach` asks `bivector_exp` to halve `x`, and `turn` to turn rotations beyond a quarter turn back first.
+fn bivector_exp_reach(x: Bivector) -> vec2<f16> {
+    let p0 = -f32(x.c0.y);
+    let p1 = -f32(x.c0.w);
+    let p2 = -f32(x.c1.x);
+    let p3 = -f32(x.c1.y);
+    let p4 = f32(x.c0.z) * p3;
+    let p5 = f32(x.c0.z) * f32(x.c2.x);
+    let p6 = f32(x.c0.z) * f32(x.c2.y);
+    let p7 = f32(x.c0.z) * f32(x.c3.x);
+    let p8 = f32(x.c0.z) * f32(x.c3.y);
+    let p9 = f32(x.c0.z) * f32(x.c3.z);
+    let p10 = p0 * p2;
+    let p11 = f32(x.c1.w) * p0;
+    let p12 = f32(x.c2.y) * p0;
+    let p13 = f32(x.c2.w) * p0;
+    let p14 = f32(x.c3.y) * p0;
+    let p15 = f32(x.c3.z) * p0;
+    let p16 = f32(x.c0.x) * p1;
+    let p17 = f32(x.c0.x) * f32(x.c1.z);
+    let p18 = f32(x.c0.x) * f32(x.c2.y);
+    let p19 = f32(x.c0.x) * f32(x.c2.z);
+    let p20 = f32(x.c0.x) * f32(x.c3.y);
+    let p21 = f32(x.c0.x) * f32(x.c3.z);
+    let p22 = f32(x.c1.w) * p1;
+    let p23 = f32(x.c2.x) * p1;
+    let p24 = f32(x.c2.w) * p1;
+    let p25 = f32(x.c3.x) * p1;
+    let p26 = f32(x.c3.z) * p1;
+    let p27 = f32(x.c1.z) * p2;
+    let p28 = f32(x.c2.x) * p2;
+    let p29 = f32(x.c2.z) * p2;
+    let p30 = f32(x.c3.x) * p2;
+    let p31 = f32(x.c3.z) * p2;
+    let p32 = f32(x.c1.z) * p3;
+    let p33 = f32(x.c1.w) * p3;
+    let p34 = f32(x.c2.z) * p3;
+    let p35 = f32(x.c2.w) * p3;
+    let p36 = f32(x.c3.z) * p3;
+    let p37 = f32(x.c1.z) * f32(x.c2.w);
+    let p38 = f32(x.c1.z) * f32(x.c3.x);
+    let p39 = f32(x.c1.z) * f32(x.c3.y);
+    let p40 = f32(x.c1.w) * f32(x.c2.z);
+    let p41 = f32(x.c1.w) * f32(x.c3.x);
+    let p42 = f32(x.c1.w) * f32(x.c3.y);
+    let p43 = f32(x.c2.x) * f32(x.c2.z);
+    let p44 = f32(x.c2.x) * f32(x.c2.w);
+    let p45 = f32(x.c2.x) * f32(x.c3.y);
+    let p46 = f32(x.c2.y) * f32(x.c2.z);
+    let p47 = f32(x.c2.y) * f32(x.c2.w);
+    let p48 = f32(x.c2.y) * f32(x.c3.x);
+    let p49 = p4 + p16;
+    let p50 = p16 + p49;
+    let p51 = p4 - p10;
+    let p52 = p51 - p10;
+    let p53 = p50 + p52;
+    let p54 = p53 * (1.0 / 2.0);
+    let p55 = p5 + p17;
+    let p56 = p17 + p55;
+    let p57 = p5 - p11;
+    let p58 = p57 - p11;
+    let p59 = p56 + p58;
+    let p60 = p59 * (1.0 / 2.0);
+    let p61 = p6 + p27;
+    let p62 = p27 + p61;
+    let p63 = p6 - p22;
+    let p64 = p63 - p22;
+    let p65 = p62 + p64;
+    let p66 = p65 * (1.0 / 2.0);
+    let p67 = p12 + p32;
+    let p68 = p32 + p67;
+    let p69 = p12 - p23;
+    let p70 = p69 - p23;
+    let p71 = p68 + p70;
+    let p72 = p71 * (1.0 / 2.0);
+    let p73 = p18 + p33;
+    let p74 = p33 + p73;
+    let p75 = p18 - p28;
+    let p76 = p75 - p28;
+    let p77 = p74 + p76;
+    let p78 = p77 * (1.0 / 2.0);
+    let p79 = p7 + p19;
+    let p80 = p19 + p79;
+    let p81 = p7 - p13;
+    let p82 = p81 - p13;
+    let p83 = p80 + p82;
+    let p84 = p83 * (1.0 / 2.0);
+    let p85 = p8 + p29;
+    let p86 = p29 + p85;
+    let p87 = p8 - p24;
+    let p88 = p87 - p24;
+    let p89 = p86 + p88;
+    let p90 = p89 * (1.0 / 2.0);
+    let p91 = p14 + p34;
+    let p92 = p34 + p91;
+    let p93 = p14 - p25;
+    let p94 = p93 - p25;
+    let p95 = p92 + p94;
+    let p96 = p95 * (1.0 / 2.0);
+    let p97 = p20 + p35;
+    let p98 = p35 + p97;
+    let p99 = p20 - p30;
+    let p100 = p99 - p30;
+    let p101 = p98 + p100;
+    let p102 = p101 * (1.0 / 2.0);
+    let p103 = p9 + p40;
+    let p104 = p40 + p103;
+    let p105 = p9 - p37;
+    let p106 = p105 - p37;
+    let p107 = p104 + p106;
+    let p108 = p107 * (1.0 / 2.0);
+    let p109 = p15 + p43;
+    let p110 = p43 + p109;
+    let p111 = p15 - p38;
+    let p112 = p111 - p38;
+    let p113 = p110 + p112;
+    let p114 = p113 * (1.0 / 2.0);
+    let p115 = p21 + p44;
+    let p116 = p44 + p115;
+    let p117 = p21 - p41;
+    let p118 = p117 - p41;
+    let p119 = p116 + p118;
+    let p120 = p119 * (1.0 / 2.0);
+    let p121 = p26 + p46;
+    let p122 = p46 + p121;
+    let p123 = p26 - p39;
+    let p124 = p123 - p39;
+    let p125 = p122 + p124;
+    let p126 = p125 * (1.0 / 2.0);
+    let p127 = p31 + p47;
+    let p128 = p47 + p127;
+    let p129 = p31 - p42;
+    let p130 = p129 - p42;
+    let p131 = p128 + p130;
+    let p132 = p131 * (1.0 / 2.0);
+    let p133 = p36 + p48;
+    let p134 = p48 + p133;
+    let p135 = p36 - p45;
+    let p136 = p135 - p45;
+    let p137 = p134 + p136;
+    let p138 = p137 * (1.0 / 2.0);
+    let p141 = f32(x.c3.x) * p66;
+    let p144 = f32(x.c2.y) * p84;
+    let p145 = f32(x.c2.x) * p90;
+    let p148 = p3 * p108;
+    let p149 = p2 * p114;
+    let p151 = f32(x.c0.x) * p126;
+    let p153 = f32(x.c0.z) * p138;
+    let p154 = fma(f32(x.c3.z), p54, p141);
+    let p155 = fma(f32(x.c2.z), p78, p144);
+    let p156 = p154 + p155;
+    let p157 = fma(f32(x.c1.w), p96, p148);
+    let p158 = fma(p1, p120, p151);
+    let p159 = p157 + p158;
+    let p160 = p156 + p159;
+    let p161 = fma(-f32(x.c3.y), p60, p153);
+    let p162 = fma(f32(x.c2.w), p72, p145);
+    let p163 = p161 - p162;
+    let p164 = fma(f32(x.c1.z), p102, p149);
+    let p165 = fma(p0, p132, p164);
+    let p166 = p163 - p165;
+    let p167 = p160 + p166;
+    let p168 = p167 * (1.0 / 3.0);
+    let p170 = p0 * p0;
+    let p173 = p2 * p2;
+    let p175 = f32(x.c1.z) * f32(x.c2.z);
+    let p176 = f32(x.c1.w) * f32(x.c2.w);
+    let p177 = f32(x.c2.x) * f32(x.c3.x);
+    let p178 = f32(x.c2.y) * f32(x.c3.y);
+    let p180 = fma(p1, p1, p173);
+    let p181 = fma(p3, p3, p175);
+    let p182 = p180 + p181;
+    let p183 = p176 + p177;
+    let p184 = p175 + p176;
+    let p185 = p183 + p184;
+    let p186 = p182 + p185;
+    let p187 = fma(f32(x.c3.z), f32(x.c3.z), p177);
+    let p188 = fma(f32(x.c0.z), f32(x.c0.z), p170);
+    let p189 = p187 - p188;
+    let p190 = fma(f32(x.c0.x), f32(x.c0.x), p178);
+    let p191 = p178 + p190;
+    let p192 = p189 - p191;
+    let p193 = p186 + p192;
+    let p195 = p60 * p84;
+    let p196 = p66 * p90;
+    let p197 = p72 * p96;
+    let p198 = p78 * p102;
+    let p200 = p114 * p114;
+    let p203 = p132 * p132;
+    let p204 = p138 * p138;
+    let p205 = p196 + p197;
+    let p206 = p196 + p198;
+    let p207 = p205 + p206;
+    let p208 = p197 + p198;
+    let p209 = fma(p126, p126, p203);
+    let p210 = p208 + p209;
+    let p211 = p207 + p210;
+    let p212 = fma(-p54, p54, p204);
+    let p213 = p195 + p195;
+    let p214 = p212 - p213;
+    let p215 = fma(p108, p108, p200);
+    let p216 = fma(p120, p120, p215);
+    let p217 = p214 - p216;
+    let p218 = p211 + p217;
+    let p219 = p168 * p168;
+    let p220 = -p219;
+    let p221 = -p0;
+    let p222 = -p1;
+    let p223 = -p2;
+    let p224 = -p3;
+    let p234 = f32(x.c2.z) * p60;
+    let p236 = f32(x.c3.x) * p60;
+    let p240 = f32(x.c2.z) * p66;
+    let p243 = p0 * p72;
+    let p244 = p1 * p72;
+    let p245 = p3 * p72;
+    let p251 = p3 * p78;
+    let p252 = f32(x.c2.w) * p78;
+    let p259 = f32(x.c1.w) * p84;
+    let p265 = f32(x.c1.w) * p90;
+    let p267 = p0 * p96;
+    let p268 = p1 * p96;
+    let p269 = p3 * p96;
+    let p275 = p3 * p102;
+    let p281 = f32(x.c1.w) * p108;
+    let p282 = f32(x.c2.z) * p108;
+    let p284 = f32(x.c3.z) * p108;
+    let p285 = p0 * p114;
+    let p289 = f32(x.c3.x) * p114;
+    let p290 = f32(x.c3.z) * p114;
+    let p292 = f32(x.c1.w) * p120;
+    let p294 = f32(x.c2.w) * p120;
+    let p296 = f32(x.c3.z) * p120;
+    let p302 = f32(x.c3.z) * p126;
+    let p303 = p2 * p132;
+    let p304 = f32(x.c1.w) * p132;
+    let p305 = f32(x.c2.y) * p132;
+    let p306 = f32(x.c2.w) * p132;
+    let p308 = f32(x.c3.z) * p132;
+    let p314 = f32(x.c3.z) * p138;
+    let p315 = fma(p3, p54, p236);
+    let p316 = fma(f32(x.c2.x), p84, p315);
+    let p317 = fma(-f32(x.c3.y), p66, p284);
+    let p318 = fma(-f32(x.c2.y), p90, p317);
+    let p319 = p316 + p318;
+    let p320 = fma(-p2, p54, p290);
+    let p321 = fma(-f32(x.c2.w), p60, p320);
+    let p322 = fma(f32(x.c3.y), p72, p259);
+    let p323 = fma(f32(x.c2.y), p96, p322);
+    let p324 = p321 - p323;
+    let p325 = fma(p1, p54, p234);
+    let p326 = fma(f32(x.c1.z), p84, p325);
+    let p327 = fma(-f32(x.c3.y), p78, p296);
+    let p328 = fma(-f32(x.c2.y), p102, p327);
+    let p329 = p326 + p328;
+    let p330 = fma(-f32(x.c0.x), p54, p302);
+    let p331 = fma(-f32(x.c2.w), p66, p330);
+    let p332 = fma(f32(x.c3.x), p72, p265);
+    let p333 = fma(f32(x.c2.x), p96, p332);
+    let p334 = p331 - p333;
+    let p335 = fma(p0, p54, p240);
+    let p336 = fma(f32(x.c1.z), p90, p335);
+    let p337 = fma(-f32(x.c3.x), p78, p308);
+    let p338 = fma(-f32(x.c2.x), p102, p337);
+    let p339 = p336 + p338;
+    let p340 = fma(f32(x.c2.z), p72, p252);
+    let p341 = fma(f32(x.c1.z), p96, p340);
+    let p342 = fma(f32(x.c1.w), p102, p314);
+    let p343 = fma(-f32(x.c0.z), p54, p342);
+    let p344 = p341 + p343;
+    let p345 = fma(p2, p66, p245);
+    let p346 = fma(f32(x.c2.y), p126, p345);
+    let p347 = fma(f32(x.c0.x), p60, p281);
+    let p348 = fma(f32(x.c2.x), p114, p347);
+    let p349 = p346 - p348;
+    let p350 = fma(p0, p60, p251);
+    let p351 = fma(f32(x.c1.z), p108, p350);
+    let p352 = fma(-p1, p66, p305);
+    let p353 = fma(-f32(x.c2.x), p120, p352);
+    let p354 = p351 + p353;
+    let p355 = fma(f32(x.c1.z), p114, p292);
+    let p356 = fma(f32(x.c2.y), p138, p355);
+    let p357 = fma(f32(x.c0.z), p60, p244);
+    let p358 = fma(p2, p78, p357);
+    let p359 = p356 - p358;
+    let p360 = fma(f32(x.c1.z), p126, p304);
+    let p361 = fma(f32(x.c2.x), p138, p360);
+    let p362 = fma(f32(x.c0.z), p66, p243);
+    let p363 = fma(f32(x.c0.x), p78, p362);
+    let p364 = p361 - p363;
+    let p365 = fma(p2, p90, p269);
+    let p366 = fma(f32(x.c2.w), p108, p365);
+    let p367 = fma(-f32(x.c0.x), p84, p289);
+    let p368 = fma(-f32(x.c3.y), p126, p367);
+    let p369 = p366 + p368;
+    let p370 = fma(p0, p84, p275);
+    let p371 = fma(f32(x.c3.x), p120, p370);
+    let p372 = fma(p1, p90, p282);
+    let p373 = fma(f32(x.c3.y), p132, p372);
+    let p374 = p371 - p373;
+    let p375 = fma(f32(x.c0.z), p84, p268);
+    let p376 = fma(p2, p102, p375);
+    let p377 = fma(f32(x.c2.z), p114, p294);
+    let p378 = fma(f32(x.c3.y), p138, p377);
+    let p379 = p376 + p378;
+    let p380 = -p379;
+    let p381 = fma(f32(x.c0.z), p90, p267);
+    let p382 = fma(f32(x.c0.x), p102, p381);
+    let p383 = fma(f32(x.c2.z), p126, p306);
+    let p384 = fma(f32(x.c3.x), p138, p383);
+    let p385 = p382 + p384;
+    let p386 = -p385;
+    let p387 = fma(p1, p126, p303);
+    let p388 = fma(p3, p138, p387);
+    let p389 = fma(f32(x.c0.z), p108, p285);
+    let p390 = fma(f32(x.c0.x), p120, p389);
+    let p391 = p388 - p390;
+    let p392 = -p324;
+    let p393 = -p334;
+    let p394 = -p339;
+    let p395 = -p344;
+    let p396 = p54 * p168;
+    let p397 = p60 * p168;
+    let p398 = p66 * p168;
+    let p399 = p72 * p168;
+    let p400 = p78 * p168;
+    let p401 = p84 * p168;
+    let p402 = p90 * p168;
+    let p403 = p96 * p168;
+    let p404 = p102 * p168;
+    let p405 = p108 * p168;
+    let p406 = p114 * p168;
+    let p407 = p120 * p168;
+    let p408 = p126 * p168;
+    let p409 = p132 * p168;
+    let p410 = p138 * p168;
+    let p411 = -p409;
+    let p412 = -p407;
+    let p413 = -p405;
+    let p414 = -p400;
+    let p415 = -p398;
+    let p416 = -p397;
+    let p417 = -p403;
+    let p418 = -p396;
+    let p419 = -p411;
+    let p420 = -p412;
+    let p421 = -p406;
+    let p422 = -p413;
+    let r1 = study_exp6_reach(p193, p218, p220);
+    let reach = f16(r1[0]);
+    let turn = f16(r1[1]);
+    return vec2<f16>(reach, turn);
+}
+
+// The exponential in closed form (docs/log6d.md §12), for rotations within about a quarter turn and rapidities up to 8: `bivector_exp` calls it.
+fn bivector_exp_from(x: Bivector) -> Even {
+    let p0 = -f32(x.c0.y);
+    let p1 = -f32(x.c0.w);
+    let p2 = -f32(x.c1.x);
+    let p3 = -f32(x.c1.y);
+    let p4 = f32(x.c0.z) * p3;
+    let p5 = f32(x.c0.z) * f32(x.c2.x);
+    let p6 = f32(x.c0.z) * f32(x.c2.y);
+    let p7 = f32(x.c0.z) * f32(x.c3.x);
+    let p8 = f32(x.c0.z) * f32(x.c3.y);
+    let p9 = f32(x.c0.z) * f32(x.c3.z);
+    let p10 = p0 * p2;
+    let p11 = f32(x.c1.w) * p0;
+    let p12 = f32(x.c2.y) * p0;
+    let p13 = f32(x.c2.w) * p0;
+    let p14 = f32(x.c3.y) * p0;
+    let p15 = f32(x.c3.z) * p0;
+    let p16 = f32(x.c0.x) * p1;
+    let p17 = f32(x.c0.x) * f32(x.c1.z);
+    let p18 = f32(x.c0.x) * f32(x.c2.y);
+    let p19 = f32(x.c0.x) * f32(x.c2.z);
+    let p20 = f32(x.c0.x) * f32(x.c3.y);
+    let p21 = f32(x.c0.x) * f32(x.c3.z);
+    let p22 = f32(x.c1.w) * p1;
+    let p23 = f32(x.c2.x) * p1;
+    let p24 = f32(x.c2.w) * p1;
+    let p25 = f32(x.c3.x) * p1;
+    let p26 = f32(x.c3.z) * p1;
+    let p27 = f32(x.c1.z) * p2;
+    let p28 = f32(x.c2.x) * p2;
+    let p29 = f32(x.c2.z) * p2;
+    let p30 = f32(x.c3.x) * p2;
+    let p31 = f32(x.c3.z) * p2;
+    let p32 = f32(x.c1.z) * p3;
+    let p33 = f32(x.c1.w) * p3;
+    let p34 = f32(x.c2.z) * p3;
+    let p35 = f32(x.c2.w) * p3;
+    let p36 = f32(x.c3.z) * p3;
+    let p37 = f32(x.c1.z) * f32(x.c2.w);
+    let p38 = f32(x.c1.z) * f32(x.c3.x);
+    let p39 = f32(x.c1.z) * f32(x.c3.y);
+    let p40 = f32(x.c1.w) * f32(x.c2.z);
+    let p41 = f32(x.c1.w) * f32(x.c3.x);
+    let p42 = f32(x.c1.w) * f32(x.c3.y);
+    let p43 = f32(x.c2.x) * f32(x.c2.z);
+    let p44 = f32(x.c2.x) * f32(x.c2.w);
+    let p45 = f32(x.c2.x) * f32(x.c3.y);
+    let p46 = f32(x.c2.y) * f32(x.c2.z);
+    let p47 = f32(x.c2.y) * f32(x.c2.w);
+    let p48 = f32(x.c2.y) * f32(x.c3.x);
+    let p49 = p4 + p16;
+    let p50 = p16 + p49;
+    let p51 = p4 - p10;
+    let p52 = p51 - p10;
+    let p53 = p50 + p52;
+    let p54 = p53 * (1.0 / 2.0);
+    let p55 = p5 + p17;
+    let p56 = p17 + p55;
+    let p57 = p5 - p11;
+    let p58 = p57 - p11;
+    let p59 = p56 + p58;
+    let p60 = p59 * (1.0 / 2.0);
+    let p61 = p6 + p27;
+    let p62 = p27 + p61;
+    let p63 = p6 - p22;
+    let p64 = p63 - p22;
+    let p65 = p62 + p64;
+    let p66 = p65 * (1.0 / 2.0);
+    let p67 = p12 + p32;
+    let p68 = p32 + p67;
+    let p69 = p12 - p23;
+    let p70 = p69 - p23;
+    let p71 = p68 + p70;
+    let p72 = p71 * (1.0 / 2.0);
+    let p73 = p18 + p33;
+    let p74 = p33 + p73;
+    let p75 = p18 - p28;
+    let p76 = p75 - p28;
+    let p77 = p74 + p76;
+    let p78 = p77 * (1.0 / 2.0);
+    let p79 = p7 + p19;
+    let p80 = p19 + p79;
+    let p81 = p7 - p13;
+    let p82 = p81 - p13;
+    let p83 = p80 + p82;
+    let p84 = p83 * (1.0 / 2.0);
+    let p85 = p8 + p29;
+    let p86 = p29 + p85;
+    let p87 = p8 - p24;
+    let p88 = p87 - p24;
+    let p89 = p86 + p88;
+    let p90 = p89 * (1.0 / 2.0);
+    let p91 = p14 + p34;
+    let p92 = p34 + p91;
+    let p93 = p14 - p25;
+    let p94 = p93 - p25;
+    let p95 = p92 + p94;
+    let p96 = p95 * (1.0 / 2.0);
+    let p97 = p20 + p35;
+    let p98 = p35 + p97;
+    let p99 = p20 - p30;
+    let p100 = p99 - p30;
+    let p101 = p98 + p100;
+    let p102 = p101 * (1.0 / 2.0);
+    let p103 = p9 + p40;
+    let p104 = p40 + p103;
+    let p105 = p9 - p37;
+    let p106 = p105 - p37;
+    let p107 = p104 + p106;
+    let p108 = p107 * (1.0 / 2.0);
+    let p109 = p15 + p43;
+    let p110 = p43 + p109;
+    let p111 = p15 - p38;
+    let p112 = p111 - p38;
+    let p113 = p110 + p112;
+    let p114 = p113 * (1.0 / 2.0);
+    let p115 = p21 + p44;
+    let p116 = p44 + p115;
+    let p117 = p21 - p41;
+    let p118 = p117 - p41;
+    let p119 = p116 + p118;
+    let p120 = p119 * (1.0 / 2.0);
+    let p121 = p26 + p46;
+    let p122 = p46 + p121;
+    let p123 = p26 - p39;
+    let p124 = p123 - p39;
+    let p125 = p122 + p124;
+    let p126 = p125 * (1.0 / 2.0);
+    let p127 = p31 + p47;
+    let p128 = p47 + p127;
+    let p129 = p31 - p42;
+    let p130 = p129 - p42;
+    let p131 = p128 + p130;
+    let p132 = p131 * (1.0 / 2.0);
+    let p133 = p36 + p48;
+    let p134 = p48 + p133;
+    let p135 = p36 - p45;
+    let p136 = p135 - p45;
+    let p137 = p134 + p136;
+    let p138 = p137 * (1.0 / 2.0);
+    let p141 = f32(x.c3.x) * p66;
+    let p144 = f32(x.c2.y) * p84;
+    let p145 = f32(x.c2.x) * p90;
+    let p148 = p3 * p108;
+    let p149 = p2 * p114;
+    let p151 = f32(x.c0.x) * p126;
+    let p153 = f32(x.c0.z) * p138;
+    let p154 = fma(f32(x.c3.z), p54, p141);
+    let p155 = fma(f32(x.c2.z), p78, p144);
+    let p156 = p154 + p155;
+    let p157 = fma(f32(x.c1.w), p96, p148);
+    let p158 = fma(p1, p120, p151);
+    let p159 = p157 + p158;
+    let p160 = p156 + p159;
+    let p161 = fma(-f32(x.c3.y), p60, p153);
+    let p162 = fma(f32(x.c2.w), p72, p145);
+    let p163 = p161 - p162;
+    let p164 = fma(f32(x.c1.z), p102, p149);
+    let p165 = fma(p0, p132, p164);
+    let p166 = p163 - p165;
+    let p167 = p160 + p166;
+    let p168 = p167 * (1.0 / 3.0);
+    let p170 = p0 * p0;
+    let p173 = p2 * p2;
+    let p175 = f32(x.c1.z) * f32(x.c2.z);
+    let p176 = f32(x.c1.w) * f32(x.c2.w);
+    let p177 = f32(x.c2.x) * f32(x.c3.x);
+    let p178 = f32(x.c2.y) * f32(x.c3.y);
+    let p180 = fma(p1, p1, p173);
+    let p181 = fma(p3, p3, p175);
+    let p182 = p180 + p181;
+    let p183 = p176 + p177;
+    let p184 = p175 + p176;
+    let p185 = p183 + p184;
+    let p186 = p182 + p185;
+    let p187 = fma(f32(x.c3.z), f32(x.c3.z), p177);
+    let p188 = fma(f32(x.c0.z), f32(x.c0.z), p170);
+    let p189 = p187 - p188;
+    let p190 = fma(f32(x.c0.x), f32(x.c0.x), p178);
+    let p191 = p178 + p190;
+    let p192 = p189 - p191;
+    let p193 = p186 + p192;
+    let p195 = p60 * p84;
+    let p196 = p66 * p90;
+    let p197 = p72 * p96;
+    let p198 = p78 * p102;
+    let p200 = p114 * p114;
+    let p203 = p132 * p132;
+    let p204 = p138 * p138;
+    let p205 = p196 + p197;
+    let p206 = p196 + p198;
+    let p207 = p205 + p206;
+    let p208 = p197 + p198;
+    let p209 = fma(p126, p126, p203);
+    let p210 = p208 + p209;
+    let p211 = p207 + p210;
+    let p212 = fma(-p54, p54, p204);
+    let p213 = p195 + p195;
+    let p214 = p212 - p213;
+    let p215 = fma(p108, p108, p200);
+    let p216 = fma(p120, p120, p215);
+    let p217 = p214 - p216;
+    let p218 = p211 + p217;
+    let p219 = p168 * p168;
+    let p220 = -p219;
+    let p221 = -p0;
+    let p222 = -p1;
+    let p223 = -p2;
+    let p224 = -p3;
+    let p234 = f32(x.c2.z) * p60;
+    let p236 = f32(x.c3.x) * p60;
+    let p240 = f32(x.c2.z) * p66;
+    let p243 = p0 * p72;
+    let p244 = p1 * p72;
+    let p245 = p3 * p72;
+    let p251 = p3 * p78;
+    let p252 = f32(x.c2.w) * p78;
+    let p259 = f32(x.c1.w) * p84;
+    let p265 = f32(x.c1.w) * p90;
+    let p267 = p0 * p96;
+    let p268 = p1 * p96;
+    let p269 = p3 * p96;
+    let p275 = p3 * p102;
+    let p281 = f32(x.c1.w) * p108;
+    let p282 = f32(x.c2.z) * p108;
+    let p284 = f32(x.c3.z) * p108;
+    let p285 = p0 * p114;
+    let p289 = f32(x.c3.x) * p114;
+    let p290 = f32(x.c3.z) * p114;
+    let p292 = f32(x.c1.w) * p120;
+    let p294 = f32(x.c2.w) * p120;
+    let p296 = f32(x.c3.z) * p120;
+    let p302 = f32(x.c3.z) * p126;
+    let p303 = p2 * p132;
+    let p304 = f32(x.c1.w) * p132;
+    let p305 = f32(x.c2.y) * p132;
+    let p306 = f32(x.c2.w) * p132;
+    let p308 = f32(x.c3.z) * p132;
+    let p314 = f32(x.c3.z) * p138;
+    let p315 = fma(p3, p54, p236);
+    let p316 = fma(f32(x.c2.x), p84, p315);
+    let p317 = fma(-f32(x.c3.y), p66, p284);
+    let p318 = fma(-f32(x.c2.y), p90, p317);
+    let p319 = p316 + p318;
+    let p320 = fma(-p2, p54, p290);
+    let p321 = fma(-f32(x.c2.w), p60, p320);
+    let p322 = fma(f32(x.c3.y), p72, p259);
+    let p323 = fma(f32(x.c2.y), p96, p322);
+    let p324 = p321 - p323;
+    let p325 = fma(p1, p54, p234);
+    let p326 = fma(f32(x.c1.z), p84, p325);
+    let p327 = fma(-f32(x.c3.y), p78, p296);
+    let p328 = fma(-f32(x.c2.y), p102, p327);
+    let p329 = p326 + p328;
+    let p330 = fma(-f32(x.c0.x), p54, p302);
+    let p331 = fma(-f32(x.c2.w), p66, p330);
+    let p332 = fma(f32(x.c3.x), p72, p265);
+    let p333 = fma(f32(x.c2.x), p96, p332);
+    let p334 = p331 - p333;
+    let p335 = fma(p0, p54, p240);
+    let p336 = fma(f32(x.c1.z), p90, p335);
+    let p337 = fma(-f32(x.c3.x), p78, p308);
+    let p338 = fma(-f32(x.c2.x), p102, p337);
+    let p339 = p336 + p338;
+    let p340 = fma(f32(x.c2.z), p72, p252);
+    let p341 = fma(f32(x.c1.z), p96, p340);
+    let p342 = fma(f32(x.c1.w), p102, p314);
+    let p343 = fma(-f32(x.c0.z), p54, p342);
+    let p344 = p341 + p343;
+    let p345 = fma(p2, p66, p245);
+    let p346 = fma(f32(x.c2.y), p126, p345);
+    let p347 = fma(f32(x.c0.x), p60, p281);
+    let p348 = fma(f32(x.c2.x), p114, p347);
+    let p349 = p346 - p348;
+    let p350 = fma(p0, p60, p251);
+    let p351 = fma(f32(x.c1.z), p108, p350);
+    let p352 = fma(-p1, p66, p305);
+    let p353 = fma(-f32(x.c2.x), p120, p352);
+    let p354 = p351 + p353;
+    let p355 = fma(f32(x.c1.z), p114, p292);
+    let p356 = fma(f32(x.c2.y), p138, p355);
+    let p357 = fma(f32(x.c0.z), p60, p244);
+    let p358 = fma(p2, p78, p357);
+    let p359 = p356 - p358;
+    let p360 = fma(f32(x.c1.z), p126, p304);
+    let p361 = fma(f32(x.c2.x), p138, p360);
+    let p362 = fma(f32(x.c0.z), p66, p243);
+    let p363 = fma(f32(x.c0.x), p78, p362);
+    let p364 = p361 - p363;
+    let p365 = fma(p2, p90, p269);
+    let p366 = fma(f32(x.c2.w), p108, p365);
+    let p367 = fma(-f32(x.c0.x), p84, p289);
+    let p368 = fma(-f32(x.c3.y), p126, p367);
+    let p369 = p366 + p368;
+    let p370 = fma(p0, p84, p275);
+    let p371 = fma(f32(x.c3.x), p120, p370);
+    let p372 = fma(p1, p90, p282);
+    let p373 = fma(f32(x.c3.y), p132, p372);
+    let p374 = p371 - p373;
+    let p375 = fma(f32(x.c0.z), p84, p268);
+    let p376 = fma(p2, p102, p375);
+    let p377 = fma(f32(x.c2.z), p114, p294);
+    let p378 = fma(f32(x.c3.y), p138, p377);
+    let p379 = p376 + p378;
+    let p380 = -p379;
+    let p381 = fma(f32(x.c0.z), p90, p267);
+    let p382 = fma(f32(x.c0.x), p102, p381);
+    let p383 = fma(f32(x.c2.z), p126, p306);
+    let p384 = fma(f32(x.c3.x), p138, p383);
+    let p385 = p382 + p384;
+    let p386 = -p385;
+    let p387 = fma(p1, p126, p303);
+    let p388 = fma(p3, p138, p387);
+    let p389 = fma(f32(x.c0.z), p108, p285);
+    let p390 = fma(f32(x.c0.x), p120, p389);
+    let p391 = p388 - p390;
+    let p392 = -p324;
+    let p393 = -p334;
+    let p394 = -p339;
+    let p395 = -p344;
+    let p396 = p54 * p168;
+    let p397 = p60 * p168;
+    let p398 = p66 * p168;
+    let p399 = p72 * p168;
+    let p400 = p78 * p168;
+    let p401 = p84 * p168;
+    let p402 = p90 * p168;
+    let p403 = p96 * p168;
+    let p404 = p102 * p168;
+    let p405 = p108 * p168;
+    let p406 = p114 * p168;
+    let p407 = p120 * p168;
+    let p408 = p126 * p168;
+    let p409 = p132 * p168;
+    let p410 = p138 * p168;
+    let p411 = -p409;
+    let p412 = -p407;
+    let p413 = -p405;
+    let p414 = -p400;
+    let p415 = -p398;
+    let p416 = -p397;
+    let p417 = -p403;
+    let p418 = -p396;
+    let p419 = -p411;
+    let p420 = -p412;
+    let p421 = -p406;
+    let p422 = -p413;
+    let r1 = study_exp6(p193, p218, p220);
+    let w1 = f16(r1[0]);
+    let w2 = f16(r1[1]);
+    let w3 = f16(r1[2]);
+    let c = f16(r1[3]);
+    let t1 = w2 * f16(p329);
+    let t3 = fma(w1, f16(f32(x.c0.x)), t1);
+    let t4 = fma(w3, f16(p408), t3);
+    let t6 = w2 * f16(p392);
+    let t8 = fma(w1, f16(p221), t6);
+    let t9 = fma(w3, f16(p419), t8);
+    let t11 = w2 * f16(p319);
+    let t13 = fma(w1, f16(f32(x.c0.z)), t11);
+    let t14 = fma(w3, f16(p410), t13);
+    let t16 = w2 * f16(p393);
+    let t18 = fma(w1, f16(p222), t16);
+    let t19 = fma(w3, f16(p420), t18);
+    let t21 = w2 * f16(p394);
+    let t23 = fma(w1, f16(p223), t21);
+    let t24 = fma(w3, f16(p421), t23);
+    let t26 = w2 * f16(p395);
+    let t28 = fma(w1, f16(p224), t26);
+    let t29 = fma(w3, f16(p422), t28);
+    let t31 = w2 * f16(p349);
+    let t33 = fma(w1, f16(f32(x.c1.z)), t31);
+    let t34 = fma(w3, f16(p414), t33);
+    let t36 = w2 * f16(p354);
+    let t38 = fma(w1, f16(f32(x.c1.w)), t36);
+    let t39 = fma(w3, f16(p399), t38);
+    let t41 = w2 * f16(p359);
+    let t43 = fma(w1, f16(f32(x.c2.x)), t41);
+    let t44 = fma(w3, f16(p415), t43);
+    let t46 = w2 * f16(p364);
+    let t48 = fma(w1, f16(f32(x.c2.y)), t46);
+    let t49 = fma(w3, f16(p416), t48);
+    let t51 = w2 * f16(p369);
+    let t53 = fma(w1, f16(f32(x.c2.z)), t51);
+    let t54 = fma(w3, f16(p404), t53);
+    let t56 = w2 * f16(p374);
+    let t58 = fma(w1, f16(f32(x.c2.w)), t56);
+    let t59 = fma(w3, f16(p417), t58);
+    let t61 = w2 * f16(p380);
+    let t63 = fma(w1, f16(f32(x.c3.x)), t61);
+    let t64 = fma(w3, f16(p402), t63);
+    let t66 = w2 * f16(p386);
+    let t68 = fma(w1, f16(f32(x.c3.y)), t66);
+    let t69 = fma(w3, f16(p401), t68);
+    let t71 = w2 * f16(p391);
+    let t73 = fma(w1, f16(f32(x.c3.z)), t71);
+    let t74 = fma(w3, f16(p418), t73);
+    let t75 = -t9;
+    let t76 = -t19;
+    let t77 = -t24;
+    let t78 = -t29;
+    let t79 = t14 * t78;
+    let t80 = t14 * t44;
+    let t81 = t14 * t49;
+    let t82 = t14 * t64;
+    let t83 = t14 * t69;
+    let t84 = t14 * t74;
+    let t85 = t75 * t77;
+    let t86 = t39 * t75;
+    let t87 = t49 * t75;
+    let t88 = t59 * t75;
+    let t89 = t69 * t75;
+    let t90 = t74 * t75;
+    let t91 = t4 * t76;
+    let t92 = t4 * t34;
+    let t93 = t4 * t49;
+    let t94 = t4 * t54;
+    let t95 = t4 * t69;
+    let t96 = t4 * t74;
+    let t97 = t39 * t76;
+    let t98 = t44 * t76;
+    let t99 = t59 * t76;
+    let t100 = t64 * t76;
+    let t101 = t74 * t76;
+    let t102 = t34 * t77;
+    let t103 = t44 * t77;
+    let t104 = t54 * t77;
+    let t105 = t64 * t77;
+    let t106 = t74 * t77;
+    let t107 = t34 * t78;
+    let t108 = t39 * t78;
+    let t109 = t54 * t78;
+    let t110 = t59 * t78;
+    let t111 = t74 * t78;
+    let t112 = t34 * t59;
+    let t113 = t34 * t64;
+    let t114 = t34 * t69;
+    let t115 = t39 * t54;
+    let t116 = t39 * t64;
+    let t117 = t39 * t69;
+    let t118 = t44 * t54;
+    let t119 = t44 * t59;
+    let t120 = t44 * t69;
+    let t121 = t49 * t54;
+    let t122 = t49 * t59;
+    let t123 = t49 * t64;
+    let t124 = t79 + t91;
+    let t125 = t91 + t124;
+    let t126 = t79 - t85;
+    let t127 = t126 - t85;
+    let t128 = t125 + t127;
+    let t129 = t128 * (1.0 / 2.0);
+    let t130 = t80 + t92;
+    let t131 = t92 + t130;
+    let t132 = t80 - t86;
+    let t133 = t132 - t86;
+    let t134 = t131 + t133;
+    let t135 = t134 * (1.0 / 2.0);
+    let t136 = t81 + t102;
+    let t137 = t102 + t136;
+    let t138 = t81 - t97;
+    let t139 = t138 - t97;
+    let t140 = t137 + t139;
+    let t141 = t140 * (1.0 / 2.0);
+    let t142 = t87 + t107;
+    let t143 = t107 + t142;
+    let t144 = t87 - t98;
+    let t145 = t144 - t98;
+    let t146 = t143 + t145;
+    let t147 = t146 * (1.0 / 2.0);
+    let t148 = t93 + t108;
+    let t149 = t108 + t148;
+    let t150 = t93 - t103;
+    let t151 = t150 - t103;
+    let t152 = t149 + t151;
+    let t153 = t152 * (1.0 / 2.0);
+    let t154 = t82 + t94;
+    let t155 = t94 + t154;
+    let t156 = t82 - t88;
+    let t157 = t156 - t88;
+    let t158 = t155 + t157;
+    let t159 = t158 * (1.0 / 2.0);
+    let t160 = t83 + t104;
+    let t161 = t104 + t160;
+    let t162 = t83 - t99;
+    let t163 = t162 - t99;
+    let t164 = t161 + t163;
+    let t165 = t164 * (1.0 / 2.0);
+    let t166 = t89 + t109;
+    let t167 = t109 + t166;
+    let t168 = t89 - t100;
+    let t169 = t168 - t100;
+    let t170 = t167 + t169;
+    let t171 = t170 * (1.0 / 2.0);
+    let t172 = t95 + t110;
+    let t173 = t110 + t172;
+    let t174 = t95 - t105;
+    let t175 = t174 - t105;
+    let t176 = t173 + t175;
+    let t177 = t176 * (1.0 / 2.0);
+    let t178 = t84 + t115;
+    let t179 = t115 + t178;
+    let t180 = t84 - t112;
+    let t181 = t180 - t112;
+    let t182 = t179 + t181;
+    let t183 = t182 * (1.0 / 2.0);
+    let t184 = t90 + t118;
+    let t185 = t118 + t184;
+    let t186 = t90 - t113;
+    let t187 = t186 - t113;
+    let t188 = t185 + t187;
+    let t189 = t188 * (1.0 / 2.0);
+    let t190 = t96 + t119;
+    let t191 = t119 + t190;
+    let t192 = t96 - t116;
+    let t193 = t192 - t116;
+    let t194 = t191 + t193;
+    let t195 = t194 * (1.0 / 2.0);
+    let t196 = t101 + t121;
+    let t197 = t121 + t196;
+    let t198 = t101 - t114;
+    let t199 = t198 - t114;
+    let t200 = t197 + t199;
+    let t201 = t200 * (1.0 / 2.0);
+    let t202 = t106 + t122;
+    let t203 = t122 + t202;
+    let t204 = t106 - t117;
+    let t205 = t204 - t117;
+    let t206 = t203 + t205;
+    let t207 = t206 * (1.0 / 2.0);
+    let t208 = t111 + t123;
+    let t209 = t123 + t208;
+    let t210 = t111 - t120;
+    let t211 = t210 - t120;
+    let t212 = t209 + t211;
+    let t213 = t212 * (1.0 / 2.0);
+    let t216 = t64 * t141;
+    let t219 = t49 * t159;
+    let t220 = t44 * t165;
+    let t223 = t78 * t183;
+    let t224 = t77 * t189;
+    let t226 = t4 * t201;
+    let t228 = t14 * t213;
+    let t229 = fma(t74, t129, t216);
+    let t230 = fma(t54, t153, t219);
+    let t231 = t229 + t230;
+    let t232 = fma(t39, t171, t223);
+    let t233 = fma(t76, t195, t226);
+    let t234 = t232 + t233;
+    let t235 = t231 + t234;
+    let t236 = fma(-t69, t135, t228);
+    let t237 = fma(t59, t147, t220);
+    let t238 = t236 - t237;
+    let t239 = fma(t34, t177, t224);
+    let t240 = fma(t75, t207, t239);
+    let t241 = t238 - t240;
+    let t242 = t235 + t241;
+    let t243 = t242 * (1.0 / 3.0);
+    let t244 = c * t4;
+    let t245 = c * t75;
+    let t246 = -t245;
+    let t247 = c * t14;
+    let t248 = c * t76;
+    let t249 = -t248;
+    let t250 = c * t77;
+    let t251 = -t250;
+    let t252 = c * t78;
+    let t253 = -t252;
+    let t254 = c * t34;
+    let t255 = c * t39;
+    let t256 = c * t44;
+    let t257 = c * t49;
+    let t258 = c * t54;
+    let t259 = c * t59;
+    let t260 = c * t64;
+    let t261 = c * t69;
+    let t262 = c * t74;
+    let t263 = c * t129;
+    let t264 = c * t153;
+    let t265 = c * t147;
+    let t266 = -t265;
+    let t267 = c * t141;
+    let t268 = c * t135;
+    let t269 = c * t177;
+    let t270 = c * t171;
+    let t271 = -t270;
+    let t272 = c * t165;
+    let t273 = c * t159;
+    let t274 = c * t195;
+    let t275 = c * t189;
+    let t276 = -t275;
+    let t277 = c * t183;
+    let t278 = c * t201;
+    let t279 = -t278;
+    let t280 = c * t207;
+    let t281 = -t280;
+    let t282 = c * t213;
+    let t283 = -t282;
+    let t284 = c * t243;
+    return Even(vec4<f16>(c, t244, t246, t247), vec4<f16>(t249, t251, t253, t254), vec4<f16>(t255, t256, t257, t258), vec4<f16>(t259, t260, t261, t262), vec4<f16>(t263, t264, t266, t267), vec4<f16>(t268, t269, t271, t272), vec4<f16>(t273, t274, t276, t277), vec4<f16>(t279, t281, t283, t284));
+}
+
+// The sum `Z` of the unit bivectors of the rotations beyond a quarter turn, which `bivector_exp` turns back by one (docs/log6d.md §12); `-<Z Z>_0` is their number.
+fn bivector_exp_turning(x: Bivector) -> Bivector {
+    let p0 = -f32(x.c0.y);
+    let p1 = -f32(x.c0.w);
+    let p2 = -f32(x.c1.x);
+    let p3 = -f32(x.c1.y);
+    let p4 = f32(x.c0.z) * p3;
+    let p5 = f32(x.c0.z) * f32(x.c2.x);
+    let p6 = f32(x.c0.z) * f32(x.c2.y);
+    let p7 = f32(x.c0.z) * f32(x.c3.x);
+    let p8 = f32(x.c0.z) * f32(x.c3.y);
+    let p9 = f32(x.c0.z) * f32(x.c3.z);
+    let p10 = p0 * p2;
+    let p11 = f32(x.c1.w) * p0;
+    let p12 = f32(x.c2.y) * p0;
+    let p13 = f32(x.c2.w) * p0;
+    let p14 = f32(x.c3.y) * p0;
+    let p15 = f32(x.c3.z) * p0;
+    let p16 = f32(x.c0.x) * p1;
+    let p17 = f32(x.c0.x) * f32(x.c1.z);
+    let p18 = f32(x.c0.x) * f32(x.c2.y);
+    let p19 = f32(x.c0.x) * f32(x.c2.z);
+    let p20 = f32(x.c0.x) * f32(x.c3.y);
+    let p21 = f32(x.c0.x) * f32(x.c3.z);
+    let p22 = f32(x.c1.w) * p1;
+    let p23 = f32(x.c2.x) * p1;
+    let p24 = f32(x.c2.w) * p1;
+    let p25 = f32(x.c3.x) * p1;
+    let p26 = f32(x.c3.z) * p1;
+    let p27 = f32(x.c1.z) * p2;
+    let p28 = f32(x.c2.x) * p2;
+    let p29 = f32(x.c2.z) * p2;
+    let p30 = f32(x.c3.x) * p2;
+    let p31 = f32(x.c3.z) * p2;
+    let p32 = f32(x.c1.z) * p3;
+    let p33 = f32(x.c1.w) * p3;
+    let p34 = f32(x.c2.z) * p3;
+    let p35 = f32(x.c2.w) * p3;
+    let p36 = f32(x.c3.z) * p3;
+    let p37 = f32(x.c1.z) * f32(x.c2.w);
+    let p38 = f32(x.c1.z) * f32(x.c3.x);
+    let p39 = f32(x.c1.z) * f32(x.c3.y);
+    let p40 = f32(x.c1.w) * f32(x.c2.z);
+    let p41 = f32(x.c1.w) * f32(x.c3.x);
+    let p42 = f32(x.c1.w) * f32(x.c3.y);
+    let p43 = f32(x.c2.x) * f32(x.c2.z);
+    let p44 = f32(x.c2.x) * f32(x.c2.w);
+    let p45 = f32(x.c2.x) * f32(x.c3.y);
+    let p46 = f32(x.c2.y) * f32(x.c2.z);
+    let p47 = f32(x.c2.y) * f32(x.c2.w);
+    let p48 = f32(x.c2.y) * f32(x.c3.x);
+    let p49 = p4 + p16;
+    let p50 = p16 + p49;
+    let p51 = p4 - p10;
+    let p52 = p51 - p10;
+    let p53 = p50 + p52;
+    let p54 = p53 * (1.0 / 2.0);
+    let p55 = p5 + p17;
+    let p56 = p17 + p55;
+    let p57 = p5 - p11;
+    let p58 = p57 - p11;
+    let p59 = p56 + p58;
+    let p60 = p59 * (1.0 / 2.0);
+    let p61 = p6 + p27;
+    let p62 = p27 + p61;
+    let p63 = p6 - p22;
+    let p64 = p63 - p22;
+    let p65 = p62 + p64;
+    let p66 = p65 * (1.0 / 2.0);
+    let p67 = p12 + p32;
+    let p68 = p32 + p67;
+    let p69 = p12 - p23;
+    let p70 = p69 - p23;
+    let p71 = p68 + p70;
+    let p72 = p71 * (1.0 / 2.0);
+    let p73 = p18 + p33;
+    let p74 = p33 + p73;
+    let p75 = p18 - p28;
+    let p76 = p75 - p28;
+    let p77 = p74 + p76;
+    let p78 = p77 * (1.0 / 2.0);
+    let p79 = p7 + p19;
+    let p80 = p19 + p79;
+    let p81 = p7 - p13;
+    let p82 = p81 - p13;
+    let p83 = p80 + p82;
+    let p84 = p83 * (1.0 / 2.0);
+    let p85 = p8 + p29;
+    let p86 = p29 + p85;
+    let p87 = p8 - p24;
+    let p88 = p87 - p24;
+    let p89 = p86 + p88;
+    let p90 = p89 * (1.0 / 2.0);
+    let p91 = p14 + p34;
+    let p92 = p34 + p91;
+    let p93 = p14 - p25;
+    let p94 = p93 - p25;
+    let p95 = p92 + p94;
+    let p96 = p95 * (1.0 / 2.0);
+    let p97 = p20 + p35;
+    let p98 = p35 + p97;
+    let p99 = p20 - p30;
+    let p100 = p99 - p30;
+    let p101 = p98 + p100;
+    let p102 = p101 * (1.0 / 2.0);
+    let p103 = p9 + p40;
+    let p104 = p40 + p103;
+    let p105 = p9 - p37;
+    let p106 = p105 - p37;
+    let p107 = p104 + p106;
+    let p108 = p107 * (1.0 / 2.0);
+    let p109 = p15 + p43;
+    let p110 = p43 + p109;
+    let p111 = p15 - p38;
+    let p112 = p111 - p38;
+    let p113 = p110 + p112;
+    let p114 = p113 * (1.0 / 2.0);
+    let p115 = p21 + p44;
+    let p116 = p44 + p115;
+    let p117 = p21 - p41;
+    let p118 = p117 - p41;
+    let p119 = p116 + p118;
+    let p120 = p119 * (1.0 / 2.0);
+    let p121 = p26 + p46;
+    let p122 = p46 + p121;
+    let p123 = p26 - p39;
+    let p124 = p123 - p39;
+    let p125 = p122 + p124;
+    let p126 = p125 * (1.0 / 2.0);
+    let p127 = p31 + p47;
+    let p128 = p47 + p127;
+    let p129 = p31 - p42;
+    let p130 = p129 - p42;
+    let p131 = p128 + p130;
+    let p132 = p131 * (1.0 / 2.0);
+    let p133 = p36 + p48;
+    let p134 = p48 + p133;
+    let p135 = p36 - p45;
+    let p136 = p135 - p45;
+    let p137 = p134 + p136;
+    let p138 = p137 * (1.0 / 2.0);
+    let p141 = f32(x.c3.x) * p66;
+    let p144 = f32(x.c2.y) * p84;
+    let p145 = f32(x.c2.x) * p90;
+    let p148 = p3 * p108;
+    let p149 = p2 * p114;
+    let p151 = f32(x.c0.x) * p126;
+    let p153 = f32(x.c0.z) * p138;
+    let p154 = fma(f32(x.c3.z), p54, p141);
+    let p155 = fma(f32(x.c2.z), p78, p144);
+    let p156 = p154 + p155;
+    let p157 = fma(f32(x.c1.w), p96, p148);
+    let p158 = fma(p1, p120, p151);
+    let p159 = p157 + p158;
+    let p160 = p156 + p159;
+    let p161 = fma(-f32(x.c3.y), p60, p153);
+    let p162 = fma(f32(x.c2.w), p72, p145);
+    let p163 = p161 - p162;
+    let p164 = fma(f32(x.c1.z), p102, p149);
+    let p165 = fma(p0, p132, p164);
+    let p166 = p163 - p165;
+    let p167 = p160 + p166;
+    let p168 = p167 * (1.0 / 3.0);
+    let p170 = p0 * p0;
+    let p173 = p2 * p2;
+    let p175 = f32(x.c1.z) * f32(x.c2.z);
+    let p176 = f32(x.c1.w) * f32(x.c2.w);
+    let p177 = f32(x.c2.x) * f32(x.c3.x);
+    let p178 = f32(x.c2.y) * f32(x.c3.y);
+    let p180 = fma(p1, p1, p173);
+    let p181 = fma(p3, p3, p175);
+    let p182 = p180 + p181;
+    let p183 = p176 + p177;
+    let p184 = p175 + p176;
+    let p185 = p183 + p184;
+    let p186 = p182 + p185;
+    let p187 = fma(f32(x.c3.z), f32(x.c3.z), p177);
+    let p188 = fma(f32(x.c0.z), f32(x.c0.z), p170);
+    let p189 = p187 - p188;
+    let p190 = fma(f32(x.c0.x), f32(x.c0.x), p178);
+    let p191 = p178 + p190;
+    let p192 = p189 - p191;
+    let p193 = p186 + p192;
+    let p195 = p60 * p84;
+    let p196 = p66 * p90;
+    let p197 = p72 * p96;
+    let p198 = p78 * p102;
+    let p200 = p114 * p114;
+    let p203 = p132 * p132;
+    let p204 = p138 * p138;
+    let p205 = p196 + p197;
+    let p206 = p196 + p198;
+    let p207 = p205 + p206;
+    let p208 = p197 + p198;
+    let p209 = fma(p126, p126, p203);
+    let p210 = p208 + p209;
+    let p211 = p207 + p210;
+    let p212 = fma(-p54, p54, p204);
+    let p213 = p195 + p195;
+    let p214 = p212 - p213;
+    let p215 = fma(p108, p108, p200);
+    let p216 = fma(p120, p120, p215);
+    let p217 = p214 - p216;
+    let p218 = p211 + p217;
+    let p219 = p168 * p168;
+    let p220 = -p219;
+    let p221 = -p0;
+    let p222 = -p1;
+    let p223 = -p2;
+    let p224 = -p3;
+    let p234 = f32(x.c2.z) * p60;
+    let p236 = f32(x.c3.x) * p60;
+    let p240 = f32(x.c2.z) * p66;
+    let p243 = p0 * p72;
+    let p244 = p1 * p72;
+    let p245 = p3 * p72;
+    let p251 = p3 * p78;
+    let p252 = f32(x.c2.w) * p78;
+    let p259 = f32(x.c1.w) * p84;
+    let p265 = f32(x.c1.w) * p90;
+    let p267 = p0 * p96;
+    let p268 = p1 * p96;
+    let p269 = p3 * p96;
+    let p275 = p3 * p102;
+    let p281 = f32(x.c1.w) * p108;
+    let p282 = f32(x.c2.z) * p108;
+    let p284 = f32(x.c3.z) * p108;
+    let p285 = p0 * p114;
+    let p289 = f32(x.c3.x) * p114;
+    let p290 = f32(x.c3.z) * p114;
+    let p292 = f32(x.c1.w) * p120;
+    let p294 = f32(x.c2.w) * p120;
+    let p296 = f32(x.c3.z) * p120;
+    let p302 = f32(x.c3.z) * p126;
+    let p303 = p2 * p132;
+    let p304 = f32(x.c1.w) * p132;
+    let p305 = f32(x.c2.y) * p132;
+    let p306 = f32(x.c2.w) * p132;
+    let p308 = f32(x.c3.z) * p132;
+    let p314 = f32(x.c3.z) * p138;
+    let p315 = fma(p3, p54, p236);
+    let p316 = fma(f32(x.c2.x), p84, p315);
+    let p317 = fma(-f32(x.c3.y), p66, p284);
+    let p318 = fma(-f32(x.c2.y), p90, p317);
+    let p319 = p316 + p318;
+    let p320 = fma(-p2, p54, p290);
+    let p321 = fma(-f32(x.c2.w), p60, p320);
+    let p322 = fma(f32(x.c3.y), p72, p259);
+    let p323 = fma(f32(x.c2.y), p96, p322);
+    let p324 = p321 - p323;
+    let p325 = fma(p1, p54, p234);
+    let p326 = fma(f32(x.c1.z), p84, p325);
+    let p327 = fma(-f32(x.c3.y), p78, p296);
+    let p328 = fma(-f32(x.c2.y), p102, p327);
+    let p329 = p326 + p328;
+    let p330 = fma(-f32(x.c0.x), p54, p302);
+    let p331 = fma(-f32(x.c2.w), p66, p330);
+    let p332 = fma(f32(x.c3.x), p72, p265);
+    let p333 = fma(f32(x.c2.x), p96, p332);
+    let p334 = p331 - p333;
+    let p335 = fma(p0, p54, p240);
+    let p336 = fma(f32(x.c1.z), p90, p335);
+    let p337 = fma(-f32(x.c3.x), p78, p308);
+    let p338 = fma(-f32(x.c2.x), p102, p337);
+    let p339 = p336 + p338;
+    let p340 = fma(f32(x.c2.z), p72, p252);
+    let p341 = fma(f32(x.c1.z), p96, p340);
+    let p342 = fma(f32(x.c1.w), p102, p314);
+    let p343 = fma(-f32(x.c0.z), p54, p342);
+    let p344 = p341 + p343;
+    let p345 = fma(p2, p66, p245);
+    let p346 = fma(f32(x.c2.y), p126, p345);
+    let p347 = fma(f32(x.c0.x), p60, p281);
+    let p348 = fma(f32(x.c2.x), p114, p347);
+    let p349 = p346 - p348;
+    let p350 = fma(p0, p60, p251);
+    let p351 = fma(f32(x.c1.z), p108, p350);
+    let p352 = fma(-p1, p66, p305);
+    let p353 = fma(-f32(x.c2.x), p120, p352);
+    let p354 = p351 + p353;
+    let p355 = fma(f32(x.c1.z), p114, p292);
+    let p356 = fma(f32(x.c2.y), p138, p355);
+    let p357 = fma(f32(x.c0.z), p60, p244);
+    let p358 = fma(p2, p78, p357);
+    let p359 = p356 - p358;
+    let p360 = fma(f32(x.c1.z), p126, p304);
+    let p361 = fma(f32(x.c2.x), p138, p360);
+    let p362 = fma(f32(x.c0.z), p66, p243);
+    let p363 = fma(f32(x.c0.x), p78, p362);
+    let p364 = p361 - p363;
+    let p365 = fma(p2, p90, p269);
+    let p366 = fma(f32(x.c2.w), p108, p365);
+    let p367 = fma(-f32(x.c0.x), p84, p289);
+    let p368 = fma(-f32(x.c3.y), p126, p367);
+    let p369 = p366 + p368;
+    let p370 = fma(p0, p84, p275);
+    let p371 = fma(f32(x.c3.x), p120, p370);
+    let p372 = fma(p1, p90, p282);
+    let p373 = fma(f32(x.c3.y), p132, p372);
+    let p374 = p371 - p373;
+    let p375 = fma(f32(x.c0.z), p84, p268);
+    let p376 = fma(p2, p102, p375);
+    let p377 = fma(f32(x.c2.z), p114, p294);
+    let p378 = fma(f32(x.c3.y), p138, p377);
+    let p379 = p376 + p378;
+    let p380 = -p379;
+    let p381 = fma(f32(x.c0.z), p90, p267);
+    let p382 = fma(f32(x.c0.x), p102, p381);
+    let p383 = fma(f32(x.c2.z), p126, p306);
+    let p384 = fma(f32(x.c3.x), p138, p383);
+    let p385 = p382 + p384;
+    let p386 = -p385;
+    let p387 = fma(p1, p126, p303);
+    let p388 = fma(p3, p138, p387);
+    let p389 = fma(f32(x.c0.z), p108, p285);
+    let p390 = fma(f32(x.c0.x), p120, p389);
+    let p391 = p388 - p390;
+    let p392 = -p324;
+    let p393 = -p334;
+    let p394 = -p339;
+    let p395 = -p344;
+    let p396 = p54 * p168;
+    let p397 = p60 * p168;
+    let p398 = p66 * p168;
+    let p399 = p72 * p168;
+    let p400 = p78 * p168;
+    let p401 = p84 * p168;
+    let p402 = p90 * p168;
+    let p403 = p96 * p168;
+    let p404 = p102 * p168;
+    let p405 = p108 * p168;
+    let p406 = p114 * p168;
+    let p407 = p120 * p168;
+    let p408 = p126 * p168;
+    let p409 = p132 * p168;
+    let p410 = p138 * p168;
+    let p411 = -p409;
+    let p412 = -p407;
+    let p413 = -p405;
+    let p414 = -p400;
+    let p415 = -p398;
+    let p416 = -p397;
+    let p417 = -p403;
+    let p418 = -p396;
+    let p419 = -p411;
+    let p420 = -p412;
+    let p421 = -p406;
+    let p422 = -p413;
+    let r1 = study_exp6_turn(p193, p218, p220);
+    let z1 = f16(r1[0]);
+    let z2 = f16(r1[1]);
+    let z3 = f16(r1[2]);
+    let n = f16(r1[3]);
+    let t1 = z2 * f16(p329);
+    let t3 = fma(z1, f16(f32(x.c0.x)), t1);
+    let t4 = fma(z3, f16(p408), t3);
+    let t6 = z2 * f16(p392);
+    let t8 = fma(z1, f16(p221), t6);
+    let t9 = fma(z3, f16(p419), t8);
+    let t11 = z2 * f16(p319);
+    let t13 = fma(z1, f16(f32(x.c0.z)), t11);
+    let t14 = fma(z3, f16(p410), t13);
+    let t16 = z2 * f16(p393);
+    let t18 = fma(z1, f16(p222), t16);
+    let t19 = fma(z3, f16(p420), t18);
+    let t21 = z2 * f16(p394);
+    let t23 = fma(z1, f16(p223), t21);
+    let t24 = fma(z3, f16(p421), t23);
+    let t26 = z2 * f16(p395);
+    let t28 = fma(z1, f16(p224), t26);
+    let t29 = fma(z3, f16(p422), t28);
+    let t31 = z2 * f16(p349);
+    let t33 = fma(z1, f16(f32(x.c1.z)), t31);
+    let t34 = fma(z3, f16(p414), t33);
+    let t36 = z2 * f16(p354);
+    let t38 = fma(z1, f16(f32(x.c1.w)), t36);
+    let t39 = fma(z3, f16(p399), t38);
+    let t41 = z2 * f16(p359);
+    let t43 = fma(z1, f16(f32(x.c2.x)), t41);
+    let t44 = fma(z3, f16(p415), t43);
+    let t46 = z2 * f16(p364);
+    let t48 = fma(z1, f16(f32(x.c2.y)), t46);
+    let t49 = fma(z3, f16(p416), t48);
+    let t51 = z2 * f16(p369);
+    let t53 = fma(z1, f16(f32(x.c2.z)), t51);
+    let t54 = fma(z3, f16(p404), t53);
+    let t56 = z2 * f16(p374);
+    let t58 = fma(z1, f16(f32(x.c2.w)), t56);
+    let t59 = fma(z3, f16(p417), t58);
+    let t61 = z2 * f16(p380);
+    let t63 = fma(z1, f16(f32(x.c3.x)), t61);
+    let t64 = fma(z3, f16(p402), t63);
+    let t66 = z2 * f16(p386);
+    let t68 = fma(z1, f16(f32(x.c3.y)), t66);
+    let t69 = fma(z3, f16(p401), t68);
+    let t71 = z2 * f16(p391);
+    let t73 = fma(z1, f16(f32(x.c3.z)), t71);
+    let t74 = fma(z3, f16(p418), t73);
+    return Bivector(vec4<f16>(t4, t9, t14, t19), vec4<f16>(t24, t29, t34, t39), vec4<f16>(t44, t49, t54, t59), vec4<f16>(t64, t69, t74, 0.0));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn trivector_norm_squared(x: Trivector) -> f16 {
     let t1 = x.c0.y * x.c0.y;
@@ -19522,35 +20880,59 @@ fn even_scale(a: Even, k: f16) -> Even {
     return Even(a.c0 * k, a.c1 * k, a.c2 * k, a.c3 * k, a.c4 * k, a.c5 * k, a.c6 * k, a.c7 * k);
 }
 
-// The exponential of a `Bivector`, a unit `Even`, by scaling and squaring (gax's Rust `exp` for this
-// kind): `B` is halved `s` times until its 1-norm is at most 1/16, a Taylor series of degree 10
-// gives `exp(B / 2^s)`, a Newton step renormalizes it, `s` squarings undo the scaling, and a
-// second Newton step renormalizes the result where it is small (1-norm below 4).
+// `a + b` for `Bivector`.
+fn bivector_add(a: Bivector, b: Bivector) -> Bivector {
+    return Bivector(a.c0 + b.c0, a.c1 + b.c1, a.c2 + b.c2, a.c3 + b.c3);
+}
+
+// `a - b` for `Bivector`.
+fn bivector_sub(a: Bivector, b: Bivector) -> Bivector {
+    return Bivector(a.c0 - b.c0, a.c1 - b.c1, a.c2 - b.c2, a.c3 - b.c3);
+}
+
+// `a k` for `Bivector` and a scalar `k`.
+fn bivector_scale(a: Bivector, k: f16) -> Bivector {
+    return Bivector(a.c0 * k, a.c1 * k, a.c2 * k, a.c3 * k);
+}
+
+// The exponential of a `Bivector`, a unit `Even`, in closed form (docs/log6d.md §12, gax's Rust
+// `exp` for this kind): `x` is halved `s` times until `bivector_exp_reach` is below 1 (rotations
+// within 3 pi/4, rapidities up to 8), rotations beyond a quarter turn are turned back by one
+// (`exp B = exp(B - (pi/2) Z) E`, `Z` the sum of their `n = -<Z Z>_0` unit bivectors and `E`
+// their product, `Z`, `1 + Z^2/2` or `(Z^3 + 7 Z)/6`), and `s` squarings undo the halving.
 fn bivector_exp(x: Bivector) -> Even {
-    let norm = abs(x.c0.x) + abs(x.c0.y) + abs(x.c0.z) + abs(x.c0.w) + abs(x.c1.x) + abs(x.c1.y) + abs(x.c1.z) + abs(x.c1.w) + abs(x.c2.x) + abs(x.c2.y) + abs(x.c2.z) + abs(x.c2.w) + abs(x.c3.x) + abs(x.c3.y) + abs(x.c3.z);
-    var h: f16 = 1.0;
+    let rt = bivector_exp_reach(x);
+    var scale: f16 = 1.0;
     var s = 0u;
     loop {
-        if s >= 64u || norm * h < 0.0625 {
+        if s >= 64u || rt.x * scale < 1.0 {
             break;
         }
-        h = h * 0.5;
+        scale = scale * 0.5;
         s = s + 1u;
     }
-    let e = Even(vec4<f16>(0.0, (x.c0.x) * h, (x.c0.y) * h, (x.c0.z) * h), vec4<f16>((x.c0.w) * h, (x.c1.x) * h, (x.c1.y) * h, (x.c1.z) * h), vec4<f16>((x.c1.w) * h, (x.c2.x) * h, (x.c2.y) * h, (x.c2.z) * h), vec4<f16>((x.c2.w) * h, (x.c3.x) * h, (x.c3.y) * h, (x.c3.z) * h), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
-    let one = Even(vec4<f16>(1.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
-    var r = one;
-    for (var k = 10; k >= 1; k = k - 1) {
-        r = even_add(one, even_scale(even_mul_even(e, r), 1.0 / f16(k)));
+    let b = bivector_scale(x, scale);
+    var r: Even;
+    if rt.y * scale < 1.0 {
+        r = bivector_exp_from(b);
+    } else {
+        let z = bivector_exp_turning(b);
+        let ze = Even(vec4<f16>(0.0, z.c0.x, z.c0.y, z.c0.z), vec4<f16>(z.c0.w, z.c1.x, z.c1.y, z.c1.z), vec4<f16>(z.c1.w, z.c2.x, z.c2.y, z.c2.z), vec4<f16>(z.c2.w, z.c3.x, z.c3.y, z.c3.z), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0));
+        let z2 = even_mul_even(ze, ze);
+        let n = -z2.c0.x;
+        r = bivector_exp_from(bivector_sub(b, bivector_scale(z, 1.5707963)));
+        if n > 2.5 {
+            r = even_mul_even(r, even_scale(even_add(even_mul_even(z2, ze), even_scale(ze, 7.0)), 1.0 / 6.0));
+        } else if n > 1.5 {
+            r = even_mul_even(r, even_add(Even(vec4<f16>(1.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, 0.0)), even_scale(z2, 0.5)));
+        } else if n > 0.5 {
+            r = even_mul_even(r, ze);
+        }
     }
-    let three = even_scale(one, 3.0);
-    r = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
     for (var i = 0u; i < s; i = i + 1u) {
         r = even_mul_even(r, r);
     }
-    let size = abs(r.c0.x) + abs(r.c0.y) + abs(r.c0.z) + abs(r.c0.w) + abs(r.c1.x) + abs(r.c1.y) + abs(r.c1.z) + abs(r.c1.w) + abs(r.c2.x) + abs(r.c2.y) + abs(r.c2.z) + abs(r.c2.w) + abs(r.c3.x) + abs(r.c3.y) + abs(r.c3.z) + abs(r.c3.w) + abs(r.c4.x) + abs(r.c4.y) + abs(r.c4.z) + abs(r.c4.w) + abs(r.c5.x) + abs(r.c5.y) + abs(r.c5.z) + abs(r.c5.w) + abs(r.c6.x) + abs(r.c6.y) + abs(r.c6.z) + abs(r.c6.w) + abs(r.c7.x) + abs(r.c7.y) + abs(r.c7.z) + abs(r.c7.w);
-    let fixed = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
-    return Even(select(r.c0, fixed.c0, size < 4.0), select(r.c1, fixed.c1, size < 4.0), select(r.c2, fixed.c2, size < 4.0), select(r.c3, fixed.c3, size < 4.0), select(r.c4, fixed.c4, size < 4.0), select(r.c5, fixed.c5, size < 4.0), select(r.c6, fixed.c6, size < 4.0), select(r.c7, fixed.c7, size < 4.0));
+    return r;
 }
 
 // The logarithm of a unit `Even`: the `Bivector` B with `exp(B) = x`, principal (every invariant
@@ -19727,6 +21109,281 @@ fn study_acosh_sq(y: StudyDual) -> StudyDual {
     series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
     series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
     return sd_select_small(t, 1e-8, series, direct);
+}
+
+
+// The closed-form exponential of a 6D bivector (docs/log6d.md §12), a port of
+// gax_core::study::{exp_weights_6d, exp_turn_6d, exp_reach_6d} in f32: the squares λ_j = μ_j²
+// of the planes are the roots of λ³ − e1 λ² + e2 λ − e3, and three functions of λ are
+// interpolated at them (data `id`): 0 `τ(λ) = tanh(√λ)/√λ`, 1 `ln cosh √λ`, 2 `1/θ` on the
+// rotations beyond a quarter turn (0 elsewhere), 3 their indicator. Series have 16 terms, as
+// study_log6's.
+const EXP6_TAU = array<f32, 40>(1e0, -3.3333333333333337e-1, 1.3333333333333336e-1, -5.3968253968253985e-2, 2.186948853615521e-2, -8.8632355299022e-3, 3.592128036572483e-3, -1.4558343870513188e-3, 5.900274409455863e-4, -2.3912911424355256e-4, 9.691537956929454e-5, -3.9278323883316846e-5, 1.591890506932897e-5, -6.451689215655433e-6, 2.614771151290755e-6, -1.059726832010466e-6, 4.2949110782738094e-7, -1.740661896357166e-7, 7.054636946400973e-8, -2.8591366623052563e-8, 1.1587644432798863e-8, -4.696295398230906e-9, 1.9033368339312775e-9, -7.713933635359069e-10, 3.12633954589209e-10, -1.267057693030541e-10, 5.135191408039372e-11, -2.081214686770049e-11, 8.434845419094346e-12, -3.418514086811159e-12, 1.3854715742948482e-12, -5.615104792414683e-13, 2.275716255372876e-13, -9.223130585139539e-14, 3.7379940310967415e-14, -1.5149519187148615e-14, 6.1398688626168176e-15, -2.4883951222762803e-15, 1.0085085566354098e-15, -4.0873312268690143e-16);
+const EXP6_LNCOSH = array<f32, 40>(0e0, 5e-1, -8.333333333333334e-2, 2.2222222222222227e-2, -6.746031746031747e-3, 2.1869488536155205e-3, -7.38602960825183e-4, 2.565805740408915e-4, -9.09896491907074e-5, 3.277930227475478e-5, -1.1956455712177626e-5, 4.405244525877024e-6, -1.636596828471535e-6, 6.122655795895756e-7, -2.3041747198769397e-7, 8.715903837635851e-8, -3.311646350032705e-8, 1.2632091406687667e-8, -4.835171934325459e-9, 1.8564834069476236e-9, -7.147841655763136e-10, 2.758962960190204e-10, -1.0673398632342961e-10, 4.1376887694158186e-11, -1.607069507366472e-11, 6.252679091784178e-12, -2.436649409674117e-12, 9.509613718591427e-13, -3.716454797803658e-13, 1.4542836929473005e-13, -5.697523478018596e-14, 2.234631571443303e-14, -8.773601238147943e-15, 3.4480549323831456e-15, -1.3563427331087554e-15, 5.339991472995345e-16, -2.1040998871039748e-16, 8.297120084617324e-17, -3.274204108258265e-17, 1.2929596879941164e-17);
+// −π²/16 (a quarter turn) and π²/4 (τ's first pole is at −π²/4).
+const EXP6_QUARTER: f32 = -0.6168502750680849;
+const EXP6_POLE: f32 = 2.4674011002723395;
+
+fn exp6_cx_exp(z: vec2<f32>) -> vec2<f32> {
+    let r = exp(z.x);
+    return vec2<f32>(r * cos(z.y), r * sin(z.y));
+}
+
+// A table's first 16 terms at a small `x` (|x| < 0.05: 0.05^16 is far below f32).
+fn exp6_small(id: i32, x: f32) -> f32 {
+    var t = EXP6_TAU;
+    if id == 1 {
+        t = EXP6_LNCOSH;
+    }
+    var acc = t[15];
+    for (var i = 14; i >= 0; i--) {
+        acc = acc * x + t[i];
+    }
+    return acc;
+}
+
+fn exp6_small_cx(id: i32, x: vec2<f32>) -> vec2<f32> {
+    var t = EXP6_TAU;
+    if id == 1 {
+        t = EXP6_LNCOSH;
+    }
+    var acc = vec2<f32>(t[15], 0.0);
+    for (var i = 14; i >= 0; i--) {
+        acc = cx_mul(acc, x) + vec2<f32>(t[i], 0.0);
+    }
+    return acc;
+}
+
+// The data at a real `x`.
+fn exp6_at(id: i32, x: f32) -> f32 {
+    let z = sqrt(max(abs(x), 1e-30));
+    if id == 2 {
+        return select(0.0, 1.0 / sqrt(max(-x, 1e-30)), x < EXP6_QUARTER);
+    }
+    if id == 3 {
+        return select(0.0, 1.0, x < EXP6_QUARTER);
+    }
+    if abs(x) < 0.05 {
+        return exp6_small(id, x);
+    }
+    if id == 0 {
+        if x < 0.0 {
+            return sin(z) / (cos(z) * z);
+        }
+        return (1.0 - 2.0 / (exp(z + z) + 1.0)) / z;
+    }
+    if x < 0.0 {
+        return log(cos(z));
+    }
+    return z + log(1.0 + exp(-(z + z))) - 0.6931471805599453;
+}
+
+// The data at a complex `x` (a conjugate pair of roots far apart: a loxodromic pair).
+fn exp6_at_cx(id: i32, x: vec2<f32>) -> vec2<f32> {
+    if id >= 2 {
+        return vec2<f32>(0.0, 0.0);
+    }
+    if dot(x, x) < 0.0025 {
+        return exp6_small_cx(id, x);
+    }
+    let one = vec2<f32>(1.0, 0.0);
+    let z = cx_sqrt(x);
+    let w = exp6_cx_exp(-2.0 * z);
+    if id == 0 {
+        return cx_div(one - w, cx_mul(one + w, z));
+    }
+    return z + cx_ln(one + w) - vec2<f32>(0.6931471805599453, 0.0);
+}
+
+// The exponential of a series: `E' = g' E`.
+fn exp6_series_exp(g_in: array<f32, 16>) -> array<f32, 16> {
+    var g = g_in;
+    var e: array<f32, 16>;
+    e[0] = exp(g[0]);
+    for (var n = 1; n < 16; n++) {
+        var acc = 0.0;
+        for (var k = 1; k <= n; k++) {
+            acc += f32(k) * g[k] * e[n - k];
+        }
+        e[n] = acc / f32(n);
+    }
+    return e;
+}
+
+// `ln(1 + w)` of a series: `L' = w' / (1 + w)`.
+fn exp6_series_log1p(w_in: array<f32, 16>) -> array<f32, 16> {
+    var w = w_in;
+    var dw: array<f32, 16>;
+    for (var k = 1; k < 16; k++) {
+        dw[k - 1] = w[k] * f32(k);
+    }
+    var den = w;
+    den[0] += 1.0;
+    var d = log6_div(dw, den);
+    var out: array<f32, 16>;
+    out[0] = log(1.0 + w[0]);
+    for (var k = 1; k < 16; k++) {
+        out[k] = d[k - 1] / f32(k);
+    }
+    return out;
+}
+
+// The data's Taylor series at `c` in `s = (x − c)/rho`.
+fn exp6_series(id: i32, c: f32, rho: f32) -> array<f32, 16> {
+    var out: array<f32, 16>;
+    if id == 3 {
+        out[0] = select(0.0, 1.0, c < EXP6_QUARTER);
+        return out;
+    }
+    if id == 2 {
+        if c < EXP6_QUARTER {
+            out = log6_pow(max(-c, 1e-30), -1.0, -0.5, rho);
+        }
+        return out;
+    }
+    if c <= 1.0 {
+        // The Maclaurin table shifted to c by repeated Horner.
+        var t = EXP6_TAU;
+        if id == 1 {
+            t = EXP6_LNCOSH;
+        }
+        var power = 1.0;
+        for (var i = 0; i < 16; i++) {
+            for (var j = 38; j >= i; j--) {
+                t[j] += c * t[j + 1];
+            }
+            out[i] = t[i] * power;
+            power *= rho;
+        }
+        return out;
+    }
+    // z = √(c + ρ s), w = e^(−2z): τ = (1 − w)/((1 + w) z), ln cosh = z + ln(1 + w) − ln 2.
+    var z = log6_pow(c, 1.0, 0.5, rho);
+    var g: array<f32, 16>;
+    for (var k = 0; k < 16; k++) {
+        g[k] = -2.0 * z[k];
+    }
+    var w = exp6_series_exp(g);
+    if id == 0 {
+        var num: array<f32, 16>;
+        var den: array<f32, 16>;
+        for (var k = 0; k < 16; k++) {
+            num[k] = -w[k];
+            den[k] = w[k];
+        }
+        num[0] += 1.0;
+        den[0] += 1.0;
+        return log6_div(log6_div(num, den), z);
+    }
+    var l = exp6_series_log1p(w);
+    for (var k = 0; k < 16; k++) {
+        out[k] = z[k] + l[k];
+    }
+    out[0] -= 0.6931471805599453;
+    return out;
+}
+
+// The distance from a centre to the data's nearest singularity.
+fn exp6_reach(id: i32, c: f32) -> f32 {
+    if id >= 2 {
+        return max(abs(c), c - EXP6_QUARTER);
+    }
+    return abs(c + EXP6_POLE);
+}
+
+// The quadratic interpolating the data at the roots of t³ − p1 t² + p2 t − p3: their series at
+// the mean (close roots), else the most isolated real root and the remaining pair.
+fn exp6_interp(id: i32, p1: f32, p2: f32, p3: f32) -> vec3<f32> {
+    let m = p1 / 3.0;
+    let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+    let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
+    let reach = exp6_reach(id, m);
+    if bound < 0.25 * reach {
+        let rho = max(reach, 1e-30);
+        return log6_reduce3(exp6_series(id, m, rho), m, rho, e2, e3);
+    }
+    let r = log6_root(p1, p2, p3, m, e2, e3);
+    let pr = log6_pair(p1, p2, p3, r);
+    let sum = pr.x;
+    let prod = pr.y;
+    let mid = sum * 0.5;
+    let d2 = mid * mid - prod;
+    let d = sqrt(abs(d2));
+    let near = exp6_reach(id, mid);
+    var pair: vec2<f32>;
+    if d < 0.25 * near {
+        let rho = max(near, 1e-30);
+        pair = log6_reduce2(exp6_series(id, mid, rho), mid, rho, d2);
+    } else if d2 < 0.0 {
+        let fc = exp6_at_cx(id, vec2<f32>(mid, d));
+        let slope = fc.y / max(d, 1e-30);
+        pair = vec2<f32>(fc.x - slope * mid, slope);
+    } else {
+        let a = mid + d;
+        let b = mid - d;
+        let fa = exp6_at(id, a);
+        let slope = (fa - exp6_at(id, b)) / max(a - b, 1e-30);
+        pair = vec2<f32>(fa - slope * a, slope);
+    }
+    let kk = (exp6_at(id, r) - (pair.y * r + pair.x)) / ((r - sum) * r + prod);
+    return vec3<f32>(pair.x + prod * kk, pair.y - sum * kk, kk);
+}
+
+// The weights of `H1, H2, H3` for the interpolant `α` (gax_core::study::h_weights).
+fn exp6_h_weights(a: vec3<f32>, e1: f32, e2: f32) -> vec3<f32> {
+    return vec3<f32>(a.x + a.y * e1 + a.z * (e1 * e1 - e2), -a.y - a.z * e1, a.z);
+}
+
+// `Σ_j P(λ_j)` for the interpolant `α`, from the power sums `3, e1, e1² − 2 e2`.
+fn exp6_trace(a: vec3<f32>, e1: f32, e2: f32) -> f32 {
+    return 3.0 * a.x + a.y * e1 + a.z * (e1 * e1 - 2.0 * e2);
+}
+
+// `[w1, w2, w3, C]`: `T = w1 H1 + w2 H2 + w3 H3` and `C = ∏ cosh μ_j`, `exp B = C (1 + T + …)`.
+fn study_exp6(e1: f32, e2: f32, e3: f32) -> vec4<f32> {
+    let w = exp6_h_weights(exp6_interp(0, e1, e2, e3), e1, e2);
+    let c = exp(exp6_trace(exp6_interp(1, e1, e2, e3), e1, e2));
+    return vec4<f32>(w, c);
+}
+
+
+// `[reach, turn]` of one root `λ` (complex): its rotation over 3π/4 (a real root) or π/4 (a
+// loxodromic pair), its rapidity over 8; and a real rotation over 1.1 π/4.
+fn exp6_reach_of(l: vec2<f32>) -> vec2<f32> {
+    let mu = cx_sqrt(l);
+    let real = abs(l.y) < 1e-12 * (1.0 + abs(l.x));
+    let limit = select(0.7853981633974483, 2.356194490192345, real);
+    let worst = max(abs(mu.y) / limit, abs(mu.x) / 8.0);
+    let turn = select(0.0, abs(mu.y) / 0.8639379797371932, real);
+    return vec2<f32>(worst, turn);
+}
+
+fn study_exp6_reach(e1: f32, e2: f32, e3: f32) -> vec2<f32> {
+    let m = e1 / 3.0;
+    let e2s = e2 - 2.0 * m * e1 + 3.0 * m * m;
+    let e3s = e3 - m * e2 + m * m * e1 - m * m * m;
+    let r = log6_root(e1, e2, e3, m, e2s, e3s);
+    let pr = log6_pair(e1, e2, e3, r);
+    let mid = pr.x * 0.5;
+    let d2 = mid * mid - pr.y;
+    let d = sqrt(abs(d2));
+    var a = vec2<f32>(mid + d, 0.0);
+    var b = vec2<f32>(mid - d, 0.0);
+    if d2 < 0.0 {
+        a = vec2<f32>(mid, d);
+        b = vec2<f32>(mid, -d);
+    }
+    return max(max(exp6_reach_of(vec2<f32>(r, 0.0)), exp6_reach_of(a)), exp6_reach_of(b));
+}
+
+
+// `[z1, z2, z3, n]`: `Z = z1 H1 + z2 H2 + z3 H3` the sum of the unit bivectors of the `n`
+// rotations beyond a quarter turn.
+fn study_exp6_turn(e1: f32, e2: f32, e3: f32) -> vec4<f32> {
+    let z = exp6_h_weights(exp6_interp(2, e1, e2, e3), e1, e2);
+    let n = exp6_trace(exp6_interp(3, e1, e2, e3), e1, e2);
+    return vec4<f32>(z, n);
 }
 
 // `study_exp_c` of `a + X` with `X² = q`, as `[f0, f1]` (gax_core::study::study_q).

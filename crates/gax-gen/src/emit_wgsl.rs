@@ -600,6 +600,340 @@ fn study_log6_turn(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
 }
 ";
 
+/// Terms of the Maclaurin tables in the WGSL exponential: centres within 1 of zero against a
+/// radius of `π²/4` give a ratio of at most 0.41, so 40 terms reach `10⁻¹⁵`, below `f32`.
+const EXP6_TERMS: usize = 40;
+
+/// The Maclaurin coefficients of `τ(x) = tanh(√x)/√x` and of `ln cosh √x` (the recurrences of
+/// `gax_core::study::expk`).
+fn exp6_tables() -> ([f64; EXP6_TERMS], [f64; EXP6_TERMS]) {
+    let (mut s, mut c) = ([0.0; EXP6_TERMS], [0.0; EXP6_TERMS]);
+    s[0] = 1.0;
+    c[0] = 1.0;
+    for n in 1..EXP6_TERMS {
+        let k = n as f64;
+        c[n] = c[n - 1] / ((2.0 * k - 1.0) * (2.0 * k));
+        s[n] = s[n - 1] / ((2.0 * k) * (2.0 * k + 1.0));
+    }
+    let mut tau = [0.0; EXP6_TERMS];
+    for k in 0..EXP6_TERMS {
+        let mut v = s[k];
+        for j in 1..=k {
+            v -= c[j] * tau[k - j];
+        }
+        tau[k] = v;
+    }
+    let mut l = [0.0; EXP6_TERMS];
+    for n in 1..EXP6_TERMS {
+        let mut v = n as f64 * c[n];
+        for k in 1..n {
+            v -= k as f64 * l[k] * c[n - k];
+        }
+        l[n] = v / n as f64;
+    }
+    (tau, l)
+}
+
+/// The WGSL helper `study_exp6` (a port of `gax_core::study::exp_weights_6d`) and the
+/// interpolation it shares with [`EXP6_TURN`], which use the series functions of [`LOG6`].
+#[allow(clippy::too_many_lines)]
+fn exp6_source() -> String {
+    let (tau, lncosh) = exp6_tables();
+    let list = |t: &[f64]| {
+        t.iter()
+            .map(|v| format!("{v:e}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    format!(
+        r"
+// The closed-form exponential of a 6D bivector (docs/log6d.md §12), a port of
+// gax_core::study::{{exp_weights_6d, exp_turn_6d, exp_reach_6d}} in f32: the squares λ_j = μ_j²
+// of the planes are the roots of λ³ − e1 λ² + e2 λ − e3, and three functions of λ are
+// interpolated at them (data `id`): 0 `τ(λ) = tanh(√λ)/√λ`, 1 `ln cosh √λ`, 2 `1/θ` on the
+// rotations beyond a quarter turn (0 elsewhere), 3 their indicator. Series have 16 terms, as
+// study_log6's.
+const EXP6_TAU = array<f32, {n}>({tau});
+const EXP6_LNCOSH = array<f32, {n}>({lncosh});
+// −π²/16 (a quarter turn) and π²/4 (τ's first pole is at −π²/4).
+const EXP6_QUARTER: f32 = -0.6168502750680849;
+const EXP6_POLE: f32 = 2.4674011002723395;
+
+fn exp6_cx_exp(z: vec2<f32>) -> vec2<f32> {{
+    let r = exp(z.x);
+    return vec2<f32>(r * cos(z.y), r * sin(z.y));
+}}
+
+// A table's first 16 terms at a small `x` (|x| < 0.05: 0.05^16 is far below f32).
+fn exp6_small(id: i32, x: f32) -> f32 {{
+    var t = EXP6_TAU;
+    if id == 1 {{
+        t = EXP6_LNCOSH;
+    }}
+    var acc = t[15];
+    for (var i = 14; i >= 0; i--) {{
+        acc = acc * x + t[i];
+    }}
+    return acc;
+}}
+
+fn exp6_small_cx(id: i32, x: vec2<f32>) -> vec2<f32> {{
+    var t = EXP6_TAU;
+    if id == 1 {{
+        t = EXP6_LNCOSH;
+    }}
+    var acc = vec2<f32>(t[15], 0.0);
+    for (var i = 14; i >= 0; i--) {{
+        acc = cx_mul(acc, x) + vec2<f32>(t[i], 0.0);
+    }}
+    return acc;
+}}
+
+// The data at a real `x`.
+fn exp6_at(id: i32, x: f32) -> f32 {{
+    let z = sqrt(max(abs(x), 1e-30));
+    if id == 2 {{
+        return select(0.0, 1.0 / sqrt(max(-x, 1e-30)), x < EXP6_QUARTER);
+    }}
+    if id == 3 {{
+        return select(0.0, 1.0, x < EXP6_QUARTER);
+    }}
+    if abs(x) < 0.05 {{
+        return exp6_small(id, x);
+    }}
+    if id == 0 {{
+        if x < 0.0 {{
+            return sin(z) / (cos(z) * z);
+        }}
+        return (1.0 - 2.0 / (exp(z + z) + 1.0)) / z;
+    }}
+    if x < 0.0 {{
+        return log(cos(z));
+    }}
+    return z + log(1.0 + exp(-(z + z))) - 0.6931471805599453;
+}}
+
+// The data at a complex `x` (a conjugate pair of roots far apart: a loxodromic pair).
+fn exp6_at_cx(id: i32, x: vec2<f32>) -> vec2<f32> {{
+    if id >= 2 {{
+        return vec2<f32>(0.0, 0.0);
+    }}
+    if dot(x, x) < 0.0025 {{
+        return exp6_small_cx(id, x);
+    }}
+    let one = vec2<f32>(1.0, 0.0);
+    let z = cx_sqrt(x);
+    let w = exp6_cx_exp(-2.0 * z);
+    if id == 0 {{
+        return cx_div(one - w, cx_mul(one + w, z));
+    }}
+    return z + cx_ln(one + w) - vec2<f32>(0.6931471805599453, 0.0);
+}}
+
+// The exponential of a series: `E' = g' E`.
+fn exp6_series_exp(g_in: array<f32, 16>) -> array<f32, 16> {{
+    var g = g_in;
+    var e: array<f32, 16>;
+    e[0] = exp(g[0]);
+    for (var n = 1; n < 16; n++) {{
+        var acc = 0.0;
+        for (var k = 1; k <= n; k++) {{
+            acc += f32(k) * g[k] * e[n - k];
+        }}
+        e[n] = acc / f32(n);
+    }}
+    return e;
+}}
+
+// `ln(1 + w)` of a series: `L' = w' / (1 + w)`.
+fn exp6_series_log1p(w_in: array<f32, 16>) -> array<f32, 16> {{
+    var w = w_in;
+    var dw: array<f32, 16>;
+    for (var k = 1; k < 16; k++) {{
+        dw[k - 1] = w[k] * f32(k);
+    }}
+    var den = w;
+    den[0] += 1.0;
+    var d = log6_div(dw, den);
+    var out: array<f32, 16>;
+    out[0] = log(1.0 + w[0]);
+    for (var k = 1; k < 16; k++) {{
+        out[k] = d[k - 1] / f32(k);
+    }}
+    return out;
+}}
+
+// The data's Taylor series at `c` in `s = (x − c)/rho`.
+fn exp6_series(id: i32, c: f32, rho: f32) -> array<f32, 16> {{
+    var out: array<f32, 16>;
+    if id == 3 {{
+        out[0] = select(0.0, 1.0, c < EXP6_QUARTER);
+        return out;
+    }}
+    if id == 2 {{
+        if c < EXP6_QUARTER {{
+            out = log6_pow(max(-c, 1e-30), -1.0, -0.5, rho);
+        }}
+        return out;
+    }}
+    if c <= 1.0 {{
+        // The Maclaurin table shifted to c by repeated Horner.
+        var t = EXP6_TAU;
+        if id == 1 {{
+            t = EXP6_LNCOSH;
+        }}
+        var power = 1.0;
+        for (var i = 0; i < 16; i++) {{
+            for (var j = {last}; j >= i; j--) {{
+                t[j] += c * t[j + 1];
+            }}
+            out[i] = t[i] * power;
+            power *= rho;
+        }}
+        return out;
+    }}
+    // z = √(c + ρ s), w = e^(−2z): τ = (1 − w)/((1 + w) z), ln cosh = z + ln(1 + w) − ln 2.
+    var z = log6_pow(c, 1.0, 0.5, rho);
+    var g: array<f32, 16>;
+    for (var k = 0; k < 16; k++) {{
+        g[k] = -2.0 * z[k];
+    }}
+    var w = exp6_series_exp(g);
+    if id == 0 {{
+        var num: array<f32, 16>;
+        var den: array<f32, 16>;
+        for (var k = 0; k < 16; k++) {{
+            num[k] = -w[k];
+            den[k] = w[k];
+        }}
+        num[0] += 1.0;
+        den[0] += 1.0;
+        return log6_div(log6_div(num, den), z);
+    }}
+    var l = exp6_series_log1p(w);
+    for (var k = 0; k < 16; k++) {{
+        out[k] = z[k] + l[k];
+    }}
+    out[0] -= 0.6931471805599453;
+    return out;
+}}
+
+// The distance from a centre to the data's nearest singularity.
+fn exp6_reach(id: i32, c: f32) -> f32 {{
+    if id >= 2 {{
+        return max(abs(c), c - EXP6_QUARTER);
+    }}
+    return abs(c + EXP6_POLE);
+}}
+
+// The quadratic interpolating the data at the roots of t³ − p1 t² + p2 t − p3: their series at
+// the mean (close roots), else the most isolated real root and the remaining pair.
+fn exp6_interp(id: i32, p1: f32, p2: f32, p3: f32) -> vec3<f32> {{
+    let m = p1 / 3.0;
+    let e2 = p2 - 2.0 * m * p1 + 3.0 * m * m;
+    let e3 = p3 - m * p2 + m * m * p1 - m * m * m;
+    let bound = 2.0 * max(sqrt(abs(e2)), log6_cbrt(abs(e3)));
+    let reach = exp6_reach(id, m);
+    if bound < 0.25 * reach {{
+        let rho = max(reach, 1e-30);
+        return log6_reduce3(exp6_series(id, m, rho), m, rho, e2, e3);
+    }}
+    let r = log6_root(p1, p2, p3, m, e2, e3);
+    let pr = log6_pair(p1, p2, p3, r);
+    let sum = pr.x;
+    let prod = pr.y;
+    let mid = sum * 0.5;
+    let d2 = mid * mid - prod;
+    let d = sqrt(abs(d2));
+    let near = exp6_reach(id, mid);
+    var pair: vec2<f32>;
+    if d < 0.25 * near {{
+        let rho = max(near, 1e-30);
+        pair = log6_reduce2(exp6_series(id, mid, rho), mid, rho, d2);
+    }} else if d2 < 0.0 {{
+        let fc = exp6_at_cx(id, vec2<f32>(mid, d));
+        let slope = fc.y / max(d, 1e-30);
+        pair = vec2<f32>(fc.x - slope * mid, slope);
+    }} else {{
+        let a = mid + d;
+        let b = mid - d;
+        let fa = exp6_at(id, a);
+        let slope = (fa - exp6_at(id, b)) / max(a - b, 1e-30);
+        pair = vec2<f32>(fa - slope * a, slope);
+    }}
+    let kk = (exp6_at(id, r) - (pair.y * r + pair.x)) / ((r - sum) * r + prod);
+    return vec3<f32>(pair.x + prod * kk, pair.y - sum * kk, kk);
+}}
+
+// The weights of `H1, H2, H3` for the interpolant `α` (gax_core::study::h_weights).
+fn exp6_h_weights(a: vec3<f32>, e1: f32, e2: f32) -> vec3<f32> {{
+    return vec3<f32>(a.x + a.y * e1 + a.z * (e1 * e1 - e2), -a.y - a.z * e1, a.z);
+}}
+
+// `Σ_j P(λ_j)` for the interpolant `α`, from the power sums `3, e1, e1² − 2 e2`.
+fn exp6_trace(a: vec3<f32>, e1: f32, e2: f32) -> f32 {{
+    return 3.0 * a.x + a.y * e1 + a.z * (e1 * e1 - 2.0 * e2);
+}}
+
+// `[w1, w2, w3, C]`: `T = w1 H1 + w2 H2 + w3 H3` and `C = ∏ cosh μ_j`, `exp B = C (1 + T + …)`.
+fn study_exp6(e1: f32, e2: f32, e3: f32) -> vec4<f32> {{
+    let w = exp6_h_weights(exp6_interp(0, e1, e2, e3), e1, e2);
+    let c = exp(exp6_trace(exp6_interp(1, e1, e2, e3), e1, e2));
+    return vec4<f32>(w, c);
+}}
+",
+        n = EXP6_TERMS,
+        last = EXP6_TERMS - 2,
+        tau = list(&tau),
+        lncosh = list(&lncosh),
+    )
+}
+
+/// The WGSL helper `study_exp6_turn` (a port of `gax_core::study::exp_turn_6d`), which uses the
+/// interpolation of [`exp6_source`].
+const EXP6_TURN: &str = r"
+// `[z1, z2, z3, n]`: `Z = z1 H1 + z2 H2 + z3 H3` the sum of the unit bivectors of the `n`
+// rotations beyond a quarter turn.
+fn study_exp6_turn(e1: f32, e2: f32, e3: f32) -> vec4<f32> {
+    let z = exp6_h_weights(exp6_interp(2, e1, e2, e3), e1, e2);
+    let n = exp6_trace(exp6_interp(3, e1, e2, e3), e1, e2);
+    return vec4<f32>(z, n);
+}
+";
+
+/// The WGSL helper `study_exp6_reach` (a port of `gax_core::study::exp_reach_6d`), which uses
+/// the root finding of [`LOG6`].
+const EXP6_REACH: &str = r"
+// `[reach, turn]` of one root `λ` (complex): its rotation over 3π/4 (a real root) or π/4 (a
+// loxodromic pair), its rapidity over 8; and a real rotation over 1.1 π/4.
+fn exp6_reach_of(l: vec2<f32>) -> vec2<f32> {
+    let mu = cx_sqrt(l);
+    let real = abs(l.y) < 1e-12 * (1.0 + abs(l.x));
+    let limit = select(0.7853981633974483, 2.356194490192345, real);
+    let worst = max(abs(mu.y) / limit, abs(mu.x) / 8.0);
+    let turn = select(0.0, abs(mu.y) / 0.8639379797371932, real);
+    return vec2<f32>(worst, turn);
+}
+
+fn study_exp6_reach(e1: f32, e2: f32, e3: f32) -> vec2<f32> {
+    let m = e1 / 3.0;
+    let e2s = e2 - 2.0 * m * e1 + 3.0 * m * m;
+    let e3s = e3 - m * e2 + m * m * e1 - m * m * m;
+    let r = log6_root(e1, e2, e3, m, e2s, e3s);
+    let pr = log6_pair(e1, e2, e3, r);
+    let mid = pr.x * 0.5;
+    let d2 = mid * mid - pr.y;
+    let d = sqrt(abs(d2));
+    var a = vec2<f32>(mid + d, 0.0);
+    var b = vec2<f32>(mid - d, 0.0);
+    if d2 < 0.0 {
+        a = vec2<f32>(mid, d);
+        b = vec2<f32>(mid, -d);
+    }
+    return max(max(exp6_reach_of(vec2<f32>(r, 0.0)), exp6_reach_of(a)), exp6_reach_of(b));
+}
+";
+
 /// A WGSL function `f(a, q) -> vec2<f32>`: the Study function `inner` of `a + X` with `X² = q`
 /// (`gax_core::study::study_q`), as `(f0, f1)` with `f(a + X) = f0 + f1 X`.
 fn study_q_source(name: &str, inner: &str) -> String {
@@ -819,6 +1153,9 @@ fn study_log_q(c0: f32, qc: f32) -> vec2<f32> {{
         ),
         StudyFn::Log6 => LOG6.into(),
         StudyFn::Log6Turn => LOG6_TURN.into(),
+        StudyFn::Exp6 => exp6_source(),
+        StudyFn::Exp6Turn => EXP6_TURN.into(),
+        StudyFn::Exp6Reach => EXP6_REACH.into(),
         StudyFn::RsqrtAbs => "// `1 / sqrt(|a|)`.
 fn study_rsqrt_abs(a: f32) -> f32 {
     return 1.0 / sqrt(abs(a));
@@ -1027,6 +1364,74 @@ fn {ks}_exp(x: {kn}) -> {en} {{
     ))
 }
 
+/// The exponential of bivector kind `k` in closed form (a 6D or 7D algebra's bivectors;
+/// docs/log6d.md §12), as WGSL text, as gax's Rust `exp` for the kind: the recorded
+/// `{k}_exp_reach` gives how often to halve `x`, and whether to turn rotations beyond a quarter
+/// turn back first; `{k}_exp_from` gives the exponential of the halved bivector `b`, or of
+/// `b − (π/2) Z`, `Z` the sum of the turned planes' unit bivectors (`{k}_exp_turning`), times
+/// their product `∏ ê = (−1)ⁿ ∏(−ê)`, a polynomial in `Z`; squarings undo the halving. It uses
+/// the module's `{e}_mul_{e}` and the [`arithmetic`] of both kinds. `None` if `k` does not embed
+/// in `e`.
+pub fn closed_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
+    let t = prec.scalar();
+    let (ks, es) = (snake(&k.name), snake(&e.name));
+    let (kn, en) = (&k.name, &e.name);
+    let embed = embedding(k, e, "z")?;
+    let (one_pos, one_sign) = e.layout.position(0)?;
+    let scalar = wgsl_coeff("z2", one_pos);
+    let n = if one_sign > 0 {
+        format!("-{scalar}")
+    } else {
+        scalar
+    };
+    let mut one = vec!["0.0".to_string(); e.layout.len()];
+    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
+    Some(format!(
+        "// The exponential of a `{kn}`, a unit `{en}`, in closed form (docs/log6d.md §12, gax's Rust
+// `exp` for this kind): `x` is halved `s` times until `{ks}_exp_reach` is below 1 (rotations
+// within 3 pi/4, rapidities up to 8), rotations beyond a quarter turn are turned back by one
+// (`exp B = exp(B - (pi/2) Z) E`, `Z` the sum of their `n = -<Z Z>_0` unit bivectors and `E`
+// their product, `Z`, `1 + Z^2/2` or `(Z^3 + 7 Z)/6`), and `s` squarings undo the halving.
+fn {ks}_exp(x: {kn}) -> {en} {{
+    let rt = {ks}_exp_reach(x);
+    var scale: {t} = 1.0;
+    var s = 0u;
+    loop {{
+        if s >= 64u || rt.x * scale < 1.0 {{
+            break;
+        }}
+        scale = scale * 0.5;
+        s = s + 1u;
+    }}
+    let b = {ks}_scale(x, scale);
+    var r: {en};
+    if rt.y * scale < 1.0 {{
+        r = {ks}_exp_from(b);
+    }} else {{
+        let z = {ks}_exp_turning(b);
+        let ze = {};
+        let z2 = {es}_mul_{es}(ze, ze);
+        let n = {n};
+        r = {ks}_exp_from({ks}_sub(b, {ks}_scale(z, 1.5707963)));
+        if n > 2.5 {{
+            r = {es}_mul_{es}(r, {es}_scale({es}_add({es}_mul_{es}(z2, ze), {es}_scale(ze, 7.0)), 1.0 / 6.0));
+        }} else if n > 1.5 {{
+            r = {es}_mul_{es}(r, {es}_add({}, {es}_scale(z2, 0.5)));
+        }} else if n > 0.5 {{
+            r = {es}_mul_{es}(r, ze);
+        }}
+    }}
+    for (var i = 0u; i < s; i = i + 1u) {{
+        r = {es}_mul_{es}(r, r);
+    }}
+    return r;
+}}
+",
+        wgsl_construct_in(prec, en, &embed),
+        wgsl_construct_in(prec, en, &one),
+    ))
+}
+
 /// The logarithm of a unit `e` (a 6D algebra's full even kind) into bivector kind `k`, as WGSL
 /// text: `unit_{e}_log` takes the recorded closed form `unit_{e}_log_closed` for `⟨x⟩₀ > 1/16`.
 /// Below, it turns the planes near a half turn by a quarter turn first, as the Rust `log`
@@ -1124,8 +1529,10 @@ pub fn fallback_logs<'a>(
         .collect()
 }
 
-/// The kinds whose `exp` is the scaling-and-squaring fallback, with the kind it lands in: those
-/// with an `exp` in Rust but no straight-line WGSL kernel.
+/// The kinds whose `exp` is composed in WGSL text (it loops), with the kind it lands in: those
+/// with an `exp` in Rust but no straight-line WGSL kernel. The composition is [`closed_exp`]
+/// where the kind has the recorded `{k}_exp_from` kernel, else [`fallback_exp`] (scaling and
+/// squaring).
 pub fn fallback_exps<'a>(
     spec: &'a AlgebraSpec,
     stats: &Stats,
@@ -1258,15 +1665,30 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         }
     }
     let logs = fallback_logs(spec, stats);
+    let closed = |k: &KindSpec| {
+        let name = format!("{}_exp_from", snake(&k.name));
+        kernels.iter().any(|x| x.name == name)
+    };
     let mut arith: Vec<&str> = Vec::new();
-    for (_, e) in fallbacks.iter().chain(&logs) {
-        if !arith.contains(&e.name.as_str()) {
-            arith.push(&e.name);
-            let _ = writeln!(s, "{}", arithmetic(e, prec));
+    let closed_kinds = fallbacks.iter().filter(|(k, _)| closed(k)).map(|(k, _)| *k);
+    for x in fallbacks
+        .iter()
+        .chain(&logs)
+        .map(|(_, e)| *e)
+        .chain(closed_kinds)
+    {
+        if !arith.contains(&x.name.as_str()) {
+            arith.push(&x.name);
+            let _ = writeln!(s, "{}", arithmetic(x, prec));
         }
     }
     for (k, e) in &fallbacks {
-        if let Some(text) = fallback_exp(k, e, prec) {
+        let text = if closed(k) {
+            closed_exp(k, e, prec)
+        } else {
+            fallback_exp(k, e, prec)
+        };
+        if let Some(text) = text {
             let _ = writeln!(s, "{text}");
         }
     }
@@ -1275,8 +1697,16 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
             let _ = writeln!(s, "{text}");
         }
     }
-    // `study_log6_turn` calls the series functions of `study_log6`.
-    if helpers.contains(&StudyFn::Log6Turn) && !helpers.contains(&StudyFn::Log6) {
+    // `study_exp6_turn` interpolates as `study_exp6` does, and the 6D exponential's helpers and
+    // `study_log6_turn` call the series functions of `study_log6`.
+    if helpers.contains(&StudyFn::Exp6Turn) && !helpers.contains(&StudyFn::Exp6) {
+        helpers.push(StudyFn::Exp6);
+    }
+    if helpers
+        .iter()
+        .any(|f| matches!(f, StudyFn::Log6Turn | StudyFn::Exp6 | StudyFn::Exp6Reach))
+        && !helpers.contains(&StudyFn::Log6)
+    {
         helpers.push(StudyFn::Log6);
     }
     // `study_log_q` calls `study_q_exp_s`, which `study_exp_q` defines.

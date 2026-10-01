@@ -53,6 +53,7 @@ fn len(spec: &AlgebraSpec, ty: &Ty) -> usize {
             .expect("kind")
             .layout
             .len(),
+        Ty::Vec(n) => *n,
         Ty::Mat { cols, rows } => cols * rows,
     }
 }
@@ -109,7 +110,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
             args.push(match t {
                 Ty::Scalar => e[0].clone(),
                 Ty::Kind(name) => gax_gen::kernel::wgsl_construct_in(prec, name, &e),
-                Ty::Mat { .. } => unreachable!(),
+                Ty::Vec(_) | Ty::Mat { .. } => unreachable!(),
             });
         }
         let _ = writeln!(
@@ -133,6 +134,12 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
                     );
                 }
                 op += len(spec, &k.result);
+            }
+            Ty::Vec(n) => {
+                for j in 0..*n {
+                    let _ = writeln!(s, "        outp[o + {}u] = {from}(r[{j}]);", op + j);
+                }
+                op += n;
             }
             Ty::Mat { cols, rows } => {
                 for c in 0..*cols {
@@ -346,7 +353,9 @@ fn fallback_exponentials_on_the_gpu() {
         };
         let (n_in, n_out) = (k.layout.len(), e.layout.len());
         let src = harness(module, &spec, &[&call], n_in, n_out);
-        let inputs: Vec<f32> = (0..SAMPLES * n_in).map(|_| rng.next()).collect();
+        let inputs: Vec<f32> = (0..SAMPLES)
+            .flat_map(|case| csta_exp_input(&mut rng, case))
+            .collect();
         let out = floats(&gpu.run(
             &src,
             "main",
@@ -390,12 +399,47 @@ fn csta_versor(rng: &mut Rng, size: f64, min: f64, max: f64) -> Vec<f32> {
     }
 }
 
+/// A CSTA bivector for the `exp` checks: every fourth one random with entries up to 1, small
+/// (0.2), large (3: several planes turned and halved), or a rotation near a half turn with a
+/// boost of rapidity up to 12.
+fn csta_exp_input(rng: &mut Rng, case: usize) -> Vec<f32> {
+    use gax::Kind;
+    let at = |name: &str| {
+        <gax::csta::Bivector as Kind>::BLADES
+            .iter()
+            .position(|n| *n == name)
+            .expect("a blade")
+    };
+    let scale = [1.0, 0.2, 3.0, 0.05][case % 4];
+    let mut b: Vec<f32> = (0..15).map(|_| scale * rng.next()).collect();
+    if case % 4 == 3 {
+        b[at("e12")] = 3.0 + 0.14 * rng.next();
+        b[at("e43")] = 12.0 * rng.next();
+    }
+    b
+}
+
 /// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
-/// `⟨R⟩₀ > 1/16`, and the planes it turns below), or `None` for the others.
+/// `⟨R⟩₀ > 1/16`, and the planes it turns below) or on a part of the bivectors (the closed-form
+/// 6D exponential, within a quarter turn, and the planes it turns beyond), or `None` for the
+/// others.
 fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
     match (algebra, kernel) {
         ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125, f64::INFINITY)),
         ("csta", "unit_even_log_turning") => Some(csta_versor(rng, 1.0, f64::NEG_INFINITY, 0.0625)),
+        // Rotations within a quarter turn.
+        ("csta", "bivector_exp_from") => Some((0..15).map(|_| 0.15 * rng.next()).collect()),
+        // A rotation between a quarter and three quarters of a turn.
+        ("csta", "bivector_exp_turning") => {
+            use gax::Kind;
+            let e12 = <gax::csta::Bivector as Kind>::BLADES
+                .iter()
+                .position(|n| *n == "e12")
+                .expect("e12");
+            let mut b: Vec<f32> = (0..15).map(|_| 0.05 * rng.next()).collect();
+            b[e12] = core::f32::consts::FRAC_PI_2 + 0.7 * rng.next();
+            Some(b)
+        }
         _ => None,
     }
 }

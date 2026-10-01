@@ -67,7 +67,7 @@ fn literal(ty: &Ty, c: &[f32]) -> String {
                 .collect();
             format!("{k}({})", fields.join(", "))
         }
-        Ty::Mat { .. } => unreachable!("no kernel takes a matrix"),
+        Ty::Vec(_) | Ty::Mat { .. } => unreachable!("no kernel takes a vector or a matrix"),
     }
 }
 
@@ -81,6 +81,7 @@ fn len(spec: &AlgebraSpec, ty: &Ty) -> usize {
             .expect("a kind")
             .layout
             .len(),
+        Ty::Vec(n) => *n,
         Ty::Mat { .. } => unreachable!(),
     }
 }
@@ -197,13 +198,17 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
         }
         count += 1;
     }
-    // The scaling-and-squaring exponentials (loops, not straight-line kernels), against gax's
-    // Rust `exp` for the same kind.
+    // The exponentials composed in WGSL text (loops, not straight-line kernels: CSTA's closed
+    // form), against gax's Rust `exp` for the same kind.
     for (kind, _) in emit_wgsl::fallback_exps(&spec, &stats) {
         let name_fn = format!("{}_exp", gax_gen::kernel::snake(&kind.name));
         let n = kind.layout.len();
-        for _ in 0..samples.max(8) {
-            let c: Vec<f32> = (0..n).map(|_| rng.next()).collect();
+        for case in 0..samples.max(8) {
+            let c: Vec<f32> = if name == "csta" {
+                csta_exp_input(&mut rng, case)
+            } else {
+                (0..n).map(|_| rng.next()).collect()
+            };
             let exact = reference_exp(name, &kind.name, &c);
             let expr = format!("{name_fn}({})", literal(&Ty::Kind(kind.name.clone()), &c));
             let mut v = res
@@ -217,8 +222,8 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
             let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
             for (o, (g, e)) in got.iter().zip(&exact).enumerate() {
                 let rel = (f64::from(*g) - e).abs() / scale;
-                // Scaling and squaring doubles the relative error with each of its up to 8
-                // squarings, so its bound is looser than a closed form's: 2⁻¹².
+                // Each squaring after halving doubles the relative error, so the bound is
+                // looser than a straight-line kernel's: 2⁻¹².
                 assert!(
                     rel < 1.0 / 4096.0,
                     "{name}: {name_fn} output {o}: {g} vs {e} at {c:?}"
@@ -271,12 +276,47 @@ fn csta_versor(rng: &mut Rng, size: f64, min: f64, max: f64) -> Vec<f32> {
     }
 }
 
+/// A CSTA bivector for the `exp` checks: every fourth one random with entries up to 1, small
+/// (0.2), large (3: several planes turned and halved), or a rotation near a half turn with a
+/// boost of rapidity up to 12.
+fn csta_exp_input(rng: &mut Rng, case: usize) -> Vec<f32> {
+    use gax::Kind;
+    let at = |name: &str| {
+        <gax::csta::Bivector as Kind>::BLADES
+            .iter()
+            .position(|n| *n == name)
+            .expect("a blade")
+    };
+    let scale = [1.0, 0.2, 3.0, 0.05][case % 4];
+    let mut b: Vec<f32> = (0..15).map(|_| scale * rng.next()).collect();
+    if case % 4 == 3 {
+        b[at("e12")] = 3.0 + 0.14 * rng.next();
+        b[at("e43")] = 12.0 * rng.next();
+    }
+    b
+}
+
 /// The argument of a kernel defined on unit versors only (the closed-form 6D logarithm, for
-/// `⟨R⟩₀ > 1/16`, and the planes it turns below), or `None` for the others.
+/// `⟨R⟩₀ > 1/16`, and the planes it turns below) or on a part of the bivectors (the closed-form
+/// 6D exponential, within a quarter turn, and the planes it turns beyond), or `None` for the
+/// others.
 fn versor_input(algebra: &str, kernel: &str, rng: &mut Rng) -> Option<Vec<f32>> {
     match (algebra, kernel) {
         ("csta", "unit_even_log_closed") => Some(csta_versor(rng, 0.3, 0.125, f64::INFINITY)),
         ("csta", "unit_even_log_turning") => Some(csta_versor(rng, 1.0, f64::NEG_INFINITY, 0.0625)),
+        // Rotations within a quarter turn.
+        ("csta", "bivector_exp_from") => Some((0..15).map(|_| 0.15 * rng.next()).collect()),
+        // A rotation between a quarter and three quarters of a turn.
+        ("csta", "bivector_exp_turning") => {
+            use gax::Kind;
+            let e12 = <gax::csta::Bivector as Kind>::BLADES
+                .iter()
+                .position(|n| *n == "e12")
+                .expect("e12");
+            let mut b: Vec<f32> = (0..15).map(|_| 0.05 * rng.next()).collect();
+            b[e12] = core::f32::consts::FRAC_PI_2 + 0.7 * rng.next();
+            Some(b)
+        }
         _ => None,
     }
 }
@@ -315,7 +355,7 @@ fn reference_log(algebra: &str, kind: &str, rng: &mut Rng, case: usize) -> (Vec<
     }
 }
 
-/// gax's Rust `exp` of a kind whose WGSL `exp` is the scaling-and-squaring fallback.
+/// gax's Rust `exp` of a kind whose WGSL `exp` is composed in text (`fallback_exps`).
 fn reference_exp(algebra: &str, kind: &str, c: &[f32]) -> Vec<f64> {
     match (algebra, kind) {
         ("csta", "Bivector") => {

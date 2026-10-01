@@ -54,6 +54,8 @@ pub enum Ty {
     Scalar,
     /// A value of the named kind.
     Kind(String),
+    /// A vector of `n` scalars, `vec{n}<f32>` in WGSL.
+    Vec(usize),
     /// A column-major matrix with `cols` columns (the input dimension) and `rows` rows.
     Mat {
         /// Columns: the input kind's dimension.
@@ -110,6 +112,13 @@ pub enum StudyFn {
     Log6,
     /// `[a0, a1, a2, n] = log_turn_6d(p1, p2, p3, r0)`: the planes to turn near a half turn.
     Log6Turn,
+    /// `[w1, w2, w3, c] = exp_weights_6d([e1, e2, e3])`: the closed-form exponential of a 6D or
+    /// 7D bivector (docs/log6d.md §12).
+    Exp6,
+    /// `[z1, z2, z3, n] = exp_turn_6d([e1, e2, e3])`: the rotations beyond a quarter turn.
+    Exp6Turn,
+    /// `[reach, turn] = exp_reach_6d([e1, e2, e3])`: whether to halve, and whether to turn.
+    Exp6Reach,
 }
 
 impl StudyFn {
@@ -132,6 +141,9 @@ impl StudyFn {
             StudyFn::LogQ => "study_log_q",
             StudyFn::Log6 => "study_log6",
             StudyFn::Log6Turn => "study_log6_turn",
+            StudyFn::Exp6 => "study_exp6",
+            StudyFn::Exp6Turn => "study_exp6_turn",
+            StudyFn::Exp6Reach => "study_exp6_reach",
         }
     }
 
@@ -146,6 +158,9 @@ impl StudyFn {
                 | StudyFn::LogQ
                 | StudyFn::Log6
                 | StudyFn::Log6Turn
+                | StudyFn::Exp6
+                | StudyFn::Exp6Turn
+                | StudyFn::Exp6Reach
         )
     }
 }
@@ -244,6 +259,7 @@ impl Ty {
         match self {
             Ty::Scalar => t.into(),
             Ty::Kind(k) => k.clone(),
+            Ty::Vec(n) => format!("vec{n}<{t}>"),
             Ty::Mat { cols, rows } => format!("mat{cols}x{rows}<{t}>"),
         }
     }
@@ -347,6 +363,7 @@ impl Kernel {
         let value = match (&self.result, &self.entries) {
             (Ty::Scalar, _) => outs[0].clone(),
             (Ty::Kind(k), _) => wgsl_construct_in(prec, k, &outs),
+            (Ty::Vec(_), _) => format!("{}({})", self.result.wgsl(prec), outs.join(", ")),
             (Ty::Mat { cols, rows }, Some(entries)) => {
                 let mut m = vec![vec!["0.0".to_string(); *rows]; *cols];
                 for (e, &(r, c)) in outs.iter().zip(entries) {
@@ -411,6 +428,9 @@ impl Kernel {
                         StudyFn::LogQ => study::log_coeffs_q(x[0], x[1]).to_vec(),
                         StudyFn::Log6 => study::log_weights_6d(x[0], x[1], x[2], x[3]).to_vec(),
                         StudyFn::Log6Turn => study::log_turn_6d(x[0], x[1], x[2], x[3]).to_vec(),
+                        StudyFn::Exp6 => study::exp_weights_6d([x[0], x[1], x[2]]).to_vec(),
+                        StudyFn::Exp6Turn => study::exp_turn_6d([x[0], x[1], x[2]]).to_vec(),
+                        StudyFn::Exp6Reach => study::exp_reach_6d([x[0], x[1], x[2]]).to_vec(),
                     };
                     for (n, v) in names.iter().zip(r) {
                         locals.push((n.clone(), v));

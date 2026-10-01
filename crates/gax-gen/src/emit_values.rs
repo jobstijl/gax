@@ -317,7 +317,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     }
     // exp in closed form from 6D to 9D (three or four invariant planes, docs/log6d.md §12).
     if all_grade2 && meta.exp.is_none() {
-        meta.exp = emit_exp_closed(spec, k, &mut body);
+        meta.exp = emit_exp_closed(spec, k, &mut body, &mut meta.kernels);
     }
     // exp in any dimension: scaling and squaring in the product closure.
     if all_grade2 && meta.exp.is_none() {
@@ -1622,10 +1622,17 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
 /// invariants are one straight-line program from the product tables: the wedge powers
 /// `Wₘ = B^∧m/m!`, `eₘ = ⟨Wₘ²⟩₀` and `Hₘ = ⟨Wₘ Wₘ₋₁⟩₂`. Then `exp B = C (1 + T + W₂(T) + …)`
 /// with `T = Σ wₘ Hₘ` (`gax::study::exp_weights_6d`), turning rotations beyond a quarter turn
-/// back by one and halving beyond three quarters.
+/// back by one and halving beyond three quarters. For three planes, also the WGSL kernels
+/// `{k}_exp_reach`, `{k}_exp_from` and `{k}_exp_turning`, which the module's `{k}_exp` composes
+/// (`emit_wgsl::closed_exp`).
 #[allow(clippy::too_many_lines)]
-fn emit_exp_closed(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
-    use crate::slp::Operand;
+fn emit_exp_closed(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    body: &mut String,
+    kernels: &mut Vec<Kernel>,
+) -> Option<String> {
+    use crate::slp::{Operand, Program};
     use crate::table::{Layout, blade_binop};
     let alg = &spec.algebra;
     let n = alg.dim();
@@ -1740,6 +1747,150 @@ fn emit_exp_closed(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Optio
     }
     let mut prog = b.prog;
     prog.outputs = outs;
+    if planes == 3 {
+        // The WGSL kernels: the invariants `e` and `H` (step 0), a Study helper, and a program
+        // reading the helper's results as locals and the `H`s as outputs of step 0: its
+        // variables are the helper's results (`0..4`), then the `H`s.
+        let ks = snake(&k.name);
+        let mut pre = prog.clone();
+        pre.outputs.truncate(planes + planes * nb);
+        pre.compact();
+        let first = Step::Lets {
+            prog: pre,
+            prefix: "p".into(),
+            vars: arg_vars(nb),
+        };
+        let study = |func: StudyFn, outs: [&str; 4]| Step::Study {
+            func,
+            args: (0..planes).map(|m| (0, m)).collect(),
+            outs: outs
+                .iter()
+                .filter(|o| !o.is_empty())
+                .map(|o| (*o).to_string())
+                .collect(),
+        };
+        let vars = |names: [&str; 4]| -> Vec<(Var, Source)> {
+            let mut v: Vec<(Var, Source)> = names
+                .iter()
+                .enumerate()
+                .filter(|(_, n)| !n.is_empty())
+                .map(|(i, n)| (i as Var, Source::Local((*n).to_string())))
+                .collect();
+            v.extend((0..planes * nb).map(|o| {
+                (
+                    (4 + o) as Var,
+                    Source::Output {
+                        step: 0,
+                        index: planes + o,
+                    },
+                )
+            }));
+            v
+        };
+        // `Σ wₘ Hₘ` in the bivector kind's layout, the weights in variables `0..3`.
+        let weighted = |b: &mut cse::Builder| -> Vec<Operand> {
+            (0..nb)
+                .map(|i| {
+                    let terms: Vec<(Rational, Operand)> = (0..planes)
+                        .map(|m| {
+                            let h = Operand::Var((4 + m * nb + i) as Var);
+                            (Rational::ONE, b.mul(Operand::Var(m as Var), h))
+                        })
+                        .collect();
+                    cse::emit_sum(b, &terms)
+                })
+                .collect()
+        };
+        // `C (1 + T + W₂(T) + W₃(T))` in the even kind, `T = Σ wₘ Hₘ`.
+        let mut bf = cse::Builder::default();
+        let t = weighted(&mut bf);
+        let t1: Vec<Operand> = l2
+            .blades
+            .iter()
+            .map(|&(m, _)| {
+                let (pos, sign) = k.layout.position(m).expect("a bivector blade");
+                bf.mul(Operand::Const(int(sign, 1)), t[pos])
+            })
+            .collect();
+        let mut tw = vec![vec![Operand::Const(Rational::ONE)], t1.clone()];
+        for m in 2..=planes {
+            let wm = product(
+                &mut bf,
+                BinOp::Wedge,
+                (&layouts[m - 1], &tw[m - 1]),
+                (&l2, &t1),
+                &layouts[m],
+                int(1, m as i64),
+            );
+            tw.push(wm);
+        }
+        let c = Operand::Var(3);
+        let assembled: Vec<Operand> = e
+            .layout
+            .blades
+            .iter()
+            .map(|&(m, sign)| {
+                let g = m.count_ones() as usize / 2;
+                let (pos, _) = layouts[g].position(m).expect("a blade of that grade");
+                let v = bf.mul(c, tw[g][pos]);
+                bf.mul(Operand::Const(int(sign, 1)), v)
+            })
+            .collect();
+        let mut from = bf.prog;
+        from.outputs = assembled;
+        let mut bz = cse::Builder::default();
+        let z = weighted(&mut bz);
+        let mut turning = bz.prog;
+        turning.outputs = z;
+        let pick = Program {
+            outputs: vec![Operand::Var(0), Operand::Var(1)],
+            ..Program::default()
+        };
+        let lets = |prog: Program, names: [&str; 4]| Step::Lets {
+            prog,
+            prefix: "t".into(),
+            vars: vars(names),
+        };
+        kernels.extend(value_kernel(
+            k,
+            &format!("{ks}_exp_reach"),
+            &format!(
+                "`[reach, turn]` of the closed-form exponential (docs/log6d.md §12): above 1, `reach` asks `{ks}_exp` to halve `x`, and `turn` to turn rotations beyond a quarter turn back first."
+            ),
+            Ty::Vec(2),
+            vec![
+                first.clone(),
+                study(StudyFn::Exp6Reach, ["reach", "turn", "", ""]),
+                lets(pick, ["reach", "turn", "", ""]),
+            ],
+        ));
+        kernels.extend(value_kernel(
+            k,
+            &format!("{ks}_exp_from"),
+            &format!(
+                "The exponential in closed form (docs/log6d.md §12), for rotations within about a quarter turn and rapidities up to 8: `{ks}_exp` calls it."
+            ),
+            Ty::Kind(e.name.clone()),
+            vec![
+                first.clone(),
+                study(StudyFn::Exp6, ["w1", "w2", "w3", "c"]),
+                lets(from, ["w1", "w2", "w3", "c"]),
+            ],
+        ));
+        kernels.extend(value_kernel(
+            k,
+            &format!("{ks}_exp_turning"),
+            &format!(
+                "The sum `Z` of the unit bivectors of the rotations beyond a quarter turn, which `{ks}_exp` turns back by one (docs/log6d.md §12); `-<Z Z>_0` is their number."
+            ),
+            Ty::Kind(k.name.clone()),
+            vec![
+                first,
+                study(StudyFn::Exp6Turn, ["z1", "z2", "z3", "n"]),
+                lets(turning, ["z1", "z2", "z3", ""]),
+            ],
+        ));
+    }
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "p", &mut lets);
