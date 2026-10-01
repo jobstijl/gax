@@ -7,13 +7,13 @@ error[E0277]: `gax::pga3d::Point<(), f64>` is not a kind
   = help: the trait `Kind` is not implemented for `gax::pga3d::Point<(), f64>`
   = note: slot lists name kinds by their bare type name: write `Point<(Point,), f64>`, not `Point<(Point<(), f64>,), f64>`
 help: the trait `Kind` is implemented for `gax::pga3d::Point`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   | impl gx::Kind for Point {
   | ^^^^^^^^^^^^^^^^^^^^^^^
   = note: required for `(gax::pga3d::Point<(), f64>,)` to implement `Slots`
 note: required by a bound in `gax::pga3d::Point`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   | pub struct Point<S: gx::Slots = (), T: gx::Coef = f32> {
   |                     ^^^^^^^^^ required by this bound in `Point`

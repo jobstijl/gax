@@ -4,5 +4,5 @@ error[E0308]: mismatched types
 6 |     let _ = Point::slot() + p;
   |                             ^ expected `Point<(Point,), _>`, found `Point<(), {float}>`
   |
-  = note: expected struct `gax::pga3d::Point<(gax::pga3d::Point,), _>`
-             found struct `gax::pga3d::Point<(), {float}>`
+  = note: expected struct `Point<(gax::pga3d::Point,), _>`
+             found struct `Point<(), {float}>`

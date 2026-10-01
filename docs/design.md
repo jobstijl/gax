@@ -41,7 +41,11 @@ share one implementation:
 3. the regeneration tool that writes the committed standard algebras.
 
 Users of the standard algebras compile no proc macro: the pre-generated algebras are ordinary source
-files in `gax/src/algebras/`, behind cargo features.
+files in `gax/src/algebras/`, behind cargo features. Each algebra is an index file
+(`algebras/pga3d.rs`) that `include!`s its parts (`algebras/pga3d/kinds.rs`, `products_gp.rs`,
+`sandwiches_motor.rs`, …), each at most 400 KB, cut at item boundaries (`gax_gen::split`): the
+compiled module is the same as one file, and every part stays small enough for GitHub to
+highlight. `gax-regen --check` also reports part files no longer generated.
 
 ## ADR-002: MSRV 1.89, edition 2024
 *Status: accepted.*

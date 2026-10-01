@@ -154,6 +154,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         helpers: BTreeSet::new(),
     };
     e.header();
+    e.part("kinds");
     let phase = std::time::Instant::now();
     let values = crate::par::map(&spec.kinds, |k| {
         crate::par::timed(
@@ -181,6 +182,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     crate::par::report(&format!("{} values", spec.name), phase);
     let phase = std::time::Instant::now();
     for op in BinOp::ALL {
+        e.part(&format!("products_{}", format!("{op:?}").to_lowercase()));
         for a in &spec.kinds {
             for b in &spec.kinds {
                 e.binary(op, a, b);
@@ -189,6 +191,7 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
     }
     crate::par::report(&format!("{} products", spec.name), phase);
     let phase = std::time::Instant::now();
+    e.part("conversions");
     e.divisions();
     e.embeddings();
     for k in &spec.kinds {
@@ -244,7 +247,12 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         },
         || crate::emit_outer::outermorphisms(spec),
     );
+    let mut versor = "";
     for (&(v, x, unit), math) in jobs.iter().zip(maths) {
+        if v.name != versor {
+            versor = &v.name;
+            e.part(&format!("sandwiches_{}", crate::kernel::snake(versor)));
+        }
         if let Some(math) = math {
             e.sandwich(v, x, unit, math);
         }
@@ -253,8 +261,10 @@ pub fn emit(spec: &AlgebraSpec, cfg: &Config) -> (String, Stats) {
         &format!("{} sandwiches and outermorphisms", spec.name),
         phase,
     );
+    e.part("outermorphisms");
     e.out.push_str(&outer);
     e.stats.outermorphisms = pairs;
+    e.part("layouts");
     for (alias, kind) in &spec.aliases {
         let _ = writeln!(
             e.out,
@@ -1228,6 +1238,12 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
             }
         }
         self.w(&body);
+    }
+
+    /// Start a part of the module (see [`crate::split`]): a marker comment, which the
+    /// regeneration tool cuts at and `algebra!` ignores.
+    fn part(&mut self, name: &str) {
+        let _ = write!(self.out, "\n{}{name}\n", crate::split::MARKER);
     }
 
     /// `From` for every kind whose blades are among another's: the same multivector as the

@@ -7,7 +7,7 @@ error[E0277]: `gax::pga3d::Point` and `Plane` have no blade in common
   = help: the trait `Cast<Plane>` is not implemented for `gax::pga3d::Point`
   = note: a cast keeps the blades two kinds share; between these two it would always be zero
 help: `gax::pga3d::Point` implements trait `Cast<K>`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   | impl gx::Cast<Point> for Point {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::Point>`
@@ -18,7 +18,7 @@ help: `gax::pga3d::Point` implements trait `Cast<K>`
   | impl gx::Cast<Multivector> for Point {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::Multivector>`
 note: required by a bound in `gax::pga3d::Point::<S, T>::cast`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
   |            ---- required by a bound in this associated function

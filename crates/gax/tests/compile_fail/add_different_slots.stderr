@@ -4,5 +4,5 @@ error[E0308]: mismatched types
 7 |     let _ = f + g;
   |                 ^ expected `Point<(Point,)>`, found `Point<(Line,)>`
   |
-  = note: expected struct `gax::pga3d::Point<(gax::pga3d::Point,)>`
-             found struct `gax::pga3d::Point<(gax::pga3d::Line,)>`
+  = note: expected struct `Point<(gax::pga3d::Point,)>`
+             found struct `Point<(gax::pga3d::Line,)>`

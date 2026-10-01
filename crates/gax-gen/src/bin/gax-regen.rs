@@ -153,7 +153,10 @@ fn main() -> ExitCode {
                     ));
                 }
             }
-            let files = vec![
+            // The module as an index of `include!`s and its parts (gax_gen::split).
+            let (index, parts) = gax_gen::split::split(&spec.name, &code, PART_BUDGET);
+            let part_dir = root.join("src/algebras").join(&spec.name);
+            let mut files = vec![
                 (
                     root.join("tests").join(format!("ops_{}.rs", spec.name)),
                     tests,
@@ -161,10 +164,6 @@ fn main() -> ExitCode {
                 (
                     root.join("tests").join(format!("laws_{}.rs", spec.name)),
                     law_tests,
-                ),
-                (
-                    root.join("src/algebras").join(format!("{}.rs", spec.name)),
-                    code,
                 ),
                 (
                     root.join("src/wgsl").join(format!("{}.wgsl", spec.name)),
@@ -175,7 +174,12 @@ fn main() -> ExitCode {
                         .join(format!("{}_f16.wgsl", spec.name)),
                     wgsl16,
                 ),
+                (
+                    root.join("src/algebras").join(format!("{}.rs", spec.name)),
+                    index,
+                ),
             ];
+            files.extend(parts.into_iter().map(|(f, c)| (part_dir.join(f), c)));
             let gp: Vec<(String, String, String)> = stats
                 .products
                 .iter()
@@ -259,6 +263,7 @@ fn main() -> ExitCode {
         .into_iter()
         .map(|(files, table, log, _, _)| (files, table, log));
     for (files, table, log) in test_outputs.into_iter().chain(outputs) {
+        stale |= remove_stale_parts(&files, check);
         for (target, content) in files {
             stale |= write_or_check(&target, &content, check);
         }
@@ -279,6 +284,39 @@ fn main() -> ExitCode {
     } else {
         ExitCode::SUCCESS
     }
+}
+
+/// The most bytes in one part file of an algebra's module (GitHub stops highlighting larger
+/// files); a larger section is cut at item boundaries.
+const PART_BUDGET: usize = 400_000;
+
+/// Part files left over in an algebra's part directory from an earlier split: deleted, or with
+/// `--check` reported as stale.
+fn remove_stale_parts(files: &[(std::path::PathBuf, String)], check: bool) -> bool {
+    let mut stale = false;
+    let dirs: std::collections::BTreeSet<&Path> = files
+        .iter()
+        .filter_map(|(f, _)| f.parent())
+        .filter(|d| d.parent().is_some_and(|p| p.ends_with("algebras")))
+        .collect();
+    for dir in dirs {
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if files.iter().any(|(f, _)| *f == path) {
+                continue;
+            }
+            if check {
+                eprintln!("{} is stale (no longer generated)", path.display());
+                stale = true;
+            } else {
+                std::fs::remove_file(&path).expect("remove a stale part");
+            }
+        }
+    }
+    stale
 }
 
 fn write_or_check(target: &Path, content: &str, check: bool) -> bool {

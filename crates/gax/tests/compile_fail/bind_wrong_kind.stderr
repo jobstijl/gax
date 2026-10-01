@@ -9,7 +9,7 @@ error[E0277]: a `Plane` does not fit a slot of kind `gax::pga3d::Point`
   = help: the trait `SubKind<gax::pga3d::Point>` is not implemented for `Plane`
   = note: a slot takes values whose blades are among its kind's; project first with `.cast::<gax::pga3d::Point>()` if dropping blades is intended
 help: `Plane` implements trait `SubKind<K>`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   | impl gx::SubKind<Plane> for Plane {}
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<Plane>`
@@ -21,7 +21,7 @@ help: `Plane` implements trait `SubKind<K>`
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `SubKind<gax::pga3d::Multivector>`
   = note: required for `gax::pga3d::Line<(gax::pga3d::Point,)>` to implement `Of<Plane>`
 note: required by a bound in `gax::pga3d::Line::<S, T>::of`
- --> src/algebras/pga3d.rs
+ --> src/algebras/pga3d/kinds.rs
   |
   |     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
   |            -- required by a bound in this associated function

@@ -18,6 +18,7 @@ pub mod par;
 pub mod poly;
 pub mod slp;
 pub mod spec;
+pub mod split;
 pub mod sym;
 pub mod symbolic;
 pub mod table;
