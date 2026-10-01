@@ -3,6 +3,7 @@
 //!
 //! Run both ways: `cargo bench -p gax-bench --bench batch` (the default x86-64 target, where
 //! only the dispatcher reaches AVX2) and with `RUSTFLAGS="-C target-cpu=native"`.
+#![allow(missing_docs)] // `criterion_group!` generates an undocumented function
 
 use criterion::{
     BenchmarkGroup, Criterion, criterion_group, criterion_main, measurement::WallTime,
@@ -96,7 +97,7 @@ fn uniform(c: &mut Criterion) {
                 *o = t >> *p;
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("wide f32x8 SoA prepared", |b| {
         b.iter(|| {
@@ -105,7 +106,7 @@ fn uniform(c: &mut Criterion) {
                 *o = t >> *p;
             }
             black_box(&packed_out);
-        })
+        });
     });
     g.bench_function("glam Affine3A loop", |b| {
         b.iter(|| {
@@ -114,7 +115,7 @@ fn uniform(c: &mut Criterion) {
                 *o = a.transform_point3a(*v);
             }
             black_box(&vout);
-        })
+        });
     });
     per_level(&mut g, "batch transform_slice", || {
         black_box(m).transform_slice(&pts, &mut out);
@@ -167,7 +168,7 @@ fn pairwise(c: &mut Criterion) {
                 *o = *m >> *p;
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("wide f32x8 SoA", |b| {
         b.iter(|| {
@@ -175,7 +176,7 @@ fn pairwise(c: &mut Criterion) {
                 *o = Unit::new_unchecked(*m) >> *p;
             }
             black_box(&packed_out);
-        })
+        });
     });
     g.bench_function("glam Affine3A loop", |b| {
         b.iter(|| {
@@ -183,7 +184,7 @@ fn pairwise(c: &mut Criterion) {
                 *o = a.transform_point3a(*v);
             }
             black_box(&vout);
-        })
+        });
     });
     let (vsoa, xsoa): (Soa<Motor>, Soa<Point>) = (
         ms.iter().map(|m| m.into_inner()).collect(),
@@ -229,7 +230,7 @@ fn exp(c: &mut Criterion) {
                 *o = black_box(*x).exp().into_inner();
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("wide f32x8 SoA", |b| {
         b.iter(|| {
@@ -237,7 +238,7 @@ fn exp(c: &mut Criterion) {
                 *o = black_box(*x).exp().into_inner();
             }
             black_box(&packed_out);
-        })
+        });
     });
     g.bench_function("glam Quat::from_scaled_axis loop (rotation only)", |b| {
         b.iter(|| {
@@ -245,7 +246,7 @@ fn exp(c: &mut Criterion) {
                 *o = glam::Quat::from_scaled_axis(black_box(*a));
             }
             black_box(&qout);
-        })
+        });
     });
     let soa: Soa<Line> = bs.iter().copied().collect();
     let mut soa_out: Soa<Motor> = Soa::new();
@@ -284,7 +285,7 @@ fn rigid_body(c: &mut Criterion) {
                 *o = rigid_step(*m, *bb, *f, black_box(dt), mass, moments);
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("scalar fused loop", |b| {
         b.iter(|| {
@@ -292,7 +293,7 @@ fn rigid_body(c: &mut Criterion) {
                 *o = rigid_step_fused(*m, *bb, *f, black_box(dt), mass, moments);
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("wide f32x8 SoA fused", |b| {
         b.iter(|| {
@@ -300,7 +301,7 @@ fn rigid_body(c: &mut Criterion) {
                 *o = rigid_step_fused(*m, *bb, *f, black_box(dt8), mass8, mom8);
             }
             black_box(&packed_out);
-        })
+        });
     });
     per_level(&mut g, "batch rigid_step_fused_batch", || {
         rigid_step_fused_batch(
@@ -342,7 +343,7 @@ fn rigid_rate(c: &mut Criterion) {
                 *o = rigid_rate_fused(*bb, *f, black_box(dt), mass, moments);
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("wide f32x8 SoA fused", |b| {
         b.iter(|| {
@@ -350,7 +351,7 @@ fn rigid_rate(c: &mut Criterion) {
                 *o = rigid_rate_fused(*bb, *f, black_box(dt8), mass8, mom8);
             }
             black_box(&packed_out);
-        })
+        });
     });
     per_level(&mut g, "batch AoS", || {
         rigid_rate_fused_batch(&bs, &fs, &[black_box(dt)], &[mass], &[moments], &mut out);

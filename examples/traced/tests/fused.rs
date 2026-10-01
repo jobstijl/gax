@@ -23,7 +23,7 @@ fn close(a: &[f64], b: &[f64]) {
 #[test]
 fn fused_matches_generic() {
     for k in 0..20 {
-        let f = k as f64;
+        let f = f64::from(k);
         let m = motor(0.3 + f, [1.0, f.sin(), 2.0], [f.cos(), 0.5, -1.0]);
         let m2 = motor(1.1 * f, [f, 1.0, -0.5], [0.2, f.sin(), 3.0]);
         let light = Point::new(0.5, 1.0, 4.0, 1.0);
@@ -61,7 +61,7 @@ fn generic_kernel_also_builds_the_map() {
 fn between_fused_matches_generic() {
     use gax::pga3d::Line;
     for k in 0..20 {
-        let f = k as f64 + 0.5;
+        let f = f64::from(k) + 0.5;
         let (pa, pb) = (
             Point::new(f.sin(), 0.5, f.cos(), 1.0),
             Point::new(1.0, f.cos(), -0.5 * f, 2.0),

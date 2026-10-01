@@ -3,12 +3,13 @@
 //! Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench transform`.
 //! The methodology follows mathbench-rs: inputs are `black_box`ed and single operations are
 //! measured one at a time, while batches run over 1024 points.
+#![allow(missing_docs)] // `criterion_group!` generates an undocumented function
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Point};
 use gax::simd::wide::f32x8;
-use gax_bench::*;
+use gax_bench::motor;
 use std::hint::black_box;
 
 const N: usize = 1024;
@@ -39,19 +40,19 @@ fn single(c: &mut Criterion) {
     let prep = m.prepare::<Point>();
     let mut g = c.benchmark_group("transform one point");
     g.bench_function("gax Unit<Motor> >> Point", |b| {
-        b.iter(|| black_box(m) >> black_box(p))
+        b.iter(|| black_box(m) >> black_box(p));
     });
     g.bench_function("gax prepared >> Point", |b| {
-        b.iter(|| black_box(prep) >> black_box(p))
+        b.iter(|| black_box(prep) >> black_box(p));
     });
     g.bench_function("gax Point<(Point,)>::of", |b| {
-        b.iter(|| black_box(mat).of(black_box(p)))
+        b.iter(|| black_box(mat).of(black_box(p)));
     });
     g.bench_function("glam Affine3A::transform_point3a", |b| {
-        b.iter(|| black_box(a).transform_point3a(black_box(v)))
+        b.iter(|| black_box(a).transform_point3a(black_box(v)));
     });
     g.bench_function("glam Quat * Vec3A (rotation only)", |b| {
-        b.iter(|| black_box(q) * black_box(v))
+        b.iter(|| black_box(q) * black_box(v));
     });
     g.finish();
 }
@@ -90,7 +91,7 @@ fn batch(c: &mut Criterion) {
                 *o = m >> *p;
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("gax prepared", |b| {
         b.iter(|| {
@@ -99,7 +100,7 @@ fn batch(c: &mut Criterion) {
                 *o = t >> *p;
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("gax dense map", |b| {
         b.iter(|| {
@@ -108,7 +109,7 @@ fn batch(c: &mut Criterion) {
                 *o = t.of(*p);
             }
             black_box(&out);
-        })
+        });
     });
     g.bench_function("gax SoA f32x8 direct", |b| {
         b.iter(|| {
@@ -117,7 +118,7 @@ fn batch(c: &mut Criterion) {
                 *o = m8 >> *p;
             }
             black_box(&soa_out);
-        })
+        });
     });
     g.bench_function("gax SoA f32x8 prepared", |b| {
         b.iter(|| {
@@ -126,7 +127,7 @@ fn batch(c: &mut Criterion) {
                 *o = t >> *p;
             }
             black_box(&soa_out);
-        })
+        });
     });
     g.bench_function("glam Affine3A", |b| {
         b.iter(|| {
@@ -135,7 +136,7 @@ fn batch(c: &mut Criterion) {
                 *o = a.transform_point3a(*v);
             }
             black_box(&vout);
-        })
+        });
     });
     g.finish();
 }
@@ -153,43 +154,43 @@ fn motors(c: &mut Criterion) {
 
     let mut g = c.benchmark_group("motors");
     g.bench_function("gax compose Unit<Motor> * Unit<Motor>", |b| {
-        b.iter(|| black_box(m1) * black_box(m2))
+        b.iter(|| black_box(m1) * black_box(m2));
     });
     g.bench_function("glam Quat * Quat", |b| {
-        b.iter(|| black_box(q1) * black_box(q2))
+        b.iter(|| black_box(q1) * black_box(q2));
     });
     g.bench_function("glam Affine3A * Affine3A", |b| {
-        b.iter(|| black_box(a1) * black_box(a2))
+        b.iter(|| black_box(a1) * black_box(a2));
     });
     g.bench_function("gax Motor::normalized", |b| {
-        b.iter(|| black_box(raw).normalized())
+        b.iter(|| black_box(raw).normalized());
     });
     g.bench_function("glam Quat::normalize", |b| {
-        b.iter(|| black_box(qraw).normalize())
+        b.iter(|| black_box(qraw).normalize());
     });
     g.bench_function("gax Unit<Motor>::inverse", |b| {
-        b.iter(|| black_box(m1).inverse())
+        b.iter(|| black_box(m1).inverse());
     });
     g.bench_function("glam Affine3A::inverse", |b| {
-        b.iter(|| black_box(a1).inverse())
+        b.iter(|| black_box(a1).inverse());
     });
     g.bench_function("gax Line::exp", |b| b.iter(|| black_box(biv).exp()));
     g.bench_function("glam Quat::from_axis_angle", |b| {
-        b.iter(|| glam::Quat::from_axis_angle(black_box(axis), black_box(0.7)))
+        b.iter(|| glam::Quat::from_axis_angle(black_box(axis), black_box(0.7)));
     });
     // The fair comparison for an exponential: the rotation vector's length must be computed.
     let scaled = glam::Vec3::new(0.2, 0.4, 0.6);
     g.bench_function("glam Quat::from_scaled_axis", |b| {
-        b.iter(|| glam::Quat::from_scaled_axis(black_box(scaled)))
+        b.iter(|| glam::Quat::from_scaled_axis(black_box(scaled)));
     });
     g.bench_function("gax Unit<Motor>::log", |b| {
-        b.iter(|| -> Line { black_box(m1).log() })
+        b.iter(|| -> Line { black_box(m1).log() });
     });
     g.bench_function("gax build map m >> Point::slot()", |b| {
-        b.iter(|| black_box(m1) >> Point::slot())
+        b.iter(|| black_box(m1) >> Point::slot());
     });
     g.bench_function("gax build map m.prepare().to_map()", |b| {
-        b.iter(|| -> Point<(Point,)> { black_box(m1).prepare::<Point>().to_map() })
+        b.iter(|| -> Point<(Point,)> { black_box(m1).prepare::<Point>().to_map() });
     });
     g.bench_function("glam Affine3A::from_rotation_translation", |b| {
         b.iter(|| {
@@ -197,7 +198,7 @@ fn motors(c: &mut Criterion) {
                 black_box(q1),
                 black_box(glam::Vec3::new(0.5, -1.0, 2.0)),
             )
-        })
+        });
     });
     g.finish();
 }

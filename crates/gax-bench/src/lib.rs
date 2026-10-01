@@ -120,7 +120,7 @@ pub fn probe_rigid_fused(
     fused::rigid_step_fixed_fused(m, b, f)
 }
 
-/// Batch SoA transform (for inspecting the dispatched kernels).
+/// Batch transform of struct-of-arrays data (for inspecting the dispatched kernels).
 #[inline(never)]
 pub fn probe_batch_soa(
     m: Unit<Motor>,
@@ -141,7 +141,7 @@ pub fn probe_lanes_fma(
     a * b + c
 }
 
-/// Batch AoS transform (for inspecting the transposes).
+/// Batch transform of array-of-structs data (for inspecting the transposes).
 #[inline(never)]
 pub fn probe_batch_aos(m: Unit<Motor>, xs: &[Point], out: &mut [Point]) {
     use gax::batch::BatchTransform;

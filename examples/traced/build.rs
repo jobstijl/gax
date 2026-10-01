@@ -1,3 +1,6 @@
+//! Traces the generic kernels of `src/kernels.rs` at build time into fused straight-line code
+//! (`fused.rs`), their batch forms and WGSL (`fused.wesl`), which the crate includes.
+
 #[path = "src/kernels.rs"]
 #[allow(dead_code)]
 mod kernels;

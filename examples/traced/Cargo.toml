@@ -12,3 +12,6 @@ gax = { path = "../../crates/gax", features = ["batch"] }
 
 [build-dependencies]
 gax = { path = "../../crates/gax", features = ["trace"] }
+
+[lints]
+workspace = true

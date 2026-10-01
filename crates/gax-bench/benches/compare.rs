@@ -3,6 +3,7 @@
 //! build-time fused), and CGA/CSTA products.
 //!
 //! Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench compare`.
+#![allow(missing_docs)] // `criterion_group!` generates an undocumented function
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use gax::Unit;
@@ -42,23 +43,23 @@ fn transforms(c: &mut Criterion) {
 
     let mut g = c.benchmark_group("compare: transform");
     g.bench_function("gax Unit<Motor> >> Point", |b| {
-        b.iter(|| black_box(m) >> black_box(p))
+        b.iter(|| black_box(m) >> black_box(p));
     });
     g.bench_function("geometric_algebra Motor::transformation(Point)", |b| {
         use geometric_algebra::Transformation;
-        b.iter(|| black_box(ga_m).transformation(black_box(ga_p)))
+        b.iter(|| black_box(ga_m).transformation(black_box(ga_p)));
     });
     g.bench_function("nalgebra Isometry3 * Point3", |b| {
-        b.iter(|| black_box(iso) * black_box(np))
+        b.iter(|| black_box(iso) * black_box(np));
     });
     g.bench_function("gax x8: prepared motor >> Point<f32x8>", |b| {
-        b.iter(|| black_box(prep8) >> black_box(p8))
+        b.iter(|| black_box(prep8) >> black_box(p8));
     });
     g.bench_function("gax x8: Unit<Motor<f32x8>> >> Point<f32x8>", |b| {
-        b.iter(|| black_box(m8) >> black_box(p8))
+        b.iter(|| black_box(m8) >> black_box(p8));
     });
     g.bench_function("ultraviolet x8: Rotor3x8 * Vec3x8 (rotation only)", |b| {
-        b.iter(|| black_box(uv_r) * black_box(uv_v))
+        b.iter(|| black_box(uv_r) * black_box(uv_v));
     });
     g.finish();
 }
@@ -96,19 +97,19 @@ fn chains(c: &mut Criterion) {
         b.iter(|| {
             let v = black_box(&ms);
             v[0] * v[1] * v[2] * v[3] * v[4]
-        })
+        });
     });
     g.bench_function("glam Affine3A product", |b| {
         b.iter(|| {
             let v = black_box(&affs);
             v[0] * v[1] * v[2] * v[3] * v[4]
-        })
+        });
     });
     g.bench_function("nalgebra Isometry3 product", |b| {
         b.iter(|| {
             let v = black_box(&isos);
             v[0] * v[1] * v[2] * v[3] * v[4]
-        })
+        });
     });
     g.finish();
 }
@@ -118,7 +119,7 @@ fn solvers(c: &mut Criterion) {
     let mut stiffness: Scalar<(Line, Line), f64> = Scalar::zero();
     let mut inertia: Scalar<(Line, Line), f64> = Scalar::zero();
     for k in 0..8 {
-        let f = k as f64;
+        let f = f64::from(k);
         let a = Line::new(f.sin(), f.cos(), 0.3 * f, 1.0, -0.5 * f, 0.2);
         let bb = Line::new(
             1.0 + f,
@@ -157,19 +158,19 @@ fn solvers(c: &mut Criterion) {
     );
     let mut g = c.benchmark_group("compare: solvers (f64)");
     g.bench_function("gax 6x6 map inverse", |b| {
-        b.iter(|| black_box(map).inverse())
+        b.iter(|| black_box(map).inverse());
     });
     g.bench_function("nalgebra Matrix6::try_inverse", |b| {
-        b.iter(|| black_box(nm).try_inverse())
+        b.iter(|| black_box(nm).try_inverse());
     });
     g.bench_function("gax 6x6 map solve", |b| {
-        b.iter(|| black_box(map).solve(black_box(rhs)))
+        b.iter(|| black_box(map).solve(black_box(rhs)));
     });
     g.bench_function("nalgebra Matrix6 LU solve", |b| {
-        b.iter(|| black_box(nm).lu().solve(&black_box(nrhs)))
+        b.iter(|| black_box(nm).lu().solve(&black_box(nrhs)));
     });
     g.bench_function("gax 6x6 generalized eigh (modes)", |b| {
-        b.iter(|| black_box(stiffness).eigh_with(black_box(inertia)))
+        b.iter(|| black_box(stiffness).eigh_with(black_box(inertia)));
     });
     g.bench_function("nalgebra 6x6 Cholesky + SymmetricEigen", |b| {
         b.iter(|| {
@@ -178,11 +179,11 @@ fn solvers(c: &mut Criterion) {
             let c = li * black_box(ka) * li.transpose();
             let e = c.symmetric_eigen();
             (e.eigenvalues, li.transpose() * e.eigenvectors)
-        })
+        });
     });
     g.bench_function("gax 4x4 map SVD", |b| b.iter(|| black_box(proj).svd()));
     g.bench_function("nalgebra Matrix4 SVD", |b| {
-        b.iter(|| black_box(nproj).svd(true, true))
+        b.iter(|| black_box(nproj).svd(true, true));
     });
     g.finish();
 }
@@ -209,7 +210,7 @@ fn rigid_body(c: &mut Criterion) {
                 black_box(mass),
                 black_box(moments),
             )
-        })
+        });
     });
     g.bench_function("gax fused at build time", |bch| {
         bch.iter(|| {
@@ -221,26 +222,26 @@ fn rigid_body(c: &mut Criterion) {
                 black_box(mass),
                 black_box(moments),
             )
-        })
+        });
     });
     g.bench_function("gax generic, constants inlined", |bch| {
-        bch.iter(|| rigid_step_fixed(black_box(m), black_box(b), black_box(f)))
+        bch.iter(|| rigid_step_fixed(black_box(m), black_box(b), black_box(f)));
     });
     g.bench_function("gax fused, constants traced", |bch| {
-        bch.iter(|| rigid_step_fixed_fused(black_box(m), black_box(b), black_box(f)))
+        bch.iter(|| rigid_step_fixed_fused(black_box(m), black_box(b), black_box(f)));
     });
     g.bench_function("gax fused without mul_add, constants traced", |bch| {
-        bch.iter(|| rigid_step_fixed_plain(black_box(m), black_box(b), black_box(f)))
+        bch.iter(|| rigid_step_fixed_plain(black_box(m), black_box(b), black_box(f)));
     });
     // Eight bodies at once (SoA lanes): here the arithmetic count is what runs.
     let m8 = Motor::<(), f32x8>::from_coeffs(m.c.map(f32x8::splat));
     let b8 = Line::<(), f32x8>::from_coeffs(b.c.map(f32x8::splat));
     let f8 = Line::<(), f32x8>::from_coeffs(f.c.map(f32x8::splat));
     g.bench_function("x8 lanes: gax generic, constants inlined", |bch| {
-        bch.iter(|| rigid_step_fixed(black_box(m8), black_box(b8), black_box(f8)))
+        bch.iter(|| rigid_step_fixed(black_box(m8), black_box(b8), black_box(f8)));
     });
     g.bench_function("x8 lanes: gax fused, constants traced", |bch| {
-        bch.iter(|| rigid_step_fixed_fused(black_box(m8), black_box(b8), black_box(f8)))
+        bch.iter(|| rigid_step_fixed_fused(black_box(m8), black_box(b8), black_box(f8)));
     });
     g.bench_function(
         "x8 lanes: gax fused without mul_add, constants traced",
@@ -270,14 +271,14 @@ fn conformal(c: &mut Criterion) {
     let bb = csta::Vector::<(), f32>::new(0.3, -0.2, 0.1, 0.8, 0.2, 0.4);
     let mut g = c.benchmark_group("compare: conformal (f32)");
     g.bench_function("gax CGA3D Unit<Motor> >> point", |b| {
-        b.iter(|| black_box(cm) >> black_box(v))
+        b.iter(|| black_box(cm) >> black_box(v));
     });
     g.bench_function("gax CGA3D Even >> point (general versor)", |b| {
-        b.iter(|| black_box(versor) >> black_box(v))
+        b.iter(|| black_box(versor) >> black_box(v));
     });
     g.bench_function("gax CGA3D Twist::exp", |b| b.iter(|| black_box(t).exp()));
     g.bench_function("gax CSTA vector * vector", |b| {
-        b.iter(|| black_box(a) * black_box(bb))
+        b.iter(|| black_box(a) * black_box(bb));
     });
     g.finish();
 
@@ -289,7 +290,7 @@ fn conformal(c: &mut Criterion) {
     }));
     let r = biv.exp();
     g.bench_function("gax Unit<Even>::log (closed form)", |b| {
-        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(r).log() })
+        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(r).log() });
     });
     // A rotation towards a half turn (e12) with a boost (e43).
     let mut near = [0.0; 15];
@@ -297,7 +298,7 @@ fn conformal(c: &mut Criterion) {
     near[5] = 0.5;
     let near = gax::csta::Bivector::<(), f64>::from_coeffs(near).exp();
     g.bench_function("gax Unit<Even>::log near a half turn (turned)", |b| {
-        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() })
+        b.iter(|| -> gax::csta::Bivector<(), f64> { black_box(near).log() });
     });
     // The exponential (docs/log6d.md §12): in closed form, and with a rotation beyond a quarter
     // turn (turned back by one first).
@@ -307,7 +308,7 @@ fn conformal(c: &mut Criterion) {
     far[5] = 0.5;
     let far = gax::csta::Bivector::<(), f64>::from_coeffs(far);
     g.bench_function("gax Bivector::exp beyond a quarter turn (turned)", |b| {
-        b.iter(|| black_box(far).exp())
+        b.iter(|| black_box(far).exp());
     });
     g.finish();
 }
