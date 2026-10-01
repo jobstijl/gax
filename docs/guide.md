@@ -65,43 +65,6 @@ The output slots of an operation are the input slots, concatenated in order. So 
 the slots of `p`, and `(…) ^ ground` keeps them. The compiler checks all of this; with generic
 `S`, `gax` proves that combining an `S`-slotted value with a plain value gives `S` again.
 
-**Generic over the kind, too.** Every product is a trait (`Vee` for `&`, `Wedge` for `^`, `Dot`,
-`Gp`, `Transform`, …) whose output kind is a table entry, so a function can take any operand the
-expression accepts and let the tables give the result. A shadow is a join with the light and a
-meet with the ground, for points and lines alike:
-
-```rust
-use gax::pga3d::{Line, Plane, Point};
-use gax::{Vee, Wedge};
-
-fn shadow<X>(light: Point<(), f64>, ground: Plane<(), f64>, x: X)
-    -> <<Point<(), f64> as Vee<X>>::Output as Wedge<Plane<(), f64>>>::Output
-where
-    Point<(), f64>: Vee<X>,
-    <Point<(), f64> as Vee<X>>::Output: Wedge<Plane<(), f64>>,
-{
-    light.vee(x).wedge(ground)
-}
-
-let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
-let pole = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 5.0);
-let p: Point<(), f64> = shadow(light, ground, Point::xyz(1.0, 2.0, 5.0)); // a point's: a point
-let l: Line<(), f64> = shadow(light, ground, pole);                       // a line's: a line
-let on_lines: Line<(Line,), f64> = shadow(light, ground, Line::slot());   // and maps, still
-assert_eq!(on_lines.of(pole), l);
-```
-
-`X` covers the kind and the slots at once. The price is the `where` clause: Rust wants a generic
-signature to state what its body needs, so the bounds retrace the expression. (Kinds as const
-bitmasks would not change that; they would give exact result kinds, which needs the unstable
-`generic_const_exprs`.) It pays where one formula serves several kinds: warp's `geom::foot`,
-`(x | flat) ^ flat`, is the foot of a point on a line in its 2D game and in its 3D tunnel, and on a
-plane, from one body. Where the kinds are fixed, concrete types read better.
-
-This is also how a narrower operand gives a narrower result: evaluate the expression on it.
-Binding it into a map already built keeps the map's output kind (section 3), since a map's type
-does not record which of its coefficients are structurally zero.
-
 ## 3. Filling slots
 
 | call | effect |
@@ -538,7 +501,45 @@ assert!((x - 1.5).abs() < 1e-12 && (y - 2.5).abs() < 1e-12);
 What is not a homomorphism is spelled out as a function: a Euclidean point as a CGA round
 point (`cga3d::Vector::up`, which is quadratic) and back (`down`).
 
-## 13. Derivatives
+## 13. Generic over the kind
+
+The functions of section 2 are generic over the slots. They can be generic over the kind as
+well: every product is a trait (`Vee` for `&`, `Wedge` for `^`, `Dot`, `Gp`, `Transform`, …)
+whose output kind is a table entry, so a function can take any operand the expression accepts
+and let the tables give the result. A shadow is a join with the light and a
+meet with the ground, for points and lines alike:
+
+```rust
+use gax::pga3d::{Line, Plane, Point};
+use gax::{Vee, Wedge};
+
+fn shadow<X>(light: Point<(), f64>, ground: Plane<(), f64>, x: X)
+    -> <<Point<(), f64> as Vee<X>>::Output as Wedge<Plane<(), f64>>>::Output
+where
+    Point<(), f64>: Vee<X>,
+    <Point<(), f64> as Vee<X>>::Output: Wedge<Plane<(), f64>>,
+{
+    light.vee(x).wedge(ground)
+}
+
+let (light, ground) = (Point::xyz(0.0, 0.0, 10.0), Plane::from_normal([0.0, 0.0, 1.0], 0.0));
+let pole = Point::xyz(1.0, 0.0, 0.0) & Point::xyz(1.0, 0.0, 5.0);
+let p: Point<(), f64> = shadow(light, ground, Point::xyz(1.0, 2.0, 5.0)); // a point's: a point
+let l: Line<(), f64> = shadow(light, ground, pole);                       // a line's: a line
+let on_lines: Line<(Line,), f64> = shadow(light, ground, Line::slot());   // and maps, still
+assert_eq!(on_lines.of(pole), l);
+assert_eq!(p.to_euclidean(), [2.0, 4.0, 0.0]);
+```
+
+`X` covers the kind and the slots at once. The `where` clause retraces the expression, since a
+generic signature states what its body needs; this pays where one formula serves several kinds,
+and where the kinds are fixed, concrete types read better.
+
+This is also how a narrower operand gives a narrower result: evaluate the expression on it.
+Binding it into a map already built keeps the map's output kind, since a map's type does not
+record which of its coefficients are structurally zero.
+
+## 14. Derivatives
 
 `gax::dual::Dual<T, N>` is a coefficient type carrying `N` derivatives along with each value
 (forward-mode automatic differentiation). Every product, sandwich, map, solver, `exp` and `log`
@@ -572,7 +573,7 @@ the right derivative where plain forward mode gives `NaN`. `Dual<T, N>` over SIM
 differentiates a batch at once; over `gax::fp::Fp` the derivatives of polynomial kernels are
 exact.
 
-## 14. Conventions and pitfalls
+## 15. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

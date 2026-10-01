@@ -71,6 +71,15 @@ cd examples/asteroids && cargo run --release                    # the game
 
 The minimum supported Rust version is 1.89. The crates are not yet published on crates.io.
 
+## AI disclosure
+
+gax was written with an AI model. Its code, tests and documentation were written by Claude
+(Anthropic), working in Claude Code under the direction of the author, who set the goals, made
+the design decisions and decided what to keep; every commit carries a `Co-Authored-By: Claude`
+line. The library's claims rest on checks rather than on trust: the algebraic laws are proved on
+symbolic coefficients ([laws](docs/laws.md)), every generated kernel is verified symbolically,
+the numerics are measured ([numerics](docs/numerics.md)), and CI runs all of it.
+
 ## License
 
 Licensed under either of [Apache License, Version 2.0](LICENSE-APACHE) or [MIT license](LICENSE-MIT)

@@ -47,16 +47,24 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Products for values, maps and forms alike**, each with the slot bookkeeping done by the type
   system: `*`, `^`, `&`, `|`, versor transport `>>` and `<<`, contractions and commutators.
 * **Binding and composition:**
-  * `m.of(x)` fills the first slot, or composes a map into it;
+  * `m.of(x)` fills the first slot, or composes a map into it; a value of a smaller kind (a rotor in
+    a motor slot) is embedded;
   * `m.at::<I>()` moves a slot to the front;
   * `m.fill(x)` fills every slot of `x`'s kind;
-  * `form.swap()` exchanges a form's two slots.
+  * `form.swap()` exchanges a form's two slots;
+  * `x.cast::<K>()` and `x.grade::<G>()` project and embed between kinds.
 * **Linear algebra on maps and forms, with typed results:**
   * `inverse`, `det`, `solve`, `svd` and `trace` on maps;
+  * `pinv` and `lstsq` on maps of any shape, and `lstsq` for one slot of a map with several;
   * `eigh_with(metric)` on forms, whose modes come back as values of the slot kind, such as twists;
   * pairing solves for induced maps.
 * **Closed forms on values:** `inverse`, `normalized` (to a certified `Unit` versor), `exp`, `log` and
-  `sqrt`, derived symbolically per type.
+  `sqrt`, derived symbolically per type; `exp` and `log` of the full conformal group of CSTA and of
+  every 6D to 9D algebra in closed form; a general `inverse` for the kinds without one.
+* **Derivatives:** `gax::dual::Dual<T, N>` is a coefficient type, so every operation above runs
+  on dual numbers and returns its derivatives (`gradient`, `jacobian`).
+* **Shaders:** WGSL modules of the standard algebras (feature `wgsl`) and GPU layouts (feature
+  `bytemuck`).
 * **Performance:**
   * operations are generated as straight-line code with exact integer tables, and the sandwich kernels
     are simplified symbolically;
@@ -64,8 +72,8 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
   * [batch kernels](https://github.com/jobstijl/gax/blob/main/docs/batch.md) (feature `batch`) run
     sandwiches, your own generic functions and traced kernels over slices, on the best SIMD level
     the CPU has, chosen at run time;
-  * [build-time tracing](https://github.com/jobstijl/gax/blob/main/docs/guide.md#build-time-tracing) fuses your
-    own generic functions.
+  * [build-time tracing](https://github.com/jobstijl/gax/blob/main/docs/guide.md#8-build-time-tracing)
+    fuses your own generic functions.
 * **No macros in user code** except `algebra!`. Stable Rust (MSRV 1.89), `no_std`.
 
 ## Learn more
@@ -85,3 +93,13 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 
 The library is inspired by [numga](https://github.com/EelcoHoogendoorn/numga),
 whose extensor model it brings to Rust's type system.
+
+## AI disclosure
+
+gax was written with an AI model. Its code, tests and documentation were written by Claude
+(Anthropic), working in Claude Code under the direction of the author, who set the goals, made
+the design decisions and decided what to keep; every commit carries a `Co-Authored-By: Claude`
+line. The library's claims rest on checks rather than on trust: the algebraic laws are proved on
+symbolic coefficients ([laws](https://github.com/jobstijl/gax/blob/main/docs/laws.md)), every
+generated kernel is verified symbolically, the numerics are measured
+([numerics](https://github.com/jobstijl/gax/blob/main/docs/numerics.md)), and CI runs all of it.
