@@ -480,27 +480,36 @@ mod pga3d_extras {
             let (o, zero) = (T::one(), T::zero());
             let [ex, ey, ez] = eye.to_euclidean();
             let [tx, ty, tz] = target.to_euclidean();
-            let forward = Point::direction(tx - ex, ty - ey, tz - ez);
-            let turn = Self::rotation_between(Point::direction(zero, zero, o), forward);
-            // Where `+y` went, and where it should be: `up` less its part along `forward`.
-            let f = Plane::orthogonal_to(forward).normalized().into_inner();
-            let u = Plane::orthogonal_to(up);
-            let want = u - f.gp((u | f).s());
-            let have = Plane::orthogonal_to(turn >> Point::direction(zero, o, zero));
-            let roll = Self::rotation_between(
-                Point::direction(have.e1(), have.e2(), have.e3()),
-                Point::direction(want.e1(), want.e2(), want.e3()),
-            );
-            // `up` along `forward`: no roll is defined; keep the turn alone.
-            let id = Self::translation(zero, zero, zero);
-            let n = want.norm();
-            let roll = Unit::new_unchecked(crate::select_lt(
-                n,
-                T::from_f64(1e-9),
-                id.into_inner(),
-                roll.into_inner(),
-            ));
-            Self::translation(ex, ey, ez) * roll * turn
+            // The frame: z forward, x = up × z (normalized), y = z × x, then its rotor
+            // (Shepperd's method, well conditioned for every rotation). Built from the frame
+            // rather than as a turn and a roll: a shortest rotation between nearly opposite
+            // directions takes its axis from rounding, and looking nearly along `up` (from above,
+            // `+z` up) once turned an `f32` camera round.
+            let unit = |v: [T; 3]| {
+                let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+                v.map(|c| c / n)
+            };
+            let cross = |a: [T; 3], b: [T; 3]| {
+                [
+                    a[1] * b[2] - a[2] * b[1],
+                    a[2] * b[0] - a[0] * b[2],
+                    a[0] * b[1] - a[1] * b[0],
+                ]
+            };
+            let z = unit([tx - ex, ty - ey, tz - ez]);
+            let u = [up.e032(), up.e013(), up.e021()];
+            let x = cross(u, z);
+            // `up` along `forward`: no roll is defined; any x orthogonal to z (from the axis z is
+            // least along).
+            let other = T::select_lt(z[0].abs(), T::from_f64(0.5), o, zero);
+            let fallback = cross([other, o - other, zero], z);
+            let norm2 = |v: [T; 3]| v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+            let tiny = T::epsilon() * T::epsilon() * norm2(u);
+            let x = unit(core::array::from_fn(|i| {
+                T::select_lt(norm2(x), tiny, fallback[i], x[i])
+            }));
+            let y = cross(z, x);
+            Self::translation(ex, ey, ez) * crate::moments::rotor_from_frame([x, y, z])
         }
     }
 

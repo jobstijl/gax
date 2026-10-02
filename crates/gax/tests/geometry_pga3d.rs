@@ -73,3 +73,39 @@ proptest! {
         prop_assert!(close(&induced.of(l), &(m << l)));
     }
 }
+
+/// `Motor::look_at` from eyes ever closer to straight above the target, `+z` up, in `f32` and
+/// `f64`: the camera's `+z` points at the target and its `+y` is orthogonal to it. (In `f32`
+/// the roll was once the shortest rotation between two opposite directions, whose axis is
+/// rounding noise, and turned the camera round.)
+#[test]
+fn look_at_near_the_up_direction() {
+    fn check<T: gax::Real + Into<f64>>(tol: f64) {
+        for k in 0..12 {
+            let d = 10f64.powi(-k);
+            for (dx, dy) in [(0.0, d), (d, 0.0), (-d, d)] {
+                let p = |x: f64, y: f64, z: f64| {
+                    Point::<(), T>::xyz(T::from_f64(x), T::from_f64(y), T::from_f64(z))
+                };
+                let m = Motor::look_at(
+                    p(dx, dy, 10.0),
+                    p(0.0, 0.0, 0.0),
+                    Point::direction(T::zero(), T::zero(), T::one()),
+                );
+                let f = m >> Point::direction(T::zero(), T::zero(), T::one());
+                let f: [f64; 3] = [f.e032().into(), f.e013().into(), f.e021().into()];
+                let want = [-dx, -dy, -10.0];
+                let n = (dx * dx + dy * dy + 100.0).sqrt();
+                for i in 0..3 {
+                    assert!((f[i] - want[i] / n).abs() < tol, "d {d:e}: forward {f:?}");
+                }
+                let u = m >> Point::direction(T::zero(), T::one(), T::zero());
+                let u: [f64; 3] = [u.e032().into(), u.e013().into(), u.e021().into()];
+                let dot = u[0] * want[0] / n + u[1] * want[1] / n + u[2] * want[2] / n;
+                assert!(dot.abs() < tol, "d {d:e}: up {u:?} along forward");
+            }
+        }
+    }
+    check::<f32>(1e-5);
+    check::<f64>(1e-12);
+}
