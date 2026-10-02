@@ -173,6 +173,14 @@ renormalization), with the body's constants known at build time:
   packed the plain products. With rustc 1.99.0 that no longer reproduces.
 * **Loops.** In a scalar loop of 1024 steps (`benches/batch.rs`) the fused kernel takes 18.2 µs
   and the generic code 16.2 µs; on `f32x8` lanes the fused kernel takes 2.56 µs.
+* **Why it moves with the compiler.** For single values, LLVM's SLP vectorizer decides whether a
+  kernel runs packed or scalar, and it changed its mind between versions. The probes
+  `probe_rigid_fused` and `probe_rigid_generic` (`--emit asm`, `target-cpu=native`): with rustc
+  1.98.1 the fused kernel is 147 instructions, packed (`vmulps`, `vfmadd213ps`) with 2 stack
+  accesses, and the generic code 189, mostly scalar with 13 (spills); with 1.99.0 it is the other
+  way round, the fused kernel 160 instructions, mostly scalar (`vfmadd231ss`) with 14 stack
+  accesses, and the generic code 165, packed with 2. Only explicit SIMD per target would pin
+  this down, and lanes and batches, where gax's speed comes from, do not depend on it.
 * **What it means:**
   * `mul_add` stays the default: it rounds each multiply-add once, and the variants are within
     10% of each other on lanes;
