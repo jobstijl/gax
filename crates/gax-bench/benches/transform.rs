@@ -197,6 +197,41 @@ fn motors(c: &mut Criterion) {
     g.bench_function("gax Unit<Motor>::log", |b| {
         b.iter(|| -> Line { black_box(m1).log() });
     });
+    // 256 different arguments per iteration (rotations of 0.05 to 2.6 rad with translations):
+    // with one constant argument, the elementary functions' branches are always predicted.
+    let bivs: Vec<Line> = (0..256)
+        .map(|i| {
+            let t = i as f32 / 256.0;
+            Line::new(0.1 + t, 0.4 * t, 0.6 - t, 0.1, -0.2 + t, 0.3)
+        })
+        .collect();
+    let axes: Vec<glam::Vec3> = bivs
+        .iter()
+        .map(|l| glam::Vec3::new(l.c[0], l.c[1], l.c[2]))
+        .collect();
+    let motors: Vec<Unit<Motor>> = bivs.iter().map(|l| l.exp()).collect();
+    g.bench_function("gax Line::exp, 256 arguments", |b| {
+        b.iter(|| {
+            for l in black_box(&bivs) {
+                black_box(l.exp());
+            }
+        });
+    });
+    g.bench_function("glam Quat::from_scaled_axis, 256 arguments", |b| {
+        b.iter(|| {
+            for v in black_box(&axes) {
+                black_box(glam::Quat::from_scaled_axis(*v));
+            }
+        });
+    });
+    g.bench_function("gax Unit<Motor>::log, 256 arguments", |b| {
+        b.iter(|| {
+            for m in black_box(&motors) {
+                let l: Line = m.log();
+                black_box(l);
+            }
+        });
+    });
     g.bench_function("gax build map m >> Point::slot()", |b| {
         b.iter(|| black_box(m1) >> Point::slot());
     });

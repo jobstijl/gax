@@ -6,6 +6,8 @@ pub use gax_core::*;
 
 mod extras;
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
+mod interop;
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
 mod moments;
 
 /// The homomorphisms between the standard algebras, as `From` impls (generated from

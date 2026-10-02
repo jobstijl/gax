@@ -9,3 +9,4 @@
 /crates/gax-highdim-tests/target
 /examples/warp/target
 /examples/warp/shots
+/crates/gax-bench/target

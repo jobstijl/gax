@@ -222,7 +222,9 @@ mod pga3d_moments {
 /// `frame[0..3]`: its quaternion by Shepperd's method (from the largest of the trace and the
 /// diagonal, so no division is small), then its axis and angle, as a gax rotation.
 #[cfg(feature = "pga3d")]
-fn rotor_from_frame<T: Real>(frame: [[T; 3]; 3]) -> crate::Unit<crate::pga3d::Motor<(), T>> {
+pub(crate) fn rotor_from_frame<T: Real>(
+    frame: [[T; 3]; 3],
+) -> crate::Unit<crate::pga3d::Motor<(), T>> {
     // r[i][k]: component i of the image of axis k.
     let r = |i: usize, k: usize| frame[k][i];
     let (one, quarter) = (T::one(), T::from_f64(0.25));

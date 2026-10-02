@@ -603,7 +603,37 @@ the right derivative where plain forward mode gives `NaN`. `Dual<T, N>` over SIM
 differentiates a batch at once; over `gax::fp::Fp` the derivatives of polynomial kernels are
 exact.
 
-## 16. Conventions and pitfalls
+## 16. Other math libraries
+
+Engines and physics libraries speak quaternions and matrices. gax converts to and from plain
+arrays, so it depends on none of them: quaternions are `[x, y, z, w]` (glam's `to_array`,
+nalgebra's `coords`), translations `[x, y, z]`, and matrices column-major `[[T; 4]; 4]` (glam's
+`from_cols_array_2d`, nalgebra's storage, WGSL's `mat4x4`):
+
+```rust
+use gax::pga3d::{Motor, Point, Rotor};
+
+let h = std::f64::consts::FRAC_PI_4;
+let q = [0.0, 0.0, h.sin(), h.cos()]; // a quarter turn about z
+let m = Motor::from_rotation_translation(q, [1.0, 2.0, 3.0]); // rotate, then translate
+let [x, y, _] = (m >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
+assert!((x - 1.0).abs() < 1e-12 && (y - 3.0).abs() < 1e-12);
+
+let (q2, t) = m.to_rotation_translation(); // back (q up to its sign)
+let cols = m.to_matrix(); // cols[3] is the translation
+assert_eq!(cols[3][..3], t[..]);
+let again = Motor::from_matrix(cols); // a rigid matrix back to a motor
+let r = Rotor::from_quaternion(q2); // only the rotation
+# let _ = (again, r);
+```
+
+With glam, `Motor::from_rotation_translation(quat.to_array(), t.to_array())` and
+`Mat4::from_cols_array_2d(&m.to_matrix())`; with nalgebra, `UnitQuaternion` coordinates and
+`Isometry3::to_homogeneous`. PGA2D has `Motor::to_matrix` and `Motor::from_matrix` for the
+3×3 homogeneous matrices of the plane. The conventions are checked against glam and nalgebra
+themselves (`crates/gax-bench/tests/interop.rs`).
+
+## 17. Conventions and pitfalls
 
 * **PGA layouts** follow the bivector.net cheat sheets:
   * a PGA3D point is `x e032 + y e013 + z e021 + w e123` (`Point::xyz`);

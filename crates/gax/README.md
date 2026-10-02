@@ -61,6 +61,9 @@ let spun: Point<(Point,)> = projection.of(spin >> Point::slot());
 * **Closed forms on values:** `inverse`, `normalized` (to a certified `Unit` versor), `exp`, `log` and
   `sqrt`, derived symbolically per type; `exp` and `log` of the full conformal group of CSTA and of
   every 6D to 9D algebra in closed form; a general `inverse` for the kinds without one.
+* **Other math libraries:** quaternions, translations and column-major matrices as plain
+  arrays (`Motor::from_rotation_translation`, `to_matrix`, `from_matrix`), checked against
+  glam and nalgebra, with no dependency on either.
 * **Mass properties:** volume, centre of mass and inertia of meshes and polygons from their
   boundary (`pga3d::Moments`, `pga2d::Moments`), as one extensor that adds over parts and moves
   with the body.

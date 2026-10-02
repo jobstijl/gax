@@ -575,19 +575,34 @@ pub fn exp_coeffs_rotation<T: Real>(lambda: T, mu: T) -> [T; 4] {
     let k = |v: f64| T::from_f64(v);
     // One reciprocal serves both quotients (it is infinite at a = 0, where the series is used).
     let inv = a.recip();
-    let s = T::select_lt(
+    let s = pick(
         a2,
         k(1e-4),
-        T::one() + a2 * (k(-1.0 / 6.0) + a2 * (k(1.0 / 120.0) + a2 * k(-1.0 / 5040.0))),
-        sin * inv,
+        || T::one() + a2 * (k(-1.0 / 6.0) + a2 * (k(1.0 / 120.0) + a2 * k(-1.0 / 5040.0))),
+        || sin * inv,
     );
     // Horner for S' in a².
-    let mut series = T::zero();
-    for c in DS.iter().rev() {
-        series = series * a2 + k(*c);
-    }
-    let ds = T::select_lt(a2, k(0.25), series, (s - cos) * inv * inv * k(0.5));
+    let series = || {
+        let mut series = T::zero();
+        for c in DS.iter().rev() {
+            series = series * a2 + k(*c);
+        }
+        series
+    };
+    let ds = pick(a2, k(0.25), series, || (s - cos) * inv * inv * k(0.5));
     [cos, mu * s * k(0.5), s, mu * ds]
+}
+
+/// `if a < b { x() } else { y() }`: a branch for a scalar (`Real::SCALAR`), which computes only
+/// the form it returns, and both forms selected lane by lane otherwise (SIMD lanes, the
+/// tracer's symbolic coefficients). The value is the same either way.
+#[inline(always)]
+fn pick<T: Real>(a: T, b: T, x: impl FnOnce() -> T, y: impl FnOnce() -> T) -> T {
+    if T::SCALAR {
+        if T::all_lt(a, b) { x() } else { y() }
+    } else {
+        T::select_lt(a, b, x(), y())
+    }
 }
 
 /// Fast path of [`log_coeffs`] for rotations: `R = c + P` with `P² = u0 + u1 I`, `u0 <= 0`
@@ -617,21 +632,21 @@ pub fn log_coeffs_rotation<T: Real>(c: (T, T), u: (T, T)) -> [T; 2] {
     let t2 = s2 * ic * ic;
     // The series applies for c0 > 0, and at s = 0 whatever the sign of c0 (the log of −R).
     let key = T::select_lt(zero, c.0, t2, T::select_lt(zero, s2, one, zero));
-    let h_series = ic * (one + t2 * (k(-1.0 / 3.0) + t2 * (k(1.0 / 5.0) + t2 * k(-1.0 / 7.0))));
-    let h0 = T::select_lt(key, k(1e-6), h_series, theta / s);
+    let h_series = || ic * (one + t2 * (k(-1.0 / 3.0) + t2 * (k(1.0 / 5.0) + t2 * k(-1.0 / 7.0))));
+    let h0 = pick(key, k(1e-6), h_series, || theta / s);
     // Horner in t²: (-1)^j (j+1)/(2j+3), j = 0..=11 (the next term is below 10⁻¹⁶ at t² = 1/25).
-    let mut g_series = zero;
-    for j in (0..12u8).rev() {
-        let (j, sign) = (f64::from(j), if j % 2 == 0 { 1.0 } else { -1.0 });
-        let c = sign * (j + 1.0) / (2.0 * j + 3.0);
-        g_series = g_series * t2 + k(c);
-    }
-    let g = T::select_lt(
-        key,
-        k(1.0 / 25.0),
-        g_series * ic * ic * ic,
-        (theta - c.0 * s / n) / (s2 * s * k(2.0)),
-    );
+    let g_series = || {
+        let mut g_series = zero;
+        for j in (0..12u8).rev() {
+            let (j, sign) = (f64::from(j), if j % 2 == 0 { 1.0 } else { -1.0 });
+            let c = sign * (j + 1.0) / (2.0 * j + 3.0);
+            g_series = g_series * t2 + k(c);
+        }
+        g_series * ic * ic * ic
+    };
+    let g = pick(key, k(1.0 / 25.0), g_series, || {
+        (theta - c.0 * s / n) / (s2 * s * k(2.0))
+    });
     [h0, -c.1 / n + u.1 * g]
 }
 
