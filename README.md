@@ -21,24 +21,6 @@ let s: Point = shadow(light, ground, Point::xyz(1.0, 2.0, 3.0)); // a value
 let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the map
 ```
 
-## Workspace
-
-| crate | what |
-|---|---|
-| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA2D/3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels, WGSL modules |
-| [`crates/gax-core`](crates/gax-core) | slot lists, kinds, coefficient traits, binding, solvers, Study-number functions (`no_std`) |
-| [`crates/gax-gen`](crates/gax-gen) | generator: exact tables, symbolic polynomials, simplifier, emitter, `gax-regen` |
-| [`crates/gax-macros`](crates/gax-macros) | the `algebra!` proc macro |
-| [`crates/gax-bench`](crates/gax-bench) | benchmarks against glam, ultraviolet, nalgebra (not published) |
-| [`crates/gax-wesl-tests`](crates/gax-wesl-tests) | the WGSL modules through the `wesl` crate: imports, stripping, CPU evaluation of every kernel (not published) |
-| [`crates/gax-gpu-tests`](crates/gax-gpu-tests) | every WGSL kernel on a GPU through wgpu (its own crate; lavapipe in CI) |
-| [`crates/gax-highdim-tests`](crates/gax-highdim-tests) | 7D, 8D and 9D algebras declared with `algebra!`: the closed-form log and exp, plain sandwiches, 7D WGSL (its own crate) |
-| [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
-| [`examples/wgpu`](examples/wgpu) | PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel shared with the CPU (its own crate) |
-| [`examples/warp`](examples/warp) | a neon twin-stick shooter on warping space: gax motors, traced kernels on CPU and GPU, the WGSL modules, synthesized audio (its own crate) |
-| [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
-| [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
-
 ## Documentation
 
 * [Guide](docs/guide.md): extensors as a composition language, in plain terms.
@@ -57,6 +39,24 @@ let projection: Point<(Point,)> = shadow(light, ground, Point::slot()); // the m
 * [Research log](docs/research.md): prior art, and what was taken from it.
 * [Performance](docs/performance.md): benchmarks, assembly findings, compile times.
 * [TODO](TODO.md): status and open work.
+
+## Workspace
+
+| crate | what |
+|---|---|
+| [`crates/gax`](crates/gax) | the library: standard algebras (PGA2D/3D, VGA2D/3D, STA, CGA2D/3D, STAP, CSTA) behind features, `algebra!`, tracing, runtime-dispatched SIMD batch kernels, WGSL modules |
+| [`crates/gax-core`](crates/gax-core) | slot lists, kinds, coefficient traits, binding, solvers, Study-number functions (`no_std`) |
+| [`crates/gax-gen`](crates/gax-gen) | generator: exact tables, symbolic polynomials, simplifier, emitter, `gax-regen` |
+| [`crates/gax-macros`](crates/gax-macros) | the `algebra!` proc macro |
+| [`crates/gax-bench`](crates/gax-bench) | benchmarks against glam, ultraviolet, nalgebra (not published) |
+| [`crates/gax-wesl-tests`](crates/gax-wesl-tests) | the WGSL modules through the `wesl` crate: imports, stripping, CPU evaluation of every kernel (not published) |
+| [`crates/gax-gpu-tests`](crates/gax-gpu-tests) | every WGSL kernel on a GPU through wgpu (its own crate; lavapipe in CI) |
+| [`crates/gax-highdim-tests`](crates/gax-highdim-tests) | 7D, 8D and 9D algebras declared with `algebra!`: the closed-form log and exp, plain sandwiches, 7D WGSL (its own crate) |
+| [`examples/traced`](examples/traced) | build-time traced kernels, end to end, with batch forms |
+| [`examples/wgpu`](examples/wgpu) | PGA2D motors on the GPU with plain wgpu: instanced shapes and a traced particle kernel shared with the CPU (its own crate) |
+| [`examples/warp`](examples/warp) | a neon twin-stick shooter on warping space: gax motors, traced kernels on CPU and GPU, the WGSL modules, synthesized audio (its own crate) |
+| [`examples/asteroids`](examples/asteroids) | a small windowed game on PGA2D motors (its own crate, outside the workspace) |
+| [`fuzz`](fuzz) | fuzzing of the algebra declaration parser |
 
 ## Development
 
