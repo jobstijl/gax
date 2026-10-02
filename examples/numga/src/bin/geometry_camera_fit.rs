@@ -1,0 +1,330 @@
+//! numga's `geometry/camera_fit`: a camera pose recovered by gradient descent, in PGA3D. The
+//! camera is a join then a meet with the point left open, `(O & X) ^ screen`, a central
+//! projection onto the plane `z = 1`; the rig moves it by conjugation, `rig >> camera(rig << X)`,
+//! and the rig is the exponential of a bivector. The image misfit is differentiated with respect
+//! to that bivector through `exp`, the sandwiches, the bind and the unitization. numga uses
+//! JAX's reverse mode; here the coefficients are gax's forward-mode dual numbers (`Dual<f64, 6>`,
+//! one derivative per bivector coefficient), so the same generic code returns the misfit and
+//! its gradient in one pass. Nothing is linearized by hand. The animation replays the descent:
+//! the estimated camera (red) flies onto the true one (blue), its images onto the observed ones,
+//! and the misfit falls.
+
+use gax::dual::{Dual, gradient};
+use gax::pga3d::{Line, Plane, Point};
+use gax::{Real, Unit};
+use gax_numga_examples::canvas::mix;
+use gax_numga_examples::{
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+};
+use std::sync::OnceLock;
+
+mod camera_fit {
+    use super::*;
+
+    pub type P = Point<(), f64>;
+    pub type B = Line<(), f64>;
+    pub type D = Dual<f64, 6>;
+
+    /// A small xorshift generator with Gaussian draws (numga's NumPy streams cannot be
+    /// reproduced, so the seeds differ from numga's).
+    pub struct Rng(pub u64);
+    impl Rng {
+        pub fn uniform(&mut self) -> f64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+        }
+        /// A standard normal draw (Box and Muller).
+        pub fn normal(&mut self) -> f64 {
+            let (u, v) = (self.uniform(), self.uniform());
+            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
+        }
+    }
+
+    /// The world: thirty points about the origin.
+    pub fn world() -> Vec<P> {
+        let mut rng = Rng(0xca3e_0001);
+        (0..30)
+            .map(|_| Point::xyz(rng.normal(), rng.normal(), rng.normal()))
+            .collect()
+    }
+
+    /// The images of the world points seen from the rig, as points on its screen `z = 1`, in the
+    /// rig's frame. Generic over the coefficients, so that dual numbers carry the gradient.
+    pub fn image<T: Real>(generator: Line<(), T>, world: &[P]) -> Vec<Point<(), T>> {
+        let c = T::from_f64;
+        let origin = Point::xyz(c(0.0), c(0.0), c(0.0));
+        let screen = Plane::new(c(0.0), c(0.0), c(1.0), c(-1.0));
+        // The camera: the join with the centre, met with the screen; a map on points.
+        let camera = (origin & Point::slot()) ^ screen;
+        let rig = generator.exp();
+        // The camera moved by the rig: the map conjugated.
+        let moved = rig >> camera.of(rig << Point::slot());
+        world
+            .iter()
+            .map(|w| {
+                let w = Point::new(c(w.c[0]), c(w.c[1]), c(w.c[2]), c(w.c[3]));
+                (rig << moved.of(w)).unitized()
+            })
+            .collect()
+    }
+
+    /// The mean squared distance between two sets of images: two images of unit weight differ
+    /// by an ideal point, whose dual is the Euclidean displacement on the screen.
+    pub fn misfit<T: Real>(images: &[Point<(), T>], observed: &[P]) -> T {
+        let c = T::from_f64;
+        let mut sum = c(0.0);
+        for (a, o) in images.iter().zip(observed) {
+            let o = Point::new(c(o.c[0]), c(o.c[1]), c(o.c[2]), c(o.c[3]));
+            sum = sum + (*a - o).dual().norm_squared();
+        }
+        sum / c(images.len() as f64)
+    }
+
+    /// The true rig's generator, and the start of the descent.
+    pub fn truth() -> B {
+        Line::new(0.1, -0.2, 0.15, -0.3, 0.1, -2.5)
+    }
+
+    pub fn start() -> B {
+        truth() + Line::new(0.3, 0.3, 0.3, -0.3, -0.3, -0.3)
+    }
+
+    /// The misfit and its gradient with respect to the generator's six coefficients.
+    pub fn misfit_and_gradient(generator: B, world: &[P], observed: &[P]) -> (f64, B) {
+        let (value, grad) = gradient(
+            |g: [D; 6]| misfit(&image(Line::from_coeffs(g), world), observed),
+            generator.c,
+        );
+        (value, Line::from_coeffs(grad))
+    }
+
+    /// Plain gradient descent with step 0.25: the generator after each step, with its misfit.
+    pub fn descend(steps: usize) -> Vec<(B, f64)> {
+        let world = world();
+        let observed = image(truth(), &world);
+        let mut g = start();
+        let mut path = Vec::with_capacity(steps + 1);
+        for _ in 0..=steps {
+            let (value, grad) = misfit_and_gradient(g, &world, &observed);
+            path.push((g, value));
+            g -= grad.gp(0.25);
+        }
+        path
+    }
+
+    /// The pose error between two generators: the log of the relative motor, whose Euclidean
+    /// part turns and whose ideal part shifts (the dual swaps the two).
+    pub fn pose_error(a: B, b: B) -> (f64, f64) {
+        let relative: B = (a.exp().inverse() * b.exp()).log();
+        (relative.norm(), relative.dual().norm())
+    }
+
+    pub const STEPS: usize = 600;
+}
+
+use camera_fit::*;
+
+/// The descent, computed once.
+fn path() -> &'static [(B, f64)] {
+    static PATH: OnceLock<Vec<(B, f64)>> = OnceLock::new();
+    PATH.get_or_init(|| descend(STEPS))
+}
+
+fn xyz(p: P) -> [f32; 3] {
+    let [x, y, z] = p.to_euclidean();
+    [x as f32, y as f32, z as f32]
+}
+
+/// A camera's frustum: its centre, and the corners of its screen.
+fn frustum(s: &mut Scene3, generator: B, colour: gax_numga_examples::Rgb, width: f32) {
+    let rig: Unit<_> = generator.exp();
+    let at = |x: f64, y: f64, z: f64| xyz(rig >> Point::xyz(x, y, z));
+    let centre = at(0.0, 0.0, 0.0);
+    let corners = [
+        at(-0.8, -0.6, 1.0),
+        at(0.8, -0.6, 1.0),
+        at(0.8, 0.6, 1.0),
+        at(-0.8, 0.6, 1.0),
+    ];
+    for k in 0..4 {
+        s.seg(centre, corners[k], width, colour, 0.9);
+        s.seg(corners[k], corners[(k + 1) % 4], width, colour, 0.9);
+    }
+    s.dot(centre, Marker::Dot, 6.0, colour);
+}
+
+const SECONDS: f32 = 10.0;
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let (w, h) = (c.width as f32, c.height as f32);
+    let path = path();
+    // Replay the descent on a logarithmic clock, so that the fast start is seen, then hold.
+    let s = ((t / SECONDS) / 0.85).min(1.0);
+    let k = (((STEPS + 1) as f32).powf(s) - 1.0).round() as usize;
+    let (g, value) = path[k.min(STEPS)];
+    let world = world();
+    let observed = image(truth(), &world);
+    let images = image(g, &world);
+    // The scene on the left, its view turning slowly.
+    let wl = (w * 0.55) as usize;
+    let mut left = Canvas::new(wl, c.height);
+    backdrop(&mut left);
+    // Centred between the world and the true camera.
+    let eye = xyz(truth().exp() >> Point::xyz(0.0, 0.0, 0.0));
+    let cam = Camera::orbit(
+        wl,
+        c.height,
+        eye.map(|v| v * 0.5),
+        13.0,
+        -1.2 + 0.5 * (t / SECONDS * core::f32::consts::TAU).sin(),
+        0.35,
+        Lens::Perspective(0.65),
+    );
+    let mut scene = Scene3::new(cam);
+    for p in &world {
+        scene.dot(
+            xyz(*p),
+            Marker::Dot,
+            4.0,
+            mix(palette::grid(), palette::ink(), 0.5),
+        );
+    }
+    frustum(&mut scene, truth(), palette::sky(), 2.0);
+    frustum(&mut scene, g, palette::red(), 1.5);
+    // The rays of the estimate, from its centre through each world point.
+    let centre = xyz(g.exp() >> Point::xyz(0.0, 0.0, 0.0));
+    for p in &world {
+        scene.seg(centre, xyz(*p), 0.6, palette::red(), 0.25);
+    }
+    scene.draw(&mut left);
+    c.blit(&left, 0, 0);
+    // The screen: the observed images and the current ones, tied together.
+    let right = plot::inset(
+        [w * 0.55, 0.0, w, h * 0.6],
+        w * 0.05,
+        h * 0.14,
+        w * 0.02,
+        h * 0.06,
+    );
+    let ax = Axes::equal(right, [0.0, 0.0], 0.75);
+    ax.frame(c, "THE SCREEN Z = 1", "", "");
+    let flat = |p: &Point<(), f64>| {
+        let [x, y, _] = p.to_euclidean();
+        [x as f32, y as f32]
+    };
+    for (a, o) in images.iter().zip(&observed) {
+        ax.line(c, flat(a), flat(o), 0.8, palette::red(), 0.5);
+    }
+    let obs: Vec<[f32; 2]> = observed.iter().map(flat).collect();
+    let cur: Vec<[f32; 2]> = images.iter().map(flat).collect();
+    ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky(), 1.0);
+    ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red(), 1.0);
+    // The misfit over the steps, on a log scale.
+    let lower = plot::inset(
+        [w * 0.55, h * 0.6, w, h],
+        w * 0.05,
+        h * 0.06,
+        w * 0.02,
+        h * 0.075,
+    );
+    let least = path.iter().fold(f64::MAX, |m, p| m.min(p.1)).max(1e-30) as f32;
+    let most = path.iter().fold(0.0f64, |m, p| m.max(p.1)) as f32;
+    let mx = Axes::new(lower, [1.0, (STEPS + 1) as f32], [least * 0.5, most * 2.0])
+        .log_x()
+        .log_y();
+    mx.frame(c, "", "STEP", "MEAN SQUARED IMAGE MISFIT");
+    let curve: Vec<[f32; 2]> = path
+        .iter()
+        .enumerate()
+        .map(|(i, p)| [(i + 1) as f32, p.1 as f32])
+        .collect();
+    mx.polyline(c, &curve, 1.0, palette::grid(), 1.0);
+    mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::yellow(), 1.0);
+    mx.scatter(
+        c,
+        &[[(k + 1) as f32, value as f32]],
+        Marker::Dot,
+        7.0,
+        palette::yellow(),
+        1.0,
+    );
+    let (turn, shift) = pose_error(truth(), g);
+    c.text(
+        &format!("STEP {k}   POSE ERROR: TURN {turn:.4}  SHIFT {shift:.4}"),
+        w * 0.02,
+        h - 14.0,
+        12.0,
+        palette::ink(),
+        Align::Left,
+    );
+    caption(
+        c,
+        "CAMERA FIT: GRADIENT DESCENT THROUGH EXP, SANDWICH AND BIND",
+        "THE GRADIENT BY GAX'S DUAL NUMBERS (PGA3D)",
+    );
+}
+
+fn main() {
+    run(Anim::new("camera fit", SECONDS).size(960, 540), draw);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::camera_fit::*;
+
+    /// numga's checks: descent on the image misfit alone recovers the pose.
+    #[test]
+    fn descent_recovers_the_pose() {
+        let path = descend(STEPS);
+        let (g, last) = path[STEPS];
+        let (turn, shift) = pose_error(truth(), g);
+        assert!(turn < 0.02 && shift < 0.02, "{turn} {shift}");
+        assert!(last < 1e-3 * path[0].1, "{} -> {last}", path[0].1);
+    }
+
+    /// The dual-number gradient agrees with central differences.
+    #[test]
+    fn the_gradient_matches_finite_differences() {
+        let world = world();
+        let observed = image(truth(), &world);
+        let g = start();
+        let (_, grad) = misfit_and_gradient(g, &world, &observed);
+        let h = 1e-6;
+        for i in 0..6 {
+            let (mut a, mut b) = (g, g);
+            a.c[i] += h;
+            b.c[i] -= h;
+            let fd = (misfit(&image(a, &world), &observed) - misfit(&image(b, &world), &observed))
+                / (2.0 * h);
+            assert!(
+                (fd - grad.c[i]).abs() < 1e-6 * (1.0 + fd.abs()),
+                "{i}: {fd} {}",
+                grad.c[i]
+            );
+        }
+    }
+
+    /// The images lie on the screen, and the truth fits exactly.
+    #[test]
+    fn images_lie_on_the_screen() {
+        let world = world();
+        for p in image(truth(), &world) {
+            assert!((p.to_euclidean()[2] - 1.0).abs() < 1e-12);
+        }
+        assert!(misfit(&image(truth(), &world), &image(truth(), &world)) < 1e-30);
+    }
+
+    #[test]
+    fn a_frame_draws() {
+        let mut draw = super::draw;
+        let c = gax_numga_examples::app::frame(
+            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
+            0.5,
+            &mut draw,
+        );
+        assert!(c.mean()[0] > 0.0);
+    }
+}

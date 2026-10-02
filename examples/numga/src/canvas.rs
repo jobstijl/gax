@@ -69,12 +69,9 @@ impl Canvas {
     /// Confine drawing to the pixel rectangle `[x0, y0, x1, y1]` (a panel), until [`Canvas::unclip`].
     pub fn clip(&mut self, r: [f32; 4]) {
         let c = |v: f32, n: usize| (v.max(0.0) as usize).min(n);
-        self.clip = [
-            c(r[0], self.width),
-            c(r[1], self.height),
-            c(r[2], self.width),
-            c(r[3], self.height),
-        ];
+        let (x0, y0) = (c(r[0], self.width), c(r[1], self.height));
+        // An inverted rectangle (an inset larger than its panel) clips everything away.
+        self.clip = [x0, y0, c(r[2], self.width).max(x0), c(r[3], self.height).max(y0)];
     }
 
     /// Draw anywhere again.
