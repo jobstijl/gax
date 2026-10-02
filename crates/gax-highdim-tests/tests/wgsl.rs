@@ -1,7 +1,8 @@
 //! The WGSL modules of a 7D algebra declared with `algebra!` (its even kind has 64 coefficients,
 //! the most the modules take): they validate, and `wesl`'s evaluator runs the closed-form
-//! logarithm `unit_even_log` and exponential `bivector_exp` (turning planes near a half turn
-//! first) and the plain sandwich kernels in `f32`, against the Rust `f64` results.
+//! logarithm `unit_even_log` and exponential `bivector_exp_closed` (turning planes near a half
+//! turn first), the scaling-and-squaring `bivector_exp` and the plain sandwich kernels in `f32`,
+//! against the Rust `f64` results.
 
 #![cfg(feature = "wgsl")]
 
@@ -75,6 +76,7 @@ fn the_modules_validate() {
     for f in [
         "fn unit_even_log(",
         "fn bivector_exp(",
+        "fn bivector_exp_closed(",
         "fn unit_even_sandwich_vector(",
     ] {
         assert!(r43::WGSL_MODULE.source.contains(f), "{f}");
@@ -117,16 +119,18 @@ fn log_exp_and_sandwiches_evaluate() {
             assert!(e < 1.0 / 4096.0, "case {case}: {got:?} vs {want:?}");
             worst = worst.max(e);
         }
-        // The closed-form exponential, against the Rust one of the same f32 bivector.
+        // Both exponentials, against the Rust one of the same f32 bivector.
         let b32 =
             Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| f64::from(b.c[i] as f32)));
         let want = b32.exp().into_inner();
-        let got = evaluate(&res, &format!("bivector_exp({})", literal("Bivector", &b32.c)));
         let scale = want.c.iter().fold(1.0f64, |m, c| m.max(c.abs()));
-        for (g, w) in got.iter().zip(&want.c) {
-            let e = (g - w).abs() / scale;
-            assert!(e < 1.0 / 4096.0, "exp, case {case}: {got:?} vs {want:?}");
-            worst_exp = worst_exp.max(e);
+        for f in ["bivector_exp", "bivector_exp_closed"] {
+            let got = evaluate(&res, &format!("{f}({})", literal("Bivector", &b32.c)));
+            for (g, w) in got.iter().zip(&want.c) {
+                let e = (g - w).abs() / scale;
+                assert!(e < 1.0 / 4096.0, "{f}, case {case}: {got:?} vs {want:?}");
+                worst_exp = worst_exp.max(e);
+            }
         }
         // The plain sandwich kernels (a versor over 32 coefficients).
         let p = Vector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
@@ -145,6 +149,6 @@ fn log_exp_and_sandwiches_evaluate() {
     }
     assert!(turned > 0, "no case turned planes");
     println!(
-        "7D unit_even_log and bivector_exp in f32: within {worst:.1e} and {worst_exp:.1e} of f64"
+        "7D unit_even_log and the exponentials in f32: within {worst:.1e} and {worst_exp:.1e} of f64"
     );
 }

@@ -198,10 +198,16 @@ fn check(name: &str, committed: &str) -> (usize, f64, f64) {
         }
         count += 1;
     }
-    // The exponentials composed in WGSL text (loops, not straight-line kernels: CSTA's closed
-    // form), against gax's Rust `exp` for the same kind.
-    for (kind, _) in emit_wgsl::fallback_exps(&spec, &stats) {
-        let name_fn = format!("{}_exp", gax_gen::kernel::snake(&kind.name));
+    // The exponentials composed in WGSL text (loops, not straight-line kernels: scaling and
+    // squaring, and CSTA's closed form), against gax's Rust `exp` for the same kind.
+    let closed = emit_wgsl::closed_exps(&spec, &stats);
+    let exps = emit_wgsl::fallback_exps(&spec, &stats);
+    let calls = exps
+        .iter()
+        .map(|(k, _)| (*k, "exp"))
+        .chain(closed.iter().map(|(k, _)| (*k, "exp_closed")));
+    for (kind, suffix) in calls {
+        let name_fn = format!("{}_{suffix}", gax_gen::kernel::snake(&kind.name));
         let n = kind.layout.len();
         for case in 0..samples.max(8) {
             let c: Vec<f32> = if name == "csta" {

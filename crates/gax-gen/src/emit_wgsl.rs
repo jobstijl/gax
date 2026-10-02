@@ -1297,7 +1297,9 @@ fn {es}_scale(a: {en}, k: {t}) -> {en} {{
 }
 
 /// The exponential of bivector kind `k` by scaling and squaring in kind `e` (the Rust
-/// fallback of `emit_values`, for kinds without a closed form: CSTA's bivectors), as WGSL text.
+/// fallback of `emit_values`), as WGSL text: `{k}_exp` for kinds without a straight-line
+/// kernel (CSTA's bivectors, where it is many times faster on a GPU than the closed form
+/// [`closed_exp`], `{k}_exp_closed`).
 /// It loops, so it is not a straight-line [`Kernel`]; it uses the module's `{e}_mul_{e}`,
 /// `{e}_reverse` and [`arithmetic`]. `None` if `k` does not embed in `e`.
 pub fn fallback_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
@@ -1364,14 +1366,19 @@ fn {ks}_exp(x: {kn}) -> {en} {{
     ))
 }
 
-/// The exponential of bivector kind `k` in closed form (a 6D or 7D algebra's bivectors;
-/// docs/log6d.md §12), as WGSL text, as gax's Rust `exp` for the kind: the recorded
+/// `{k}_exp_closed`: the exponential of bivector kind `k` in closed form (a 6D or 7D algebra's
+/// bivectors; docs/log6d.md §12), as WGSL text, as gax's Rust `exp` for the kind: the recorded
 /// `{k}_exp_reach` gives how often to halve `x`, and whether to turn rotations beyond a quarter
-/// turn back first; `{k}_exp_from` gives the exponential of the halved bivector `b`, or of
-/// `b − (π/2) Z`, `Z` the sum of the turned planes' unit bivectors (`{k}_exp_turning`), times
-/// their product `∏ ê = (−1)ⁿ ∏(−ê)`, a polynomial in `Z`; squarings undo the halving. It uses
-/// the module's `{e}_mul_{e}` and the [`arithmetic`] of both kinds. `None` if `k` does not embed
-/// in `e`.
+/// turn back first; `{k}_exp_from` gives the exponential of `b − (π/2) Z`, `b` the halved
+/// bivector and `Z` the sum of the turned planes' unit bivectors (`{k}_exp_turning`, or zero),
+/// times their product `∏ ê = (−1)ⁿ ∏(−ê)`, a polynomial in `Z`; squarings undo the halving.
+/// `{k}_exp_from` is called once, outside the branch, so an invocation group whose members
+/// differ in turning runs it once. It uses the module's `{e}_mul_{e}` and the [`arithmetic`] of
+/// both kinds. `None` if `k` does not embed in `e`.
+///
+/// On a GPU it is 10 to 30 times as accurate as the scaling and squaring of [`fallback_exp`]
+/// (`{k}_exp`) on bivectors with entries up to 1, and many times slower: its interpolation
+/// works on local arrays, which GPUs keep in memory rather than registers (docs/shaders.md).
 pub fn closed_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
     let t = prec.scalar();
     let (ks, es) = (snake(&k.name), snake(&e.name));
@@ -1392,7 +1399,7 @@ pub fn closed_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String>
 // within 3 pi/4, rapidities up to 8), rotations beyond a quarter turn are turned back by one
 // (`exp B = exp(B - (pi/2) Z) E`, `Z` the sum of their `n = -<Z Z>_0` unit bivectors and `E`
 // their product, `Z`, `1 + Z^2/2` or `(Z^3 + 7 Z)/6`), and `s` squarings undo the halving.
-fn {ks}_exp(x: {kn}) -> {en} {{
+fn {ks}_exp_closed(x: {kn}) -> {en} {{
     let rt = {ks}_exp_reach(x);
     var scale: {t} = 1.0;
     var s = 0u;
@@ -1404,15 +1411,16 @@ fn {ks}_exp(x: {kn}) -> {en} {{
         s = s + 1u;
     }}
     let b = {ks}_scale(x, scale);
-    var r: {en};
-    if rt.y * scale < 1.0 {{
-        r = {ks}_exp_from(b);
-    }} else {{
-        let z = {ks}_exp_turning(b);
+    let turned = rt.y * scale >= 1.0;
+    var z = {};
+    if turned {{
+        z = {ks}_exp_turning(b);
+    }}
+    var r = {ks}_exp_from({ks}_sub(b, {ks}_scale(z, 1.5707963)));
+    if turned {{
         let ze = {};
         let z2 = {es}_mul_{es}(ze, ze);
         let n = {n};
-        r = {ks}_exp_from({ks}_sub(b, {ks}_scale(z, 1.5707963)));
         if n > 2.5 {{
             r = {es}_mul_{es}(r, {es}_scale({es}_add({es}_mul_{es}(z2, ze), {es}_scale(ze, 7.0)), 1.0 / 6.0));
         }} else if n > 1.5 {{
@@ -1427,6 +1435,7 @@ fn {ks}_exp(x: {kn}) -> {en} {{
     return r;
 }}
 ",
+        wgsl_construct_in(prec, kn, &vec!["0.0".to_string(); k.layout.len()]),
         wgsl_construct_in(prec, en, &embed),
         wgsl_construct_in(prec, en, &one),
     ))
@@ -1529,10 +1538,8 @@ pub fn fallback_logs<'a>(
         .collect()
 }
 
-/// The kinds whose `exp` is composed in WGSL text (it loops), with the kind it lands in: those
-/// with an `exp` in Rust but no straight-line WGSL kernel. The composition is [`closed_exp`]
-/// where the kind has the recorded `{k}_exp_from` kernel, else [`fallback_exp`] (scaling and
-/// squaring).
+/// The kinds whose `exp` is the scaling-and-squaring fallback ([`fallback_exp`]), with the kind
+/// it lands in: those with an `exp` in Rust but no straight-line WGSL kernel.
 pub fn fallback_exps<'a>(
     spec: &'a AlgebraSpec,
     stats: &Stats,
@@ -1549,6 +1556,21 @@ pub fn fallback_exps<'a>(
             let k = spec.kinds.iter().find(|x| x.name == v.kind)?;
             let e = spec.kinds.iter().find(|x| &x.name == e)?;
             Some((k, e))
+        })
+        .collect()
+}
+
+/// The kinds of [`fallback_exps`] that also have the closed form `{k}_exp_closed`
+/// ([`closed_exp`]): those with the recorded `{k}_exp_from` kernel.
+pub fn closed_exps<'a>(spec: &'a AlgebraSpec, stats: &Stats) -> Vec<(&'a KindSpec, &'a KindSpec)> {
+    fallback_exps(spec, stats)
+        .into_iter()
+        .filter(|(k, _)| {
+            let name = format!("{}_exp_from", snake(&k.name));
+            stats
+                .values
+                .iter()
+                .any(|v| v.kernels.iter().any(|x| x.name == name))
         })
         .collect()
 }
@@ -1665,17 +1687,13 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         }
     }
     let logs = fallback_logs(spec, stats);
-    let closed = |k: &KindSpec| {
-        let name = format!("{}_exp_from", snake(&k.name));
-        kernels.iter().any(|x| x.name == name)
-    };
+    let closed = closed_exps(spec, stats);
     let mut arith: Vec<&str> = Vec::new();
-    let closed_kinds = fallbacks.iter().filter(|(k, _)| closed(k)).map(|(k, _)| *k);
     for x in fallbacks
         .iter()
         .chain(&logs)
         .map(|(_, e)| *e)
-        .chain(closed_kinds)
+        .chain(closed.iter().map(|(k, _)| *k))
     {
         if !arith.contains(&x.name.as_str()) {
             arith.push(&x.name);
@@ -1683,12 +1701,12 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         }
     }
     for (k, e) in &fallbacks {
-        let text = if closed(k) {
-            closed_exp(k, e, prec)
-        } else {
-            fallback_exp(k, e, prec)
-        };
-        if let Some(text) = text {
+        if let Some(text) = fallback_exp(k, e, prec) {
+            let _ = writeln!(s, "{text}");
+        }
+    }
+    for (k, e) in &closed {
+        if let Some(text) = closed_exp(k, e, prec) {
             let _ = writeln!(s, "{text}");
         }
     }

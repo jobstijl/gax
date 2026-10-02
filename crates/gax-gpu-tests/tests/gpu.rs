@@ -5,8 +5,9 @@
 //!   kernels (WGSL's `+`, `-`, `*` are correctly rounded, and fusing only removes roundings),
 //!   and within a relative `2⁻¹⁰` for kernels that call WGSL's elementary functions, whose
 //!   specified accuracy is loose (`sin` and `cos` to an absolute `2⁻¹¹`).
-//! * The scaling-and-squaring exponentials (loops, not straight-line kernels) against gax's Rust
-//!   `exp`, within a relative `2⁻¹⁰`.
+//! * The exponentials composed in WGSL text (loops, not straight-line kernels: scaling and
+//!   squaring, and CSTA's closed form `bivector_exp_closed`) against gax's Rust `exp`, within a
+//!   relative `2⁻¹⁰`; and, ignored by default, the two's cost and accuracy (`csta_exp_timing`).
 //! * CSTA's `unit_even_log` (the closed form, turning planes near a half turn first) against
 //!   gax's Rust `log`, within a relative `2⁻¹⁰`; its kernels, defined on unit versors only, get
 //!   `exp` of random bivectors in the kernel sweep.
@@ -23,6 +24,7 @@ use gax_gen::kernel::{Kernel, Precision, Ty};
 use gax_gen::spec::AlgebraSpec;
 use gax_gpu_tests::{Gpu, floats};
 use std::fmt::Write as _;
+use std::time::Instant;
 
 struct Rng(u64);
 impl Rng {
@@ -340,11 +342,17 @@ fn fallback_exponentials_on_the_gpu() {
     let module = gax::wgsl::CSTA.source;
     let mut rng = Rng(0x0dd_ba11);
     let fallbacks = emit_wgsl::fallback_exps(&spec, &stats);
+    let closed = emit_wgsl::closed_exps(&spec, &stats);
     assert_ne!(fallbacks, []);
-    for (k, e) in fallbacks {
+    assert_ne!(closed, []);
+    let calls = fallbacks
+        .iter()
+        .map(|(k, e)| (*k, *e, "exp"))
+        .chain(closed.iter().map(|(k, e)| (*k, *e, "exp_closed")));
+    for (k, e, suffix) in calls {
         // The harness only needs the call's name and signature.
         let call = Kernel {
-            name: format!("{}_exp", gax_gen::kernel::snake(&k.name)),
+            name: format!("{}_{suffix}", gax_gen::kernel::snake(&k.name)),
             doc: String::new(),
             params: vec![("x".into(), Ty::Kind(k.name.clone()))],
             result: Ty::Kind(e.name.clone()),
@@ -680,5 +688,107 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
                 w.c[o]
             );
         }
+    }
+}
+
+/// The cost and accuracy of CSTA's two exponentials on the GPU, scaling and squaring
+/// (`bivector_exp`) and the closed form (`bivector_exp_closed`):
+/// `cargo test --release -- --ignored --nocapture csta_exp_timing`. Accuracy is against the Rust
+/// `f64` exp on the inputs of the exp checks. For the cost, each invocation takes `reps`
+/// exponentials of bivectors with entries up to 1, each depending on the last; the difference
+/// between two `reps` cancels the compilation and the transfers.
+#[test]
+#[ignore = "a timing, not a check"]
+fn csta_exp_timing() {
+    let Some(gpu) = Gpu::or_skip() else { return };
+    let spec = spec("csta");
+    let module = gax::wgsl::CSTA.source;
+    let mut rng = Rng(0x7_1e5);
+    let n = SAMPLES;
+    let acc_inputs: Vec<f32> = (0..n)
+        .flat_map(|case| csta_exp_input(&mut rng, case))
+        .collect();
+    for f in ["bivector_exp", "bivector_exp_closed"] {
+        let call = Kernel {
+            name: f.into(),
+            doc: String::new(),
+            params: vec![("x".into(), Ty::Kind("Bivector".into()))],
+            result: Ty::Kind("Even".into()),
+            steps: Vec::new(),
+            entries: None,
+        };
+        let src = harness(module, &spec, &[&call], 15, 32);
+        let out = floats(&gpu.run(
+            &src,
+            "main",
+            &[bytemuck::cast_slice(&acc_inputs)],
+            n * 32 * 4,
+            n as u32,
+        ));
+        let mut by_case = [0.0f64; 4];
+        for i in 0..n {
+            let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|j| {
+                f64::from(acc_inputs[i * 15 + j])
+            }));
+            let exact = b.exp().into_inner().c;
+            let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+            for (o, e) in exact.iter().enumerate() {
+                let rel = (f64::from(out[i * 32 + o]) - e).abs() / scale;
+                by_case[i % 4] = by_case[i % 4].max(rel);
+            }
+        }
+        println!(
+            "csta {f}: within {:.1e} (entries up to 1), {:.1e} (0.2), {:.1e} (3), {:.1e} (a half turn and a boost) of the Rust f64 exp",
+            by_case[0], by_case[1], by_case[2], by_case[3]
+        );
+    }
+    const N: u32 = 1 << 18;
+    let inputs: Vec<f32> = (0..N * 15).map(|_| rng.next()).collect();
+    let parts: Vec<String> = (0..15).map(|j| format!("inp[i + {j}u]")).collect();
+    let b = gax_gen::kernel::wgsl_construct("Bivector", &parts);
+    for f in ["bivector_exp", "bivector_exp_closed"] {
+        let time = |reps: u32| -> f64 {
+            let src = format!(
+                "{module}
+@group(0) @binding(0) var<storage, read> inp: array<f32>;
+@group(0) @binding(1) var<storage, read_write> outp: array<f32>;
+
+@compute @workgroup_size(64)
+fn main(@builtin(global_invocation_id) id: vec3<u32>) {{
+    let n = id.x;
+    if (n >= {N}u) {{ return; }}
+    let i = n * 15u;
+    var b = {b};
+    var acc = 0.0;
+    for (var r = 0u; r < {reps}u; r = r + 1u) {{
+        let x = {f}(b);
+        acc = acc + x.c0.x;
+        b.c0.x = b.c0.x + 0.001 * x.c0.y;
+    }}
+    outp[n] = acc;
+}}
+"
+            );
+            (0..3)
+                .map(|_| {
+                    let t = Instant::now();
+                    let out = gpu.run(
+                        &src,
+                        "main",
+                        &[bytemuck::cast_slice(&inputs)],
+                        N as usize * 4,
+                        N,
+                    );
+                    assert!(floats(&out).iter().all(|x| x.is_finite()), "{f}");
+                    t.elapsed().as_secs_f64()
+                })
+                .fold(f64::INFINITY, f64::min)
+        };
+        let (one, many) = (time(1), time(33));
+        println!(
+            "csta {f}: {:.2} ns per exponential over {N} invocations ({:.1} ms for 32 each)",
+            (many - one) / f64::from(32 * N) * 1e9,
+            (many - one) * 1e3
+        );
     }
 }

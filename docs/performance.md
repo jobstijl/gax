@@ -346,6 +346,21 @@ It is the same program on both sides, so moving an effect to the GPU changes not
 it computes. `--check` compares GPU particles with their CPU twins after up to two seconds of
 flight: they agree to `7·10⁻⁶`.
 
+**CSTA's two bivector exponentials on the GPU** (`crates/gax-gpu-tests`, `csta_exp_timing`,
+ignored by default; `2¹⁸` invocations of 32 dependent exponentials each, bivectors with entries
+up to 1):
+
+| | per exponential | within, of the Rust `f64` exp: entries up to 1 / up to 3 / a half turn and a boost of 12 |
+|---|---|---|
+| `bivector_exp` (scaling and squaring in the even kind) | **1.8 ns** | `2·10⁻⁵` / `8·10⁻⁵` / `3·10⁻⁵` |
+| `bivector_exp_closed` (the closed form, log6d.md §12) | 19 ns | `2·10⁻⁶` / `4·10⁻⁶` / `3·10⁻⁵` |
+
+On the CPU, in `f64`, the closed form is the faster one (3.4 µs against 4.1 µs, and 35 µs to
+4.3 µs in 7D). On a GPU it is not: its series (16 terms) and tables (40) are local arrays, which
+a GPU keeps in memory rather than registers, while scaling and squaring is uniform multiply-adds.
+An earlier composition, which called `bivector_exp_from` in both branches of the turning test,
+took 40 ns: invocations of one wavefront that differ in turning ran both branches.
+
 ## Law-based rewrites in the tracer
 
 The laws license rewrites (docs/laws.md §4), such as folding a versor chain

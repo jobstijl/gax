@@ -391,12 +391,15 @@ tables of terms); see ADR-034 in [design.md](design.md).
 * **`exp` in `f32`** is within `10⁻⁴` of the `f64` result for most bivectors, but up to `10⁻³`
   for large boosts (entries up to 2.5 in `R(4,3)`), where `C` and `T` are large and the wedge
   powers of `T` cancel against each other. In `f64` the same cases are within `3·10⁻¹²`.
-* **`exp` in WGSL** is the same closed form (`bivector_exp`, from 6D and 7D bivectors): the
-  helpers `study_exp6`, `study_exp6_turn` and `study_exp6_reach` reuse `study_log6`'s root
+* **`exp` in WGSL** has the same closed form as `bivector_exp_closed` (6D and 7D bivectors):
+  the helpers `study_exp6`, `study_exp6_turn` and `study_exp6_reach` reuse `study_log6`'s root
   finding and series arithmetic with `τ`, `ln cosh` and the turned planes as data, and the
-  module halves, turns and squares as the Rust `exp` does. In `f32` on the CPU evaluator it is
-  within `2·10⁻⁵` of the Rust `f64` `exp` for CSTA (rotations past a half turn, boosts of
-  rapidity 12), `1.5·10⁻⁵` on a GPU, and `3·10⁻⁷` for `R(4,3)`.
+  module halves, turns and squares as the Rust `exp` does. On a GPU (RX 6900 XT) it is within
+  `2·10⁻⁶` of the Rust `f64` `exp` for bivectors with entries up to 1 and `3·10⁻⁵` with a
+  rotation near a half turn and a boost of rapidity 12, against `2·10⁻⁵` and `3·10⁻⁵` for
+  scaling and squaring; but it takes 19 ns per exponential against 1.8 ns. Its series work on
+  local arrays, which a GPU keeps in memory, while scaling and squaring is uniform
+  multiply-adds, so the module's `bivector_exp` stays scaling and squaring.
 
 ## 12. The exponential
 

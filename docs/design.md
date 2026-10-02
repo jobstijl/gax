@@ -737,11 +737,11 @@ highlight. `gax-regen --check` also reports part files no longer generated.
 * **Every `exp` and `log`.** The general Study helpers (`study_exp_split`, `study_log_q`, …)
   are ports of `gax_core::study` over a small complex and dual-number library (`CHANNELS`),
   with their direct forms evaluated at a stand-in argument wherever the series is selected, so
-  no discarded branch divides by zero. The bivector `exp` of 6D and 7D algebras is the closed
-  form of ADR-035: recorded kernels (`bivector_exp_reach`, `_from`, `_turning`) composed by a
-  loop that halves and squares, emitted as text (`closed_exp`; algebras without a closed form
-  get scaling and squaring, `fallback_exp`) and tested against the Rust `exp`, within `2⁻¹²`
-  on the CPU evaluator.
+  no discarded branch divides by zero. CSTA's bivector `exp` is scaling and squaring there, a
+  loop emitted as text (`fallback_exp`), and the closed form of ADR-035 is `bivector_exp_closed`
+  (`closed_exp`: recorded kernels `bivector_exp_reach`, `_from`, `_turning` composed by a loop
+  that halves and squares), both tested against the Rust `exp`, within `2⁻¹²` on the CPU
+  evaluator.
 * **`f16`.** Every module has an `f16` twin (`gax::pga3d_f16`, `{Kind}Gpu16`), printed from
   the same programs with a precision parameter. Its Study helpers and the programs that feed
   them (norms) stay in `f32`, converted at the boundary, because `f16`'s range (2⁻¹⁴ to 65504)
@@ -967,9 +967,11 @@ and their `_8d` twins, `h_weights`; derivation in log6d.md §12).*
   (at a triple root it created a fake separation: 8D PGA's log was wrong at three planes of
   1.2 rad plus a translation; regression test `equal_planes_below_a_sixteenth`).
 * **WGSL** (added later): the helpers `study_exp6`, `study_exp6_turn` and `study_exp6_reach`,
-  ports in `f32` next to `study_log6`, whose root finding and series arithmetic they reuse; the
-  module's `bivector_exp` halves, turns and squares as the Rust `exp` does. Within `2·10⁻⁵` of
-  the Rust `f64` result for CSTA, `3·10⁻⁷` for `R(4,3)`.
+  ports in `f32` next to `study_log6`, whose root finding and series arithmetic they reuse;
+  the module's `bivector_exp_closed` halves, turns and squares as the Rust `exp` does. On a GPU
+  it is 10 to 20 times as accurate as scaling and squaring for typical bivectors but 10 times
+  slower (19 ns against 1.8 ns: local arrays live in memory on a GPU, and dense products are
+  uniform multiply-adds), so `bivector_exp` stays scaling and squaring.
 * **Result.** 3.5 µs in CSTA (4.3 µs turned), 4.0 / 6.8 / 10 µs in 7D / 8D / 9D: 9x to 90x
   faster from 7D on. Within `5·10⁻¹³` of a Taylor series in `f64` on random bivectors of seven
   algebras, no NaN (log6d.md §12).

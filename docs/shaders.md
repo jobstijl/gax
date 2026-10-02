@@ -48,10 +48,15 @@ in a vertex buffer, each field is one attribute location.
 
 The names are `snake_case` kind names joined by the operation. `exp` and `log` exist wherever
 the Rust code has them, in every algebra: rotations and motions through real trigonometry, boosts
-and general versors (STA, CGA, STAP, CSTA) through the general Study functions, and the
-bivector `exp` and the log of the full even kind in closed form for CSTA and every 6D and 7D
-algebra (turning planes beyond a quarter or near a half turn first), as in Rust (log6d.md §8
-and §12).
+and general versors (STA, CGA, STAP, CSTA) through the general Study functions, and the log of
+the full even kind in closed form for CSTA and every 6D and 7D algebra (turning planes near a
+half turn first), as in Rust (log6d.md §8). Their bivector `exp` is scaling and squaring in the
+even kind, and `bivector_exp_closed` the closed form of the Rust `exp` (log6d.md §12): on a GPU
+the closed form is 10 to 20 times as accurate on bivectors with entries up to 1 (`2·10⁻⁶`
+against `2·10⁻⁵` of the `f64` result) and 10 times slower (19 ns against 1.8 ns per
+exponential on an RX 6900 XT). Its interpolation works on local arrays (series of 16 terms,
+tables of 40), which GPUs keep in memory rather than in registers, while scaling and squaring
+is uniform multiply-adds.
 Kinds of more than 64 coefficients (from 8D on) have no WGSL kernels.
 
 ## Using a module

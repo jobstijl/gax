@@ -20892,12 +20892,43 @@ fn bivector_scale(a: Bivector, k: f32) -> Bivector {
     return Bivector(a.c0 * k, a.c1 * k, a.c2 * k, a.c3 * k);
 }
 
+// The exponential of a `Bivector`, a unit `Even`, by scaling and squaring (gax's Rust `exp` for this
+// kind): `B` is halved `s` times until its 1-norm is at most 1/16, a Taylor series of degree 10
+// gives `exp(B / 2^s)`, a Newton step renormalizes it, `s` squarings undo the scaling, and a
+// second Newton step renormalizes the result where it is small (1-norm below 4).
+fn bivector_exp(x: Bivector) -> Even {
+    let norm = abs(x.c0.x) + abs(x.c0.y) + abs(x.c0.z) + abs(x.c0.w) + abs(x.c1.x) + abs(x.c1.y) + abs(x.c1.z) + abs(x.c1.w) + abs(x.c2.x) + abs(x.c2.y) + abs(x.c2.z) + abs(x.c2.w) + abs(x.c3.x) + abs(x.c3.y) + abs(x.c3.z);
+    var h: f32 = 1.0;
+    var s = 0u;
+    loop {
+        if s >= 64u || norm * h < 0.0625 {
+            break;
+        }
+        h = h * 0.5;
+        s = s + 1u;
+    }
+    let e = Even(vec4<f32>(0.0, (x.c0.x) * h, (x.c0.y) * h, (x.c0.z) * h), vec4<f32>((x.c0.w) * h, (x.c1.x) * h, (x.c1.y) * h, (x.c1.z) * h), vec4<f32>((x.c1.w) * h, (x.c2.x) * h, (x.c2.y) * h, (x.c2.z) * h), vec4<f32>((x.c2.w) * h, (x.c3.x) * h, (x.c3.y) * h, (x.c3.z) * h), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    let one = Even(vec4<f32>(1.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    var r = one;
+    for (var k = 10; k >= 1; k = k - 1) {
+        r = even_add(one, even_scale(even_mul_even(e, r), 1.0 / f32(k)));
+    }
+    let three = even_scale(one, 3.0);
+    r = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
+    for (var i = 0u; i < s; i = i + 1u) {
+        r = even_mul_even(r, r);
+    }
+    let size = abs(r.c0.x) + abs(r.c0.y) + abs(r.c0.z) + abs(r.c0.w) + abs(r.c1.x) + abs(r.c1.y) + abs(r.c1.z) + abs(r.c1.w) + abs(r.c2.x) + abs(r.c2.y) + abs(r.c2.z) + abs(r.c2.w) + abs(r.c3.x) + abs(r.c3.y) + abs(r.c3.z) + abs(r.c3.w) + abs(r.c4.x) + abs(r.c4.y) + abs(r.c4.z) + abs(r.c4.w) + abs(r.c5.x) + abs(r.c5.y) + abs(r.c5.z) + abs(r.c5.w) + abs(r.c6.x) + abs(r.c6.y) + abs(r.c6.z) + abs(r.c6.w) + abs(r.c7.x) + abs(r.c7.y) + abs(r.c7.z) + abs(r.c7.w);
+    let fixed = even_mul_even(r, even_scale(even_sub(three, even_mul_even(even_reverse(r), r)), 0.5));
+    return Even(select(r.c0, fixed.c0, size < 4.0), select(r.c1, fixed.c1, size < 4.0), select(r.c2, fixed.c2, size < 4.0), select(r.c3, fixed.c3, size < 4.0), select(r.c4, fixed.c4, size < 4.0), select(r.c5, fixed.c5, size < 4.0), select(r.c6, fixed.c6, size < 4.0), select(r.c7, fixed.c7, size < 4.0));
+}
+
 // The exponential of a `Bivector`, a unit `Even`, in closed form (docs/log6d.md §12, gax's Rust
 // `exp` for this kind): `x` is halved `s` times until `bivector_exp_reach` is below 1 (rotations
 // within 3 pi/4, rapidities up to 8), rotations beyond a quarter turn are turned back by one
 // (`exp B = exp(B - (pi/2) Z) E`, `Z` the sum of their `n = -<Z Z>_0` unit bivectors and `E`
 // their product, `Z`, `1 + Z^2/2` or `(Z^3 + 7 Z)/6`), and `s` squarings undo the halving.
-fn bivector_exp(x: Bivector) -> Even {
+fn bivector_exp_closed(x: Bivector) -> Even {
     let rt = bivector_exp_reach(x);
     var scale: f32 = 1.0;
     var s = 0u;
@@ -20909,15 +20940,16 @@ fn bivector_exp(x: Bivector) -> Even {
         s = s + 1u;
     }
     let b = bivector_scale(x, scale);
-    var r: Even;
-    if rt.y * scale < 1.0 {
-        r = bivector_exp_from(b);
-    } else {
-        let z = bivector_exp_turning(b);
+    let turned = rt.y * scale >= 1.0;
+    var z = Bivector(vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+    if turned {
+        z = bivector_exp_turning(b);
+    }
+    var r = bivector_exp_from(bivector_sub(b, bivector_scale(z, 1.5707963)));
+    if turned {
         let ze = Even(vec4<f32>(0.0, z.c0.x, z.c0.y, z.c0.z), vec4<f32>(z.c0.w, z.c1.x, z.c1.y, z.c1.z), vec4<f32>(z.c1.w, z.c2.x, z.c2.y, z.c2.z), vec4<f32>(z.c2.w, z.c3.x, z.c3.y, z.c3.z), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0), vec4<f32>(0.0, 0.0, 0.0, 0.0));
         let z2 = even_mul_even(ze, ze);
         let n = -z2.c0.x;
-        r = bivector_exp_from(bivector_sub(b, bivector_scale(z, 1.5707963)));
         if n > 2.5 {
             r = even_mul_even(r, even_scale(even_add(even_mul_even(z2, ze), even_scale(ze, 7.0)), 1.0 / 6.0));
         } else if n > 1.5 {
