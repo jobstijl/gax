@@ -5,16 +5,70 @@
 //! error is `log(target ~cam)` (a twist), not an angle; shake is a small random twist
 //! `exp(ε B)` composed onto the camera pose. Particles leave along directions turned by
 //! rotation motors; their colours are lights.
+//!
+//! A killed enemy's outline breaks into wreckage: triangles from its centre of area, each with
+//! its area and centroid from `gax::pga2d::Moments`. Every piece keeps the body's velocity at
+//! its own centroid and its spin, plus a kick away from the centre proportional to its offset:
+//! the kicks' momenta cancel (the centroid is the area-weighted mean of the pieces'), and being
+//! radial they add no angular momentum, so the pieces carry the body's motion on.
 
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
 use crate::render::{Particle, PostSettings};
-use crate::sim::body::{Pose, heading, pose_at, turned};
+use crate::sim::body::{Body, ORIGIN, Pose, heading, pose_at, turned};
 use crate::sim::rng::Rng;
-use crate::sim::{ARENA, Event, Kind, World};
-use gax::pga2d::{Motor, Point};
+use crate::sim::{ARENA, Event, Kind, World, Wreck};
+use gax::pga2d::{Moments, Motor, Point};
 
 type P = Point<(), f32>;
+
+/// A piece of a killed enemy's outline: a triangle about its own centroid, moving.
+pub struct Piece {
+    /// Its motion (the pose of its centroid).
+    pub body: Body,
+    /// Its corners, relative to its centroid.
+    pub tri: [P; 3],
+    /// Its light.
+    pub color: Light,
+    /// Seconds left.
+    pub life: f32,
+}
+
+/// How long wreckage lasts, in seconds.
+pub const WRECK_LIFE: f32 = 0.9;
+
+/// The pieces of the outline `hull` (radius 1, in the body's frame) of a body moving as
+/// `wreck`: triangles from the centre of area, each with the body's velocity at its centroid
+/// and its spin, plus `kick` times its offset from the centre (scaled by the radius).
+pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
+    let r = wreck.radius;
+    let pts: Vec<P> = hull
+        .iter()
+        .map(|&p| crate::render::scene::scaled(p, r))
+        .collect();
+    let g = Moments::of_polygon(&pts).centroid();
+    let centre = wreck.pose >> ORIGIN;
+    (0..pts.len())
+        .map(|i| {
+            let tri = [g, pts[i], pts[(i + 1) % pts.len()]];
+            let c = Moments::of_polygon(&tri).centroid();
+            let [cx, cy] = c.to_euclidean();
+            let local = Motor::translation(-cx, -cy);
+            let pose = wreck.pose * Motor::translation(cx, cy);
+            // The body's velocity at the piece's centroid: its velocity plus its spin turning
+            // the offset from its centre a quarter turn; then the kick, along the offset from
+            // the centre of area.
+            let at = pose >> ORIGIN;
+            let arm = at - centre;
+            let mut body = Body::new(pose);
+            body.vel = wreck.vel
+                + turned(arm, core::f32::consts::FRAC_PI_2) * wreck.spin
+                + (wreck.pose >> (c - g)) * (kick / r);
+            body.spin = wreck.spin;
+            (body, tri.map(|p| local >> p))
+        })
+        .collect()
+}
 
 struct Blast {
     pos: P,
@@ -34,6 +88,8 @@ pub struct Fx {
     blasts: Vec<Blast>,
     /// Particles to spawn this frame.
     pub spawn: Vec<Particle>,
+    /// Pieces of killed enemies' outlines.
+    pub wreckage: Vec<Piece>,
     shock: Option<(P, f32)>,
     /// A full-screen flash, decaying.
     pub flash: f32,
@@ -65,6 +121,7 @@ impl Fx {
             rng: Rng::new(0xf00d),
             blasts: Vec::new(),
             spawn: Vec::new(),
+            wreckage: Vec::new(),
             shock: None,
             flash: 0.0,
             shake_scale: 1.0,
@@ -158,9 +215,20 @@ impl Fx {
                     size,
                     scored,
                     points,
+                    wreck,
                 } => {
                     let p = pos;
                     let c = scene::color(kind);
+                    if let (Some(w), Some(hull)) = (wreck, scene::hull(kind)) {
+                        for (body, tri) in shatter(&hull, &w, 4.0) {
+                            self.wreckage.push(Piece {
+                                body,
+                                tri,
+                                color: c,
+                                life: WRECK_LIFE,
+                            });
+                        }
+                    }
                     if points >= 250 {
                         self.popups.push((p, points.to_string(), 0.0, c));
                     }
@@ -307,6 +375,11 @@ impl Fx {
         for p in &mut self.popups {
             p.2 += dt;
         }
+        for p in &mut self.wreckage {
+            p.body.step(dt);
+            p.life -= dt;
+        }
+        self.wreckage.retain(|p| p.life > 0.0);
         self.popups.retain(|p| p.2 < 1.1);
         self.shake = (self.shake - dt * 2.2).max(0.0);
         self.flash = (self.flash - dt * 2.5).max(0.0);
@@ -347,6 +420,109 @@ impl Fx {
             aberration: 0.006,
             saturation: 1.35,
             shock,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::render::scene;
+    use crate::sim::body::pose_at;
+
+    /// A drifter shot down leaves wreckage, which drifts with it and is gone after its life.
+    #[test]
+    fn a_kill_leaves_wreckage_that_fades() {
+        use crate::sim::{DT, Input, at, dir};
+        let mut w = World::new(1);
+        w.director.enabled = false;
+        w.spawn(Kind::Drifter, at(8.0, 0.0));
+        w.enemies[0].body.vel = dir(0.0, 0.0);
+        let mut fx = Fx::new();
+        let fire = Input {
+            aim: dir(1.0, 0.0),
+            fire: true,
+            ..Input::default()
+        };
+        let mut most = 0;
+        for _ in 0..240 {
+            w.tick(&fire);
+            fx.on_events(&w.events);
+            fx.camera(&w, DT);
+            most = most.max(fx.wreckage.len());
+        }
+        // A diamond breaks into its four triangles.
+        assert_eq!(most, 4);
+        let near = fx.wreckage.is_empty()
+            || fx
+                .wreckage
+                .iter()
+                .all(|p| crate::sim::body::distance(p.body.pos(), at(8.0, 0.0)) < 8.0);
+        assert!(near);
+        for _ in 0..240 {
+            fx.camera(&w, DT);
+        }
+        assert!(fx.wreckage.is_empty(), "wreckage outlived its life");
+    }
+
+    /// `p × v` for a point and a direction (the moment of a momentum about the origin).
+    fn cross(p: P, v: P) -> f32 {
+        let [x, y] = p.to_euclidean();
+        x * v.e01() - y * v.e20()
+    }
+
+    /// The wreckage carries the body's linear and angular momentum: the pieces' masses (areas)
+    /// times their velocities sum to the body's mass times its velocity at its centre of area,
+    /// and their spins and orbits to its angular momentum, for every family's outline.
+    #[test]
+    fn wreckage_conserves_momentum() {
+        let wreck = Wreck {
+            pose: pose_at(1.0, 2.0, 0.7),
+            vel: Point::direction(3.0, -1.0),
+            spin: 2.0,
+            radius: 1.3,
+        };
+        let kinds = [
+            Kind::Drifter,
+            Kind::Chaser,
+            Kind::Mote,
+            Kind::Evader,
+            Kind::Splitter,
+            Kind::Fragment,
+            Kind::Serpent,
+            Kind::Warden,
+            Kind::Carrier,
+        ];
+        for kind in kinds {
+            let hull = scene::hull(kind).expect("an outline");
+            let pts: Vec<P> = hull
+                .iter()
+                .map(|&p| scene::scaled(p, wreck.radius))
+                .collect();
+            let whole = Moments::of_polygon(&pts).moved(wreck.pose);
+            let (area, g) = (whole.area(), whole.centroid());
+            let centre = wreck.pose >> ORIGIN;
+            let v_g = wreck.vel + turned(g - centre, core::f32::consts::FRAC_PI_2) * wreck.spin;
+            let (mut p, mut l, mut a) = (Point::direction(0.0, 0.0), 0.0, 0.0);
+            for (body, tri) in shatter(&hull, &wreck, 4.0) {
+                let m = Moments::of_polygon(&tri);
+                a += m.area();
+                p += body.vel * m.area();
+                l += m.polar_moment(1.0) * body.spin + m.area() * cross(body.pos(), body.vel);
+            }
+            let want_p = v_g * area;
+            let want_l = whole.polar_moment(1.0) * wreck.spin + area * cross(g, v_g);
+            assert!((a - area).abs() < 1e-5, "{kind:?}: area {a} vs {area}");
+            assert!(
+                (p - want_p).ideal_norm() < 1e-4 * want_p.ideal_norm(),
+                "{kind:?}: momentum {:?} vs {:?}",
+                p.to_euclidean(),
+                want_p.to_euclidean()
+            );
+            assert!(
+                (l - want_l).abs() < 1e-4 * want_l.abs(),
+                "{kind:?}: {l} vs {want_l}"
+            );
         }
     }
 }

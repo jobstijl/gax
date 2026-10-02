@@ -1025,6 +1025,7 @@ fn tunnel_sounds(w: &tunnel::World, view: &render::tunnel::View) -> Vec<sim::Eve
                     },
                     scored: points > 0,
                     points,
+                    wreck: None,
                 },
                 T::Bolt { pos } => sim::Event::Deflect {
                     pos: at(pos),
@@ -1217,6 +1218,17 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let camera = scene::camera(game.cam, game.half_height, size, game.time);
     let hud_cam = scene::camera(sim::body::pose_at(0.0, 0.0, 0.0), 18.0, size, game.time);
     scene::world_lines(&game.sim, game.alpha, game.time, &mut game.world_lines);
+    for p in &game.fx.wreckage {
+        let c = light::fade(p.color, p.life / fx::WRECK_LIFE);
+        scene::outline(
+            &mut game.world_lines,
+            &p.tri,
+            1.0,
+            c,
+            scene::THIN,
+            p.body.pose,
+        );
+    }
     for (p, text, age, color) in &game.fx.popups {
         // Rising and fading.
         let c = light::fade(*color, (1.0 - age / 1.1).max(0.0));

@@ -216,6 +216,19 @@ pub struct Ship {
     pub barrel: bool,
 }
 
+/// A killed enemy's motion and size: its outline breaks into pieces that carry them on.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Wreck {
+    /// Its pose.
+    pub pose: Pose,
+    /// Its linear velocity (a direction).
+    pub vel: P,
+    /// Its angular velocity.
+    pub spin: f32,
+    /// Its drawn radius.
+    pub radius: f32,
+}
+
 /// What happened in a tick, for the renderer (particles, grid impulses, shake) and the audio.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Event {
@@ -231,6 +244,9 @@ pub enum Event {
         scored: bool,
         /// Points gained (with the multiplier).
         points: u64,
+        /// Its motion and size, for the wreckage of its outline (`None` for a serpent's body
+        /// and the tunnel's foes).
+        wreck: Option<Wreck>,
     },
     /// A bullet hit a wall.
     Wall { pos: P },
@@ -695,6 +711,12 @@ impl World {
             size,
             scored,
             points,
+            wreck: Some(Wreck {
+                pose: e.body.pose,
+                vel: e.body.vel,
+                spin: e.body.spin,
+                radius: e.radius,
+            }),
         });
         // A serpent's body goes with its head.
         for seg in &e.chain {
@@ -704,6 +726,7 @@ impl World {
                 size: 0.4,
                 scored: false,
                 points: 0,
+                wreck: None,
             });
         }
         if scored {

@@ -218,6 +218,24 @@ fn regular(n: usize) -> Vec<Point<(), f32>> {
         .collect()
 }
 
+/// The main outline of a family at radius 1, for its wreckage (`None` for a singularity, which
+/// is drawn as circles and goes up in particles).
+pub fn hull(kind: Kind) -> Option<Vec<Point<(), f32>>> {
+    let scaled_by = |pts: &[Point<(), f32>], k: f32| pts.iter().map(|&p| scaled(p, k)).collect();
+    match kind {
+        Kind::Drifter => Some(DIAMOND.to_vec()),
+        Kind::Chaser => Some(scaled_by(&SQUARE, 0.9)),
+        Kind::Mote => Some(DART.to_vec()),
+        Kind::Evader => Some(BOW.to_vec()),
+        Kind::Splitter => Some(scaled_by(&SQUARE, 1.06)),
+        Kind::Fragment => Some(ARROW.to_vec()),
+        Kind::Serpent => Some(HEAD.to_vec()),
+        Kind::Warden => Some(TAIL.to_vec()),
+        Kind::Carrier => Some(regular(6)),
+        Kind::Singularity => None,
+    }
+}
+
 /// The shape of a family, drawn at pose `m` (time `t` animates it).
 #[allow(clippy::too_many_arguments)]
 pub fn draw_enemy(
