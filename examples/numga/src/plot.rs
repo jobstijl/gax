@@ -1,0 +1,532 @@
+//! Plot axes on a canvas: a rectangle of pixels showing a range of data, linear or logarithmic
+//! on each axis, with a frame, ticks and labels; lines, markers, arrows, filled shapes, level
+//! lines, images and legends in data coordinates.
+
+use crate::canvas::{Canvas, Px, Rgb};
+use crate::font::Align;
+use crate::{contour, palette};
+
+/// A marker's shape.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Marker {
+    /// A filled disk.
+    Dot,
+    /// A hollow circle.
+    Ring,
+    /// A filled square.
+    Square,
+    /// A five-pointed star.
+    Star,
+    /// A diagonal cross.
+    Cross,
+    /// A filled triangle, pointing up.
+    Triangle,
+}
+
+/// Axes: data `x` and `y` ranges shown in the pixel rectangle `rect` (`[x0, y0, x1, y1]`).
+#[derive(Clone, Copy, Debug)]
+pub struct Axes {
+    /// The pixel rectangle.
+    pub rect: [f32; 4],
+    /// The data range across.
+    pub x: [f32; 2],
+    /// The data range up.
+    pub y: [f32; 2],
+    /// Logarithmic across.
+    pub log_x: bool,
+    /// Logarithmic up.
+    pub log_y: bool,
+}
+
+/// `[x0, y0, x1, y1]` of panel `i` of `n` side by side on a canvas, with a margin.
+pub fn panel(c: &Canvas, i: usize, n: usize) -> [f32; 4] {
+    let w = c.width as f32 / n as f32;
+    [i as f32 * w, 0.0, (i + 1) as f32 * w, c.height as f32]
+}
+
+/// `rect` shrunk by `left`, `top`, `right`, `bottom` pixels (room for ticks and titles).
+pub fn inset(rect: [f32; 4], left: f32, top: f32, right: f32, bottom: f32) -> [f32; 4] {
+    [
+        rect[0] + left,
+        rect[1] + top,
+        rect[2] - right,
+        rect[3] - bottom,
+    ]
+}
+
+fn nice_step(span: f32, n: f32) -> f32 {
+    let raw = (span / n).abs().max(1e-30);
+    let mag = 10f32.powf(raw.log10().floor());
+    let f = raw / mag;
+    mag * if f < 1.5 {
+        1.0
+    } else if f < 3.5 {
+        2.0
+    } else if f < 7.5 {
+        5.0
+    } else {
+        10.0
+    }
+}
+
+fn label(v: f32, step: f32) -> String {
+    if v.abs() < step * 1e-3 {
+        return "0".into();
+    }
+    let digits = (-step.log10().floor()).max(0.0) as usize;
+    if v.abs() >= 1e4 || v.abs() < 1e-3 {
+        format!("{v:.1e}")
+    } else {
+        format!("{v:.digits$}")
+    }
+}
+
+impl Axes {
+    /// Axes showing `x` by `y` in `rect`.
+    pub fn new(rect: [f32; 4], x: [f32; 2], y: [f32; 2]) -> Axes {
+        Axes {
+            rect,
+            x,
+            y,
+            log_x: false,
+            log_y: false,
+        }
+    }
+
+    /// Axes with equal scales across and up, centred on `centre`, `half_height` units from the
+    /// middle to the top (for geometry).
+    pub fn equal(rect: [f32; 4], centre: [f32; 2], half_height: f32) -> Axes {
+        let (w, h) = (rect[2] - rect[0], rect[3] - rect[1]);
+        let half_width = half_height * w / h;
+        Axes::new(
+            rect,
+            [centre[0] - half_width, centre[0] + half_width],
+            [centre[1] - half_height, centre[1] + half_height],
+        )
+    }
+
+    /// The same, logarithmic up.
+    pub fn log_y(self) -> Axes {
+        Axes {
+            log_y: true,
+            ..self
+        }
+    }
+
+    /// The same, logarithmic across.
+    pub fn log_x(self) -> Axes {
+        Axes {
+            log_x: true,
+            ..self
+        }
+    }
+
+    fn t(v: f32, r: [f32; 2], log: bool) -> f32 {
+        if log {
+            (v.max(1e-30).ln() - r[0].ln()) / (r[1].ln() - r[0].ln())
+        } else {
+            (v - r[0]) / (r[1] - r[0])
+        }
+    }
+
+    /// The pixel of data point `p`.
+    pub fn px(&self, p: [f32; 2]) -> Px {
+        let tx = Self::t(p[0], self.x, self.log_x);
+        let ty = Self::t(p[1], self.y, self.log_y);
+        [
+            self.rect[0] + tx * (self.rect[2] - self.rect[0]),
+            self.rect[3] - ty * (self.rect[3] - self.rect[1]),
+        ]
+    }
+
+    /// The data point at pixel `q` (linear axes).
+    pub fn data(&self, q: Px) -> [f32; 2] {
+        let tx = (q[0] - self.rect[0]) / (self.rect[2] - self.rect[0]);
+        let ty = (self.rect[3] - q[1]) / (self.rect[3] - self.rect[1]);
+        let v = |t: f32, r: [f32; 2], log: bool| {
+            if log {
+                (r[0].ln() + t * (r[1].ln() - r[0].ln())).exp()
+            } else {
+                r[0] + t * (r[1] - r[0])
+            }
+        };
+        [v(tx, self.x, self.log_x), v(ty, self.y, self.log_y)]
+    }
+
+    /// Pixels per data unit across (linear axes).
+    pub fn scale(&self) -> f32 {
+        (self.rect[2] - self.rect[0]) / (self.x[1] - self.x[0])
+    }
+
+    /// Confine drawing to the axes.
+    pub fn clip(&self, c: &mut Canvas) {
+        c.clip(self.rect);
+    }
+
+    /// A frame with ticks and tick labels, a title above and axis labels.
+    pub fn frame(&self, c: &mut Canvas, title: &str, xlabel: &str, ylabel: &str) {
+        c.unclip();
+        let ink = palette::ink();
+        let dim = palette::grid();
+        let s = ((self.rect[3] - self.rect[1]) / 26.0).clamp(8.0, 14.0);
+        let [x0, y0, x1, y1] = self.rect;
+        c.polyline(
+            &[[x0, y0], [x1, y0], [x1, y1], [x0, y1]],
+            1.0,
+            dim,
+            1.0,
+            true,
+        );
+        let ticks = |r: [f32; 2], log: bool| -> Vec<f32> {
+            let (lo, hi) = (r[0].min(r[1]), r[0].max(r[1]));
+            if log {
+                let (a, b) = (lo.log10().ceil() as i32, hi.log10().floor() as i32);
+                (a..=b).map(|k| 10f32.powi(k)).collect()
+            } else {
+                let step = nice_step(hi - lo, 5.0);
+                let first = (lo / step).ceil() as i64;
+                let last = (hi / step).floor() as i64;
+                (first..=last).map(|k| k as f32 * step).collect()
+            }
+        };
+        let step_x = nice_step(self.x[1] - self.x[0], 5.0);
+        for v in ticks(self.x, self.log_x) {
+            let [px, _] = self.px([v, self.y[0]]);
+            c.line([px, y1], [px, y1 - 4.0], 1.0, dim, 1.0);
+            let text = if self.log_x {
+                format!("1E{}", v.log10().round())
+            } else {
+                label(v, step_x)
+            };
+            c.text(&text, px, y1 + s * 1.3, s * 0.8, ink, Align::Center);
+        }
+        let step_y = nice_step(self.y[1] - self.y[0], 5.0);
+        for v in ticks(self.y, self.log_y) {
+            let [_, py] = self.px([self.x[0], v]);
+            c.line([x0, py], [x0 + 4.0, py], 1.0, dim, 1.0);
+            let text = if self.log_y {
+                format!("1E{}", v.log10().round())
+            } else {
+                label(v, step_y)
+            };
+            c.text(
+                &text,
+                x0 - s * 0.4,
+                py + s * 0.4,
+                s * 0.8,
+                ink,
+                Align::Right,
+            );
+        }
+        if !title.is_empty() {
+            c.text(
+                title,
+                (x0 + x1) * 0.5,
+                y0 - s * 0.6,
+                s * 1.1,
+                ink,
+                Align::Center,
+            );
+        }
+        if !xlabel.is_empty() {
+            c.text(
+                xlabel,
+                (x0 + x1) * 0.5,
+                y1 + s * 2.7,
+                s * 0.9,
+                ink,
+                Align::Center,
+            );
+        }
+        if !ylabel.is_empty() {
+            c.text(
+                ylabel,
+                x0,
+                y0 - s * 0.6 - if title.is_empty() { 0.0 } else { s * 1.6 },
+                s * 0.9,
+                ink,
+                Align::Left,
+            );
+        }
+    }
+
+    /// A segment in data coordinates.
+    pub fn line(
+        &self,
+        c: &mut Canvas,
+        a: [f32; 2],
+        b: [f32; 2],
+        width: f32,
+        color: Rgb,
+        alpha: f32,
+    ) {
+        self.clip(c);
+        c.line(self.px(a), self.px(b), width, color, alpha);
+        c.unclip();
+    }
+
+    /// A polyline through data points; non-finite points break it.
+    pub fn polyline(&self, c: &mut Canvas, pts: &[[f32; 2]], width: f32, color: Rgb, alpha: f32) {
+        self.clip(c);
+        for w in pts.windows(2) {
+            if w[0].iter().chain(&w[1]).all(|v| v.is_finite()) {
+                c.line(self.px(w[0]), self.px(w[1]), width, color, alpha);
+            }
+        }
+        c.unclip();
+    }
+
+    /// A dashed polyline: dashes of `dash` pixels with equal gaps.
+    pub fn dashed(
+        &self,
+        c: &mut Canvas,
+        pts: &[[f32; 2]],
+        width: f32,
+        dash: f32,
+        color: Rgb,
+        alpha: f32,
+    ) {
+        self.clip(c);
+        let mut along = 0.0f32;
+        for w in pts.windows(2) {
+            let (a, b) = (self.px(w[0]), self.px(w[1]));
+            let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+            let mut s = 0.0;
+            while s < len {
+                let phase = (along + s) % (2.0 * dash);
+                let run = if phase < dash {
+                    dash - phase
+                } else {
+                    2.0 * dash - phase
+                };
+                let e = (s + run).min(len);
+                if phase < dash {
+                    let p = |t: f32| {
+                        [
+                            a[0] + (b[0] - a[0]) * t / len,
+                            a[1] + (b[1] - a[1]) * t / len,
+                        ]
+                    };
+                    c.line(p(s), p(e), width, color, alpha);
+                }
+                s = e;
+            }
+            along += len;
+        }
+        c.unclip();
+    }
+
+    /// A marker of `size` pixels at each data point.
+    pub fn scatter(
+        &self,
+        c: &mut Canvas,
+        pts: &[[f32; 2]],
+        marker: Marker,
+        size: f32,
+        color: Rgb,
+        alpha: f32,
+    ) {
+        self.clip(c);
+        for &p in pts {
+            if p.iter().all(|v| v.is_finite()) {
+                mark(c, self.px(p), marker, size, color, alpha);
+            }
+        }
+        c.unclip();
+    }
+
+    /// An arrow from `from` to `to` (data coordinates) with a head of `head` pixels.
+    pub fn arrow(
+        &self,
+        c: &mut Canvas,
+        from: [f32; 2],
+        to: [f32; 2],
+        width: f32,
+        head: f32,
+        color: Rgb,
+    ) {
+        self.clip(c);
+        arrow(c, self.px(from), self.px(to), width, head, color, 1.0);
+        c.unclip();
+    }
+
+    /// The infinite line through `p` along `d`, clipped to the axes.
+    pub fn axline(
+        &self,
+        c: &mut Canvas,
+        p: [f32; 2],
+        d: [f32; 2],
+        width: f32,
+        color: Rgb,
+        alpha: f32,
+    ) {
+        let big = 4.0 * ((self.x[1] - self.x[0]).abs() + (self.y[1] - self.y[0]).abs());
+        let n = (d[0] * d[0] + d[1] * d[1]).sqrt().max(1e-30);
+        let (dx, dy) = (d[0] / n * big, d[1] / n * big);
+        self.line(
+            c,
+            [p[0] - dx, p[1] - dy],
+            [p[0] + dx, p[1] + dy],
+            width,
+            color,
+            alpha,
+        );
+    }
+
+    /// A filled polygon in data coordinates.
+    pub fn fill(&self, c: &mut Canvas, poly: &[[f32; 2]], color: Rgb, alpha: f32) {
+        self.clip(c);
+        let px: Vec<Px> = poly.iter().map(|&p| self.px(p)).collect();
+        c.fill(&px, color, alpha);
+        c.unclip();
+    }
+
+    /// Text at a data point.
+    pub fn text(&self, c: &mut Canvas, at: [f32; 2], s: &str, size: f32, color: Rgb, align: Align) {
+        let [x, y] = self.px(at);
+        c.text(s, x, y, size, color, align);
+    }
+
+    /// The level line `f(x, y) = level`, from `n` x `n` samples over the axes.
+    pub fn contour(
+        &self,
+        c: &mut Canvas,
+        f: impl Fn(f32, f32) -> f32,
+        n: usize,
+        level: f32,
+        width: f32,
+        color: Rgb,
+    ) {
+        self.clip(c);
+        for [a, b] in contour::of_fn(f, self.x, self.y, n, level) {
+            c.line(self.px(a), self.px(b), width, color, 1.0);
+        }
+        c.unclip();
+    }
+
+    /// An image over the axes: `f(x, y)` per pixel (`samples` x `samples` each), `None` showing
+    /// the canvas through.
+    pub fn image(
+        &self,
+        c: &mut Canvas,
+        samples: usize,
+        f: impl Fn(f32, f32) -> Option<Rgb> + Sync,
+    ) {
+        self.clip(c);
+        let me = *self;
+        c.shade(samples, |x, y| {
+            let [u, v] = me.data([x, y]);
+            f(u, v)
+        });
+        c.unclip();
+    }
+
+    /// A legend in the top right corner: a short line of each colour and its label.
+    pub fn legend(&self, c: &mut Canvas, entries: &[(&str, Rgb)]) {
+        let s = ((self.rect[3] - self.rect[1]) / 30.0).clamp(7.0, 12.0);
+        let w = entries
+            .iter()
+            .map(|(t, _)| crate::font::width(t, s))
+            .fold(0.0, f32::max)
+            + s * 3.5;
+        let (x1, y0) = (self.rect[2] - s * 0.6, self.rect[1] + s * 0.6);
+        let x0 = x1 - w;
+        c.fill(
+            &[
+                [x0, y0],
+                [x1, y0],
+                [x1, y0 + s * 1.6 * entries.len() as f32 + s * 0.4],
+                [x0, y0 + s * 1.6 * entries.len() as f32 + s * 0.4],
+            ],
+            palette::bottom(),
+            0.75,
+        );
+        for (i, (t, col)) in entries.iter().enumerate() {
+            let y = y0 + s * (1.2 + 1.6 * i as f32);
+            c.line(
+                [x0 + s * 0.5, y - s * 0.35],
+                [x0 + s * 2.2, y - s * 0.35],
+                2.0,
+                *col,
+                1.0,
+            );
+            c.text(t, x0 + s * 2.8, y, s, palette::ink(), Align::Left);
+        }
+    }
+}
+
+/// A marker at pixel `p`.
+pub fn mark(c: &mut Canvas, p: Px, marker: Marker, size: f32, color: Rgb, alpha: f32) {
+    let r = size * 0.5;
+    match marker {
+        Marker::Dot => c.disk(p, r, color, alpha),
+        Marker::Ring => c.ring(p, r, (size / 6.0).max(1.0), color, alpha),
+        Marker::Square => c.fill(
+            &[
+                [p[0] - r, p[1] - r],
+                [p[0] + r, p[1] - r],
+                [p[0] + r, p[1] + r],
+                [p[0] - r, p[1] + r],
+            ],
+            color,
+            alpha,
+        ),
+        Marker::Triangle => c.fill(
+            &[
+                [p[0], p[1] - r],
+                [p[0] + r, p[1] + r * 0.8],
+                [p[0] - r, p[1] + r * 0.8],
+            ],
+            color,
+            alpha,
+        ),
+        Marker::Cross => {
+            c.line(
+                [p[0] - r, p[1] - r],
+                [p[0] + r, p[1] + r],
+                (size / 5.0).max(1.0),
+                color,
+                alpha,
+            );
+            c.line(
+                [p[0] - r, p[1] + r],
+                [p[0] + r, p[1] - r],
+                (size / 5.0).max(1.0),
+                color,
+                alpha,
+            );
+        }
+        Marker::Star => {
+            let pts: Vec<Px> = (0..10)
+                .map(|k| {
+                    let a = core::f32::consts::PI * (0.5 + k as f32 / 5.0);
+                    let rr = if k % 2 == 0 { r * 1.2 } else { r * 0.5 };
+                    [p[0] + rr * a.cos(), p[1] - rr * a.sin()]
+                })
+                .collect();
+            c.fill(&pts, color, alpha);
+        }
+    }
+}
+
+/// An arrow between pixels with a head of `head` pixels.
+pub fn arrow(c: &mut Canvas, a: Px, b: Px, width: f32, head: f32, color: Rgb, alpha: f32) {
+    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+    let len = (dx * dx + dy * dy).sqrt();
+    if len.is_nan() || len <= 1e-6 {
+        return;
+    }
+    let (ux, uy) = (dx / len, dy / len);
+    let h = head.min(len * 0.6);
+    let base = [b[0] - ux * h, b[1] - uy * h];
+    c.line(a, base, width, color, alpha);
+    c.fill(
+        &[
+            b,
+            [base[0] - uy * h * 0.45, base[1] + ux * h * 0.45],
+            [base[0] + uy * h * 0.45, base[1] - ux * h * 0.45],
+        ],
+        color,
+        alpha,
+    );
+}

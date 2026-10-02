@@ -1,0 +1,27 @@
+[package]
+name = "gax-numga-examples"
+description = "numga's examples ported to gax, each a small animation (window or GIF)"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A standalone crate, so that the windowing dependencies stay out of gax's workspace.
+[workspace]
+
+[dependencies]
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "macros", "pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga2d", "cga3d", "stap", "csta"] }
+winit = "0.30"
+softbuffer = "0.4"
+gif = "0.13"
+png = "0.17"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+debug = "line-tables-only"
