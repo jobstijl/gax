@@ -1,0 +1,493 @@
+//! numga's `relativity/dirac`: the Dirac electron in the spacetime algebra (STA). An electron's
+//! state at a point is an even multivector `ψ = exp(I β / 2) R √ρ`: a density, an angle `β` and
+//! a Lorentz rotor. Its sandwich on an open vector slot, `ψ >> Vector::slot()`, is a map on
+//! spacetime that carries the observer's frame to the electron's: the image of the time axis
+//! is the current, that of the `z` axis the spin. `β` drops out on vectors and shows on
+//! bivectors.
+//!
+//! For a plane wave the Dirac equation is a linear map on even multivectors, the Hamiltonian
+//! `H(ψ) = p t ψ + m t ψ t`. Paired with the Hermitian product `⟨(t ψ̃ t) φ⟩` it is a symmetric
+//! form, and the generalized eigenproblem gives its energies `±√(p² + m²)`, each fourfold: the
+//! mass shell. A mixture of positive and negative energy makes the current circulate at twice
+//! the energy, the trembling motion (Zitterbewegung). The animation traces the paths of three
+//! such electrons, with their spins, beside the two sheets of the mass shell.
+
+use std::sync::OnceLock;
+
+use gax_numga_examples::canvas::srgb;
+use gax_numga_examples::{
+    Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+};
+
+mod dirac {
+    use gax::sta::{Bivector, Even, Pseudoscalar, Scalar, Vector};
+
+    pub type V = Vector<(), f64>;
+    pub type B = Bivector<(), f64>;
+    /// A Dirac spinor is an even multivector.
+    pub type Spinor = Even<(), f64>;
+    /// The spinor's map on spacetime.
+    pub type Frame = Vector<(Vector,), f64>;
+    /// The plane-wave Dirac equation, a map on spinors.
+    pub type Hamiltonian = Even<(Even,), f64>;
+
+    /// The observer's time axis.
+    pub fn time() -> V {
+        Vector::new(1.0, 0.0, 0.0, 0.0)
+    }
+
+    /// The `z` axis.
+    pub fn z_axis() -> V {
+        Vector::new(0.0, 0.0, 0.0, 1.0)
+    }
+
+    /// The spin plane `y ^ x`: right multiplication by it squares to minus one.
+    pub fn spin_plane() -> B {
+        Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, -1.0)
+    }
+
+    /// A scalar as a spinor.
+    pub fn scalar(s: f64) -> Spinor {
+        Scalar::new(s).cast::<Even>()
+    }
+
+    /// `exp(I angle)`, with `I = e0123` squaring to minus one: `cos + I sin`. (STA's
+    /// pseudoscalar has no `exp` in gax; numga exponentiates any blade.)
+    pub fn phase(angle: f64) -> Spinor {
+        scalar(angle.cos()) + (Pseudoscalar::new(angle.sin())).cast::<Even>()
+    }
+
+    // Used by the tests (part of numga's core).
+    #[cfg_attr(not(test), allow(dead_code))]
+    /// The spinor with the given density, angle `β` and Lorentz rotor.
+    pub fn spinor(density: f64, beta: f64, rotor: Spinor) -> Spinor {
+        phase(beta / 2.0) * rotor * density.sqrt()
+    }
+
+    /// The spinor's map on spacetime: the density times its Lorentz transformation. `β` drops
+    /// out, because the pseudoscalar anticommutes with vectors.
+    pub fn frame(psi: Spinor) -> Frame {
+        psi >> Vector::slot()
+    }
+
+    /// `ψ ψ̃ = exp(I β) ρ`: a scalar plus a pseudoscalar.
+    pub fn invariants(psi: Spinor) -> Spinor {
+        psi * psi.reverse()
+    }
+
+    // Used by the tests (part of numga's core).
+    #[cfg_attr(not(test), allow(dead_code))]
+    /// What the spinor does to bivectors beyond what its frame does: its own sandwich on
+    /// bivectors, composed with the inverse of the frame's extension to bivectors. It is
+    /// multiplication by `exp(I β) / ρ`.
+    pub fn duality(psi: Spinor) -> Bivector<(Bivector,), f64> {
+        (psi >> Bivector::slot()).of(frame(psi).outermorphism::<Bivector>().inverse())
+    }
+
+    /// The electron's current: the frame's image of the time axis.
+    pub fn current(psi: Spinor) -> V {
+        frame(psi).of(time())
+    }
+
+    /// The electron's spin, in units of half the reduced Planck constant: the frame's image of
+    /// the `z` axis.
+    pub fn spin(psi: Spinor) -> V {
+        frame(psi).of(z_axis())
+    }
+
+    /// The velocity a current carries, as the observer sees it: its relative vector (the part
+    /// across the time axis) over its density (the part along it).
+    pub fn velocity(flow: V) -> B {
+        (flow ^ time()) * (1.0 / (flow | time()).s())
+    }
+
+    /// The Dirac equation for a plane wave of the given spatial momentum, as a map on spinors:
+    /// the momentum as a relative vector on the left, and the mass through the reflection in
+    /// the time axis.
+    pub fn hamiltonian(momentum: V, mass: f64) -> Hamiltonian {
+        let t = time();
+        (momentum * t) * Even::slot() + (t * Even::slot() * t) * mass
+    }
+
+    /// The Hermitian product of spinors, `⟨(t ψ̃ t) φ⟩`: positive definite, the identity in
+    /// the blade basis. The Hamiltonian is symmetric under it.
+    pub fn hermitian() -> gax::sta::Scalar<(Even, Even), f64> {
+        form(Even::slot())
+    }
+
+    /// The energy of the plane wave, `√(m² + p²)`: a spatial vector squares to minus its
+    /// length squared in this signature.
+    pub fn energy(momentum: V, mass: f64) -> f64 {
+        (mass * mass - momentum.norm_squared()).sqrt()
+    }
+
+    /// The plane wave's spinor at the given times. The projector onto positive energy,
+    /// `(ψ + H(ψ) / E) / 2`, splits it into its positive- and negative-energy parts, which turn
+    /// in the spin plane at the energy, in opposite senses.
+    pub fn evolve(momentum: V, mass: f64, psi: Spinor, times: &[f64]) -> Vec<Spinor> {
+        let e = energy(momentum, mass);
+        let positive = (psi + hamiltonian(momentum, mass).of(psi) * (1.0 / e)) * 0.5;
+        times
+            .iter()
+            .map(|t| {
+                let turn = (spin_plane() * (e * t)).exp().into_inner();
+                positive * turn.reverse() + (psi - positive) * turn
+            })
+            .collect()
+    }
+
+    /// The positions a velocity carries a point through, from the origin, one step at a time.
+    pub fn path(velocities: &[B], dt: f64) -> Vec<B> {
+        let mut at = Bivector::zero();
+        let mut out = vec![at];
+        for v in &velocities[..velocities.len() - 1] {
+            at += *v * dt;
+            out.push(at);
+        }
+        out
+    }
+
+    // --- the scenes -------------------------------------------------------------------
+
+    pub const MASS: f64 = 1.0;
+    /// The share of negative energy in each electron.
+    pub const MIXTURES: [f64; 3] = [0.1, 0.25, 0.5];
+
+    /// A spatial momentum.
+    pub fn momentum(x: f64, y: f64, z: f64) -> V {
+        Vector::new(0.0, x, y, z)
+    }
+
+    /// The Hamiltonian's energies, ascending, and its eigenstates, over a grid of momenta in
+    /// the `xy` plane: `(px, py, energies, states)` row by row.
+    #[allow(clippy::type_complexity)]
+    pub fn mass_shell(extent: f64, count: usize) -> Vec<(f64, f64, [f64; 8], [Spinor; 8])> {
+        let along = |i: usize| -extent + 2.0 * extent * i as f64 / (count - 1) as f64;
+        (0..count * count)
+            .map(|k| {
+                let (px, py) = (along(k % count), along(k / count));
+                let h = hamiltonian(momentum(px, py, 0.0), MASS);
+                let (values, states) = form(h).eigh_with(hermitian());
+                (px, py, values, states)
+            })
+            .collect()
+    }
+
+    /// The form `⟨(t ψ̃ t) H(φ)⟩` of a map on spinors: symmetric when the map is Hermitian.
+    pub fn form(h: Hamiltonian) -> gax::sta::Scalar<(Even, Even), f64> {
+        let t = time();
+        (t * Even::slot().reverse() * t).scalar_product(h)
+    }
+
+    /// Electrons of the given momentum with a share of negative energy mixed in, followed in
+    /// time: the times, their spinors, and the paths their currents trace.
+    #[allow(clippy::type_complexity)]
+    pub fn trembling(
+        momentum: V,
+        seconds: f64,
+        count: usize,
+    ) -> (Vec<f64>, Vec<Vec<Spinor>>, Vec<Vec<B>>) {
+        let h = hamiltonian(momentum, MASS);
+        let e = energy(momentum, MASS);
+        // A positive-energy state with spin along z, and a negative-energy state that turns the
+        // other way (from `tx = e01 = -e10`).
+        let tx = Even::new(0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let electron = (scalar(1.0) + h.of(scalar(1.0)) * (1.0 / e)) * 0.5;
+        let positron = (tx - h.of(tx) * (1.0 / e)) * 0.5;
+        let electron = electron * (1.0 / invariants(electron).s().sqrt());
+        let positron = positron * (1.0 / (-invariants(positron).s()).sqrt());
+        let times: Vec<f64> = (0..count)
+            .map(|i| seconds * i as f64 / (count - 1) as f64)
+            .collect();
+        let dt = times[1] - times[0];
+        let mut spinors = Vec::new();
+        let mut paths = Vec::new();
+        for share in MIXTURES {
+            let psi = evolve(
+                momentum,
+                MASS,
+                electron * (1.0 - share).sqrt() + positron * share.sqrt(),
+                &times,
+            );
+            let velocities: Vec<B> = psi.iter().map(|p| velocity(current(*p))).collect();
+            paths.push(path(&velocities, dt));
+            spinors.push(psi);
+        }
+        (times, spinors, paths)
+    }
+}
+
+use dirac::*;
+
+const SECONDS: f32 = 10.0;
+/// The time the trembling paths are followed for.
+const DURATION: f64 = 12.0;
+const SAMPLES: usize = 600;
+
+/// What the frames share: the mass shell's grid and sheets, and the trembling paths.
+struct Scene {
+    shell: (usize, Vec<[f32; 3]>, Vec<[f32; 3]>),
+    paths: Vec<Vec<[f32; 3]>>,
+    spins: Vec<Vec<[f32; 3]>>,
+}
+
+/// A relative vector's components along `xt`, `yt` and `zt` (the bivectors `e10, e20, e30`,
+/// which square to +1).
+fn relative(b: B) -> [f32; 3] {
+    [b.e10() as f32, b.e20() as f32, b.e30() as f32]
+}
+
+/// The spatial part of a spacetime vector, as the observer sees it.
+fn spatial(v: V) -> [f32; 3] {
+    relative(v ^ time())
+}
+
+fn scene() -> &'static Scene {
+    static SCENE: OnceLock<Scene> = OnceLock::new();
+    SCENE.get_or_init(|| {
+        let n = 21;
+        let shell = mass_shell(2.0, n);
+        let sheet = |k: usize| -> Vec<[f32; 3]> {
+            shell
+                .iter()
+                .map(|(px, py, e, _)| [*px as f32, *py as f32, e[k] as f32])
+                .collect()
+        };
+        let (_, spinors, paths) = trembling(momentum(0.0, 0.0, 0.3), DURATION, SAMPLES);
+        Scene {
+            shell: (n, sheet(7), sheet(0)),
+            paths: paths
+                .iter()
+                .map(|p| p.iter().map(|b| relative(*b)).collect())
+                .collect(),
+            spins: spinors
+                .iter()
+                .map(|s| s.iter().map(|p| spatial(spin(*p))).collect())
+                .collect(),
+        }
+    })
+}
+
+fn colours() -> [Rgb; 3] {
+    [palette::sky(), palette::purple(), srgb(0.95, 0.42, 0.33)]
+}
+
+/// A camera whose image centre sits at pixel `(cx, h / 2)` of the canvas.
+fn camera(cx: f32, h: f32, target: [f32; 3], azimuth: f32, elevation: f32, half: f32) -> Camera {
+    Camera::orbit(
+        (2.0 * cx) as usize,
+        h as usize,
+        target,
+        20.0,
+        azimuth,
+        elevation,
+        Lens::Parallel(half),
+    )
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let s = scene();
+    let (w, h) = (c.width as f32, c.height as f32);
+    let size = (h / 36.0).clamp(7.0, 14.0);
+    let phase = t / SECONDS;
+    let colours = colours();
+
+    // The trembling paths, traced as time goes on, with each electron's spin where it is.
+    let upto = ((phase * SAMPLES as f32) as usize).clamp(2, SAMPLES);
+    let azimuth = -1.05 + 0.5 * (phase * core::f32::consts::TAU).sin();
+    let cam = camera(w * 0.3, h * 1.08, [0.0, 0.0, 1.7], azimuth, 0.2, 2.0);
+    let mut scene3 = Scene3::new(cam);
+    // A floor grid and the z axis.
+    for k in 0..=6 {
+        let a = -0.6 + 0.2 * k as f32;
+        let g = palette::grid();
+        scene3.seg([a, -0.6, 0.0], [a, 0.6, 0.0], 1.0, g, 0.7);
+        scene3.seg([-0.6, a, 0.0], [0.6, a, 0.0], 1.0, g, 0.7);
+    }
+    scene3.seg([0.0, 0.0, 0.0], [0.0, 0.0, 3.4], 1.0, palette::grid(), 0.9);
+    for (k, (path, spins)) in s.paths.iter().zip(&s.spins).enumerate() {
+        scene3.polyline(&path[..upto], 1.6, colours[k], 1.0);
+        let here = path[upto - 1];
+        let axis = spins[upto - 1];
+        let n = (axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2]).sqrt();
+        scene3.arrow(here, axis.map(|v| 0.4 * v / n), 2.0, 8.0, colours[k]);
+        scene3.dot(here, Marker::Dot, 6.0, colours[k]);
+    }
+    c.clip([0.0, 0.0, w * 0.6, h]);
+    scene3.draw(c);
+    c.unclip();
+    let at = f64::from(phase) * DURATION;
+    c.text(
+        &format!("T = {at:4.1} H/MC2"),
+        w * 0.04,
+        h * 0.95,
+        size,
+        palette::ink(),
+        Align::Left,
+    );
+    for (k, share) in MIXTURES.iter().enumerate() {
+        c.text(
+            &format!("{:.0}% NEGATIVE ENERGY", share * 100.0),
+            w * 0.04,
+            h * 0.2 + k as f32 * size * 1.6,
+            size * 0.85,
+            colours[k],
+            Align::Left,
+        );
+    }
+
+    // The mass shell: the two sheets of energies over the momentum plane, turning.
+    let (n, top, bottom) = &s.shell;
+    let azimuth = -0.9 + phase * core::f32::consts::TAU;
+    let cam = camera(w * 0.8, h * 1.12, [0.0, 0.0, 0.0], azimuth, 0.3, 4.6);
+    let mut scene3 = Scene3::new(cam);
+    for (sheet, colour) in [(top, palette::red()), (bottom, palette::sky())] {
+        let m = *n - 1;
+        let at = |u: f32, v: f32| {
+            let (i, j) = (
+                (u * m as f32).round() as usize,
+                (v * m as f32).round() as usize,
+            );
+            sheet[j * n + i]
+        };
+        scene3.surface(at, m, m, |_, _| colour, 0.6, Some((colour, 0.6)));
+    }
+    scene3.seg([0.0, 0.0, -3.2], [0.0, 0.0, 3.2], 1.0, palette::ink(), 0.6);
+    c.clip([w * 0.6, 0.0, w, h]);
+    scene3.draw(c);
+    c.unclip();
+    let x = w * 0.8;
+    c.text(
+        "THE MASS SHELL: E = +-SQRT(P2 + M2)",
+        x,
+        h * 0.2,
+        size * 0.85,
+        palette::ink(),
+        Align::Center,
+    );
+    c.text(
+        "POSITIVE ENERGY",
+        x,
+        h * 0.2 + size * 1.6,
+        size * 0.8,
+        palette::red(),
+        Align::Center,
+    );
+    c.text(
+        "NEGATIVE ENERGY, GAP 2 MC2",
+        x,
+        h * 0.95,
+        size * 0.8,
+        palette::sky(),
+        Align::Center,
+    );
+    caption(
+        c,
+        "THE DIRAC ELECTRON: ZITTERBEWEGUNG",
+        "STA SPINORS: THE CURRENT CIRCLES AT TWICE THE ENERGY, SPIN ALONG Z",
+    );
+}
+
+fn main() {
+    run(Anim::new("dirac", SECONDS).size(960, 540), draw);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dirac::*;
+    use gax::sta::{Bivector, Even, Vector};
+
+    /// numga's `np.random.default_rng(0).normal` cannot be reproduced: a xorshift stream with
+    /// Box-Muller normals stands in (the check holds for any probe).
+    struct Rng(u64);
+    impl Rng {
+        fn uniform(&mut self) -> f64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+        }
+        fn normal(&mut self) -> f64 {
+            let (u, v) = (self.uniform(), self.uniform());
+            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
+        }
+    }
+
+    fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
+        a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+    }
+
+    /// `ψ >> v == ρ (R >> v)` for vectors; on bivectors the spinor's sandwich is its frame's
+    /// extension times `exp(I β) / ρ`.
+    #[test]
+    fn a_spinor_is_rho_times_a_lorentz_map_and_beta_acts_only_on_bivectors() {
+        // numga's `(tx * 0.4 + xy * 0.9 + yz * -0.3) * 0.5`, with `tx = -e10`.
+        let rotor = Bivector::new(-0.2, 0.0, 0.0, -0.15, 0.0, 0.45)
+            .exp()
+            .into_inner();
+        let psi = spinor(2.0, 0.7, rotor);
+        let v = Vector::new(0.3, -1.2, 0.5, 2.0);
+        assert!(close(&frame(psi).of(v).c, &((rotor >> v) * 2.0).c, 1e-12));
+        let b = Bivector::new(0.2, -0.4, 1.1, 0.3, -0.7, 0.5);
+        let expected: Even<(), f64> = phase(0.7) * b * 0.5;
+        assert!(close(
+            &duality(psi).of(b).c,
+            &expected.cast::<Bivector>().c,
+            1e-9
+        ));
+        assert!(expected.s().abs() < 1e-15 && expected.e0123().abs() < 1e-15);
+    }
+
+    /// Each momentum has the energies `-E` and `+E`, each fourfold; the positive-energy states
+    /// have `β = 0` and the negative-energy states `β = π`, where `ψ ψ̃` has a negative scalar
+    /// part.
+    #[test]
+    fn mass_shell_energies_are_fourfold_and_beta_tells_their_sign() {
+        for (px, py, values, states) in mass_shell(1.0, 5) {
+            let e = energy(momentum(px, py, 0.0), MASS);
+            for (k, value) in values.iter().enumerate() {
+                let expected = if k < 4 { -e } else { e };
+                assert!((value - expected).abs() < 1e-12, "{values:?} vs {e}");
+                let sign = invariants(states[k]).s().signum();
+                assert_eq!(sign, if k < 4 { -1.0 } else { 1.0 });
+            }
+        }
+    }
+
+    /// The density the current carries is constant in time, and the Hamiltonian commutes with
+    /// right multiplication by the spin plane.
+    #[test]
+    fn trembling_density_is_constant_and_the_spin_plane_commutes() {
+        let p = momentum(0.0, 0.0, 0.3);
+        let (_, spinors, paths) = trembling(p, 3.0, 60);
+        for psi in &spinors {
+            let first = (current(psi[0]) | time()).s();
+            for s in psi {
+                let density = (current(*s) | time()).s();
+                assert!((density - first).abs() <= 1e-10 * first.abs());
+            }
+        }
+        assert_eq!(paths.len(), 3);
+        let mut rng = Rng(0x9e37_79b9_7f4a_7c15);
+        let probe = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.normal()));
+        let h = hamiltonian(p, MASS);
+        let unit = Even::slot() * spin_plane();
+        assert!(close(
+            &h.of(unit.of(probe)).c,
+            &unit.of(h.of(probe)).c,
+            1e-12
+        ));
+    }
+
+    #[test]
+    fn a_frame_draws() {
+        let mut draw = super::draw;
+        let c = gax_numga_examples::app::frame(
+            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
+            0.5,
+            &mut draw,
+        );
+        assert!(c.mean()[0] > 0.0);
+    }
+}
