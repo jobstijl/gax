@@ -3,7 +3,8 @@
 
 use crate::canvas::{Rgb, mix, srgb};
 
-fn stops(t: f32, s: &[[f32; 3]]) -> Rgb {
+/// A colormap through `s`, sRGB stops spaced evenly over `t ∈ [0, 1]`, linear between them.
+pub fn stops(t: f32, s: &[[f32; 3]]) -> Rgb {
     let t = if t.is_finite() {
         t.clamp(0.0, 1.0)
     } else {

@@ -145,7 +145,15 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Determinism per value (ADR-040): `Strict<T>` coefficients, on scalars and every SIMD level; the lanes' `exp` made the scalar's (a determinism bug with the feature)
 - [x] Mass properties (ADR-041): `pga3d::Moments` and `pga2d::Moments` from boundary meshes and polygons, after *Clean up your Mesh!*; the asteroids example breaks rocks into the pieces of their outlines with momentum conserved
 - [x] Generated algebras as directories of parts under 400 KB (GitHub highlights them), `.gitattributes` for generated files
-- [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, complex coefficients, algebras beyond 9D
+- [x] numga's examples ported (`examples/numga`): 52 animated binaries with numga's tests; the port's findings below
+- [x] Complex coefficients and general eigenvalues (ADR-042): `gax::Complex<T>` as a `Coef`, `eigvals`/`eig` on square maps (Hessenberg and double-shift QR, inverse iteration), `eigh` on maps, `map_coefs`
+- [x] The Hodge dual `hodge()` (`~x I`, numga's `dual`) beside the metric-free `dual()`; `Sum` for values and maps; `Motor::look_at` built from its frame (an f32 camera looking along `up` faced away)
+- [ ] Open-slot products of large kinds compile very slowly (a 6D signature's sandwich and product maps over 15 minutes, 12 GB for twelve): emit them as table loops, as the largest value products are
+- [ ] Extra kinds in the standard algebras: PGA ideal points (`Direction`), VGA3D `Paravector`, STA `Phasor` (scalar + pseudoscalar, with `exp` of the pseudoscalar)
+- [ ] An algebra trait (associated kinds `Point`, `Line`, `Motor`, …) for code written once over PGA2D and PGA3D or VGA2D–5D; the ports used macros
+- [ ] Grade-preserving sandwiches of certified versors in 5D and up (`m >> x` widens to the odd or full kind), and `normalized` for 5D even versors
+- [ ] Binding several slots of a form with maps at once (`value(dynamics, actuation)` is `.of(a).at::<1>().of(b).swap()` now); `lstsq` over several leading slots; `pinv` and `svd` on forms and non-square maps; a semidefinite generalized `eigh`
+- [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D
 
 ## Decisions for the project owner
 - Publishing to crates.io (later).

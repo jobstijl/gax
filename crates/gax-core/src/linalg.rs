@@ -768,6 +768,383 @@ where
     x
 }
 
+/// The eigenvalues of a general (non-symmetric) real matrix, as `(re, im)`, complex pairs
+/// conjugate and adjacent, sorted by real part, then imaginary part. Householder reduction to
+/// Hessenberg form, then the double-shift QR iteration (EISPACK's `hqr`, as in JAMA), with its
+/// exceptional shifts at the 10th and 30th iteration. Eigenvalues that do not converge in
+/// `30 N` iterations are NaN. For scalar coefficients: the iteration branches on the data.
+#[allow(clippy::many_single_char_names, clippy::too_many_lines)]
+pub fn eigvals<T: Real, M: SquareArr<T>>(a: &M) -> (M::Vector, M::Vector) {
+    let n = M::N;
+    let mut h = *a;
+    let (zero, one) = (T::zero(), T::one());
+    let lt = |x: T, y: T| T::all_lt(x, y);
+    // Householder reduction to upper Hessenberg form (an orthogonal similarity).
+    for k in 0..n.saturating_sub(2) {
+        let mut v = M::zero_vector();
+        let mut alpha2 = zero;
+        for i in k + 1..n {
+            v[i] = h[i][k];
+            alpha2 = alpha2 + v[i] * v[i];
+        }
+        let norm = alpha2.sqrt();
+        if !lt(T::from_f64(1e-300), norm) {
+            continue;
+        }
+        let sign = if lt(v[k + 1], zero) { -one } else { one };
+        v[k + 1] = v[k + 1] + sign * norm;
+        let mut vv = zero;
+        for i in k + 1..n {
+            vv = vv + v[i] * v[i];
+        }
+        let two_over = T::from_i64(2) / vv;
+        for j in 0..n {
+            let mut s = zero;
+            for i in k + 1..n {
+                s = s + v[i] * h[i][j];
+            }
+            let s = s * two_over;
+            for i in k + 1..n {
+                h[i][j] = h[i][j] - s * v[i];
+            }
+        }
+        for i in 0..n {
+            let mut s = zero;
+            for j in k + 1..n {
+                s = s + h[i][j] * v[j];
+            }
+            let s = s * two_over;
+            for j in k + 1..n {
+                h[i][j] = h[i][j] - s * v[j];
+            }
+        }
+    }
+    let (mut d, mut e) = (M::zero_vector(), M::zero_vector());
+    if n == 0 {
+        return (d, e);
+    }
+    let eps = T::epsilon();
+    let mut norm = zero;
+    for i in 0..n {
+        for j in i.saturating_sub(1)..n {
+            norm = norm + h[i][j].abs();
+        }
+    }
+    let (mut p, mut q, mut r) = (zero, zero, zero);
+    let (mut s, mut z): (T, T);
+    let mut exshift = zero;
+    let mut top = n as isize - 1;
+    let mut iter = 0usize;
+    let low = 0isize;
+    let at = |h: &M, i: isize, j: isize| h[i as usize][j as usize];
+    while top >= low {
+        let nn = top;
+        // A small subdiagonal element splits the matrix.
+        let mut l = nn;
+        while l > low {
+            let mut s0 = at(&h, l - 1, l - 1).abs() + at(&h, l, l).abs();
+            if s0 == zero {
+                s0 = norm;
+            }
+            if lt(at(&h, l, l - 1).abs(), eps * s0) {
+                break;
+            }
+            l -= 1;
+        }
+        if l == nn {
+            // One root.
+            d[nn as usize] = at(&h, nn, nn) + exshift;
+            e[nn as usize] = zero;
+            top -= 1;
+            iter = 0;
+        } else if l == nn - 1 {
+            // Two roots: a real pair or a conjugate pair.
+            let w = at(&h, nn, nn - 1) * at(&h, nn - 1, nn);
+            p = (at(&h, nn - 1, nn - 1) - at(&h, nn, nn)) * T::from_f64(0.5);
+            q = p * p + w;
+            z = q.abs().sqrt();
+            let x = at(&h, nn, nn) + exshift;
+            let (i1, i0) = ((nn - 1) as usize, nn as usize);
+            if lt(q, zero) {
+                d[i1] = x + p;
+                d[i0] = x + p;
+                e[i1] = z;
+                e[i0] = -z;
+            } else {
+                z = if lt(p, zero) { p - z } else { p + z };
+                d[i1] = x + z;
+                d[i0] = if z == zero { d[i1] } else { x - w / z };
+                e[i1] = zero;
+                e[i0] = zero;
+            }
+            top -= 2;
+            iter = 0;
+        } else {
+            if iter > 30 * n {
+                for k in low..=nn {
+                    d[k as usize] = T::from_f64(f64::NAN);
+                    e[k as usize] = T::from_f64(f64::NAN);
+                }
+                break;
+            }
+            let mut x = at(&h, nn, nn);
+            let mut y = zero;
+            let mut w = zero;
+            if l < nn {
+                y = at(&h, nn - 1, nn - 1);
+                w = at(&h, nn, nn - 1) * at(&h, nn - 1, nn);
+            }
+            // Wilkinson's exceptional shift.
+            if iter == 10 {
+                exshift = exshift + x;
+                for i in low..=nn {
+                    h[i as usize][i as usize] = h[i as usize][i as usize] - x;
+                }
+                let s0 = at(&h, nn, nn - 1).abs() + at(&h, nn - 1, nn - 2).abs();
+                x = T::from_f64(0.75) * s0;
+                y = x;
+                w = T::from_f64(-0.4375) * s0 * s0;
+            }
+            // MATLAB's exceptional shift.
+            if iter == 30 {
+                let mut s0 = (y - x) * T::from_f64(0.5);
+                s0 = s0 * s0 + w;
+                if lt(zero, s0) {
+                    s0 = s0.sqrt();
+                    if lt(y, x) {
+                        s0 = -s0;
+                    }
+                    s0 = x - w / ((y - x) * T::from_f64(0.5) + s0);
+                    for i in low..=nn {
+                        h[i as usize][i as usize] = h[i as usize][i as usize] - s0;
+                    }
+                    exshift = exshift + s0;
+                    x = T::from_f64(0.964);
+                    y = x;
+                    w = x;
+                }
+            }
+            iter += 1;
+            // Two consecutive small subdiagonal elements.
+            let mut m = nn - 2;
+            while m >= l {
+                z = at(&h, m, m);
+                r = x - z;
+                s = y - z;
+                p = (r * s - w) / at(&h, m + 1, m) + at(&h, m, m + 1);
+                q = at(&h, m + 1, m + 1) - z - r - s;
+                r = at(&h, m + 2, m + 1);
+                s = p.abs() + q.abs() + r.abs();
+                p = p / s;
+                q = q / s;
+                r = r / s;
+                if m == l {
+                    break;
+                }
+                let lhs = at(&h, m, m - 1).abs() * (q.abs() + r.abs());
+                let rhs = eps
+                    * (p.abs()
+                        * (at(&h, m - 1, m - 1).abs() + z.abs() + at(&h, m + 1, m + 1).abs()));
+                if lt(lhs, rhs) {
+                    break;
+                }
+                m -= 1;
+            }
+            for i in m + 2..=nn {
+                h[i as usize][(i - 2) as usize] = zero;
+                if i > m + 2 {
+                    h[i as usize][(i - 3) as usize] = zero;
+                }
+            }
+            // The double QR step on rows l..=nn and columns m..=nn.
+            let mut k = m;
+            while k < nn {
+                let notlast = k != nn - 1;
+                if k != m {
+                    p = at(&h, k, k - 1);
+                    q = at(&h, k + 1, k - 1);
+                    r = if notlast { at(&h, k + 2, k - 1) } else { zero };
+                    x = p.abs() + q.abs() + r.abs();
+                    if x == zero {
+                        k += 1;
+                        continue;
+                    }
+                    p = p / x;
+                    q = q / x;
+                    r = r / x;
+                }
+                s = (p * p + q * q + r * r).sqrt();
+                if lt(p, zero) {
+                    s = -s;
+                }
+                if s != zero {
+                    if k != m {
+                        h[k as usize][(k - 1) as usize] = -s * x;
+                    } else if l != m {
+                        h[k as usize][(k - 1) as usize] = -at(&h, k, k - 1);
+                    }
+                    p = p + s;
+                    x = p / s;
+                    y = q / s;
+                    z = r / s;
+                    q = q / p;
+                    r = r / p;
+                    for j in k..=nn {
+                        let (k0, j0) = (k as usize, j as usize);
+                        let mut pp = h[k0][j0] + q * h[k0 + 1][j0];
+                        if notlast {
+                            pp = pp + r * h[k0 + 2][j0];
+                            h[k0 + 2][j0] = h[k0 + 2][j0] - pp * z;
+                        }
+                        h[k0][j0] = h[k0][j0] - pp * x;
+                        h[k0 + 1][j0] = h[k0 + 1][j0] - pp * y;
+                    }
+                    let last = nn.min(k + 3);
+                    for i in l..=last {
+                        let (i0, k0) = (i as usize, k as usize);
+                        let mut pp = x * h[i0][k0] + y * h[i0][k0 + 1];
+                        if notlast {
+                            pp = pp + z * h[i0][k0 + 2];
+                            h[i0][k0 + 2] = h[i0][k0 + 2] - pp * r;
+                        }
+                        h[i0][k0] = h[i0][k0] - pp;
+                        h[i0][k0 + 1] = h[i0][k0 + 1] - pp * q;
+                    }
+                }
+                k += 1;
+            }
+        }
+    }
+    // Sort by real part, then imaginary part (insertion sort: N is small).
+    for i in 1..n {
+        let mut j = i;
+        while j > 0 && (lt(d[j], d[j - 1]) || (d[j] == d[j - 1] && lt(e[j], e[j - 1]))) {
+            let (a, b) = (d[j], e[j]);
+            d[j] = d[j - 1];
+            e[j] = e[j - 1];
+            d[j - 1] = a;
+            e[j - 1] = b;
+            j -= 1;
+        }
+    }
+    (d, e)
+}
+
+/// An eigenvector of `a` for the eigenvalue `re + i im`, as `(re, im)` parts, unit length, by
+/// two steps of inverse iteration on `a − λ I` (complex Gaussian elimination with partial
+/// pivoting, the shift nudged off the eigenvalue by a few ulps of the matrix's norm).
+#[allow(clippy::many_single_char_names, clippy::too_many_lines)]
+pub fn eigvector<T: Real, M: SquareArr<T>>(a: &M, re: T, im: T) -> (M::Vector, M::Vector) {
+    let n = M::N;
+    let zero = T::zero();
+    let lt = |x: T, y: T| T::all_lt(x, y);
+    let mut norm = zero;
+    for i in 0..n {
+        for j in 0..n {
+            norm = norm + a[i][j].abs();
+        }
+    }
+    let nudge = T::epsilon() * T::from_i64(64) * norm.max(T::one());
+    let (lr, li) = (re + nudge, im);
+    // B = A − λ I, as real and imaginary parts.
+    let (mut br, mut bi) = (*a, M::zero());
+    for i in 0..n {
+        br[i][i] = br[i][i] - lr;
+        bi[i][i] = bi[i][i] - li;
+    }
+    // LU with partial pivoting, in place; the permutation matrix records the row swaps.
+    let mut perm = M::zero();
+    for i in 0..n {
+        perm[i][i] = T::one();
+    }
+    for k in 0..n {
+        let mut piv = k;
+        let mut best = br[k][k] * br[k][k] + bi[k][k] * bi[k][k];
+        for i in k + 1..n {
+            let v = br[i][k] * br[i][k] + bi[i][k] * bi[i][k];
+            if lt(best, v) {
+                best = v;
+                piv = i;
+            }
+        }
+        if piv != k {
+            let (r0, i0) = (br[k], bi[k]);
+            br[k] = br[piv];
+            bi[k] = bi[piv];
+            br[piv] = r0;
+            bi[piv] = i0;
+            let t = perm[k];
+            perm[k] = perm[piv];
+            perm[piv] = t;
+        }
+        let (pr, pi) = (br[k][k], bi[k][k]);
+        let mut d2 = pr * pr + pi * pi;
+        if !lt(zero, d2) {
+            // A zero pivot: the iteration only needs a tiny one.
+            br[k][k] = nudge;
+            d2 = nudge * nudge;
+        }
+        let (pr, pi) = (br[k][k], bi[k][k]);
+        for i in k + 1..n {
+            // factor = B[i][k] / pivot.
+            let (xr, xi) = (br[i][k], bi[i][k]);
+            let fr = (xr * pr + xi * pi) / d2;
+            let fi = (xi * pr - xr * pi) / d2;
+            br[i][k] = fr;
+            bi[i][k] = fi;
+            for j in k + 1..n {
+                let (ur, ui) = (br[k][j], bi[k][j]);
+                br[i][j] = br[i][j] - (fr * ur - fi * ui);
+                bi[i][j] = bi[i][j] - (fr * ui + fi * ur);
+            }
+        }
+    }
+    let (mut xr, mut xi) = (M::zero_vector(), M::zero_vector());
+    for i in 0..n {
+        // A start with every component, so no eigenvector is orthogonal to it.
+        xr[i] = T::one() + T::from_f64(0.1) * T::from_i64(i as i64);
+    }
+    for _ in 0..3 {
+        // Permute, then forward and back substitution.
+        let (mut yr, mut yi) = (M::zero_vector(), M::zero_vector());
+        for i in 0..n {
+            for j in 0..n {
+                yr[i] = yr[i] + perm[i][j] * xr[j];
+                yi[i] = yi[i] + perm[i][j] * xi[j];
+            }
+        }
+        for i in 0..n {
+            for k in 0..i {
+                let (fr, fi) = (br[i][k], bi[i][k]);
+                yr[i] = yr[i] - (fr * yr[k] - fi * yi[k]);
+                yi[i] = yi[i] - (fr * yi[k] + fi * yr[k]);
+            }
+        }
+        for i in (0..n).rev() {
+            let (mut sr, mut si) = (yr[i], yi[i]);
+            for k in i + 1..n {
+                let (ur, ui) = (br[i][k], bi[i][k]);
+                sr = sr - (ur * yr[k] - ui * yi[k]);
+                si = si - (ur * yi[k] + ui * yr[k]);
+            }
+            let (pr, pi) = (br[i][i], bi[i][i]);
+            let d2 = pr * pr + pi * pi;
+            yr[i] = (sr * pr + si * pi) / d2;
+            yi[i] = (si * pr - sr * pi) / d2;
+        }
+        let mut len = zero;
+        for i in 0..n {
+            len = len + yr[i] * yr[i] + yi[i] * yi[i];
+        }
+        let inv = len.sqrt().recip();
+        for i in 0..n {
+            xr[i] = yr[i] * inv;
+            xi[i] = yi[i] * inv;
+        }
+    }
+    (xr, xi)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

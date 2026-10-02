@@ -191,6 +191,13 @@ highlight. `gax-regen --check` also reports part files no longer generated.
     * The successors of ganja by its own author (GAmphetamine) and kingdon (Roelfs) use the sign
       chosen here.
 * **Duality:** `dual()` is `J_R` and `undual()` is `J_L`. Both are metric free.
+* **The Hodge dual** `hodge()` is `~x I`, with the metric: numga's `dual`, and what Maxwell's
+  equations and constitutive maps in STA need. It agrees with `dual` where every basis vector
+  squares to `+1`, flips sign on blades with an odd number of negative squares (STA, R(4,1)), and
+  vanishes on blades containing a null vector, where `dual` does not (so PGA keeps `dual`). It
+  is generated for every kind of an algebra with a pseudoscalar kind, values and maps alike
+  (found porting numga's electromagnetism and cyclide examples, where the metric-free dual gave
+  wrong results).
 * **Standard PGA layouts:** these are the bivector.net layouts:
   * PGA3D: `1,e0,e1,e2,e3,e01,e02,e03,e12,e31,e23,e021,e013,e032,e123,e0123`;
   * PGA2D: `1,e0,e1,e2,e01,e20,e12,e012`.
@@ -1136,6 +1143,31 @@ algebra; `Of` accepts sub-kinds; `slots::MAX_SLOTS` = 12).*
   apex's independence; additivity; equivariance (`moved` against moving the mesh); a cut mesh;
   the frame diagonalizing the inertia at half turns; polygons against the shoelace formula and
   known polar moments; `f32`.
+
+## ADR-042: Complex coefficients and general eigenvalues
+*Status: accepted, implemented (`gax::Complex`, `SquareMap::{eig, eigvals, eigh}`, `map_coefs`).*
+
+* **The need.** Porting numga's examples, nine of them needed eigenvalues of maps that are not
+  symmetric (rotations, boosts, stress-energy tensors, generalized problems against singular
+  metrics) or complex numbers outright (the complex transversals of four lines, spin groups'
+  eigenvalues `±i`); each wrote its own solver.
+* **`Complex<T>` is a `Coef`, not a `Real`.** The generated products need only a ring, so
+  complex multivectors and maps work unchanged; what needs an ordering (norms, solvers,
+  `exp`) stays real, and `Complex` has its own `sqrt`, `exp`, `ln` and division.
+* **`eigvals`** reduces the coefficient matrix to Hessenberg form by Householder reflections
+  and runs the double-shift QR iteration with EISPACK's exceptional shifts (`hqr`, as in JAMA);
+  eigenvalues come sorted, conjugate pairs adjacent. **`eig`** adds an eigenvector per
+  eigenvalue by inverse iteration on `A − λI` with complex Gaussian elimination, returned as a
+  value of the input kind with complex coefficients. Unlike the symmetric solvers they branch
+  on the data, so they are for scalar coefficients, not SIMD lanes.
+* **`eigh` on a map** takes the coefficient matrix as symmetric: numga's semantics, for maps
+  self-adjoint under the coefficient inner product. A map self-adjoint under another metric is
+  paired with it as a form first (`Form::eigh_with`), as before.
+* **`map_coefs`** (on `Extensor`) converts the coefficients of a value or map, to `Complex`,
+  `Dual` or `f32`; `Strict`'s wrapping was the private version of it.
+* **Checks.** Rotations give `e^{±iθ}` and 1, boosts `e^{±φ}` and 1, and 200 random 6×6 maps
+  satisfy `A v = λ v` with their eigenvalues multiplying to the determinant and adding up to the
+  trace.
 
 ---
 

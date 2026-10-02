@@ -90,6 +90,13 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         Scalar { c: [S::from_flat(&mut |_| T::zero(), 0); 1] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Scalar<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -308,6 +315,19 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Scalar<(), T> {
@@ -371,6 +391,36 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Scalar as gx::Kind>::Arr<T>, <Scalar as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Scalar as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Scalar as gx::Kind>::Arr<gx::Complex<T>>, <Scalar as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
+    {
+        gx::SquareMap::eig(self)
     }
 
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
@@ -479,6 +529,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Scalar<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Scalar { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Scalar<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -803,6 +861,13 @@ impl<S: gx::Slots, T: gx::Coef> Vector<S, T> {
         Vector { c: [S::from_flat(&mut |_| T::zero(), 0); 6] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Vector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -1021,6 +1086,19 @@ impl<S: gx::Slots, T: gx::Coef> Vector<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Vector<(), T> {
@@ -1114,6 +1192,36 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Vector as gx::Kind>::Arr<T>, <Vector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Vector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Vector as gx::Kind>::Arr<gx::Complex<T>>, <Vector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
     }
 
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
@@ -1222,6 +1330,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Vector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Vector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Vector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -1597,6 +1713,13 @@ impl<S: gx::Slots, T: gx::Coef> Twist<S, T> {
         Twist { c: [S::from_flat(&mut |_| T::zero(), 0); 10] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Twist<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -1815,6 +1938,19 @@ impl<S: gx::Slots, T: gx::Coef> Twist<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Twist<(), T> {
@@ -1934,6 +2070,36 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Twist as gx::Kind>::Arr<T>, <Twist as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Twist as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Twist as gx::Kind>::Arr<gx::Complex<T>>, <Twist as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -2040,6 +2206,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Twist<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Twist { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Twist<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -2491,6 +2665,13 @@ impl<S: gx::Slots, T: gx::Coef> Bivector<S, T> {
         Bivector { c: [S::from_flat(&mut |_| T::zero(), 0); 15] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Bivector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -2709,6 +2890,19 @@ impl<S: gx::Slots, T: gx::Coef> Bivector<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Bivector<(), T> {
@@ -2858,6 +3052,36 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Bivector as gx::Kind>::Arr<T>, <Bivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Bivector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Bivector as gx::Kind>::Arr<gx::Complex<T>>, <Bivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -2964,6 +3188,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Bivector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Bivector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Bivector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -3728,6 +3960,13 @@ impl<S: gx::Slots, T: gx::Coef> Trivector<S, T> {
         Trivector { c: [S::from_flat(&mut |_| T::zero(), 0); 20] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Trivector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -3946,6 +4185,19 @@ impl<S: gx::Slots, T: gx::Coef> Trivector<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Trivector<(), T> {
@@ -4125,6 +4377,36 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Trivector as gx::Kind>::Arr<T>, <Trivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Trivector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Trivector as gx::Kind>::Arr<gx::Complex<T>>, <Trivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -4231,6 +4513,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Trivector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Trivector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Trivector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -4571,6 +4861,13 @@ impl<S: gx::Slots, T: gx::Coef> Quadvector<S, T> {
         Quadvector { c: [S::from_flat(&mut |_| T::zero(), 0); 15] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Quadvector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -4789,6 +5086,19 @@ impl<S: gx::Slots, T: gx::Coef> Quadvector<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Quadvector<(), T> {
@@ -4938,6 +5248,36 @@ impl<A: gx::Kind, T: gx::Real> Quadvector<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Quadvector as gx::Kind>::Arr<T>, <Quadvector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Quadvector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Quadvector as gx::Kind>::Arr<gx::Complex<T>>, <Quadvector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quadvector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -5044,6 +5384,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Quadvector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Quadvector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Quadvector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -5375,6 +5723,13 @@ impl<S: gx::Slots, T: gx::Coef> Quintvector<S, T> {
         Quintvector { c: [S::from_flat(&mut |_| T::zero(), 0); 6] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Quintvector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -5593,6 +5948,19 @@ impl<S: gx::Slots, T: gx::Coef> Quintvector<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Quintvector<(), T> {
@@ -5686,6 +6054,36 @@ impl<A: gx::Kind, T: gx::Real> Quintvector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Quintvector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Quintvector as gx::Kind>::Arr<T>, <Quintvector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Quintvector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Quintvector as gx::Kind>::Arr<gx::Complex<T>>, <Quintvector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Quintvector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
     }
 
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
@@ -5794,6 +6192,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Quintvector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Quintvector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Quintvector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -6169,6 +6575,13 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         Pseudoscalar { c: [S::from_flat(&mut |_| T::zero(), 0); 1] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Pseudoscalar<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -6387,6 +6800,19 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Pseudoscalar<(), T> {
@@ -6450,6 +6876,36 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Pseudoscalar as gx::Kind>::Arr<T>, <Pseudoscalar as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Pseudoscalar as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Pseudoscalar as gx::Kind>::Arr<gx::Complex<T>>, <Pseudoscalar as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
+    {
+        gx::SquareMap::eig(self)
     }
 
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
@@ -6558,6 +7014,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Pseudoscalar<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Pseudoscalar { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Pseudoscalar<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -6867,6 +7331,13 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
         Motor { c: [S::from_flat(&mut |_| T::zero(), 0); 16] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Motor<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -7085,6 +7556,19 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
     }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
 }
 
 impl<T: gx::Coef> Motor<(), T> {
@@ -7240,6 +7724,36 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Motor as gx::Kind>::Arr<T>, <Motor as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Motor as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Motor as gx::Kind>::Arr<gx::Complex<T>>, <Motor as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -7346,6 +7860,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Motor<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Motor { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Motor<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -7726,6 +8248,13 @@ impl<S: gx::Slots, T: gx::Coef> Even<S, T> {
         Even { c: [S::from_flat(&mut |_| T::zero(), 0); 32] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Even<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -7943,6 +8472,19 @@ impl<S: gx::Slots, T: gx::Coef> Even<S, T> {
     #[inline(always)]
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
+    }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
     }
 }
 
@@ -8195,6 +8737,36 @@ impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Even as gx::Kind>::Arr<T>, <Even as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Even as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Even as gx::Kind>::Arr<gx::Complex<T>>, <Even as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -8301,6 +8873,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Even<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Even { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Even<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -8917,6 +9497,13 @@ impl<S: gx::Slots, T: gx::Coef> Odd<S, T> {
         Odd { c: [S::from_flat(&mut |_| T::zero(), 0); 32] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Odd<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -9134,6 +9721,19 @@ impl<S: gx::Slots, T: gx::Coef> Odd<S, T> {
     #[inline(always)]
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
+    }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
     }
 }
 
@@ -9386,6 +9986,36 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Odd as gx::Kind>::Arr<T>, <Odd as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Odd as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Odd as gx::Kind>::Arr<gx::Complex<T>>, <Odd as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -9492,6 +10122,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Odd<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Odd { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Odd<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -9860,6 +10498,13 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         Multivector { c: [S::from_flat(&mut |_| T::zero(), 0); 64] }
     }
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Multivector<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
@@ -10077,6 +10722,19 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
     #[inline(always)]
     pub fn undual(self) -> <Self as gx::Undual>::Output {
         gx::Undual::undual(self)
+    }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
     }
 }
 
@@ -10521,6 +11179,36 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
         gx::SquareMap::det(self)
     }
 
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Multivector as gx::Kind>::Arr<T>, <Multivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Multivector as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Multivector as gx::Kind>::Arr<gx::Complex<T>>, <Multivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
     #[inline]
     pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
@@ -10627,6 +11315,14 @@ impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Multivector<S, T> {
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {
         Multivector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Multivector<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
     }
 }
 
@@ -11949,45 +12645,4 @@ impl gx::Cast<Even> for Multivector {
 
 impl gx::Cast<Odd> for Multivector {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false), (26, 10, false), (27, 11, false), (28, 12, false), (29, 13, false), (30, 14, false), (31, 15, false), (32, 16, false), (33, 17, false), (34, 18, false), (35, 19, false), (36, 20, false), (37, 21, false), (38, 22, false), (39, 23, false), (40, 24, false), (41, 25, false), (57, 26, false), (58, 27, false), (59, 28, false), (60, 29, false), (61, 30, false), (62, 31, false)];
-}
-
-impl gx::Cast<Multivector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false), (20, 20, false), (21, 21, false), (22, 22, false), (23, 23, false), (24, 24, false), (25, 25, false), (26, 26, false), (27, 27, false), (28, 28, false), (29, 29, false), (30, 30, false), (31, 31, false), (32, 32, false), (33, 33, false), (34, 34, false), (35, 35, false), (36, 36, false), (37, 37, false), (38, 38, false), (39, 39, false), (40, 40, false), (41, 41, false), (42, 42, false), (43, 43, false), (44, 44, false), (45, 45, false), (46, 46, false), (47, 47, false), (48, 48, false), (49, 49, false), (50, 50, false), (51, 51, false), (52, 52, false), (53, 53, false), (54, 54, false), (55, 55, false), (56, 56, false), (57, 57, false), (58, 58, false), (59, 59, false), (60, 60, false), (61, 61, false), (62, 62, false), (63, 63, false)];
-}
-
-impl gx::SubKind<Multivector> for Multivector {}
-
-impl gx::GradePart<0> for Multivector {
-    type Out = Scalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::GradePart<1> for Multivector {
-    type Out = Vector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
-}
-
-impl gx::GradePart<2> for Multivector {
-    type Out = Bivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false), (8, 1, false), (9, 2, false), (10, 3, false), (11, 4, false), (12, 5, false), (13, 6, false), (14, 7, false), (15, 8, false), (16, 9, false), (17, 10, false), (18, 11, false), (19, 12, false), (20, 13, false), (21, 14, false)];
-}
-
-impl gx::GradePart<3> for Multivector {
-    type Out = Trivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(22, 0, false), (23, 1, false), (24, 2, false), (25, 3, false), (26, 4, false), (27, 5, false), (28, 6, false), (29, 7, false), (30, 8, false), (31, 9, false), (32, 10, false), (33, 11, false), (34, 12, false), (35, 13, false), (36, 14, false), (37, 15, false), (38, 16, false), (39, 17, false), (40, 18, false), (41, 19, false)];
-}
-
-impl gx::GradePart<4> for Multivector {
-    type Out = Quadvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(42, 0, false), (43, 1, false), (44, 2, false), (45, 3, false), (46, 4, false), (47, 5, false), (48, 6, false), (49, 7, false), (50, 8, false), (51, 9, false), (52, 10, false), (53, 11, false), (54, 12, false), (55, 13, false), (56, 14, false)];
-}
-
-impl gx::GradePart<5> for Multivector {
-    type Out = Quintvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(57, 0, false), (58, 1, false), (59, 2, false), (60, 3, false), (61, 4, false), (62, 5, false)];
-}
-
-impl gx::GradePart<6> for Multivector {
-    type Out = Pseudoscalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(63, 0, false)];
 }

@@ -210,6 +210,28 @@ Maps between kinds of the same size have `inverse`, `det`, `solve`, `svd` and, f
 to itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
 so. Right-hand sides keep their slots: solving against a map returns a map.
 
+Maps from a kind to itself also have eigenvalues. `eigh` takes the coefficient matrix as
+symmetric (numga's `eigh` on a map: right for maps self-adjoint under the coefficient inner
+product, such as stretches of Euclidean vectors); `eigvals` and `eig` take it as it is, so the
+eigenvalues come out complex, as `gax::Complex<T>`, and `eig`'s eigenvectors are values with
+complex coefficients. `Complex<f64>` is a coefficient type like any other, so complex
+multivectors and maps use the same products; `map_coefs` converts a value or map from one
+coefficient type to another:
+
+```rust
+use gax::Complex;
+use gax::pga3d::{Motor, Plane};
+
+let r = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.7); // a rotation by 0.7 about z
+let m = r >> Plane::slot();
+let (values, vectors) = m.eig(); // e^{-0.7i}, 1, 1, e^{0.7i}
+let complex = m.map_coefs(Complex::real);
+for (l, v) in values.iter().zip(vectors) {
+    let image = complex.of(v); // m v = λ v, with complex coefficients
+    assert!(image.c.iter().zip(v.c).all(|(a, b)| (*a - *l * b).abs() < 1e-12));
+}
+```
+
 Maps of any shape, singular ones included, have `pinv` (the Moore–Penrose pseudo-inverse) and
 `lstsq` (the least-norm least-squares solution), by one-sided Jacobi. On a map with several slots,
 `lstsq` solves for the first slot against a right-hand side on the others (`at::<I>()` picks
@@ -646,6 +668,18 @@ themselves (`crates/gax-bench/tests/interop.rs`).
   about `+x`. Its sign for some pairs differs from ganja.js, and in PGA3D it differs from numga
   by the orientation of the pseudoscalar (`e0123` here); see ADR-009 in the
   [design record](design.md).
+* **Two duals.** `dual()` is the metric-free complement (it works in PGA, where the metric is
+  degenerate); `hodge()` is `~x I` with the metric, numga's `dual`. In STA and other algebras
+  with negative squares they differ in sign on some blades: physics written with the Hodge dual
+  (Maxwell, constitutive relations) needs `hodge()`.
+* **Coming from numga.** numga orients the PGA3D pseudoscalar as `x∧y∧z∧w = −e0123`, so its
+  points, `&` and `dual` in PGA3D are the negatives of gax's: a formula carries over unchanged when
+  its point literals and `&`s are even in number, and flips sign otherwise (a joined axis turns
+  the other way, `exp(axis θ/2)` becomes `exp(-axis θ/2)`, joint torques change sign). PGA2D agrees.
+  `examples/numga` ports all of numga's examples, with these differences noted where they arise.
+* **Clippy and the operators.** `clippy::eq_op` reads `a | a` and `b ^ b` as bitwise operations
+  on equal operands; write `a.dot(a)`, `a.norm_squared()` or `b.wedge(b)`. And `>>` binds looser
+  than `*` but clippy's `precedence` lint asks for parentheses in `a * b >> c`: write `(a * b) >> c`.
 * **Float literals.** Type parameter defaults do not drive inference in Rust. `Point::xyz(1.0, 2.0, 3.0)`
   alone is `f64` by the literal fallback; annotate (`let p: Point = …`) for the `f32` default.
 * **Floating point.** See [numerics.md](numerics.md) for the details:

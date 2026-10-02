@@ -9,7 +9,8 @@
 
 use crate as gx;
 
-include!("csta/kinds.rs");
+include!("csta/kinds_1.rs");
+include!("csta/kinds_2.rs");
 include!("csta/products_gp_1.rs");
 include!("csta/products_gp_2.rs");
 include!("csta/products_wedge.rs");

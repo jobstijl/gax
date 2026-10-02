@@ -69,6 +69,8 @@ pub struct Camera {
     pub pose: Unit<Motor<(), f32>>,
     /// The projection.
     pub lens: Lens,
+    /// The viewport's top left corner on the canvas, in pixels.
+    origin: [f32; 2],
     size: [f32; 2],
 }
 
@@ -85,6 +87,7 @@ impl Camera {
         Camera {
             pose: Motor::look_at(p(eye), p(target), Point::direction(0.0, 0.0, 1.0)),
             lens,
+            origin: [0.0, 0.0],
             size: [width as f32, height as f32],
         }
     }
@@ -107,6 +110,17 @@ impl Camera {
         let eye = (turn >> Point::xyz(distance, 0.0, 0.0)).to_euclidean();
         let eye = [eye[0] + target[0], eye[1] + target[1], eye[2] + target[2]];
         Camera::looking(width, height, eye, target, lens)
+    }
+
+    /// The same camera drawing into the pixel rectangle `[x0, y0, x1, y1]` of a larger canvas (a
+    /// panel): its view fills the rectangle, and [`Camera::px`] and [`Camera::ray`] work in the
+    /// canvas's pixels. Pair it with `canvas.clip(rect)` to keep the drawing inside.
+    pub fn viewport(self, rect: [f32; 4]) -> Camera {
+        Camera {
+            origin: [rect[0], rect[1]],
+            size: [rect[2] - rect[0], rect[3] - rect[1]],
+            ..self
+        }
     }
 
     /// Pixels per unit at unit depth (perspective) or per world unit (parallel).
@@ -133,7 +147,10 @@ impl Camera {
             Lens::Perspective(_) => (x / z, y / z),
             Lens::Parallel(_) => (x, y),
         };
-        Some([self.size[0] * 0.5 + sx * f, self.size[1] * 0.5 - sy * f])
+        Some([
+            self.origin[0] + self.size[0] * 0.5 + sx * f,
+            self.origin[1] + self.size[1] * 0.5 - sy * f,
+        ])
     }
 
     /// The pixel of a PGA3D point (`None` behind the camera or at infinity).
@@ -148,8 +165,8 @@ impl Camera {
     pub fn ray(&self, q: Px) -> (Point<(), f32>, Point<(), f32>) {
         let f = self.focal();
         let (sx, sy) = (
-            (q[0] - self.size[0] * 0.5) / f,
-            (self.size[1] * 0.5 - q[1]) / f,
+            (q[0] - self.origin[0] - self.size[0] * 0.5) / f,
+            (self.origin[1] + self.size[1] * 0.5 - q[1]) / f,
         );
         match self.lens {
             Lens::Perspective(_) => {

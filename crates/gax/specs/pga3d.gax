@@ -10,7 +10,7 @@ versor Line = [e23, e31, e12, e01, e02, e03] "A line, or a twist or forque: the 
 versor Point = [e032, e013, e021, e123] "A point `(x, y, z)` with weight `w`, stored as `x e032 + y e013 + z e021 + w e123`: the trivectors. With `w = 0` it is a direction. As a versor it is a point reflection.";
 kind Pseudoscalar = [e0123] "The pseudoscalar `e0123`.";
 versor Rotor = [1, e23, e31, e12] "A rotation about a line through the origin.";
-versor Translator = [1, e01, e02, e03] "A translation, `1 + (dx e01 + dy e02 + dz e03) / 2`.";
+versor Translator = [1, e01, e02, e03] "A translation by `(dx, dy, dz)`: `1 - (dx e01 + dy e02 + dz e03) / 2` (`Motor::translation`).";
 versor Motor = [1, e23, e31, e12, e01, e02, e03, e0123] "A rigid motion: the even subalgebra.";
 versor Flector = [e1, e2, e3, e0, e032, e013, e021, e123] "An improper rigid motion: the odd subalgebra.";
 kind Multivector = [1, e0, e1, e2, e3, e01, e02, e03, e12, e31, e23, e021, e013, e032, e123, e0123] "A general multivector, in the bivector.net order.";

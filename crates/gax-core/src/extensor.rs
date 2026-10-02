@@ -8,6 +8,7 @@
 
 use crate::cast::SubKind;
 use crate::coef::{Coef, Real};
+use crate::complex::Complex;
 use crate::fill::SplitLast;
 use crate::kind::{Extensor, Kind};
 use crate::linalg::{self, Column, SquareArr};
@@ -38,6 +39,33 @@ pub trait SquareMap: Extensor<Coef: Real> {
     /// For a map between different kinds this depends on the blade layouts (orientation and
     /// order); for an endomorphism it is basis independent.
     fn det(self) -> Self::Coef;
+    /// The eigenvalues (ascending) and eigenvectors (unit values of the input kind) of the
+    /// map's coefficient matrix, taken as symmetric (its symmetric part): numga's `eigh` on a
+    /// map. For an endomorphism that is self-adjoint under the coefficient inner product, as
+    /// on Euclidean vectors, even elements of VGA or STA spinors; a map self-adjoint under
+    /// another metric is better paired with that metric as a form (`Form::eigh_with`).
+    #[allow(clippy::type_complexity)]
+    fn eigh(
+        self,
+    ) -> (
+        <Self::Kind as Kind>::Arr<Self::Coef>,
+        <Self::Kind as Kind>::Arr<<Self::Input as Kind>::Mv<(), Self::Coef>>,
+    );
+    /// The eigenvalues, complex in general (conjugate pairs adjacent), sorted by real part,
+    /// then imaginary part: the double-shift QR iteration on the coefficient matrix (for an
+    /// endomorphism; for a map between different kinds they depend on the layouts, as
+    /// [`det`](Self::det) does). Not branch free: for scalar coefficients.
+    fn eigvals(self) -> <Self::Kind as Kind>::Arr<Complex<Self::Coef>>;
+    /// The eigenvalues, as [`eigvals`](Self::eigvals), and an eigenvector of each, a unit
+    /// complex value of the input kind (`self.of(v) = λ v` with complex coefficients), by
+    /// inverse iteration. A defective eigenvalue (a Jordan block) has one eigenvector, repeated.
+    #[allow(clippy::type_complexity)]
+    fn eig(
+        self,
+    ) -> (
+        <Self::Kind as Kind>::Arr<Complex<Self::Coef>>,
+        <Self::Kind as Kind>::Arr<<Self::Input as Kind>::Mv<(), Complex<Self::Coef>>>,
+    );
     /// Solve `self(x) = rhs` for `x`. A right-hand side with slots of its own keeps them: the
     /// solution is then a map with those slots.
     fn solve<X>(self, rhs: X) -> <Self::Input as Kind>::Mv<X::Slots, Self::Coef>
@@ -97,6 +125,45 @@ where
 
     fn det(self) -> M::Coef {
         linalg::det(self.coeffs())
+    }
+
+    fn eigh(
+        self,
+    ) -> (
+        <M::Kind as Kind>::Arr<M::Coef>,
+        <M::Kind as Kind>::Arr<A::Mv<(), M::Coef>>,
+    ) {
+        let a = self.coeffs();
+        let n = <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
+        let (mut vals, mut vecs) = linalg::eigh(&symmetrize(a), sweeps(n));
+        linalg::sort_pairs(&mut vals, &mut vecs);
+        (
+            <M::Kind as Kind>::arr_from_fn(|k| vals[k]),
+            <M::Kind as Kind>::arr_from_fn(|k| value_from::<A, M::Coef>(|i| vecs[k][i])),
+        )
+    }
+
+    fn eigvals(self) -> <M::Kind as Kind>::Arr<Complex<M::Coef>> {
+        let (re, im) = linalg::eigvals(self.coeffs());
+        <M::Kind as Kind>::arr_from_fn(|i| Complex::new(re[i], im[i]))
+    }
+
+    fn eig(
+        self,
+    ) -> (
+        <M::Kind as Kind>::Arr<Complex<M::Coef>>,
+        <M::Kind as Kind>::Arr<A::Mv<(), Complex<M::Coef>>>,
+    ) {
+        let a = self.coeffs();
+        let (re, im) = linalg::eigvals(a);
+        let values = <M::Kind as Kind>::arr_from_fn(|i| Complex::new(re[i], im[i]));
+        let vectors = <M::Kind as Kind>::arr_from_fn(|k| {
+            let (vr, vi) = linalg::eigvector(a, re[k], im[k]);
+            <A::Mv<(), Complex<M::Coef>> as Extensor>::from_coeffs(A::arr_from_fn(|i| {
+                Complex::new(vr[i], vi[i])
+            }))
+        });
+        (values, vectors)
     }
 
     fn solve<X>(self, rhs: X) -> A::Mv<X::Slots, M::Coef>

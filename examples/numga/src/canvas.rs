@@ -71,7 +71,12 @@ impl Canvas {
         let c = |v: f32, n: usize| (v.max(0.0) as usize).min(n);
         let (x0, y0) = (c(r[0], self.width), c(r[1], self.height));
         // An inverted rectangle (an inset larger than its panel) clips everything away.
-        self.clip = [x0, y0, c(r[2], self.width).max(x0), c(r[3], self.height).max(y0)];
+        self.clip = [
+            x0,
+            y0,
+            c(r[2], self.width).max(x0),
+            c(r[3], self.height).max(y0),
+        ];
     }
 
     /// Draw anywhere again.
@@ -194,7 +199,10 @@ impl Canvas {
         }
     }
 
-    /// A filled polygon (non-zero winding), antialiased by 4 x 4 samples per pixel.
+    /// A filled polygon (non-zero winding), antialiased: four sub-rows per pixel row, each
+    /// covering its spans exactly across. Each sub-row finds where the edges cross it, sorts
+    /// the crossings, and adds the inside spans' coverage to the pixels they overlap, so the
+    /// cost grows with the edges and the polygon's area, not their product.
     pub fn fill(&mut self, poly: &[Px], c: Rgb, alpha: f32) {
         if poly.len() < 3 || !poly.iter().flatten().all(|v| v.is_finite()) {
             return;
@@ -206,33 +214,56 @@ impl Canvas {
             .iter()
             .fold([f32::MIN; 2], |m, p| [m[0].max(p[0]), m[1].max(p[1])]);
         let (xs, ys) = self.span(lo, hi);
-        let winding = |x: f32, y: f32| {
-            let mut w = 0i32;
-            for i in 0..poly.len() {
-                let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
-                let side = (b[0] - a[0]) * (y - a[1]) - (x - a[0]) * (b[1] - a[1]);
-                if a[1] <= y && b[1] > y && side > 0.0 {
-                    w += 1;
-                } else if a[1] > y && b[1] <= y && side < 0.0 {
-                    w -= 1;
-                }
-            }
-            w != 0
-        };
+        if xs.is_empty() || ys.is_empty() {
+            return;
+        }
+        let (x0, width) = (xs.start, xs.end - xs.start);
+        let mut cover = vec![0.0f32; width];
+        let mut cross: Vec<(f32, i32)> = Vec::new();
+        const SUB: usize = 4;
         for y in ys {
-            for x in xs.clone() {
-                let mut n = 0;
-                for sy in 0..4 {
-                    for sx in 0..4 {
-                        let (fx, fy) = (
-                            x as f32 + (sx as f32 + 0.5) / 4.0,
-                            y as f32 + (sy as f32 + 0.5) / 4.0,
-                        );
-                        n += usize::from(winding(fx, fy));
+            cover.iter_mut().for_each(|v| *v = 0.0);
+            for sub in 0..SUB {
+                let fy = y as f32 + (sub as f32 + 0.5) / SUB as f32;
+                cross.clear();
+                for i in 0..poly.len() {
+                    let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
+                    if (a[1] <= fy) != (b[1] <= fy) {
+                        let t = (fy - a[1]) / (b[1] - a[1]);
+                        cross.push((a[0] + t * (b[0] - a[0]), if b[1] > a[1] { 1 } else { -1 }));
                     }
                 }
-                if n > 0 {
-                    self.blend(x, y, c, alpha * n as f32 / 16.0);
+                cross.sort_by(|p, q| p.0.total_cmp(&q.0));
+                let mut wind = 0;
+                for k in 0..cross.len() {
+                    let before = wind;
+                    wind += cross[k].1;
+                    if before == 0 && wind != 0 {
+                        // An inside span starts here and ends where the winding returns to 0.
+                        let start = cross[k].0;
+                        let mut w = wind;
+                        let mut end = start;
+                        for &(x, d) in &cross[k + 1..] {
+                            w += d;
+                            if w == 0 {
+                                end = x;
+                                break;
+                            }
+                        }
+                        // Add the span's width in each pixel it overlaps.
+                        let (a, b) = (start - x0 as f32, end - x0 as f32);
+                        let first = a.max(0.0).floor() as usize;
+                        let last = (b.min(width as f32).ceil() as usize).min(width);
+                        for (px, v) in cover.iter_mut().enumerate().take(last).skip(first) {
+                            let (l, r) = (px as f32, px as f32 + 1.0);
+                            *v += (b.min(r) - a.max(l)).max(0.0) / SUB as f32;
+                        }
+                    }
+                }
+            }
+            for (i, v) in cover.iter().enumerate() {
+                if *v > 0.0 {
+                    self.blend(x0 + i, y, c, alpha * v.min(1.0));
                 }
             }
         }

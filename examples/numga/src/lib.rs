@@ -12,6 +12,7 @@ pub mod contour;
 pub mod font;
 pub mod palette;
 pub mod plot;
+pub mod rng;
 pub mod scene3;
 pub mod view;
 
@@ -46,6 +47,57 @@ mod tests {
         c.line([2.0, 5.0], [18.0, 5.0], 2.0, [1.0; 3], 1.0);
         assert!(c.get(10, 4)[0] > 0.9 && c.get(10, 5)[0] > 0.9);
         assert!(c.get(10, 1)[0] < 1e-6 && c.get(0, 5)[0] < 1e-6);
+    }
+
+    #[test]
+    fn fills_cover_their_area() {
+        // A triangle, a star with a hole by winding, and a camera viewport into a panel.
+        let mut c = Canvas::new(40, 40);
+        c.fill(&[[0.0, 0.0], [40.0, 0.0], [0.0, 40.0]], [1.0; 3], 1.0);
+        assert!((c.mean()[0] - 0.5).abs() < 2e-3, "{:?}", c.mean());
+        let mut c = Canvas::new(60, 60);
+        let star: Vec<Px> = (0..5)
+            .map(|k| {
+                let a = core::f32::consts::TAU * (k * 2) as f32 / 5.0;
+                [30.0 + 25.0 * a.cos(), 30.0 + 25.0 * a.sin()]
+            })
+            .collect();
+        c.fill(&star, [1.0; 3], 1.0);
+        assert!(c.get(30, 30)[0] > 0.99, "non-zero winding fills the centre");
+    }
+
+    #[test]
+    fn a_viewport_centres_the_view_in_its_panel() {
+        let cam = Camera::looking(
+            100,
+            100,
+            [0.0, -5.0, 0.0],
+            [0.0, 0.0, 0.0],
+            Lens::Perspective(0.8),
+        )
+        .viewport([200.0, 50.0, 300.0, 150.0]);
+        let o = cam.px([0.0, 0.0, 0.0]).expect("in view");
+        assert!(
+            (o[0] - 250.0).abs() < 1e-3 && (o[1] - 100.0).abs() < 1e-3,
+            "{o:?}"
+        );
+        let (origin, dir) = cam.ray([250.0, 100.0]);
+        let [ox, oy, oz] = origin.to_euclidean();
+        assert!(ox.abs() < 1e-4 && (oy + 5.0).abs() < 1e-4 && oz.abs() < 1e-4);
+        assert!((dir.e013() - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn the_generator_draws_standard_normals() {
+        let mut r = rng::Rng::new(7);
+        let n = 20000;
+        let xs: Vec<f64> = (0..n).map(|_| r.normal()).collect();
+        let mean = xs.iter().sum::<f64>() / n as f64;
+        let var = xs.iter().map(|x| (x - mean) * (x - mean)).sum::<f64>() / n as f64;
+        assert!(
+            mean.abs() < 0.03 && (var - 1.0).abs() < 0.05,
+            "{mean} {var}"
+        );
     }
 
     #[test]

@@ -76,6 +76,27 @@ pub trait Extensor: Copy + Debug + PartialEq + 'static {
     fn from_coeffs(c: Coeffs<Self>) -> Self;
     /// The output-first coefficients.
     fn coeffs(&self) -> &Coeffs<Self>;
+
+    /// Every coefficient mapped by `f`, kind and slots kept: a value or map of `f64` as
+    /// `Complex<f64>`, as `Dual<f64, N>` (to differentiate through it), or as `f32`.
+    ///
+    /// ```
+    /// use gax::{Complex, Extensor};
+    /// use gax::pga3d::Point;
+    /// let p = Point::<(), f64>::xyz(1.0, 2.0, 3.0);
+    /// let z: Point<(), Complex<f64>> = p.map_coefs(Complex::real);
+    /// assert_eq!(z.c[0], Complex::real(1.0));
+    /// ```
+    #[inline]
+    fn map_coefs<U: Coef>(&self, mut f: impl FnMut(Self::Coef) -> U) -> Retype<Self, Self::Slots, U>
+    where
+        Self: Sized,
+    {
+        let c = <Self::Kind as Kind>::arr_map(self.coeffs(), |col| {
+            <Self::Slots as Slots>::map(col, &mut |x| f(*x))
+        });
+        <Retype<Self, Self::Slots, U> as Extensor>::from_coeffs(c)
+    }
 }
 
 /// Same kind, other slots and coefficients.

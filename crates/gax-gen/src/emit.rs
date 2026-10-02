@@ -804,6 +804,13 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         {name} {{ c: [S::from_flat(&mut |_| T::zero(), 0); {n}] }}
     }}
 
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `Dual` or `f32`
+    /// (see [`Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: Coef>(&self, f: impl FnMut(T) -> U) -> {name}<S, U> {{
+        gx::Extensor::map_coefs(self, f)
+    }}
+
     /// Fill the first open slot with a value, or compose a map into it.
     #[inline(always)]
     pub fn of<X>(self, x: X) -> <Self as Of<X>>::Output
@@ -927,6 +934,21 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
                 "\n    /// See [`{tr}`].\n    #[inline(always)]\n    pub fn {m}(self) -> <Self as {tr}>::Output {{\n        {tr}::{m}(self)\n    }}\n"
             );
         }
+        // The metric (Hodge) dual, where the algebra has a kind holding just the pseudoscalar.
+        let n = self.spec.algebra.dim();
+        let full = (1u32 << n) - 1;
+        if let Some(ps) = self
+            .spec
+            .kinds
+            .iter()
+            .find(|k| k.layout.blades.len() == 1 && k.layout.blades[0].0 == full)
+        {
+            let (pn, sign) = (&ps.name, if ps.layout.blades[0].1 > 0 { "" } else { "-" });
+            let _ = write!(
+                self.out,
+                "\n    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in\n    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two\n    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and\n    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`\n    /// does not.\n    #[inline(always)]\n    pub fn hodge(self) -> <<Self as Reverse>::Output as Gp<{pn}<(), T>>>::Output\n    where\n        <Self as Reverse>::Output: Gp<{pn}<(), T>>,\n    {{\n        Gp::gp(Reverse::reverse(self), {pn}::new({sign}T::one()))\n    }}\n"
+            );
+        }
         self.w("}\n\n");
 
         // Value constructors and accessors.
@@ -1000,6 +1022,36 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
     {{
         SquareMap::det(self)
+    }}
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<{name} as Kind>::Arr<T>, <{name} as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::eigh(self)
+    }}
+
+    /// The eigenvalues, complex in general, sorted (see [`SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <{name} as Kind>::Arr<gx::Complex<T>>
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::eigvals(self)
+    }}
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<{name} as Kind>::Arr<gx::Complex<T>>, <{name} as Kind>::Arr<<A as Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
+    {{
+        SquareMap::eig(self)
     }}
 
     /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
@@ -1119,6 +1171,14 @@ impl<S: Slots, T: Coef> core::ops::Sub for {name}<S, T> {{
     #[inline(always)]
     fn sub(self, rhs: Self) -> Self {{
         {sub}
+    }}
+}}
+
+impl<S: Slots, T: Coef> core::iter::Sum for {name}<S, T> {{
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {{
+        iter.fold(Self::zero(), |a, b| a + b)
     }}
 }}
 

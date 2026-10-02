@@ -35,6 +35,7 @@ pub mod batch;
 pub mod bind;
 pub mod cast;
 pub mod coef;
+pub mod complex;
 pub mod dual;
 pub mod extensor;
 pub mod fill;
@@ -57,6 +58,7 @@ pub mod unit;
 pub use bind::Of;
 pub use cast::{Cast, GradePart, SubKind};
 pub use coef::{Coef, Elem, Real};
+pub use complex::Complex;
 pub use extensor::{
     Endomorphism, Form, LeastSquares, Pairing, PseudoInverse, SquareMap, TraceFirst,
 };

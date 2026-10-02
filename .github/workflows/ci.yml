@@ -88,6 +88,33 @@ jobs:
       - run: cargo build --release
         working-directory: examples/asteroids
 
+  numga:
+    name: numga's examples (tests, clippy, a frame of each)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: examples/numga
+      - name: clippy
+        working-directory: examples/numga
+        run: cargo clippy --tests -- -D warnings
+      - name: tests
+        working-directory: examples/numga
+        run: cargo test --release
+      - name: every example renders a frame (headless)
+        working-directory: examples/numga
+        shell: bash
+        run: |
+          set -e
+          for f in src/bin/*; do
+            b=$(basename "$f" .rs)
+            cargo run -q --release --bin "$b" -- --png "/tmp/$b.png" --at 1.0 --size 320x180
+          done
+
   generated:
     name: generated algebras are up to date
     runs-on: ubuntu-latest
