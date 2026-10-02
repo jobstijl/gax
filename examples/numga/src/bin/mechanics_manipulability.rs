@@ -479,7 +479,7 @@ mod tests {
         // Both against the joint torques a unit tip force produces: each joint's axis paired
         // with the force's line through the tip.
         for f in [[0.3, -0.2, 0.5], [1.0, 0.4, -0.7]] {
-            let n = (f[0] * f[0] + f[1] * f[1] + f[2] * f[2]) as f64;
+            let n: f64 = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
             let along = Point::direction(f[0], f[1], f[2]).gp(1.0 / n.sqrt());
             let torques = axes.map(|a| (a & (tip & along)).s());
             let squared: f64 = torques.iter().map(|t| t * t).sum();
