@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -28,6 +31,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -47,6 +53,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -66,6 +75,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -85,6 +97,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -109,6 +124,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -139,6 +157,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -169,6 +190,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for V
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -199,6 +223,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -245,6 +272,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -264,6 +294,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -284,6 +317,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -308,6 +344,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -332,6 +371,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -351,6 +393,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -371,6 +416,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -401,6 +449,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -431,6 +482,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -477,6 +531,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -496,6 +553,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -520,6 +580,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -544,6 +607,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -568,6 +634,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -587,6 +656,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -617,6 +689,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -647,6 +722,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for B
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -677,6 +755,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -723,6 +804,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -742,6 +826,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -766,6 +853,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -790,6 +880,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -814,6 +907,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -833,6 +929,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -863,6 +962,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -893,6 +995,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -923,6 +1028,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -969,6 +1077,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -993,6 +1104,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1012,6 +1126,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1031,6 +1148,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1050,6 +1170,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1074,6 +1197,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1104,6 +1230,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1134,6 +1263,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Q
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1164,6 +1296,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1210,6 +1345,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1240,6 +1378,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1260,6 +1401,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1290,6 +1434,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1320,6 +1467,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1350,6 +1500,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1370,6 +1523,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1400,6 +1556,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1430,6 +1589,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 112 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1476,6 +1638,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1506,6 +1671,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1536,6 +1704,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1566,6 +1737,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1596,6 +1770,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1626,6 +1803,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1656,6 +1836,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1686,6 +1869,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for E
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1716,6 +1902,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1762,6 +1951,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1792,6 +1984,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1822,6 +2017,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1852,6 +2050,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1882,6 +2083,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1912,6 +2116,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1942,6 +2149,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1972,6 +2182,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for O
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2002,6 +2215,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2048,6 +2264,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2094,6 +2313,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2140,6 +2362,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2186,6 +2411,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2232,6 +2460,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2278,6 +2509,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 112 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2324,6 +2558,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2370,6 +2607,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2416,6 +2656,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];

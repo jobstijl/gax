@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Scalar
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -19,6 +22,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Scalar<
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -34,6 +40,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for S
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -49,6 +58,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Vector
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -68,6 +80,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Vector
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -83,6 +98,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Vector<
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -102,6 +120,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Vector<S1
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -117,6 +138,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for V
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 9 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -163,6 +187,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Bivect
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -187,6 +214,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Bivect
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -206,6 +236,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Bive
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -221,6 +254,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Bivecto
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -251,6 +287,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Bivector<
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -270,6 +309,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for B
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -316,6 +358,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Trivec
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -340,6 +385,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Trivec
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -364,6 +412,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Triv
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -383,6 +434,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Tri
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -398,6 +452,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Trivect
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 28 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -428,6 +485,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Trivector
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 28 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -458,6 +518,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -504,6 +567,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Quadve
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -523,6 +589,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Quadve
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -547,6 +616,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Quad
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 18 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -571,6 +643,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Qua
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -590,6 +665,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Quadvector<S2, T>> for Qu
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Quadvector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -605,6 +683,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Quadvec
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -635,6 +716,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Quadvecto
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -665,6 +749,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Q
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -711,6 +798,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudo
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -726,6 +816,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Pseudo
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -745,6 +838,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Pseu
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -769,6 +865,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Pse
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -793,6 +892,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Quadvector<S2, T>> for Ps
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Quadvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -812,6 +914,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Pseudos
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -842,6 +947,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Pseudosca
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -872,6 +980,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for P
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -918,6 +1029,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Motor<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -948,6 +1062,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Motor<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -978,6 +1095,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Moto
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1008,6 +1128,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Mot
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1027,6 +1150,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Quadvector<S2, T>> for Mo
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Quadvector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1042,6 +1168,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 41 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1072,6 +1201,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Motor<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1102,6 +1234,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 81 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1148,6 +1283,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Odd<S1
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1178,6 +1316,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Odd<S1
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1208,6 +1349,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Odd<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1238,6 +1382,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Odd
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1268,6 +1415,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Quadvector<S2, T>> for Od
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Quadvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1287,6 +1437,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Odd<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 41 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1317,6 +1470,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Odd<S1, T
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1347,6 +1503,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for O
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 81 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1393,6 +1552,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Multiv
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1439,6 +1601,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Vector<S2, T>> for Multiv
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1485,6 +1650,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Bivector<S2, T>> for Mult
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1531,6 +1699,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Trivector<S2, T>> for Mul
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1577,6 +1748,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Quadvector<S2, T>> for Mu
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Quadvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1623,6 +1797,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Motor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 82 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1669,6 +1846,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Odd<S2, T>> for Multivect
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1715,6 +1895,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 162 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];

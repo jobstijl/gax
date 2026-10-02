@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -19,6 +22,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Scalar<S
     type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -36,6 +42,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Scalar<
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -53,6 +62,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -68,6 +80,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Scalar<
     type Output = Rotor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -84,6 +99,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Sc
     type Output = Translator<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -101,6 +119,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Scalar<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -119,6 +140,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Scala
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -137,6 +161,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for S
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -159,6 +186,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Line<S
     type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -176,6 +206,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Line<S1,
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -194,6 +227,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Line<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 7 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -212,6 +248,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -229,6 +268,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Line<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -247,6 +289,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Li
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 7 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -265,6 +310,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Line<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -283,6 +331,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Line<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -301,6 +352,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for L
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -323,6 +377,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Point<
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -340,6 +397,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Point<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 7 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -358,6 +418,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Point<S
     type Output = Translator<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -375,6 +438,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -392,6 +458,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Point<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -410,6 +479,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Po
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -427,6 +499,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Point<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -445,6 +520,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Point
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -463,6 +541,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -485,6 +566,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudo
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -500,6 +584,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Pseudosc
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -517,6 +604,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Pseudos
     type Output = Line<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -534,6 +624,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Pseudos
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -552,6 +645,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Ps
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -567,6 +663,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Pseudos
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -585,6 +684,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Pseud
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -602,6 +704,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -624,6 +729,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Rotor<
     type Output = Rotor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -640,6 +748,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Rotor<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -658,6 +769,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Rotor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -676,6 +790,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -694,6 +811,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Rotor<S
     type Output = Rotor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Rotor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -710,6 +830,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Ro
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -728,6 +851,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Rotor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -746,6 +872,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Rotor
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -764,6 +893,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for R
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -786,6 +918,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Transl
     type Output = Translator<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -803,6 +938,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Translat
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 7 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -821,6 +959,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Transla
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -838,6 +979,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -853,6 +997,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Transla
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -871,6 +1018,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Tr
     type Output = Translator<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Translator<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -888,6 +1038,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Transla
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -906,6 +1059,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Trans
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -924,6 +1080,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -946,6 +1105,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Motor<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -964,6 +1126,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Motor<S1
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -982,6 +1147,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1000,6 +1168,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1018,6 +1189,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1036,6 +1210,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Mo
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1054,6 +1231,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1072,6 +1252,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Motor
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1090,6 +1273,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1112,6 +1298,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Flecto
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1130,6 +1319,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Flector<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1148,6 +1340,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Flector
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1166,6 +1361,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Point<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1183,6 +1381,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Flector
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1201,6 +1402,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Fl
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1219,6 +1423,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Flector
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1237,6 +1444,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Flect
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1255,6 +1465,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for F
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1277,6 +1490,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Multiv
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1299,6 +1515,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Line<S2, T>> for Multivec
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Line<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1321,6 +1540,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Point<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Point<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1343,6 +1565,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1365,6 +1590,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Rotor<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Rotor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1387,6 +1615,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Translator<S2, T>> for Mu
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Translator<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1409,6 +1640,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1431,6 +1665,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Flector<S2, T>> for Multi
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Flector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1453,6 +1690,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];

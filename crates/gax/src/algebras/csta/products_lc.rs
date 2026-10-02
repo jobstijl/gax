@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Scalar
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -19,6 +22,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Scalar
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -39,6 +45,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Scalar<
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -63,6 +72,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Scal
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -92,6 +104,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Sca
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -126,6 +141,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Sc
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -155,6 +173,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for S
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -175,6 +196,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -190,6 +214,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Scalar<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -220,6 +247,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Scalar<S
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -266,6 +296,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Scalar<S1
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -312,6 +345,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for S
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -390,6 +426,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Vector
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -405,6 +444,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Vector<
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -425,6 +467,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Vect
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -445,6 +490,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Vec
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -474,6 +522,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Ve
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -508,6 +559,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for V
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -537,6 +591,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -557,6 +614,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Vector<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -603,6 +663,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Vector<S
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -649,6 +712,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Vector<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -695,6 +761,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for V
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -773,6 +842,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Twist<S
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -788,6 +860,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Twis
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -803,6 +878,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Twi
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -823,6 +901,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Tw
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -852,6 +933,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for T
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -886,6 +970,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -915,6 +1002,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Twist<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 24 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -945,6 +1035,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Twist<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -991,6 +1084,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Twist<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1037,6 +1133,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1115,6 +1214,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Bivecto
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1130,6 +1232,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Bive
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1145,6 +1250,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Biv
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1165,6 +1273,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Bi
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1194,6 +1305,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for B
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1228,6 +1342,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1257,6 +1374,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Bivecto
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1287,6 +1407,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Bivector
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1333,6 +1456,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Bivector<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1379,6 +1505,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for B
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1457,6 +1586,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Tri
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1472,6 +1604,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Tr
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1492,6 +1627,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for T
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1521,6 +1659,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1555,6 +1696,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Trivect
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1575,6 +1719,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Trivecto
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1621,6 +1768,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Trivector
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1667,6 +1817,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1745,6 +1898,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Qu
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1760,6 +1916,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for Q
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1780,6 +1939,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1809,6 +1971,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Quadvec
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 5 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1824,6 +1989,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Quadvect
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1870,6 +2038,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Quadvecto
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1890,6 +2061,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Q
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1968,6 +2142,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for Q
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1983,6 +2160,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2003,6 +2183,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Quintvec
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2023,6 +2206,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Quintvect
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2038,6 +2224,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for Q
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2116,6 +2305,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2131,6 +2323,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Pseudosc
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2146,6 +2341,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for P
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2161,6 +2359,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Motor<
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2176,6 +2377,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Motor<
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2196,6 +2400,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2226,6 +2433,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Moto
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 25 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2272,6 +2482,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Mot
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2318,6 +2531,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Mo
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2364,6 +2580,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for M
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 56 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2410,6 +2629,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2456,6 +2678,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 41 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2486,6 +2711,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Motor<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 122 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2532,6 +2760,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Motor<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 122 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2578,6 +2809,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 244 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2656,6 +2890,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Even<S
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2671,6 +2908,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Even<S
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2691,6 +2931,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Even<S1
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2721,6 +2964,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Even
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2767,6 +3013,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Eve
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2813,6 +3062,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Ev
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2859,6 +3111,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for E
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2905,6 +3160,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2951,6 +3209,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Even<S1
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 61 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2981,6 +3242,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Even<S1,
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 183 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3027,6 +3291,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Even<S1, 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 182 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3073,6 +3340,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for E
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 365 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3151,6 +3421,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Odd<S1
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3166,6 +3439,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Odd<S1,
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3186,6 +3462,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Odd<
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3206,6 +3485,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Odd
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3252,6 +3534,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Od
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3298,6 +3583,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for O
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3344,6 +3632,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3390,6 +3681,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Odd<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3436,6 +3730,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Odd<S1, 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 182 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3482,6 +3779,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Odd<S1, T
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 182 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3528,6 +3828,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for O
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 364 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3606,6 +3909,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Scalar<S2, T>> for Multiv
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3621,6 +3927,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Vector<S2, T>> for Multiv
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3699,6 +4008,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Twist<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3777,6 +4089,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Bivector<S2, T>> for Mult
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3855,6 +4170,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Trivector<S2, T>> for Mul
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3933,6 +4251,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quadvector<S2, T>> for Mu
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quadvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4011,6 +4332,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Quintvector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Quintvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4089,6 +4413,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Pseudoscalar<S2, T>> for 
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Pseudoscalar<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4167,6 +4494,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Motor<S2, T>> for Multive
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Motor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 121 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4245,6 +4575,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Even<S2, T>> for Multivec
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 365 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4323,6 +4656,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Odd<S2, T>> for Multivect
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 364 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4401,6 +4737,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Lc<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn lc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 729 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Lc::lc(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];

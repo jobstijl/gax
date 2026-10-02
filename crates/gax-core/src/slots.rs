@@ -120,6 +120,55 @@ where
     }))
 }
 
+/// Products of maps above this much work (terms of the value product times the slot entries
+/// of the result) run as the value product once per pair of slot entries ([`by_entries`])
+/// instead of unrolled across the slot arrays: unrolled, a 6D product with a 15-entry slot is
+/// some 7000 array operations for the compiler to optimize, and a few of them took minutes.
+pub const SLOT_UNROLL_MAX: usize = 4096;
+
+/// A bilinear operation `f` on values, extended to extensors with slots: `f` of every pair of
+/// slot entries of `a` and `b`, collected with slots `Cat<S1, S2>` (`a`'s first). Generated
+/// products of maps call it above [`SLOT_UNROLL_MAX`].
+#[inline]
+pub fn by_entries<M1, M2, R, F>(
+    a: &M1,
+    b: &M2,
+    f: F,
+) -> Retype<R, Cat<M1::Slots, M2::Slots>, R::Coef>
+where
+    M1: Extensor,
+    M2: Extensor<Coef = M1::Coef>,
+    R: Extensor<Slots = (), Coef = M1::Coef>,
+    F: Fn(Retype<M1, (), M1::Coef>, Retype<M2, (), M1::Coef>) -> R,
+{
+    type V<M> = Retype<M, (), <M as Extensor>::Coef>;
+    // Each operand as a slot array of plain values.
+    let av: <M1::Slots as Slots>::Arr<V<M1>> = <M1::Slots as Slots>::from_flat(
+        &mut |k| {
+            V::<M1>::from_coeffs(<M1::Kind as Kind>::arr_map(a.coeffs(), |col| {
+                <M1::Slots as Slots>::get_flat(col, k)
+            }))
+        },
+        0,
+    );
+    let bv: <M2::Slots as Slots>::Arr<V<M2>> = <M2::Slots as Slots>::from_flat(
+        &mut |k| {
+            V::<M2>::from_coeffs(<M2::Kind as Kind>::arr_map(b.coeffs(), |col| {
+                <M2::Slots as Slots>::get_flat(col, k)
+            }))
+        },
+        0,
+    );
+    let prod = <M1::Slots as Slots>::outer::<M2::Slots, _, _, R>(&av, &bv, &mut |x, y| f(*x, *y));
+    // Back to output-first coefficients.
+    let c = <R::Kind as Kind>::arr_from_fn(|o| {
+        <Cat<M1::Slots, M2::Slots> as Slots>::map(&prod, &mut |r: &R| {
+            <R::Kind as Kind>::arr_map(r.coeffs(), |x| *x).as_ref()[o]
+        })
+    });
+    <Retype<R, Cat<M1::Slots, M2::Slots>, R::Coef> as Extensor>::from_coeffs(c)
+}
+
 impl HasCat for () {
     type Cat<R: Slots> = R;
 }

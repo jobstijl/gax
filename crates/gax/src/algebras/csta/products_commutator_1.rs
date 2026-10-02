@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -33,6 +36,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -53,6 +59,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -73,6 +82,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -102,6 +114,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -136,6 +151,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -151,6 +169,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -171,6 +192,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -217,6 +241,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -263,6 +290,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for V
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -309,6 +339,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -387,6 +420,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -407,6 +443,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 48 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -431,6 +470,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -460,6 +502,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -494,6 +539,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -523,6 +571,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -543,6 +594,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -573,6 +627,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -619,6 +676,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -665,6 +725,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -743,6 +806,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -763,6 +829,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -792,6 +861,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -821,6 +893,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 180 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -855,6 +930,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -884,6 +962,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -904,6 +985,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -950,6 +1034,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -996,6 +1083,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for B
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1042,6 +1132,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1120,6 +1213,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1149,6 +1245,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1183,6 +1282,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 180 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1217,6 +1319,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 200 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1263,6 +1368,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1309,6 +1417,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1338,6 +1449,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1372,6 +1486,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1418,6 +1535,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1464,6 +1584,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for T
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1510,6 +1633,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 640 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1588,6 +1714,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1622,6 +1751,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 80 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1651,6 +1783,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1680,6 +1815,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1726,6 +1864,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1755,6 +1896,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1789,6 +1933,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1835,6 +1982,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1881,6 +2031,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Q
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1927,6 +2080,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2005,6 +2161,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2020,6 +2179,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2040,6 +2202,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2060,6 +2225,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2089,6 +2257,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2123,6 +2294,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 30 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2152,6 +2326,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2172,6 +2349,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2218,6 +2398,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2264,6 +2447,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Q
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2310,6 +2496,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2388,6 +2577,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2408,6 +2600,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2442,6 +2637,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2462,6 +2660,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for P
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2508,6 +2709,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2554,6 +2758,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2600,6 +2807,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2630,6 +2840,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2676,6 +2889,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2722,6 +2938,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2768,6 +2987,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 40 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2814,6 +3036,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 88 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2844,6 +3069,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2890,6 +3118,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for M
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2936,6 +3167,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3014,6 +3248,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3060,6 +3297,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3106,6 +3346,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3152,6 +3395,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3198,6 +3444,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3244,6 +3493,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3290,6 +3542,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3336,6 +3591,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3382,6 +3640,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for E
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 512 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3428,6 +3689,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 992 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3506,6 +3770,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3552,6 +3819,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 160 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3598,6 +3868,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3644,6 +3917,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3690,6 +3966,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3736,6 +4015,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3782,6 +4064,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3828,6 +4113,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3874,6 +4162,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 512 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3920,6 +4211,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for O
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 512 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3966,6 +4260,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1024 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4044,6 +4341,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> fo
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Vector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4122,6 +4422,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Twist<S2, T>> for
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Twist<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4200,6 +4503,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Bivector<S2, T>> 
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Bivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4278,6 +4584,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>>
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Trivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 640 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4356,6 +4665,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quadvector<S2, T>
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quadvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4434,6 +4746,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Quintvector<S2, T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Quintvector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4512,6 +4827,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Pseudoscalar<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4558,6 +4876,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn commutator(self, rhs: Motor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4627,162 +4948,6 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Motor<S2, T>> for
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((((p(38, 11) + p(39, 12)) + (p(40, 13) + p(60, 10))) - ((p(41, 14) + p(57, 7)) + (p(58, 8) + p(59, 9))))).0,
                 <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Multivector<S1, T> {
-    type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn commutator(self, rhs: Even<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Multivector {
-            c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((((p(3, 2) + p(5, 11)) + (p(6, 7) + p(31, 22))) + ((p(37, 18) + p(40, 26)) - (p(2, 3) + p(4, 4)))) - (((p(22, 16) + p(26, 24)) + (p(30, 23) + p(32, 20))) + ((p(36, 19) + p(39, 27)) + (p(41, 28) + p(57, 31)))))).0,
-                (((((p(1, 3) + p(5, 12)) + (p(6, 8) + p(29, 23))) + ((p(35, 19) + p(38, 27)) - (p(3, 1) + p(4, 5)))) - (((p(23, 16) + p(27, 24)) + (p(31, 21) + p(33, 20))) + ((p(37, 17) + p(40, 25)) + (p(41, 29) + p(58, 31)))))).0,
-                (((((p(2, 1) + p(5, 13)) + (p(6, 9) + p(30, 21))) + ((p(36, 17) + p(39, 25)) - (p(1, 2) + p(4, 6)))) - (((p(24, 16) + p(28, 24)) + (p(29, 22) + p(34, 20))) + ((p(35, 18) + p(38, 26)) + (p(41, 30) + p(59, 31)))))).0,
-                (((((p(5, 14) + p(6, 10)) - (p(1, 4) + p(2, 5))) - ((p(3, 6) + p(25, 16)) + (p(26, 21) + p(27, 22)))) - (((p(28, 23) + p(32, 17)) + (p(33, 18) + p(34, 19))) + ((p(38, 28) + p(39, 29)) + (p(40, 30) + p(60, 31)))))).0,
-                (((((p(1, 7) + p(2, 8)) + (p(3, 9) + p(5, 15))) + ((p(22, 17) + p(23, 18)) + (p(24, 19) + p(29, 28)))) + (((p(30, 29) + p(31, 30)) - (p(4, 10) + p(25, 20))) - ((p(26, 25) + p(27, 26)) + (p(28, 27) + p(61, 31)))))).0,
-                (((((p(1, 11) + p(2, 12)) + (p(3, 13) + p(22, 21))) + ((p(23, 22) + p(24, 23)) + (p(32, 25) + p(33, 26)))) + (((p(34, 27) + p(62, 31)) - (p(4, 14) + p(6, 15))) - ((p(25, 24) + p(35, 28)) + (p(36, 29) + p(37, 30)))))).0,
-                (((((p(9, 2) + p(11, 6)) + (p(14, 13) + p(18, 9))) + ((p(44, 23) + p(48, 19)) + (p(53, 26) + p(55, 30)))) - (((p(8, 3) + p(12, 5)) + (p(15, 12) + p(19, 8))) + ((p(45, 22) + p(49, 18)) + (p(52, 27) + p(56, 29)))))).0,
-                (((((p(7, 3) + p(12, 4)) + (p(15, 11) + p(19, 7))) + ((p(45, 21) + p(49, 17)) + (p(51, 27) + p(56, 28)))) - (((p(9, 1) + p(10, 6)) + (p(13, 13) + p(17, 9))) + ((p(43, 23) + p(47, 19)) + (p(53, 25) + p(54, 30)))))).0,
-                (((((p(8, 1) + p(10, 5)) + (p(13, 12) + p(17, 8))) + ((p(43, 22) + p(47, 18)) + (p(52, 25) + p(54, 29)))) - (((p(7, 2) + p(11, 4)) + (p(14, 11) + p(18, 7))) + ((p(44, 21) + p(48, 17)) + (p(51, 26) + p(55, 28)))))).0,
-                (((((p(9, 5) + p(12, 2)) + (p(16, 11) + p(20, 7))) + ((p(46, 21) + p(50, 17)) + (p(53, 29) + p(56, 26)))) - (((p(8, 6) + p(11, 3)) + (p(13, 14) + p(17, 10))) + ((p(43, 24) + p(47, 20)) + (p(52, 30) + p(55, 27)))))).0,
-                (((((p(7, 6) + p(10, 3)) + (p(16, 12) + p(20, 8))) + ((p(46, 22) + p(50, 18)) + (p(51, 30) + p(54, 27)))) - (((p(9, 4) + p(12, 1)) + (p(14, 14) + p(18, 10))) + ((p(44, 24) + p(48, 20)) + (p(53, 28) + p(56, 25)))))).0,
-                (((((p(8, 4) + p(11, 1)) + (p(16, 13) + p(20, 9))) + ((p(46, 23) + p(50, 19)) + (p(52, 28) + p(55, 25)))) - (((p(7, 5) + p(10, 2)) + (p(15, 14) + p(19, 10))) + ((p(45, 24) + p(49, 20)) + (p(51, 29) + p(54, 26)))))).0,
-                (((((p(9, 8) + p(10, 10)) + (p(13, 15) + p(15, 2))) + ((p(42, 17) + p(44, 30)) + (p(51, 20) + p(55, 19)))) - (((p(8, 9) + p(14, 3)) + (p(16, 4) + p(21, 7))) + ((p(43, 16) + p(45, 29)) + (p(46, 25) + p(56, 18)))))).0,
-                (((((p(7, 9) + p(11, 10)) + (p(13, 3) + p(14, 15))) + ((p(42, 18) + p(45, 28)) + (p(52, 20) + p(56, 17)))) - (((p(9, 7) + p(15, 1)) + (p(16, 5) + p(21, 8))) + ((p(43, 30) + p(44, 16)) + (p(46, 26) + p(54, 19)))))).0,
-                (((((p(8, 7) + p(12, 10)) + (p(14, 1) + p(15, 15))) + ((p(42, 19) + p(43, 29)) + (p(53, 20) + p(54, 18)))) - (((p(7, 8) + p(13, 2)) + (p(16, 6) + p(21, 9))) + ((p(44, 28) + p(45, 16)) + (p(46, 27) + p(55, 17)))))).0,
-                (((((p(10, 7) + p(11, 8)) + (p(12, 9) + p(16, 15))) + ((p(42, 20) + p(51, 17)) + (p(52, 18) + p(53, 19)))) - (((p(13, 4) + p(14, 5)) + (p(15, 6) + p(21, 10))) + ((p(43, 25) + p(44, 26)) + (p(45, 27) + p(46, 16)))))).0,
-                (((((p(9, 12) + p(10, 14)) + (p(19, 2) + p(21, 11))) + ((p(42, 21) + p(49, 29)) + (p(50, 25) + p(56, 22)))) - (((p(8, 13) + p(17, 15)) + (p(18, 3) + p(20, 4))) + ((p(47, 16) + p(48, 30)) + (p(51, 24) + p(55, 23)))))).0,
-                (((((p(7, 13) + p(11, 14)) + (p(17, 3) + p(21, 12))) + ((p(42, 22) + p(47, 30)) + (p(50, 26) + p(54, 23)))) - (((p(9, 11) + p(18, 15)) + (p(19, 1) + p(20, 5))) + ((p(48, 16) + p(49, 28)) + (p(52, 24) + p(56, 21)))))).0,
-                (((((p(8, 11) + p(12, 14)) + (p(18, 1) + p(21, 13))) + ((p(42, 23) + p(48, 28)) + (p(50, 27) + p(55, 21)))) - (((p(7, 12) + p(17, 2)) + (p(19, 15) + p(20, 6))) + ((p(47, 29) + p(49, 16)) + (p(53, 24) + p(54, 22)))))).0,
-                (((((p(10, 11) + p(11, 12)) + (p(12, 13) + p(21, 14))) + ((p(42, 24) + p(47, 25)) + (p(48, 26) + p(49, 27)))) - (((p(17, 4) + p(18, 5)) + (p(19, 6) + p(20, 15))) + ((p(50, 16) + p(51, 21)) + (p(52, 22) + p(53, 23)))))).0,
-                (((((p(16, 14) + p(17, 7)) + (p(18, 8) + p(19, 9))) + ((p(46, 24) + p(47, 17)) + (p(48, 18) + p(49, 19)))) - (((p(13, 11) + p(14, 12)) + (p(15, 13) + p(20, 10))) + ((p(43, 21) + p(44, 22)) + (p(45, 23) + p(50, 20)))))).0,
-                (((((p(1, 16) + p(5, 21)) + (p(6, 17) + p(24, 2))) + ((p(26, 14) + p(30, 13)) + (p(32, 10) + p(36, 9)))) + (((p(38, 31) + p(59, 26)) - (p(23, 3) + p(25, 4))) - ((p(31, 12) + p(37, 8)) + (p(58, 27) + p(60, 28)))))).0,
-                (((((p(2, 16) + p(5, 22)) + (p(6, 18) + p(22, 3))) + ((p(27, 14) + p(31, 11)) + (p(33, 10) + p(37, 7)))) + (((p(39, 31) + p(57, 27)) - (p(24, 1) + p(25, 5))) - ((p(29, 13) + p(35, 9)) + (p(59, 25) + p(60, 29)))))).0,
-                (((((p(3, 16) + p(5, 23)) + (p(6, 19) + p(23, 1))) + ((p(28, 14) + p(29, 12)) + (p(34, 10) + p(35, 8)))) + (((p(40, 31) + p(58, 25)) - (p(22, 2) + p(25, 6))) - ((p(30, 11) + p(36, 7)) + (p(57, 26) + p(60, 30)))))).0,
-                (((((p(4, 16) + p(5, 24)) + (p(6, 20) + p(26, 11))) + ((p(27, 12) + p(28, 13)) + (p(32, 7) + p(33, 8)))) + (((p(34, 9) + p(41, 31)) - (p(22, 4) + p(23, 5))) - ((p(24, 6) + p(57, 28)) + (p(58, 29) + p(59, 30)))))).0,
-                (((((p(1, 20) + p(5, 25)) + (p(25, 7) + p(26, 15))) + ((p(28, 2) + p(30, 6)) + (p(40, 8) + p(59, 18)))) - (((p(4, 17) + p(22, 10)) + (p(27, 3) + p(29, 31))) + ((p(31, 5) + p(39, 9)) + (p(58, 19) + p(61, 28)))))).0,
-                (((((p(2, 20) + p(5, 26)) + (p(25, 8) + p(26, 3))) + ((p(27, 15) + p(31, 4)) + (p(38, 9) + p(57, 19)))) - (((p(4, 18) + p(23, 10)) + (p(28, 1) + p(29, 6))) + ((p(30, 31) + p(40, 7)) + (p(59, 17) + p(61, 29)))))).0,
-                (((((p(3, 20) + p(5, 27)) + (p(25, 9) + p(27, 1))) + ((p(28, 15) + p(29, 5)) + (p(39, 7) + p(58, 17)))) - (((p(4, 19) + p(24, 10)) + (p(26, 2) + p(30, 4))) + ((p(31, 31) + p(38, 8)) + (p(57, 18) + p(61, 30)))))).0,
-                (((((p(2, 19) + p(5, 28)) + (p(24, 8) + p(26, 31))) + ((p(28, 5) + p(29, 15)) + (p(31, 2) + p(38, 10)))) + (((p(57, 20) + p(61, 25)) - (p(3, 18) + p(23, 9))) - ((p(27, 6) + p(30, 3)) + (p(41, 7) + p(60, 17)))))).0,
-                (((((p(3, 17) + p(5, 29)) + (p(22, 9) + p(26, 6))) + ((p(27, 31) + p(29, 3)) + (p(30, 15) + p(39, 10)))) + (((p(58, 20) + p(61, 26)) - (p(1, 19) + p(24, 7))) - ((p(28, 4) + p(31, 1)) + (p(41, 8) + p(60, 18)))))).0,
-                (((((p(1, 18) + p(5, 30)) + (p(23, 7) + p(27, 4))) + ((p(28, 31) + p(30, 1)) + (p(31, 15) + p(40, 10)))) + (((p(59, 20) + p(61, 27)) - (p(2, 17) + p(22, 8))) - ((p(26, 5) + p(29, 2)) + (p(41, 9) + p(60, 19)))))).0,
-                (((((p(1, 24) + p(25, 11)) + (p(34, 2) + p(35, 31))) + ((p(36, 6) + p(39, 13)) + (p(58, 23) + p(62, 28)))) - (((p(4, 21) + p(6, 25)) + (p(22, 14) + p(32, 15))) + ((p(33, 3) + p(37, 5)) + (p(40, 12) + p(59, 22)))))).0,
-                (((((p(2, 24) + p(25, 12)) + (p(32, 3) + p(36, 31))) + ((p(37, 4) + p(40, 11)) + (p(59, 21) + p(62, 29)))) - (((p(4, 22) + p(6, 26)) + (p(23, 14) + p(33, 15))) + ((p(34, 1) + p(35, 6)) + (p(38, 13) + p(57, 23)))))).0,
-                (((((p(3, 24) + p(25, 13)) + (p(33, 1) + p(35, 5))) + ((p(37, 31) + p(38, 12)) + (p(57, 22) + p(62, 30)))) - (((p(4, 23) + p(6, 27)) + (p(24, 14) + p(32, 2))) + ((p(34, 15) + p(36, 4)) + (p(39, 11) + p(58, 21)))))).0,
-                (((((p(2, 23) + p(24, 12)) + (p(34, 5) + p(37, 2))) + ((p(41, 11) + p(60, 21)) - (p(3, 22) + p(6, 28)))) - (((p(23, 13) + p(32, 31)) + (p(33, 6) + p(35, 15))) + ((p(36, 3) + p(38, 14)) + (p(57, 24) + p(62, 25)))))).0,
-                (((((p(3, 21) + p(22, 13)) + (p(32, 6) + p(35, 3))) + ((p(41, 12) + p(60, 22)) - (p(1, 23) + p(6, 29)))) - (((p(24, 11) + p(33, 31)) + (p(34, 4) + p(36, 15))) + ((p(37, 1) + p(39, 14)) + (p(58, 24) + p(62, 26)))))).0,
-                (((((p(1, 22) + p(23, 11)) + (p(33, 4) + p(36, 1))) + ((p(41, 13) + p(60, 23)) - (p(2, 21) + p(6, 30)))) - (((p(22, 12) + p(32, 5)) + (p(34, 31) + p(35, 2))) + ((p(37, 15) + p(40, 14)) + (p(59, 24) + p(62, 27)))))).0,
-                (((((p(3, 26) + p(27, 13)) + (p(34, 8) + p(35, 10))) + ((p(40, 2) + p(62, 17)) - (p(2, 27) + p(4, 28)))) - (((p(22, 31) + p(28, 12)) + (p(29, 14) + p(33, 9))) + ((p(39, 3) + p(41, 4)) + (p(57, 16) + p(61, 21)))))).0,
-                (((((p(1, 27) + p(28, 11)) + (p(32, 9) + p(36, 10))) + ((p(38, 3) + p(62, 18)) - (p(3, 25) + p(4, 29)))) - (((p(23, 31) + p(26, 13)) + (p(30, 14) + p(34, 7))) + ((p(40, 1) + p(41, 5)) + (p(58, 16) + p(61, 22)))))).0,
-                (((((p(2, 25) + p(26, 12)) + (p(33, 7) + p(37, 10))) + ((p(39, 1) + p(62, 19)) - (p(1, 26) + p(4, 30)))) - (((p(24, 31) + p(27, 11)) + (p(31, 14) + p(32, 8))) + ((p(38, 2) + p(41, 6)) + (p(59, 16) + p(61, 23)))))).0,
-                (((((p(35, 7) + p(36, 8)) + (p(37, 9) + p(62, 20))) - ((p(1, 28) + p(2, 29)) + (p(3, 30) + p(25, 31)))) - (((p(29, 11) + p(30, 12)) + (p(31, 13) + p(38, 4))) + ((p(39, 5) + p(40, 6)) + (p(60, 16) + p(61, 24)))))).0,
-                (((((p(13, 21) + p(14, 22)) + (p(15, 23) + p(17, 17))) + ((p(18, 18) + p(19, 19)) + (p(46, 14) + p(50, 10)))) - (((p(16, 24) + p(20, 20)) + (p(43, 11) + p(44, 12))) + ((p(45, 13) + p(47, 7)) + (p(48, 8) + p(49, 9)))))).0,
-                (((((p(9, 18) + p(10, 20)) + (p(13, 16) + p(15, 29))) + ((p(16, 25) + p(43, 15)) + (p(45, 2) + p(56, 8)))) - (((p(8, 19) + p(14, 30)) + (p(21, 17) + p(42, 7))) + ((p(44, 3) + p(46, 4)) + (p(51, 10) + p(55, 9)))))).0,
-                (((((p(7, 19) + p(11, 20)) + (p(13, 30) + p(14, 16))) + ((p(16, 26) + p(43, 3)) + (p(44, 15) + p(54, 9)))) - (((p(9, 17) + p(15, 28)) + (p(21, 18) + p(42, 8))) + ((p(45, 1) + p(46, 5)) + (p(52, 10) + p(56, 7)))))).0,
-                (((((p(8, 17) + p(12, 20)) + (p(14, 28) + p(15, 16))) + ((p(16, 27) + p(44, 1)) + (p(45, 15) + p(55, 7)))) - (((p(7, 18) + p(13, 29)) + (p(21, 19) + p(42, 9))) + ((p(43, 2) + p(46, 6)) + (p(53, 10) + p(54, 8)))))).0,
-                (((((p(10, 17) + p(11, 18)) + (p(12, 19) + p(13, 25))) + ((p(14, 26) + p(15, 27)) + (p(16, 16) + p(46, 15)))) - (((p(21, 20) + p(42, 10)) + (p(43, 4) + p(44, 5))) + ((p(45, 6) + p(51, 7)) + (p(52, 8) + p(53, 9)))))).0,
-                (((((p(9, 22) + p(10, 24)) + (p(17, 16) + p(18, 30))) + ((p(21, 21) + p(49, 2)) + (p(51, 14) + p(55, 13)))) - (((p(8, 23) + p(19, 29)) + (p(20, 25) + p(42, 11))) + ((p(47, 15) + p(48, 3)) + (p(50, 4) + p(56, 12)))))).0,
-                (((((p(7, 23) + p(11, 24)) + (p(18, 16) + p(19, 28))) + ((p(21, 22) + p(47, 3)) + (p(52, 14) + p(56, 11)))) - (((p(9, 21) + p(17, 30)) + (p(20, 26) + p(42, 12))) + ((p(48, 15) + p(49, 1)) + (p(50, 5) + p(54, 13)))))).0,
-                (((((p(8, 21) + p(12, 24)) + (p(17, 29) + p(19, 16))) + ((p(21, 23) + p(48, 1)) + (p(53, 14) + p(54, 12)))) - (((p(7, 22) + p(18, 28)) + (p(20, 27) + p(42, 13))) + ((p(47, 2) + p(49, 15)) + (p(50, 6) + p(55, 11)))))).0,
-                (((((p(10, 21) + p(11, 22)) + (p(12, 23) + p(20, 16))) + ((p(21, 24) + p(51, 11)) + (p(52, 12) + p(53, 13)))) - (((p(17, 25) + p(18, 26)) + (p(19, 27) + p(42, 14))) + ((p(47, 4) + p(48, 5)) + (p(49, 6) + p(50, 15)))))).0,
-                (((((p(9, 26) + p(11, 30)) + (p(16, 21) + p(17, 20))) + ((p(43, 14) + p(50, 7)) + (p(53, 2) + p(55, 6)))) - (((p(8, 27) + p(12, 29)) + (p(13, 24) + p(20, 17))) + ((p(46, 11) + p(47, 10)) + (p(52, 3) + p(56, 5)))))).0,
-                (((((p(7, 27) + p(12, 28)) + (p(16, 22) + p(18, 20))) + ((p(44, 14) + p(50, 8)) + (p(51, 3) + p(56, 4)))) - (((p(9, 25) + p(10, 30)) + (p(14, 24) + p(20, 18))) + ((p(46, 12) + p(48, 10)) + (p(53, 1) + p(54, 6)))))).0,
-                (((((p(8, 25) + p(10, 29)) + (p(16, 23) + p(19, 20))) + ((p(45, 14) + p(50, 9)) + (p(52, 1) + p(54, 5)))) - (((p(7, 26) + p(11, 28)) + (p(15, 24) + p(20, 19))) + ((p(46, 13) + p(49, 10)) + (p(51, 2) + p(55, 4)))))).0,
-                (((((p(9, 29) + p(12, 26)) + (p(15, 22) + p(18, 19))) + ((p(44, 13) + p(49, 8)) + (p(53, 5) + p(56, 2)))) - (((p(8, 30) + p(11, 27)) + (p(14, 23) + p(19, 18))) + ((p(45, 12) + p(48, 9)) + (p(52, 6) + p(55, 3)))))).0,
-                (((((p(7, 30) + p(10, 27)) + (p(13, 23) + p(19, 17))) + ((p(45, 11) + p(47, 9)) + (p(51, 6) + p(54, 3)))) - (((p(9, 28) + p(12, 25)) + (p(15, 21) + p(17, 19))) + ((p(43, 13) + p(49, 7)) + (p(53, 4) + p(56, 1)))))).0,
-                (((((p(8, 28) + p(11, 25)) + (p(14, 21) + p(17, 18))) + ((p(43, 12) + p(48, 7)) + (p(52, 4) + p(55, 1)))) - (((p(7, 29) + p(10, 26)) + (p(13, 22) + p(18, 17))) + ((p(44, 11) + p(47, 8)) + (p(51, 5) + p(54, 2)))))).0,
-                (((((p(1, 31) + p(24, 26)) + (p(27, 23) + p(34, 18))) + ((p(35, 20) + p(38, 16)) + (p(59, 2) + p(61, 11)))) - (((p(23, 27) + p(25, 28)) + (p(28, 22) + p(29, 24))) + ((p(33, 19) + p(58, 3)) + (p(60, 4) + p(62, 7)))))).0,
-                (((((p(2, 31) + p(22, 27)) + (p(28, 21) + p(32, 19))) + ((p(36, 20) + p(39, 16)) + (p(57, 3) + p(61, 12)))) - (((p(24, 25) + p(25, 29)) + (p(26, 23) + p(30, 24))) + ((p(34, 17) + p(59, 1)) + (p(60, 5) + p(62, 8)))))).0,
-                (((((p(3, 31) + p(23, 25)) + (p(26, 22) + p(33, 17))) + ((p(37, 20) + p(40, 16)) + (p(58, 1) + p(61, 13)))) - (((p(22, 26) + p(25, 30)) + (p(27, 21) + p(31, 24))) + ((p(32, 18) + p(57, 2)) + (p(60, 6) + p(62, 9)))))).0,
-                (((((p(4, 31) + p(35, 17)) + (p(36, 18) + p(37, 19))) + ((p(41, 16) + p(61, 14)) - (p(22, 28) + p(23, 29)))) - (((p(24, 30) + p(29, 21)) + (p(30, 22) + p(31, 23))) + ((p(57, 4) + p(58, 5)) + (p(59, 6) + p(62, 10)))))).0,
-                (((((p(5, 31) + p(41, 20)) + (p(57, 7) + p(58, 8))) + ((p(59, 9) + p(61, 15)) - (p(26, 28) + p(27, 29)))) - (((p(28, 30) + p(29, 25)) + (p(30, 26) + p(31, 27))) + ((p(38, 17) + p(39, 18)) + (p(40, 19) + p(60, 10)))))).0,
-                (((((p(32, 28) + p(33, 29)) + (p(34, 30) + p(35, 25))) + ((p(36, 26) + p(37, 27)) + (p(38, 21) + p(39, 22)))) + (((p(40, 23) + p(60, 14)) - (p(6, 31) + p(41, 24))) - ((p(57, 11) + p(58, 12)) + (p(59, 13) + p(62, 15)))))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Multivector<S1, T> {
-    type Output = Multivector<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn commutator(self, rhs: Odd<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Multivector {
-            c: [
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                (((((p(9, 1) + p(10, 3)) + (p(42, 6) + p(45, 20))) + ((p(46, 16) + p(49, 14)) + (p(50, 10) + p(53, 23)))) + (((p(54, 25) + p(63, 26)) - (p(8, 2) + p(13, 5))) - ((p(17, 4) + p(44, 21)) + (p(48, 15) + p(52, 24)))))).0,
-                (((((p(7, 2) + p(11, 3)) + (p(42, 7) + p(43, 21))) + ((p(46, 17) + p(47, 15)) + (p(50, 11) + p(51, 24)))) + (((p(55, 25) + p(63, 27)) - (p(9, 0) + p(14, 5))) - ((p(18, 4) + p(45, 19)) + (p(49, 13) + p(53, 22)))))).0,
-                (((((p(8, 0) + p(12, 3)) + (p(42, 8) + p(44, 19))) + ((p(46, 18) + p(48, 13)) + (p(50, 12) + p(52, 22)))) + (((p(56, 25) + p(63, 28)) - (p(7, 1) + p(15, 5))) - ((p(19, 4) + p(43, 20)) + (p(47, 14) + p(51, 23)))))).0,
-                (((((p(10, 0) + p(11, 1)) + (p(12, 2) + p(42, 9))) + ((p(43, 16) + p(44, 17)) + (p(45, 18) + p(47, 10)))) + (((p(48, 11) + p(49, 12)) + (p(54, 22) + p(55, 23))) + ((p(56, 24) + p(63, 29)) - (p(16, 5) + p(20, 4)))))).0,
-                (((((p(16, 3) + p(46, 9)) + (p(51, 10) + p(52, 11))) + ((p(53, 12) + p(63, 30)) - (p(13, 0) + p(14, 1)))) - (((p(15, 2) + p(21, 4)) + (p(43, 6) + p(44, 7))) + ((p(45, 8) + p(54, 13)) + (p(55, 14) + p(56, 15)))))).0,
-                (((((p(20, 3) + p(21, 5)) + (p(50, 9) + p(54, 19))) + ((p(55, 20) + p(56, 21)) - (p(17, 0) + p(18, 1)))) - (((p(19, 2) + p(47, 6)) + (p(48, 7) + p(49, 8))) + ((p(51, 16) + p(52, 17)) + (p(53, 18) + p(63, 31)))))).0,
-                (((((p(2, 2) + p(23, 8)) + (p(27, 18) + p(31, 20))) + ((p(33, 12) + p(37, 14)) + (p(39, 24) + p(58, 28)))) - (((p(3, 1) + p(24, 7)) + (p(28, 17) + p(30, 21))) + ((p(34, 11) + p(36, 15)) + (p(40, 23) + p(59, 27)))))).0,
-                (((((p(3, 0) + p(24, 6)) + (p(28, 16) + p(29, 21))) + ((p(34, 10) + p(35, 15)) + (p(40, 22) + p(59, 26)))) - (((p(1, 2) + p(22, 8)) + (p(26, 18) + p(31, 19))) + ((p(32, 12) + p(37, 13)) + (p(38, 24) + p(57, 28)))))).0,
-                (((((p(1, 1) + p(22, 7)) + (p(26, 17) + p(30, 19))) + ((p(32, 11) + p(36, 13)) + (p(38, 23) + p(57, 27)))) - (((p(2, 0) + p(23, 6)) + (p(27, 16) + p(29, 20))) + ((p(33, 10) + p(35, 14)) + (p(39, 22) + p(58, 26)))))).0,
-                (((((p(4, 0) + p(25, 6)) + (p(27, 21) + p(30, 18))) + ((p(33, 15) + p(36, 12)) + (p(41, 22) + p(60, 26)))) - (((p(1, 3) + p(22, 9)) + (p(28, 20) + p(31, 17))) + ((p(34, 14) + p(37, 11)) + (p(38, 25) + p(57, 29)))))).0,
-                (((((p(4, 1) + p(25, 7)) + (p(28, 19) + p(31, 16))) + ((p(34, 13) + p(37, 10)) + (p(41, 23) + p(60, 27)))) - (((p(2, 3) + p(23, 9)) + (p(26, 21) + p(29, 18))) + ((p(32, 15) + p(35, 12)) + (p(39, 25) + p(58, 29)))))).0,
-                (((((p(4, 2) + p(25, 8)) + (p(26, 20) + p(29, 17))) + ((p(32, 14) + p(35, 11)) + (p(41, 24) + p(60, 28)))) - (((p(3, 3) + p(24, 9)) + (p(27, 19) + p(30, 16))) + ((p(33, 13) + p(36, 10)) + (p(40, 25) + p(59, 29)))))).0,
-                (((((p(1, 4) + p(23, 15)) + (p(26, 9) + p(27, 24))) + ((p(30, 8) + p(39, 12)) + (p(41, 13) + p(57, 30)))) - (((p(5, 0) + p(24, 14)) + (p(25, 10) + p(28, 23))) + ((p(29, 25) + p(31, 7)) + (p(40, 11) + p(61, 26)))))).0,
-                (((((p(2, 4) + p(24, 13)) + (p(27, 9) + p(28, 22))) + ((p(31, 6) + p(40, 10)) + (p(41, 14) + p(58, 30)))) - (((p(5, 1) + p(22, 15)) + (p(25, 11) + p(26, 24))) + ((p(29, 8) + p(30, 25)) + (p(38, 12) + p(61, 27)))))).0,
-                (((((p(3, 4) + p(22, 14)) + (p(26, 23) + p(28, 9))) + ((p(29, 7) + p(38, 11)) + (p(41, 15) + p(59, 30)))) - (((p(5, 2) + p(23, 13)) + (p(25, 12) + p(27, 22))) + ((p(30, 6) + p(31, 25)) + (p(39, 10) + p(61, 28)))))).0,
-                (((((p(4, 4) + p(26, 6)) + (p(27, 7) + p(28, 8))) + ((p(38, 13) + p(39, 14)) + (p(40, 15) + p(60, 30)))) - (((p(5, 3) + p(22, 10)) + (p(23, 11) + p(24, 12))) + ((p(29, 22) + p(30, 23)) + (p(31, 24) + p(61, 29)))))).0,
-                (((((p(1, 5) + p(23, 21)) + (p(32, 9) + p(34, 23))) + ((p(35, 25) + p(36, 8)) + (p(40, 17) + p(62, 26)))) - (((p(6, 0) + p(24, 20)) + (p(25, 16) + p(33, 24))) + ((p(37, 7) + p(39, 18)) + (p(41, 19) + p(57, 31)))))).0,
-                (((((p(2, 5) + p(24, 19)) + (p(32, 24) + p(33, 9))) + ((p(36, 25) + p(37, 6)) + (p(38, 18) + p(62, 27)))) - (((p(6, 1) + p(22, 21)) + (p(25, 17) + p(34, 22))) + ((p(35, 8) + p(40, 16)) + (p(41, 20) + p(58, 31)))))).0,
-                (((((p(3, 5) + p(22, 20)) + (p(33, 22) + p(34, 9))) + ((p(35, 7) + p(37, 25)) + (p(39, 16) + p(62, 28)))) - (((p(6, 2) + p(23, 19)) + (p(25, 18) + p(32, 23))) + ((p(36, 6) + p(38, 17)) + (p(41, 21) + p(59, 31)))))).0,
-                (((((p(4, 5) + p(32, 6)) + (p(33, 7) + p(34, 8))) + ((p(35, 22) + p(36, 23)) + (p(37, 24) + p(62, 29)))) - (((p(6, 3) + p(22, 16)) + (p(23, 17) + p(24, 18))) + ((p(38, 19) + p(39, 20)) + (p(40, 21) + p(60, 31)))))).0,
-                (((((p(5, 5) + p(29, 19)) + (p(30, 20) + p(31, 21))) + ((p(32, 10) + p(33, 11)) + (p(34, 12) + p(62, 30)))) - (((p(6, 4) + p(26, 16)) + (p(27, 17) + p(28, 18))) + ((p(35, 13) + p(36, 14)) + (p(37, 15) + p(61, 31)))))).0,
-                (((((p(9, 7) + p(10, 9)) + (p(14, 21) + p(18, 15))) + ((p(53, 27) + p(54, 29)) - (p(8, 8) + p(15, 20)))) - (((p(16, 16) + p(19, 14)) + (p(20, 10) + p(42, 0))) + ((p(43, 5) + p(47, 4)) + (p(52, 28) + p(63, 22)))))).0,
-                (((((p(7, 8) + p(11, 9)) + (p(15, 19) + p(19, 13))) + ((p(51, 28) + p(55, 29)) - (p(9, 6) + p(13, 21)))) - (((p(16, 17) + p(17, 15)) + (p(20, 11) + p(42, 1))) + ((p(44, 5) + p(48, 4)) + (p(53, 26) + p(63, 23)))))).0,
-                (((((p(8, 6) + p(12, 9)) + (p(13, 20) + p(17, 14))) + ((p(52, 26) + p(56, 29)) - (p(7, 7) + p(14, 19)))) - (((p(16, 18) + p(18, 13)) + (p(20, 12) + p(42, 2))) + ((p(45, 5) + p(49, 4)) + (p(51, 27) + p(63, 24)))))).0,
-                (((((p(10, 6) + p(11, 7)) + (p(12, 8) + p(54, 26))) + ((p(55, 27) + p(56, 28)) - (p(13, 16) + p(14, 17)))) - (((p(15, 18) + p(17, 10)) + (p(18, 11) + p(19, 12))) + ((p(42, 3) + p(46, 5)) + (p(50, 4) + p(63, 25)))))).0,
-                (((((p(9, 11) + p(11, 15)) + (p(15, 23) + p(16, 6))) + ((p(43, 3) + p(45, 27)) + (p(54, 30) + p(63, 13)))) - (((p(8, 12) + p(12, 14)) + (p(13, 9) + p(14, 24))) + ((p(21, 10) + p(44, 28)) + (p(46, 0) + p(51, 4)))))).0,
-                (((((p(7, 12) + p(12, 13)) + (p(13, 24) + p(16, 7))) + ((p(43, 28) + p(44, 3)) + (p(55, 30) + p(63, 14)))) - (((p(9, 10) + p(10, 15)) + (p(14, 9) + p(15, 22))) + ((p(21, 11) + p(45, 26)) + (p(46, 1) + p(52, 4)))))).0,
-                (((((p(8, 10) + p(10, 14)) + (p(14, 22) + p(16, 8))) + ((p(44, 26) + p(45, 3)) + (p(56, 30) + p(63, 15)))) - (((p(7, 11) + p(11, 13)) + (p(13, 23) + p(15, 9))) + ((p(21, 12) + p(43, 27)) + (p(46, 2) + p(53, 4)))))).0,
-                (((((p(9, 14) + p(12, 11)) + (p(13, 25) + p(15, 7))) + ((p(43, 29) + p(44, 2)) - (p(8, 15) + p(11, 12)))) - (((p(14, 8) + p(16, 22)) + (p(21, 13) + p(45, 1))) + ((p(46, 26) + p(51, 30)) + (p(54, 4) + p(63, 10)))))).0,
-                (((((p(7, 15) + p(10, 12)) + (p(13, 8) + p(14, 25))) + ((p(44, 29) + p(45, 0)) - (p(9, 13) + p(12, 10)))) - (((p(15, 6) + p(16, 23)) + (p(21, 14) + p(43, 2))) + ((p(46, 27) + p(52, 30)) + (p(55, 4) + p(63, 11)))))).0,
-                (((((p(8, 13) + p(11, 10)) + (p(14, 6) + p(15, 25))) + ((p(43, 1) + p(45, 29)) - (p(7, 14) + p(10, 11)))) - (((p(13, 7) + p(16, 24)) + (p(21, 15) + p(44, 0))) + ((p(46, 28) + p(53, 30)) + (p(56, 4) + p(63, 12)))))).0,
-                (((((p(9, 17) + p(11, 21)) + (p(18, 24) + p(20, 6))) + ((p(21, 16) + p(47, 3)) + (p(48, 28) + p(51, 5)))) - (((p(8, 18) + p(12, 20)) + (p(17, 9) + p(19, 23))) + ((p(49, 27) + p(50, 0)) + (p(54, 31) + p(63, 19)))))).0,
-                (((((p(7, 18) + p(12, 19)) + (p(19, 22) + p(20, 7))) + ((p(21, 17) + p(48, 3)) + (p(49, 26) + p(52, 5)))) - (((p(9, 16) + p(10, 21)) + (p(17, 24) + p(18, 9))) + ((p(47, 28) + p(50, 1)) + (p(55, 31) + p(63, 20)))))).0,
-                (((((p(8, 16) + p(10, 20)) + (p(17, 23) + p(20, 8))) + ((p(21, 18) + p(47, 27)) + (p(49, 3) + p(53, 5)))) - (((p(7, 17) + p(11, 19)) + (p(18, 22) + p(19, 9))) + ((p(48, 26) + p(50, 2)) + (p(56, 31) + p(63, 21)))))).0,
-                (((((p(9, 20) + p(12, 17)) + (p(19, 7) + p(20, 22))) + ((p(21, 19) + p(48, 2)) + (p(50, 26) + p(51, 31)))) + (((p(54, 5) + p(63, 16)) - (p(8, 21) + p(11, 18))) - ((p(17, 25) + p(18, 8)) + (p(47, 29) + p(49, 1)))))).0,
-                (((((p(7, 21) + p(10, 18)) + (p(17, 8) + p(20, 23))) + ((p(21, 20) + p(49, 0)) + (p(50, 27) + p(52, 31)))) + (((p(55, 5) + p(63, 17)) - (p(9, 19) + p(12, 16))) - ((p(18, 25) + p(19, 6)) + (p(47, 2) + p(48, 29)))))).0,
-                (((((p(8, 19) + p(11, 16)) + (p(18, 6) + p(20, 24))) + ((p(21, 21) + p(47, 1)) + (p(50, 28) + p(53, 31)))) + (((p(56, 5) + p(63, 18)) - (p(7, 20) + p(10, 17))) - ((p(17, 7) + p(19, 25)) + (p(48, 0) + p(49, 29)))))).0,
-                (((((p(9, 23) + p(10, 25)) + (p(15, 17) + p(18, 12))) + ((p(20, 13) + p(42, 26)) + (p(47, 30) + p(53, 1)))) + (((p(54, 3) + p(63, 6)) - (p(8, 24) + p(14, 18))) - ((p(16, 19) + p(19, 11)) + (p(43, 31) + p(52, 2)))))).0,
-                (((((p(7, 24) + p(11, 25)) + (p(13, 18) + p(19, 10))) + ((p(20, 14) + p(42, 27)) + (p(48, 30) + p(51, 2)))) + (((p(55, 3) + p(63, 7)) - (p(9, 22) + p(15, 16))) - ((p(16, 20) + p(17, 12)) + (p(44, 31) + p(53, 0)))))).0,
-                (((((p(8, 22) + p(12, 25)) + (p(14, 16) + p(17, 11))) + ((p(20, 15) + p(42, 28)) + (p(49, 30) + p(52, 0)))) + (((p(56, 3) + p(63, 8)) - (p(7, 23) + p(13, 17))) - ((p(16, 21) + p(18, 10)) + (p(45, 31) + p(51, 1)))))).0,
-                (((((p(10, 22) + p(11, 23)) + (p(12, 24) + p(17, 13))) + ((p(18, 14) + p(19, 15)) + (p(42, 29) + p(50, 30)))) + (((p(54, 0) + p(55, 1)) + (p(56, 2) + p(63, 9))) - ((p(13, 19) + p(14, 20)) + (p(15, 21) + p(46, 31)))))).0,
-                (((((p(1, 6) + p(2, 7)) + (p(3, 8) + p(25, 3))) + ((p(38, 26) + p(39, 27)) + (p(40, 28) + p(60, 25)))) - (((p(4, 9) + p(22, 0)) + (p(23, 1) + p(24, 2))) + ((p(41, 29) + p(57, 22)) + (p(58, 23) + p(59, 24)))))).0,
-                (((((p(3, 14) + p(4, 10)) + (p(22, 4) + p(27, 28))) + ((p(31, 1) + p(58, 12)) + (p(60, 13) + p(61, 22)))) - (((p(2, 15) + p(5, 6)) + (p(26, 3) + p(28, 27))) + ((p(29, 29) + p(30, 2)) + (p(38, 30) + p(59, 11)))))).0,
-                (((((p(1, 15) + p(4, 11)) + (p(23, 4) + p(28, 26))) + ((p(29, 2) + p(59, 10)) + (p(60, 14) + p(61, 23)))) - (((p(3, 13) + p(5, 7)) + (p(26, 28) + p(27, 3))) + ((p(30, 29) + p(31, 0)) + (p(39, 30) + p(57, 12)))))).0,
-                (((((p(2, 13) + p(4, 12)) + (p(24, 4) + p(26, 27))) + ((p(30, 0) + p(57, 11)) + (p(60, 15) + p(61, 24)))) - (((p(1, 14) + p(5, 8)) + (p(27, 26) + p(28, 3))) + ((p(29, 1) + p(31, 29)) + (p(40, 30) + p(58, 10)))))).0,
-                (((((p(1, 10) + p(2, 11)) + (p(3, 12) + p(25, 4))) + ((p(57, 13) + p(58, 14)) + (p(59, 15) + p(61, 25)))) - (((p(5, 9) + p(26, 0)) + (p(27, 1) + p(28, 2))) + ((p(29, 26) + p(30, 27)) + (p(31, 28) + p(41, 30)))))).0,
-                (((((p(3, 20) + p(4, 16)) + (p(22, 5) + p(34, 27))) + ((p(35, 29) + p(37, 1)) + (p(38, 31) + p(59, 17)))) - (((p(2, 21) + p(6, 6)) + (p(32, 3) + p(33, 28))) + ((p(36, 2) + p(58, 18)) + (p(60, 19) + p(62, 22)))))).0,
-                (((((p(1, 21) + p(4, 17)) + (p(23, 5) + p(32, 28))) + ((p(35, 2) + p(36, 29)) + (p(39, 31) + p(57, 18)))) - (((p(3, 19) + p(6, 7)) + (p(33, 3) + p(34, 26))) + ((p(37, 0) + p(59, 16)) + (p(60, 20) + p(62, 23)))))).0,
-                (((((p(2, 19) + p(4, 18)) + (p(24, 5) + p(33, 26))) + ((p(36, 0) + p(37, 29)) + (p(40, 31) + p(58, 16)))) - (((p(1, 20) + p(6, 8)) + (p(32, 27) + p(34, 3))) + ((p(35, 1) + p(57, 17)) + (p(60, 21) + p(62, 24)))))).0,
-                (((((p(1, 16) + p(2, 17)) + (p(3, 18) + p(25, 5))) + ((p(35, 26) + p(36, 27)) + (p(37, 28) + p(41, 31)))) - (((p(6, 9) + p(32, 0)) + (p(33, 1) + p(34, 2))) + ((p(57, 19) + p(58, 20)) + (p(59, 21) + p(62, 25)))))).0,
-                (((((p(2, 24) + p(5, 16)) + (p(23, 28) + p(26, 5))) + ((p(35, 30) + p(39, 2)) + (p(58, 8) + p(62, 13)))) - (((p(3, 23) + p(6, 10)) + (p(24, 27) + p(29, 31))) + ((p(32, 4) + p(40, 1)) + (p(59, 7) + p(61, 19)))))).0,
-                (((((p(3, 22) + p(5, 17)) + (p(24, 26) + p(27, 5))) + ((p(36, 30) + p(40, 0)) + (p(59, 6) + p(62, 14)))) - (((p(1, 24) + p(6, 11)) + (p(22, 28) + p(30, 31))) + ((p(33, 4) + p(38, 2)) + (p(57, 8) + p(61, 20)))))).0,
-                (((((p(1, 23) + p(5, 18)) + (p(22, 27) + p(28, 5))) + ((p(37, 30) + p(38, 1)) + (p(57, 7) + p(62, 15)))) - (((p(2, 22) + p(6, 12)) + (p(23, 26) + p(31, 31))) + ((p(34, 4) + p(39, 0)) + (p(58, 6) + p(61, 21)))))).0,
-                (((((p(4, 22) + p(5, 19)) + (p(25, 26) + p(26, 31))) + ((p(29, 5) + p(41, 0)) + (p(60, 6) + p(61, 16)))) - (((p(1, 25) + p(6, 13)) + (p(22, 29) + p(32, 30))) + ((p(35, 4) + p(38, 3)) + (p(57, 9) + p(62, 10)))))).0,
-                (((((p(4, 23) + p(5, 20)) + (p(25, 27) + p(27, 31))) + ((p(30, 5) + p(41, 1)) + (p(60, 7) + p(61, 17)))) - (((p(2, 25) + p(6, 14)) + (p(23, 29) + p(33, 30))) + ((p(36, 4) + p(39, 3)) + (p(58, 9) + p(62, 11)))))).0,
-                (((((p(4, 24) + p(5, 21)) + (p(25, 28) + p(28, 31))) + ((p(31, 5) + p(41, 2)) + (p(60, 8) + p(61, 18)))) - (((p(3, 25) + p(6, 15)) + (p(24, 29) + p(34, 30))) + ((p(37, 4) + p(40, 3)) + (p(59, 9) + p(62, 12)))))).0,
-                (((((p(9, 27) + p(10, 29)) + (p(13, 31) + p(45, 17))) + ((p(48, 12) + p(50, 13)) + (p(53, 7) + p(54, 9)))) - (((p(8, 28) + p(17, 30)) + (p(42, 22) + p(44, 18))) + ((p(46, 19) + p(49, 11)) + (p(52, 8) + p(63, 0)))))).0,
-                (((((p(7, 28) + p(11, 29)) + (p(14, 31) + p(43, 18))) + ((p(49, 10) + p(50, 14)) + (p(51, 8) + p(55, 9)))) - (((p(9, 26) + p(18, 30)) + (p(42, 23) + p(45, 16))) + ((p(46, 20) + p(47, 12)) + (p(53, 6) + p(63, 1)))))).0,
-                (((((p(8, 26) + p(12, 29)) + (p(15, 31) + p(44, 16))) + ((p(47, 11) + p(50, 15)) + (p(52, 6) + p(56, 9)))) - (((p(7, 27) + p(19, 30)) + (p(42, 24) + p(43, 17))) + ((p(46, 21) + p(48, 10)) + (p(51, 7) + p(63, 2)))))).0,
-                (((((p(10, 26) + p(11, 27)) + (p(12, 28) + p(16, 31))) + ((p(47, 13) + p(48, 14)) + (p(49, 15) + p(54, 6)))) + (((p(55, 7) + p(56, 8)) - (p(20, 30) + p(42, 25))) - ((p(43, 19) + p(44, 20)) + (p(45, 21) + p(63, 3)))))).0,
-                (((((p(16, 29) + p(43, 22)) + (p(44, 23) + p(45, 24))) + ((p(51, 13) + p(52, 14)) + (p(53, 15) + p(54, 10)))) + (((p(55, 11) + p(56, 12)) - (p(13, 26) + p(14, 27))) - ((p(15, 28) + p(21, 30)) + (p(46, 25) + p(63, 4)))))).0,
-                (((((p(17, 26) + p(18, 27)) + (p(19, 28) + p(21, 31))) + ((p(50, 25) + p(63, 5)) - (p(20, 29) + p(47, 22)))) - (((p(48, 23) + p(49, 24)) + (p(51, 19) + p(52, 20))) + ((p(53, 21) + p(54, 16)) + (p(55, 17) + p(56, 18)))))).0,
-                ((((((p(1, 26) + p(2, 27)) + (p(3, 28) + p(5, 31))) + ((p(25, 25) + p(32, 13)) + (p(33, 14) + p(34, 15)))) + (((p(35, 10) + p(36, 11)) + (p(37, 12) + p(38, 6))) + ((p(39, 7) + p(40, 8)) + (p(60, 3) + p(61, 5))))) - ((((p(4, 29) + p(6, 30)) + (p(22, 22) + p(23, 23))) + ((p(24, 24) + p(26, 19)) + (p(27, 20) + p(28, 21)))) + (((p(29, 16) + p(30, 17)) + (p(31, 18) + p(41, 9))) + ((p(57, 0) + p(58, 1)) + (p(59, 2) + p(62, 4))))))).0,
             ],
         }
     }

@@ -1425,9 +1425,16 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         } else {
             "#[inline(always)]"
         };
+        // Maps whose slots make the unrolled product large run it once per pair of slot entries
+        // instead (`gx::slots::by_entries`); the condition is decided per monomorphization, so
+        // values and small maps compile only the unrolled code.
+        let by_entries = format!(
+            "        if const {{ <S1 as Slots>::SIZE * <S2 as Slots>::SIZE > 1 && {} * <S1 as Slots>::SIZE * <S2 as Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX }} {{\n            return gx::slots::by_entries(&self, &rhs, |x, y| {tr}::{m}(x, y));\n        }}\n",
+            table.len()
+        );
         let _ = write!(
             body,
-            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    {inline}\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
+            "impl<S1: Slots, S2: Slots, T: Coef> {tr}<{bn}<S2, T>> for {an}<S1, T> {{\n    type Output = {on}<Cat<S1, S2>, T>;\n    {inline}\n    fn {m}(self, rhs: {bn}<S2, T>) -> {on}<Cat<S1, S2>, T> {{\n{by_entries}        let a = self.c.map(SlotArr::<S1, T>);\n        let b = rhs.c.map(SlotArr::<S2, T>);\n{ops}        {on} {{\n            c: [\n"
         );
         for e in exprs {
             let _ = writeln!(body, "                {e},");

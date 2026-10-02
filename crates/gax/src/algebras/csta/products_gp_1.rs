@@ -4,6 +4,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Scalar
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -19,6 +22,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Scalar
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -39,6 +45,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Scalar<
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -63,6 +72,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Scal
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -92,6 +104,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Sca
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -126,6 +141,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Sc
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -155,6 +173,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for S
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -175,6 +196,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -190,6 +214,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Scalar<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -220,6 +247,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Scalar<S
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -266,6 +296,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Scalar<S1
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -312,6 +345,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for S
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -390,6 +426,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Vector
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -410,6 +449,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Vector
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -456,6 +498,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Vector<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -502,6 +547,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Vect
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -548,6 +596,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Vec
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -594,6 +645,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Ve
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -640,6 +694,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for V
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -686,6 +743,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -706,6 +766,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Vector<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -752,6 +815,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Vector<S
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -798,6 +864,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Vector<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -844,6 +913,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for V
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 384 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -922,6 +994,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Twist<
     type Output = Twist<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Twist<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -946,6 +1021,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Twist<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -992,6 +1070,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Twist<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 84 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1022,6 +1103,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Twis
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 150 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1068,6 +1152,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Twi
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 200 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1114,6 +1201,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Tw
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 150 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1160,6 +1250,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for T
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1206,6 +1299,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1235,6 +1331,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Twist<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 128 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1265,6 +1364,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Twist<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1311,6 +1413,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Twist<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1357,6 +1462,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 640 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1435,6 +1543,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Bivect
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1464,6 +1575,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Bivect
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1510,6 +1624,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Bivecto
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 150 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1556,6 +1673,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Bive
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 225 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1602,6 +1722,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Biv
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 300 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1648,6 +1771,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Bi
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 225 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1694,6 +1820,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for B
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1740,6 +1869,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1769,6 +1901,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Bivecto
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1815,6 +1950,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Bivector
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1861,6 +1999,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Bivector<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1907,6 +2048,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for B
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 960 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -1985,6 +2129,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Trivec
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2019,6 +2166,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Trivec
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2065,6 +2215,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Trivect
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 200 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2111,6 +2264,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Triv
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 300 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2157,6 +2313,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Tri
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 400 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2203,6 +2362,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Tr
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 300 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2249,6 +2411,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for T
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2295,6 +2460,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2329,6 +2497,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Trivect
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2375,6 +2546,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Trivecto
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 640 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2421,6 +2595,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Trivector
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 640 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2467,6 +2644,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for T
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1280 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2545,6 +2725,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Quadve
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2574,6 +2757,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Quadve
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2620,6 +2806,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Quadvec
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 150 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2666,6 +2855,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Quad
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 225 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2712,6 +2904,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Qua
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 300 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2758,6 +2953,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Qu
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 225 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2804,6 +3002,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for Q
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2850,6 +3051,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2879,6 +3083,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Quadvec
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2925,6 +3132,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Quadvect
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -2971,6 +3181,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Quadvecto
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 480 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3017,6 +3230,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Q
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 960 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3095,6 +3311,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Quintv
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3115,6 +3334,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Quintv
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3161,6 +3383,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Quintve
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 60 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3207,6 +3432,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Quin
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3253,6 +3481,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Qui
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 120 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3299,6 +3530,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Qu
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 90 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3345,6 +3579,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for Q
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 36 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3391,6 +3628,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3411,6 +3651,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Quintve
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3457,6 +3700,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Quintvec
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3503,6 +3749,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Quintvect
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3549,6 +3798,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Q
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 384 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3627,6 +3879,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Pseudo
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3642,6 +3897,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Pseudo
     type Output = Quintvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Quintvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3662,6 +3920,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Pseudos
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 10 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3691,6 +3952,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Pseu
     type Output = Quadvector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Quadvector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3720,6 +3984,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Pse
     type Output = Trivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 20 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3754,6 +4021,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Ps
     type Output = Bivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 15 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3783,6 +4053,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for P
     type Output = Vector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3803,6 +4076,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3818,6 +4094,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Pseudos
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3864,6 +4143,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Pseudosc
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3910,6 +4192,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Pseudosca
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -3956,6 +4241,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 64 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4034,6 +4322,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Motor<
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4064,6 +4355,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Motor<
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4110,6 +4404,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Twist<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 128 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4140,6 +4437,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Moto
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4186,6 +4486,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Mot
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 320 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4232,6 +4535,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Mo
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 240 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4278,6 +4584,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quintvector<S2, T>> for M
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Quintvector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 96 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4324,6 +4633,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4370,6 +4682,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Motor<S2, T>> for Motor<S
     type Output = Motor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Motor<S2, T>) -> Motor<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4400,6 +4715,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Motor<S1
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 512 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4446,6 +4764,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Motor<S1,
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 512 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4492,6 +4813,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for M
     type Output = Multivector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1024 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4570,6 +4894,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Even<S
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4616,6 +4943,9 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
     fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 192 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
@@ -4653,190 +4983,6 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Even<S
                 ((((p(20, 5) + p(25, 0)) + p(26, 1)) + ((p(27, 2) - p(24, 4)) - p(31, 3)))).0,
                 ((((p(16, 4) + p(17, 0)) + p(18, 1)) + ((p(19, 2) - p(20, 3)) - p(31, 4)))).0,
                 ((((p(16, 5) + p(21, 0)) + p(22, 1)) + ((p(23, 2) + p(31, 5)) - p(24, 3)))).0,
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Twist<S2, T>> for Even<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn gp(self, rhs: Twist<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
-            c: [
-                (((((p(4, 3) + p(5, 4)) + p(6, 5)) + (p(7, 6) + p(8, 7))) + (((p(9, 8) - p(1, 0)) - p(2, 1)) - (p(3, 2) + p(10, 9))))).0,
-                (((((p(0, 0) + p(3, 1)) + p(5, 5)) + (p(8, 8) + p(20, 6))) - (((p(2, 2) + p(6, 4)) + p(9, 7)) + (p(16, 3) + p(17, 9))))).0,
-                (((((p(0, 1) + p(1, 2)) + p(6, 3)) + (p(9, 6) + p(20, 7))) - (((p(3, 0) + p(4, 5)) + p(7, 8)) + (p(16, 4) + p(18, 9))))).0,
-                (((((p(0, 2) + p(2, 0)) + p(4, 4)) + (p(7, 7) + p(20, 8))) - (((p(1, 1) + p(5, 3)) + p(8, 6)) + (p(16, 5) + p(19, 9))))).0,
-                (((((p(0, 3) + p(3, 4)) + p(6, 1)) + (p(10, 6) + p(16, 0))) + (((p(19, 7) - p(2, 5)) - p(5, 2)) - (p(7, 9) + p(18, 8))))).0,
-                (((((p(0, 4) + p(1, 5)) + p(4, 2)) + (p(10, 7) + p(16, 1))) + (((p(17, 8) - p(3, 3)) - p(6, 0)) - (p(8, 9) + p(19, 6))))).0,
-                (((((p(0, 5) + p(2, 3)) + p(5, 0)) + (p(10, 8) + p(16, 2))) + (((p(18, 6) - p(1, 4)) - p(4, 1)) - (p(9, 9) + p(17, 7))))).0,
-                ((((p(9, 1) + p(18, 5)) - p(8, 2)) - ((p(10, 3) + p(19, 4)) + p(20, 0)))).0,
-                ((((p(7, 2) + p(19, 3)) - p(9, 0)) - ((p(10, 4) + p(17, 5)) + p(20, 1)))).0,
-                ((((p(8, 0) + p(17, 4)) - p(7, 1)) - ((p(10, 5) + p(18, 3)) + p(20, 2)))).0,
-                (-(((p(7, 3) + p(8, 4)) + p(9, 5)) + ((p(17, 0) + p(18, 1)) + p(19, 2)))).0,
-                (((((p(0, 6) + p(3, 7)) + (p(4, 9) + p(13, 1))) + ((p(15, 6) + p(22, 5)) + p(27, 7))) + (((p(28, 9) - p(2, 8)) - (p(12, 2) + p(14, 3))) - ((p(23, 4) + p(24, 0)) + p(26, 8))))).0,
-                (((((p(0, 7) + p(1, 8)) + (p(5, 9) + p(11, 2))) + ((p(15, 7) + p(23, 3)) + p(25, 8))) + (((p(29, 9) - p(3, 6)) - (p(13, 0) + p(14, 4))) - ((p(21, 5) + p(24, 1)) + p(27, 6))))).0,
-                (((((p(0, 8) + p(2, 6)) + (p(6, 9) + p(12, 0))) + ((p(15, 8) + p(21, 4)) + p(26, 6))) + (((p(30, 9) - p(1, 7)) - (p(11, 1) + p(14, 5))) - ((p(22, 3) + p(24, 2)) + p(25, 7))))).0,
-                (((((p(0, 9) + p(4, 6)) + (p(5, 7) + p(6, 8))) + ((p(15, 9) + p(28, 6)) + p(29, 7))) + (((p(30, 8) - p(11, 3)) - (p(12, 4) + p(13, 5))) - ((p(21, 0) + p(22, 1)) + p(23, 2))))).0,
-                (((((p(10, 9) + p(28, 3)) + p(29, 4)) + (p(30, 5) - p(7, 6))) - (((p(8, 7) + p(9, 8)) + p(25, 0)) + (p(26, 1) + p(27, 2))))).0,
-                (((((p(20, 9) - p(1, 3)) - p(2, 4)) - (p(3, 5) + p(4, 0))) - (((p(5, 1) + p(6, 2)) + p(17, 6)) + (p(18, 7) + p(19, 8))))).0,
-                ((((p(9, 4) + p(10, 0)) + p(19, 1)) - ((p(8, 5) + p(18, 2)) + p(20, 3)))).0,
-                ((((p(7, 5) + p(10, 1)) + p(17, 2)) - ((p(9, 3) + p(19, 0)) + p(20, 4)))).0,
-                ((((p(8, 3) + p(10, 2)) + p(18, 0)) - ((p(7, 4) + p(17, 1)) + p(20, 5)))).0,
-                ((((p(7, 0) + p(8, 1)) + p(9, 2)) - ((p(17, 3) + p(18, 4)) + p(19, 5)))).0,
-                (((((p(1, 9) + p(5, 8)) + (p(13, 4) + p(14, 0))) + ((p(23, 1) + p(25, 9)) + p(29, 8))) - (((p(6, 7) + p(12, 5)) + (p(16, 6) + p(22, 2))) + ((p(24, 3) + p(30, 7)) + p(31, 6))))).0,
-                (((((p(2, 9) + p(6, 6)) + (p(11, 5) + p(14, 1))) + ((p(21, 2) + p(26, 9)) + p(30, 6))) - (((p(4, 8) + p(13, 3)) + (p(16, 7) + p(23, 0))) + ((p(24, 4) + p(28, 8)) + p(31, 7))))).0,
-                (((((p(3, 9) + p(4, 7)) + (p(12, 3) + p(14, 2))) + ((p(22, 0) + p(27, 9)) + p(28, 7))) - (((p(5, 6) + p(11, 4)) + (p(16, 8) + p(21, 1))) + ((p(24, 5) + p(29, 6)) + p(31, 8))))).0,
-                (((((p(1, 6) + p(2, 7)) + (p(3, 8) + p(11, 0))) + ((p(12, 1) + p(13, 2)) + p(25, 6))) + (((p(26, 7) + p(27, 8)) - (p(16, 9) + p(21, 3))) - ((p(22, 4) + p(23, 5)) + p(31, 9))))).0,
-                (((((p(9, 7) + p(15, 0)) + p(17, 9)) + (p(27, 1) + p(29, 5))) - (((p(8, 8) + p(20, 6)) + p(26, 2)) + (p(30, 4) + p(31, 3))))).0,
-                (((((p(7, 8) + p(15, 1)) + p(18, 9)) + (p(25, 2) + p(30, 3))) - (((p(9, 6) + p(20, 7)) + p(27, 0)) + (p(28, 5) + p(31, 4))))).0,
-                (((((p(8, 6) + p(15, 2)) + p(19, 9)) + (p(26, 0) + p(28, 4))) - (((p(7, 7) + p(20, 8)) + p(25, 1)) + (p(29, 3) + p(31, 5))))).0,
-                (((((p(7, 9) + p(15, 3)) + p(18, 8)) + (p(27, 4) + p(30, 1))) + (((p(31, 0) - p(10, 6)) - p(19, 7)) - (p(26, 5) + p(29, 2))))).0,
-                (((((p(8, 9) + p(15, 4)) + p(19, 6)) + (p(25, 5) + p(28, 2))) + (((p(31, 1) - p(10, 7)) - p(17, 8)) - (p(27, 3) + p(30, 0))))).0,
-                (((((p(9, 9) + p(15, 5)) + p(17, 7)) + (p(26, 3) + p(29, 0))) + (((p(31, 2) - p(10, 8)) - p(18, 6)) - (p(25, 4) + p(28, 1))))).0,
-                (((((p(17, 6) + p(18, 7)) + p(19, 8)) - (p(20, 9) + p(25, 3))) - (((p(26, 4) + p(27, 5)) + p(28, 0)) + (p(29, 1) + p(30, 2))))).0,
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Even<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn gp(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
-            c: [
-                (((((p(4, 3) + p(5, 4)) + (p(6, 5) + p(7, 10))) + ((p(8, 11) + p(9, 12)) + (p(11, 6) + p(12, 7)))) + (((p(13, 8) + p(15, 14)) - (p(1, 0) + p(2, 1))) - ((p(3, 2) + p(10, 13)) + p(14, 9))))).0,
-                (((((p(0, 0) + p(3, 1)) + (p(5, 5) + p(8, 12))) + ((p(12, 8) + p(20, 10)) + (p(24, 6) + p(25, 14)))) - (((p(2, 2) + p(6, 4)) + (p(9, 11) + p(13, 7))) + ((p(16, 3) + p(17, 13)) + p(21, 9))))).0,
-                (((((p(0, 1) + p(1, 2)) + (p(6, 3) + p(9, 10))) + ((p(13, 6) + p(20, 11)) + (p(24, 7) + p(26, 14)))) - (((p(3, 0) + p(4, 5)) + (p(7, 12) + p(11, 8))) + ((p(16, 4) + p(18, 13)) + p(22, 9))))).0,
-                (((((p(0, 2) + p(2, 0)) + (p(4, 4) + p(7, 11))) + ((p(11, 7) + p(20, 12)) + (p(24, 8) + p(27, 14)))) - (((p(1, 1) + p(5, 3)) + (p(8, 10) + p(12, 6))) + ((p(16, 5) + p(19, 13)) + p(23, 9))))).0,
-                (((((p(0, 3) + p(3, 4)) + (p(6, 1) + p(10, 10))) + ((p(14, 6) + p(16, 0)) + (p(19, 11) + p(23, 7)))) + (((p(28, 14) - p(2, 5)) - (p(5, 2) + p(7, 13))) - ((p(11, 9) + p(18, 12)) + p(22, 8))))).0,
-                (((((p(0, 4) + p(1, 5)) + (p(4, 2) + p(10, 11))) + ((p(14, 7) + p(16, 1)) + (p(17, 12) + p(21, 8)))) + (((p(29, 14) - p(3, 3)) - (p(6, 0) + p(8, 13))) - ((p(12, 9) + p(19, 10)) + p(23, 6))))).0,
-                (((((p(0, 5) + p(2, 3)) + (p(5, 0) + p(10, 12))) + ((p(14, 8) + p(16, 2)) + (p(18, 10) + p(22, 6)))) + (((p(30, 14) - p(1, 4)) - (p(4, 1) + p(9, 13))) - ((p(13, 9) + p(17, 11)) + p(21, 7))))).0,
-                (((((p(0, 6) + p(3, 7)) + (p(4, 9) + p(7, 14))) + ((p(9, 1) + p(18, 5)) + (p(26, 8) - p(2, 8)))) - (((p(8, 2) + p(10, 3)) + (p(15, 6) + p(19, 4))) + ((p(20, 0) + p(27, 7)) + p(28, 9))))).0,
-                (((((p(0, 7) + p(1, 8)) + (p(5, 9) + p(7, 2))) + ((p(8, 14) + p(19, 3)) + (p(27, 6) - p(3, 6)))) - (((p(9, 0) + p(10, 4)) + (p(15, 7) + p(17, 5))) + ((p(20, 1) + p(25, 8)) + p(29, 9))))).0,
-                (((((p(0, 8) + p(2, 6)) + (p(6, 9) + p(8, 0))) + ((p(9, 14) + p(17, 4)) + (p(25, 7) - p(1, 7)))) - (((p(7, 1) + p(10, 5)) + (p(15, 8) + p(18, 3))) + ((p(20, 2) + p(26, 6)) + p(30, 9))))).0,
-                (((((p(0, 9) + p(4, 6)) + (p(5, 7) + p(6, 8))) + ((p(10, 14) - p(7, 3)) - (p(8, 4) + p(9, 5)))) - (((p(15, 9) + p(17, 0)) + (p(18, 1) + p(19, 2))) + ((p(28, 6) + p(29, 7)) + p(30, 8))))).0,
-                (((((p(0, 10) + p(3, 11)) + (p(4, 13) + p(13, 1))) + ((p(15, 10) + p(22, 5)) + (p(27, 11) + p(28, 13)))) - (((p(2, 12) + p(11, 14)) + (p(12, 2) + p(14, 3))) + ((p(23, 4) + p(24, 0)) + p(26, 12))))).0,
-                (((((p(0, 11) + p(1, 12)) + (p(5, 13) + p(11, 2))) + ((p(15, 11) + p(23, 3)) + (p(25, 12) + p(29, 13)))) - (((p(3, 10) + p(12, 14)) + (p(13, 0) + p(14, 4))) + ((p(21, 5) + p(24, 1)) + p(27, 10))))).0,
-                (((((p(0, 12) + p(2, 10)) + (p(6, 13) + p(12, 0))) + ((p(15, 12) + p(21, 4)) + (p(26, 10) + p(30, 13)))) - (((p(1, 11) + p(11, 1)) + (p(13, 14) + p(14, 5))) + ((p(22, 3) + p(24, 2)) + p(25, 11))))).0,
-                (((((p(0, 13) + p(4, 10)) + (p(5, 11) + p(6, 12))) + ((p(15, 13) + p(28, 10)) + (p(29, 11) + p(30, 12)))) - (((p(11, 3) + p(12, 4)) + (p(13, 5) + p(14, 14))) + ((p(21, 0) + p(22, 1)) + p(23, 2))))).0,
-                (((((p(0, 14) + p(10, 13)) + (p(11, 6) + p(12, 7))) + ((p(13, 8) + p(28, 3)) + (p(29, 4) + p(30, 5)))) - (((p(7, 10) + p(8, 11)) + (p(9, 12) + p(14, 9))) + ((p(25, 0) + p(26, 1)) + p(27, 2))))).0,
-                (((((p(20, 13) + p(24, 9)) + (p(31, 14) - p(1, 3))) - ((p(2, 4) + p(3, 5)) + (p(4, 0) + p(5, 1)))) - (((p(6, 2) + p(17, 10)) + (p(18, 11) + p(19, 12))) + ((p(21, 6) + p(22, 7)) + p(23, 8))))).0,
-                (((((p(1, 9) + p(5, 8)) + (p(9, 4) + p(10, 0))) + ((p(17, 14) + p(19, 1)) + (p(30, 7) + p(31, 6)))) - (((p(6, 7) + p(8, 5)) + (p(16, 6) + p(18, 2))) + ((p(20, 3) + p(25, 9)) + p(29, 8))))).0,
-                (((((p(2, 9) + p(6, 6)) + (p(7, 5) + p(10, 1))) + ((p(17, 2) + p(18, 14)) + (p(28, 8) + p(31, 7)))) - (((p(4, 8) + p(9, 3)) + (p(16, 7) + p(19, 0))) + ((p(20, 4) + p(26, 9)) + p(30, 6))))).0,
-                (((((p(3, 9) + p(4, 7)) + (p(8, 3) + p(10, 2))) + ((p(18, 0) + p(19, 14)) + (p(29, 6) + p(31, 8)))) - (((p(5, 6) + p(7, 4)) + (p(16, 8) + p(17, 1))) + ((p(20, 5) + p(27, 9)) + p(28, 7))))).0,
-                (((((p(1, 6) + p(2, 7)) + (p(3, 8) + p(7, 0))) + ((p(8, 1) + p(9, 2)) + (p(20, 14) + p(31, 9)))) - (((p(16, 9) + p(17, 3)) + (p(18, 4) + p(19, 5))) + ((p(25, 6) + p(26, 7)) + p(27, 8))))).0,
-                (((((p(1, 13) + p(5, 12)) + (p(13, 4) + p(14, 0))) + ((p(23, 1) + p(25, 13)) + (p(29, 12) - p(6, 11)))) - (((p(12, 5) + p(16, 10)) + (p(21, 14) + p(22, 2))) + ((p(24, 3) + p(30, 11)) + p(31, 10))))).0,
-                (((((p(2, 13) + p(6, 10)) + (p(11, 5) + p(14, 1))) + ((p(21, 2) + p(26, 13)) + (p(30, 10) - p(4, 12)))) - (((p(13, 3) + p(16, 11)) + (p(22, 14) + p(23, 0))) + ((p(24, 4) + p(28, 12)) + p(31, 11))))).0,
-                (((((p(3, 13) + p(4, 11)) + (p(12, 3) + p(14, 2))) + ((p(22, 0) + p(27, 13)) + (p(28, 11) - p(5, 10)))) - (((p(11, 4) + p(16, 12)) + (p(21, 1) + p(23, 14))) + ((p(24, 5) + p(29, 10)) + p(31, 12))))).0,
-                (((((p(1, 10) + p(2, 11)) + (p(3, 12) + p(11, 0))) + ((p(12, 1) + p(13, 2)) + (p(25, 10) + p(26, 11)))) + (((p(27, 12) - p(16, 13)) - (p(21, 3) + p(22, 4))) - ((p(23, 5) + p(24, 14)) + p(31, 13))))).0,
-                (((((p(1, 14) + p(9, 11)) + (p(12, 8) + p(15, 0))) + ((p(17, 13) + p(24, 6)) + (p(27, 1) + p(29, 5)))) - (((p(8, 12) + p(13, 7)) + (p(20, 10) + p(21, 9))) + ((p(26, 2) + p(30, 4)) + p(31, 3))))).0,
-                (((((p(2, 14) + p(7, 12)) + (p(13, 6) + p(15, 1))) + ((p(18, 13) + p(24, 7)) + (p(25, 2) + p(30, 3)))) - (((p(9, 10) + p(11, 8)) + (p(20, 11) + p(22, 9))) + ((p(27, 0) + p(28, 5)) + p(31, 4))))).0,
-                (((((p(3, 14) + p(8, 10)) + (p(11, 7) + p(15, 2))) + ((p(19, 13) + p(24, 8)) + (p(26, 0) + p(28, 4)))) - (((p(7, 11) + p(12, 6)) + (p(20, 12) + p(23, 9))) + ((p(25, 1) + p(29, 3)) + p(31, 5))))).0,
-                (((((p(4, 14) + p(7, 13)) + (p(14, 6) + p(15, 3))) + ((p(18, 12) + p(23, 7)) + (p(27, 4) + p(30, 1)))) + (((p(31, 0) - p(10, 10)) - (p(11, 9) + p(19, 11))) - ((p(22, 8) + p(26, 5)) + p(29, 2))))).0,
-                (((((p(5, 14) + p(8, 13)) + (p(14, 7) + p(15, 4))) + ((p(19, 10) + p(21, 8)) + (p(25, 5) + p(28, 2)))) + (((p(31, 1) - p(10, 11)) - (p(12, 9) + p(17, 12))) - ((p(23, 6) + p(27, 3)) + p(30, 0))))).0,
-                (((((p(6, 14) + p(9, 13)) + (p(14, 8) + p(15, 5))) + ((p(17, 11) + p(22, 6)) + (p(26, 3) + p(29, 0)))) + (((p(31, 2) - p(10, 12)) - (p(13, 9) + p(18, 10))) - ((p(21, 7) + p(25, 4)) + p(28, 1))))).0,
-                (((((p(16, 14) + p(17, 10)) + (p(18, 11) + p(19, 12))) + ((p(24, 9) - p(20, 13)) - (p(21, 6) + p(22, 7)))) - (((p(23, 8) + p(25, 3)) + (p(26, 4) + p(27, 5))) + ((p(28, 0) + p(29, 1)) + p(30, 2))))).0,
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Even<S1, T> {
-    type Output = Odd<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Odd {
-            c: [
-                ((((((p(6, 1) + p(8, 12)) + p(10, 13)) + (p(12, 6) + p(14, 7))) + (((p(15, 16) + p(16, 0)) + p(19, 14)) + (p(20, 10) + p(23, 8)))) + ((((p(24, 4) + p(27, 17)) + p(28, 19)) - (p(1, 3) + p(5, 2))) - (((p(9, 11) + p(13, 5)) + p(18, 15)) + (p(22, 9) + p(26, 18)))))).0,
-                ((((((p(4, 2) + p(9, 10)) + p(10, 14)) + (p(13, 4) + p(14, 8))) + (((p(15, 17) + p(16, 1)) + p(17, 15)) + (p(20, 11) + p(21, 9)))) + ((((p(24, 5) + p(25, 18)) + p(29, 19)) - (p(2, 3) + p(6, 0))) - (((p(7, 12) + p(11, 6)) + p(19, 13)) + (p(23, 7) + p(27, 16)))))).0,
-                ((((((p(5, 0) + p(7, 11)) + p(10, 15)) + (p(11, 5) + p(14, 9))) + (((p(15, 18) + p(16, 2)) + p(18, 13)) + (p(20, 12) + p(22, 7)))) + ((((p(24, 6) + p(26, 16)) + p(30, 19)) - (p(3, 3) + p(4, 1))) - (((p(8, 10) + p(12, 4)) + p(17, 14)) + (p(21, 8) + p(25, 17)))))).0,
-                ((((((p(7, 13) + p(8, 14)) + p(9, 15)) + (p(11, 7) + p(12, 8))) + (((p(13, 9) + p(15, 19)) + p(16, 3)) + (p(17, 10) + p(18, 11)))) + ((((p(19, 12) + p(21, 4)) + p(22, 5)) + (p(23, 6) + p(28, 16))) + (((p(29, 17) + p(30, 18)) - p(1, 0)) - (p(2, 1) + p(3, 2)))))).0,
-                ((((((p(4, 7) + p(5, 8)) + p(6, 9)) + (p(10, 19) + p(20, 3))) + (((p(25, 4) + p(26, 5)) + p(27, 6)) - (p(1, 4) + p(2, 5)))) - ((((p(3, 6) + p(7, 16)) + p(8, 17)) + (p(9, 18) + p(17, 0))) + (((p(18, 1) + p(19, 2)) + p(28, 7)) + (p(29, 8) + p(30, 9)))))).0,
-                ((((((p(4, 13) + p(5, 14)) + p(6, 15)) + (p(11, 16) + p(12, 17))) + (((p(13, 18) + p(24, 3)) + p(28, 13)) + (p(29, 14) + p(30, 15)))) - ((((p(1, 10) + p(2, 11)) + p(3, 12)) + (p(14, 19) + p(21, 0))) + (((p(22, 1) + p(23, 2)) + p(25, 10)) + (p(26, 11) + p(27, 12)))))).0,
-                ((((((p(0, 0) + p(3, 1)) + p(4, 3)) + (p(8, 15) + p(12, 9))) + (((p(18, 12) + p(20, 13)) + p(22, 6)) + (p(24, 7) + p(25, 19)))) + ((((p(29, 18) - p(2, 2)) - p(9, 14)) - (p(10, 10) + p(13, 8))) - (((p(14, 4) + p(19, 11)) + p(23, 5)) + (p(30, 17) + p(31, 16)))))).0,
-                ((((((p(0, 1) + p(1, 2)) + p(5, 3)) + (p(9, 13) + p(13, 7))) + (((p(19, 10) + p(20, 14)) + p(23, 4)) + (p(24, 8) + p(26, 19)))) + ((((p(30, 16) - p(3, 0)) - p(7, 15)) - (p(10, 11) + p(11, 9))) - (((p(14, 5) + p(17, 12)) + p(21, 6)) + (p(28, 18) + p(31, 17)))))).0,
-                ((((((p(0, 2) + p(2, 0)) + p(6, 3)) + (p(7, 14) + p(11, 8))) + (((p(17, 11) + p(20, 15)) + p(21, 5)) + (p(24, 9) + p(27, 19)))) + ((((p(28, 17) - p(1, 1)) - p(8, 13)) - (p(10, 12) + p(12, 7))) - (((p(14, 6) + p(18, 10)) + p(22, 4)) + (p(29, 16) + p(31, 18)))))).0,
-                ((((((p(0, 3) + p(4, 0)) + p(5, 1)) + (p(6, 2) + p(17, 13))) + (((p(18, 14) + p(19, 15)) + p(21, 7)) + (p(22, 8) + p(23, 9)))) + ((((p(25, 16) + p(26, 17)) + p(27, 18)) - (p(7, 10) + p(8, 11))) - (((p(9, 12) + p(11, 4)) + p(12, 5)) + (p(13, 6) + p(31, 19)))))).0,
-                ((((((p(0, 4) + p(3, 5)) + p(5, 9)) + (p(9, 17) + p(10, 0))) + (((p(17, 19) + p(19, 1)) + p(26, 6)) + (p(30, 8) + p(31, 7)))) - ((((p(2, 6) + p(6, 8)) + p(7, 3)) + (p(8, 18) + p(15, 4))) + (((p(16, 7) + p(18, 2)) + p(20, 16)) + (p(27, 5) + p(29, 9)))))).0,
-                ((((((p(0, 5) + p(1, 6)) + p(6, 7)) + (p(7, 18) + p(10, 1))) + (((p(17, 2) + p(18, 19)) + p(27, 4)) + (p(28, 9) + p(31, 8)))) - ((((p(3, 4) + p(4, 9)) + p(8, 3)) + (p(9, 16) + p(15, 5))) + (((p(16, 8) + p(19, 0)) + p(20, 17)) + (p(25, 6) + p(30, 7)))))).0,
-                ((((((p(0, 6) + p(2, 4)) + p(4, 8)) + (p(8, 16) + p(10, 2))) + (((p(18, 0) + p(19, 19)) + p(25, 5)) + (p(29, 7) + p(31, 9)))) - ((((p(1, 5) + p(5, 7)) + p(7, 17)) + (p(9, 3) + p(15, 6))) + (((p(16, 9) + p(17, 1)) + p(20, 18)) + (p(26, 4) + p(28, 8)))))).0,
-                ((((((p(0, 7) + p(3, 8)) + p(6, 5)) + (p(7, 19) + p(9, 1))) + (((p(16, 4) + p(17, 3)) + p(18, 18)) + (p(26, 9) + p(29, 6)))) - ((((p(2, 9) + p(5, 6)) + p(8, 2)) + (p(10, 16) + p(15, 7))) + (((p(19, 17) + p(20, 0)) + p(27, 8)) + (p(30, 5) + p(31, 4)))))).0,
-                ((((((p(0, 8) + p(1, 9)) + p(4, 6)) + (p(7, 2) + p(8, 19))) + (((p(16, 5) + p(18, 3)) + p(19, 16)) + (p(27, 7) + p(30, 4)))) - ((((p(3, 7) + p(6, 4)) + p(9, 0)) + (p(10, 17) + p(15, 8))) + (((p(17, 18) + p(20, 1)) + p(25, 9)) + (p(28, 6) + p(31, 5)))))).0,
-                ((((((p(0, 9) + p(2, 7)) + p(5, 4)) + (p(8, 0) + p(9, 19))) + (((p(16, 6) + p(17, 17)) + p(19, 3)) + (p(25, 8) + p(28, 5)))) - ((((p(1, 8) + p(4, 5)) + p(7, 1)) + (p(10, 18) + p(15, 9))) + (((p(18, 16) + p(20, 2)) + p(26, 7)) + (p(29, 4) + p(31, 6)))))).0,
-                ((((((p(0, 10) + p(3, 11)) + p(5, 15)) + (p(12, 18) + p(14, 0))) + (((p(15, 10) + p(23, 1)) + p(24, 16)) + (p(27, 11) + p(29, 15)))) - ((((p(2, 12) + p(6, 14)) + p(11, 3)) + (p(13, 17) + p(16, 13))) + (((p(21, 19) + p(22, 2)) + p(26, 12)) + (p(30, 14) + p(31, 13)))))).0,
-                ((((((p(0, 11) + p(1, 12)) + p(6, 13)) + (p(13, 16) + p(14, 1))) + (((p(15, 11) + p(21, 2)) + p(24, 17)) + (p(25, 12) + p(30, 13)))) - ((((p(3, 10) + p(4, 15)) + p(11, 18)) + (p(12, 3) + p(16, 14))) + (((p(22, 19) + p(23, 0)) + p(27, 10)) + (p(28, 15) + p(31, 14)))))).0,
-                ((((((p(0, 12) + p(2, 10)) + p(4, 14)) + (p(11, 17) + p(14, 2))) + (((p(15, 12) + p(22, 0)) + p(24, 18)) + (p(26, 10) + p(28, 14)))) - ((((p(1, 11) + p(5, 13)) + p(12, 16)) + (p(13, 3) + p(16, 15))) + (((p(21, 1) + p(23, 19)) + p(25, 11)) + (p(29, 13) + p(31, 15)))))).0,
-                ((((((p(0, 13) + p(3, 14)) + p(6, 11)) + (p(13, 1) + p(14, 16))) + (((p(15, 13) + p(16, 10)) + p(21, 3)) + (p(23, 17) + p(27, 14)))) + ((((p(30, 11) + p(31, 10)) - p(2, 15)) - (p(5, 12) + p(11, 19))) - (((p(12, 2) + p(22, 18)) + p(24, 0)) + (p(26, 15) + p(29, 12)))))).0,
-                ((((((p(0, 14) + p(1, 15)) + p(4, 12)) + (p(11, 2) + p(14, 17))) + (((p(15, 14) + p(16, 11)) + p(21, 18)) + (p(22, 3) + p(25, 15)))) + ((((p(28, 12) + p(31, 11)) - p(3, 13)) - (p(6, 10) + p(12, 19))) - (((p(13, 0) + p(23, 16)) + p(24, 1)) + (p(27, 13) + p(30, 10)))))).0,
-                ((((((p(0, 15) + p(2, 13)) + p(5, 10)) + (p(12, 0) + p(14, 18))) + (((p(15, 15) + p(16, 12)) + p(22, 16)) + (p(23, 3) + p(26, 13)))) + ((((p(29, 10) + p(31, 12)) - p(1, 14)) - (p(4, 11) + p(11, 1))) - (((p(13, 19) + p(21, 17)) + p(24, 2)) + (p(25, 14) + p(28, 11)))))).0,
-                ((((((p(0, 16) + p(3, 17)) + p(4, 19)) + (p(9, 11) + p(12, 6))) + (((p(14, 7) + p(18, 15)) + p(23, 8)) + (p(24, 4) + p(30, 1)))) + ((((p(31, 0) - p(2, 18)) - p(8, 12)) - (p(10, 13) + p(13, 5))) - (((p(19, 14) + p(20, 10)) + p(22, 9)) + (p(25, 3) + p(29, 2)))))).0,
-                ((((((p(0, 17) + p(1, 18)) + p(5, 19)) + (p(7, 12) + p(13, 4))) + (((p(14, 8) + p(19, 13)) + p(21, 9)) + (p(24, 5) + p(28, 2)))) + ((((p(31, 1) - p(3, 16)) - p(9, 10)) - (p(10, 14) + p(11, 6))) - (((p(17, 15) + p(20, 11)) + p(23, 7)) + (p(26, 3) + p(30, 0)))))).0,
-                ((((((p(0, 18) + p(2, 16)) + p(6, 19)) + (p(8, 10) + p(11, 5))) + (((p(14, 9) + p(17, 14)) + p(22, 7)) + (p(24, 6) + p(29, 0)))) + ((((p(31, 2) - p(1, 17)) - p(7, 11)) - (p(10, 15) + p(12, 4))) - (((p(18, 13) + p(20, 12)) + p(21, 8)) + (p(27, 3) + p(28, 1)))))).0,
-                ((((((p(0, 19) + p(4, 16)) + p(5, 17)) + (p(6, 18) + p(11, 7))) + (((p(12, 8) + p(13, 9)) + p(21, 4)) + (p(22, 5) + p(23, 6)))) + ((((p(31, 3) - p(7, 13)) - p(8, 14)) - (p(9, 15) + p(17, 10))) - (((p(18, 11) + p(19, 12)) + p(25, 0)) + (p(26, 1) + p(27, 2)))))).0,
-                ((((((p(1, 19) + p(5, 18)) + p(9, 14)) + (p(10, 10) + p(12, 9))) + (((p(15, 0) + p(19, 11)) + p(22, 6)) + (p(24, 7) + p(27, 1)))) + ((((p(28, 3) - p(6, 17)) - p(8, 15)) - (p(13, 8) + p(14, 4))) - (((p(16, 16) + p(18, 12)) + p(20, 13)) + (p(23, 5) + p(26, 2)))))).0,
-                ((((((p(2, 19) + p(6, 16)) + p(7, 15)) + (p(10, 11) + p(13, 7))) + (((p(15, 1) + p(17, 12)) + p(23, 4)) + (p(24, 8) + p(25, 2)))) + ((((p(29, 3) - p(4, 18)) - p(9, 13)) - (p(11, 9) + p(14, 5))) - (((p(16, 17) + p(19, 10)) + p(20, 14)) + (p(21, 6) + p(27, 0)))))).0,
-                ((((((p(3, 19) + p(4, 17)) + p(8, 13)) + (p(10, 12) + p(11, 8))) + (((p(15, 2) + p(18, 10)) + p(21, 5)) + (p(24, 9) + p(26, 0)))) + ((((p(30, 3) - p(5, 16)) - p(7, 14)) - (p(12, 7) + p(14, 6))) - (((p(16, 18) + p(17, 11)) + p(20, 15)) + (p(22, 4) + p(25, 1)))))).0,
-                ((((((p(1, 16) + p(2, 17)) + p(3, 18)) + (p(7, 10) + p(8, 11))) + (((p(9, 12) + p(15, 3)) + p(21, 7)) + (p(22, 8) + p(23, 9)))) + ((((p(28, 0) + p(29, 1)) + p(30, 2)) - (p(11, 4) + p(12, 5))) - (((p(13, 6) + p(16, 19)) + p(17, 13)) + (p(18, 14) + p(19, 15)))))).0,
-                ((((((p(10, 3) + p(17, 16)) + p(18, 17)) + (p(19, 18) + p(25, 7))) + (((p(26, 8) + p(27, 9)) + p(28, 4)) + (p(29, 5) + p(30, 6)))) - ((((p(1, 7) + p(2, 8)) + p(3, 9)) + (p(4, 4) + p(5, 5))) + (((p(6, 6) + p(7, 0)) + p(8, 1)) + (p(9, 2) + p(20, 19)))))).0,
-                ((((((p(14, 3) + p(24, 19)) - p(1, 13)) - (p(2, 14) + p(3, 15))) - (((p(4, 10) + p(5, 11)) + p(6, 12)) + (p(11, 0) + p(12, 1)))) - ((((p(13, 2) + p(21, 16)) + p(22, 17)) + (p(23, 18) + p(25, 13))) + (((p(26, 14) + p(27, 15)) + p(28, 10)) + (p(29, 11) + p(30, 12)))))).0,
-            ],
-        }
-    }
-}
-
-impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Quadvector<S2, T>> for Even<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
-    #[inline(always)]
-    fn gp(self, rhs: Quadvector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
-        let a = self.c.map(gx::SlotArr::<S1, T>);
-        let b = rhs.c.map(gx::SlotArr::<S2, T>);
-        let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
-            c: [
-                (((((p(17, 5) + p(18, 6)) + (p(19, 7) + p(21, 1))) + ((p(22, 2) + p(23, 3)) + (p(28, 12) + p(29, 13)))) + (((p(30, 14) - p(16, 0)) - (p(20, 8) + p(24, 4))) - ((p(25, 9) + p(26, 10)) + p(27, 11))))).0,
-                (((((p(7, 8) + p(11, 4)) + (p(15, 9) + p(18, 7))) + ((p(22, 3) + p(27, 10)) + (p(29, 14) - p(4, 0)))) - (((p(10, 5) + p(14, 1)) + (p(19, 6) + p(23, 2))) + ((p(26, 11) + p(30, 13)) + p(31, 12))))).0,
-                (((((p(8, 8) + p(12, 4)) + (p(15, 10) + p(19, 5))) + ((p(23, 1) + p(25, 11)) + (p(30, 12) - p(5, 0)))) - (((p(10, 6) + p(14, 2)) + (p(17, 7) + p(21, 3))) + ((p(27, 9) + p(28, 14)) + p(31, 13))))).0,
-                (((((p(9, 8) + p(13, 4)) + (p(15, 11) + p(17, 6))) + ((p(21, 2) + p(26, 9)) + (p(28, 13) - p(6, 0)))) - (((p(10, 7) + p(14, 3)) + (p(18, 5) + p(22, 1))) + ((p(25, 10) + p(29, 12)) + p(31, 14))))).0,
-                (((((p(1, 0) + p(8, 7)) + (p(12, 3) + p(15, 12))) + ((p(20, 5) + p(24, 1)) + (p(27, 13) + p(30, 10)))) + (((p(31, 9) - p(9, 6)) - (p(13, 2) + p(17, 8))) - ((p(21, 4) + p(26, 14)) + p(29, 11))))).0,
-                (((((p(2, 0) + p(9, 5)) + (p(13, 1) + p(15, 13))) + ((p(20, 6) + p(24, 2)) + (p(25, 14) + p(28, 11)))) + (((p(31, 10) - p(7, 7)) - (p(11, 3) + p(18, 8))) - ((p(22, 4) + p(27, 12)) + p(30, 9))))).0,
-                (((((p(3, 0) + p(7, 6)) + (p(11, 2) + p(15, 14))) + ((p(20, 7) + p(24, 3)) + (p(26, 12) + p(29, 9)))) + (((p(31, 11) - p(8, 5)) - (p(12, 1) + p(19, 8))) - ((p(23, 4) + p(25, 13)) + p(28, 10))))).0,
-                (((((p(6, 2) + p(9, 10)) + (p(16, 1) + p(18, 14))) + ((p(25, 4) + p(29, 3)) - (p(1, 4) + p(5, 3)))) - (((p(8, 11) + p(10, 12)) + (p(17, 0) + p(19, 13))) + ((p(20, 9) + p(30, 2)) + p(31, 1))))).0,
-                (((((p(4, 3) + p(7, 11)) + (p(16, 2) + p(19, 12))) + ((p(26, 4) + p(30, 1)) - (p(2, 4) + p(6, 1)))) - (((p(9, 9) + p(10, 13)) + (p(17, 14) + p(18, 0))) + ((p(20, 10) + p(28, 3)) + p(31, 2))))).0,
-                (((((p(5, 1) + p(8, 9)) + (p(16, 3) + p(17, 13))) + ((p(27, 4) + p(28, 2)) - (p(3, 4) + p(4, 2)))) - (((p(7, 10) + p(10, 14)) + (p(18, 12) + p(19, 0))) + ((p(20, 11) + p(29, 1)) + p(31, 3))))).0,
-                (((((p(16, 4) + p(25, 1)) + (p(26, 2) + p(27, 3))) - ((p(1, 1) + p(2, 2)) + (p(3, 3) + p(7, 12)))) - (((p(8, 13) + p(9, 14)) + (p(17, 9) + p(18, 10))) + ((p(19, 11) + p(20, 0)) + p(31, 4))))).0,
-                (((((p(6, 6) + p(12, 11)) + (p(14, 12) + p(16, 5))) + ((p(23, 13) + p(24, 9)) + (p(30, 6) + p(31, 5)))) - (((p(1, 8) + p(5, 7)) + (p(13, 10) + p(21, 0))) + ((p(22, 14) + p(25, 8)) + p(29, 7))))).0,
-                (((((p(4, 7) + p(13, 9)) + (p(14, 13) + p(16, 6))) + ((p(21, 14) + p(24, 10)) + (p(28, 7) + p(31, 6)))) - (((p(2, 8) + p(6, 5)) + (p(11, 11) + p(22, 0))) + ((p(23, 12) + p(26, 8)) + p(30, 5))))).0,
-                (((((p(5, 5) + p(11, 10)) + (p(14, 14) + p(16, 7))) + ((p(22, 12) + p(24, 11)) + (p(29, 5) + p(31, 7)))) - (((p(3, 8) + p(4, 6)) + (p(12, 9) + p(21, 13))) + ((p(23, 0) + p(27, 8)) + p(28, 6))))).0,
-                (((((p(11, 12) + p(12, 13)) + (p(13, 14) + p(16, 8))) + ((p(21, 9) + p(22, 10)) + (p(23, 11) + p(31, 8)))) - (((p(1, 5) + p(2, 6)) + (p(3, 7) + p(24, 0))) + ((p(25, 5) + p(26, 6)) + p(27, 7))))).0,
-                (((((p(4, 12) + p(5, 13)) + (p(6, 14) + p(20, 8))) + ((p(21, 1) + p(22, 2)) + (p(23, 3) - p(1, 9)))) - (((p(2, 10) + p(3, 11)) + (p(17, 5) + p(18, 6))) + ((p(19, 7) + p(24, 4)) + p(31, 0))))).0,
-                (((((p(0, 0) + p(7, 5)) + (p(8, 6) + p(9, 7))) + ((p(11, 1) + p(12, 2)) + (p(13, 3) - p(10, 8)))) - (((p(14, 4) + p(25, 12)) + (p(26, 13) + p(27, 14))) + ((p(28, 9) + p(29, 10)) + p(30, 11))))).0,
-                (((((p(0, 1) + p(3, 2)) + (p(4, 4) + p(7, 0))) + ((p(9, 13) + p(10, 9)) + (p(19, 10) + p(26, 3)))) - (((p(2, 3) + p(8, 14)) + (p(15, 1) + p(18, 11))) + ((p(20, 12) + p(27, 2)) + p(28, 4))))).0,
-                (((((p(0, 2) + p(1, 3)) + (p(5, 4) + p(7, 14))) + ((p(8, 0) + p(10, 10)) + (p(17, 11) + p(27, 1)))) - (((p(3, 1) + p(9, 12)) + (p(15, 2) + p(19, 9))) + ((p(20, 13) + p(25, 3)) + p(29, 4))))).0,
-                (((((p(0, 3) + p(2, 1)) + (p(6, 4) + p(8, 12))) + ((p(9, 0) + p(10, 11)) + (p(18, 9) + p(25, 2)))) - (((p(1, 2) + p(7, 13)) + (p(15, 3) + p(17, 10))) + ((p(20, 14) + p(26, 1)) + p(30, 4))))).0,
-                (((((p(0, 4) + p(4, 1)) + (p(5, 2) + p(6, 3))) + ((p(7, 9) + p(8, 10)) + (p(9, 11) + p(10, 0)))) - (((p(15, 4) + p(17, 12)) + (p(18, 13) + p(19, 14))) + ((p(28, 1) + p(29, 2)) + p(30, 3))))).0,
-                (((((p(0, 5) + p(3, 6)) + (p(4, 8) + p(11, 0))) + ((p(12, 14) + p(15, 5)) + (p(22, 11) + p(24, 12)))) + (((p(27, 6) + p(28, 8)) - (p(2, 7) + p(13, 13))) - ((p(14, 9) + p(23, 10)) + p(26, 7))))).0,
-                (((((p(0, 6) + p(1, 7)) + (p(5, 8) + p(12, 0))) + ((p(13, 12) + p(15, 6)) + (p(23, 9) + p(24, 13)))) + (((p(25, 7) + p(29, 8)) - (p(3, 5) + p(11, 14))) - ((p(14, 10) + p(21, 11)) + p(27, 5))))).0,
-                (((((p(0, 7) + p(2, 5)) + (p(6, 8) + p(11, 13))) + ((p(13, 0) + p(15, 7)) + (p(21, 10) + p(24, 14)))) + (((p(26, 5) + p(30, 8)) - (p(1, 6) + p(12, 12))) - ((p(14, 11) + p(22, 9)) + p(25, 6))))).0,
-                (((((p(0, 8) + p(4, 5)) + (p(5, 6) + p(6, 7))) + ((p(14, 0) + p(15, 8)) + (p(21, 12) + p(22, 13)))) + (((p(23, 14) + p(28, 5)) + (p(29, 6) + p(30, 7))) - ((p(11, 9) + p(12, 10)) + p(13, 11))))).0,
-                (((((p(0, 9) + p(3, 10)) + (p(5, 14) + p(10, 5))) + ((p(11, 4) + p(19, 6)) + (p(22, 3) - p(2, 11)))) - (((p(6, 13) + p(7, 8)) + (p(14, 1) + p(16, 12))) + ((p(18, 7) + p(23, 2)) + p(28, 0))))).0,
-                (((((p(0, 10) + p(1, 11)) + (p(6, 12) + p(10, 6))) + ((p(12, 4) + p(17, 7)) + (p(23, 1) - p(3, 9)))) - (((p(4, 14) + p(8, 8)) + (p(14, 2) + p(16, 13))) + ((p(19, 5) + p(21, 3)) + p(29, 0))))).0,
-                (((((p(0, 11) + p(2, 9)) + (p(4, 13) + p(10, 7))) + ((p(13, 4) + p(18, 5)) + (p(21, 2) - p(1, 10)))) - (((p(5, 12) + p(9, 8)) + (p(14, 3) + p(16, 14))) + ((p(17, 6) + p(22, 1)) + p(30, 0))))).0,
-                (((((p(0, 12) + p(3, 13)) + (p(6, 10) + p(9, 6))) + ((p(12, 3) + p(16, 9)) + (p(17, 8) + p(24, 1)))) + (((p(25, 0) - p(2, 14)) - (p(5, 11) + p(8, 7))) - ((p(13, 2) + p(20, 5)) + p(21, 4))))).0,
-                (((((p(0, 13) + p(1, 14)) + (p(4, 11) + p(7, 7))) + ((p(13, 1) + p(16, 10)) + (p(18, 8) + p(24, 2)))) + (((p(26, 0) - p(3, 12)) - (p(6, 9) + p(9, 5))) - ((p(11, 3) + p(20, 6)) + p(22, 4))))).0,
-                (((((p(0, 14) + p(2, 12)) + (p(5, 9) + p(8, 5))) + ((p(11, 2) + p(16, 11)) + (p(19, 8) + p(24, 3)))) + (((p(27, 0) - p(1, 13)) - (p(4, 10) + p(7, 6))) - ((p(12, 1) + p(20, 7)) + p(23, 4))))).0,
-                (((((p(10, 8) + p(11, 1)) + (p(12, 2) + p(13, 3))) + ((p(15, 0) - p(1, 12)) - (p(2, 13) + p(3, 14)))) - (((p(4, 9) + p(5, 10)) + (p(6, 11) + p(7, 5))) + ((p(8, 6) + p(9, 7)) + p(14, 4))))).0,
             ],
         }
     }

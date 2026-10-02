@@ -944,6 +944,15 @@ algebras' kernels are unchanged:
   one tuple; the expressions and their order are unchanged (this also changed the layout of
   CGA3D's, STAP's and CSTA's largest kernels).
 * **GPU layouts only up to 64 coefficients,** the WGSL modules' limit.
+* **Products of large maps per pair of slot entries** (added after porting numga's spin groups,
+  whose 6D sandwich maps took minutes each to compile). A product is generic over its operands'
+  slots, and unrolled it multiplies whole slot arrays term by term: a CSTA `Even` times a
+  `Bivector` slot is some 7000 array operations for LLVM. Above `SLOT_UNROLL_MAX` (4096) terms
+  times slot entries, the generated product calls `slots::by_entries`, which splits both operands
+  into slot arrays of plain values, runs the value product on every pair (`Slots::outer`), and
+  reassembles the coefficients. The choice is an `if const` on the slot sizes, so values and
+  small maps compile only the unrolled code. A probe with three such maps in CSTA went from
+  128 s to 4 s in a release build (5 s with the same products on values).
 
 Compiling a 7D, 8D or 9D algebra takes 30 to 60 s and 2.5 to 4.5 GB in a release build. `exp`
 there was scaling and squaring (0.24 ms in 8D, 0.95 ms in 9D) until ADR-035.

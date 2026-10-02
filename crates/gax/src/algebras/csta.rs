@@ -13,6 +13,7 @@ include!("csta/kinds_1.rs");
 include!("csta/kinds_2.rs");
 include!("csta/products_gp_1.rs");
 include!("csta/products_gp_2.rs");
+include!("csta/products_gp_3.rs");
 include!("csta/products_wedge.rs");
 include!("csta/products_vee.rs");
 include!("csta/products_lc.rs");
