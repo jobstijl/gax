@@ -1,6 +1,6 @@
 //! gax against nalgebra, ultraviolet and the `geometric_algebra` crate, beyond the glam suite
 //! in `transform.rs`: transforms, composition chains, solvers, a rigid-body step (generic and
-//! build-time fused), and CGA/CSTA products.
+//! build-time fused), CGA/CSTA products, the general inverse, least squares and derivatives.
 //!
 //! Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench compare`.
 #![allow(missing_docs)] // `criterion_group!` generates an undocumented function
@@ -313,5 +313,78 @@ fn conformal(c: &mut Criterion) {
     g.finish();
 }
 
-criterion_group!(benches, transforms, chains, solvers, rigid_body, conformal);
+/// The general inverse (ADR-037), least squares (ADR-038) and forward-mode derivatives
+/// (ADR-039), in `f64`.
+fn numerics(c: &mut Criterion) {
+    use gax::dual::Dual;
+    type D6 = Dual<f64, 6>;
+    fn coeffs<const N: usize>() -> [f64; N] {
+        core::array::from_fn(|i| ((i as f64 + 1.0) * 0.37).sin())
+    }
+    let mut g = c.benchmark_group("compare: general inverse (f64)");
+    let pm = gax::pga3d::Multivector::<(), f64>::from_coeffs(coeffs());
+    g.bench_function("gax PGA3D Multivector::inverse", |b| {
+        b.iter(|| black_box(pm).inverse());
+    });
+    let ce = gax::cga3d::Even::<(), f64>::from_coeffs(coeffs());
+    g.bench_function("gax CGA3D Even::inverse", |b| {
+        b.iter(|| black_box(ce).inverse());
+    });
+    let cm = gax::cga3d::Multivector::<(), f64>::from_coeffs(coeffs());
+    g.bench_function("gax CGA3D Multivector::inverse", |b| {
+        b.iter(|| black_box(cm).inverse());
+    });
+    let se = gax::csta::Even::<(), f64>::from_coeffs(coeffs());
+    g.bench_function("gax CSTA Even::inverse", |b| {
+        b.iter(|| black_box(se).inverse());
+    });
+    let sm = gax::csta::Multivector::<(), f64>::from_coeffs(coeffs());
+    g.bench_function("gax CSTA Multivector::inverse", |b| {
+        b.iter(|| black_box(sm).inverse());
+    });
+    g.finish();
+
+    let mut g = c.benchmark_group("compare: least squares (f64)");
+    // A 6 x 4 map (points to lines), a value to fit, and a 6 x 6 map for scale.
+    let tall = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|i| {
+        core::array::from_fn(|j| ((i * 4 + j) as f64 * 0.61 + 0.2).sin())
+    }));
+    let rhs = Line::<(), f64>::from_coeffs(coeffs());
+    let square = Line::<(Line,), f64>::from_coeffs(core::array::from_fn(|i| {
+        core::array::from_fn(|j| ((i * 6 + j) as f64 * 0.61 + 0.2).sin())
+    }));
+    g.bench_function("gax pinv of a 6 x 4 map", |b| {
+        b.iter(|| black_box(tall).pinv());
+    });
+    g.bench_function("gax lstsq of a 6 x 4 map", |b| {
+        b.iter(|| -> Point<(), f64> { black_box(tall).lstsq(black_box(rhs)) });
+    });
+    g.bench_function("gax LU inverse of a 6 x 6 map", |b| {
+        b.iter(|| black_box(square).inverse());
+    });
+    g.finish();
+
+    let mut g = c.benchmark_group("compare: derivatives (f64)");
+    let bl = Line::<(), f64>::from_coeffs([0.3, -0.2, 0.5, 1.0, 2.0, -0.5]);
+    let p = Point::<(), f64>::new(1.0, 2.0, 3.0, 1.0);
+    let m = bl.exp();
+    let bd = Line::<(), D6>::from_coeffs(core::array::from_fn(|i| D6::variable(bl.c[i], i)));
+    let pd = Point::<(), D6>::from_coeffs(p.c.map(D6::constant));
+    let md = bd.exp();
+    g.bench_function("gax Unit<Motor> >> Point", |b| {
+        b.iter(|| black_box(m) >> black_box(p));
+    });
+    g.bench_function("gax Unit<Motor> >> Point, six derivatives", |b| {
+        b.iter(|| black_box(md) >> black_box(pd));
+    });
+    g.bench_function("gax Line::exp", |b| b.iter(|| black_box(bl).exp()));
+    g.bench_function("gax Line::exp, six derivatives", |b| {
+        b.iter(|| black_box(bd).exp());
+    });
+    g.finish();
+}
+
+criterion_group!(
+    benches, transforms, chains, solvers, rigid_body, conformal, numerics
+);
 criterion_main!(benches);

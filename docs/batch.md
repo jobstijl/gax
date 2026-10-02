@@ -172,9 +172,9 @@ in the last bits.
 The numbers are in [performance.md](performance.md) (section "Batch kernels"). With 1024 elements
 in a default build (no `target-cpu`), where the dispatcher picks AVX2:
 
-* One motor on many points in SoA form takes 0.27 µs, about 3x faster than glam's
-  `Affine3A` loop and 4x faster than scalar gax.
-* `exp` of twists in SoA form is 19x faster than scalar code, thanks to the vectorized `sin` and
+* One motor on many points in SoA form takes 0.32 µs, about 2.3x faster than glam's
+  `Affine3A` loop and 3.5x faster than scalar gax.
+* `exp` of twists in SoA form is 16x faster than scalar code, thanks to the vectorized `sin` and
   `cos`.
 * The array-of-structs forms pay for transposes: they beat scalar loops but not glam's
   single-point transform.

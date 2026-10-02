@@ -319,12 +319,13 @@ turns, lanes and `f32`.
 
 | algebra | `log` (closed form) | `log` (planes turned) | `exp` (closed form, §12) | `exp` (scaling and squaring, before) |
 |---|---|---|---|---|
-| CSTA (6D, 32 coefficients) | 2.6 µs | 6.6 µs | 3.5 µs (4.3 µs turned) | 4.1 µs |
-| 7D `R(4,3)` (64) | 2.5 µs | 7.0 µs | 4.0 µs | 35 µs |
-| 8D `R(4,4)` (128) | 2.9 µs | 10 µs | 6.8 µs | 0.24 ms |
-| 9D `R(5,4)` (256) | 3.8 µs | 31 µs | 10 µs | 0.95 ms |
+| CSTA (6D, 32 coefficients) | 2.7 µs | 6.6 µs | 3.4 µs (4.2 µs turned) | 4.1 µs |
+| 7D `R(4,3)` (64) | 2.9 µs | 8.0 µs | 4.3 µs | 35 µs |
+| 8D `R(4,4)` (128) | 3.0 µs | 10 µs | 6.7 µs | 0.24 ms |
+| 9D `R(5,4)` (256) | 4.0 µs | 27 µs | 10 µs | 0.95 ms |
 
-(f64, Ryzen 7 5800X, one core, release builds; the machine was not idle.) The closed form is
+(f64, Ryzen 7 5800X, one core, release builds, rustc 1.99.0, measured again on an idle machine
+on 2026-10-02; the scaling-and-squaring column is from the earlier measurement.) The closed form is
 dominated by one straight-line program for `r₀`, the `p`s and the `G`s. Turning adds `k`
 products by the bivector `Z` and a second closed form. Inverse scaling and squaring took 50.7 µs
 in CSTA. Scaling and squaring in CSTA works in the 32-coefficient even kind, where a product is

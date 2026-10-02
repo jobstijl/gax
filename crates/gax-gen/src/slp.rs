@@ -615,7 +615,8 @@ pub enum Target {
     /// fused into `mul_add` (a hardware fused multiply-add where the target has one).
     Rust,
     /// The same Rust without `mul_add`: plain products and sums, which LLVM's SLP vectorizer
-    /// packs into SIMD more readily for a kernel called once (performance.md).
+    /// may pack into SIMD more readily for a kernel called once, depending on the compiler
+    /// version (performance.md).
     RustPlain,
     /// WGSL, in `f32`. With `fma`, single-use products feeding a sum become `fma(a, b, c)`;
     /// without it they stay `a * b + c`.

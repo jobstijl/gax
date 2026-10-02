@@ -269,9 +269,10 @@ impl Tracer {
 
     /// Whether the Rust form fuses single-use products into `mul_add` (on by default). Fusing
     /// is faster where a kernel runs in a loop or on SIMD lanes; off, plain products and sums
-    /// let LLVM's SLP vectorizer pack a kernel called once per frame into SIMD, which can be
-    /// much faster (the traced rigid-body step: 15 ns against 24 ns; performance.md). Measure
-    /// both for kernels on the hot path. The WGSL form is not affected.
+    /// can let LLVM's SLP vectorizer pack a kernel called once per frame into SIMD (the traced
+    /// rigid-body step took 15 ns against 24 ns with rustc 1.98.1; with 1.99.0 the two are
+    /// within the spread between runs; performance.md). Measure both for kernels on the hot
+    /// path. The WGSL form is not affected.
     pub fn fma(&mut self, on: bool) -> &mut Tracer {
         self.plain = !on;
         self
