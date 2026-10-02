@@ -45,6 +45,17 @@ fn single(c: &mut Criterion) {
     g.bench_function("gax prepared >> Point", |b| {
         b.iter(|| black_box(prep) >> black_box(p));
     });
+    // The maps read from memory (as from an array, or a reference) rather than passed by
+    // value: by value, the 13 entries of the prepared map are stored right before the kernel
+    // reads them in column groups that straddle those stores, which stalls store forwarding.
+    g.bench_function("gax prepared >> Point, map from memory", |b| {
+        let r = &prep;
+        b.iter(|| *black_box(r) >> black_box(p));
+    });
+    g.bench_function("gax Point<(Point,)>::of, map from memory", |b| {
+        let r = &mat;
+        b.iter(|| black_box(r).of(black_box(p)));
+    });
     g.bench_function("gax Point<(Point,)>::of", |b| {
         b.iter(|| black_box(mat).of(black_box(p)));
     });

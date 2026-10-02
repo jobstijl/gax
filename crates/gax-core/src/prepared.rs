@@ -23,6 +23,10 @@ use core::marker::PhantomData;
 ///
 /// `V` is the versor's kind, wrapped in `Unit` when the versor is certified (the entries then
 /// come from the simplified formulas).
+///
+/// Prepare once and apply from a variable, an array or a reference. Passed by value into a
+/// function that is not inlined, a map is stored right before it is read, which can stall the
+/// processor's store forwarding for a few nanoseconds per call (docs/performance.md).
 pub struct Prepared<V, X, T, const N: usize> {
     /// The non-constant matrix entries, in the order the generated code expects.
     pub m: [T; N],

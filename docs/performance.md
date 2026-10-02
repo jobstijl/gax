@@ -22,8 +22,8 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 | operation | gax | glam 0.30 |
 |---|---|---|
 | transform one point: `Unit<Motor> >> Point` (fused, FMA) | 4.0 ns (4.7 in a second run) | `Affine3A::transform_point3a`: 1.3 ns; `Quat * Vec3A` (rotation only): 2.4 ns |
-| transform one point: prepared sparse map `m.prepare::<Point>() >> p` | 7.8 ns | |
-| transform one point: dense map `Point<(Point,)>::of` | 3.2 ns (2.8 in a second run) | |
+| transform one point: prepared sparse map `m.prepare::<Point>() >> p`, by value / read from memory | 7.8 / 2.7 ns | |
+| transform one point: dense map `Point<(Point,)>::of`, by value / read from memory | 3.2 / 2.4 ns (2.8 by value in a second run) | |
 | transform 1024 points, AoS: direct / prepared / dense map | 1.42 / 1.03 / 1.09 µs | `Affine3A` loop: 0.67 µs |
 | transform 1024 points, SoA `f32x8`: direct / **prepared** | 0.46 / **0.24 µs** | (2.8x faster than glam) |
 | compose motors `Unit<Motor> * Unit<Motor>` | 5.4 ns | `Affine3A * Affine3A`: 3.0 ns; `Quat * Quat`: 1.2 ns |
@@ -33,12 +33,16 @@ Run with `RUSTFLAGS="-C target-cpu=native" cargo bench -p gax-bench --bench tran
 | motor logarithm `Unit<Motor>::log` | 21 ns | — |
 | build the point map: `m.prepare::<Point>().to_map()` / `m >> Point::slot()` | 4.6 / 9.7 ns | `Affine3A::from_rotation_translation`: 5.0 ns |
 
-**The prepared single-point transform** took 3.5 ns with rustc 1.98.1 (2026-09-29) and takes
-7.8 ns with 1.99.0. Not a change in gax: the commit measured then gives 7.3 ns with 1.99.0, and
-the kernel's assembly (`gax_apply_prepared`, 38 instructions) is as short as the dense map's (37,
-which runs at 3 ns), so the difference is in how the benchmark loop around it is compiled. On
-many points the prepared action is the fastest form (1.03 µs per 1024 in AoS form, 0.24 µs in
-SoA form).
+**The prepared map passed by value** takes 7.8 ns, and 2.7 ns read from memory (from an array,
+or through a reference). Its 13 entries (52 bytes) are passed through memory, and the kernel,
+which LLVM vectorizes by columns, reads them with loads that straddle the stores that just wrote
+them (offsets 12, 28 and 44), so the processor cannot forward the stored values and waits for
+them to reach the cache (store-forwarding stalls). Only a map stored right before each use pays
+this: a non-inlined call taking a `Prepared` by value, or this benchmark, which passes it through
+`black_box` on every iteration. In loops and in batches the prepared action is the fastest form
+(1.03 µs per 1024 points in AoS form, 0.24 µs in SoA form). A layout the column loads could
+forward from would be the padded 4×4 matrix, which is the dense map. (With rustc 1.98.1 the by-value
+row measured 3.5 ns: how the compiler copies the map decides whether the stall happens.)
 
 ### Where gax is faster
 
