@@ -361,13 +361,18 @@ up to 1):
 | | per exponential | within, of the Rust `f64` exp: entries up to 1 / up to 3 / a half turn and a boost of 12 |
 |---|---|---|
 | `bivector_exp` (scaling and squaring in the even kind) | **1.8 ns** | `2·10⁻⁵` / `8·10⁻⁵` / `3·10⁻⁵` |
-| `bivector_exp_closed` (the closed form, log6d.md §12) | 19 ns | `2·10⁻⁶` / `4·10⁻⁶` / `3·10⁻⁵` |
+| `bivector_exp_closed` (the closed form, log6d.md §12) | 10 ns | `2·10⁻⁶` / `4·10⁻⁶` / `3·10⁻⁵` |
 
 On the CPU, in `f64`, the closed form is the faster one (3.4 µs against 4.1 µs, and 35 µs to
-4.3 µs in 7D). On a GPU it is not: its series (16 terms) and tables (40) are local arrays, which
+4.3 µs in 7D). On a GPU it is not: its series (16 terms) and tables (24) are local arrays, which
 a GPU keeps in memory rather than registers, while scaling and squaring is uniform multiply-adds.
-An earlier composition, which called `bivector_exp_from` in both branches of the turning test,
-took 40 ns: invocations of one wavefront that differ in turning ran both branches.
+Two changes brought it from 40 ns to 10 ns: `bivector_exp_from` called once instead of in both
+branches of the turning test (invocations of one wavefront that differ in turning ran both;
+19 ns), and tables of 24 terms instead of 40, which `f32` does not need (the shift to a centre
+is the helper's main cost). Computing the invariants once instead of twice would not pay: the
+kernels that compute only them (`bivector_exp_reach`, `bivector_exp_turning`) take under 0.1 ns.
+In the `f16` module, `bivector_exp` is the closed form, within `4·10⁻³` of the Rust exp where
+scaling and squaring in `f16` is off by up to `4·10⁻²` (`f16_exponentials_on_the_gpu`).
 
 ## Law-based rewrites in the tracer
 

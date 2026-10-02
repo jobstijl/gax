@@ -397,9 +397,11 @@ tables of terms); see ADR-034 in [design.md](design.md).
   module halves, turns and squares as the Rust `exp` does. On a GPU (RX 6900 XT) it is within
   `2·10⁻⁶` of the Rust `f64` `exp` for bivectors with entries up to 1 and `3·10⁻⁵` with a
   rotation near a half turn and a boost of rapidity 12, against `2·10⁻⁵` and `3·10⁻⁵` for
-  scaling and squaring; but it takes 19 ns per exponential against 1.8 ns. Its series work on
+  scaling and squaring; but it takes 10 ns per exponential against 1.8 ns. Its series work on
   local arrays, which a GPU keeps in memory, while scaling and squaring is uniform
-  multiply-adds, so the module's `bivector_exp` stays scaling and squaring.
+  multiply-adds, so the `f32` module's `bivector_exp` stays scaling and squaring. In `f16`
+  scaling and squaring is off by up to `4·10⁻²` and the closed form within `4·10⁻³`, so there
+  `bivector_exp` is the closed form.
 
 ## 12. The exponential
 

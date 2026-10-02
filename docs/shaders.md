@@ -53,10 +53,13 @@ the full even kind in closed form for CSTA and every 6D and 7D algebra (turning 
 half turn first), as in Rust (log6d.md §8). Their bivector `exp` is scaling and squaring in the
 even kind, and `bivector_exp_closed` the closed form of the Rust `exp` (log6d.md §12): on a GPU
 the closed form is 10 to 20 times as accurate on bivectors with entries up to 1 (`2·10⁻⁶`
-against `2·10⁻⁵` of the `f64` result) and 10 times slower (19 ns against 1.8 ns per
+against `2·10⁻⁵` of the `f64` result) and 6 times slower (10 ns against 1.8 ns per
 exponential on an RX 6900 XT). Its interpolation works on local arrays (series of 16 terms,
-tables of 40), which GPUs keep in memory rather than in registers, while scaling and squaring
-is uniform multiply-adds.
+tables of 24), which GPUs keep in memory rather than in registers, while scaling and squaring
+is uniform multiply-adds. In the `f16` modules `bivector_exp` is the closed form, and scaling
+and squaring `bivector_exp_squaring`: rounding every product and squaring in `f16`, it is off by
+up to `4·10⁻²`, where the closed form, which computes in `f32` up to its final assembly, is
+within `4·10⁻³`.
 Kinds of more than 64 coefficients (from 8D on) have no WGSL kernels.
 
 ## Using a module

@@ -601,8 +601,9 @@ fn study_log6_turn(p1: f32, p2: f32, p3: f32, r0: f32) -> vec4<f32> {
 ";
 
 /// Terms of the Maclaurin tables in the WGSL exponential: centres within 1 of zero against a
-/// radius of `π²/4` give a ratio of at most 0.41, so 40 terms reach `10⁻¹⁵`, below `f32`.
-const EXP6_TERMS: usize = 40;
+/// radius of `π²/4` give a ratio of at most 0.41, so 24 terms reach `5·10⁻¹⁰`, below `f32`'s
+/// `6·10⁻⁸` (the shift to a centre costs 16 passes over them, the helper's main cost on a GPU).
+const EXP6_TERMS: usize = 24;
 
 /// The Maclaurin coefficients of `τ(x) = tanh(√x)/√x` and of `ln cosh √x` (the recurrences of
 /// `gax_core::study::expk`).
@@ -1700,14 +1701,38 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
             let _ = writeln!(s, "{}", arithmetic(x, prec));
         }
     }
+    // In `f16`, scaling and squaring loses about 2⁻⁵ (its products and squarings round in
+    // `f16`), while the closed form computes in `f32` up to the final assembly (2⁻⁸): there
+    // `{k}_exp` is the closed form and the squaring is `{k}_exp_squaring`.
+    let closed_default =
+        |k: &KindSpec| prec == Precision::F16 && closed.iter().any(|(c, _)| c.name == k.name);
     for (k, e) in &fallbacks {
         if let Some(text) = fallback_exp(k, e, prec) {
+            let text = if closed_default(k) {
+                let ks = snake(&k.name);
+                text.replace(&format!("fn {ks}_exp("), &format!("fn {ks}_exp_squaring("))
+            } else {
+                text
+            };
             let _ = writeln!(s, "{text}");
         }
     }
     for (k, e) in &closed {
         if let Some(text) = closed_exp(k, e, prec) {
             let _ = writeln!(s, "{text}");
+            if closed_default(k) {
+                let (ks, kn, en) = (snake(&k.name), &k.name, &e.name);
+                let _ = writeln!(
+                    s,
+                    "// The exponential of a `{kn}`: in this `f16` module the closed form (`{ks}_exp_closed`),
+// which computes in `f32` up to its final assembly; scaling and squaring, which rounds every
+// product in `f16`, is `{ks}_exp_squaring`.
+fn {ks}_exp(x: {kn}) -> {en} {{
+    return {ks}_exp_closed(x);
+}}
+"
+                );
+            }
         }
     }
     for (k, e) in &logs {

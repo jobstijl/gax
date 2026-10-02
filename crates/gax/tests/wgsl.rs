@@ -53,12 +53,20 @@ fn every_f16_module_validates() {
     assert_eq!(gax::wgsl::ALL_F16.len(), gax::wgsl::ALL.len());
     for (m, m32) in gax::wgsl::ALL_F16.iter().zip(gax::wgsl::ALL) {
         assert!(m.source.starts_with("enable f16;"), "{}", m.path);
-        let module = parse(m);
-        // The same functions as the f32 module.
-        assert_eq!(
-            module.functions.len(),
-            parse(m32).functions.len(),
-            "{}",
+        let names = |m: &naga::Module| -> std::collections::BTreeSet<String> {
+            m.functions
+                .iter()
+                .filter_map(|(_, f)| f.name.clone())
+                .collect()
+        };
+        let (f16, f32) = (names(&parse(m)), names(&parse(m32)));
+        // The same functions as the f32 module, and where `exp` is the closed form in f16 (it
+        // computes in f32 up to its final assembly), scaling and squaring as `*_exp_squaring`.
+        assert!(f32.is_subset(&f16), "{}", m.path);
+        let extra: Vec<&String> = f16.difference(&f32).collect();
+        assert!(
+            extra.iter().all(|n| n.ends_with("_exp_squaring")),
+            "{}: {extra:?}",
             m.path
         );
     }

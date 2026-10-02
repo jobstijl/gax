@@ -8,6 +8,8 @@
 //! * The exponentials composed in WGSL text (loops, not straight-line kernels: scaling and
 //!   squaring, and CSTA's closed form `bivector_exp_closed`) against gax's Rust `exp`, within a
 //!   relative `2⁻¹⁰`; and, ignored by default, the two's cost and accuracy (`csta_exp_timing`).
+//! * The `f16` module's exponentials: the closed form (`bivector_exp` there) within `2⁻⁷`,
+//!   scaling and squaring (`bivector_exp_squaring`) within `2⁻⁴`.
 //! * CSTA's `unit_even_log` (the closed form, turning planes near a half turn first) against
 //!   gax's Rust `log`, within a relative `2⁻¹⁰`; its kernels, defined on unit versors only, get
 //!   `exp` of random bivectors in the kernel sweep.
@@ -390,6 +392,66 @@ fn fallback_exponentials_on_the_gpu() {
             }
         }
         println!("csta: {} x {SAMPLES} samples within {worst:.1e}", call.name);
+    }
+}
+
+/// CSTA's two exponentials in the `f16` module, against gax's Rust `exp` of the same (rounded)
+/// bivectors with entries up to 1 or 0.2 (larger ones overflow `f16`, whose largest value is
+/// 65504, after their squarings).
+#[test]
+fn f16_exponentials_on_the_gpu() {
+    let Some(gpu) = Gpu::or_skip() else { return };
+    if !gpu.f16 {
+        eprintln!("the adapter has no shader-f16: skipping the f16 exponentials");
+        return;
+    }
+    let spec = spec("csta");
+    let mut rng = Rng(0x00f1_6e4b);
+    let inputs: Vec<f32> = (0..SAMPLES)
+        .flat_map(|case| {
+            let scale = if case % 2 == 0 { 1.0 } else { 0.2 };
+            (0..15)
+                .map(|_| gax::gpu::f16_to_f32(gax::gpu::f16_bits(scale * rng.next())))
+                .collect::<Vec<f32>>()
+        })
+        .collect();
+    // `bivector_exp` is the closed form in the f16 module: within 2⁻⁷, against 2⁻⁴ for scaling
+    // and squaring, whose products and squarings round in f16.
+    for (f, tol) in [
+        ("bivector_exp", 1.0 / 128.0),
+        ("bivector_exp_closed", 1.0 / 128.0),
+        ("bivector_exp_squaring", 1.0 / 16.0),
+    ] {
+        let call = Kernel {
+            name: f.into(),
+            doc: String::new(),
+            params: vec![("x".into(), Ty::Kind("Bivector".into()))],
+            result: Ty::Kind("Even".into()),
+            steps: Vec::new(),
+            entries: None,
+        };
+        let src = harness_in(Precision::F16, gax::wgsl::CSTA_F16.source, &spec, &[&call], 15, 32);
+        let out = floats(&gpu.run(
+            &src,
+            "main",
+            &[bytemuck::cast_slice(&inputs)],
+            SAMPLES * 32 * 4,
+            SAMPLES as u32,
+        ));
+        let mut worst = 0.0f64;
+        for n in 0..SAMPLES {
+            let b = gax::csta::Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+                f64::from(inputs[n * 15 + i])
+            }));
+            let exact = b.exp().into_inner().c;
+            let scale = exact.iter().fold(1.0f64, |m, x| m.max(x.abs()));
+            for (o, e) in exact.iter().enumerate() {
+                let rel = (f64::from(out[n * 32 + o]) - e).abs() / scale;
+                assert!(rel < tol, "csta f16: {f} output {o}: {} vs {e}", out[n * 32 + o]);
+                worst = worst.max(rel);
+            }
+        }
+        println!("csta (f16): {f} x {SAMPLES} samples within {worst:.1e}");
     }
 }
 

@@ -969,9 +969,10 @@ and their `_8d` twins, `h_weights`; derivation in log6d.md §12).*
 * **WGSL** (added later): the helpers `study_exp6`, `study_exp6_turn` and `study_exp6_reach`,
   ports in `f32` next to `study_log6`, whose root finding and series arithmetic they reuse;
   the module's `bivector_exp_closed` halves, turns and squares as the Rust `exp` does. On a GPU
-  it is 10 to 20 times as accurate as scaling and squaring for typical bivectors but 10 times
-  slower (19 ns against 1.8 ns: local arrays live in memory on a GPU, and dense products are
-  uniform multiply-adds), so `bivector_exp` stays scaling and squaring.
+  it is 10 to 20 times as accurate as scaling and squaring for typical bivectors but 6 times
+  slower (10 ns against 1.8 ns: local arrays live in memory on a GPU, and dense products are
+  uniform multiply-adds), so `bivector_exp` stays scaling and squaring in `f32`. In `f16`,
+  where scaling and squaring is off by up to `4·10⁻²`, `bivector_exp` is the closed form.
 * **Result.** 3.5 µs in CSTA (4.3 µs turned), 4.0 / 6.8 / 10 µs in 7D / 8D / 9D: 9x to 90x
   faster from 7D on. Within `5·10⁻¹³` of a Taylor series in `f64` on random bivectors of seven
   algebras, no NaN (log6d.md §12).
