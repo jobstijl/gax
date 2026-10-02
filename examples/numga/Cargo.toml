@@ -25,3 +25,11 @@ opt-level = 3
 
 [profile.release]
 debug = "line-tables-only"
+
+# The algebra! macro runs gax's generator at compile time: optimize it (docs/guide.md, "Your own
+# algebra").
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.release.build-override]
+opt-level = 3

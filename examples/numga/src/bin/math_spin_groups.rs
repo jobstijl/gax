@@ -1,0 +1,1101 @@
+//! numga's `math/spin_groups`: the spin groups of every signature up to six dimensions.
+//!
+//! Choosing p directions that square to plus one and q that square to minus one picks out the
+//! signature (p, q): the bivectors of the chosen directions generate its rotors, the spin
+//! group, and their even products are its spinors. Three maps with open slots tell the groups
+//! apart.
+//!
+//! The invariant form of the rotors' Lie algebra, the trace of the double commutator with two
+//! bivectors left open, is the algebra's own inner product on those bivectors, times
+//! `2 (n - 2)`: the geometric product carries it already.
+//!
+//! Sandwiching the bivectors with the product of the positive directions is an involution: it
+//! negates exactly the planes that mix a positive with a negative direction. The planes it fixes
+//! generate rotations, the planes it negates generate boosts; a group is compact when every
+//! plane is a rotation.
+//!
+//! In an even number of dimensions the pseudoscalar commutes with every spinor. When it squares
+//! to plus one it splits the spinors into two halves; when it squares to minus one it acts on
+//! them as the complex unit (its eigenvalues, found here by a small local eigensolver for real
+//! matrices, are then ±i). In four Euclidean dimensions each generator is the sum of two
+//! commuting halves, each turning every plane through one angle; their orbits on the
+//! three-sphere are the fibres of the Hopf fibration and of its mirror image.
+//!
+//! numga does all this inside one algebra, Cl(6,3), with nine directions. A gax `algebra!` of
+//! nine dimensions takes minutes and gigabytes to compile, so this port declares each signature
+//! as an algebra of its own, twelve of three to six dimensions with only the kinds it needs
+//! (vectors, bivectors, even and odd), and one macro runs the same code on each. The maps on
+//! bivectors and spinors are built from their images of the basis blades (`from_images`)
+//! rather than by products with open slots: in six dimensions those take minutes each to
+//! compile.
+//!
+//! The animation: the table of signatures, and below it the points of the three-sphere carried
+//! along the two isoclinic flows (circles filling nested tori, linked in opposite senses) and
+//! along a rotation turning xy twice while zw turns three times (trefoil knots), seen through
+//! the stereographic projection.
+
+use gax_numga_examples::{
+    Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption, colormap,
+    palette, run,
+};
+use std::sync::OnceLock;
+
+gax::algebra! {
+    algebra cl30 "Cl(3,0): 3 directions squaring to plus one, 0 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3];
+    kind Bivector = [e12, e13, e23];
+    kind Even = [1, e12, e13, e23];
+    kind Odd = [e1, e2, e3, e123];
+}
+
+gax::algebra! {
+    algebra cl21 "Cl(2,1): 2 directions squaring to plus one, 1 to minus one.";
+    basis e1 = 1, e2 = 1, et = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, et];
+    kind Bivector = [e12, e1t, e2t];
+    kind Even = [1, e12, e1t, e2t];
+    kind Odd = [e1, e2, et, e12t];
+}
+
+gax::algebra! {
+    algebra cl40 "Cl(4,0): 4 directions squaring to plus one, 0 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4];
+    kind Bivector = [e12, e13, e14, e23, e24, e34];
+    kind Even = [1, e12, e13, e14, e23, e24, e34, e1234];
+    kind Odd = [e1, e2, e3, e4, e123, e124, e134, e234];
+}
+
+gax::algebra! {
+    algebra cl31 "Cl(3,1): 3 directions squaring to plus one, 1 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, et = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, et];
+    kind Bivector = [e12, e13, e1t, e23, e2t, e3t];
+    kind Even = [1, e12, e13, e1t, e23, e2t, e3t, e123t];
+    kind Odd = [e1, e2, e3, et, e123, e12t, e13t, e23t];
+}
+
+gax::algebra! {
+    algebra cl22 "Cl(2,2): 2 directions squaring to plus one, 2 to minus one.";
+    basis e1 = 1, e2 = 1, et = -1, es = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, et, es];
+    kind Bivector = [e12, e1t, e1s, e2t, e2s, ets];
+    kind Even = [1, e12, e1t, e1s, e2t, e2s, ets, e12ts];
+    kind Odd = [e1, e2, et, es, e12t, e12s, e1ts, e2ts];
+}
+
+gax::algebra! {
+    algebra cl50 "Cl(5,0): 5 directions squaring to plus one, 0 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4, e5];
+    kind Bivector = [e12, e13, e14, e15, e23, e24, e25, e34, e35, e45];
+    kind Even = [1, e12, e13, e14, e15, e23, e24, e25, e34, e35, e45, e1234, e1235, e1245, e1345, e2345];
+    kind Odd = [e1, e2, e3, e4, e5, e123, e124, e125, e134, e135, e145, e234, e235, e245, e345, e12345];
+}
+
+gax::algebra! {
+    algebra cl41 "Cl(4,1): 4 directions squaring to plus one, 1 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, et = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4, et];
+    kind Bivector = [e12, e13, e14, e1t, e23, e24, e2t, e34, e3t, e4t];
+    kind Even = [1, e12, e13, e14, e1t, e23, e24, e2t, e34, e3t, e4t, e1234, e123t, e124t, e134t, e234t];
+    kind Odd = [e1, e2, e3, e4, et, e123, e124, e12t, e134, e13t, e14t, e234, e23t, e24t, e34t, e1234t];
+}
+
+gax::algebra! {
+    algebra cl32 "Cl(3,2): 3 directions squaring to plus one, 2 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, et = -1, es = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, et, es];
+    kind Bivector = [e12, e13, e1t, e1s, e23, e2t, e2s, e3t, e3s, ets];
+    kind Even = [1, e12, e13, e1t, e1s, e23, e2t, e2s, e3t, e3s, ets, e123t, e123s, e12ts, e13ts, e23ts];
+    kind Odd = [e1, e2, e3, et, es, e123, e12t, e12s, e13t, e13s, e1ts, e23t, e23s, e2ts, e3ts, e123ts];
+}
+
+gax::algebra! {
+    algebra cl60 "Cl(6,0): 6 directions squaring to plus one, 0 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1, e6 = 1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4, e5, e6];
+    kind Bivector = [e12, e13, e14, e15, e16, e23, e24, e25, e26, e34, e35, e36, e45, e46, e56];
+    kind Even = [1, e12, e13, e14, e15, e16, e23, e24, e25, e26, e34, e35, e36, e45, e46, e56, e1234, e1235, e1236, e1245, e1246, e1256, e1345, e1346, e1356, e1456, e2345, e2346, e2356, e2456, e3456, e123456];
+    kind Odd = [e1, e2, e3, e4, e5, e6, e123, e124, e125, e126, e134, e135, e136, e145, e146, e156, e234, e235, e236, e245, e246, e256, e345, e346, e356, e456, e12345, e12346, e12356, e12456, e13456, e23456];
+}
+
+gax::algebra! {
+    algebra cl51 "Cl(5,1): 5 directions squaring to plus one, 1 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1, et = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4, e5, et];
+    kind Bivector = [e12, e13, e14, e15, e1t, e23, e24, e25, e2t, e34, e35, e3t, e45, e4t, e5t];
+    kind Even = [1, e12, e13, e14, e15, e1t, e23, e24, e25, e2t, e34, e35, e3t, e45, e4t, e5t, e1234, e1235, e123t, e1245, e124t, e125t, e1345, e134t, e135t, e145t, e2345, e234t, e235t, e245t, e345t, e12345t];
+    kind Odd = [e1, e2, e3, e4, e5, et, e123, e124, e125, e12t, e134, e135, e13t, e145, e14t, e15t, e234, e235, e23t, e245, e24t, e25t, e345, e34t, e35t, e45t, e12345, e1234t, e1235t, e1245t, e1345t, e2345t];
+}
+
+gax::algebra! {
+    algebra cl42 "Cl(4,2): 4 directions squaring to plus one, 2 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, et = -1, es = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, e4, et, es];
+    kind Bivector = [e12, e13, e14, e1t, e1s, e23, e24, e2t, e2s, e34, e3t, e3s, e4t, e4s, ets];
+    kind Even = [1, e12, e13, e14, e1t, e1s, e23, e24, e2t, e2s, e34, e3t, e3s, e4t, e4s, ets, e1234, e123t, e123s, e124t, e124s, e12ts, e134t, e134s, e13ts, e14ts, e234t, e234s, e23ts, e24ts, e34ts, e1234ts];
+    kind Odd = [e1, e2, e3, e4, et, es, e123, e124, e12t, e12s, e134, e13t, e13s, e14t, e14s, e1ts, e234, e23t, e23s, e24t, e24s, e2ts, e34t, e34s, e3ts, e4ts, e1234t, e1234s, e123ts, e124ts, e134ts, e234ts];
+}
+
+gax::algebra! {
+    algebra cl33 "Cl(3,3): 3 directions squaring to plus one, 3 to minus one.";
+    basis e1 = 1, e2 = 1, e3 = 1, et = -1, es = -1, er = -1;
+    kind Scalar = [1];
+    kind Vector = [e1, e2, e3, et, es, er];
+    kind Bivector = [e12, e13, e1t, e1s, e1r, e23, e2t, e2s, e2r, e3t, e3s, e3r, ets, etr, esr];
+    kind Even = [1, e12, e13, e1t, e1s, e1r, e23, e2t, e2s, e2r, e3t, e3s, e3r, ets, etr, esr, e123t, e123s, e123r, e12ts, e12tr, e12sr, e13ts, e13tr, e13sr, e1tsr, e23ts, e23tr, e23sr, e2tsr, e3tsr, e123tsr];
+    kind Odd = [e1, e2, e3, et, es, er, e123, e12t, e12s, e12r, e13t, e13s, e13r, e1ts, e1tr, e1sr, e23t, e23s, e23r, e2ts, e2tr, e2sr, e3ts, e3tr, e3sr, etsr, e123ts, e123tr, e123sr, e12tsr, e13tsr, e23tsr];
+}
+
+/// Complex numbers and the eigenvalues of a real square matrix.
+#[allow(clippy::needless_range_loop)]
+mod eig {
+    /// A complex number `(re, im)`.
+    pub type C = (f64, f64);
+
+    /// The eigenvalues of a real square matrix: reduction to Hessenberg form by elimination,
+    /// then the shifted QR algorithm with Francis double steps (after Numerical Recipes'
+    /// `elmhes` and `hqr`). Complex eigenvalues come in conjugate pairs.
+    pub fn eigvals(m: &[Vec<f64>]) -> Vec<C> {
+        let n = m.len();
+        // One-based copy, as in the classic formulation.
+        let mut a = vec![vec![0.0f64; n + 1]; n + 1];
+        for i in 0..n {
+            for j in 0..n {
+                a[i + 1][j + 1] = m[i][j];
+            }
+        }
+        hessenberg(&mut a, n);
+        hqr(&mut a, n)
+    }
+
+    fn hessenberg(a: &mut [Vec<f64>], n: usize) {
+        for m in 2..n {
+            let mut x = 0.0f64;
+            let mut i = m;
+            for j in m..=n {
+                if a[j][m - 1].abs() > x.abs() {
+                    x = a[j][m - 1];
+                    i = j;
+                }
+            }
+            if i != m {
+                for j in (m - 1)..=n {
+                    let t = a[i][j];
+                    a[i][j] = a[m][j];
+                    a[m][j] = t;
+                }
+                for row in a.iter_mut().skip(1) {
+                    row.swap(i, m);
+                }
+            }
+            if x != 0.0 {
+                for i in (m + 1)..=n {
+                    let mut y = a[i][m - 1];
+                    if y != 0.0 {
+                        y /= x;
+                        a[i][m - 1] = y;
+                        for j in m..=n {
+                            a[i][j] -= y * a[m][j];
+                        }
+                        for j in 1..=n {
+                            a[j][m] += y * a[j][i];
+                        }
+                    }
+                }
+            }
+        }
+        // Clear the multipliers below the subdiagonal.
+        for i in 3..=n {
+            for j in 1..(i - 1) {
+                a[i][j] = 0.0;
+            }
+        }
+    }
+
+    fn sign(a: f64, b: f64) -> f64 {
+        if b >= 0.0 { a.abs() } else { -a.abs() }
+    }
+
+    #[allow(clippy::many_single_char_names)]
+    fn hqr(a: &mut [Vec<f64>], n: usize) -> Vec<C> {
+        let mut wr = vec![0.0; n + 1];
+        let mut wi = vec![0.0; n + 1];
+        let mut anorm = 0.0;
+        for i in 1..=n {
+            for j in (i.max(2) - 1)..=n {
+                anorm += a[i][j].abs();
+            }
+        }
+        let mut nn = n;
+        let mut t = 0.0;
+        let (mut p, mut q, mut r): (f64, f64, f64);
+        while nn >= 1 {
+            let mut its = 0;
+            loop {
+                let mut l = nn;
+                while l >= 2 {
+                    let mut s = a[l - 1][l - 1].abs() + a[l][l].abs();
+                    if s == 0.0 {
+                        s = anorm;
+                    }
+                    if a[l][l - 1].abs() + s == s {
+                        a[l][l - 1] = 0.0;
+                        break;
+                    }
+                    l -= 1;
+                }
+                let mut x = a[nn][nn];
+                if l == nn {
+                    wr[nn] = x + t;
+                    wi[nn] = 0.0;
+                    nn -= 1;
+                    break;
+                }
+                let mut y = a[nn - 1][nn - 1];
+                let mut w = a[nn][nn - 1] * a[nn - 1][nn];
+                if l == nn - 1 {
+                    p = 0.5 * (y - x);
+                    q = p * p + w;
+                    let mut z = q.abs().sqrt();
+                    x += t;
+                    if q >= 0.0 {
+                        z = p + sign(z, p);
+                        wr[nn - 1] = x + z;
+                        wr[nn] = x + z;
+                        if z != 0.0 {
+                            wr[nn] = x - w / z;
+                        }
+                        wi[nn - 1] = 0.0;
+                        wi[nn] = 0.0;
+                    } else {
+                        wr[nn - 1] = x + p;
+                        wr[nn] = x + p;
+                        wi[nn - 1] = -z;
+                        wi[nn] = z;
+                    }
+                    nn -= 2;
+                    break;
+                }
+                assert!(its < 60, "too many iterations in hqr");
+                if its == 10 || its == 20 || its == 40 {
+                    // An exceptional shift, to break cycles.
+                    t += x;
+                    for i in 1..=nn {
+                        a[i][i] -= x;
+                    }
+                    let s = a[nn][nn - 1].abs() + a[nn - 1][nn - 2].abs();
+                    x = 0.75 * s;
+                    y = x;
+                    w = -0.4375 * s * s;
+                }
+                its += 1;
+                let mut m = nn - 2;
+                let mut z;
+                loop {
+                    z = a[m][m];
+                    r = x - z;
+                    let s = y - z;
+                    p = (r * s - w) / a[m + 1][m] + a[m][m + 1];
+                    q = a[m + 1][m + 1] - z - r - s;
+                    r = a[m + 2][m + 1];
+                    let s = p.abs() + q.abs() + r.abs();
+                    p /= s;
+                    q /= s;
+                    r /= s;
+                    if m == l {
+                        break;
+                    }
+                    let u = a[m][m - 1].abs() * (q.abs() + r.abs());
+                    let v = p.abs() * (a[m - 1][m - 1].abs() + z.abs() + a[m + 1][m + 1].abs());
+                    if u + v == v {
+                        break;
+                    }
+                    m -= 1;
+                }
+                for i in (m + 2)..=nn {
+                    a[i][i - 2] = 0.0;
+                    if i != m + 2 {
+                        a[i][i - 3] = 0.0;
+                    }
+                }
+                let mut k = m;
+                while k < nn {
+                    if k != m {
+                        p = a[k][k - 1];
+                        q = a[k + 1][k - 1];
+                        r = 0.0;
+                        if k != nn - 1 {
+                            r = a[k + 2][k - 1];
+                        }
+                        x = p.abs() + q.abs() + r.abs();
+                        if x != 0.0 {
+                            p /= x;
+                            q /= x;
+                            r /= x;
+                        }
+                    }
+                    let s = sign((p * p + q * q + r * r).sqrt(), p);
+                    if s != 0.0 {
+                        if k == m {
+                            if l != m {
+                                a[k][k - 1] = -a[k][k - 1];
+                            }
+                        } else {
+                            a[k][k - 1] = -s * x;
+                        }
+                        p += s;
+                        x = p / s;
+                        y = q / s;
+                        z = r / s;
+                        q /= p;
+                        r /= p;
+                        for j in k..=nn {
+                            p = a[k][j] + q * a[k + 1][j];
+                            if k != nn - 1 {
+                                p += r * a[k + 2][j];
+                                a[k + 2][j] -= p * z;
+                            }
+                            a[k + 1][j] -= p * y;
+                            a[k][j] -= p * x;
+                        }
+                        let mmin = if nn < k + 3 { nn } else { k + 3 };
+                        for i in l..=mmin {
+                            p = x * a[i][k] + y * a[i][k + 1];
+                            if k != nn - 1 {
+                                p += z * a[i][k + 2];
+                                a[i][k + 2] -= p * r;
+                            }
+                            a[i][k + 1] -= p * q;
+                            a[i][k] -= p;
+                        }
+                    }
+                    k += 1;
+                }
+            }
+        }
+        (1..=n).map(|i| (wr[i], wi[i])).collect()
+    }
+}
+
+/// The groups: one function per question, run on each signature's algebra by a macro, since a
+/// function generic over the algebra would have to restate every product in its bounds.
+mod spin {
+    use super::eig::{self, C};
+    use super::*;
+
+    /// A small xorshift stream of standard normal numbers (numga's generator cannot be
+    /// reproduced; the checks hold for any sample).
+    pub struct Normal(u64);
+
+    impl Normal {
+        pub fn new(seed: u64) -> Normal {
+            Normal(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
+        }
+        fn uniform(&mut self) -> f64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+        }
+        pub fn next(&mut self) -> f64 {
+            let (a, b) = (self.uniform(), self.uniform());
+            (-2.0 * a.ln()).sqrt() * (core::f64::consts::TAU * b).cos()
+        }
+    }
+
+    /// A map's coefficient matrix, rows the output's blades and columns the input's.
+    pub fn matrix<const I: usize, const O: usize>(c: &[[f64; I]; O]) -> Vec<Vec<f64>> {
+        c.iter().map(|row| row.to_vec()).collect()
+    }
+
+    /// One signature: its numbers, and the maps they come from.
+    #[derive(Clone, Debug)]
+    pub struct Row {
+        pub p: usize,
+        pub q: usize,
+        /// The number of planes, the bivectors' dimension.
+        pub planes: usize,
+        /// Whether the invariant form is exactly `2 (n - 2)` times the inner product.
+        pub form_is_inner: bool,
+        /// The invariant form over the inner product, on a random bivector.
+        pub factor: f64,
+        /// The eigenvalues of the involution on the bivectors.
+        pub signs: Vec<C>,
+        /// The square of the pseudoscalar.
+        pub square: f64,
+        /// In even dimensions, the eigenvalues of the pseudoscalar acting on the spinors.
+        pub action: Option<Vec<C>>,
+    }
+
+    impl Row {
+        /// The involution's fixed planes (rotations) and negated planes (boosts).
+        pub fn counts(&self) -> (usize, usize) {
+            let plus = self.signs.iter().filter(|s| s.0 > 0.0).count();
+            (plus, self.signs.len() - plus)
+        }
+
+        /// What the pseudoscalar does to the spinors.
+        pub fn spinors(&self) -> &'static str {
+            match &self.action {
+                None => "ONE PIECE",
+                Some(values) if values.iter().all(|v| v.1.abs() < 1e-9) => "TWO HALVES",
+                Some(_) => "COMPLEX",
+            }
+        }
+    }
+
+    /// Basis vector `i` of an algebra.
+    macro_rules! axis {
+        ($m:ident, $i:expr) => {{
+            let i: usize = $i;
+            $m::Vector::<(), f64>::from_coeffs(core::array::from_fn(
+                |j| if j == i { 1.0 } else { 0.0 },
+            ))
+        }};
+    }
+
+    /// The product of basis vectors `0..k` of an algebra, as an even and an odd part (one of
+    /// them zero): pairs of vectors multiply to even values, and a last vector left over makes
+    /// the product odd.
+    macro_rules! blade_product {
+        ($m:ident, $k:expr) => {{
+            use $m::{Even, Odd, Scalar};
+            let k: usize = $k;
+            let mut even: Even<(), f64> = Scalar::<(), f64>::from_coeffs([1.0]).cast::<Even>();
+            for i in 0..k / 2 {
+                even = even * (axis!($m, 2 * i) * axis!($m, 2 * i + 1));
+            }
+            let odd: Odd<(), f64> = if k % 2 == 1 {
+                even * axis!($m, k - 1)
+            } else {
+                Odd::zero()
+            };
+            if k % 2 == 1 {
+                (Even::zero(), odd)
+            } else {
+                (even, odd)
+            }
+        }};
+    }
+
+    /// The involution on the bivectors: the sandwich with the product of the positive
+    /// directions, `P B ~P`, as a map built from its images of the basis bivectors (the map
+    /// with the bivector open, `P * Bivector::slot() * ~P`, is the same map; built by products
+    /// with open slots, six-dimensional maps take minutes to compile).
+    macro_rules! involution {
+        ($m:ident, $p:expr) => {{
+            use $m::Bivector;
+            let (even, odd) = blade_product!($m, $p);
+            Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
+                let b = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+                    if i == j { 1.0 } else { 0.0 }
+                }));
+                ((even * b) * even.reverse()).cast::<Bivector>()
+                    + ((odd * b) * odd.reverse()).cast::<Bivector>()
+            }))
+        }};
+    }
+    #[cfg(test)]
+    pub(crate) use {axis, blade_product, involution};
+
+    /// The pseudoscalar of an even number of directions acting on the spinors by the geometric
+    /// product from the left, as a map built from its images of the basis spinors.
+    macro_rules! action {
+        ($m:ident, $n:expr) => {{
+            use $m::Even;
+            let (pseudoscalar, _) = blade_product!($m, $n);
+            Even::<(Even,), f64>::from_images(core::array::from_fn(|j| {
+                pseudoscalar
+                    * Even::<(), f64>::from_coeffs(core::array::from_fn(|i| {
+                        if i == j { 1.0 } else { 0.0 }
+                    }))
+            }))
+        }};
+    }
+    #[cfg(test)]
+    pub(crate) use action;
+
+    /// The row of a signature.
+    macro_rules! row {
+        ($m:ident, $p:expr, $q:expr, $rng:expr) => {{
+            use $m::Bivector;
+            let n: usize = $p + $q;
+            // The invariant form on basis bivectors: the trace of `ad_a ad_b`, each `ad` the
+            // commutator with the other bivector open. (The form with both bivectors open, the
+            // double commutator with three open slots traced, takes too long to compile in
+            // six dimensions.)
+            let basis: Vec<Bivector<(), f64>> = (0..n * (n - 1) / 2)
+                .map(|i| {
+                    Bivector::from_coeffs(core::array::from_fn(|j| if j == i { 1.0 } else { 0.0 }))
+                })
+                .collect();
+            let ad: Vec<Bivector<(Bivector,), f64>> = basis
+                .iter()
+                .map(|a| {
+                    Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
+                        a.commutator(basis[j])
+                    }))
+                })
+                .collect();
+            let form: Vec<Vec<f64>> = ad
+                .iter()
+                .map(|a| ad.iter().map(|b| a.of(*b).trace()).collect())
+                .collect();
+            let inner: Vec<Vec<f64>> = basis
+                .iter()
+                .map(|a| basis.iter().map(|b| (*a | *b).s()).collect())
+                .collect();
+            let sample: Vec<f64> = (0..basis.len()).map(|_| $rng.next()).collect();
+            let pair = |m: &Vec<Vec<f64>>| -> f64 {
+                (0..sample.len())
+                    .map(|i| {
+                        (0..sample.len())
+                            .map(|j| sample[i] * m[i][j] * sample[j])
+                            .sum::<f64>()
+                    })
+                    .sum()
+            };
+            let factor = pair(&form) / pair(&inner);
+            let scale = 2.0 * (n as f64 - 2.0);
+            let form_is_inner = form
+                .iter()
+                .flatten()
+                .zip(inner.iter().flatten())
+                .all(|(f, i)| *f == scale * *i);
+            let signs = eig::eigvals(&matrix(&involution!($m, $p).c));
+            let (even, odd) = blade_product!($m, n);
+            let square = (even * even).s() + (odd * odd).s();
+            let action = (n % 2 == 0).then(|| eig::eigvals(&matrix(&action!($m, n).c)));
+            Row {
+                p: $p,
+                q: $q,
+                planes: n * (n - 1) / 2,
+                form_is_inner,
+                factor,
+                signs,
+                square,
+                action,
+            }
+        }};
+    }
+
+    /// The signatures, in numga's order.
+    pub fn zoo(seed: u64) -> Vec<Row> {
+        let mut rng = Normal::new(seed);
+        vec![
+            row!(cl30, 3, 0, rng),
+            row!(cl21, 2, 1, rng),
+            row!(cl40, 4, 0, rng),
+            row!(cl31, 3, 1, rng),
+            row!(cl22, 2, 2, rng),
+            row!(cl50, 5, 0, rng),
+            row!(cl41, 4, 1, rng),
+            row!(cl32, 3, 2, rng),
+            row!(cl60, 6, 0, rng),
+            row!(cl51, 5, 1, rng),
+            row!(cl42, 4, 2, rng),
+            row!(cl33, 3, 3, rng),
+        ]
+    }
+
+    /// The table, computed once.
+    pub fn table() -> &'static [Row] {
+        static TABLE: OnceLock<Vec<Row>> = OnceLock::new();
+        TABLE.get_or_init(|| zoo(0))
+    }
+
+    /// Four Euclidean dimensions: rotors, the isoclinic split and the flows.
+    pub mod four {
+        use super::*;
+        pub use cl40::{Bivector, Even, Vector};
+
+        pub type B = Bivector<(), f64>;
+        pub type V = Vector<(), f64>;
+        pub type E = Even<(), f64>;
+
+        /// The bivector with one plane: `e_ij` by its basis indices.
+        pub fn plane(i: usize, j: usize) -> B {
+            let names = [(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
+            B::from_coeffs(names.map(|n| if n == (i, j) { 1.0 } else { 0.0 }))
+        }
+
+        /// The basis vector `e_i`.
+        pub fn axis(i: usize) -> V {
+            V::from_coeffs(core::array::from_fn(|j| if j == i { 1.0 } else { 0.0 }))
+        }
+
+        /// The pseudoscalar, as an even multivector.
+        pub fn pseudoscalar() -> E {
+            blade_product!(cl40, 4).0
+        }
+
+        /// The scalar one, as an even multivector.
+        pub fn one() -> E {
+            cl40::Scalar::<(), f64>::from_coeffs([1.0]).cast::<Even>()
+        }
+
+        /// A four-dimensional generator as the sum of two commuting generators,
+        /// `(1 + I) / 2` and `(1 - I) / 2` times it: bivectors again, one turning each plane
+        /// along with its dual plane, the other against it. Their exponentials multiply to the
+        /// generator's rotor.
+        pub fn isoclinic(generator: B) -> (B, B) {
+            let i = pseudoscalar();
+            let plus = (one() + i).gp(0.5);
+            let minus = (one() - i).gp(0.5);
+            (
+                (plus * generator).cast::<Bivector>(),
+                (minus * generator).cast::<Bivector>(),
+            )
+        }
+
+        /// The sandwich of a vector with a rotor.
+        pub fn turn(r: E, v: V) -> V {
+            ((r * v) * r.reverse()).cast::<Vector>()
+        }
+
+        /// The sandwich with a rotor, as a map on vectors.
+        pub fn turn_map(r: E) -> Vector<(Vector,), f64> {
+            Vector::<(Vector,), f64>::from_images(core::array::from_fn(|j| turn(r, axis(j))))
+        }
+
+        /// A unit vector of the four directions, projected from `-e4` into the space of the
+        /// first three: `(v - e4 (v | e4)) / (1 + v | e4)`.
+        pub fn stereographic(v: V) -> [f64; 3] {
+            let w = axis(3);
+            let h = (v | w).s();
+            let s = (v - w.gp(h)).gp(1.0 / (1.0 + h));
+            [s.c[0], s.c[1], s.c[2]]
+        }
+
+        /// A random rotor of the four Euclidean directions and its two isoclinic factors, with
+        /// the halves of its generator.
+        pub fn split(seed: u64) -> (E, E, E, B, B) {
+            let mut rng = Normal::new(seed);
+            let generator = B::from_coeffs(core::array::from_fn(|_| rng.next()));
+            let (along, against) = isoclinic(generator);
+            (
+                generator.exp().into_inner(),
+                along.exp().into_inner(),
+                against.exp().into_inner(),
+                along,
+                against,
+            )
+        }
+
+        /// The orbits of points of the three-sphere under the two isoclinic flows, turning xy
+        /// together with zw one way and the other, and under a rotation turning xy twice while
+        /// zw turns three times (the two flows combined at different rates,
+        /// `5 against - along`), from one start at each height; all projected into space.
+        pub struct Flows {
+            pub left: Vec<Vec<[f64; 3]>>,
+            pub right: Vec<Vec<[f64; 3]>>,
+            pub knotted: Vec<Vec<[f64; 3]>>,
+            /// Height and azimuth index of each orbit of the flows.
+            pub index: Vec<(usize, usize)>,
+            pub along: B,
+            pub against: B,
+        }
+
+        pub fn flows(azimuths: usize, heights: &[f64], count: usize) -> Flows {
+            let (along, against) = isoclinic(plane(0, 1));
+            let half = |b: B, a: f64| b.gp(a).exp().into_inner();
+            // x turned up toward z by each height, then about z by each azimuth.
+            let start = |h: f64, phi: f64| {
+                turn(
+                    half(plane(0, 1), -phi / 2.0) * half(plane(0, 2), -h / 2.0),
+                    axis(0),
+                )
+            };
+            let orbit = |generator: B, s: V| -> Vec<[f64; 3]> {
+                // One full turn of every plane: the sandwich turns by twice the rotor's angle.
+                (0..=count)
+                    .map(|k| {
+                        let angle = core::f64::consts::PI * k as f64 / count as f64;
+                        stereographic(turn(half(generator, 2.0 * angle), s))
+                    })
+                    .collect()
+            };
+            let mut flows = Flows {
+                left: Vec::new(),
+                right: Vec::new(),
+                knotted: Vec::new(),
+                index: Vec::new(),
+                along,
+                against,
+            };
+            let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
+            for (i, h) in heights.iter().enumerate() {
+                for k in 0..azimuths {
+                    let phi = core::f64::consts::TAU * k as f64 / azimuths as f64;
+                    let s = start(*h, phi);
+                    flows.left.push(orbit(along, s));
+                    flows.right.push(orbit(against, s));
+                    flows.index.push((i, k));
+                }
+                flows.knotted.push(orbit(combined, start(*h, 0.0)));
+            }
+            flows
+        }
+
+        /// Gauss's linking number of two closed polygons in the space of x y z: the volume each
+        /// pair of segments spans with the line between them, over the cube of its length,
+        /// summed and divided by four pi. The volume is the trivector's scalar product with the
+        /// reverse of the unit volume `e123`.
+        pub fn linking(first: &[[f64; 3]], second: &[[f64; 3]]) -> f64 {
+            let v = |p: [f64; 3]| V::from_coeffs([p[0], p[1], p[2], 0.0]);
+            let volume = blade_product!(cl40, 3).1.reverse();
+            let mut sum = 0.0;
+            for a in first.windows(2) {
+                for b in second.windows(2) {
+                    let (a0, a1, b0, b1) = (v(a[0]), v(a[1]), v(b[0]), v(b[1]));
+                    let separation = (a1 + a0 - b1 - b0).gp(0.5);
+                    let trivolume = (separation ^ (a1 - a0) ^ (b1 - b0))
+                        .scalar_product(volume)
+                        .s();
+                    sum += trivolume / separation.norm().powi(3);
+                }
+            }
+            sum / (4.0 * core::f64::consts::PI)
+        }
+
+        /// The flows of the animation, computed once.
+        pub fn cached() -> &'static Flows {
+            static FLOWS: OnceLock<Flows> = OnceLock::new();
+            FLOWS.get_or_init(|| flows(12, &[0.25, 0.6, 1.0], 240))
+        }
+    }
+}
+
+use spin::*;
+
+const SECONDS: f32 = 8.0;
+
+/// A colour per orbit: the start's position around the xy plane as the hue, its height as the
+/// value.
+fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) -> Rgb {
+    let hue = colormap::hsv(azimuth as f32 / azimuths as f32);
+    let soft = canvas::mix(hue, [1.0; 3], 0.2);
+    canvas::scale(
+        soft,
+        0.95 - 0.4 * height as f32 / (heights.max(2) - 1) as f32,
+    )
+}
+
+fn f32s(p: [f64; 3]) -> [f32; 3] {
+    p.map(|v| v as f32)
+}
+
+/// The table of signatures, as text.
+/// The checks of the four-dimensional scenes, live: the isoclinic split of a random rotor, the
+/// combined rotation as the two flows, and the linking of two orbits of each flow.
+struct Checks {
+    split: f64,
+    angles: [f64; 2],
+    combined: f64,
+    links: [f64; 2],
+}
+
+fn checks() -> &'static Checks {
+    static CHECKS: OnceLock<Checks> = OnceLock::new();
+    CHECKS.get_or_init(|| {
+        use four::*;
+        let max_abs = |c: &[f64]| c.iter().fold(0.0f64, |m, v| m.max(v.abs()));
+        let (rotor, left, right, _, _) = split(1);
+        // The spread of the turning angles of each factor's eigenvalues.
+        let angles = [left, right].map(|factor| {
+            let a: Vec<f64> = eig::eigvals(&matrix(&turn_map(factor).c))
+                .iter()
+                .map(|(re, im)| im.atan2(*re).abs())
+                .collect();
+            let lo = a.iter().copied().fold(f64::INFINITY, f64::min);
+            let hi = a.iter().copied().fold(0.0, f64::max);
+            hi - lo
+        });
+        let f = cached();
+        let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
+        let last = f.left.len() - 12 + 4;
+        Checks {
+            split: max_abs(&(left * right - rotor).c),
+            angles,
+            combined: max_abs(&(combined - (f.against.gp(5.0) - f.along)).c),
+            links: [
+                linking(&f.left[0], &f.left[last]),
+                linking(&f.right[0], &f.right[last]),
+            ],
+        }
+    })
+}
+
+fn draw_table(c: &mut Canvas, x: f32, y: f32, size: f32) {
+    let header = "(P,Q)  PLANES  ROTATIONS  BOOSTS  FORM/INNER  I*I  SPINORS";
+    c.text(header, x, y, size, palette::ink(), Align::Left);
+    for (k, row) in table().iter().enumerate() {
+        let (rotations, boosts) = row.counts();
+        let line = format!(
+            "({},{})  {:>6}  {:>9}  {:>6}  {:>10.1}  {:>+3.0}  {}",
+            row.p,
+            row.q,
+            row.planes,
+            rotations,
+            boosts,
+            row.factor,
+            row.square,
+            row.spinors()
+        );
+        let colour = if boosts == 0 {
+            palette::sky()
+        } else {
+            palette::grid()
+        };
+        let colour = canvas::mix(colour, palette::ink(), 0.35);
+        c.text(
+            &line,
+            x,
+            y + (k + 1) as f32 * size * 1.45,
+            size,
+            colour,
+            Align::Left,
+        );
+    }
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let (w, h) = (c.width as f32, c.height as f32);
+    let phase = t / SECONDS;
+    let size = (h / 52.0).clamp(4.0, 10.0);
+    draw_table(c, w * 0.43, h * 0.05, size);
+
+    let flows = four::cached();
+    let families = [&flows.left, &flows.right, &flows.knotted];
+    let extent = families
+        .iter()
+        .flat_map(|f| f.iter().flatten())
+        .fold(0.0f64, |m, p| {
+            m.max(p[0].abs()).max(p[1].abs()).max(p[2].abs())
+        });
+    let length = flows.left[0].len() - 1;
+    let step = ((phase * length as f32) as usize).min(length - 1);
+    let titles = [
+        "ALONG: XY WITH ZW",
+        "AGAINST: XY AGAINST ZW",
+        "XY TWICE, ZW THREE TIMES",
+    ];
+    let top = (h * 0.38) as usize;
+    let width = c.width / 3;
+    for (k, family) in families.iter().enumerate() {
+        let rect = [k * width, top, (k + 1) * width, c.height];
+        let mut panel = Canvas::new(rect[2] - rect[0], rect[3] - rect[1]);
+        let edge = |y: usize| canvas::mix(palette::top(), palette::bottom(), y as f32 / (h - 1.0));
+        panel.backdrop(edge(rect[1]), edge(rect[3] - 1));
+        let cam = Camera::orbit(
+            panel.width,
+            panel.height,
+            [0.0; 3],
+            (extent * 4.2) as f32,
+            (-55.0f32).to_radians() + 0.5 * (phase * core::f32::consts::TAU).sin(),
+            24.0f32.to_radians(),
+            Lens::Perspective(0.5),
+        );
+        let mut scene = Scene3::new(cam);
+        let knots = k == 2;
+        for (o, orbit) in family.iter().enumerate() {
+            let (height, azimuth) = if knots { (o, 0) } else { flows.index[o] };
+            let colour = orbit_colour(height, 3, azimuth, 12);
+            let pts: Vec<[f32; 3]> = orbit.iter().map(|p| f32s(*p)).collect();
+            scene.polyline(&pts, if knots { 1.2 } else { 0.6 }, colour, 0.8);
+            // The points carried along: one per orbit, six riding along each knot.
+            let riders = if knots { 6 } else { 1 };
+            for r in 0..riders {
+                let at = (step + r * length / riders) % length;
+                scene.dot(f32s(orbit[at]), Marker::Dot, 7.0, colour);
+            }
+        }
+        scene.draw(&mut panel);
+        c.blit(&panel, rect[0], rect[1]);
+        c.text(
+            titles[k],
+            rect[0] as f32 + width as f32 * 0.5,
+            top as f32 + 16.0,
+            11.0,
+            palette::ink(),
+            Align::Center,
+        );
+        if k < 2 {
+            c.text(
+                &format!("LINKING NUMBER {:+.2}", checks().links[k]),
+                rect[0] as f32 + width as f32 * 0.5,
+                h - 12.0,
+                10.0,
+                palette::grid(),
+                Align::Center,
+            );
+        }
+    }
+    let exact = table().iter().all(|row| row.form_is_inner);
+    let ch = checks();
+    let lines = [
+        if exact {
+            "FORM = 2(N-2) INNER PRODUCT, EXACTLY, IN EVERY ROW".to_string()
+        } else {
+            "FORM AND INNER PRODUCT DIFFER".to_string()
+        },
+        format!("SPIN(4) ROTOR = LEFT * RIGHT FACTOR: {:.0E}", ch.split),
+        format!(
+            "EACH FACTOR TURNS ALL PLANES ALIKE: {:.0E}",
+            ch.angles[0].max(ch.angles[1])
+        ),
+        format!("2 XY + 3 ZW = 5 AGAINST - ALONG: {:.0E}", ch.combined),
+    ];
+    for (k, line) in lines.iter().enumerate() {
+        c.text(
+            line,
+            w * 0.015,
+            h * 0.2 + k as f32 * size * 1.6,
+            size,
+            palette::grid(),
+            Align::Left,
+        );
+    }
+    caption(
+        c,
+        "SPIN GROUPS OF EVERY SIGNATURE UP TO 6D",
+        "TWELVE ALGEBRAS CL(P,Q); BELOW: THE ISOCLINIC FLOWS OF SPIN(4)",
+    );
+}
+
+fn main() {
+    run(Anim::new("spin groups", SECONDS).size(960, 540), draw);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::eig::eigvals;
+    use super::spin::four::*;
+    use super::*;
+
+    fn max_abs(c: &[f64]) -> f64 {
+        c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
+    }
+
+    /// The local eigensolver on a rotation by 0.3 in a plane and a diagonal matrix.
+    #[test]
+    fn the_eigensolver_finds_complex_pairs() {
+        let (c, s) = (0.3f64.cos(), 0.3f64.sin());
+        let values = eigvals(&[vec![c, -s, 0.0], vec![s, c, 0.0], vec![0.0, 0.0, 2.0]]);
+        let mut im: Vec<f64> = values.iter().map(|v| v.1).collect();
+        im.sort_by(f64::total_cmp);
+        assert!((im[0] + s).abs() < 1e-14 && im[1].abs() < 1e-14 && (im[2] - s).abs() < 1e-14);
+        assert!(values.iter().any(|v| (v.0 - 2.0).abs() < 1e-14));
+    }
+
+    /// numga's first test: in the signature (3, 1) the involution fixes the planes of rotations
+    /// and negates the planes of boosts, and the pseudoscalar acts on the spinors as the complex
+    /// unit.
+    #[test]
+    fn rotations_and_boosts_of_the_signature_3_1() {
+        use super::cl31::Bivector;
+        let involution = involution!(cl31, 3);
+        // e12 is a rotation, e1t a boost (the third blade in the layout).
+        let xy: Bivector<(), f64> = Bivector::from_coeffs([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        let xt: Bivector<(), f64> = Bivector::from_coeffs([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
+        assert!(max_abs(&(involution.of(xy) - xy).c) < 1e-12);
+        assert!(max_abs(&(involution.of(xt) + xt).c) < 1e-12);
+        for v in eigvals(&matrix(&action!(cl31, 4).c)) {
+            assert!((v.1.abs() - 1.0).abs() < 1e-12, "{v:?}");
+        }
+    }
+
+    /// numga's `zoo` and `centres` checks: the invariant form is `2 (n - 2)` times the inner
+    /// product, exactly; the involution fixes `p (p - 1) / 2 + q (q - 1) / 2` planes and negates
+    /// `p q`; the pseudoscalar's eigenvalues on the spinors square to its square.
+    #[test]
+    fn the_table_passes_its_checks() {
+        let rows = zoo(0);
+        assert_eq!(rows.len(), 12);
+        for row in &rows {
+            let (p, q) = (row.p, row.q);
+            assert!(row.form_is_inner, "({p}, {q})");
+            let n = (p + q) as f64;
+            assert!(
+                (row.factor - 2.0 * (n - 2.0)).abs() < 1e-12,
+                "{}",
+                row.factor
+            );
+            assert_eq!(row.counts(), ((p * p - p) / 2 + (q * q - q) / 2, p * q));
+            if let Some(values) = &row.action {
+                for (re, im) in values {
+                    let (sq_re, sq_im) = (re * re - im * im, 2.0 * re * im);
+                    assert!((sq_re - row.square).abs() < 1e-12 && sq_im.abs() < 1e-12);
+                }
+            }
+        }
+        // The table renders a header and a line per signature.
+        let text_rows = 1 + rows.len();
+        assert_eq!(text_rows, 13);
+    }
+
+    /// numga's `split` checks: the halves commute, the factors multiply to the rotor, and each
+    /// factor turns all its planes through one angle.
+    #[test]
+    fn a_rotor_splits_into_isoclinic_factors() {
+        let (rotor, left, right, along, against) = split(1);
+        assert!(max_abs(&along.commutator(against).c) < 1e-12);
+        assert!(max_abs(&(left * right - rotor).c) < 1e-8);
+        for factor in [left, right] {
+            let angles: Vec<f64> = eigvals(&matrix(&turn_map(factor).c))
+                .iter()
+                .map(|(re, im)| im.atan2(*re).abs())
+                .collect();
+            for a in &angles {
+                assert!((a - angles[0]).abs() < 1e-9, "{angles:?}");
+            }
+        }
+    }
+
+    /// numga's `flows` checks, at the test's sizes: turning xy twice while zw turns three times
+    /// is the flow against run five times over and the flow along run once backward; every
+    /// orbit closes, and two orbits of one flow link once, with opposite signs for the flows.
+    #[test]
+    fn the_flows_close_and_link() {
+        let azimuths = 6;
+        let f = flows(azimuths, &[0.3, 0.9], 120);
+        let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
+        assert!(max_abs(&(combined - (f.against.gp(5.0) - f.along)).c) < 1e-12);
+        for orbit in f.left.iter().chain(&f.knotted) {
+            let (a, b) = (orbit[0], orbit[orbit.len() - 1]);
+            assert!(max_abs(&[a[0] - b[0], a[1] - b[1], a[2] - b[2]]) < 1e-5);
+        }
+        let last = f.left.len() - azimuths + azimuths / 3;
+        let forward = linking(&f.left[0], &f.left[last]);
+        let backward = linking(&f.right[0], &f.right[last]);
+        assert!((forward.abs() - 1.0).abs() < 1e-2, "{forward}");
+        assert!((backward.abs() - 1.0).abs() < 1e-2, "{backward}");
+        assert!(forward.signum() == -backward.signum());
+    }
+
+    #[test]
+    fn a_frame_draws() {
+        let mut draw = super::draw;
+        let c = gax_numga_examples::app::frame(
+            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
+            0.5,
+            &mut draw,
+        );
+        assert!(c.mean()[0] > 0.0);
+    }
+}
