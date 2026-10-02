@@ -1,0 +1,535 @@
+//! numga's `quantum/two_spins`: two spins entangled by their exchange interaction, in the
+//! algebra of two copies of space, R(6,0). One spin lives in the directions `x y z` (`e1 e2 e3`),
+//! the other in `X Y Z` (`e4 e5 e6`). The state of one spin is an even multivector of its own
+//! space, as in the Pauli algebra; the state of the pair is a product of the two, taken in the
+//! ideal of the correlator `C = (1 - xy XY) / 2`. In that ideal, multiplying on the right by either
+//! spin's `xy` plane is the same: `C xy` is the pair's imaginary unit.
+//!
+//! The exchange couples each plane of one spin to the same plane of the other,
+//! `K = yz YZ + zx ZX + xy XY`, with `K² = 3 + 2 K`: `(1 + K) / 4` and `(3 - K) / 4` are
+//! idempotents that split every state into its singlet part (on which `K` is 3) and its triplet
+//! part (on which it is -1), and each part turns by its own rotor, multiplied on the right.
+//!
+//! The animation runs the exchange from spin up and spin down to the swapped pair and back: each
+//! spin's Bloch vector shrinks to nothing as the pair becomes fully entangled and grows again
+//! turned over, while the correlation ellipsoid (the image of the second spin's unit directions
+//! under the correlation map) swells from a needle to a sphere; below, the largest Bell (CHSH)
+//! combination rises from 2 to `2 sqrt 2` and falls back.
+
+use gax_numga_examples::canvas::mix;
+use gax_numga_examples::{
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+};
+use std::sync::OnceLock;
+
+gax::algebra! {
+    algebra pair "Two copies of Euclidean space, R(6,0): one spin's directions e1 e2 e3, the other's e4 e5 e6.";
+    basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1, e6 = 1;
+    kind Scalar = [1];
+    kind First = [e1, e2, e3];
+    kind Second = [e4, e5, e6];
+    kind FirstPlanes = [e23, e31, e12];
+    kind SecondPlanes = [e56, e64, e45];
+    kind FirstVolume = [e123];
+    kind SecondVolume = [e456];
+    kind FirstSpinor = [1, e23, e31, e12];
+    kind Spinor = [1, e23, e31, e12, e56, e64, e45,
+        e2356, e2364, e2345, e3156, e3164, e3145, e1256, e1264, e1245];
+}
+
+mod spins {
+    use super::pair::*;
+
+    /// A direction of the first spin, of the second, and a state of the pair.
+    pub type F = First<(), f64>;
+    pub type G = Second<(), f64>;
+    pub type Sp = Spinor<(), f64>;
+    /// The correlations as a map from the second spin's directions to the first's.
+    pub type Correlation = First<(Second,), f64>;
+
+    /// The first spin's directions and planes.
+    pub fn x() -> F {
+        First::new(1.0, 0.0, 0.0)
+    }
+    pub fn y() -> F {
+        First::new(0.0, 1.0, 0.0)
+    }
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn z() -> F {
+        First::new(0.0, 0.0, 1.0)
+    }
+    pub fn yz() -> FirstPlanes<(), f64> {
+        FirstPlanes::new(1.0, 0.0, 0.0)
+    }
+    pub fn zx() -> FirstPlanes<(), f64> {
+        FirstPlanes::new(0.0, 1.0, 0.0)
+    }
+    pub fn xy() -> FirstPlanes<(), f64> {
+        FirstPlanes::new(0.0, 0.0, 1.0)
+    }
+    /// The second spin's directions and planes.
+    pub fn big_x() -> G {
+        Second::new(1.0, 0.0, 0.0)
+    }
+    pub fn big_y() -> G {
+        Second::new(0.0, 1.0, 0.0)
+    }
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn big_z() -> G {
+        Second::new(0.0, 0.0, 1.0)
+    }
+    pub fn big_yz() -> SecondPlanes<(), f64> {
+        SecondPlanes::new(1.0, 0.0, 0.0)
+    }
+    pub fn big_zx() -> SecondPlanes<(), f64> {
+        SecondPlanes::new(0.0, 1.0, 0.0)
+    }
+    pub fn big_xy() -> SecondPlanes<(), f64> {
+        SecondPlanes::new(0.0, 0.0, 1.0)
+    }
+    /// Each spin's pseudoscalar.
+    pub fn i_first() -> FirstVolume<(), f64> {
+        FirstVolume::new(1.0)
+    }
+    pub fn i_second() -> SecondVolume<(), f64> {
+        SecondVolume::new(1.0)
+    }
+
+    /// One, as a state of the pair.
+    pub fn one() -> Sp {
+        Scalar::new(1.0).cast::<Spinor>()
+    }
+    /// The correlator `(1 - xy XY) / 2`.
+    pub fn correlator() -> Sp {
+        (one() - xy() * big_xy()) * 0.5
+    }
+    /// The pair's imaginary unit, `C xy`.
+    pub fn imaginary() -> Sp {
+        correlator() * xy()
+    }
+    /// The exchange coupling `yz YZ + zx ZX + xy XY`.
+    pub fn coupling() -> Sp {
+        yz() * big_yz() + zx() * big_zx() + xy() * big_xy()
+    }
+    /// The idempotents of the singlet and the triplet.
+    pub fn singlet_part() -> Sp {
+        (one() + coupling()) * 0.25
+    }
+    pub fn triplet_part() -> Sp {
+        (one() * 3.0 - coupling()) * 0.25
+    }
+
+    /// The state after the exchange has acted for `angle` (coupling strength times time): its
+    /// singlet part turned by three times the angle, its triplet part back by the angle.
+    pub fn exchange(state: Sp, angle: f64) -> Sp {
+        singlet_part() * state * (xy() * (3.0 * angle)).exp().into_inner()
+            + triplet_part() * state * (xy() * -angle).exp().into_inner()
+    }
+
+    /// Each spin's Bloch vector: the part of `2 state C xy ~state` in its own planes, read as a
+    /// vector of its space.
+    pub fn bloch(state: Sp) -> (F, G) {
+        let spin = state * imaginary() * state.reverse() * 2.0;
+        let first = i_first().inverse() * spin.cast::<FirstPlanes>();
+        let second = i_second().inverse() * spin.cast::<SecondPlanes>();
+        (first, second)
+    }
+
+    /// The correlations as a map from the second spin's directions to the first's:
+    /// `a | correlation(b)` is the expected product of the two spins' values along `a` and `b`.
+    /// The density `2 state ~state` times the second spin's plane of `b`, its part in the first
+    /// spin's planes, read as a vector.
+    pub fn correlation(state: Sp) -> Correlation {
+        let density = state * state.reverse() * 2.0;
+        let planes = i_second() * Second::slot();
+        i_first().inverse() * (density * planes).cast::<FirstPlanes>()
+    }
+
+    /// The largest Bell combination over all directions, `2 sqrt(s1² + s2²)` from the two
+    /// largest singular values of the correlation map.
+    pub fn bell(correlations: Correlation) -> f64 {
+        let (_, s, _) = correlations.svd();
+        2.0 * (s[0] * s[0] + s[1] * s[1]).sqrt()
+    }
+
+    /// The Bell combination along two directions of each spin as a multivector acting on states
+    /// from the left: `(I a)(I' b)` is minus the product of the two spins' values along a and b.
+    pub fn bell_element(a: F, a2: F, b: G, b2: G) -> Sp {
+        -((i_first() * a) * (i_second() * (b + b2)) + (i_first() * a2) * (i_second() * (b - b2)))
+    }
+
+    /// The expectation of a multivector acting from the left: `2 <~state element state>`.
+    pub fn expectation(element: Sp, state: Sp) -> f64 {
+        2.0 * (state.reverse() * element * state).s()
+    }
+
+    /// The first spin up along z, the second down: a half turn in its ZX plane turns Z over.
+    pub fn up_down() -> Sp {
+        -big_zx() * correlator()
+    }
+
+    /// The exchange from spin up and spin down over the angle that swaps them: the angles, both
+    /// Bloch vectors and the largest Bell combinations.
+    pub struct Swap {
+        pub angles: Vec<f64>,
+        pub first: Vec<F>,
+        pub second: Vec<G>,
+        pub bells: Vec<f64>,
+    }
+
+    pub fn swap(frames: usize) -> Swap {
+        let angles: Vec<f64> = (0..frames)
+            .map(|k| core::f64::consts::FRAC_PI_4 * k as f64 / (frames - 1) as f64)
+            .collect();
+        let states: Vec<Sp> = angles.iter().map(|a| exchange(up_down(), *a)).collect();
+        let (first, second) = states.iter().map(|s| bloch(*s)).unzip();
+        let bells = states.iter().map(|s| bell(correlation(*s))).collect();
+        Swap {
+            angles,
+            first,
+            second,
+            bells,
+        }
+    }
+
+    /// The singlet (the singlet part of spin up and spin down, normalized), the Bell element along
+    /// the directions at which it reaches `2 sqrt 2`, and its value there.
+    pub fn singlet() -> (Sp, Sp, f64) {
+        let state = singlet_part() * up_down() * core::f64::consts::SQRT_2;
+        // The first spin's directions a quarter turn apart; the second spin's halfway between
+        // them, reversed, since the singlet's spins disagree along every direction.
+        let h = core::f64::consts::FRAC_1_SQRT_2;
+        let element = bell_element(x(), y(), (big_x() + big_y()) * -h, (big_x() - big_y()) * -h);
+        (state, element, expectation(element, state))
+    }
+}
+
+use spins::*;
+
+/// The exchange over its whole range, computed once.
+fn swapped() -> &'static Swap {
+    static S: OnceLock<Swap> = OnceLock::new();
+    S.get_or_init(|| swap(121))
+}
+
+fn first3(v: F) -> [f32; 3] {
+    [v.e1() as f32, v.e2() as f32, v.e3() as f32]
+}
+
+fn second3(v: G) -> [f32; 3] {
+    [v.e4() as f32, v.e5() as f32, v.e6() as f32]
+}
+
+/// A 3D panel: the scene drawn on its own canvas over the matching stretch of the backdrop, and
+/// copied into `rect`. `label` draws on the panel's canvas with its camera.
+fn panel3(
+    c: &mut Canvas,
+    rect: [usize; 4],
+    cam: impl Fn(usize, usize) -> Camera,
+    fill: impl FnOnce(&mut Scene3),
+    label: impl FnOnce(&mut Canvas, &Camera),
+) {
+    let [x0, y0, x1, y1] = rect;
+    let (w, h) = (x1 - x0, y1 - y0);
+    let mut sub = Canvas::new(w, h);
+    let rows = (c.height.max(2) - 1) as f32;
+    sub.backdrop(
+        mix(palette::top(), palette::bottom(), y0 as f32 / rows),
+        mix(palette::top(), palette::bottom(), (y1 - 1) as f32 / rows),
+    );
+    let camera = cam(w, h);
+    let mut scene = Scene3::new(camera);
+    fill(&mut scene);
+    scene.draw(&mut sub);
+    label(&mut sub, &camera);
+    c.blit(&sub, x0, y0);
+}
+
+/// The unit ball, faintly, with its three axes.
+fn ball(s: &mut Scene3) {
+    s.sphere_wire([0.0; 3], 1.0, 18, palette::grid(), 0.55);
+    for k in 0..3 {
+        let mut a = [0.0; 3];
+        a[k] = 1.0;
+        s.seg(a.map(|v| -v), a, 1.0, palette::grid(), 1.0);
+    }
+}
+
+/// Axis names at the ends of the axes.
+fn axis_names(sub: &mut Canvas, cam: &Camera) {
+    for (k, name) in ["X", "Y", "Z"].iter().enumerate() {
+        let mut a = [0.0; 3];
+        a[k] = 1.18;
+        if let Some(p) = cam.px(a) {
+            sub.text(name, p[0], p[1] + 4.0, 11.0, palette::grid(), Align::Center);
+        }
+    }
+}
+
+/// The image of the second spin's unit sphere under the correlation map.
+fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Rgb) {
+    let tau = core::f32::consts::TAU;
+    s.surface(
+        |u, v| {
+            let (lon, lat) = (tau * u, core::f32::consts::PI * (v - 0.5));
+            let b = pair::Second::new(
+                f64::from(lat.cos() * lon.cos()),
+                f64::from(lat.cos() * lon.sin()),
+                f64::from(lat.sin()),
+            );
+            first3(corr.of(b))
+        },
+        28,
+        14,
+        |_, _| colour,
+        0.35,
+        Some((colour, 0.8)),
+    );
+}
+
+fn draw(c: &mut Canvas, t: f32) {
+    backdrop(c);
+    let (w, h) = (c.width, c.height);
+    let tau = core::f64::consts::TAU;
+    let phase = f64::from(t) / 8.0;
+    // From up-down to swapped and back, easing in and out.
+    let angle = core::f64::consts::FRAC_PI_8 * (1.0 - (tau * phase).cos());
+    let state = exchange(up_down(), angle);
+    let data = swapped();
+    let (first, second) = bloch(state);
+    let corr = correlation(state);
+    let value = bell(corr);
+    let azimuth = (-55.0f32).to_radians() + 0.35 * (tau * phase).sin() as f32;
+    let elevation = 18.0f32.to_radians();
+    let cam = |w: usize, h: usize| {
+        Camera::orbit(
+            w,
+            h,
+            [0.0; 3],
+            4.4,
+            azimuth,
+            elevation,
+            Lens::Perspective(0.62),
+        )
+    };
+    let top = h * 92 / 540;
+    let bottom = h * 392 / 540;
+    let third = w / 3;
+    let colours: [Rgb; 3] = [palette::red(), palette::purple(), palette::sky()];
+    let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
+    for k in 0..3 {
+        let rect = [k * third, top, (k + 1) * third, bottom];
+        panel3(
+            c,
+            rect,
+            cam,
+            |s| {
+                ball(s);
+                // Each Bloch vector's tip over the whole exchange, faintly, under its arrow.
+                match k {
+                    0 => {
+                        let path: Vec<[f32; 3]> = data.first.iter().map(|v| first3(*v)).collect();
+                        s.polyline(&path, 2.0, colours[0], 0.35);
+                        s.arrow([0.0; 3], first3(first), 3.0, 11.0, colours[0]);
+                    }
+                    2 => {
+                        let path: Vec<[f32; 3]> = data.second.iter().map(|v| second3(*v)).collect();
+                        s.polyline(&path, 2.0, colours[2], 0.35);
+                        s.arrow([0.0; 3], second3(second), 3.0, 11.0, colours[2]);
+                    }
+                    _ => ellipsoid(s, corr, colours[1]),
+                }
+            },
+            axis_names,
+        );
+        c.text(
+            titles[k],
+            (k as f32 + 0.5) * third as f32,
+            top as f32 - 4.0,
+            13.0,
+            colours[k],
+            Align::Center,
+        );
+    }
+    // The lengths of the Bloch vectors under their balls.
+    let len = |v: [f32; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    for (k, l) in [(0, len(first3(first))), (2, len(second3(second)))] {
+        c.text(
+            &format!("LENGTH {l:.2}"),
+            (k as f32 + 0.5) * third as f32,
+            bottom as f32 + 2.0,
+            11.0,
+            palette::ink(),
+            Align::Center,
+        );
+    }
+    // The largest Bell combination along the exchange.
+    let quarter = core::f32::consts::FRAC_PI_4;
+    let ax = Axes::new(
+        [
+            w as f32 * 0.073,
+            (bottom + h * 34 / 540) as f32,
+            w as f32 * 0.97,
+            (h - h * 42 / 540) as f32,
+        ],
+        [0.0, quarter],
+        [1.9, 2.95],
+    );
+    ax.frame(c, "", "EXCHANGE ANGLE (RAD)", "LARGEST BELL VALUE");
+    let root8 = 2.0 * core::f32::consts::SQRT_2;
+    for (level, dash) in [(2.0, 6.0), (root8, 2.0)] {
+        ax.dashed(
+            c,
+            &[[0.0, level], [quarter, level]],
+            1.0,
+            dash,
+            palette::grid(),
+            1.0,
+        );
+    }
+    let small = 9.0;
+    ax.text(
+        c,
+        [quarter / 2.0, 2.04],
+        "EACH SPIN ITS OWN ANSWERS",
+        small,
+        palette::grid(),
+        Align::Center,
+    );
+    ax.text(
+        c,
+        [0.01, root8 + 0.04],
+        "2 SQRT 2",
+        small,
+        palette::grid(),
+        Align::Left,
+    );
+    let curve: Vec<[f32; 2]> = data
+        .angles
+        .iter()
+        .zip(&data.bells)
+        .map(|(a, b)| [*a as f32, *b as f32])
+        .collect();
+    ax.polyline(c, &curve, 1.6, colours[1], 1.0);
+    ax.scatter(
+        c,
+        &[[angle as f32, value as f32]],
+        Marker::Dot,
+        8.0,
+        colours[1],
+        1.0,
+    );
+    // The singlet's Bell combination along the directions that reach the bound, and the
+    // state's norm, which the exchange keeps.
+    let (_, _, reached) = singlet();
+    let norm = expectation(one(), state);
+    caption(
+        c,
+        "TWO SPINS: EXCHANGE AND ENTANGLEMENT",
+        &format!("R(6,0)  ANGLE {angle:.3}  BELL {value:.3}  NORM {norm:.3}  SINGLET {reached:.3}"),
+    );
+}
+
+fn main() {
+    run(Anim::new("two spins", 8.0).size(960, 540), draw);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pair::*;
+    use super::spins::*;
+
+    fn small(s: Sp, tol: f64) -> bool {
+        s.c.iter().all(|v| v.abs() <= tol)
+    }
+
+    /// A small xorshift generator: numga's NumPy streams cannot be reproduced, and the check that
+    /// uses it holds for any directions.
+    struct Rng(u64);
+    impl Rng {
+        fn unit(&mut self) -> f64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 >> 11) as f64 / (1u64 << 53) as f64
+        }
+        fn normal(&mut self) -> f64 {
+            let (u, v) = (self.unit().max(1e-300), self.unit());
+            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
+        }
+    }
+
+    /// The singlet and triplet parts are idempotent and add up to one; the coupling squares to
+    /// `3 + 2 K`.
+    #[test]
+    fn the_coupling_splits_states_into_singlet_and_triplet() {
+        let k = coupling();
+        assert!(small(k * k - one() * 3.0 - k * 2.0, 1e-12));
+        let s = singlet_part();
+        assert!(small(s * s - s, 1e-12));
+        assert!(small(s + triplet_part() - one(), 1e-12));
+    }
+
+    /// numga's `swap` checks: the exchange keeps the state normalized and both Bloch vectors
+    /// equally long; halfway the spins are fully entangled, with no Bloch vector and the Bell
+    /// combination at `2 sqrt 2`; at the end they have swapped.
+    #[test]
+    fn the_exchange_swaps_up_and_down_through_a_fully_entangled_state() {
+        for frames in [121, 21] {
+            let s = swap(frames);
+            for (angle, (a, b)) in s.angles.iter().zip(s.first.iter().zip(&s.second)) {
+                let state = exchange(up_down(), *angle);
+                assert!((expectation(one(), state) - 1.0).abs() < 1e-7);
+                assert!(((*a | *a).s() - (*b | *b).s()).abs() < 1e-7);
+            }
+            let middle = frames / 2;
+            assert!(s.first[middle].c.iter().all(|v| v.abs() < 1e-7));
+            let last = frames - 1;
+            for (i, want) in [(0, 2.0), (middle, 2.0 * 2f64.sqrt()), (last, 2.0)] {
+                assert!((s.bells[i] - want).abs() < 1e-7, "{i}: {}", s.bells[i]);
+            }
+            assert!((s.first[last] + z()).c.iter().all(|v| v.abs() < 1e-7));
+            assert!((s.second[last] - big_z()).c.iter().all(|v| v.abs() < 1e-7));
+        }
+    }
+
+    /// numga's `singlet` checks: normalized, the coupling acts on it as three, no Bloch vector,
+    /// every direction anticorrelated with the same direction of the other spin; the Bell element
+    /// squares to `4 - 4 (a ^ a')(b ^ b')` for any unit directions, and the singlet reaches the
+    /// bound `2 sqrt 2` this sets.
+    #[test]
+    fn the_singlet_reaches_the_bell_bound() {
+        let (state, _, value) = singlet();
+        assert!((expectation(one(), state) - 1.0).abs() < 1e-12);
+        assert!(small(coupling() * state - state * 3.0, 1e-12));
+        let (first, _) = bloch(state);
+        assert!(first.c.iter().all(|v| v.abs() < 1e-12));
+        let corr = correlation(state);
+        for (across, along) in [(big_x(), x()), (big_y(), y()), (big_z(), z())] {
+            assert!((corr.of(across) + along).c.iter().all(|v| v.abs() < 1e-12));
+        }
+        let mut rng = Rng(0x5eed_0001);
+        for _ in 0..20 {
+            let mut n = || rng.normal();
+            let (a, a2) = (First::new(n(), n(), n()), First::new(n(), n(), n()));
+            let (b, b2) = (Second::new(n(), n(), n()), Second::new(n(), n(), n()));
+            let unit_f = |v: F| v / (v | v).s().sqrt();
+            let unit_g = |v: G| v / (v | v).s().sqrt();
+            let (a, a2, b, b2) = (unit_f(a), unit_f(a2), unit_g(b), unit_g(b2));
+            let e = bell_element(a, a2, b, b2);
+            let want = one() * 4.0 - (a ^ a2) * (b ^ b2) * 4.0;
+            assert!(small(e * e - want, 1e-12));
+        }
+        assert!((value - 2.0 * 2f64.sqrt()).abs() < 1e-12);
+    }
+
+    #[test]
+    fn a_frame_draws() {
+        let mut draw = super::draw;
+        let anim = gax_numga_examples::Anim::new("t", 8.0).size(480, 270);
+        let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
+        let b = gax_numga_examples::app::frame(&anim, 3.0, &mut draw);
+        assert!(a.mean()[0] > 0.0);
+        assert!(a.mean() != b.mean());
+    }
+}
