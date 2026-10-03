@@ -12,6 +12,9 @@ help: `gax::pga3d::Point` implements trait `Cast<K>`
   | impl gx::Cast<Point> for Point {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::Point>`
 ...
+  | impl gx::Cast<Direction> for Point {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::Direction>`
+...
   | impl gx::Cast<Flector> for Point {
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Cast<gax::pga3d::Flector>`
 ...

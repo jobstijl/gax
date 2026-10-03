@@ -83,6 +83,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Phasor<S2, T>> for Vector<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Phasor<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            c: [
+                (p(0, 1)).0,
+                (-p(1, 1)).0,
+                (-p(2, 1)).0,
+                (-p(3, 1)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Vector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -395,6 +416,27 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Phasor<S2, T>> for Trivector<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Phasor<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            c: [
+                (-p(0, 1)).0,
+                (p(1, 1)).0,
+                (p(2, 1)).0,
+                (p(3, 1)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -565,6 +607,98 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T
                 (p(0, 2)).0,
                 (p(0, 3)).0,
                 (p(0, 4)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Vector<S2, T>> for Phasor<S1, T> {
+    type Output = Trivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Vector<S2, T>) -> Trivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Trivector {
+            c: [
+                (-p(1, 0)).0,
+                (p(1, 1)).0,
+                (p(1, 2)).0,
+                (p(1, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Trivector<S2, T>> for Phasor<S1, T> {
+    type Output = Vector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Trivector<S2, T>) -> Vector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Vector {
+            c: [
+                (p(1, 0)).0,
+                (-p(1, 1)).0,
+                (-p(1, 2)).0,
+                (-p(1, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Odd<S2, T>> for Phasor<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (p(1, 4)).0,
+                (-p(1, 5)).0,
+                (-p(1, 6)).0,
+                (-p(1, 7)).0,
+                (-p(1, 0)).0,
+                (p(1, 1)).0,
+                (p(1, 2)).0,
+                (p(1, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Multivector<S2, T>> for Phasor<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Multivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (p(1, 11)).0,
+                (-p(1, 12)).0,
+                (-p(1, 13)).0,
+                (-p(1, 14)).0,
+                (-p(1, 1)).0,
+                (p(1, 2)).0,
+                (p(1, 3)).0,
+                (p(1, 4)).0,
             ],
         }
     }
@@ -824,6 +958,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Phasor<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Phasor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (-p(4, 1)).0,
+                (p(5, 1)).0,
+                (p(6, 1)).0,
+                (p(7, 1)).0,
+                (p(0, 1)).0,
+                (-p(1, 1)).0,
+                (-p(2, 1)).0,
+                (-p(3, 1)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Even<S2, T>> for Odd<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -1026,6 +1185,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Pseudoscalar<S2, 
                 (-p(2, 0)).0,
                 (-p(3, 0)).0,
                 (-p(4, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Commutator<Phasor<S2, T>> for Multivector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn commutator(self, rhs: Phasor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Commutator::commutator(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (-p(11, 1)).0,
+                (p(12, 1)).0,
+                (p(13, 1)).0,
+                (p(14, 1)).0,
+                (p(1, 1)).0,
+                (-p(2, 1)).0,
+                (-p(3, 1)).0,
+                (-p(4, 1)).0,
             ],
         }
     }

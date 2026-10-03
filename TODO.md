@@ -149,7 +149,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Complex coefficients and general eigenvalues (ADR-042): `gax::Complex<T>` as a `Coef`, `eigvals`/`eig` on square maps (Hessenberg and double-shift QR, inverse iteration), `eigh` on maps, `map_coefs`
 - [x] The Hodge dual `hodge()` (`~x I`, numga's `dual`) beside the metric-free `dual()`; `Sum` for values and maps; `Motor::look_at` built from its frame (an f32 camera looking along `up` faced away)
 - [x] Open-slot products of large kinds compiled very slowly (a 6D signature's sandwich and product maps over 15 minutes, 12 GB for twelve): above 4096 terms times slot entries they run as the value product per pair of slot entries (`slots::by_entries`, ADR-034); a CSTA probe 128 s to 4 s
-- [ ] Extra kinds in the standard algebras: PGA ideal points (`Direction`), VGA3D `Paravector`, STA `Phasor` (scalar + pseudoscalar, with `exp` of the pseudoscalar)
+- [x] Extra kinds in the standard algebras as `part`s (kinds never chosen as a result type, so no existing type changes): PGA ideal points (`Direction`), VGA3D `Paravector`, STA `Phasor`; `exp` of any kind spanning 1 and one blade with a constant square (the STA pseudoscalar's lands in `Phasor`)
 - [ ] An algebra trait (associated kinds `Point`, `Line`, `Motor`, …) for code written once over PGA2D and PGA3D or VGA2D–5D; the ports used macros
 - [ ] Grade-preserving sandwiches of certified versors in 5D and up (`m >> x` widens to the odd or full kind), and `normalized` for 5D even versors
 - [ ] Binding several slots of a form with maps at once (`value(dynamics, actuation)` is `.of(a).at::<1>().of(b).swap()` now); `lstsq` over several leading slots; `pinv` and `svd` on forms and non-square maps; a semidefinite generalized `eigh`

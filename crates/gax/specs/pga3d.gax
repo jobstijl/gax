@@ -8,6 +8,7 @@ kind Scalar = [1] "A scalar.";
 versor Plane = [e1, e2, e3, e0] "A plane `a x + b y + c z + d = 0`, stored as `a e1 + b e2 + c e3 + d e0`: the vectors (grade 1). As a versor it is a reflection.";
 versor Line = [e23, e31, e12, e01, e02, e03] "A line, or a twist or forque: the bivectors. `e23, e31, e12` hold the direction (the Euclidean part), `e01, e02, e03` the moment. As a versor it is a half turn.";
 versor Point = [e032, e013, e021, e123] "A point `(x, y, z)` with weight `w`, stored as `x e032 + y e013 + z e021 + w e123`: the trivectors. With `w = 0` it is a direction. As a versor it is a point reflection.";
+part Direction = [e032, e013, e021] "A direction: an ideal point (a point at infinity), the weightless part of a `Point`. Its slots take what has no position: velocities, normals, axes.";
 kind Pseudoscalar = [e0123] "The pseudoscalar `e0123`.";
 versor Rotor = [1, e23, e31, e12] "A rotation about a line through the origin.";
 versor Translator = [1, e01, e02, e03] "A translation by `(dx, dy, dz)`: `1 - (dx e01 + dy e02 + dz e03) / 2` (`Motor::translation`).";

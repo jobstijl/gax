@@ -249,6 +249,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Line>` `>>` `Line` | 15 mul, 6 add | 8 mul, 2 add |
 | `Line` `>>` `Point` | 14 mul, 6 add | 8 mul, 2 add |
 | `Unit<Line>` `>>` `Point` | 13 mul, 6 add | 8 mul, 2 add |
+| `Line` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
+| `Unit<Line>` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
 | `Line` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Line>` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Line` `>>` `Rotor` | 9 mul, 1 add | 6 mul, 1 add |
@@ -267,6 +269,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Point>` `>>` `Line` | 9 mul, 2 add | 5 mul, 0 add |
 | `Point` `>>` `Point` | 9 mul, 2 add | 5 mul, 0 add |
 | `Unit<Point>` `>>` `Point` | 9 mul, 2 add | 5 mul, 0 add |
+| `Point` `>>` `Direction` | 3 mul, 0 add | 1 mul, 0 add |
+| `Unit<Point>` `>>` `Direction` | 3 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Point>` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Rotor` | 8 mul, 0 add | 5 mul, 0 add |
@@ -285,6 +289,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Line` | 10 mul, 4 add | 4 mul, 2 add |
 | `Rotor` `>>` `Point` | 10 mul, 4 add | 4 mul, 2 add |
 | `Unit<Rotor>` `>>` `Point` | 10 mul, 4 add | 4 mul, 2 add |
+| `Rotor` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
+| `Unit<Rotor>` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
 | `Rotor` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Rotor>` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Rotor` `>>` `Rotor` | 4 mul, 1 add | 2 mul, 1 add |
@@ -303,6 +309,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Translator>` `>>` `Line` | 9 mul, 2 add | 5 mul, 0 add |
 | `Translator` `>>` `Point` | 9 mul, 2 add | 5 mul, 0 add |
 | `Unit<Translator>` `>>` `Point` | 9 mul, 2 add | 5 mul, 0 add |
+| `Translator` `>>` `Direction` | 3 mul, 0 add | 1 mul, 0 add |
+| `Unit<Translator>` `>>` `Direction` | 3 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Translator>` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Rotor` | 8 mul, 0 add | 5 mul, 0 add |
@@ -321,6 +329,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Motor>` `>>` `Line` | 17 mul, 8 add | 10 mul, 4 add |
 | `Motor` `>>` `Point` | 16 mul, 8 add | 10 mul, 4 add |
 | `Unit<Motor>` `>>` `Point` | 16 mul, 8 add | 10 mul, 4 add |
+| `Motor` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
+| `Unit<Motor>` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
 | `Motor` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Motor>` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Motor` `>>` `Rotor` | 12 mul, 3 add | 8 mul, 3 add |
@@ -339,6 +349,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Flector>` `>>` `Line` | 17 mul, 8 add | 10 mul, 4 add |
 | `Flector` `>>` `Point` | 16 mul, 8 add | 10 mul, 4 add |
 | `Unit<Flector>` `>>` `Point` | 16 mul, 8 add | 10 mul, 4 add |
+| `Flector` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
+| `Unit<Flector>` `>>` `Direction` | 9 mul, 3 add | 4 mul, 1 add |
 | `Flector` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Unit<Flector>` `>>` `Pseudoscalar` | 3 mul, 1 add | 2 mul, 1 add |
 | `Flector` `>>` `Rotor` | 12 mul, 3 add | 8 mul, 3 add |
@@ -364,6 +376,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Plane>` `>>` `Line` | 36 mul, 18 add | 15 mul, 5 add |
 | `Plane` `>>` `Point` | 25 mul, 15 add | 15 mul, 6 add |
 | `Unit<Plane>` `>>` `Point` | 17 mul, 8 add | 15 mul, 6 add |
+| `Plane` `>>` `Direction` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Plane>` `>>` `Direction` | 15 mul, 7 add | 9 mul, 5 add |
 | `Plane` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Unit<Plane>` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Plane` `>>` `Rotor` | 31 mul, 15 add | 15 mul, 6 add |
@@ -384,6 +398,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Line>` `>>` `Line` | 48 mul, 24 add | 24 mul, 8 add |
 | `Line` `>>` `Point` | 28 mul, 18 add | 18 mul, 9 add |
 | `Unit<Line>` `>>` `Point` | 25 mul, 13 add | 18 mul, 9 add |
+| `Line` `>>` `Direction` | 18 mul, 11 add | 9 mul, 5 add |
+| `Unit<Line>` `>>` `Direction` | 15 mul, 7 add | 9 mul, 5 add |
 | `Line` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Unit<Line>` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Line` `>>` `Rotor` | 42 mul, 27 add | 25 mul, 15 add |
@@ -404,6 +420,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Point>` `>>` `Line` | 19 mul, 6 add | 7 mul, 0 add |
 | `Point` `>>` `Point` | 12 mul, 3 add | 7 mul, 0 add |
 | `Unit<Point>` `>>` `Point` | 12 mul, 3 add | 7 mul, 0 add |
+| `Point` `>>` `Direction` | 4 mul, 0 add | 1 mul, 0 add |
+| `Unit<Point>` `>>` `Direction` | 4 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Point>` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Point` `>>` `Rotor` | 17 mul, 3 add | 7 mul, 0 add |
@@ -424,6 +442,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Line` | 34 mul, 25 add | 16 mul, 13 add |
 | `Rotor` `>>` `Point` | 23 mul, 20 add | 16 mul, 14 add |
 | `Unit<Rotor>` `>>` `Point` | 26 mul, 15 add | 16 mul, 14 add |
+| `Rotor` `>>` `Direction` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Rotor>` `>>` `Direction` | 25 mul, 15 add | 16 mul, 13 add |
 | `Rotor` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Rotor>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Rotor` `>>` `Rotor` | 23 mul, 20 add | 16 mul, 14 add |
@@ -444,6 +464,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Translator>` `>>` `Line` | 19 mul, 6 add | 7 mul, 0 add |
 | `Translator` `>>` `Point` | 12 mul, 3 add | 7 mul, 0 add |
 | `Unit<Translator>` `>>` `Point` | 12 mul, 3 add | 7 mul, 0 add |
+| `Translator` `>>` `Direction` | 4 mul, 0 add | 1 mul, 0 add |
+| `Unit<Translator>` `>>` `Direction` | 4 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Unit<Translator>` `>>` `Pseudoscalar` | 2 mul, 0 add | 1 mul, 0 add |
 | `Translator` `>>` `Rotor` | 17 mul, 3 add | 7 mul, 0 add |
@@ -464,6 +486,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Motor>` `>>` `Line` | 58 mul, 45 add | 40 mul, 28 add |
 | `Motor` `>>` `Point` | 38 mul, 32 add | 31 mul, 23 add |
 | `Unit<Motor>` `>>` `Point` | 33 mul, 21 add | 31 mul, 23 add |
+| `Motor` `>>` `Direction` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Motor>` `>>` `Direction` | 25 mul, 15 add | 16 mul, 13 add |
 | `Motor` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Motor>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Motor` `>>` `Rotor` | 53 mul, 46 add | 42 mul, 34 add |
@@ -484,6 +508,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Flector>` `>>` `Line` | 58 mul, 45 add | 40 mul, 28 add |
 | `Flector` `>>` `Point` | 38 mul, 32 add | 31 mul, 23 add |
 | `Unit<Flector>` `>>` `Point` | 33 mul, 21 add | 31 mul, 23 add |
+| `Flector` `>>` `Direction` | 22 mul, 19 add | 16 mul, 13 add |
+| `Unit<Flector>` `>>` `Direction` | 25 mul, 15 add | 16 mul, 13 add |
 | `Flector` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Flector>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Flector` `>>` `Rotor` | 53 mul, 46 add | 42 mul, 34 add |
@@ -511,6 +537,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Vector>` `>>` `Trivector` | 20 mul, 10 add | 16 mul, 8 add |
 | `Vector` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Vector>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Vector` `>>` `Phasor` | 6 mul, 3 add | 4 mul, 3 add |
+| `Unit<Vector>` `>>` `Phasor` | 6 mul, 3 add | 4 mul, 3 add |
 | `Vector` `>>` `Even` | 48 mul, 32 add | 16 mul, 8 add |
 | `Unit<Vector>` `>>` `Even` | 48 mul, 27 add | 16 mul, 8 add |
 | `Vector` `>>` `Odd` | 46 mul, 28 add | 16 mul, 8 add |
@@ -527,6 +555,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Even>` `>>` `Trivector` | 52 mul, 48 add | 44 mul, 36 add |
 | `Even` `>>` `Pseudoscalar` | 15 mul, 10 add | 13 mul, 10 add |
 | `Unit<Even>` `>>` `Pseudoscalar` | 9 mul, 7 add | 8 mul, 7 add |
+| `Even` `>>` `Phasor` | 18 mul, 12 add | 13 mul, 10 add |
+| `Unit<Even>` `>>` `Phasor` | 10 mul, 7 add | 8 mul, 7 add |
 | `Even` `>>` `Even` | 84 mul, 76 add | 52 mul, 44 add |
 | `Unit<Even>` `>>` `Even` | 85 mul, 69 add | 50 mul, 39 add |
 | `Even` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
@@ -543,6 +573,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Odd>` `>>` `Trivector` | 52 mul, 48 add | 44 mul, 36 add |
 | `Odd` `>>` `Pseudoscalar` | 15 mul, 10 add | 13 mul, 10 add |
 | `Unit<Odd>` `>>` `Pseudoscalar` | 9 mul, 7 add | 8 mul, 7 add |
+| `Odd` `>>` `Phasor` | 18 mul, 12 add | 13 mul, 10 add |
+| `Unit<Odd>` `>>` `Phasor` | 10 mul, 7 add | 8 mul, 7 add |
 | `Odd` `>>` `Even` | 84 mul, 76 add | 52 mul, 44 add |
 | `Unit<Odd>` `>>` `Even` | 85 mul, 69 add | 50 mul, 39 add |
 | `Odd` `>>` `Odd` | 72 mul, 60 add | 44 mul, 36 add |
@@ -646,6 +678,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Vector>` `>>` `Bivector` | 15 mul, 7 add | 9 mul, 5 add |
 | `Vector` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
 | `Unit<Vector>` `>>` `Pseudoscalar` | 4 mul, 2 add | 3 mul, 2 add |
+| `Vector` `>>` `Paravector` | 19 mul, 12 add | 9 mul, 6 add |
+| `Unit<Vector>` `>>` `Paravector` | 16 mul, 7 add | 9 mul, 6 add |
 | `Vector` `>>` `Rotor` | 19 mul, 12 add | 9 mul, 6 add |
 | `Unit<Vector>` `>>` `Rotor` | 16 mul, 7 add | 9 mul, 6 add |
 | `Vector` `>>` `Odd` | 19 mul, 12 add | 9 mul, 6 add |
@@ -660,6 +694,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Rotor>` `>>` `Bivector` | 25 mul, 15 add | 16 mul, 13 add |
 | `Rotor` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Rotor>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Rotor` `>>` `Paravector` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Rotor>` `>>` `Paravector` | 26 mul, 15 add | 16 mul, 14 add |
 | `Rotor` `>>` `Rotor` | 23 mul, 20 add | 16 mul, 14 add |
 | `Unit<Rotor>` `>>` `Rotor` | 26 mul, 15 add | 16 mul, 14 add |
 | `Rotor` `>>` `Odd` | 23 mul, 20 add | 16 mul, 14 add |
@@ -674,6 +710,8 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Unit<Odd>` `>>` `Bivector` | 25 mul, 15 add | 16 mul, 13 add |
 | `Odd` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
 | `Unit<Odd>` `>>` `Pseudoscalar` | 5 mul, 3 add | 4 mul, 3 add |
+| `Odd` `>>` `Paravector` | 23 mul, 20 add | 16 mul, 14 add |
+| `Unit<Odd>` `>>` `Paravector` | 26 mul, 15 add | 16 mul, 14 add |
 | `Odd` `>>` `Rotor` | 23 mul, 20 add | 16 mul, 14 add |
 | `Unit<Odd>` `>>` `Rotor` | 26 mul, 15 add | 16 mul, 14 add |
 | `Odd` `>>` `Odd` | 23 mul, 20 add | 16 mul, 14 add |

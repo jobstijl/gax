@@ -644,6 +644,198 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for P
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Scalar<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Plane<S2, T>> for Direction<S1, T> {
+    type Output = Line<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Plane<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Line<S2, T>> for Direction<S1, T> {
+    type Output = Plane<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Line<S2, T>) -> Plane<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Plane {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Rotor<S2, T>> for Direction<S1, T> {
+    type Output = Flector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Rotor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Translator<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Translator<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Motor<S2, T>> for Direction<S1, T> {
+    type Output = Flector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Motor<S2, T>) -> Flector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Flector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 1) + p(1, 2)) + p(2, 3))).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Flector<S2, T>> for Direction<S1, T> {
+    type Output = Line<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Flector<S2, T>) -> Line<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 6 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Line {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 2) - p(2, 1))).0,
+                ((p(2, 0) - p(0, 2))).0,
+                ((p(0, 1) - p(1, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Multivector<S2, T>> for Direction<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn rc(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Rc::rc(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (((p(0, 10) + p(1, 9)) + p(2, 8))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(1, 4) - p(2, 3))).0,
+                ((p(2, 2) - p(0, 4))).0,
+                ((p(0, 3) - p(1, 2))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(2, 0)).0,
+                (p(1, 0)).0,
+                (p(0, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Rc<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]

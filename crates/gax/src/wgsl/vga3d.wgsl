@@ -32,6 +32,11 @@ struct Pseudoscalar {
     c0: vec4<f32>,
 }
 
+// `Paravector`: [1, e1, e2, e3]
+struct Paravector {
+    c0: vec4<f32>,
+}
+
 // `Rotor`: [1, e23, e31, e12]
 struct Rotor {
     c0: vec4<f32>,
@@ -68,6 +73,11 @@ fn bivector_new(e23: f32, e31: f32, e12: f32) -> Bivector {
 // A `Pseudoscalar` from its coefficients.
 fn pseudoscalar_new(e123: f32) -> Pseudoscalar {
     return Pseudoscalar(vec4<f32>(e123, 0.0, 0.0, 0.0));
+}
+
+// A `Paravector` from its coefficients.
+fn paravector_new(s: f32, e1: f32, e2: f32, e3: f32) -> Paravector {
+    return Paravector(vec4<f32>(s, e1, e2, e3));
 }
 
 // A `Rotor` from its coefficients.
@@ -112,6 +122,11 @@ fn bivector_reverse(x: Bivector) -> Bivector {
 fn pseudoscalar_reverse(x: Pseudoscalar) -> Pseudoscalar {
     let t0 = -x.c0.x;
     return Pseudoscalar(vec4<f32>(t0, 0.0, 0.0, 0.0));
+}
+
+// The reverse `~x`.
+fn paravector_reverse(x: Paravector) -> Paravector {
+    return Paravector(vec4<f32>(x.c0.x, x.c0.y, x.c0.z, x.c0.w));
 }
 
 // The reverse `~x`.
@@ -453,6 +468,16 @@ fn pseudoscalar_renormalize_fast(x: Pseudoscalar) -> Pseudoscalar {
 }
 
 // The squared norm: the scalar part of `x ~x`.
+fn paravector_norm_squared(x: Paravector) -> f32 {
+    let t1 = x.c0.y * x.c0.y;
+    let t3 = x.c0.w * x.c0.w;
+    let t4 = fma(x.c0.x, x.c0.x, t1);
+    let t5 = fma(x.c0.z, x.c0.z, t3);
+    let t6 = t4 + t5;
+    return t6;
+}
+
+// The squared norm: the scalar part of `x ~x`.
 fn rotor_norm_squared(x: Rotor) -> f32 {
     let t1 = x.c0.y * x.c0.y;
     let t3 = x.c0.w * x.c0.w;
@@ -781,6 +806,57 @@ fn unit_vector_sandwich_pseudoscalar(v: Vector, x: Pseudoscalar) -> Pseudoscalar
     let t4 = fma(v.c0.z, v.c0.z, t3);
     let t5 = x.c0.x * t4;
     return Pseudoscalar(vec4<f32>(t5, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Vector` v and `Paravector` x (`v >> x`).
+fn vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = t0 - t1;
+    let t7 = t0 + t1;
+    let t8 = t2 + t7;
+    let t9 = t6 - t2;
+    let t10 = t2 + t6;
+    let t11 = t7 - t2;
+    let t12 = x.c0.x * t8;
+    let t15 = x.c0.w * t4;
+    let t18 = x.c0.w * t5;
+    let t20 = x.c0.z * t5;
+    let t22 = fma(x.c0.z, t3, t15);
+    let t23 = t22 * 2.0;
+    let t24 = fma(x.c0.y, t9, t23);
+    let t25 = fma(x.c0.y, t3, t18);
+    let t26 = t25 * 2.0;
+    let t27 = fma(-x.c0.z, t10, t26);
+    let t28 = fma(x.c0.y, t4, t20);
+    let t29 = t28 * 2.0;
+    let t30 = fma(-x.c0.w, t11, t29);
+    return Multivector(vec4<f32>(t12, t24, t27, t30), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Vector` v and `Paravector` x (`v >> x`).
+fn unit_vector_sandwich_paravector(v: Vector, x: Paravector) -> Multivector {
+    let t1 = v.c0.y * x.c0.z;
+    let t3 = fma(v.c0.x, x.c0.y, t1);
+    let t4 = fma(v.c0.z, x.c0.w, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t8 = t5 * 2.0;
+    let t10 = v.c0.y * v.c0.y;
+    let t12 = fma(v.c0.x, v.c0.x, t10);
+    let t13 = fma(v.c0.z, v.c0.z, t12);
+    let t15 = fma(-x.c0.y, t13, t8);
+    let t16 = t6 * 2.0;
+    let t18 = fma(-x.c0.z, t13, t16);
+    let t19 = t7 * 2.0;
+    let t21 = fma(-x.c0.w, t13, t19);
+    let t22 = x.c0.x * t13;
+    return Multivector(vec4<f32>(t22, t15, t18, t21), vec4<f32>(0.0, 0.0, 0.0, 0.0));
 }
 
 // `v x ~v` for `Vector` v and `Rotor` x (`v >> x`).
@@ -1366,6 +1442,80 @@ fn unit_rotor_sandwich_pseudoscalar(v: Rotor, x: Pseudoscalar) -> Pseudoscalar {
     let t6 = t4 + t5;
     let t7 = x.c0.x * t6;
     return Pseudoscalar(vec4<f32>(t7, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Rotor` v and `Paravector` x (`v >> x`).
+fn rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t0 + t1;
+    let t12 = t2 - t3;
+    let t13 = t2 + t3;
+    let t14 = t11 + t13;
+    let t15 = t11 - t13;
+    let t16 = t6 + t7;
+    let t17 = t5 - t8;
+    let t18 = t6 - t7;
+    let t19 = t10 + t12;
+    let t20 = t4 + t9;
+    let t21 = t5 + t8;
+    let t22 = t4 - t9;
+    let t23 = t10 - t12;
+    let t24 = x.c0.x * t14;
+    let t26 = x.c0.z * t16;
+    let t30 = x.c0.w * t20;
+    let t31 = x.c0.y * t21;
+    let t34 = fma(-x.c0.w, t17, t26);
+    let t35 = t34 * 2.0;
+    let t36 = fma(x.c0.y, t15, t35);
+    let t37 = fma(-x.c0.y, t18, t30);
+    let t38 = t37 * 2.0;
+    let t39 = fma(x.c0.z, t19, t38);
+    let t40 = fma(-x.c0.z, t22, t31);
+    let t41 = t40 * 2.0;
+    let t42 = fma(x.c0.w, t23, t41);
+    return Multivector(vec4<f32>(t24, t36, t39, t42), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Paravector` x (`v >> x`).
+fn unit_rotor_sandwich_paravector(v: Rotor, x: Paravector) -> Multivector {
+    let t2 = v.c0.w * x.c0.z;
+    let t3 = fma(v.c0.x, x.c0.y, t2);
+    let t4 = fma(-v.c0.z, x.c0.w, t3);
+    let t6 = v.c0.y * x.c0.w;
+    let t8 = fma(v.c0.x, x.c0.z, t6);
+    let t9 = fma(-v.c0.w, x.c0.y, t8);
+    let t12 = v.c0.z * x.c0.y;
+    let t13 = fma(v.c0.x, x.c0.w, t12);
+    let t14 = fma(-v.c0.y, x.c0.z, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.y * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.z * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.w * t29;
+    let t39 = fma(t36, 2.0, t38);
+    let t40 = x.c0.x * t29;
+    return Multivector(vec4<f32>(t40, t31, t35, t39), vec4<f32>(0.0, 0.0, 0.0, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Rotor` x (`v >> x`).
@@ -2090,6 +2240,80 @@ fn unit_odd_sandwich_pseudoscalar(v: Odd, x: Pseudoscalar) -> Pseudoscalar {
     let t6 = t4 + t5;
     let t7 = x.c0.x * t6;
     return Pseudoscalar(vec4<f32>(t7, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Odd` v and `Paravector` x (`v >> x`).
+fn odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t0 + t1;
+    let t12 = t2 - t3;
+    let t13 = t2 + t3;
+    let t14 = t11 + t13;
+    let t15 = t10 - t12;
+    let t16 = t4 - t9;
+    let t17 = t5 + t8;
+    let t18 = t4 + t9;
+    let t19 = t10 + t12;
+    let t20 = t6 - t7;
+    let t21 = t5 - t8;
+    let t22 = t6 + t7;
+    let t23 = t11 - t13;
+    let t24 = x.c0.x * t14;
+    let t27 = x.c0.w * t17;
+    let t28 = x.c0.y * t18;
+    let t32 = x.c0.z * t22;
+    let t34 = fma(x.c0.z, t16, t27);
+    let t35 = t34 * 2.0;
+    let t36 = fma(x.c0.y, t15, t35);
+    let t37 = fma(-x.c0.w, t20, t28);
+    let t38 = t37 * 2.0;
+    let t39 = fma(-x.c0.z, t19, t38);
+    let t40 = fma(x.c0.y, t21, t32);
+    let t41 = t40 * 2.0;
+    let t42 = fma(-x.c0.w, t23, t41);
+    return Multivector(vec4<f32>(t24, t36, t39, t42), vec4<f32>(0.0, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Odd` v and `Paravector` x (`v >> x`).
+fn unit_odd_sandwich_paravector(v: Odd, x: Paravector) -> Multivector {
+    let t1 = v.c0.y * x.c0.z;
+    let t3 = fma(v.c0.x, x.c0.y, t1);
+    let t4 = fma(v.c0.z, x.c0.w, t3);
+    let t7 = v.c0.w * x.c0.w;
+    let t8 = fma(v.c0.x, x.c0.z, t7);
+    let t9 = fma(-v.c0.y, x.c0.y, t8);
+    let t10 = v.c0.x * x.c0.w;
+    let t13 = fma(-v.c0.z, x.c0.y, t10);
+    let t14 = fma(-v.c0.w, x.c0.z, t13);
+    let t16 = v.c0.z * t14;
+    let t17 = v.c0.y * t4;
+    let t20 = v.c0.w * t9;
+    let t21 = fma(v.c0.y, t9, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.y * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t14, t17);
+    let t33 = t32 * 2.0;
+    let t35 = fma(-x.c0.z, t29, t33);
+    let t36 = fma(v.c0.z, t4, t20);
+    let t37 = t36 * 2.0;
+    let t39 = fma(-x.c0.w, t29, t37);
+    let t40 = x.c0.x * t29;
+    return Multivector(vec4<f32>(t40, t31, t35, t39), vec4<f32>(0.0, 0.0, 0.0, 0.0));
 }
 
 // `v x ~v` for `Odd` v and `Rotor` x (`v >> x`).

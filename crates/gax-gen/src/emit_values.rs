@@ -54,6 +54,78 @@ fn study_structure(alg: &Algebra, mv: &SymMv) -> Option<Study> {
     }
 }
 
+/// `exp` of a kind spanning `1` and one blade `B` whose square is a constant (`±1` or `0`), or
+/// just `B`: for `x = a + b B`, `exp(x) = e^a (C + S B)` with `(C, S)` = `(cos b, sin b)`,
+/// `(cosh b, sinh b)` or `(1, b)` by the sign of `B²`. Emitted where the algebra has a kind with
+/// exactly the support `{1, B}` for the result (STA's `Phasor`); a plain value, since
+/// `x ~x` need not be 1 (in STA `(cos b + sin b I)^~ = cos b + sin b I`).
+fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
+    let alg = &spec.algebra;
+    let blades: Vec<(u32, i8)> = k.layout.blades.iter().map(|&(m, s)| (m, s as i8)).collect();
+    let others: Vec<(u32, i8)> = blades.iter().copied().filter(|b| b.0 != 0).collect();
+    let [(b, sb)] = others.as_slice() else {
+        return;
+    };
+    let isq = match alg.blade_product(*b, *b) {
+        [] => 0,
+        [(0, c)] if c.abs() == 1 => *c,
+        _ => return,
+    };
+    let support: BTreeSet<u32> = [0, *b].into_iter().collect();
+    let Some(out) = spec.kinds.iter().find(|o| {
+        o.layout.blades.len() == 2
+            && o.layout.blades.iter().map(|x| x.0).collect::<BTreeSet<_>>() == support
+    }) else {
+        return;
+    };
+    let pos = |layout: &crate::table::Layout, m: u32| layout.position(m);
+    // The input's coefficients of 1 and B, signs applied.
+    let scalar = match pos(&k.layout, 0) {
+        Some((i, s)) => format!("{}self.c[{i}]", if s > 0 { "" } else { "-" }),
+        None => "T::zero()".into(),
+    };
+    let (bi, _) = pos(&k.layout, *b).expect("the blade");
+    let bcoef = format!("{}self.c[{bi}]", if *sb > 0 { "" } else { "-" });
+    let (c, sn) = match isq {
+        -1 => ("cos", "sin"),
+        1 => ("cosh", "sinh"),
+        _ => ("", ""),
+    };
+    let (cs, ss) = if isq == 0 {
+        ("T::one()".to_string(), "b".to_string())
+    } else {
+        (format!("b.{c}()"), format!("b.{sn}()"))
+    };
+    let (o0, so0) = pos(&out.layout, 0).expect("a scalar");
+    let (ob, sob) = pos(&out.layout, *b).expect("the blade");
+    let mut coeffs = vec![String::new(); 2];
+    coeffs[o0] = format!("{}e * ({cs})", if so0 > 0 { "" } else { "-" });
+    coeffs[ob] = format!("{}e * ({ss})", if sob > 0 { "" } else { "-" });
+    let (kind_sq, name) = (
+        match isq {
+            -1 => "-1",
+            1 => "+1",
+            _ => "0",
+        },
+        &out.name,
+    );
+    let _ = write!(
+        body,
+        "    /// The exponential: for `x = a + b B` with `B² = {kind_sq}`, `e^a (C(b) + S(b) B)` with `C, S` the
+    /// cosine and sine (`B² = -1`), the hyperbolic ones (`+1`) or `1, b` (`0`). A `{name}`, not a
+    /// `Unit`: `x ~x` need not be 1.
+    #[inline]
+    pub fn exp(self) -> {name}<(), T> {{
+        let (a, b) = ({scalar}, {bcoef});
+        let e = a.exp();
+        {name}::from_coeffs([{}])
+    }}
+
+",
+        coeffs.join(", ")
+    );
+}
+
 /// Whether `p` is minus a sum of squares of single variables, hence never positive.
 fn nonpositive(p: &Poly) -> bool {
     !p.is_zero()
@@ -322,6 +394,11 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     // exp in any dimension: scaling and squaring in the product closure.
     if all_grade2 && meta.exp.is_none() {
         meta.exp = emit_exp_fallback(spec, k, &mut body);
+    }
+
+    // exp of a scalar plus one blade whose square is a constant (STA's pseudoscalar, a phasor).
+    if meta.exp.is_none() && !all_grade2 {
+        emit_exp_single_blade(spec, k, &mut body);
     }
 
     // log: for unit versors whose parts are a Study number and a bivector.

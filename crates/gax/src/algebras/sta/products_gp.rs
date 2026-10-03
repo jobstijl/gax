@@ -101,6 +101,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Scalar<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                (p(0, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 1)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Scalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -296,6 +321,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
                 (-p(1, 0)).0,
                 (-p(2, 0)).0,
                 (-p(3, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Vector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+                (p(0, 1)).0,
+                (-p(1, 1)).0,
+                (-p(2, 1)).0,
+                (-p(3, 1)).0,
             ],
         }
     }
@@ -505,6 +555,29 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Bivector<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            c: [
+                ((p(0, 0) + p(3, 1))).0,
+                ((p(1, 0) + p(4, 1))).0,
+                ((p(2, 0) + p(5, 1))).0,
+                ((p(3, 0) - p(0, 1))).0,
+                ((p(4, 0) - p(1, 1))).0,
+                ((p(5, 0) - p(2, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Bivector<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -705,6 +778,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Trivector<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (-p(0, 1)).0,
+                (p(1, 1)).0,
+                (p(2, 1)).0,
+                (p(3, 1)).0,
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                (p(2, 0)).0,
+                (p(3, 0)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Trivector<S1, T> {
     type Output = Odd<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -889,6 +987,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                (-p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Even<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -967,6 +1090,237 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
                 (p(0, 3)).0,
                 (p(0, 4)).0,
                 (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Phasor<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                (p(0, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(1, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Vector<S2, T>> for Phasor<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Vector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+                (-p(1, 0)).0,
+                (p(1, 1)).0,
+                (p(1, 2)).0,
+                (p(1, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Bivector<S2, T>> for Phasor<S1, T> {
+    type Output = Bivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Bivector<S2, T>) -> Bivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Bivector {
+            c: [
+                ((p(0, 0) + p(1, 3))).0,
+                ((p(0, 1) + p(1, 4))).0,
+                ((p(0, 2) + p(1, 5))).0,
+                ((p(0, 3) - p(1, 0))).0,
+                ((p(0, 4) - p(1, 1))).0,
+                ((p(0, 5) - p(1, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Phasor<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Trivector<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 8 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                (p(1, 0)).0,
+                (-p(1, 1)).0,
+                (-p(1, 2)).0,
+                (-p(1, 3)).0,
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                (p(0, 2)).0,
+                (p(0, 3)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Phasor<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                (-p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Phasor<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                ((p(0, 0) - p(1, 1))).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(0, 1) + p(1, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Even<S2, T>> for Phasor<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Even<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                ((p(0, 0) - p(1, 7))).0,
+                ((p(0, 1) + p(1, 4))).0,
+                ((p(0, 2) + p(1, 5))).0,
+                ((p(0, 3) + p(1, 6))).0,
+                ((p(0, 4) - p(1, 1))).0,
+                ((p(0, 5) - p(1, 2))).0,
+                ((p(0, 6) - p(1, 3))).0,
+                ((p(0, 7) + p(1, 0))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Odd<S2, T>> for Phasor<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Odd<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                ((p(0, 0) + p(1, 4))).0,
+                ((p(0, 1) - p(1, 5))).0,
+                ((p(0, 2) - p(1, 6))).0,
+                ((p(0, 3) - p(1, 7))).0,
+                ((p(0, 4) - p(1, 0))).0,
+                ((p(0, 5) + p(1, 1))).0,
+                ((p(0, 6) + p(1, 2))).0,
+                ((p(0, 7) + p(1, 3))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for Phasor<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            c: [
+                ((p(0, 0) - p(1, 15))).0,
+                ((p(0, 1) + p(1, 11))).0,
+                ((p(0, 2) - p(1, 12))).0,
+                ((p(0, 3) - p(1, 13))).0,
+                ((p(0, 4) - p(1, 14))).0,
+                ((p(0, 5) + p(1, 8))).0,
+                ((p(0, 6) + p(1, 9))).0,
+                ((p(0, 7) + p(1, 10))).0,
+                ((p(0, 8) - p(1, 5))).0,
+                ((p(0, 9) - p(1, 6))).0,
+                ((p(0, 10) - p(1, 7))).0,
+                ((p(0, 11) - p(1, 1))).0,
+                ((p(0, 12) + p(1, 2))).0,
+                ((p(0, 13) + p(1, 3))).0,
+                ((p(0, 14) + p(1, 4))).0,
+                ((p(0, 15) + p(1, 0))).0,
             ],
         }
     }
@@ -1092,6 +1446,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
                 (-p(2, 0)).0,
                 (-p(3, 0)).0,
                 (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Even<S1, T> {
+    type Output = Even<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Even {
+            c: [
+                ((p(0, 0) - p(7, 1))).0,
+                ((p(1, 0) + p(4, 1))).0,
+                ((p(2, 0) + p(5, 1))).0,
+                ((p(3, 0) + p(6, 1))).0,
+                ((p(4, 0) - p(1, 1))).0,
+                ((p(5, 0) - p(2, 1))).0,
+                ((p(6, 0) - p(3, 1))).0,
+                ((p(0, 1) + p(7, 0))).0,
             ],
         }
     }
@@ -1300,6 +1679,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
                 (-p(1, 0)).0,
                 (-p(2, 0)).0,
                 (-p(3, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Odd<S1, T> {
+    type Output = Odd<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Odd<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 16 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Odd {
+            c: [
+                ((p(0, 0) - p(4, 1))).0,
+                ((p(1, 0) + p(5, 1))).0,
+                ((p(2, 0) + p(6, 1))).0,
+                ((p(3, 0) + p(7, 1))).0,
+                ((p(0, 1) + p(4, 0))).0,
+                ((p(5, 0) - p(1, 1))).0,
+                ((p(6, 0) - p(2, 1))).0,
+                ((p(7, 0) - p(3, 1))).0,
             ],
         }
     }
@@ -1548,6 +1952,39 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
                 (-p(3, 0)).0,
                 (-p(4, 0)).0,
                 (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn gp(self, rhs: Phasor<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 32 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            c: [
+                ((p(0, 0) - p(15, 1))).0,
+                ((p(1, 0) - p(11, 1))).0,
+                ((p(2, 0) + p(12, 1))).0,
+                ((p(3, 0) + p(13, 1))).0,
+                ((p(4, 0) + p(14, 1))).0,
+                ((p(5, 0) + p(8, 1))).0,
+                ((p(6, 0) + p(9, 1))).0,
+                ((p(7, 0) + p(10, 1))).0,
+                ((p(8, 0) - p(5, 1))).0,
+                ((p(9, 0) - p(6, 1))).0,
+                ((p(10, 0) - p(7, 1))).0,
+                ((p(1, 1) + p(11, 0))).0,
+                ((p(12, 0) - p(2, 1))).0,
+                ((p(13, 0) - p(3, 1))).0,
+                ((p(14, 0) - p(4, 1))).0,
+                ((p(0, 1) + p(15, 0))).0,
             ],
         }
     }

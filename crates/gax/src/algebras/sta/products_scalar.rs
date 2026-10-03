@@ -18,6 +18,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>>
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Phasor<S2, T>> for Scalar<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Phasor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Scalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -234,6 +252,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Phasor<S2, T>> for Pseudoscalar<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Phasor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                (-p(0, 1)).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Scalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -265,6 +301,96 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2
         Scalar {
             c: [
                 (-p(0, 15)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Scalar<S2, T>> for Phasor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Scalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                (p(0, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S2, T>> for Phasor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Pseudoscalar<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 1 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                (-p(1, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Phasor<S2, T>> for Phasor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Phasor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                ((p(0, 0) - p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Even<S2, T>> for Phasor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Even<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                ((p(0, 0) - p(1, 7))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Multivector<S2, T>> for Phasor<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Multivector<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                ((p(0, 0) - p(1, 15))).0,
             ],
         }
     }
@@ -319,6 +445,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
         Scalar {
             c: [
                 (-p(7, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Phasor<S2, T>> for Even<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Phasor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                ((p(0, 0) - p(7, 1))).0,
             ],
         }
     }
@@ -517,6 +661,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Pseudoscalar<S
         Scalar {
             c: [
                 (-p(15, 0)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::ScalarProduct<Phasor<S2, T>> for Multivector<S1, T> {
+    type Output = Scalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn scalar_product(self, rhs: Phasor<S2, T>) -> Scalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::ScalarProduct::scalar_product(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Scalar {
+            c: [
+                ((p(0, 0) - p(15, 1))).0,
             ],
         }
     }

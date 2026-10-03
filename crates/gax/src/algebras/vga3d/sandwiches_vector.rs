@@ -948,6 +948,289 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Vector {
     }
 }
 
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Paravector<S, T>> for Vector<(), T> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[0] * v[1];
+        let t4 = v[0] * v[2];
+        let t5 = v[1] * v[2];
+        let t6 = t0 - t1;
+        let t7 = t0 + t1;
+        let t8 = t2 + t7;
+        let t9 = t6 - t2;
+        let t10 = t2 + t6;
+        let t11 = t7 - t2;
+        let t12 = xv[0] * t8;
+        let t15 = xv[3] * t4;
+        let t18 = xv[3] * t5;
+        let t20 = xv[2] * t5;
+        let t22 = xv[2].mul_add(t3, t15);
+        let t23 = t22 * T::from_i64(2);
+        let t24 = xv[1].mul_add(t9, t23);
+        let t25 = xv[1].mul_add(t3, t18);
+        let t26 = t25 * T::from_i64(2);
+        let t27 = (-xv[2]).mul_add(t10, t26);
+        let t28 = xv[1].mul_add(t4, t20);
+        let t29 = t28 * T::from_i64(2);
+        let t30 = (-xv[3]).mul_add(t11, t29);
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t12, t24, t27, t30, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Paravector<S, T>> for Vector<(), T> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Paravector> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Paravector, T, 7>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Paravector, T, 7> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        gx::Prepared::from_entries([m8, m9, m10, m11, m13, m14, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Paravector<S, T>> for gx::Prepared<Vector, Paravector, T, 7> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Paravector, T, 7>> for Multivector<(Paravector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Paravector, T, 7>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Paravector, gx::batch::Plain> for Vector {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Paravector, T, 7>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Paravector, T, 7> {
+        gx::Prepare::<Paravector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Paravector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Paravector, W, 7> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Paravector, T, 7>, x: Paravector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Paravector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Paravector<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 4>(&x.c) {
+        let t1 = v[1] * xv[2];
+        let t3 = v[0].mul_add(xv[1], t1);
+        let t4 = v[2].mul_add(xv[3], t3);
+        let t5 = v[0] * t4;
+        let t6 = v[1] * t4;
+        let t7 = v[2] * t4;
+        let t8 = t5 * T::from_i64(2);
+        let t10 = v[1] * v[1];
+        let t12 = v[0].mul_add(v[0], t10);
+        let t13 = v[2].mul_add(v[2], t12);
+        let t15 = (-xv[1]).mul_add(t13, t8);
+        let t16 = t6 * T::from_i64(2);
+        let t18 = (-xv[2]).mul_add(t13, t16);
+        let t19 = t7 * T::from_i64(2);
+        let t21 = (-xv[3]).mul_add(t13, t19);
+        let t22 = xv[0] * t13;
+            return Multivector { c: gx::slots::from_values::<S, T, 8>([t22, t15, t18, t21, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m8)).0, (x[1].scale(m9) + x[2].scale(m10) + x[3].scale(m11)).0, (x[1].scale(m10) + x[2].scale(m13) + x[3].scale(m14)).0, (x[1].scale(m11) + x[2].scale(m14) + x[3].scale(m15)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Paravector<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Paravector> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Paravector, T, 7> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u3 = v[0].mul_add(v[0], u1);
+        let u4 = v[2].mul_add(v[2], -T::from_i64(1));
+        let u5 = u3 + u4;
+            T::check_unit(&[u5]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[0] * v[1];
+        let m4 = v[0] * v[2];
+        let m5 = v[1] * v[2];
+        let m6 = m0 - m1;
+        let m7 = m0 + m1;
+        let m8 = m2 + m7;
+        let m9 = m6 - m2;
+        let m10 = m3 * T::from_i64(2);
+        let m11 = m4 * T::from_i64(2);
+        let m12 = m2 + m6;
+        let m13 = -m12;
+        let m14 = m5 * T::from_i64(2);
+        let m15 = m2 - m7;
+        gx::Prepared::from_entries([m8, m9, m10, m11, m13, m14, m15])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Paravector<S, T>> for gx::Prepared<gx::Unit<Vector>, Paravector, T, 7> {
+    type Output = Multivector<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Paravector<S, T>) -> Multivector<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Multivector { c: [(x[0].scale(m[0])).0, (x[1].scale(m[1]) + x[2].scale(m[2]) + x[3].scale(m[3])).0, (x[1].scale(m[2]) + x[2].scale(m[4]) + x[3].scale(m[5])).0, (x[1].scale(m[3]) + x[2].scale(m[5]) + x[3].scale(m[6])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>> for Multivector<(Paravector,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>) -> Self {
+        let m = p.m;
+        Multivector { c: [[m[0], T::zero(), T::zero(), T::zero()], [T::zero(), m[1], m[2], m[3]], [T::zero(), m[2], m[4], m[5]], [T::zero(), m[3], m[5], m[6]], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()], [T::zero(), T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Paravector, gx::batch::Certified> for Vector {
+    type Y = Multivector;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Paravector, T, 7> {
+        gx::Prepare::<Paravector>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Paravector, W, 7> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Paravector, T, 7>, x: Paravector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Paravector<(), T>) -> Multivector<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Rotor<S, T>> for Vector<(), T> {
     type Output = Rotor<S, T>;
     #[inline(always)]

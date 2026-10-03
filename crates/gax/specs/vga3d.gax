@@ -6,6 +6,7 @@ kind Scalar = [1] "A scalar.";
 versor Vector = [e1, e2, e3] "A vector. As a versor it is a reflection in the plane perpendicular to it.";
 kind Bivector = [e23, e31, e12] "A bivector: an oriented plane, or the generator of a rotation.";
 kind Pseudoscalar = [e123] "The unit volume element `e123`.";
+part Paravector = [1, e1, e2, e3] "A scalar plus a vector: a spin state's density matrix `(1 + r)/2` in the Pauli algebra (Bloch vector `r`).";
 versor Rotor = [1, e23, e31, e12] "A rotor: the even subalgebra, isomorphic to the quaternions.";
 versor Odd = [e1, e2, e3, e123] "The odd subalgebra: rotoreflections.";
 kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123] "A general multivector.";

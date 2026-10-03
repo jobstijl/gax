@@ -3048,6 +3048,16 @@ impl<T: gx::Real> Rotor<(), T> {
         gx::Unit::new_unchecked(Rotor::from_coeffs([t0, t1]))
     }
 
+    /// The exponential: for `x = a + b B` with `BÂ² = -1`, `e^a (C(b) + S(b) B)` with `C, S` the
+    /// cosine and sine (`BÂ² = -1`), the hyperbolic ones (`+1`) or `1, b` (`0`). A `Rotor`, not a
+    /// `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    pub fn exp(self) -> Rotor<(), T> {
+        let (a, b) = (self.c[0], self.c[1]);
+        let e = a.exp();
+        Rotor::from_coeffs([e * (b.cos()), e * (b.sin())])
+    }
+
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
     #[inline(always)]
     pub fn sqrt(self) -> gx::Unit<Self> {

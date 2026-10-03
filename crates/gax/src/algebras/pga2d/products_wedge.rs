@@ -58,6 +58,26 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Scal
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Scalar<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Scalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -235,6 +255,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Line
         Pseudoscalar {
             c: [
                 (((p(0, 0) + p(1, 1)) + p(2, 2))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Line<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
             ],
         }
     }
@@ -489,6 +527,147 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Scalar<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Line<S2, T>> for Direction<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Line<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Rotor<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Translator<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Translator<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Motor<S2, T>> for Direction<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Motor<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(1, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Flector<S2, T>> for Direction<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Flector<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> for Direction<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Multivector<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(1, 0)).0,
+                (p(0, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(0, 2) + p(1, 3))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Pseudoscalar<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -634,6 +813,26 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Roto
                 (p(0, 0)).0,
                 (p(0, 1)).0,
                 (p(0, 2)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Rotor<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -820,6 +1019,26 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Tran
                 (p(0, 0)).0,
                 (p(0, 1)).0,
                 (p(0, 2)).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Translator<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
             ],
         }
     }
@@ -1013,6 +1232,26 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Moto
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Motor<S1, T> {
+    type Output = Point<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Point<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Point {
+            c: [
+                (p(0, 0)).0,
+                (p(0, 1)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> for Motor<S1, T> {
     type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -1199,6 +1438,24 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Flec
     }
 }
 
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Flector<S1, T> {
+    type Output = Pseudoscalar<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Pseudoscalar<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Pseudoscalar {
+            c: [
+                ((p(0, 0) + p(1, 1))).0,
+            ],
+        }
+    }
+}
+
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Rotor<S2, T>> for Flector<S1, T> {
     type Output = Flector<gx::Cat<S1, S2>, T>;
     #[inline(always)]
@@ -1377,6 +1634,31 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Point<S2, T>> for Mult
                 (p(0, 0)).0,
                 (p(0, 2)).0,
                 (((p(1, 2) + p(2, 0)) + p(3, 1))).0,
+            ],
+        }
+    }
+}
+
+impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Direction<S2, T>> for Multivector<S1, T> {
+    type Output = Multivector<gx::Cat<S1, S2>, T>;
+    #[inline(always)]
+    fn wedge(self, rhs: Direction<S2, T>) -> Multivector<gx::Cat<S1, S2>, T> {
+        if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
+            return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
+        }
+        let a = self.c.map(gx::SlotArr::<S1, T>);
+        let b = rhs.c.map(gx::SlotArr::<S2, T>);
+        let p = move |i: usize, j: usize| a[i] * b[j];
+        Multivector {
+            c: [
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                (p(0, 1)).0,
+                (p(0, 0)).0,
+                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
+                ((p(2, 0) + p(3, 1))).0,
             ],
         }
     }

@@ -397,8 +397,16 @@ gax::algebra! {
 * **The basis.** Basis vectors are `e` plus one character, given with their squares. `metric eo ei = -1;`
   sets an off-diagonal entry, for null bases.
 * **Kinds.** A `kind` lists its blades in the order and orientation you want (`e31` is `−e13`).
-  `versor` also generates fused sandwiches with that kind as the versor. `Scalar` and a full
+  `versor` also generates fused sandwiches with that kind as the versor. A `part` is a kind
+  that operations never take as their result type: it is reached only by name, through casts,
+  constructors and slots, so declaring one changes no existing type (PGA2D's translators log to a
+  `Point`, though their support also fits the `Direction` part). `Scalar` and a full
   `Multivector` are added if you leave them out.
+* **Parts in the standard algebras.** PGA2D and PGA3D have `Direction`, the ideal points
+  (`point.cast::<Direction>()` drops the weight, `Direction::slot()` is a map that takes only
+  directions); VGA3D has `Paravector` (`1 + r`, the Pauli algebra's states); STA has `Phasor`
+  (`a + b e0123`, a complex number commuting with the even subalgebra), the result of the
+  pseudoscalar's `exp`.
 * **Build time.** The macro runs the generator at compile time. Add `[profile.dev.build-override]`
   and `[profile.release.build-override]` with `opt-level = 3` to your `Cargo.toml` (both
   profiles build proc macros unoptimized by default), or large algebras expand slowly.

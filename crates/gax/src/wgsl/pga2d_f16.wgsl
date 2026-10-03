@@ -30,6 +30,11 @@ struct Point {
     c0: vec4<f16>,
 }
 
+// `Direction`: [e20, e01]
+struct Direction {
+    c0: vec4<f16>,
+}
+
 // `Pseudoscalar`: [e012]
 struct Pseudoscalar {
     c0: vec4<f16>,
@@ -78,6 +83,11 @@ fn line_new(e1: f16, e2: f16, e0: f16) -> Line {
 // A `Point` from its coefficients.
 fn point_new(e20: f16, e01: f16, e12: f16) -> Point {
     return Point(vec4<f16>(e20, e01, e12, 0.0));
+}
+
+// A `Direction` from its coefficients.
+fn direction_new(e20: f16, e01: f16) -> Direction {
+    return Direction(vec4<f16>(e20, e01, 0.0, 0.0));
 }
 
 // A `Pseudoscalar` from its coefficients.
@@ -146,6 +156,13 @@ fn point_reverse(x: Point) -> Point {
     let t1 = -x.c0.y;
     let t2 = -x.c0.z;
     return Point(vec4<f16>(t0, t1, t2, 0.0));
+}
+
+// The reverse `~x`.
+fn direction_reverse(x: Direction) -> Direction {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    return Direction(vec4<f16>(t0, t1, 0.0, 0.0));
 }
 
 // The reverse `~x`.
@@ -766,6 +783,18 @@ fn point_exp(x: Point) -> Motor {
     return Motor(vec4<f16>(c0, t0, t1, t2));
 }
 
+// The exponential, a unit `Translator`: `exp(B) = C(B²) + S(B²) B`.
+fn direction_exp(x: Direction) -> Translator {
+    let r1 = study_exp_complex(0.0, 0.0);
+    let c0 = f16(r1[0]);
+    let c1 = f16(r1[1]);
+    let s0 = f16(r1[2]);
+    let s1 = f16(r1[3]);
+    let t0 = x.c0.x * s0;
+    let t1 = x.c0.y * s0;
+    return Translator(vec4<f16>(c0, t0, t1, 0.0));
+}
+
 // The squared norm: the scalar part of `x ~x`.
 fn rotor_norm_squared(x: Rotor) -> f16 {
     let t1 = x.c0.y * x.c0.y;
@@ -1111,6 +1140,34 @@ fn unit_line_matrix_point(v: Line) -> mat3x3<f16> {
     let m10 = m0 + m1;
     let m11 = -m10;
     return mat3x3<f16>(vec3<f16>(m5, m6, 0.0), vec3<f16>(m6, m8, 0.0), vec3<f16>(m7, m9, m11));
+}
+
+// `v x ~v` for `Line` v and `Direction` x (`v >> x`).
+fn line_sandwich_direction(v: Line, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t10 = t6 * 2.0;
+    let t11 = fma(-x.c0.y, t3, t10);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Line` v and `Direction` x (`v >> x`).
+fn unit_line_sandwich_direction(v: Line, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t10 = t6 * 2.0;
+    let t11 = fma(-x.c0.y, t3, t10);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Line` v and `Pseudoscalar` x (`v >> x`).
@@ -1561,6 +1618,26 @@ fn unit_point_matrix_point(v: Point) -> mat3x3<f16> {
     return mat3x3<f16>(vec3<f16>(m3, 0.0, 0.0), vec3<f16>(0.0, m3, 0.0), vec3<f16>(m4, m5, m0));
 }
 
+// `v x ~v` for `Point` v and `Direction` x (`v >> x`).
+fn point_sandwich_direction(v: Point, x: Direction) -> Point {
+    let t0 = v.c0.z * v.c0.z;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = -t1;
+    let t4 = -t2;
+    return Point(vec4<f16>(t3, t4, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Point` v and `Direction` x (`v >> x`).
+fn unit_point_sandwich_direction(v: Point, x: Direction) -> Point {
+    let t0 = v.c0.z * v.c0.z;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = -t1;
+    let t4 = -t2;
+    return Point(vec4<f16>(t3, t4, 0.0, 0.0));
+}
+
 // `v x ~v` for `Point` v and `Pseudoscalar` x (`v >> x`).
 fn point_sandwich_pseudoscalar(v: Point, x: Pseudoscalar) -> Pseudoscalar {
     let t0 = v.c0.z * v.c0.z;
@@ -1925,6 +2002,34 @@ fn unit_rotor_matrix_point(v: Rotor) -> mat3x3<f16> {
     let m5 = -m4;
     let m6 = m0 + m2;
     return mat3x3<f16>(vec3<f16>(m3, m5, 0.0), vec3<f16>(m4, m3, 0.0), vec3<f16>(0.0, 0.0, m6));
+}
+
+// `v x ~v` for `Rotor` v and `Direction` x (`v >> x`).
+fn rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Direction` x (`v >> x`).
+fn unit_rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Pseudoscalar` x (`v >> x`).
@@ -2303,6 +2408,22 @@ fn unit_translator_matrix_point(v: Translator) -> mat3x3<f16> {
     let m4 = -m3;
     let m5 = m2 * 2.0;
     return mat3x3<f16>(vec3<f16>(m0, 0.0, 0.0), vec3<f16>(0.0, m0, 0.0), vec3<f16>(m4, m5, m0));
+}
+
+// `v x ~v` for `Translator` v and `Direction` x (`v >> x`).
+fn translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    return Point(vec4<f16>(t1, t2, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Translator` v and `Direction` x (`v >> x`).
+fn unit_translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    return Point(vec4<f16>(t1, t2, 0.0, 0.0));
 }
 
 // `v x ~v` for `Translator` v and `Pseudoscalar` x (`v >> x`).
@@ -2707,6 +2828,34 @@ fn unit_motor_matrix_point(v: Motor) -> mat3x3<f16> {
     let m13 = m12 * 2.0;
     let m14 = m0 + m2;
     return mat3x3<f16>(vec3<f16>(m7, m11, 0.0), vec3<f16>(m8, m7, 0.0), vec3<f16>(m10, m13, m14));
+}
+
+// `v x ~v` for `Motor` v and `Direction` x (`v >> x`).
+fn motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `Direction` x (`v >> x`).
+fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t7 = x.c0.y * t3;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t11 = fma(-t6, 2.0, t7);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
 }
 
 // `v x ~v` for `Motor` v and `Pseudoscalar` x (`v >> x`).
@@ -3253,6 +3402,34 @@ fn unit_flector_matrix_point(v: Flector) -> mat3x3<f16> {
     return mat3x3<f16>(vec3<f16>(m7, m8, 0.0), vec3<f16>(m8, m11, 0.0), vec3<f16>(m10, m13, m15));
 }
 
+// `v x ~v` for `Flector` v and `Direction` x (`v >> x`).
+fn flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t10 = t6 * 2.0;
+    let t11 = fma(-x.c0.y, t3, t10);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
+// `v x ~v` for a unit `Flector` v and `Direction` x (`v >> x`).
+fn unit_flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t2 = v.c0.x * v.c0.y;
+    let t3 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = x.c0.y * t2;
+    let t6 = x.c0.x * t2;
+    let t8 = t5 * 2.0;
+    let t9 = fma(x.c0.x, t3, t8);
+    let t10 = t6 * 2.0;
+    let t11 = fma(-x.c0.y, t3, t10);
+    return Point(vec4<f16>(t9, t11, 0.0, 0.0));
+}
+
 // `v x ~v` for `Flector` v and `Pseudoscalar` x (`v >> x`).
 fn flector_sandwich_pseudoscalar(v: Flector, x: Pseudoscalar) -> Pseudoscalar {
     let t1 = v.c0.y * v.c0.y;
@@ -3767,6 +3944,15 @@ fn study_acosh_sq(y: StudyDual) -> StudyDual {
     series = sd_sub(series, sd_scale(tt, 1.0 / 3.0));
     series = sd_add(series, sd_scale(sd_mul(tt, t), 4.0 / 45.0));
     return sd_select_small(t, 1e-8, series, direct);
+}
+
+// `exp(B) = c0 + c1 I + (s0 + s1 I) B` for `B² = lambda + mu I`, `I² = -1`, as
+// `[c0, c1, s0, s1]` (gax_core::study::exp_coeffs).
+fn study_exp_complex(lambda: f32, mu: f32) -> vec4<f32> {
+    let x = StudyDual(vec2<f32>(lambda, mu), vec2<f32>(0.0, 0.0));
+    let c = study_exp_c(x).p;
+    let s = study_exp_s(x).p;
+    return vec4<f32>(c.x, c.y, s.x, s.y);
 }
 
 // `exp(B) = C + S B` for `B² = lambda + mu I` with `I² = 0` and `lambda <= 0`, as

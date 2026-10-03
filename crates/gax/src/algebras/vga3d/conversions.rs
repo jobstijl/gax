@@ -32,6 +32,14 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Pseudoscalar<S, T> 
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Scalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Scalar<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Scalar<(), T>>>::Output;
     #[inline(always)]
@@ -124,6 +132,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Vector<(), T>>> for Pseudosca
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Vector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Vector<(), T>>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Vector<(), T>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Vector<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Vector<(), T>>>::Output;
     #[inline(always)]
@@ -207,6 +232,14 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Bivector<(), T>> for Pseudoscalar<S, T
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Bivector<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Bivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Bivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Bivector<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Bivector<(), T>>>::Output;
     #[inline(always)]
@@ -263,6 +296,14 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Pseudoscalar<
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
     #[inline(always)]
@@ -283,6 +324,70 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Multivector<S
     type Output = <Self as gx::Gp<Pseudoscalar<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Pseudoscalar<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Scalar<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Vector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Bivector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Rotor<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Odd<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Paravector<(), T>> for Multivector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Paravector<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
     }
 }
@@ -347,6 +452,23 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Pseudoscalar<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Rotor<(), T>>> for Pseudoscalar<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Rotor<(), T>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Rotor<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Rotor<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Rotor<(), T>>> for Paravector<S, T> {
     type Output = <Self as gx::Gp<Rotor<(), T>>>::Output;
     /// `self ~rhs`: a unit versor's inverse is its reverse.
     #[inline(always)]
@@ -474,6 +596,23 @@ impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Odd<(), T>>> for Pseudoscalar
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Odd<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Odd<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Odd<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Odd<(), T>>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Odd<(), T>>>::Output;
+    /// `self ~rhs`: a unit versor's inverse is its reverse.
+    #[inline(always)]
+    fn div_by(self, rhs: gx::Unit<Odd<(), T>>) -> Self::Output {
+        gx::Gp::gp(self, rhs.into_inner().reverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Odd<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Odd<(), T>>>::Output;
     #[inline(always)]
@@ -557,6 +696,14 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Pseudoscalar<S
     }
 }
 
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Paravector<S, T> {
+    type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
+    #[inline(always)]
+    fn div_by(self, rhs: Multivector<(), T>) -> Self::Output {
+        gx::Gp::gp(self, rhs.inverse())
+    }
+}
+
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Rotor<S, T> {
     type Output = <Self as gx::Gp<Multivector<(), T>>>::Output;
     #[inline(always)]
@@ -581,6 +728,16 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Multivector<(), T>> for Multivector<S,
     }
 }
 
+impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Paravector<S, T> {
+    /// The same multivector as a [`Paravector`].
+    #[inline(always)]
+    fn from(x: Scalar<S, T>) -> Self {
+        Paravector { c: [x.c[0], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> gx::Widen<Paravector<(), T>> for Scalar<(), T> {}
+
 impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Rotor<S, T> {
     /// The same multivector as a [`Rotor`].
     #[inline(always)]
@@ -600,6 +757,16 @@ impl<S: gx::Slots, T: gx::Coef> From<Scalar<S, T>> for Multivector<S, T> {
 }
 
 impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Scalar<(), T> {}
+
+impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Paravector<S, T> {
+    /// The same multivector as a [`Paravector`].
+    #[inline(always)]
+    fn from(x: Vector<S, T>) -> Self {
+        Paravector { c: [<S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), x.c[0], x.c[1], x.c[2]] }
+    }
+}
+
+impl<T: gx::Coef> gx::Widen<Paravector<(), T>> for Vector<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Vector<S, T>> for Odd<S, T> {
     /// The same multivector as a [`Odd`].
@@ -660,6 +827,16 @@ impl<S: gx::Slots, T: gx::Coef> From<Pseudoscalar<S, T>> for Multivector<S, T> {
 }
 
 impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Pseudoscalar<(), T> {}
+
+impl<S: gx::Slots, T: gx::Coef> From<Paravector<S, T>> for Multivector<S, T> {
+    /// The same multivector as a [`Multivector`].
+    #[inline(always)]
+    fn from(x: Paravector<S, T>) -> Self {
+        Multivector { c: [x.c[0], x.c[1], x.c[2], x.c[3], <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0), <S as gx::Slots>::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> gx::Widen<Multivector<(), T>> for Paravector<(), T> {}
 
 impl<S: gx::Slots, T: gx::Coef> From<Rotor<S, T>> for Multivector<S, T> {
     /// The same multivector as a [`Multivector`].
@@ -858,6 +1035,51 @@ impl<S: gx::Slots, T: gx::Coef> gx::Undual for Pseudoscalar<S, T> {
     fn undual(self) -> Scalar<S, T> {
         let a = self.c;
         Scalar { c: [a[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Reverse for Paravector<S, T> {
+    type Output = Multivector<S, T>;
+    #[inline]
+    fn reverse(self) -> Multivector<S, T> {
+        let a = self.c;
+        Multivector { c: [a[0], a[1], a[2], a[3], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Involute for Paravector<S, T> {
+    type Output = Multivector<S, T>;
+    #[inline]
+    fn involute(self) -> Multivector<S, T> {
+        let a = self.c;
+        Multivector { c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Conjugate for Paravector<S, T> {
+    type Output = Multivector<S, T>;
+    #[inline]
+    fn conjugate(self) -> Multivector<S, T> {
+        let a = self.c;
+        Multivector { c: [a[0], (-gx::SlotArr::<S, T>(a[1])).0, (-gx::SlotArr::<S, T>(a[2])).0, (-gx::SlotArr::<S, T>(a[3])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Dual for Paravector<S, T> {
+    type Output = Multivector<S, T>;
+    #[inline]
+    fn dual(self) -> Multivector<S, T> {
+        let a = self.c;
+        Multivector { c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1], a[2], a[3], a[0]] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Undual for Paravector<S, T> {
+    type Output = Multivector<S, T>;
+    #[inline]
+    fn undual(self) -> Multivector<S, T> {
+        let a = self.c;
+        Multivector { c: [S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1], a[2], a[3], a[0]] }
     }
 }
 

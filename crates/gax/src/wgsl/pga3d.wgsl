@@ -33,6 +33,11 @@ struct Point {
     c0: vec4<f32>,
 }
 
+// `Direction`: [e032, e013, e021]
+struct Direction {
+    c0: vec4<f32>,
+}
+
 // `Pseudoscalar`: [e0123]
 struct Pseudoscalar {
     c0: vec4<f32>,
@@ -90,6 +95,11 @@ fn line_new(e23: f32, e31: f32, e12: f32, e01: f32, e02: f32, e03: f32) -> Line 
 // A `Point` from its coefficients.
 fn point_new(e032: f32, e013: f32, e021: f32, e123: f32) -> Point {
     return Point(vec4<f32>(e032, e013, e021, e123));
+}
+
+// A `Direction` from its coefficients.
+fn direction_new(e032: f32, e013: f32, e021: f32) -> Direction {
+    return Direction(vec4<f32>(e032, e013, e021, 0.0));
 }
 
 // A `Pseudoscalar` from its coefficients.
@@ -175,6 +185,14 @@ fn point_reverse(x: Point) -> Point {
     let t2 = -x.c0.z;
     let t3 = -x.c0.w;
     return Point(vec4<f32>(t0, t1, t2, t3));
+}
+
+// The reverse `~x`.
+fn direction_reverse(x: Direction) -> Direction {
+    let t0 = -x.c0.x;
+    let t1 = -x.c0.y;
+    let t2 = -x.c0.z;
+    return Direction(vec4<f32>(t0, t1, t2, 0.0));
 }
 
 // The reverse `~x`.
@@ -2689,6 +2707,99 @@ fn unit_plane_matrix_point(v: Plane) -> mat4x4<f32> {
     return mat4x4<f32>(vec4<f32>(m10, m12, m14, 0.0), vec4<f32>(m12, m17, m19, 0.0), vec4<f32>(m14, m19, m23, 0.0), vec4<f32>(m16, m21, m25, m26));
 }
 
+// `v x ~v` for `Plane` v and `Direction` x (`v >> x`).
+fn plane_sandwich_direction(v: Plane, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = t0 - t1;
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t9 = t0 + t1;
+    let t10 = t9 - t2;
+    let t13 = x.c0.z * t4;
+    let t15 = x.c0.y * t8;
+    let t16 = x.c0.z * t5;
+    let t18 = x.c0.y * t5;
+    let t19 = x.c0.z * t10;
+    let t20 = fma(x.c0.y, t3, t13);
+    let t21 = t20 * 2.0;
+    let t22 = fma(x.c0.x, t7, t21);
+    let t23 = -t22;
+    let t24 = fma(x.c0.x, t3, t16);
+    let t26 = fma(-t24, 2.0, t15);
+    let t27 = fma(x.c0.x, t4, t18);
+    let t29 = fma(-t27, 2.0, t19);
+    return Point(vec4<f32>(t23, t26, t29, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Plane` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn plane_matrix_direction(v: Plane) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m2 - m6;
+    let m8 = m3 * 2.0;
+    let m9 = -m8;
+    let m10 = m4 * 2.0;
+    let m11 = -m10;
+    let m12 = m2 + m6;
+    let m13 = m5 * 2.0;
+    let m14 = -m13;
+    let m15 = m0 + m1;
+    let m16 = m15 - m2;
+    return mat3x4<f32>(vec4<f32>(m7, m9, m11, 0.0), vec4<f32>(m9, m12, m14, 0.0), vec4<f32>(m11, m14, m16, 0.0));
+}
+
+// `v x ~v` for a unit `Plane` v and `Direction` x (`v >> x`).
+fn unit_plane_sandwich_direction(v: Plane, x: Direction) -> Point {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t10 = v.c0.y * v.c0.y;
+    let t12 = fma(v.c0.x, v.c0.x, t10);
+    let t13 = fma(v.c0.z, v.c0.z, t12);
+    let t14 = x.c0.x * t13;
+    let t15 = fma(-t5, 2.0, t14);
+    let t17 = x.c0.y * t13;
+    let t18 = fma(-t6, 2.0, t17);
+    let t20 = x.c0.z * t13;
+    let t21 = fma(-t7, 2.0, t20);
+    return Point(vec4<f32>(t15, t18, t21, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Plane` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_plane_matrix_direction(v: Plane) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m2 - m6;
+    let m8 = m3 * 2.0;
+    let m9 = -m8;
+    let m10 = m4 * 2.0;
+    let m11 = -m10;
+    let m12 = m2 + m6;
+    let m13 = m5 * 2.0;
+    let m14 = -m13;
+    let m15 = m0 + m1;
+    let m16 = m15 - m2;
+    return mat3x4<f32>(vec4<f32>(m7, m9, m11, 0.0), vec4<f32>(m9, m12, m14, 0.0), vec4<f32>(m11, m14, m16, 0.0));
+}
+
 // `v x ~v` for `Plane` v and `Pseudoscalar` x (`v >> x`).
 fn plane_sandwich_pseudoscalar(v: Plane, x: Pseudoscalar) -> Pseudoscalar {
     let t1 = v.c0.y * v.c0.y;
@@ -3639,6 +3750,94 @@ fn unit_line_matrix_point(v: Line) -> mat4x4<f32> {
     return mat4x4<f32>(vec4<f32>(m14, m15, m16, 0.0), vec4<f32>(m15, m20, m21, 0.0), vec4<f32>(m16, m21, m24, 0.0), vec4<f32>(m18, m23, m26, m27));
 }
 
+// `v x ~v` for `Line` v and `Direction` x (`v >> x`).
+fn line_sandwich_direction(v: Line, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.x * v.c0.y;
+    let t4 = v.c0.x * v.c0.z;
+    let t5 = v.c0.y * v.c0.z;
+    let t6 = t0 - t1;
+    let t7 = t6 - t2;
+    let t8 = t2 + t6;
+    let t9 = t0 + t1;
+    let t10 = t9 - t2;
+    let t13 = x.c0.z * t4;
+    let t16 = x.c0.z * t5;
+    let t18 = x.c0.y * t5;
+    let t20 = fma(x.c0.y, t3, t13);
+    let t21 = t20 * 2.0;
+    let t22 = fma(x.c0.x, t7, t21);
+    let t23 = fma(x.c0.x, t3, t16);
+    let t24 = t23 * 2.0;
+    let t25 = fma(-x.c0.y, t8, t24);
+    let t26 = fma(x.c0.x, t4, t18);
+    let t27 = t26 * 2.0;
+    let t28 = fma(-x.c0.z, t10, t27);
+    return Point(vec4<f32>(t22, t25, t28, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Line` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn line_matrix_direction(v: Line) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m6 - m2;
+    let m8 = m3 * 2.0;
+    let m9 = m4 * 2.0;
+    let m10 = m2 + m6;
+    let m11 = -m10;
+    let m12 = m5 * 2.0;
+    let m13 = m2 - m0;
+    let m14 = m13 - m1;
+    return mat3x4<f32>(vec4<f32>(m7, m8, m9, 0.0), vec4<f32>(m8, m11, m12, 0.0), vec4<f32>(m9, m12, m14, 0.0));
+}
+
+// `v x ~v` for a unit `Line` v and `Direction` x (`v >> x`).
+fn unit_line_sandwich_direction(v: Line, x: Direction) -> Point {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t5 = v.c0.x * t4;
+    let t6 = v.c0.y * t4;
+    let t7 = v.c0.z * t4;
+    let t8 = t5 * 2.0;
+    let t10 = v.c0.y * v.c0.y;
+    let t12 = fma(v.c0.x, v.c0.x, t10);
+    let t13 = fma(v.c0.z, v.c0.z, t12);
+    let t15 = fma(-x.c0.x, t13, t8);
+    let t16 = t6 * 2.0;
+    let t18 = fma(-x.c0.y, t13, t16);
+    let t19 = t7 * 2.0;
+    let t21 = fma(-x.c0.z, t13, t19);
+    return Point(vec4<f32>(t15, t18, t21, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Line` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_line_matrix_direction(v: Line) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.x * v.c0.y;
+    let m4 = v.c0.x * v.c0.z;
+    let m5 = v.c0.y * v.c0.z;
+    let m6 = m0 - m1;
+    let m7 = m6 - m2;
+    let m8 = m3 * 2.0;
+    let m9 = m4 * 2.0;
+    let m10 = m2 + m6;
+    let m11 = -m10;
+    let m12 = m5 * 2.0;
+    let m13 = m2 - m0;
+    let m14 = m13 - m1;
+    return mat3x4<f32>(vec4<f32>(m7, m8, m9, 0.0), vec4<f32>(m8, m11, m12, 0.0), vec4<f32>(m9, m12, m14, 0.0));
+}
+
 // `v x ~v` for `Line` v and `Pseudoscalar` x (`v >> x`).
 fn line_sandwich_pseudoscalar(v: Line, x: Pseudoscalar) -> Pseudoscalar {
     let t1 = v.c0.y * v.c0.y;
@@ -4465,6 +4664,44 @@ fn unit_point_matrix_point(v: Point) -> mat4x4<f32> {
     return mat4x4<f32>(vec4<f32>(m4, 0.0, 0.0, 0.0), vec4<f32>(0.0, m4, 0.0, 0.0), vec4<f32>(0.0, 0.0, m4, 0.0), vec4<f32>(m5, m6, m7, m0));
 }
 
+// `v x ~v` for `Point` v and `Direction` x (`v >> x`).
+fn point_sandwich_direction(v: Point, x: Direction) -> Point {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = -t1;
+    let t5 = -t2;
+    let t6 = -t3;
+    return Point(vec4<f32>(t4, t5, t6, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Point` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn point_matrix_direction(v: Point) -> mat3x4<f32> {
+    let m0 = v.c0.w * v.c0.w;
+    let m1 = -m0;
+    return mat3x4<f32>(vec4<f32>(m1, 0.0, 0.0, 0.0), vec4<f32>(0.0, m1, 0.0, 0.0), vec4<f32>(0.0, 0.0, m1, 0.0));
+}
+
+// `v x ~v` for a unit `Point` v and `Direction` x (`v >> x`).
+fn unit_point_sandwich_direction(v: Point, x: Direction) -> Point {
+    let t0 = v.c0.w * v.c0.w;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    let t4 = -t1;
+    let t5 = -t2;
+    let t6 = -t3;
+    return Point(vec4<f32>(t4, t5, t6, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Point` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_point_matrix_direction(v: Point) -> mat3x4<f32> {
+    let m0 = v.c0.w * v.c0.w;
+    let m1 = -m0;
+    return mat3x4<f32>(vec4<f32>(m1, 0.0, 0.0, 0.0), vec4<f32>(0.0, m1, 0.0, 0.0), vec4<f32>(0.0, 0.0, m1, 0.0));
+}
+
 // `v x ~v` for `Point` v and `Pseudoscalar` x (`v >> x`).
 fn point_sandwich_pseudoscalar(v: Point, x: Pseudoscalar) -> Pseudoscalar {
     let t0 = v.c0.w * v.c0.w;
@@ -5179,6 +5416,145 @@ fn unit_rotor_matrix_point(v: Rotor) -> mat4x4<f32> {
     let m28 = m10 - m11;
     let m29 = m12 + m13;
     return mat4x4<f32>(vec4<f32>(m14, m20, m25, 0.0), vec4<f32>(m16, m21, m27, 0.0), vec4<f32>(m18, m23, m28, 0.0), vec4<f32>(0.0, 0.0, 0.0, m29));
+}
+
+// `v x ~v` for `Rotor` v and `Direction` x (`v >> x`).
+fn rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Point(vec4<f32>(t34, t37, t40, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Rotor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn rotor_matrix_direction(v: Rotor) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f32>(vec4<f32>(m14, m20, m25, 0.0), vec4<f32>(m16, m21, m27, 0.0), vec4<f32>(m18, m23, m28, 0.0));
+}
+
+// `v x ~v` for a unit `Rotor` v and `Direction` x (`v >> x`).
+fn unit_rotor_sandwich_direction(v: Rotor, x: Direction) -> Point {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Point(vec4<f32>(t31, t35, t39, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Rotor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_rotor_matrix_direction(v: Rotor) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f32>(vec4<f32>(m14, m20, m25, 0.0), vec4<f32>(m16, m21, m27, 0.0), vec4<f32>(m18, m23, m28, 0.0));
 }
 
 // `v x ~v` for `Rotor` v and `Pseudoscalar` x (`v >> x`).
@@ -6055,6 +6431,36 @@ fn unit_translator_matrix_point(v: Translator) -> mat4x4<f32> {
     let m8 = m3 * 2.0;
     let m9 = -m8;
     return mat4x4<f32>(vec4<f32>(m0, 0.0, 0.0, 0.0), vec4<f32>(0.0, m0, 0.0, 0.0), vec4<f32>(0.0, 0.0, m0, 0.0), vec4<f32>(m5, m7, m9, m0));
+}
+
+// `v x ~v` for `Translator` v and `Direction` x (`v >> x`).
+fn translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    return Point(vec4<f32>(t1, t2, t3, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Translator` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn translator_matrix_direction(v: Translator) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    return mat3x4<f32>(vec4<f32>(m0, 0.0, 0.0, 0.0), vec4<f32>(0.0, m0, 0.0, 0.0), vec4<f32>(0.0, 0.0, m0, 0.0));
+}
+
+// `v x ~v` for a unit `Translator` v and `Direction` x (`v >> x`).
+fn unit_translator_sandwich_direction(v: Translator, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = x.c0.x * t0;
+    let t2 = x.c0.y * t0;
+    let t3 = x.c0.z * t0;
+    return Point(vec4<f32>(t1, t2, t3, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Translator` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_translator_matrix_direction(v: Translator) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    return mat3x4<f32>(vec4<f32>(m0, 0.0, 0.0, 0.0), vec4<f32>(0.0, m0, 0.0, 0.0), vec4<f32>(0.0, 0.0, m0, 0.0));
 }
 
 // `v x ~v` for `Translator` v and `Pseudoscalar` x (`v >> x`).
@@ -6944,6 +7350,145 @@ fn unit_motor_matrix_point(v: Motor) -> mat4x4<f32> {
     let m52 = m51 * 2.0;
     let m53 = m24 + m25;
     return mat4x4<f32>(vec4<f32>(m26, m36, m45, 0.0), vec4<f32>(m28, m37, m47, 0.0), vec4<f32>(m30, m39, m48, 0.0), vec4<f32>(m34, m43, m52, m53));
+}
+
+// `v x ~v` for `Motor` v and `Direction` x (`v >> x`).
+fn motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c0.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c0.w;
+    let t9 = v.c0.z * v.c0.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t0 + t1;
+    let t13 = t2 + t3;
+    let t14 = t12 - t13;
+    let t15 = t6 + t7;
+    let t16 = t5 - t8;
+    let t17 = t6 - t7;
+    let t18 = t10 + t11;
+    let t19 = t4 + t9;
+    let t20 = t5 + t8;
+    let t21 = t4 - t9;
+    let t22 = t10 - t11;
+    let t24 = x.c0.y * t15;
+    let t28 = x.c0.z * t19;
+    let t29 = x.c0.x * t20;
+    let t32 = fma(-x.c0.z, t16, t24);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t14, t33);
+    let t35 = fma(-x.c0.x, t17, t28);
+    let t36 = t35 * 2.0;
+    let t37 = fma(x.c0.y, t18, t36);
+    let t38 = fma(-x.c0.y, t21, t29);
+    let t39 = t38 * 2.0;
+    let t40 = fma(x.c0.z, t22, t39);
+    return Point(vec4<f32>(t34, t37, t40, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Motor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn motor_matrix_direction(v: Motor) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f32>(vec4<f32>(m14, m20, m25, 0.0), vec4<f32>(m16, m21, m27, 0.0), vec4<f32>(m18, m23, m28, 0.0));
+}
+
+// `v x ~v` for a unit `Motor` v and `Direction` x (`v >> x`).
+fn unit_motor_sandwich_direction(v: Motor, x: Direction) -> Point {
+    let t2 = v.c0.w * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t2);
+    let t4 = fma(-v.c0.z, x.c0.z, t3);
+    let t6 = v.c0.y * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t6);
+    let t9 = fma(-v.c0.w, x.c0.x, t8);
+    let t12 = v.c0.z * x.c0.x;
+    let t13 = fma(v.c0.x, x.c0.z, t12);
+    let t14 = fma(-v.c0.y, x.c0.y, t13);
+    let t16 = v.c0.w * t9;
+    let t17 = v.c0.y * t14;
+    let t20 = v.c0.z * t4;
+    let t21 = fma(-v.c0.z, t14, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c0.w * v.c0.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = fma(-v.c0.w, t4, t17);
+    let t34 = x.c0.y * t29;
+    let t35 = fma(t32, 2.0, t34);
+    let t36 = fma(-v.c0.y, t9, t20);
+    let t38 = x.c0.z * t29;
+    let t39 = fma(t36, 2.0, t38);
+    return Point(vec4<f32>(t31, t35, t39, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Motor` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_motor_matrix_direction(v: Motor) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c0.w * v.c0.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c0.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c0.w;
+    let m9 = v.c0.z * v.c0.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m0 + m1;
+    let m13 = m2 + m3;
+    let m14 = m12 - m13;
+    let m15 = m6 + m7;
+    let m16 = m15 * 2.0;
+    let m17 = m8 - m5;
+    let m18 = m17 * 2.0;
+    let m19 = m7 - m6;
+    let m20 = m19 * 2.0;
+    let m21 = m10 + m11;
+    let m22 = m4 + m9;
+    let m23 = m22 * 2.0;
+    let m24 = m5 + m8;
+    let m25 = m24 * 2.0;
+    let m26 = m9 - m4;
+    let m27 = m26 * 2.0;
+    let m28 = m10 - m11;
+    return mat3x4<f32>(vec4<f32>(m14, m20, m25, 0.0), vec4<f32>(m16, m21, m27, 0.0), vec4<f32>(m18, m23, m28, 0.0));
 }
 
 // `v x ~v` for `Motor` v and `Pseudoscalar` x (`v >> x`).
@@ -8514,6 +9059,153 @@ fn unit_flector_matrix_point(v: Flector) -> mat4x4<f32> {
     let m55 = m54 * 2.0;
     let m56 = m49 + m50;
     return mat4x4<f32>(vec4<f32>(m24, m36, m45, 0.0), vec4<f32>(m26, m37, m48, 0.0), vec4<f32>(m29, m39, m51, 0.0), vec4<f32>(m33, m43, m55, m56));
+}
+
+// `v x ~v` for `Flector` v and `Direction` x (`v >> x`).
+fn flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+    let t0 = v.c0.x * v.c0.x;
+    let t1 = v.c0.y * v.c0.y;
+    let t2 = v.c0.z * v.c0.z;
+    let t3 = v.c1.w * v.c1.w;
+    let t4 = v.c0.x * v.c0.y;
+    let t5 = v.c0.x * v.c0.z;
+    let t6 = v.c0.x * v.c1.w;
+    let t7 = v.c0.y * v.c0.z;
+    let t8 = v.c0.y * v.c1.w;
+    let t9 = v.c0.z * v.c1.w;
+    let t10 = t0 - t1;
+    let t11 = t2 - t3;
+    let t12 = t10 - t11;
+    let t13 = t4 - t9;
+    let t14 = t5 + t8;
+    let t15 = t4 + t9;
+    let t16 = t10 + t11;
+    let t17 = t6 - t7;
+    let t18 = t5 - t8;
+    let t19 = t6 + t7;
+    let t20 = t0 + t1;
+    let t21 = t2 + t3;
+    let t22 = t20 - t21;
+    let t25 = x.c0.z * t14;
+    let t28 = x.c0.z * t17;
+    let t30 = x.c0.y * t19;
+    let t31 = x.c0.z * t22;
+    let t32 = fma(x.c0.y, t13, t25);
+    let t33 = t32 * 2.0;
+    let t34 = fma(x.c0.x, t12, t33);
+    let t35 = -t34;
+    let t36 = fma(-x.c0.x, t15, t28);
+    let t37 = t36 * 2.0;
+    let t38 = fma(x.c0.y, t16, t37);
+    let t39 = fma(x.c0.x, t18, t30);
+    let t41 = fma(-t39, 2.0, t31);
+    return Point(vec4<f32>(t35, t38, t41, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for `Flector` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn flector_matrix_direction(v: Flector) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c1.w * v.c1.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c1.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c1.w;
+    let m9 = v.c0.z * v.c1.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m11 - m10;
+    let m13 = m9 - m4;
+    let m14 = m13 * 2.0;
+    let m15 = m5 + m8;
+    let m16 = m15 * 2.0;
+    let m17 = -m16;
+    let m18 = m4 + m9;
+    let m19 = m18 * 2.0;
+    let m20 = -m19;
+    let m21 = m10 + m11;
+    let m22 = m6 - m7;
+    let m23 = m22 * 2.0;
+    let m24 = m8 - m5;
+    let m25 = m24 * 2.0;
+    let m26 = m6 + m7;
+    let m27 = m26 * 2.0;
+    let m28 = -m27;
+    let m29 = m0 + m1;
+    let m30 = m2 + m3;
+    let m31 = m29 - m30;
+    return mat3x4<f32>(vec4<f32>(m12, m20, m25, 0.0), vec4<f32>(m14, m21, m28, 0.0), vec4<f32>(m17, m23, m31, 0.0));
+}
+
+// `v x ~v` for a unit `Flector` v and `Direction` x (`v >> x`).
+fn unit_flector_sandwich_direction(v: Flector, x: Direction) -> Point {
+    let t1 = v.c0.y * x.c0.y;
+    let t3 = fma(v.c0.x, x.c0.x, t1);
+    let t4 = fma(v.c0.z, x.c0.z, t3);
+    let t7 = v.c1.w * x.c0.z;
+    let t8 = fma(v.c0.x, x.c0.y, t7);
+    let t9 = fma(-v.c0.y, x.c0.x, t8);
+    let t10 = v.c0.x * x.c0.z;
+    let t13 = fma(-v.c0.z, x.c0.x, t10);
+    let t14 = fma(-v.c1.w, x.c0.y, t13);
+    let t16 = v.c0.z * t14;
+    let t18 = v.c1.w * t14;
+    let t20 = v.c1.w * t9;
+    let t21 = fma(v.c0.y, t9, t16);
+    let t24 = v.c0.y * v.c0.y;
+    let t26 = v.c1.w * v.c1.w;
+    let t27 = fma(v.c0.x, v.c0.x, t24);
+    let t28 = fma(v.c0.z, v.c0.z, t26);
+    let t29 = t27 + t28;
+    let t30 = x.c0.x * t29;
+    let t31 = fma(t21, 2.0, t30);
+    let t32 = -t31;
+    let t33 = fma(-v.c0.y, t4, t18);
+    let t35 = x.c0.y * t29;
+    let t36 = fma(t33, 2.0, t35);
+    let t37 = fma(v.c0.z, t4, t20);
+    let t39 = x.c0.z * t29;
+    let t40 = fma(-t37, 2.0, t39);
+    return Point(vec4<f32>(t32, t36, t40, 0.0));
+}
+
+// The matrix of `x -> v x ~v` on `Direction` for a unit `Flector` v (`v >> Direction::slot()`); apply it as `m * x`.
+fn unit_flector_matrix_direction(v: Flector) -> mat3x4<f32> {
+    let m0 = v.c0.x * v.c0.x;
+    let m1 = v.c0.y * v.c0.y;
+    let m2 = v.c0.z * v.c0.z;
+    let m3 = v.c1.w * v.c1.w;
+    let m4 = v.c0.x * v.c0.y;
+    let m5 = v.c0.x * v.c0.z;
+    let m6 = v.c0.x * v.c1.w;
+    let m7 = v.c0.y * v.c0.z;
+    let m8 = v.c0.y * v.c1.w;
+    let m9 = v.c0.z * v.c1.w;
+    let m10 = m0 - m1;
+    let m11 = m2 - m3;
+    let m12 = m11 - m10;
+    let m13 = m9 - m4;
+    let m14 = m13 * 2.0;
+    let m15 = m5 + m8;
+    let m16 = m15 * 2.0;
+    let m17 = -m16;
+    let m18 = m4 + m9;
+    let m19 = m18 * 2.0;
+    let m20 = -m19;
+    let m21 = m10 + m11;
+    let m22 = m6 - m7;
+    let m23 = m22 * 2.0;
+    let m24 = m8 - m5;
+    let m25 = m24 * 2.0;
+    let m26 = m6 + m7;
+    let m27 = m26 * 2.0;
+    let m28 = -m27;
+    let m29 = m0 + m1;
+    let m30 = m2 + m3;
+    let m31 = m29 - m30;
+    return mat3x4<f32>(vec4<f32>(m12, m20, m25, 0.0), vec4<f32>(m14, m21, m28, 0.0), vec4<f32>(m17, m23, m31, 0.0));
 }
 
 // `v x ~v` for `Flector` v and `Pseudoscalar` x (`v >> x`).

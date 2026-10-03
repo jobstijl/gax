@@ -1867,6 +1867,391 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Flector {
     }
 }
 
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for Flector<(), T> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = v[1] * v[1];
+        let t2 = v[2] * v[2];
+        let t3 = v[7] * v[7];
+        let t4 = v[0] * v[1];
+        let t5 = v[0] * v[2];
+        let t6 = v[0] * v[7];
+        let t7 = v[1] * v[2];
+        let t8 = v[1] * v[7];
+        let t9 = v[2] * v[7];
+        let t10 = t0 - t1;
+        let t11 = t2 - t3;
+        let t12 = t10 - t11;
+        let t13 = t4 - t9;
+        let t14 = t5 + t8;
+        let t15 = t4 + t9;
+        let t16 = t10 + t11;
+        let t17 = t6 - t7;
+        let t18 = t5 - t8;
+        let t19 = t6 + t7;
+        let t20 = t0 + t1;
+        let t21 = t2 + t3;
+        let t22 = t20 - t21;
+        let t25 = xv[2] * t14;
+        let t28 = xv[2] * t17;
+        let t30 = xv[1] * t19;
+        let t31 = xv[2] * t22;
+        let t32 = xv[1].mul_add(t13, t25);
+        let t33 = t32 * T::from_i64(2);
+        let t34 = xv[0].mul_add(t12, t33);
+        let t35 = -t34;
+        let t36 = (-xv[0]).mul_add(t15, t28);
+        let t37 = t36 * T::from_i64(2);
+        let t38 = xv[1].mul_add(t16, t37);
+        let t39 = xv[0].mul_add(t18, t30);
+        let t41 = (-t39).mul_add(T::from_i64(2), t31);
+            return Point { c: gx::slots::from_values::<S, T, 4>([t35, t38, t41, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Direction<S, T>> for Flector<(), T> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T>) -> Point<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Direction> for Flector<(), T> {
+    type Output = gx::Prepared<Flector, Direction, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Flector, Direction, T, 9> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        gx::Prepared::from_entries([m12, m14, m17, m20, m21, m23, m25, m28, m31])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Prepared<Flector, Direction, T, 9> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Flector, Direction, T, 9>> for Point<(Direction,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Flector, Direction, T, 9>) -> Self {
+        let m = p.m;
+        Point { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Direction, gx::batch::Plain> for Flector {
+    type Y = Point;
+    type Versor<T: gx::Coef> = Flector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Flector, Direction, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Flector<(), T>) -> Flector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Flector<(), T>) -> gx::Prepared<Flector, Direction, T, 9> {
+        gx::Prepare::<Direction>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Flector, Direction, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Flector, Direction, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Flector, Direction, T, 9>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Flector<(), T>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Unit<Flector<(), T>> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t1 = v[1] * xv[1];
+        let t3 = v[0].mul_add(xv[0], t1);
+        let t4 = v[2].mul_add(xv[2], t3);
+        let t7 = v[7] * xv[2];
+        let t8 = v[0].mul_add(xv[1], t7);
+        let t9 = (-v[1]).mul_add(xv[0], t8);
+        let t10 = v[0] * xv[2];
+        let t13 = (-v[2]).mul_add(xv[0], t10);
+        let t14 = (-v[7]).mul_add(xv[1], t13);
+        let t16 = v[2] * t14;
+        let t18 = v[7] * t14;
+        let t20 = v[7] * t9;
+        let t21 = v[1].mul_add(t9, t16);
+        let t24 = v[1] * v[1];
+        let t26 = v[7] * v[7];
+        let t27 = v[0].mul_add(v[0], t24);
+        let t28 = v[2].mul_add(v[2], t26);
+        let t29 = t27 + t28;
+        let t30 = xv[0] * t29;
+        let t31 = t21.mul_add(T::from_i64(2), t30);
+        let t32 = -t31;
+        let t33 = (-v[1]).mul_add(t4, t18);
+        let t35 = xv[1] * t29;
+        let t36 = t33.mul_add(T::from_i64(2), t35);
+        let t37 = v[2].mul_add(t4, t20);
+        let t39 = xv[2] * t29;
+        let t40 = (-t37).mul_add(T::from_i64(2), t39);
+            return Point { c: gx::slots::from_values::<S, T, 4>([t32, t36, t40, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m12) + x[1].scale(m14) + x[2].scale(m17)).0, (x[0].scale(m20) + x[1].scale(m21) + x[2].scale(m23)).0, (x[0].scale(m25) + x[1].scale(m28) + x[2].scale(m31)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Direction<S, T>> for gx::Unit<Flector<(), T>> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T>) -> Point<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Direction> for gx::Unit<Flector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Flector>, Direction, T, 9>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Flector>, Direction, T, 9> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[1] * v[1];
+        let u5 = v[1] * v[5];
+        let u7 = v[3] * v[7];
+        let u8 = v[0].mul_add(v[0], u1);
+        let u9 = v[2].mul_add(v[2], u8);
+        let u10 = v[7].mul_add(v[7], -T::from_i64(1));
+        let u11 = u9 + u10;
+        let u12 = v[0].mul_add(v[4], u5);
+        let u13 = v[2].mul_add(v[6], u7);
+        let u14 = u12 + u13;
+        let u15 = u14 * T::from_i64(2);
+        let u16 = -u15;
+            T::check_unit(&[u11, u16]);
+        }
+        let m0 = v[0] * v[0];
+        let m1 = v[1] * v[1];
+        let m2 = v[2] * v[2];
+        let m3 = v[7] * v[7];
+        let m4 = v[0] * v[1];
+        let m5 = v[0] * v[2];
+        let m6 = v[0] * v[7];
+        let m7 = v[1] * v[2];
+        let m8 = v[1] * v[7];
+        let m9 = v[2] * v[7];
+        let m10 = m0 - m1;
+        let m11 = m2 - m3;
+        let m12 = m11 - m10;
+        let m13 = m9 - m4;
+        let m14 = m13 * T::from_i64(2);
+        let m15 = m5 + m8;
+        let m16 = m15 * T::from_i64(2);
+        let m17 = -m16;
+        let m18 = m4 + m9;
+        let m19 = m18 * T::from_i64(2);
+        let m20 = -m19;
+        let m21 = m10 + m11;
+        let m22 = m6 - m7;
+        let m23 = m22 * T::from_i64(2);
+        let m24 = m8 - m5;
+        let m25 = m24 * T::from_i64(2);
+        let m26 = m6 + m7;
+        let m27 = m26 * T::from_i64(2);
+        let m28 = -m27;
+        let m29 = m0 + m1;
+        let m30 = m2 + m3;
+        let m31 = m29 - m30;
+        gx::Prepared::from_entries([m12, m14, m17, m20, m21, m23, m25, m28, m31])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Prepared<gx::Unit<Flector>, Direction, T, 9> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m[0]) + x[1].scale(m[1]) + x[2].scale(m[2])).0, (x[0].scale(m[3]) + x[1].scale(m[4]) + x[2].scale(m[5])).0, (x[0].scale(m[6]) + x[1].scale(m[7]) + x[2].scale(m[8])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Flector>, Direction, T, 9>> for Point<(Direction,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Flector>, Direction, T, 9>) -> Self {
+        let m = p.m;
+        Point { c: [[m[0], m[1], m[2]], [m[3], m[4], m[5]], [m[6], m[7], m[8]], [T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Direction, gx::batch::Certified> for Flector {
+    type Y = Point;
+    type Versor<T: gx::Coef> = gx::Unit<Flector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Flector>, Direction, T, 9>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Flector<(), T>) -> gx::Unit<Flector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> Flector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Flector<(), T>>) -> gx::Prepared<gx::Unit<Flector>, Direction, T, 9> {
+        gx::Prepare::<Direction>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction, T, 9>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Flector>, Direction, W, 9> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1]), f(m[2]), f(m[3]), f(m[4]), f(m[5]), f(m[6]), f(m[7]), f(m[8])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Flector>, Direction, T, 9>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Flector<(), T>>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Flector<(), T> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]

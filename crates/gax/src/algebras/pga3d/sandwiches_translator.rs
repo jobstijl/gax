@@ -890,6 +890,190 @@ impl gx::batch::SandwichKernel<Point, gx::batch::Certified> for Translator {
     }
 }
 
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for Translator<(), T> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = xv[0] * t0;
+        let t2 = xv[1] * t0;
+        let t3 = xv[2] * t0;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t1, t2, t3, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m0)).0, (x[1].scale(m0)).0, (x[2].scale(m0)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Direction<S, T>> for Translator<(), T> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T>) -> Point<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Direction> for Translator<(), T> {
+    type Output = gx::Prepared<Translator, Direction, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Translator, Direction, T, 1> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        gx::Prepared::from_entries([m0])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Prepared<Translator, Direction, T, 1> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[2].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Translator, Direction, T, 1>> for Point<(Direction,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Translator, Direction, T, 1>) -> Self {
+        let m = p.m;
+        Point { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Direction, gx::batch::Plain> for Translator {
+    type Y = Point;
+    type Versor<T: gx::Coef> = Translator<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Translator, Direction, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Translator<(), T>) -> Translator<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Translator<(), T>) -> Translator<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Translator<(), T>) -> gx::Prepared<Translator, Direction, T, 1> {
+        gx::Prepare::<Direction>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Translator, Direction, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Translator, Direction, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Translator, Direction, T, 1>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Translator<(), T>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Unit<Translator<(), T>> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 3>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t1 = xv[0] * t0;
+        let t2 = xv[1] * t0;
+        let t3 = xv[2] * t0;
+            return Point { c: gx::slots::from_values::<S, T, 4>([t1, t2, t3, T::from_i64(0)]) };
+        }
+        let m0 = v[0] * v[0];
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m0)).0, (x[1].scale(m0)).0, (x[2].scale(m0)).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Direction<S, T>> for gx::Unit<Translator<(), T>> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Direction<S, T>) -> Point<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Direction> for gx::Unit<Translator<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Translator>, Direction, T, 1>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Translator>, Direction, T, 1> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u1 = v[0].mul_add(v[0], -T::from_i64(1));
+            T::check_unit(&[u1]);
+        }
+        let m0 = v[0] * v[0];
+        gx::Prepared::from_entries([m0])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Direction<S, T>> for gx::Prepared<gx::Unit<Translator>, Direction, T, 1> {
+    type Output = Point<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Direction<S, T>) -> Point<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Point { c: [(x[0].scale(m[0])).0, (x[1].scale(m[0])).0, (x[2].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0)] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Translator>, Direction, T, 1>> for Point<(Direction,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Translator>, Direction, T, 1>) -> Self {
+        let m = p.m;
+        Point { c: [[m[0], T::zero(), T::zero()], [T::zero(), m[0], T::zero()], [T::zero(), T::zero(), m[0]], [T::zero(), T::zero(), T::zero()]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Direction, gx::batch::Certified> for Translator {
+    type Y = Point;
+    type Versor<T: gx::Coef> = gx::Unit<Translator<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Translator>, Direction, T, 1>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Translator<(), T>) -> gx::Unit<Translator<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Translator<(), T>>) -> Translator<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Translator<(), T>>) -> gx::Prepared<gx::Unit<Translator>, Direction, T, 1> {
+        gx::Prepare::<Direction>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Translator>, Direction, T, 1>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Translator>, Direction, W, 1> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Translator>, Direction, T, 1>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Translator<(), T>>, x: Direction<(), T>) -> Point<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Pseudoscalar<S, T>> for Translator<(), T> {
     type Output = Pseudoscalar<S, T>;
     #[inline(always)]

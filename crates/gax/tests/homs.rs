@@ -428,270 +428,360 @@ fn vga3d_to_pga3d() {
     }
     #[inline(never)]
     fn p4(rng: &mut Rng) {
+        let (a, b): (vga3d::Scalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Scalar * Paravector");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Scalar * Odd");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Vector * Scalar");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Vector * Vector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Vector * Bivector");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Vector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
+        let (a, b): (vga3d::Vector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Vector * Paravector");
+    }
+    #[inline(never)]
+    fn p13(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Vector * Rotor");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p14(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Vector * Odd");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Vector * Multivector");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p16(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Bivector * Scalar");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Bivector * Vector");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Bivector * Bivector");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Bivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
+        let (a, b): (vga3d::Bivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Bivector * Paravector");
+    }
+    #[inline(never)]
+    fn p21(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Bivector * Rotor");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Bivector * Odd");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Bivector * Multivector");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p24(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Point::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Pseudoscalar * Vector");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Pseudoscalar * Bivector");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p27(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Scalar::from(a * b)), &rhs), "Pseudoscalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
+        let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Paravector");
+    }
+    #[inline(never)]
+    fn p29(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Pseudoscalar * Odd");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p31(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p32(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Scalar::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Scalar");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Plane::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Vector");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Bivector");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Point::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Paravector");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Rotor::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Rotor");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Flector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Odd");
+    }
+    #[inline(never)]
+    fn p39(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Paravector * Multivector");
+    }
+    #[inline(never)]
+    fn p40(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Vector");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Rotor * Bivector");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
+        let (a, b): (vga3d::Rotor<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Rotor * Paravector");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p46(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Odd");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p47(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p48(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Odd * Scalar");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p49(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Odd * Vector");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p50(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Odd * Bivector");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p51(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Odd * Pseudoscalar");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p52(rng: &mut Rng) {
+        let (a, b): (vga3d::Odd<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Odd * Paravector");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Odd * Rotor");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Odd * Odd");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Odd * Multivector");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Vector");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Bivector");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p60(rng: &mut Rng) {
+        let (a, b): (vga3d::Multivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Paravector");
+    }
+    #[inline(never)]
+    fn p61(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Odd");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -747,6 +837,21 @@ fn vga3d_to_pga3d() {
         p46(&mut rng);
         p47(&mut rng);
         p48(&mut rng);
+        p49(&mut rng);
+        p50(&mut rng);
+        p51(&mut rng);
+        p52(&mut rng);
+        p53(&mut rng);
+        p54(&mut rng);
+        p55(&mut rng);
+        p56(&mut rng);
+        p57(&mut rng);
+        p58(&mut rng);
+        p59(&mut rng);
+        p60(&mut rng);
+        p61(&mut rng);
+        p62(&mut rng);
+        p63(&mut rng);
     }
 }
 
@@ -775,462 +880,558 @@ fn pga2d_to_pga3d() {
     }
     #[inline(never)]
     fn p3(rng: &mut Rng) {
+        let (a, b): (pga2d::Scalar<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Scalar * Direction");
+    }
+    #[inline(never)]
+    fn p4(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Point::from(a * b)), &rhs), "Scalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p4(rng: &mut Rng) {
+    fn p5(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Translator::from(a * b)), &rhs), "Scalar * Translator");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Scalar * Motor");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Scalar * Flector");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Scalar::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Line * Scalar");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Line * Line");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Line * Point");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p13(rng: &mut Rng) {
+        let (a, b): (pga2d::Line<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Line * Direction");
+    }
+    #[inline(never)]
+    fn p14(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Line * Pseudoscalar");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Line * Rotor");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p16(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Line * Translator");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Line * Motor");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Line * Flector");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Plane::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Line * Multivector");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Point * Scalar");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p21(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Point * Line");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Translator::from(a * b)), &rhs), "Point * Point");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
+        let (a, b): (pga2d::Point<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Point * Direction");
+    }
+    #[inline(never)]
+    fn p24(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Point * Pseudoscalar");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Point * Rotor");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Point * Translator");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p27(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Point * Motor");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Point * Flector");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p29(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Point * Multivector");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Scalar::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Direction * Scalar");
+    }
+    #[inline(never)]
+    fn p31(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Plane::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Direction * Line");
+    }
+    #[inline(never)]
+    fn p32(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Direction * Point");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Rotor::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Direction * Rotor");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Translator::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Direction * Translator");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Motor::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Direction * Motor");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Flector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Direction * Flector");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Line::from(a) * pga3d::Multivector::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Direction * Multivector");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Point::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p39(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Pseudoscalar * Line");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p40(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Plane::from(a * b)), &rhs), "Pseudoscalar * Point");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Point::from(a * b)), &rhs), "Pseudoscalar * Translator");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Pseudoscalar * Motor");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Pseudoscalar * Flector");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p45(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Point::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p46(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p47(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Line");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p48(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Rotor * Point");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p49(rng: &mut Rng) {
+        let (a, b): (pga2d::Rotor<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Rotor * Direction");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p51(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Rotor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p52(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Rotor * Translator");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p53(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Rotor * Motor");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Rotor * Flector");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Rotor::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Translator::from(a * b)), &rhs), "Translator * Scalar");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Translator * Line");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Translator * Point");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
+        let (a, b): (pga2d::Translator<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Translator * Direction");
+    }
+    #[inline(never)]
+    fn p60(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Point::from(a * b)), &rhs), "Translator * Pseudoscalar");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p61(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Translator * Rotor");
     }
     #[inline(never)]
-    fn p49(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Translator::from(a * b)), &rhs), "Translator * Translator");
     }
     #[inline(never)]
-    fn p50(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Translator * Motor");
     }
     #[inline(never)]
-    fn p51(rng: &mut Rng) {
+    fn p64(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Translator * Flector");
     }
     #[inline(never)]
-    fn p52(rng: &mut Rng) {
+    fn p65(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Translator::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Translator * Multivector");
     }
     #[inline(never)]
-    fn p53(rng: &mut Rng) {
+    fn p66(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Motor * Scalar");
     }
     #[inline(never)]
-    fn p54(rng: &mut Rng) {
+    fn p67(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Motor * Line");
     }
     #[inline(never)]
-    fn p55(rng: &mut Rng) {
+    fn p68(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Motor * Point");
     }
     #[inline(never)]
-    fn p56(rng: &mut Rng) {
+    fn p69(rng: &mut Rng) {
+        let (a, b): (pga2d::Motor<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Motor * Direction");
+    }
+    #[inline(never)]
+    fn p70(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Motor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p57(rng: &mut Rng) {
+    fn p71(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Motor * Rotor");
     }
     #[inline(never)]
-    fn p58(rng: &mut Rng) {
+    fn p72(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Motor * Translator");
     }
     #[inline(never)]
-    fn p59(rng: &mut Rng) {
+    fn p73(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Motor * Motor");
     }
     #[inline(never)]
-    fn p60(rng: &mut Rng) {
+    fn p74(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Motor * Flector");
     }
     #[inline(never)]
-    fn p61(rng: &mut Rng) {
+    fn p75(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Motor::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Motor * Multivector");
     }
     #[inline(never)]
-    fn p62(rng: &mut Rng) {
+    fn p76(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Scalar");
     }
     #[inline(never)]
-    fn p63(rng: &mut Rng) {
+    fn p77(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Flector * Line");
     }
     #[inline(never)]
-    fn p64(rng: &mut Rng) {
+    fn p78(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Point");
     }
     #[inline(never)]
-    fn p65(rng: &mut Rng) {
+    fn p79(rng: &mut Rng) {
+        let (a, b): (pga2d::Flector<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Direction");
+    }
+    #[inline(never)]
+    fn p80(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Line::from(a * b)), &rhs), "Flector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p66(rng: &mut Rng) {
+    fn p81(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Rotor");
     }
     #[inline(never)]
-    fn p67(rng: &mut Rng) {
+    fn p82(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Translator");
     }
     #[inline(never)]
-    fn p68(rng: &mut Rng) {
+    fn p83(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Flector::from(a * b)), &rhs), "Flector * Motor");
     }
     #[inline(never)]
-    fn p69(rng: &mut Rng) {
+    fn p84(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Motor::from(a * b)), &rhs), "Flector * Flector");
     }
     #[inline(never)]
-    fn p70(rng: &mut Rng) {
+    fn p85(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Flector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Flector * Multivector");
     }
     #[inline(never)]
-    fn p71(rng: &mut Rng) {
+    fn p86(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Scalar::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p72(rng: &mut Rng) {
+    fn p87(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Plane::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Line");
     }
     #[inline(never)]
-    fn p73(rng: &mut Rng) {
+    fn p88(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Line::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Point");
     }
     #[inline(never)]
-    fn p74(rng: &mut Rng) {
+    fn p89(rng: &mut Rng) {
+        let (a, b): (pga2d::Multivector<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Line::from(b));
+        assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Direction");
+    }
+    #[inline(never)]
+    fn p90(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Point::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p75(rng: &mut Rng) {
+    fn p91(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Rotor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p76(rng: &mut Rng) {
+    fn p92(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Translator::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Translator");
     }
     #[inline(never)]
-    fn p77(rng: &mut Rng) {
+    fn p93(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Motor::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Motor");
     }
     #[inline(never)]
-    fn p78(rng: &mut Rng) {
+    fn p94(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Flector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Flector");
     }
     #[inline(never)]
-    fn p79(rng: &mut Rng) {
+    fn p95(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -1317,6 +1518,22 @@ fn pga2d_to_pga3d() {
         p77(&mut rng);
         p78(&mut rng);
         p79(&mut rng);
+        p80(&mut rng);
+        p81(&mut rng);
+        p82(&mut rng);
+        p83(&mut rng);
+        p84(&mut rng);
+        p85(&mut rng);
+        p86(&mut rng);
+        p87(&mut rng);
+        p88(&mut rng);
+        p89(&mut rng);
+        p90(&mut rng);
+        p91(&mut rng);
+        p92(&mut rng);
+        p93(&mut rng);
+        p94(&mut rng);
+        p95(&mut rng);
     }
 }
 
@@ -1351,570 +1568,678 @@ fn pga3d_to_stap() {
     }
     #[inline(never)]
     fn p4(rng: &mut Rng) {
+        let (a, b): (pga3d::Scalar<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Scalar * Direction");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Quadvector::from(a * b)), &rhs), "Scalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Scalar * Translator");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Scalar * Motor");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Scalar * Flector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Scalar::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Vector::from(a * b)), &rhs), "Plane * Scalar");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Plane * Plane");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p13(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Plane * Line");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p14(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Plane * Point");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
+        let (a, b): (pga3d::Plane<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Plane * Direction");
+    }
+    #[inline(never)]
+    fn p16(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Plane * Pseudoscalar");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Plane * Rotor");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Plane * Translator");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Plane * Motor");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Plane * Flector");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p21(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Vector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Plane * Multivector");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Bivector::from(a * b)), &rhs), "Line * Scalar");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Line * Plane");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p24(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Line * Line");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Line * Point");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
+        let (a, b): (pga3d::Line<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Line * Direction");
+    }
+    #[inline(never)]
+    fn p27(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Bivector::from(a * b)), &rhs), "Line * Pseudoscalar");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Line * Rotor");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p29(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Line * Translator");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Line * Motor");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p31(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Line * Flector");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p32(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Bivector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Line * Multivector");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p33(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Point * Scalar");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p34(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Point * Plane");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p35(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Point * Line");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p36(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Point * Point");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p37(rng: &mut Rng) {
+        let (a, b): (pga3d::Point<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Bivector::from(a * b)), &rhs), "Point * Direction");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Vector::from(a * b)), &rhs), "Point * Pseudoscalar");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p39(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Point * Rotor");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p40(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Point * Translator");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Point * Motor");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Point * Flector");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Point * Multivector");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Scalar::from(b));
+        assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Direction * Scalar");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Vector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Direction * Plane");
+    }
+    #[inline(never)]
+    fn p46(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Bivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Direction * Line");
+    }
+    #[inline(never)]
+    fn p47(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Bivector::from(a * b)), &rhs), "Direction * Point");
+    }
+    #[inline(never)]
+    fn p48(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Direction * Rotor");
+    }
+    #[inline(never)]
+    fn p49(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
+        assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Direction * Translator");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Motor::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Direction * Motor");
+    }
+    #[inline(never)]
+    fn p51(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Odd::from(b));
+        assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Direction * Flector");
+    }
+    #[inline(never)]
+    fn p52(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Trivector::from(a) * stap::Multivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Direction * Multivector");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Pseudoscalar * Plane");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Bivector::from(a * b)), &rhs), "Pseudoscalar * Line");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Vector::from(a * b)), &rhs), "Pseudoscalar * Point");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Translator");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Pseudoscalar * Motor");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p60(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Pseudoscalar * Flector");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p61(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Quadvector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p49(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p50(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Rotor * Plane");
     }
     #[inline(never)]
-    fn p51(rng: &mut Rng) {
+    fn p64(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Line");
     }
     #[inline(never)]
-    fn p52(rng: &mut Rng) {
+    fn p65(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Rotor * Point");
     }
     #[inline(never)]
-    fn p53(rng: &mut Rng) {
+    fn p66(rng: &mut Rng) {
+        let (a, b): (pga3d::Rotor<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Rotor * Direction");
+    }
+    #[inline(never)]
+    fn p67(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p54(rng: &mut Rng) {
+    fn p68(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p55(rng: &mut Rng) {
+    fn p69(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Translator");
     }
     #[inline(never)]
-    fn p56(rng: &mut Rng) {
+    fn p70(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Rotor * Motor");
     }
     #[inline(never)]
-    fn p57(rng: &mut Rng) {
+    fn p71(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Rotor * Flector");
     }
     #[inline(never)]
-    fn p58(rng: &mut Rng) {
+    fn p72(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p59(rng: &mut Rng) {
+    fn p73(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Translator * Scalar");
     }
     #[inline(never)]
-    fn p60(rng: &mut Rng) {
+    fn p74(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Translator * Plane");
     }
     #[inline(never)]
-    fn p61(rng: &mut Rng) {
+    fn p75(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Translator * Line");
     }
     #[inline(never)]
-    fn p62(rng: &mut Rng) {
+    fn p76(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Translator * Point");
     }
     #[inline(never)]
-    fn p63(rng: &mut Rng) {
+    fn p77(rng: &mut Rng) {
+        let (a, b): (pga3d::Translator<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Trivector::from(a * b)), &rhs), "Translator * Direction");
+    }
+    #[inline(never)]
+    fn p78(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Quadvector::from(a * b)), &rhs), "Translator * Pseudoscalar");
     }
     #[inline(never)]
-    fn p64(rng: &mut Rng) {
+    fn p79(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Translator * Rotor");
     }
     #[inline(never)]
-    fn p65(rng: &mut Rng) {
+    fn p80(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Translator * Translator");
     }
     #[inline(never)]
-    fn p66(rng: &mut Rng) {
+    fn p81(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Translator * Motor");
     }
     #[inline(never)]
-    fn p67(rng: &mut Rng) {
+    fn p82(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Translator * Flector");
     }
     #[inline(never)]
-    fn p68(rng: &mut Rng) {
+    fn p83(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Translator * Multivector");
     }
     #[inline(never)]
-    fn p69(rng: &mut Rng) {
+    fn p84(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Scalar");
     }
     #[inline(never)]
-    fn p70(rng: &mut Rng) {
+    fn p85(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Motor * Plane");
     }
     #[inline(never)]
-    fn p71(rng: &mut Rng) {
+    fn p86(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Line");
     }
     #[inline(never)]
-    fn p72(rng: &mut Rng) {
+    fn p87(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Motor * Point");
     }
     #[inline(never)]
-    fn p73(rng: &mut Rng) {
+    fn p88(rng: &mut Rng) {
+        let (a, b): (pga3d::Motor<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Motor * Direction");
+    }
+    #[inline(never)]
+    fn p89(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p74(rng: &mut Rng) {
+    fn p90(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Rotor");
     }
     #[inline(never)]
-    fn p75(rng: &mut Rng) {
+    fn p91(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Translator");
     }
     #[inline(never)]
-    fn p76(rng: &mut Rng) {
+    fn p92(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Motor * Motor");
     }
     #[inline(never)]
-    fn p77(rng: &mut Rng) {
+    fn p93(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Motor * Flector");
     }
     #[inline(never)]
-    fn p78(rng: &mut Rng) {
+    fn p94(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Motor::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Motor * Multivector");
     }
     #[inline(never)]
-    fn p79(rng: &mut Rng) {
+    fn p95(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Scalar");
     }
     #[inline(never)]
-    fn p80(rng: &mut Rng) {
+    fn p96(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Flector * Plane");
     }
     #[inline(never)]
-    fn p81(rng: &mut Rng) {
+    fn p97(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Line");
     }
     #[inline(never)]
-    fn p82(rng: &mut Rng) {
+    fn p98(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Flector * Point");
     }
     #[inline(never)]
-    fn p83(rng: &mut Rng) {
+    fn p99(rng: &mut Rng) {
+        let (a, b): (pga3d::Flector<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Flector * Direction");
+    }
+    #[inline(never)]
+    fn p100(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p84(rng: &mut Rng) {
+    fn p101(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Rotor");
     }
     #[inline(never)]
-    fn p85(rng: &mut Rng) {
+    fn p102(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Translator");
     }
     #[inline(never)]
-    fn p86(rng: &mut Rng) {
+    fn p103(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Odd::from(a * b)), &rhs), "Flector * Motor");
     }
     #[inline(never)]
-    fn p87(rng: &mut Rng) {
+    fn p104(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Motor::from(a * b)), &rhs), "Flector * Flector");
     }
     #[inline(never)]
-    fn p88(rng: &mut Rng) {
+    fn p105(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Odd::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Flector * Multivector");
     }
     #[inline(never)]
-    fn p89(rng: &mut Rng) {
+    fn p106(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Scalar::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p90(rng: &mut Rng) {
+    fn p107(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Vector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Plane");
     }
     #[inline(never)]
-    fn p91(rng: &mut Rng) {
+    fn p108(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Bivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Line");
     }
     #[inline(never)]
-    fn p92(rng: &mut Rng) {
+    fn p109(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Trivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Point");
     }
     #[inline(never)]
-    fn p93(rng: &mut Rng) {
+    fn p110(rng: &mut Rng) {
+        let (a, b): (pga3d::Multivector<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Trivector::from(b));
+        assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Direction");
+    }
+    #[inline(never)]
+    fn p111(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Quadvector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p94(rng: &mut Rng) {
+    fn p112(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p95(rng: &mut Rng) {
+    fn p113(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Translator");
     }
     #[inline(never)]
-    fn p96(rng: &mut Rng) {
+    fn p114(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Motor::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Motor");
     }
     #[inline(never)]
-    fn p97(rng: &mut Rng) {
+    fn p115(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Odd::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Flector");
     }
     #[inline(never)]
-    fn p98(rng: &mut Rng) {
+    fn p116(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -2020,6 +2345,24 @@ fn pga3d_to_stap() {
         p96(&mut rng);
         p97(&mut rng);
         p98(&mut rng);
+        p99(&mut rng);
+        p100(&mut rng);
+        p101(&mut rng);
+        p102(&mut rng);
+        p103(&mut rng);
+        p104(&mut rng);
+        p105(&mut rng);
+        p106(&mut rng);
+        p107(&mut rng);
+        p108(&mut rng);
+        p109(&mut rng);
+        p110(&mut rng);
+        p111(&mut rng);
+        p112(&mut rng);
+        p113(&mut rng);
+        p114(&mut rng);
+        p115(&mut rng);
+        p116(&mut rng);
     }
 }
 
@@ -2239,270 +2582,360 @@ fn vga3d_to_cga3d() {
     }
     #[inline(never)]
     fn p4(rng: &mut Rng) {
+        let (a, b): (vga3d::Scalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Scalar * Paravector");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Scalar * Odd");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Vector * Scalar");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Vector * Vector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Vector * Bivector");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Vector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
+        let (a, b): (vga3d::Vector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Vector * Paravector");
+    }
+    #[inline(never)]
+    fn p13(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Vector * Rotor");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p14(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Vector * Odd");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Vector * Multivector");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p16(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Bivector * Scalar");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Bivector * Vector");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Bivector * Bivector");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Bivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
+        let (a, b): (vga3d::Bivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Bivector * Paravector");
+    }
+    #[inline(never)]
+    fn p21(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Bivector * Rotor");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Bivector * Odd");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Bivector * Multivector");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p24(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Pseudoscalar * Vector");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Pseudoscalar * Bivector");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p27(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Scalar::from(a * b)), &rhs), "Pseudoscalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
+        let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Paravector");
+    }
+    #[inline(never)]
+    fn p29(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Pseudoscalar * Odd");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p31(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p32(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Scalar::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Scalar");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Vector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Vector");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Twist::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Bivector");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Paravector");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Motor::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Rotor");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Odd::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Odd");
+    }
+    #[inline(never)]
+    fn p39(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Paravector * Multivector");
+    }
+    #[inline(never)]
+    fn p40(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Vector");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Bivector");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
+        let (a, b): (vga3d::Rotor<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Rotor * Paravector");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p46(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Odd");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p47(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p48(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Odd * Scalar");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p49(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Odd * Vector");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p50(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Odd * Bivector");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p51(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Odd * Pseudoscalar");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p52(rng: &mut Rng) {
+        let (a, b): (vga3d::Odd<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Odd * Paravector");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Odd * Rotor");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Odd * Odd");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Odd * Multivector");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Vector");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Bivector");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p60(rng: &mut Rng) {
+        let (a, b): (vga3d::Multivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Paravector");
+    }
+    #[inline(never)]
+    fn p61(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Odd");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -2558,6 +2991,21 @@ fn vga3d_to_cga3d() {
         p46(&mut rng);
         p47(&mut rng);
         p48(&mut rng);
+        p49(&mut rng);
+        p50(&mut rng);
+        p51(&mut rng);
+        p52(&mut rng);
+        p53(&mut rng);
+        p54(&mut rng);
+        p55(&mut rng);
+        p56(&mut rng);
+        p57(&mut rng);
+        p58(&mut rng);
+        p59(&mut rng);
+        p60(&mut rng);
+        p61(&mut rng);
+        p62(&mut rng);
+        p63(&mut rng);
     }
 }
 
@@ -2586,462 +3034,558 @@ fn pga2d_to_cga2d() {
     }
     #[inline(never)]
     fn p3(rng: &mut Rng) {
+        let (a, b): (pga2d::Scalar<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Scalar * Direction");
+    }
+    #[inline(never)]
+    fn p4(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Trivector::from(a * b)), &rhs), "Scalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p4(rng: &mut Rng) {
+    fn p5(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Scalar * Translator");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Scalar * Motor");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Scalar * Flector");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (pga2d::Scalar<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Scalar::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Vector::from(a * b)), &rhs), "Line * Scalar");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Line * Line");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Line * Point");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p13(rng: &mut Rng) {
+        let (a, b): (pga2d::Line<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Line * Direction");
+    }
+    #[inline(never)]
+    fn p14(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Line * Pseudoscalar");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Line * Rotor");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p16(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Line * Translator");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Line * Motor");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Line * Flector");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (pga2d::Line<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Vector::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Line * Multivector");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Point * Scalar");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p21(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Point * Line");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Point * Point");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
+        let (a, b): (pga2d::Point<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Point * Direction");
+    }
+    #[inline(never)]
+    fn p24(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Vector::from(a * b)), &rhs), "Point * Pseudoscalar");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Point * Rotor");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Point * Translator");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p27(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Point * Motor");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Point * Flector");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p29(rng: &mut Rng) {
         let (a, b): (pga2d::Point<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Point * Multivector");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Scalar::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Direction * Scalar");
+    }
+    #[inline(never)]
+    fn p31(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Vector::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Direction * Line");
+    }
+    #[inline(never)]
+    fn p32(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Direction * Point");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Direction * Rotor");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Direction * Translator");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Motor::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Direction * Motor");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Odd::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Direction * Flector");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (pga2d::Direction<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Twist::from(a) * cga2d::Multivector::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Direction * Multivector");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Trivector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p39(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Pseudoscalar * Line");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p40(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Vector::from(a * b)), &rhs), "Pseudoscalar * Point");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Trivector::from(a * b)), &rhs), "Pseudoscalar * Translator");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Pseudoscalar * Motor");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Pseudoscalar * Flector");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p45(rng: &mut Rng) {
         let (a, b): (pga2d::Pseudoscalar<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Trivector::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p46(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p47(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Rotor * Line");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p48(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Rotor * Point");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p49(rng: &mut Rng) {
+        let (a, b): (pga2d::Rotor<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Rotor * Direction");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p51(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p52(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Rotor * Translator");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p53(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Rotor * Motor");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Rotor * Flector");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (pga2d::Rotor<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Translator * Scalar");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Translator * Line");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Translator * Point");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
+        let (a, b): (pga2d::Translator<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Translator * Direction");
+    }
+    #[inline(never)]
+    fn p60(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Trivector::from(a * b)), &rhs), "Translator * Pseudoscalar");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p61(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Translator * Rotor");
     }
     #[inline(never)]
-    fn p49(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Translator * Translator");
     }
     #[inline(never)]
-    fn p50(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Translator * Motor");
     }
     #[inline(never)]
-    fn p51(rng: &mut Rng) {
+    fn p64(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Translator * Flector");
     }
     #[inline(never)]
-    fn p52(rng: &mut Rng) {
+    fn p65(rng: &mut Rng) {
         let (a, b): (pga2d::Translator<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Translator * Multivector");
     }
     #[inline(never)]
-    fn p53(rng: &mut Rng) {
+    fn p66(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Motor * Scalar");
     }
     #[inline(never)]
-    fn p54(rng: &mut Rng) {
+    fn p67(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Motor * Line");
     }
     #[inline(never)]
-    fn p55(rng: &mut Rng) {
+    fn p68(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Motor * Point");
     }
     #[inline(never)]
-    fn p56(rng: &mut Rng) {
+    fn p69(rng: &mut Rng) {
+        let (a, b): (pga2d::Motor<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Motor * Direction");
+    }
+    #[inline(never)]
+    fn p70(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Motor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p57(rng: &mut Rng) {
+    fn p71(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Motor * Rotor");
     }
     #[inline(never)]
-    fn p58(rng: &mut Rng) {
+    fn p72(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Motor * Translator");
     }
     #[inline(never)]
-    fn p59(rng: &mut Rng) {
+    fn p73(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Motor * Motor");
     }
     #[inline(never)]
-    fn p60(rng: &mut Rng) {
+    fn p74(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Motor * Flector");
     }
     #[inline(never)]
-    fn p61(rng: &mut Rng) {
+    fn p75(rng: &mut Rng) {
         let (a, b): (pga2d::Motor<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Motor::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Motor * Multivector");
     }
     #[inline(never)]
-    fn p62(rng: &mut Rng) {
+    fn p76(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Scalar");
     }
     #[inline(never)]
-    fn p63(rng: &mut Rng) {
+    fn p77(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Flector * Line");
     }
     #[inline(never)]
-    fn p64(rng: &mut Rng) {
+    fn p78(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Point");
     }
     #[inline(never)]
-    fn p65(rng: &mut Rng) {
+    fn p79(rng: &mut Rng) {
+        let (a, b): (pga2d::Flector<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Direction");
+    }
+    #[inline(never)]
+    fn p80(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Twist::from(a * b)), &rhs), "Flector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p66(rng: &mut Rng) {
+    fn p81(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Rotor");
     }
     #[inline(never)]
-    fn p67(rng: &mut Rng) {
+    fn p82(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Translator");
     }
     #[inline(never)]
-    fn p68(rng: &mut Rng) {
+    fn p83(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Odd::from(a * b)), &rhs), "Flector * Motor");
     }
     #[inline(never)]
-    fn p69(rng: &mut Rng) {
+    fn p84(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Motor::from(a * b)), &rhs), "Flector * Flector");
     }
     #[inline(never)]
-    fn p70(rng: &mut Rng) {
+    fn p85(rng: &mut Rng) {
         let (a, b): (pga2d::Flector<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Odd::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Flector * Multivector");
     }
     #[inline(never)]
-    fn p71(rng: &mut Rng) {
+    fn p86(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Scalar::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p72(rng: &mut Rng) {
+    fn p87(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Vector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Line");
     }
     #[inline(never)]
-    fn p73(rng: &mut Rng) {
+    fn p88(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Twist::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Point");
     }
     #[inline(never)]
-    fn p74(rng: &mut Rng) {
+    fn p89(rng: &mut Rng) {
+        let (a, b): (pga2d::Multivector<(), f64>, pga2d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Twist::from(b));
+        assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Direction");
+    }
+    #[inline(never)]
+    fn p90(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Trivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p75(rng: &mut Rng) {
+    fn p91(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p76(rng: &mut Rng) {
+    fn p92(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Translator");
     }
     #[inline(never)]
-    fn p77(rng: &mut Rng) {
+    fn p93(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Motor::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Motor");
     }
     #[inline(never)]
-    fn p78(rng: &mut Rng) {
+    fn p94(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Odd::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Flector");
     }
     #[inline(never)]
-    fn p79(rng: &mut Rng) {
+    fn p95(rng: &mut Rng) {
         let (a, b): (pga2d::Multivector<(), f64>, pga2d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -3128,6 +3672,22 @@ fn pga2d_to_cga2d() {
         p77(&mut rng);
         p78(&mut rng);
         p79(&mut rng);
+        p80(&mut rng);
+        p81(&mut rng);
+        p82(&mut rng);
+        p83(&mut rng);
+        p84(&mut rng);
+        p85(&mut rng);
+        p86(&mut rng);
+        p87(&mut rng);
+        p88(&mut rng);
+        p89(&mut rng);
+        p90(&mut rng);
+        p91(&mut rng);
+        p92(&mut rng);
+        p93(&mut rng);
+        p94(&mut rng);
+        p95(&mut rng);
     }
 }
 
@@ -3162,570 +3722,678 @@ fn pga3d_to_cga3d() {
     }
     #[inline(never)]
     fn p4(rng: &mut Rng) {
+        let (a, b): (pga3d::Scalar<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Scalar * Direction");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Quadvector::from(a * b)), &rhs), "Scalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Scalar * Translator");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Scalar * Motor");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Scalar * Flector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (pga3d::Scalar<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Scalar::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Plane * Scalar");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Plane * Plane");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p13(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Plane * Line");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p14(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Plane * Point");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
+        let (a, b): (pga3d::Plane<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Plane * Direction");
+    }
+    #[inline(never)]
+    fn p16(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Plane * Pseudoscalar");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Plane * Rotor");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Plane * Translator");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Plane * Motor");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Plane * Flector");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p21(rng: &mut Rng) {
         let (a, b): (pga3d::Plane<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Vector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Plane * Multivector");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Line * Scalar");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Line * Plane");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p24(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Line * Line");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Line * Point");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
+        let (a, b): (pga3d::Line<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Line * Direction");
+    }
+    #[inline(never)]
+    fn p27(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Line * Pseudoscalar");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Line * Rotor");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p29(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Line * Translator");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Line * Motor");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p31(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Line * Flector");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p32(rng: &mut Rng) {
         let (a, b): (pga3d::Line<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Twist::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Line * Multivector");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p33(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Point * Scalar");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p34(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Point * Plane");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p35(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Point * Line");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p36(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Point * Point");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p37(rng: &mut Rng) {
+        let (a, b): (pga3d::Point<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Point * Direction");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Point * Pseudoscalar");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p39(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Point * Rotor");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p40(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Point * Translator");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Point * Motor");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Point * Flector");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (pga3d::Point<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Point * Multivector");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Scalar::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Direction * Scalar");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Vector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Direction * Plane");
+    }
+    #[inline(never)]
+    fn p46(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Twist::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Direction * Line");
+    }
+    #[inline(never)]
+    fn p47(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Direction * Point");
+    }
+    #[inline(never)]
+    fn p48(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Direction * Rotor");
+    }
+    #[inline(never)]
+    fn p49(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Direction * Translator");
+    }
+    #[inline(never)]
+    fn p50(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Motor::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Direction * Motor");
+    }
+    #[inline(never)]
+    fn p51(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Odd::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Direction * Flector");
+    }
+    #[inline(never)]
+    fn p52(rng: &mut Rng) {
+        let (a, b): (pga3d::Direction<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Trivector::from(a) * cga3d::Multivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Direction * Multivector");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Pseudoscalar * Plane");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Twist::from(a * b)), &rhs), "Pseudoscalar * Line");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Vector::from(a * b)), &rhs), "Pseudoscalar * Point");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Quadvector::from(a * b)), &rhs), "Pseudoscalar * Translator");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Pseudoscalar * Motor");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p60(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Pseudoscalar * Flector");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p61(rng: &mut Rng) {
         let (a, b): (pga3d::Pseudoscalar<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Quadvector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p49(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p50(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Plane");
     }
     #[inline(never)]
-    fn p51(rng: &mut Rng) {
+    fn p64(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Line");
     }
     #[inline(never)]
-    fn p52(rng: &mut Rng) {
+    fn p65(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Point");
     }
     #[inline(never)]
-    fn p53(rng: &mut Rng) {
+    fn p66(rng: &mut Rng) {
+        let (a, b): (pga3d::Rotor<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Direction");
+    }
+    #[inline(never)]
+    fn p67(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p54(rng: &mut Rng) {
+    fn p68(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p55(rng: &mut Rng) {
+    fn p69(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Translator");
     }
     #[inline(never)]
-    fn p56(rng: &mut Rng) {
+    fn p70(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Rotor * Motor");
     }
     #[inline(never)]
-    fn p57(rng: &mut Rng) {
+    fn p71(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Rotor * Flector");
     }
     #[inline(never)]
-    fn p58(rng: &mut Rng) {
+    fn p72(rng: &mut Rng) {
         let (a, b): (pga3d::Rotor<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p59(rng: &mut Rng) {
+    fn p73(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Translator * Scalar");
     }
     #[inline(never)]
-    fn p60(rng: &mut Rng) {
+    fn p74(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Translator * Plane");
     }
     #[inline(never)]
-    fn p61(rng: &mut Rng) {
+    fn p75(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Translator * Line");
     }
     #[inline(never)]
-    fn p62(rng: &mut Rng) {
+    fn p76(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Translator * Point");
     }
     #[inline(never)]
-    fn p63(rng: &mut Rng) {
+    fn p77(rng: &mut Rng) {
+        let (a, b): (pga3d::Translator<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Trivector::from(a * b)), &rhs), "Translator * Direction");
+    }
+    #[inline(never)]
+    fn p78(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Quadvector::from(a * b)), &rhs), "Translator * Pseudoscalar");
     }
     #[inline(never)]
-    fn p64(rng: &mut Rng) {
+    fn p79(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Translator * Rotor");
     }
     #[inline(never)]
-    fn p65(rng: &mut Rng) {
+    fn p80(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Translator * Translator");
     }
     #[inline(never)]
-    fn p66(rng: &mut Rng) {
+    fn p81(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Translator * Motor");
     }
     #[inline(never)]
-    fn p67(rng: &mut Rng) {
+    fn p82(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Translator * Flector");
     }
     #[inline(never)]
-    fn p68(rng: &mut Rng) {
+    fn p83(rng: &mut Rng) {
         let (a, b): (pga3d::Translator<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Translator * Multivector");
     }
     #[inline(never)]
-    fn p69(rng: &mut Rng) {
+    fn p84(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Scalar");
     }
     #[inline(never)]
-    fn p70(rng: &mut Rng) {
+    fn p85(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Motor * Plane");
     }
     #[inline(never)]
-    fn p71(rng: &mut Rng) {
+    fn p86(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Line");
     }
     #[inline(never)]
-    fn p72(rng: &mut Rng) {
+    fn p87(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Motor * Point");
     }
     #[inline(never)]
-    fn p73(rng: &mut Rng) {
+    fn p88(rng: &mut Rng) {
+        let (a, b): (pga3d::Motor<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Motor * Direction");
+    }
+    #[inline(never)]
+    fn p89(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p74(rng: &mut Rng) {
+    fn p90(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Rotor");
     }
     #[inline(never)]
-    fn p75(rng: &mut Rng) {
+    fn p91(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Translator");
     }
     #[inline(never)]
-    fn p76(rng: &mut Rng) {
+    fn p92(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Motor * Motor");
     }
     #[inline(never)]
-    fn p77(rng: &mut Rng) {
+    fn p93(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Motor * Flector");
     }
     #[inline(never)]
-    fn p78(rng: &mut Rng) {
+    fn p94(rng: &mut Rng) {
         let (a, b): (pga3d::Motor<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Motor::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Motor * Multivector");
     }
     #[inline(never)]
-    fn p79(rng: &mut Rng) {
+    fn p95(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Scalar");
     }
     #[inline(never)]
-    fn p80(rng: &mut Rng) {
+    fn p96(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Flector * Plane");
     }
     #[inline(never)]
-    fn p81(rng: &mut Rng) {
+    fn p97(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Line");
     }
     #[inline(never)]
-    fn p82(rng: &mut Rng) {
+    fn p98(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Flector * Point");
     }
     #[inline(never)]
-    fn p83(rng: &mut Rng) {
+    fn p99(rng: &mut Rng) {
+        let (a, b): (pga3d::Flector<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Flector * Direction");
+    }
+    #[inline(never)]
+    fn p100(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p84(rng: &mut Rng) {
+    fn p101(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Rotor");
     }
     #[inline(never)]
-    fn p85(rng: &mut Rng) {
+    fn p102(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Translator");
     }
     #[inline(never)]
-    fn p86(rng: &mut Rng) {
+    fn p103(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Odd::from(a * b)), &rhs), "Flector * Motor");
     }
     #[inline(never)]
-    fn p87(rng: &mut Rng) {
+    fn p104(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Motor::from(a * b)), &rhs), "Flector * Flector");
     }
     #[inline(never)]
-    fn p88(rng: &mut Rng) {
+    fn p105(rng: &mut Rng) {
         let (a, b): (pga3d::Flector<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Odd::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Flector * Multivector");
     }
     #[inline(never)]
-    fn p89(rng: &mut Rng) {
+    fn p106(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Scalar::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p90(rng: &mut Rng) {
+    fn p107(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Plane<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Vector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Plane");
     }
     #[inline(never)]
-    fn p91(rng: &mut Rng) {
+    fn p108(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Line<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Twist::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Line");
     }
     #[inline(never)]
-    fn p92(rng: &mut Rng) {
+    fn p109(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Point<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Trivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Point");
     }
     #[inline(never)]
-    fn p93(rng: &mut Rng) {
+    fn p110(rng: &mut Rng) {
+        let (a, b): (pga3d::Multivector<(), f64>, pga3d::Direction<(), f64>) = (rng.value(), rng.value());
+        let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Trivector::from(b));
+        assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Direction");
+    }
+    #[inline(never)]
+    fn p111(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Quadvector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p94(rng: &mut Rng) {
+    fn p112(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p95(rng: &mut Rng) {
+    fn p113(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Translator<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Translator");
     }
     #[inline(never)]
-    fn p96(rng: &mut Rng) {
+    fn p114(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Motor<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Motor::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Motor");
     }
     #[inline(never)]
-    fn p97(rng: &mut Rng) {
+    fn p115(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Flector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Odd::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Flector");
     }
     #[inline(never)]
-    fn p98(rng: &mut Rng) {
+    fn p116(rng: &mut Rng) {
         let (a, b): (pga3d::Multivector<(), f64>, pga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
@@ -3831,6 +4499,24 @@ fn pga3d_to_cga3d() {
         p96(&mut rng);
         p97(&mut rng);
         p98(&mut rng);
+        p99(&mut rng);
+        p100(&mut rng);
+        p101(&mut rng);
+        p102(&mut rng);
+        p103(&mut rng);
+        p104(&mut rng);
+        p105(&mut rng);
+        p106(&mut rng);
+        p107(&mut rng);
+        p108(&mut rng);
+        p109(&mut rng);
+        p110(&mut rng);
+        p111(&mut rng);
+        p112(&mut rng);
+        p113(&mut rng);
+        p114(&mut rng);
+        p115(&mut rng);
+        p116(&mut rng);
     }
 }
 
@@ -5432,270 +6118,360 @@ fn vga3d_to_sta() {
     }
     #[inline(never)]
     fn p4(rng: &mut Rng) {
+        let (a, b): (vga3d::Scalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Scalar::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Scalar * Paravector");
+    }
+    #[inline(never)]
+    fn p5(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Scalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Scalar * Rotor");
     }
     #[inline(never)]
-    fn p5(rng: &mut Rng) {
+    fn p6(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Scalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Scalar * Odd");
     }
     #[inline(never)]
-    fn p6(rng: &mut Rng) {
+    fn p7(rng: &mut Rng) {
         let (a, b): (vga3d::Scalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Scalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Scalar * Multivector");
     }
     #[inline(never)]
-    fn p7(rng: &mut Rng) {
+    fn p8(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Vector * Scalar");
     }
     #[inline(never)]
-    fn p8(rng: &mut Rng) {
+    fn p9(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Vector");
     }
     #[inline(never)]
-    fn p9(rng: &mut Rng) {
+    fn p10(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Bivector");
     }
     #[inline(never)]
-    fn p10(rng: &mut Rng) {
+    fn p11(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Vector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p11(rng: &mut Rng) {
+    fn p12(rng: &mut Rng) {
+        let (a, b): (vga3d::Vector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Paravector");
+    }
+    #[inline(never)]
+    fn p13(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Rotor");
     }
     #[inline(never)]
-    fn p12(rng: &mut Rng) {
+    fn p14(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Odd");
     }
     #[inline(never)]
-    fn p13(rng: &mut Rng) {
+    fn p15(rng: &mut Rng) {
         let (a, b): (vga3d::Vector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Vector * Multivector");
     }
     #[inline(never)]
-    fn p14(rng: &mut Rng) {
+    fn p16(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Bivector * Scalar");
     }
     #[inline(never)]
-    fn p15(rng: &mut Rng) {
+    fn p17(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Vector");
     }
     #[inline(never)]
-    fn p16(rng: &mut Rng) {
+    fn p18(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Bivector");
     }
     #[inline(never)]
-    fn p17(rng: &mut Rng) {
+    fn p19(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Bivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p18(rng: &mut Rng) {
+    fn p20(rng: &mut Rng) {
+        let (a, b): (vga3d::Bivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Paravector");
+    }
+    #[inline(never)]
+    fn p21(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Rotor");
     }
     #[inline(never)]
-    fn p19(rng: &mut Rng) {
+    fn p22(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Odd");
     }
     #[inline(never)]
-    fn p20(rng: &mut Rng) {
+    fn p23(rng: &mut Rng) {
         let (a, b): (vga3d::Bivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Bivector::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Bivector * Multivector");
     }
     #[inline(never)]
-    fn p21(rng: &mut Rng) {
+    fn p24(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Pseudoscalar::from(a * b)), &rhs), "Pseudoscalar * Scalar");
     }
     #[inline(never)]
-    fn p22(rng: &mut Rng) {
+    fn p25(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Pseudoscalar * Vector");
     }
     #[inline(never)]
-    fn p23(rng: &mut Rng) {
+    fn p26(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Bivector::from(a * b)), &rhs), "Pseudoscalar * Bivector");
     }
     #[inline(never)]
-    fn p24(rng: &mut Rng) {
+    fn p27(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Scalar::from(a * b)), &rhs), "Pseudoscalar * Pseudoscalar");
     }
     #[inline(never)]
-    fn p25(rng: &mut Rng) {
+    fn p28(rng: &mut Rng) {
+        let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Pseudoscalar * Paravector");
+    }
+    #[inline(never)]
+    fn p29(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Pseudoscalar * Rotor");
     }
     #[inline(never)]
-    fn p26(rng: &mut Rng) {
+    fn p30(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Pseudoscalar * Odd");
     }
     #[inline(never)]
-    fn p27(rng: &mut Rng) {
+    fn p31(rng: &mut Rng) {
         let (a, b): (vga3d::Pseudoscalar<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Pseudoscalar::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Pseudoscalar * Multivector");
     }
     #[inline(never)]
-    fn p28(rng: &mut Rng) {
+    fn p32(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Scalar::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Scalar");
+    }
+    #[inline(never)]
+    fn p33(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Vector");
+    }
+    #[inline(never)]
+    fn p34(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Bivector");
+    }
+    #[inline(never)]
+    fn p35(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Pseudoscalar::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Pseudoscalar");
+    }
+    #[inline(never)]
+    fn p36(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Paravector");
+    }
+    #[inline(never)]
+    fn p37(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Rotor");
+    }
+    #[inline(never)]
+    fn p38(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Odd");
+    }
+    #[inline(never)]
+    fn p39(rng: &mut Rng) {
+        let (a, b): (vga3d::Paravector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Paravector * Multivector");
+    }
+    #[inline(never)]
+    fn p40(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Scalar");
     }
     #[inline(never)]
-    fn p29(rng: &mut Rng) {
+    fn p41(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Vector");
     }
     #[inline(never)]
-    fn p30(rng: &mut Rng) {
+    fn p42(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Bivector");
     }
     #[inline(never)]
-    fn p31(rng: &mut Rng) {
+    fn p43(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Pseudoscalar");
     }
     #[inline(never)]
-    fn p32(rng: &mut Rng) {
+    fn p44(rng: &mut Rng) {
+        let (a, b): (vga3d::Rotor<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Paravector");
+    }
+    #[inline(never)]
+    fn p45(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Rotor");
     }
     #[inline(never)]
-    fn p33(rng: &mut Rng) {
+    fn p46(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Odd");
     }
     #[inline(never)]
-    fn p34(rng: &mut Rng) {
+    fn p47(rng: &mut Rng) {
         let (a, b): (vga3d::Rotor<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Rotor * Multivector");
     }
     #[inline(never)]
-    fn p35(rng: &mut Rng) {
+    fn p48(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Scalar");
     }
     #[inline(never)]
-    fn p36(rng: &mut Rng) {
+    fn p49(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Vector");
     }
     #[inline(never)]
-    fn p37(rng: &mut Rng) {
+    fn p50(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Bivector");
     }
     #[inline(never)]
-    fn p38(rng: &mut Rng) {
+    fn p51(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Pseudoscalar");
     }
     #[inline(never)]
-    fn p39(rng: &mut Rng) {
+    fn p52(rng: &mut Rng) {
+        let (a, b): (vga3d::Odd<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Paravector");
+    }
+    #[inline(never)]
+    fn p53(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Rotor");
     }
     #[inline(never)]
-    fn p40(rng: &mut Rng) {
+    fn p54(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Odd");
     }
     #[inline(never)]
-    fn p41(rng: &mut Rng) {
+    fn p55(rng: &mut Rng) {
         let (a, b): (vga3d::Odd<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Odd * Multivector");
     }
     #[inline(never)]
-    fn p42(rng: &mut Rng) {
+    fn p56(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Scalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Scalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Scalar");
     }
     #[inline(never)]
-    fn p43(rng: &mut Rng) {
+    fn p57(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Vector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Vector");
     }
     #[inline(never)]
-    fn p44(rng: &mut Rng) {
+    fn p58(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Bivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Bivector::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Bivector");
     }
     #[inline(never)]
-    fn p45(rng: &mut Rng) {
+    fn p59(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Pseudoscalar<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Pseudoscalar::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Pseudoscalar");
     }
     #[inline(never)]
-    fn p46(rng: &mut Rng) {
+    fn p60(rng: &mut Rng) {
+        let (a, b): (vga3d::Multivector<(), f64>, vga3d::Paravector<(), f64>) = (rng.value(), rng.value());
+        let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
+        assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Paravector");
+    }
+    #[inline(never)]
+    fn p61(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Rotor<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Rotor");
     }
     #[inline(never)]
-    fn p47(rng: &mut Rng) {
+    fn p62(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Odd<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Odd");
     }
     #[inline(never)]
-    fn p48(rng: &mut Rng) {
+    fn p63(rng: &mut Rng) {
         let (a, b): (vga3d::Multivector<(), f64>, vga3d::Multivector<(), f64>) = (rng.value(), rng.value());
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Multivector");
@@ -5751,6 +6527,21 @@ fn vga3d_to_sta() {
         p46(&mut rng);
         p47(&mut rng);
         p48(&mut rng);
+        p49(&mut rng);
+        p50(&mut rng);
+        p51(&mut rng);
+        p52(&mut rng);
+        p53(&mut rng);
+        p54(&mut rng);
+        p55(&mut rng);
+        p56(&mut rng);
+        p57(&mut rng);
+        p58(&mut rng);
+        p59(&mut rng);
+        p60(&mut rng);
+        p61(&mut rng);
+        p62(&mut rng);
+        p63(&mut rng);
     }
 }
 

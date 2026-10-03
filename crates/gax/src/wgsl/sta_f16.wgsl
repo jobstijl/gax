@@ -41,6 +41,11 @@ struct Pseudoscalar {
     c0: vec4<f16>,
 }
 
+// `Phasor`: [1, e0123]
+struct Phasor {
+    c0: vec4<f16>,
+}
+
 // `Even`: [1, e10, e20, e30, e23, e31, e12, e0123]
 struct Even {
     c0: vec4<f16>,
@@ -88,6 +93,11 @@ fn trivector_new(e123: f16, e032: f16, e013: f16, e021: f16) -> Trivector {
 // A `Pseudoscalar` from its coefficients.
 fn pseudoscalar_new(e0123: f16) -> Pseudoscalar {
     return Pseudoscalar(vec4<f16>(e0123, 0.0, 0.0, 0.0));
+}
+
+// A `Phasor` from its coefficients.
+fn phasor_new(s: f16, e0123: f16) -> Phasor {
+    return Phasor(vec4<f16>(s, e0123, 0.0, 0.0));
 }
 
 // A `Even` from its coefficients.
@@ -143,6 +153,11 @@ fn trivector_reverse(x: Trivector) -> Trivector {
 // The reverse `~x`.
 fn pseudoscalar_reverse(x: Pseudoscalar) -> Pseudoscalar {
     return Pseudoscalar(vec4<f16>(x.c0.x, 0.0, 0.0, 0.0));
+}
+
+// The reverse `~x`.
+fn phasor_reverse(x: Phasor) -> Phasor {
+    return Phasor(vec4<f16>(x.c0.x, x.c0.y, 0.0, 0.0));
 }
 
 // The reverse `~x`.
@@ -1025,6 +1040,44 @@ fn pseudoscalar_renormalize_fast(x: Pseudoscalar) -> Pseudoscalar {
 }
 
 // The squared norm: the scalar part of `x ~x`.
+fn phasor_norm_squared(x: Phasor) -> f16 {
+    let t0 = x.c0.x * x.c0.x;
+    let t2 = fma(-x.c0.y, x.c0.y, t0);
+    return t2;
+}
+
+// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.
+fn phasor_normalized(x: Phasor) -> Phasor {
+    let p0 = f32(x.c0.x) * f32(x.c0.x);
+    let p2 = f32(x.c0.x) * f32(x.c0.y);
+    let p3 = fma(-f32(x.c0.y), f32(x.c0.y), p0);
+    let p4 = p2 * 2.0;
+    let r1 = study_rsqrt_complex(p3, p4);
+    let s0 = f16(r1[0]);
+    let s1 = f16(r1[1]);
+    let t0 = x.c0.x * s0;
+    let t3 = x.c0.y * s0;
+    let t4 = fma(-x.c0.y, s1, t0);
+    let t5 = fma(x.c0.x, s1, t3);
+    return Phasor(vec4<f16>(t4, t5, 0.0, 0.0));
+}
+
+// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+fn phasor_renormalize_fast(x: Phasor) -> Phasor {
+    let t0 = x.c0.x * x.c0.x;
+    let t1 = x.c0.y * x.c0.y;
+    let t2 = x.c0.x * t0;
+    let t5 = x.c0.y * t1;
+    let t7 = fma(x.c0.x, t1, x.c0.x);
+    let t8 = t7 * (3.0 / 2.0);
+    let t9 = fma(-t2, (1.0 / 2.0), t8);
+    let t11 = fma(-x.c0.y, t0, x.c0.y);
+    let t12 = t11 * (3.0 / 2.0);
+    let t13 = fma(t5, (1.0 / 2.0), t12);
+    return Phasor(vec4<f16>(t9, t13, 0.0, 0.0));
+}
+
+// The squared norm: the scalar part of `x ~x`.
 fn even_norm_squared(x: Even) -> f16 {
     let t2 = x.c0.z * x.c0.z;
     let t4 = x.c1.x * x.c1.x;
@@ -1817,6 +1870,32 @@ fn unit_vector_sandwich_pseudoscalar(v: Vector, x: Pseudoscalar) -> Pseudoscalar
     let t7 = t5 - t6;
     let t8 = t0 * t7;
     return Pseudoscalar(vec4<f16>(t8, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Vector` v and `Phasor` x (`v >> x`).
+fn vector_sandwich_phasor(v: Vector, x: Phasor) -> Even {
+    let t0 = v.c0.x * v.c0.x;
+    let t3 = v.c0.w * v.c0.w;
+    let t4 = fma(-v.c0.y, v.c0.y, t0);
+    let t5 = fma(v.c0.z, v.c0.z, t3);
+    let t6 = t4 - t5;
+    let t7 = x.c0.x * t6;
+    let t8 = x.c0.y * t6;
+    let t9 = -t8;
+    return Even(vec4<f16>(t7, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t9));
+}
+
+// `v x ~v` for a unit `Vector` v and `Phasor` x (`v >> x`).
+fn unit_vector_sandwich_phasor(v: Vector, x: Phasor) -> Even {
+    let t0 = -x.c0.y;
+    let t1 = v.c0.x * v.c0.x;
+    let t4 = v.c0.w * v.c0.w;
+    let t5 = fma(-v.c0.y, v.c0.y, t1);
+    let t6 = fma(v.c0.z, v.c0.z, t4);
+    let t7 = t5 - t6;
+    let t8 = x.c0.x * t7;
+    let t9 = t0 * t7;
+    return Even(vec4<f16>(t8, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t9));
 }
 
 // `v x ~v` for `Vector` v and `Even` x (`v >> x`).
@@ -3149,6 +3228,51 @@ fn unit_even_sandwich_pseudoscalar(v: Even, x: Pseudoscalar) -> Pseudoscalar {
     let t14 = t10 - t13;
     let t15 = x.c0.x * t14;
     return Pseudoscalar(vec4<f16>(t15, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Even` v and `Phasor` x (`v >> x`).
+fn even_sandwich_phasor(v: Even, x: Phasor) -> Even {
+    let t2 = v.c0.z * v.c0.z;
+    let t4 = v.c1.x * v.c1.x;
+    let t6 = v.c1.z * v.c1.z;
+    let t7 = v.c1.w * v.c1.w;
+    let t9 = v.c0.y * v.c1.x;
+    let t11 = v.c0.w * v.c1.z;
+    let t12 = fma(v.c0.x, v.c0.x, t4);
+    let t13 = fma(v.c1.y, v.c1.y, t6);
+    let t14 = t12 + t13;
+    let t15 = fma(v.c0.y, v.c0.y, t2);
+    let t16 = fma(v.c0.w, v.c0.w, t7);
+    let t17 = t15 + t16;
+    let t18 = t14 - t17;
+    let t19 = fma(v.c0.x, v.c1.w, t9);
+    let t20 = fma(v.c0.z, v.c1.y, t11);
+    let t21 = t19 + t20;
+    let t22 = x.c0.x * t18;
+    let t23 = x.c0.y * t21;
+    let t24 = x.c0.x * t21;
+    let t27 = fma(-t23, 2.0, t22);
+    let t28 = t24 * 2.0;
+    let t29 = fma(x.c0.y, t18, t28);
+    return Even(vec4<f16>(t27, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t29));
+}
+
+// `v x ~v` for a unit `Even` v and `Phasor` x (`v >> x`).
+fn unit_even_sandwich_phasor(v: Even, x: Phasor) -> Even {
+    let t2 = v.c0.z * v.c0.z;
+    let t4 = v.c1.x * v.c1.x;
+    let t6 = v.c1.z * v.c1.z;
+    let t7 = v.c1.w * v.c1.w;
+    let t8 = fma(v.c0.x, v.c0.x, t4);
+    let t9 = fma(v.c1.y, v.c1.y, t6);
+    let t10 = t8 + t9;
+    let t11 = fma(v.c0.y, v.c0.y, t2);
+    let t12 = fma(v.c0.w, v.c0.w, t7);
+    let t13 = t11 + t12;
+    let t14 = t10 - t13;
+    let t15 = x.c0.x * t14;
+    let t16 = x.c0.y * t14;
+    return Even(vec4<f16>(t15, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t16));
 }
 
 // `v x ~v` for `Even` v and `Even` x (`v >> x`).
@@ -4943,6 +5067,53 @@ fn unit_odd_sandwich_pseudoscalar(v: Odd, x: Pseudoscalar) -> Pseudoscalar {
     let t15 = t11 - t14;
     let t16 = t0 * t15;
     return Pseudoscalar(vec4<f16>(t16, 0.0, 0.0, 0.0));
+}
+
+// `v x ~v` for `Odd` v and `Phasor` x (`v >> x`).
+fn odd_sandwich_phasor(v: Odd, x: Phasor) -> Even {
+    let t2 = v.c0.z * v.c0.z;
+    let t4 = v.c1.x * v.c1.x;
+    let t5 = v.c1.y * v.c1.y;
+    let t7 = v.c1.w * v.c1.w;
+    let t9 = v.c0.y * v.c1.y;
+    let t11 = v.c0.w * v.c1.w;
+    let t12 = fma(v.c0.x, v.c0.x, t5);
+    let t13 = fma(v.c1.z, v.c1.z, t7);
+    let t14 = t12 + t13;
+    let t15 = fma(v.c0.y, v.c0.y, t2);
+    let t16 = fma(v.c0.w, v.c0.w, t4);
+    let t17 = t15 + t16;
+    let t18 = t14 - t17;
+    let t19 = fma(v.c0.x, v.c1.x, t9);
+    let t20 = fma(v.c0.z, v.c1.z, t11);
+    let t21 = t19 + t20;
+    let t22 = x.c0.x * t18;
+    let t23 = x.c0.y * t21;
+    let t24 = x.c0.x * t21;
+    let t27 = fma(-t23, 2.0, t22);
+    let t28 = t24 * 2.0;
+    let t29 = fma(x.c0.y, t18, t28);
+    let t30 = -t29;
+    return Even(vec4<f16>(t27, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t30));
+}
+
+// `v x ~v` for a unit `Odd` v and `Phasor` x (`v >> x`).
+fn unit_odd_sandwich_phasor(v: Odd, x: Phasor) -> Even {
+    let t0 = -x.c0.y;
+    let t3 = v.c0.z * v.c0.z;
+    let t5 = v.c1.x * v.c1.x;
+    let t6 = v.c1.y * v.c1.y;
+    let t8 = v.c1.w * v.c1.w;
+    let t9 = fma(v.c0.x, v.c0.x, t6);
+    let t10 = fma(v.c1.z, v.c1.z, t8);
+    let t11 = t9 + t10;
+    let t12 = fma(v.c0.y, v.c0.y, t3);
+    let t13 = fma(v.c0.w, v.c0.w, t5);
+    let t14 = t12 + t13;
+    let t15 = t11 - t14;
+    let t16 = x.c0.x * t15;
+    let t17 = t0 * t15;
+    return Even(vec4<f16>(t16, 0.0, 0.0, 0.0), vec4<f16>(0.0, 0.0, 0.0, t17));
 }
 
 // `v x ~v` for `Odd` v and `Even` x (`v >> x`).

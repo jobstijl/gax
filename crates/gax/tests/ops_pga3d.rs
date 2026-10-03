@@ -67,6 +67,7 @@ fn gp() {
     bin::<Scalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Scalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Scalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Scalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Scalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Scalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Scalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -77,6 +78,7 @@ fn gp() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -87,6 +89,7 @@ fn gp() {
     bin::<Line<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Line<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -97,12 +100,22 @@ fn gp() {
     bin::<Point<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Point<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Pseudoscalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Pseudoscalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -116,6 +129,7 @@ fn gp() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -126,6 +140,7 @@ fn gp() {
     bin::<Translator<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Translator<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -136,6 +151,7 @@ fn gp() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -146,6 +162,7 @@ fn gp() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -156,6 +173,7 @@ fn gp() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Gp, |a, b| a.gp(b));
@@ -172,6 +190,7 @@ fn wedge() {
     bin::<Scalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Scalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Scalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Scalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Scalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Scalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Scalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -182,6 +201,7 @@ fn wedge() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Plane<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -202,6 +222,13 @@ fn wedge() {
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Pseudoscalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Pseudoscalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -211,6 +238,7 @@ fn wedge() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -221,6 +249,7 @@ fn wedge() {
     bin::<Translator<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Translator<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -231,6 +260,7 @@ fn wedge() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -241,6 +271,7 @@ fn wedge() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Flector<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -250,6 +281,7 @@ fn wedge() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Wedge, |a, b| a.wedge(b));
@@ -266,12 +298,14 @@ fn vee() {
     bin::<Scalar<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Scalar<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Plane<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Plane<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Plane<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Line<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -281,16 +315,28 @@ fn vee() {
     bin::<Point<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Point<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Pseudoscalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Pseudoscalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -299,6 +345,7 @@ fn vee() {
     bin::<Pseudoscalar<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Rotor<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -306,6 +353,7 @@ fn vee() {
     bin::<Rotor<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Translator<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -315,6 +363,7 @@ fn vee() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -324,6 +373,7 @@ fn vee() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -334,6 +384,7 @@ fn vee() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Vee, |a, b| a.vee(b));
@@ -350,6 +401,7 @@ fn lc() {
     bin::<Scalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Scalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Scalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Scalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Scalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Scalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Scalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -359,6 +411,7 @@ fn lc() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -367,6 +420,7 @@ fn lc() {
     bin::<Plane<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Line<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -381,6 +435,7 @@ fn lc() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -391,6 +446,7 @@ fn lc() {
     bin::<Translator<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Translator<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -401,6 +457,7 @@ fn lc() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -410,6 +467,7 @@ fn lc() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -420,6 +478,7 @@ fn lc() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Lc, |a, b| a.lc(b));
@@ -461,6 +520,14 @@ fn rc() {
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
     bin::<Pseudoscalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
     bin::<Pseudoscalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Rc, |a, b| a.rc(b));
@@ -522,6 +589,7 @@ fn dot() {
     bin::<Scalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Scalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Scalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Scalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Scalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Scalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Scalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -532,6 +600,7 @@ fn dot() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -542,6 +611,7 @@ fn dot() {
     bin::<Line<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Line<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -558,6 +628,14 @@ fn dot() {
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Pseudoscalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Pseudoscalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -571,6 +649,7 @@ fn dot() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -581,6 +660,7 @@ fn dot() {
     bin::<Translator<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Translator<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -591,6 +671,7 @@ fn dot() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -601,6 +682,7 @@ fn dot() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -611,6 +693,7 @@ fn dot() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Dot, |a, b| a.dot(b));
@@ -677,6 +760,7 @@ fn commutator() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -686,6 +770,7 @@ fn commutator() {
     bin::<Line<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Line<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Line<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -694,12 +779,20 @@ fn commutator() {
     bin::<Point<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Point<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Pseudoscalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Pseudoscalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Pseudoscalar<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -707,6 +800,7 @@ fn commutator() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Rotor<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -722,6 +816,7 @@ fn commutator() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Motor<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -730,6 +825,7 @@ fn commutator() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -739,6 +835,7 @@ fn commutator() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Commutator, |a, b| a.commutator(b));
@@ -755,6 +852,7 @@ fn anticommutator() {
     bin::<Scalar<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Scalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Scalar<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Scalar<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Scalar<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Scalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Scalar<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -765,6 +863,7 @@ fn anticommutator() {
     bin::<Plane<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Plane<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Plane<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -774,6 +873,7 @@ fn anticommutator() {
     bin::<Line<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Line<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -789,6 +889,14 @@ fn anticommutator() {
     bin::<Point<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Point<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Point<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Flector<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Direction<(), f64>, Multivector<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Pseudoscalar<(), f64>, Scalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Pseudoscalar<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Pseudoscalar<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -799,6 +907,7 @@ fn anticommutator() {
     bin::<Rotor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Rotor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -809,6 +918,7 @@ fn anticommutator() {
     bin::<Translator<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Translator<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -819,6 +929,7 @@ fn anticommutator() {
     bin::<Motor<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Motor<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -829,6 +940,7 @@ fn anticommutator() {
     bin::<Flector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Flector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Flector<(), f64>, Motor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -838,6 +950,7 @@ fn anticommutator() {
     bin::<Multivector<(), f64>, Plane<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Multivector<(), f64>, Line<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Multivector<(), f64>, Point<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
+    bin::<Multivector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Multivector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Multivector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
     bin::<Multivector<(), f64>, Translator<(), f64>, _>(&o, &mut rng, BinOp::Anticommutator, |a, b| a.anticommutator(b));
@@ -854,6 +967,7 @@ fn reverse() {
     un::<Plane<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Line<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Point<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
+    un::<Direction<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Pseudoscalar<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Rotor<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
     un::<Translator<(), f64>, _>(&o, &mut rng, UnOp::Reverse, |a| a.reverse());
@@ -870,6 +984,7 @@ fn involute() {
     un::<Plane<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Line<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Point<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
+    un::<Direction<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Pseudoscalar<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Rotor<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
     un::<Translator<(), f64>, _>(&o, &mut rng, UnOp::Involute, |a| a.involute());
@@ -886,6 +1001,7 @@ fn conjugate() {
     un::<Plane<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Line<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Point<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
+    un::<Direction<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Pseudoscalar<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Rotor<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
     un::<Translator<(), f64>, _>(&o, &mut rng, UnOp::Conjugate, |a| a.conjugate());
@@ -902,6 +1018,7 @@ fn dual() {
     un::<Plane<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Line<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Point<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
+    un::<Direction<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Pseudoscalar<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Rotor<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
     un::<Translator<(), f64>, _>(&o, &mut rng, UnOp::Dual, |a| a.dual());
@@ -918,6 +1035,7 @@ fn undual() {
     un::<Plane<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Line<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Point<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
+    un::<Direction<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Pseudoscalar<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Rotor<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
     un::<Translator<(), f64>, _>(&o, &mut rng, UnOp::Undual, |a| a.undual());
@@ -965,6 +1083,8 @@ fn sandwiches() {
     sandwich::<Plane<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Plane<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Plane<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Plane<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Plane<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -985,6 +1105,8 @@ fn sandwiches() {
     sandwich::<Line<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Line<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Line<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Line<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Line<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -1005,6 +1127,8 @@ fn sandwiches() {
     sandwich::<Point<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Point<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Point<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Point<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Point<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Point<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Point<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Point<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -1025,6 +1149,8 @@ fn sandwiches() {
     sandwich::<Rotor<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Rotor<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Rotor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Rotor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Rotor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -1045,6 +1171,8 @@ fn sandwiches() {
     sandwich::<Translator<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Translator<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Translator<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Translator<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Translator<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -1065,6 +1193,8 @@ fn sandwiches() {
     sandwich::<Motor<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Motor<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Motor<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Motor<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Motor<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);
@@ -1085,6 +1215,8 @@ fn sandwiches() {
     sandwich::<Flector<(), f64>, Line<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Line>() >> x);
     sandwich::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Point>() >> x);
     sandwich::<Flector<(), f64>, Point<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Point>() >> x);
+    sandwich::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Direction>() >> x);
+    sandwich::<Flector<(), f64>, Direction<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Direction>() >> x);
     sandwich::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Pseudoscalar>() >> x);
     sandwich::<Flector<(), f64>, Pseudoscalar<(), f64>, _>(&o, &mut rng, true, |v, x| Unit::new_unchecked(v) >> x, |v, x| Unit::new_unchecked(v).prepare::<Pseudoscalar>() >> x);
     sandwich::<Flector<(), f64>, Rotor<(), f64>, _>(&o, &mut rng, false, |v, x| v >> x, |v, x| v.prepare::<Rotor>() >> x);

@@ -1549,6 +1549,226 @@ impl gx::batch::SandwichKernel<Pseudoscalar, gx::batch::Certified> for Vector {
     }
 }
 
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Phasor<S, T>> for Vector<(), T> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Phasor<S, T>) -> Even<S, T> {
+        let v = self.c;
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = v[0] * v[0];
+        let t3 = v[3] * v[3];
+        let t4 = (-v[1]).mul_add(v[1], t0);
+        let t5 = v[2].mul_add(v[2], t3);
+        let t6 = t4 - t5;
+        let t7 = xv[0] * t6;
+        let t8 = xv[1] * t6;
+        let t9 = -t8;
+            return Even { c: gx::slots::from_values::<S, T, 8>([t7, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t9]) };
+        }
+        let m0 = v[0] * v[0];
+        let m3 = v[3] * v[3];
+        let m4 = (-v[1]).mul_add(v[1], m0);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 - m5;
+        let m7 = -m6;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m6)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[1].scale(m7)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Phasor<S, T>> for Vector<(), T> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Phasor<S, T>) -> Even<S, T> {
+        gx::Transform::transform(self.reverse(), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Phasor> for Vector<(), T> {
+    type Output = gx::Prepared<Vector, Phasor, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<Vector, Phasor, T, 2> {
+        let v = self.c;
+        let m0 = v[0] * v[0];
+        let m3 = v[3] * v[3];
+        let m4 = (-v[1]).mul_add(v[1], m0);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 - m5;
+        let m7 = -m6;
+        gx::Prepared::from_entries([m6, m7])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Phasor<S, T>> for gx::Prepared<Vector, Phasor, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Phasor<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[1].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<Vector, Phasor, T, 2>> for Even<(Phasor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<Vector, Phasor, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0], T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), m[1]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Phasor, gx::batch::Plain> for Vector {
+    type Y = Even;
+    type Versor<T: gx::Coef> = Vector<(), T>;
+    type Prepared<T: gx::Coef> = gx::Prepared<Vector, Phasor, T, 2>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: Vector<(), T>) -> Vector<(), T> {
+        v
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: Vector<(), T>) -> gx::Prepared<Vector, Phasor, T, 2> {
+        gx::Prepare::<Phasor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<Vector, Phasor, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<Vector, Phasor, W, 2> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<Vector, Phasor, T, 2>, x: Phasor<(), T>) -> Even<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: Vector<(), T>, x: Phasor<(), T>) -> Even<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Phasor<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Phasor<S, T>) -> Even<S, T> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u0 = v[0] * v[0];
+        let u4 = (-v[1]).mul_add(v[1], u0);
+        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], T::from_i64(1));
+        let u7 = u5 - u6;
+            T::check_unit(&[u7]);
+        }
+        if let Some(xv) = gx::slots::values::<S, T, 2>(&x.c) {
+        let t0 = -xv[1];
+        let t1 = v[0] * v[0];
+        let t4 = v[3] * v[3];
+        let t5 = (-v[1]).mul_add(v[1], t1);
+        let t6 = v[2].mul_add(v[2], t4);
+        let t7 = t5 - t6;
+        let t8 = xv[0] * t7;
+        let t9 = t0 * t7;
+            return Even { c: gx::slots::from_values::<S, T, 8>([t8, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t9]) };
+        }
+        let m0 = v[0] * v[0];
+        let m3 = v[3] * v[3];
+        let m4 = (-v[1]).mul_add(v[1], m0);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 - m5;
+        let m7 = -m6;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m6)).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[1].scale(m7)).0] }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::TransformInv<Phasor<S, T>> for gx::Unit<Vector<(), T>> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform_inv(self, x: Phasor<S, T>) -> Even<S, T> {
+        gx::Transform::transform(gx::Unit::new_unchecked(self.into_inner().reverse()), x)
+    }
+}
+
+impl<T: gx::Coef> gx::Prepare<Phasor> for gx::Unit<Vector<(), T>> {
+    type Output = gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>;
+    #[inline]
+    fn prepare(self) -> gx::Prepared<gx::Unit<Vector>, Phasor, T, 2> {
+        let v = self.into_inner().c;
+        #[cfg(feature = "check-units")]
+        {
+        let u0 = v[0] * v[0];
+        let u4 = (-v[1]).mul_add(v[1], u0);
+        let u5 = (-v[2]).mul_add(v[2], u4);
+        let u6 = v[3].mul_add(v[3], T::from_i64(1));
+        let u7 = u5 - u6;
+            T::check_unit(&[u7]);
+        }
+        let m0 = v[0] * v[0];
+        let m3 = v[3] * v[3];
+        let m4 = (-v[1]).mul_add(v[1], m0);
+        let m5 = v[2].mul_add(v[2], m3);
+        let m6 = m4 - m5;
+        let m7 = -m6;
+        gx::Prepared::from_entries([m6, m7])
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Transform<Phasor<S, T>> for gx::Prepared<gx::Unit<Vector>, Phasor, T, 2> {
+    type Output = Even<S, T>;
+    #[inline(always)]
+    fn transform(self, x: Phasor<S, T>) -> Even<S, T> {
+        let m = self.m;
+        let x = x.c.map(gx::SlotArr::<S, T>);
+        Even { c: [(x[0].scale(m[0])).0, S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), (x[1].scale(m[1])).0] }
+    }
+}
+
+impl<T: gx::Coef> From<gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>> for Even<(Phasor,), T> {
+    /// The dense map of the prepared action.
+    #[inline]
+    fn from(p: gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>) -> Self {
+        let m = p.m;
+        Even { c: [[m[0], T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), T::zero()], [T::zero(), m[1]]] }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl gx::batch::SandwichKernel<Phasor, gx::batch::Certified> for Vector {
+    type Y = Even;
+    type Versor<T: gx::Coef> = gx::Unit<Vector<(), T>>;
+    type Prepared<T: gx::Coef> = gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>;
+    #[inline(always)]
+    fn wrap<T: gx::Coef>(v: Vector<(), T>) -> gx::Unit<Vector<(), T>> {
+        gx::Unit::new_unchecked(v)
+    }
+    #[inline(always)]
+    fn unwrap<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> Vector<(), T> {
+        v.into_inner()
+    }
+    #[inline(always)]
+    fn prepare<T: gx::Coef>(v: gx::Unit<Vector<(), T>>) -> gx::Prepared<gx::Unit<Vector>, Phasor, T, 2> {
+        gx::Prepare::<Phasor>::prepare(v)
+    }
+    #[inline(always)]
+    fn map_prepared<T: gx::Coef, W: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>, mut f: impl FnMut(T) -> W) -> gx::Prepared<gx::Unit<Vector>, Phasor, W, 2> {
+        let m = p.m;
+        gx::Prepared::from_entries([f(m[0]), f(m[1])])
+    }
+    #[inline(always)]
+    fn apply_prepared<T: gx::Coef>(p: gx::Prepared<gx::Unit<Vector>, Phasor, T, 2>, x: Phasor<(), T>) -> Even<(), T> {
+        gx::Transform::transform(p, x)
+    }
+    #[inline(always)]
+    fn apply<T: gx::Coef>(v: gx::Unit<Vector<(), T>>, x: Phasor<(), T>) -> Even<(), T> {
+        gx::Transform::transform(v, x)
+    }
+}
+
 impl<S: gx::Slots, T: gx::Coef> gx::Transform<Even<S, T>> for Vector<(), T> {
     type Output = Even<S, T>;
     #[inline(always)]

@@ -173,6 +173,17 @@ mod vga3d_to_pga3d {
 
     impl<T: Coef> crate::Widen<crate::pga3d::Point<(), T>> for crate::vga3d::Pseudoscalar<(), T> {}
 
+    impl<S: Slots, T: Coef> From<crate::vga3d::Paravector<S, T>> for crate::pga3d::Multivector<S, T> {
+        /// The image under the homomorphism from `vga3d` to `pga3d`.
+        #[inline(always)]
+        fn from(x: crate::vga3d::Paravector<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::pga3d::Multivector::from_coeffs([(a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::pga3d::Multivector<(), T>> for crate::vga3d::Paravector<(), T> {}
+
     impl<S: Slots, T: Coef> From<crate::vga3d::Rotor<S, T>> for crate::pga3d::Rotor<S, T> {
         /// The image under the homomorphism from `vga3d` to `pga3d`.
         #[inline(always)]
@@ -245,6 +256,17 @@ mod pga2d_to_pga3d {
     }
 
     impl<T: Coef> crate::Widen<crate::pga3d::Line<(), T>> for crate::pga2d::Point<(), T> {}
+
+    impl<S: Slots, T: Coef> From<crate::pga2d::Direction<S, T>> for crate::pga3d::Line<S, T> {
+        /// The image under the homomorphism from `pga2d` to `pga3d`.
+        #[inline(always)]
+        fn from(x: crate::pga2d::Direction<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::pga3d::Line::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (-a[0]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::pga3d::Line<(), T>> for crate::pga2d::Direction<(), T> {}
 
     impl<S: Slots, T: Coef> From<crate::pga2d::Pseudoscalar<S, T>> for crate::pga3d::Point<S, T> {
         /// The image under the homomorphism from `pga2d` to `pga3d`.
@@ -362,6 +384,17 @@ mod pga3d_to_stap {
     }
 
     impl<T: Coef> crate::Widen<crate::stap::Trivector<(), T>> for crate::pga3d::Point<(), T> {}
+
+    impl<S: Slots, T: Coef> From<crate::pga3d::Direction<S, T>> for crate::stap::Trivector<S, T> {
+        /// The image under the homomorphism from `pga3d` to `stap`.
+        #[inline(always)]
+        fn from(x: crate::pga3d::Direction<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::stap::Trivector::from_coeffs([(-a[0]).0, (-a[1]).0, (-a[2]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::stap::Trivector<(), T>> for crate::pga3d::Direction<(), T> {}
 
     impl<S: Slots, T: Coef> From<crate::pga3d::Pseudoscalar<S, T>> for crate::stap::Quadvector<S, T> {
         /// The image under the homomorphism from `pga3d` to `stap`.
@@ -542,6 +575,17 @@ mod vga3d_to_cga3d {
 
     impl<T: Coef> crate::Widen<crate::cga3d::Trivector<(), T>> for crate::vga3d::Pseudoscalar<(), T> {}
 
+    impl<S: Slots, T: Coef> From<crate::vga3d::Paravector<S, T>> for crate::cga3d::Multivector<S, T> {
+        /// The image under the homomorphism from `vga3d` to `cga3d`.
+        #[inline(always)]
+        fn from(x: crate::vga3d::Paravector<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::cga3d::Multivector::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::cga3d::Multivector<(), T>> for crate::vga3d::Paravector<(), T> {}
+
     impl<S: Slots, T: Coef> From<crate::vga3d::Rotor<S, T>> for crate::cga3d::Motor<S, T> {
         /// The image under the homomorphism from `vga3d` to `cga3d`.
         #[inline(always)]
@@ -614,6 +658,17 @@ mod pga2d_to_cga2d {
     }
 
     impl<T: Coef> crate::Widen<crate::cga2d::Twist<(), T>> for crate::pga2d::Point<(), T> {}
+
+    impl<S: Slots, T: Coef> From<crate::pga2d::Direction<S, T>> for crate::cga2d::Twist<S, T> {
+        /// The image under the homomorphism from `pga2d` to `cga2d`.
+        #[inline(always)]
+        fn from(x: crate::pga2d::Direction<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::cga2d::Twist::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[1]).0, (-a[0]).0])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::cga2d::Twist<(), T>> for crate::pga2d::Direction<(), T> {}
 
     impl<S: Slots, T: Coef> From<crate::pga2d::Pseudoscalar<S, T>> for crate::cga2d::Trivector<S, T> {
         /// The image under the homomorphism from `pga2d` to `cga2d`.
@@ -731,6 +786,17 @@ mod pga3d_to_cga3d {
     }
 
     impl<T: Coef> crate::Widen<crate::cga3d::Trivector<(), T>> for crate::pga3d::Point<(), T> {}
+
+    impl<S: Slots, T: Coef> From<crate::pga3d::Direction<S, T>> for crate::cga3d::Trivector<S, T> {
+        /// The image under the homomorphism from `pga3d` to `cga3d`.
+        #[inline(always)]
+        fn from(x: crate::pga3d::Direction<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::cga3d::Trivector::from_coeffs([<S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), (a[0]).0, (a[1]).0, (a[2]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
+        }
+    }
+
+    impl<T: Coef> crate::Widen<crate::cga3d::Trivector<(), T>> for crate::pga3d::Direction<(), T> {}
 
     impl<S: Slots, T: Coef> From<crate::pga3d::Pseudoscalar<S, T>> for crate::cga3d::Quadvector<S, T> {
         /// The image under the homomorphism from `pga3d` to `cga3d`.
@@ -1087,6 +1153,15 @@ mod vga3d_to_sta {
         fn from(x: crate::vga3d::Pseudoscalar<S, T>) -> Self {
             let a = x.c.map(SlotArr::<S, T>);
             crate::sta::Pseudoscalar::from_coeffs([(a[0]).0])
+        }
+    }
+
+    impl<S: Slots, T: Coef> From<crate::vga3d::Paravector<S, T>> for crate::sta::Even<S, T> {
+        /// The image under the homomorphism from `vga3d` to `sta`.
+        #[inline(always)]
+        fn from(x: crate::vga3d::Paravector<S, T>) -> Self {
+            let a = x.c.map(SlotArr::<S, T>);
+            crate::sta::Even::from_coeffs([(a[0]).0, (a[1]).0, (a[2]).0, (a[3]).0, <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0), <S as Slots>::from_flat(&mut |_| T::zero(), 0)])
         }
     }
 

@@ -34,6 +34,10 @@ pub struct KindSpec {
     pub layout: Layout,
     /// Whether sandwich kernels are generated with this kind as the versor.
     pub versor: bool,
+    /// Whether operations may take this kind as their result type. False for a `part`: a
+    /// kind reached only by name (casts, constructors, slots), so declaring it changes no
+    /// existing result type (a PGA2D translator's log stays a `Point`, not a `Direction`).
+    pub result: bool,
     /// Documentation.
     pub doc: String,
 }
@@ -202,7 +206,7 @@ impl AlgebraSpec {
         let mut doc = String::new();
         let mut basis: Vec<(char, i64)> = Vec::new();
         let mut off_diagonal: Vec<(char, char, i64)> = Vec::new();
-        let mut raw_kinds: Vec<(String, Vec<String>, bool, String)> = Vec::new();
+        let mut raw_kinds: Vec<(String, Vec<String>, bool, bool, String)> = Vec::new();
         let mut aliases = Vec::new();
         while let Some(tok) = p.next() {
             let Tok::Ident(word) = tok else {
@@ -248,7 +252,7 @@ impl AlgebraSpec {
                     p.expect_punct(';')?;
                     off_diagonal.push((a, b, v));
                 }
-                "kind" | "versor" => {
+                "kind" | "versor" | "part" => {
                     let kname = p.ident()?;
                     if !is_type_name(&kname) {
                         return Err(AlgebraError(format!(
@@ -276,7 +280,7 @@ impl AlgebraSpec {
                     }
                     let kdoc = p.opt_str();
                     p.expect_punct(';')?;
-                    raw_kinds.push((kname, blades, word == "versor", kdoc));
+                    raw_kinds.push((kname, blades, word == "versor", word != "part", kdoc));
                 }
                 "alias" => {
                     let a = p.ident()?;
@@ -317,7 +321,7 @@ impl AlgebraSpec {
         }
         let algebra = Algebra::new(&names, metric)?;
         let mut kinds: Vec<KindSpec> = Vec::new();
-        for (kname, blades, versor, kdoc) in raw_kinds {
+        for (kname, blades, versor, result, kdoc) in raw_kinds {
             if kinds.iter().any(|k| k.name == kname) {
                 return Err(AlgebraError(format!("duplicate kind {kname}")));
             }
@@ -328,6 +332,7 @@ impl AlgebraSpec {
                 blades,
                 layout,
                 versor,
+                result,
                 doc: kdoc,
             });
         }
@@ -348,6 +353,7 @@ impl AlgebraSpec {
                         blades: vec![(0, 1)],
                     },
                     versor: false,
+                    result: true,
                     doc: "A scalar.".into(),
                 },
             );
@@ -368,6 +374,7 @@ impl AlgebraSpec {
                     blades: masks.iter().map(|&m| (m, 1)).collect(),
                 },
                 versor: false,
+                result: true,
                 doc: "A general multivector, blades by grade then index.".into(),
             });
         }
@@ -407,7 +414,7 @@ impl AlgebraSpec {
             support.iter().map(|m| m.count_ones()).collect();
         self.kinds
             .iter()
-            .filter(|k| support.is_subset(&k.layout.support()))
+            .filter(|k| k.result && support.is_subset(&k.layout.support()))
             .min_by_key(|k| (!k.layout.grades().is_subset(&grades), k.layout.len()))
     }
 }
@@ -425,6 +432,24 @@ fn basis_suffix(name: &str) -> Result<char, AlgebraError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A `part` is never chosen as a result type, even where it is the smallest kind that fits.
+    #[test]
+    fn parts_are_not_results() {
+        let s = AlgebraSpec::parse(
+            r#"algebra p2 "p"; basis e0 = 0, e1 = 1, e2 = 1;
+            versor Point = [e20, e01, e12]; part Direction = [e20, e01];"#,
+        )
+        .expect("parse");
+        let ideal: std::collections::BTreeSet<u32> = [0b101, 0b011].into_iter().collect();
+        assert_eq!(s.kind_for_support(&ideal).expect("a kind").name, "Point");
+        let d = s
+            .kinds
+            .iter()
+            .find(|k| k.name == "Direction")
+            .expect("declared");
+        assert!(!d.result && !d.versor);
+    }
 
     const PGA2D: &str = r#"
         algebra pga2d "PGA2D";

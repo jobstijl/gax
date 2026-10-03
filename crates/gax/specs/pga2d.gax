@@ -7,6 +7,7 @@ basis e0 = 0, e1 = 1, e2 = 1;
 kind Scalar = [1] "A scalar.";
 versor Line = [e1, e2, e0] "A line `a x + b y + c = 0`, stored as `a e1 + b e2 + c e0`: the vectors (grade 1) of plane-based PGA. As a versor it is a reflection.";
 versor Point = [e20, e01, e12] "A point `(x, y)` with weight `w`, stored as `x e20 + y e01 + w e12`: the bivectors. With `w = 0` it is a direction, a point at infinity. As a versor it is a half turn.";
+part Direction = [e20, e01] "A direction: an ideal point (a point at infinity), the weightless part of a `Point`.";
 kind Pseudoscalar = [e012] "The pseudoscalar `e012`.";
 versor Rotor = [1, e12] "A rotation about the origin, `cos(a/2) + sin(a/2) e12`.";
 versor Translator = [1, e20, e01] "A translation by `(dx, dy)`: `1 + (dy e20 - dx e01) / 2` (`Motor::translation`).";

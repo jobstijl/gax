@@ -27,6 +27,10 @@ pub type TrivectorSoa<E = f32> = gx::batch::Soa<Trivector, E>;
 pub type PseudoscalarSoa<E = f32> = gx::batch::Soa<Pseudoscalar, E>;
 
 #[cfg(feature = "batch")]
+/// [`Phasor`] values in struct-of-arrays form, for the batch kernels.
+pub type PhasorSoa<E = f32> = gx::batch::Soa<Phasor, E>;
+
+#[cfg(feature = "batch")]
 /// [`Even`] values in struct-of-arrays form, for the batch kernels.
 pub type EvenSoa<E = f32> = gx::batch::Soa<Even, E>;
 
@@ -542,6 +546,105 @@ impl From<PseudoscalarGpu16> for Pseudoscalar<(), f32> {
 }
 
 #[cfg(feature = "bytemuck")]
+/// [`Phasor`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Phasor`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PhasorGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Phasor { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<PhasorGpu>() == 16);
+    assert!(core::mem::align_of::<PhasorGpu>() == 16);
+    assert!(core::mem::offset_of!(PhasorGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for PhasorGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for PhasorGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Phasor<(), f32>> for PhasorGpu {
+    #[inline]
+    fn from(x: Phasor<(), f32>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        PhasorGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::Unit<Phasor<(), f32>>> for PhasorGpu {
+    #[inline]
+    fn from(x: gx::Unit<Phasor<(), f32>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<PhasorGpu> for Phasor<(), f32> {
+    #[inline]
+    fn from(g: PhasorGpu) -> Self {
+        Phasor::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Phasor`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::sta_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct PhasorGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Phasor { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<PhasorGpu16>() == 8);
+    assert!(core::mem::align_of::<PhasorGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for PhasorGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for PhasorGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Phasor<(), f32>> for PhasorGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Phasor<(), f32>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        PhasorGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<PhasorGpu16> for Phasor<(), f32> {
+    #[inline]
+    fn from(g: PhasorGpu16) -> Self {
+        Phasor::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
 /// [`Even`] in the GPU layout of the `gax::wgsl` modules: its 8 coefficients in blade
 /// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Even`).
 #[repr(C, align(16))]
@@ -863,6 +966,7 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Bivector", core::mem::size_of::<BivectorGpu>(), core::mem::align_of::<BivectorGpu>(), core::mem::offset_of!(BivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Trivector", core::mem::size_of::<TrivectorGpu>(), core::mem::align_of::<TrivectorGpu>(), core::mem::offset_of!(TrivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Pseudoscalar", core::mem::size_of::<PseudoscalarGpu>(), core::mem::align_of::<PseudoscalarGpu>(), core::mem::offset_of!(PseudoscalarGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Phasor", core::mem::size_of::<PhasorGpu>(), core::mem::align_of::<PhasorGpu>(), core::mem::offset_of!(PhasorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Even", core::mem::size_of::<EvenGpu>(), core::mem::align_of::<EvenGpu>(), core::mem::offset_of!(EvenGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu>(), core::mem::align_of::<OddGpu>(), core::mem::offset_of!(OddGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu>(), core::mem::align_of::<MultivectorGpu>(), core::mem::offset_of!(MultivectorGpu, c), core::mem::size_of::<[f32; 4]>()),
@@ -876,6 +980,7 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Bivector", core::mem::size_of::<BivectorGpu16>(), core::mem::align_of::<BivectorGpu16>(), core::mem::offset_of!(BivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Trivector", core::mem::size_of::<TrivectorGpu16>(), core::mem::align_of::<TrivectorGpu16>(), core::mem::offset_of!(TrivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Pseudoscalar", core::mem::size_of::<PseudoscalarGpu16>(), core::mem::align_of::<PseudoscalarGpu16>(), core::mem::offset_of!(PseudoscalarGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Phasor", core::mem::size_of::<PhasorGpu16>(), core::mem::align_of::<PhasorGpu16>(), core::mem::offset_of!(PhasorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Even", core::mem::size_of::<EvenGpu16>(), core::mem::align_of::<EvenGpu16>(), core::mem::offset_of!(EvenGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Odd", core::mem::size_of::<OddGpu16>(), core::mem::align_of::<OddGpu16>(), core::mem::offset_of!(OddGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Multivector", core::mem::size_of::<MultivectorGpu16>(), core::mem::align_of::<MultivectorGpu16>(), core::mem::offset_of!(MultivectorGpu16, c), core::mem::size_of::<[u16; 4]>()),

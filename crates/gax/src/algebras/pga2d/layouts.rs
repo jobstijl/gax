@@ -19,6 +19,10 @@ pub type LineSoa<E = f32> = gx::batch::Soa<Line, E>;
 pub type PointSoa<E = f32> = gx::batch::Soa<Point, E>;
 
 #[cfg(feature = "batch")]
+/// [`Direction`] values in struct-of-arrays form, for the batch kernels.
+pub type DirectionSoa<E = f32> = gx::batch::Soa<Direction, E>;
+
+#[cfg(feature = "batch")]
 /// [`Pseudoscalar`] values in struct-of-arrays form, for the batch kernels.
 pub type PseudoscalarSoa<E = f32> = gx::batch::Soa<Pseudoscalar, E>;
 
@@ -344,6 +348,105 @@ impl From<PointGpu16> for Point<(), f32> {
     #[inline]
     fn from(g: PointGpu16) -> Self {
         Point::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+/// [`Direction`] in the GPU layout of the `gax::wgsl` modules: its 2 coefficients in blade
+/// order, four per `vec4<f32>` field, zero-padded (the WGSL struct `Direction`).
+#[repr(C, align(16))]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DirectionGpu {
+    /// The coefficients, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[f32; 4]; 1],
+}
+
+// The WGSL layout of `struct Direction { c0: vec4<f32>, ... }`: size 16 per field, align 16.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<DirectionGpu>() == 16);
+    assert!(core::mem::align_of::<DirectionGpu>() == 16);
+    assert!(core::mem::offset_of!(DirectionGpu, c) == 0);
+};
+
+// SAFETY: `repr(C, align(16))` over `[[f32; 4]; 1]` (size a multiple of 16): no padding
+// bytes, and every bit pattern is a valid `f32`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for DirectionGpu {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for DirectionGpu {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Direction<(), f32>> for DirectionGpu {
+    #[inline]
+    fn from(x: Direction<(), f32>) -> Self {
+        let mut c = [[0.0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = *v;
+        }
+        DirectionGpu { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<gx::Unit<Direction<(), f32>>> for DirectionGpu {
+    #[inline]
+    fn from(x: gx::Unit<Direction<(), f32>>) -> Self {
+        x.into_inner().into()
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<DirectionGpu> for Direction<(), f32> {
+    #[inline]
+    fn from(g: DirectionGpu) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|i| g.c[i / 4][i % 4]))
+    }
+}
+
+/// [`Direction`] in the GPU layout of the `gax::wgsl` `f16` modules (`gax::pga2d_f16`): its 2
+/// coefficients as IEEE binary16 bit patterns, four per `vec4<f16>` field, zero-padded.
+#[repr(C, align(8))]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DirectionGpu16 {
+    /// The coefficients' `f16` bits, `c[i / 4][i % 4]` for coefficient `i`.
+    pub c: [[u16; 4]; 1],
+}
+
+// The WGSL layout of `struct Direction { c0: vec4<f16>, ... }`: size 8 per field, align 8.
+#[cfg(feature = "bytemuck")]
+const _: () = {
+    assert!(core::mem::size_of::<DirectionGpu16>() == 8);
+    assert!(core::mem::align_of::<DirectionGpu16>() == 8);
+};
+
+// SAFETY: `repr(C, align(8))` over `[[u16; 4]; 1]` (size a multiple of 8): no padding bytes,
+// and every bit pattern is a valid `u16`.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Zeroable for DirectionGpu16 {}
+// SAFETY: as above.
+#[cfg(feature = "bytemuck")]
+unsafe impl gx::bytemuck::Pod for DirectionGpu16 {}
+
+#[cfg(feature = "bytemuck")]
+impl From<Direction<(), f32>> for DirectionGpu16 {
+    /// Each coefficient rounded to the nearest `f16`.
+    #[inline]
+    fn from(x: Direction<(), f32>) -> Self {
+        let mut c = [[0; 4]; 1];
+        for (i, v) in x.c.iter().enumerate() {
+            c[i / 4][i % 4] = gx::gpu::f16_bits(*v);
+        }
+        DirectionGpu16 { c }
+    }
+}
+
+#[cfg(feature = "bytemuck")]
+impl From<DirectionGpu16> for Direction<(), f32> {
+    #[inline]
+    fn from(g: DirectionGpu16) -> Self {
+        Direction::from_coeffs(core::array::from_fn(|i| gx::gpu::f16_to_f32(g.c[i / 4][i % 4])))
     }
 }
 
@@ -964,6 +1067,7 @@ pub const GPU_LAYOUTS: &[(&str, usize, usize, usize, usize)] = &[
     ("Scalar", core::mem::size_of::<ScalarGpu>(), core::mem::align_of::<ScalarGpu>(), core::mem::offset_of!(ScalarGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Line", core::mem::size_of::<LineGpu>(), core::mem::align_of::<LineGpu>(), core::mem::offset_of!(LineGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Point", core::mem::size_of::<PointGpu>(), core::mem::align_of::<PointGpu>(), core::mem::offset_of!(PointGpu, c), core::mem::size_of::<[f32; 4]>()),
+    ("Direction", core::mem::size_of::<DirectionGpu>(), core::mem::align_of::<DirectionGpu>(), core::mem::offset_of!(DirectionGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Pseudoscalar", core::mem::size_of::<PseudoscalarGpu>(), core::mem::align_of::<PseudoscalarGpu>(), core::mem::offset_of!(PseudoscalarGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Rotor", core::mem::size_of::<RotorGpu>(), core::mem::align_of::<RotorGpu>(), core::mem::offset_of!(RotorGpu, c), core::mem::size_of::<[f32; 4]>()),
     ("Translator", core::mem::size_of::<TranslatorGpu>(), core::mem::align_of::<TranslatorGpu>(), core::mem::offset_of!(TranslatorGpu, c), core::mem::size_of::<[f32; 4]>()),
@@ -978,6 +1082,7 @@ pub const GPU_LAYOUTS_F16: &[(&str, usize, usize, usize, usize)] = &[
     ("Scalar", core::mem::size_of::<ScalarGpu16>(), core::mem::align_of::<ScalarGpu16>(), core::mem::offset_of!(ScalarGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Line", core::mem::size_of::<LineGpu16>(), core::mem::align_of::<LineGpu16>(), core::mem::offset_of!(LineGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Point", core::mem::size_of::<PointGpu16>(), core::mem::align_of::<PointGpu16>(), core::mem::offset_of!(PointGpu16, c), core::mem::size_of::<[u16; 4]>()),
+    ("Direction", core::mem::size_of::<DirectionGpu16>(), core::mem::align_of::<DirectionGpu16>(), core::mem::offset_of!(DirectionGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Pseudoscalar", core::mem::size_of::<PseudoscalarGpu16>(), core::mem::align_of::<PseudoscalarGpu16>(), core::mem::offset_of!(PseudoscalarGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Rotor", core::mem::size_of::<RotorGpu16>(), core::mem::align_of::<RotorGpu16>(), core::mem::offset_of!(RotorGpu16, c), core::mem::size_of::<[u16; 4]>()),
     ("Translator", core::mem::size_of::<TranslatorGpu16>(), core::mem::align_of::<TranslatorGpu16>(), core::mem::offset_of!(TranslatorGpu16, c), core::mem::size_of::<[u16; 4]>()),

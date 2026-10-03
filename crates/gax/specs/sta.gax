@@ -7,6 +7,7 @@ versor Vector = [e0, e1, e2, e3] "A spacetime vector (an event or a four-momentu
 kind Bivector = [e10, e20, e30, e23, e31, e12] "A bivector: an electromagnetic field, or the generator of a Lorentz transformation. `e10, e20, e30` are the boosts (electric part), `e23, e31, e12` the rotations (magnetic part).";
 kind Trivector = [e123, e032, e013, e021] "A trivector (a pseudovector).";
 kind Pseudoscalar = [e0123] "The unit four-volume `e0123`.";
+part Phasor = [1, e0123] "A scalar plus a pseudoscalar: a complex number with `i = e0123`, which commutes with the even subalgebra (`exp` of a pseudoscalar, the duality rotation `exp(I β)` of a spinor).";
 versor Even = [1, e10, e20, e30, e23, e31, e12, e0123] "The even subalgebra: spinors and Lorentz rotors.";
 versor Odd = [e0, e1, e2, e3, e123, e032, e013, e021] "The odd subalgebra.";
 kind Multivector = [1, e0, e1, e2, e3, e10, e20, e30, e23, e31, e12, e123, e032, e013, e021, e0123] "A general multivector.";

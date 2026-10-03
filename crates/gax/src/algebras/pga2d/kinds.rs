@@ -2357,6 +2357,708 @@ impl<T: gx::Real> gx::Normalize for Point<(), T> {
     }
 }
 
+#[doc = "A direction: an ideal point (a point at infinity), the weightless part of a `Point`."]
+///
+/// Blades, in coefficient order: `[e20, e01]`.
+///
+/// `S` lists the open slots: `Direction` (that is, `Direction<()>`) is a value, `Direction<(A,)>` a
+/// linear map from `A`, `Direction<(A, B)>` a bilinear map. `T` is the coefficient type.
+#[repr(C)]
+pub struct Direction<S: gx::Slots = (), T: gx::Coef = f32> {
+    /// Coefficients, output first: `c[i]` is the slot array of blade `i`.
+    pub c: [S::Arr<T>; 2],
+}
+
+impl<S: gx::Slots, T: gx::Coef> Clone for Direction<S, T> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> Copy for Direction<S, T> {}
+
+impl<S: gx::Slots, T: gx::Coef> PartialEq for Direction<S, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.c == other.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::fmt::Debug for Direction<S, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let mut d = f.debug_struct("Direction");
+        for (b, c) in <Direction as gx::Kind>::BLADES.iter().zip(self.c.iter()) {
+            d.field(b, c);
+        }
+        d.finish()
+    }
+}
+
+impl gx::Kind for Direction {
+    const N: usize = 2;
+    const NAME: &'static str = "Direction";
+    const MODULE: &'static str = module_path!();
+    const BLADES: &'static [&'static str] = &["e20", "e01"];
+    type Arr<X: gx::Elem> = [X; 2];
+    type Mv<S: gx::Slots, T: gx::Coef> = Direction<S, T>;
+    type Scalar = Scalar;
+    #[inline(always)]
+    fn arr_from_fn<X: gx::Elem>(mut f: impl FnMut(usize) -> X) -> [X; 2] {
+        [f(0), f(1)]
+    }
+    #[inline(always)]
+    fn arr_map<X: gx::Elem, Y: gx::Elem>(a: &[X; 2], mut f: impl FnMut(&X) -> Y) -> [Y; 2] {
+        [f(&a[0]), f(&a[1])]
+    }
+    #[inline(always)]
+    fn arr_zip<X: gx::Elem, Y: gx::Elem, Z: gx::Elem>(
+        a: &[X; 2],
+        b: &[Y; 2],
+        mut f: impl FnMut(&X, &Y) -> Z,
+    ) -> [Z; 2] {
+        [f(&a[0], &b[0]), f(&a[1], &b[1])]
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Extensor for Direction<S, T> {
+    type Kind = Direction;
+    type Slots = S;
+    type Coef = T;
+    #[inline(always)]
+    fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        Direction { c }
+    }
+    #[inline(always)]
+    fn coeffs(&self) -> &[S::Arr<T>; 2] {
+        &self.c
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> Direction<S, T> {
+    /// Construct from output-first coefficients.
+    #[inline(always)]
+    pub const fn from_coeffs(c: [S::Arr<T>; 2]) -> Self {
+        Direction { c }
+    }
+
+    /// All coefficients zero.
+    #[inline(always)]
+    pub fn zero() -> Self {
+        Direction { c: [S::from_flat(&mut |_| T::zero(), 0); 2] }
+    }
+
+    /// Every coefficient mapped by `f`, kind and slots kept: to `Complex`, `gx::Dual` or `f32`
+    /// (see [`gx::Extensor::map_coefs`]).
+    #[inline]
+    pub fn map_coefs<U: gx::Coef>(&self, f: impl FnMut(T) -> U) -> Direction<S, U> {
+        gx::Extensor::map_coefs(self, f)
+    }
+
+    /// Fill the first open slot with a value, or compose a map into it.
+    #[inline(always)]
+    pub fn of<X>(self, x: X) -> <Self as gx::Of<X>>::Output
+    where
+        Self: gx::Of<X>,
+    {
+        gx::Of::of(self, x)
+    }
+
+    /// This value or map as a `K`: the blades they share kept, `K`'s other blades zero (a
+    /// projection, an embedding, or both; on maps and forms, of the output).
+    #[inline(always)]
+    pub fn cast<K: gx::Kind>(self) -> K::Mv<S, T>
+    where
+        Direction: gx::Cast<K>,
+    {
+        gx::cast::cast::<Self, K>(&self)
+    }
+
+    /// The grade-`G` part, as the declared kind that holds it (on maps and forms, of the
+    /// output).
+    #[inline(always)]
+    pub fn grade<const G: usize>(self) -> <<Direction as gx::GradePart<G>>::Out as gx::Kind>::Mv<S, T>
+    where
+        Direction: gx::GradePart<G>,
+    {
+        gx::cast::grade::<Self, G>(&self)
+    }
+
+    /// Least squares: the least-norm `x` of the first slot's kind minimizing
+    /// `âself.of(x) â rhsâ` (coefficient norms). For a one-slot map `rhs` may have slots, which
+    /// `x` keeps; for more slots `rhs` has exactly the remaining ones.
+    #[inline]
+    pub fn lstsq<X>(self, rhs: X) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X>,
+    {
+        gx::LeastSquares::lstsq(self, rhs)
+    }
+
+    /// [`Self::lstsq`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_with<X>(self, rhs: X, rcond: T) -> <Self as gx::LeastSquares<X>>::Solution
+    where
+        Self: gx::LeastSquares<X, Coef = T>,
+    {
+        gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
+    #[inline(always)]
+    pub fn at<const I: usize>(self) -> Direction<<S as gx::MoveToFront<I>>::Moved, T>
+    where
+        S: gx::MoveToFront<I>,
+    {
+        Direction { c: self.c.map(|col| <S as gx::MoveToFront<I>>::move_arr(&col)) }
+    }
+
+    /// Contract the output with open slot `I` (which must be of kind `Direction`): a trace with no
+    /// metric, leaving a scalar with the other slots (numga's `trace(slot)`).
+    #[inline(always)]
+    pub fn trace_at<const I: usize>(self) -> <Direction<<S as gx::MoveToFront<I>>::Moved, T> as gx::TraceFirst>::Output
+    where
+        S: gx::MoveToFront<I>,
+        Direction<<S as gx::MoveToFront<I>>::Moved, T>: gx::TraceFirst,
+    {
+        gx::TraceFirst::trace_first(self.at::<I>())
+    }
+
+    /// The outermorphism of this map on vectors (or antivectors) to the kind `B`:
+    /// `m.outermorphism::<Line>().of(a ^ b) == m.of(a) ^ m.of(b)` (with `&` for antivectors).
+    #[inline(always)]
+    pub fn outermorphism<B>(self) -> <Self as gx::Outermorphism<B>>::Output
+    where
+        Self: gx::Outermorphism<B>,
+    {
+        gx::Outermorphism::outermorphism(self)
+    }
+
+    /// Fill every open slot of `x`'s kind with the value `x`; the other slots stay open.
+    #[inline(always)]
+    pub fn fill<X>(self, x: X) -> Direction<<S as gx::FillList<X::Kind>>::Out, T>
+    where
+        X: gx::Extensor<Slots = (), Coef = T>,
+        S: gx::FillList<X::Kind>,
+    {
+        let xc = x.coeffs();
+        Direction { c: self.c.map(|col| <S as gx::FillList<X::Kind>>::fill(&col, xc)) }
+    }
+
+    /// See [`gx::Gp`].
+    #[inline(always)]
+    pub fn gp<R>(self, rhs: R) -> <Self as gx::Gp<R>>::Output
+    where
+        Self: gx::Gp<R>,
+    {
+        gx::Gp::gp(self, rhs)
+    }
+
+    /// See [`gx::Wedge`].
+    #[inline(always)]
+    pub fn wedge<R>(self, rhs: R) -> <Self as gx::Wedge<R>>::Output
+    where
+        Self: gx::Wedge<R>,
+    {
+        gx::Wedge::wedge(self, rhs)
+    }
+
+    /// See [`gx::Vee`].
+    #[inline(always)]
+    pub fn vee<R>(self, rhs: R) -> <Self as gx::Vee<R>>::Output
+    where
+        Self: gx::Vee<R>,
+    {
+        gx::Vee::vee(self, rhs)
+    }
+
+    /// See [`gx::Dot`].
+    #[inline(always)]
+    pub fn dot<R>(self, rhs: R) -> <Self as gx::Dot<R>>::Output
+    where
+        Self: gx::Dot<R>,
+    {
+        gx::Dot::dot(self, rhs)
+    }
+
+    /// See [`gx::Lc`].
+    #[inline(always)]
+    pub fn lc<R>(self, rhs: R) -> <Self as gx::Lc<R>>::Output
+    where
+        Self: gx::Lc<R>,
+    {
+        gx::Lc::lc(self, rhs)
+    }
+
+    /// See [`gx::Rc`].
+    #[inline(always)]
+    pub fn rc<R>(self, rhs: R) -> <Self as gx::Rc<R>>::Output
+    where
+        Self: gx::Rc<R>,
+    {
+        gx::Rc::rc(self, rhs)
+    }
+
+    /// See [`gx::ScalarProduct`].
+    #[inline(always)]
+    pub fn scalar_product<R>(self, rhs: R) -> <Self as gx::ScalarProduct<R>>::Output
+    where
+        Self: gx::ScalarProduct<R>,
+    {
+        gx::ScalarProduct::scalar_product(self, rhs)
+    }
+
+    /// See [`gx::Commutator`].
+    #[inline(always)]
+    pub fn commutator<R>(self, rhs: R) -> <Self as gx::Commutator<R>>::Output
+    where
+        Self: gx::Commutator<R>,
+    {
+        gx::Commutator::commutator(self, rhs)
+    }
+
+    /// See [`gx::Anticommutator`].
+    #[inline(always)]
+    pub fn anticommutator<R>(self, rhs: R) -> <Self as gx::Anticommutator<R>>::Output
+    where
+        Self: gx::Anticommutator<R>,
+    {
+        gx::Anticommutator::anticommutator(self, rhs)
+    }
+
+    /// See [`gx::Transform`].
+    #[inline(always)]
+    pub fn transform<R>(self, rhs: R) -> <Self as gx::Transform<R>>::Output
+    where
+        Self: gx::Transform<R>,
+    {
+        gx::Transform::transform(self, rhs)
+    }
+
+    /// See [`gx::TransformInv`].
+    #[inline(always)]
+    pub fn transform_inv<R>(self, rhs: R) -> <Self as gx::TransformInv<R>>::Output
+    where
+        Self: gx::TransformInv<R>,
+    {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+
+    /// See [`gx::Reverse`].
+    #[inline(always)]
+    pub fn reverse(self) -> <Self as gx::Reverse>::Output {
+        gx::Reverse::reverse(self)
+    }
+
+    /// See [`gx::Involute`].
+    #[inline(always)]
+    pub fn involute(self) -> <Self as gx::Involute>::Output {
+        gx::Involute::involute(self)
+    }
+
+    /// See [`gx::Conjugate`].
+    #[inline(always)]
+    pub fn conjugate(self) -> <Self as gx::Conjugate>::Output {
+        gx::Conjugate::conjugate(self)
+    }
+
+    /// See [`gx::Dual`].
+    #[inline(always)]
+    pub fn dual(self) -> <Self as gx::Dual>::Output {
+        gx::Dual::dual(self)
+    }
+
+    /// See [`gx::Undual`].
+    #[inline(always)]
+    pub fn undual(self) -> <Self as gx::Undual>::Output {
+        gx::Undual::undual(self)
+    }
+
+    /// The Hodge dual `~x I`, with the metric (`I` the product of the basis vectors in
+    /// order): numga's `dual`. [`dual`](Self::dual) is the metric-free complement; the two
+    /// differ in sign on blades containing basis vectors of negative square (STA, R(4,1)), and
+    /// `hodge` vanishes on blades containing a null basis vector (`e0` of PGA), where `dual`
+    /// does not.
+    #[inline(always)]
+    pub fn hodge(self) -> <<Self as gx::Reverse>::Output as gx::Gp<Pseudoscalar<(), T>>>::Output
+    where
+        <Self as gx::Reverse>::Output: gx::Gp<Pseudoscalar<(), T>>,
+    {
+        gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
+    }
+}
+
+impl<T: gx::Coef> Direction<(), T> {
+    /// A value from its coefficients, in blade order.
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub const fn new(e20: T, e01: T) -> Self {
+        Direction { c: [e20, e01] }
+    }
+
+    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
+    /// [`gx::Prepared`]).
+    #[inline(always)]
+    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
+    where
+        Self: gx::Prepare<X>,
+    {
+        gx::Prepare::prepare(self)
+    }
+
+    /// The identity map on `Direction`: a `Direction` with one open `Direction` slot.
+    #[inline(always)]
+    pub fn slot() -> Direction<(Direction,), T> {
+        Direction { c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
+    }
+
+    /// Coefficient of `e20`.
+    #[inline(always)]
+    pub fn e20(&self) -> T {
+        self.c[0]
+    }
+
+    /// Coefficient of `e01`.
+    #[inline(always)]
+    pub fn e01(&self) -> T {
+        self.c[1]
+    }
+}
+
+impl<A: gx::Kind, T: gx::Coef> Direction<(A,), T> {
+    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
+    /// `Direction`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
+    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
+    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
+    /// the input blade `i`.
+    #[inline]
+    pub fn from_images(images: A::Arr<Direction<(), T>>) -> Self {
+        let images = images.as_ref();
+        Direction { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Direction<(A,), T> {
+    /// The inverse map, `A <- Direction`.
+    #[inline]
+    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::inverse(self)
+    }
+
+    /// The determinant of the map's coefficient matrix.
+    #[inline]
+    pub fn det(self) -> T
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::det(self)
+    }
+
+    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
+    /// symmetric (see [`gx::SquareMap::eigh`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<Direction as gx::Kind>::Arr<T>, <Direction as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::eigh(self)
+    }
+
+    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
+    #[inline]
+    pub fn eigvals(self) -> <Direction as gx::Kind>::Arr<gx::Complex<T>>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::eigvals(self)
+    }
+
+    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eig(self) -> (<Direction as gx::Kind>::Arr<gx::Complex<T>>, <Direction as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::eig(self)
+    }
+
+    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
+    #[inline]
+    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+        X: gx::Extensor<Kind = Direction, Coef = T>,
+    {
+        gx::SquareMap::solve(self, rhs)
+    }
+
+    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd(self) -> (<Direction as gx::Kind>::Arr<Direction<(), T>>, <Direction as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::SquareMap<Coef = T, Kind = Direction, Input = A>,
+    {
+        gx::SquareMap::svd(self)
+    }
+
+    /// The MooreâPenrose pseudo-inverse, `A <- Direction`, of a map of any shape: it sends `b` to
+    /// the least-norm least-squares solution of `self.of(x) â b`.
+    #[inline]
+    pub fn pinv(self) -> A::Mv<(Direction,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Direction,), T>>,
+    {
+        gx::PseudoInverse::pinv(self)
+    }
+
+    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn pinv_with(self, rcond: T) -> A::Mv<(Direction,), T>
+    where
+        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Direction,), T>>,
+    {
+        gx::PseudoInverse::pinv_with(self, rcond)
+    }
+
+    /// The trace of a map from `Direction` to itself.
+    #[inline]
+    pub fn trace(self) -> T
+    where
+        Self: gx::Endomorphism<Coef = T, Kind = Direction, Input = Direction>,
+    {
+        gx::Endomorphism::trace(self)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Direction<(A, B), T> {
+    /// Exchange the two slots.
+    #[inline]
+    pub fn swap(self) -> Direction<(B, A), T> {
+        self.at::<1>()
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Direction<(A, B), T> {
+    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
+    #[inline]
+    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
+    where
+        Self: gx::Pairing<Coef = T, Kind = Direction, First = A, Second = B>,
+        R: gx::Extensor<Kind = Direction, Coef = T>,
+        R::Slots: gx::SplitLast<Last = B>,
+    {
+        gx::Pairing::solve(self, rhs)
+    }
+}
+
+impl<A: gx::Kind, T: gx::Real> Direction<(A, A), T> {
+    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
+    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Direction, Slot = A>,
+    {
+        gx::Form::eigh_with(self, metric)
+    }
+
+    /// Symmetric eigenproblem in the coefficient basis (identity metric).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Direction, Slot = A>,
+    {
+        gx::Form::eigh(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Direction<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn add(self, rhs: Self) -> Self {
+        Direction { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Direction<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Self) -> Self {
+        Direction { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Direction<S, T> {
+    /// The sum of values or of maps; zero for none.
+    #[inline]
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::zero(), |a, b| a + b)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::AddAssign for Direction<S, T> {
+    #[inline(always)]
+    fn add_assign(&mut self, rhs: Self) {
+        *self = *self + rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::SubAssign for Direction<S, T> {
+    #[inline(always)]
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = *self - rhs;
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> core::ops::Neg for Direction<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn neg(self) -> Self {
+        Direction { c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Direction<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn gp(self, rhs: T) -> Self {
+        Direction { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Direction<S, T> {
+    type Output = Self;
+    #[inline(always)]
+    fn div_by(self, rhs: T) -> Self {
+        let r = rhs.recip();
+        Direction { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Direction<S, T>
+where
+    Self: gx::DivBy<R>,
+{
+    type Output = <Self as gx::DivBy<R>>::Output;
+    #[inline(always)]
+    fn div(self, rhs: R) -> Self::Output {
+        gx::DivBy::div_by(self, rhs)
+    }
+}
+
+impl<S: gx::Slots> core::ops::Mul<Direction<S, f32>> for f32 {
+    type Output = Direction<S, f32>;
+    #[inline(always)]
+    fn mul(self, rhs: Direction<S, f32>) -> Direction<S, f32> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots> core::ops::Mul<Direction<S, f64>> for f64 {
+    type Output = Direction<S, f64>;
+    #[inline(always)]
+    fn mul(self, rhs: Direction<S, f64>) -> Direction<S, f64> {
+        rhs.gp(self)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Mul<R> for Direction<S, T>
+where
+    Self: gx::Gp<R>,
+{
+    type Output = <Self as gx::Gp<R>>::Output;
+    #[inline(always)]
+    fn mul(self, rhs: R) -> Self::Output {
+        gx::Gp::gp(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitXor<R> for Direction<S, T>
+where
+    Self: gx::Wedge<R>,
+{
+    type Output = <Self as gx::Wedge<R>>::Output;
+    #[inline(always)]
+    fn bitxor(self, rhs: R) -> Self::Output {
+        gx::Wedge::wedge(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitAnd<R> for Direction<S, T>
+where
+    Self: gx::Vee<R>,
+{
+    type Output = <Self as gx::Vee<R>>::Output;
+    #[inline(always)]
+    fn bitand(self, rhs: R) -> Self::Output {
+        gx::Vee::vee(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitOr<R> for Direction<S, T>
+where
+    Self: gx::Dot<R>,
+{
+    type Output = <Self as gx::Dot<R>>::Output;
+    #[inline(always)]
+    fn bitor(self, rhs: R) -> Self::Output {
+        gx::Dot::dot(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shr<R> for Direction<S, T>
+where
+    Self: gx::Transform<R>,
+{
+    type Output = <Self as gx::Transform<R>>::Output;
+    #[inline(always)]
+    fn shr(self, rhs: R) -> Self::Output {
+        gx::Transform::transform(self, rhs)
+    }
+}
+
+impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shl<R> for Direction<S, T>
+where
+    Self: gx::TransformInv<R>,
+{
+    type Output = <Self as gx::TransformInv<R>>::Output;
+    #[inline(always)]
+    fn shl(self, rhs: R) -> Self::Output {
+        gx::TransformInv::transform_inv(self, rhs)
+    }
+}
+
+impl<T: gx::Real> Direction<(), T> {
+    /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B` with `BÂ²` a Study number.
+    #[inline]
+    #[allow(unused_variables)]
+    pub fn exp(self) -> gx::Unit<Translator<(), T>> {
+        T::vectorize(#[inline(always)] move || {
+        let x = self.c;
+        let [c0, c1, s0, s1] = gx::study::exp_coeffs(-1, T::from_i64(0), T::from_i64(0));
+        let t0 = x[0] * s0;
+        let t1 = x[1] * s0;
+        gx::Unit::new_unchecked(Translator::from_coeffs([c0, t0, t1]))
+        })
+    }
+
+}
+
+impl<T: gx::Real> gx::Exp for Direction<(), T> {
+    type Output = gx::Unit<Translator<(), T>>;
+    #[inline(always)]
+    fn exp(self) -> Self::Output {
+        Self::exp(self)
+    }
+}
+
 #[doc = "The pseudoscalar `e012`."]
 ///
 /// Blades, in coefficient order: `[e012]`.
@@ -3752,6 +4454,16 @@ impl<T: gx::Real> Rotor<(), T> {
         let t0 = x[0] * s0;
         let t1 = x[1] * s0;
         gx::Unit::new_unchecked(Rotor::from_coeffs([t0, t1]))
+    }
+
+    /// The exponential: for `x = a + b B` with `BÂ² = -1`, `e^a (C(b) + S(b) B)` with `C, S` the
+    /// cosine and sine (`BÂ² = -1`), the hyperbolic ones (`+1`) or `1, b` (`0`). A `Rotor`, not a
+    /// `gx::Unit`: `x ~x` need not be 1.
+    #[inline]
+    pub fn exp(self) -> Rotor<(), T> {
+        let (a, b) = (self.c[0], self.c[1]);
+        let e = a.exp();
+        Rotor::from_coeffs([e * (b.cos()), e * (b.sin())])
     }
 
     /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
@@ -7099,6 +7811,10 @@ impl gx::KindEq<Point> for Scalar {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Direction> for Scalar {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Pseudoscalar> for Scalar {
     type Out = gx::False;
 }
@@ -7132,6 +7848,10 @@ impl gx::KindEq<Line> for Line {
 }
 
 impl gx::KindEq<Point> for Line {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Direction> for Line {
     type Out = gx::False;
 }
 
@@ -7171,6 +7891,10 @@ impl gx::KindEq<Point> for Point {
     type Out = gx::True;
 }
 
+impl gx::KindEq<Direction> for Point {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Pseudoscalar> for Point {
     type Out = gx::False;
 }
@@ -7195,6 +7919,46 @@ impl gx::KindEq<Multivector> for Point {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Scalar> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Line> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Point> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Direction> for Direction {
+    type Out = gx::True;
+}
+
+impl gx::KindEq<Pseudoscalar> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Rotor> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Translator> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Motor> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Flector> for Direction {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Multivector> for Direction {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Scalar> for Pseudoscalar {
     type Out = gx::False;
 }
@@ -7204,6 +7968,10 @@ impl gx::KindEq<Line> for Pseudoscalar {
 }
 
 impl gx::KindEq<Point> for Pseudoscalar {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Direction> for Pseudoscalar {
     type Out = gx::False;
 }
 
@@ -7243,6 +8011,10 @@ impl gx::KindEq<Point> for Rotor {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Direction> for Rotor {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Pseudoscalar> for Rotor {
     type Out = gx::False;
 }
@@ -7276,6 +8048,10 @@ impl gx::KindEq<Line> for Translator {
 }
 
 impl gx::KindEq<Point> for Translator {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Direction> for Translator {
     type Out = gx::False;
 }
 
@@ -7315,6 +8091,10 @@ impl gx::KindEq<Point> for Motor {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Direction> for Motor {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Pseudoscalar> for Motor {
     type Out = gx::False;
 }
@@ -7351,6 +8131,10 @@ impl gx::KindEq<Point> for Flector {
     type Out = gx::False;
 }
 
+impl gx::KindEq<Direction> for Flector {
+    type Out = gx::False;
+}
+
 impl gx::KindEq<Pseudoscalar> for Flector {
     type Out = gx::False;
 }
@@ -7384,6 +8168,10 @@ impl gx::KindEq<Line> for Multivector {
 }
 
 impl gx::KindEq<Point> for Multivector {
+    type Out = gx::False;
+}
+
+impl gx::KindEq<Direction> for Multivector {
     type Out = gx::False;
 }
 
@@ -7475,6 +8263,10 @@ impl gx::Cast<Point> for Point {
 
 impl gx::SubKind<Point> for Point {}
 
+impl gx::Cast<Direction> for Point {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
 impl gx::Cast<Rotor> for Point {
     const SHARED: &'static [(usize, usize, bool)] = &[(2, 1, false)];
 }
@@ -7498,6 +8290,41 @@ impl gx::SubKind<Multivector> for Point {}
 impl gx::GradePart<2> for Point {
     type Out = Point;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false)];
+}
+
+impl gx::Cast<Point> for Direction {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl gx::SubKind<Point> for Direction {}
+
+impl gx::Cast<Direction> for Direction {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
+}
+
+impl gx::SubKind<Direction> for Direction {}
+
+impl gx::Cast<Translator> for Direction {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false)];
+}
+
+impl gx::SubKind<Translator> for Direction {}
+
+impl gx::Cast<Motor> for Direction {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 2, false), (1, 3, false)];
+}
+
+impl gx::SubKind<Motor> for Direction {}
+
+impl gx::Cast<Multivector> for Direction {
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 5, false), (1, 4, false)];
+}
+
+impl gx::SubKind<Multivector> for Direction {}
+
+impl gx::GradePart<2> for Direction {
+    type Out = Point;
+    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false)];
 }
 
 impl gx::Cast<Pseudoscalar> for Pseudoscalar {
@@ -7571,6 +8398,10 @@ impl gx::Cast<Point> for Translator {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false)];
 }
 
+impl gx::Cast<Direction> for Translator {
+    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false)];
+}
+
 impl gx::Cast<Rotor> for Translator {
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
 }
@@ -7609,6 +8440,10 @@ impl gx::Cast<Scalar> for Motor {
 
 impl gx::Cast<Point> for Motor {
     const SHARED: &'static [(usize, usize, bool)] = &[(1, 2, false), (2, 0, false), (3, 1, false)];
+}
+
+impl gx::Cast<Direction> for Motor {
+    const SHARED: &'static [(usize, usize, bool)] = &[(2, 0, false), (3, 1, false)];
 }
 
 impl gx::Cast<Rotor> for Motor {
@@ -7681,6 +8516,10 @@ impl gx::Cast<Line> for Multivector {
 
 impl gx::Cast<Point> for Multivector {
     const SHARED: &'static [(usize, usize, bool)] = &[(4, 1, false), (5, 0, false), (6, 2, false)];
+}
+
+impl gx::Cast<Direction> for Multivector {
+    const SHARED: &'static [(usize, usize, bool)] = &[(4, 1, false), (5, 0, false)];
 }
 
 impl gx::Cast<Pseudoscalar> for Multivector {
