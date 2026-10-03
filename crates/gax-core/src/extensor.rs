@@ -999,3 +999,262 @@ lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8);
 lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
 lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
 lstsq_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11);
+
+/// Values indexed by a pair of blades `(i, j)` of kinds `A` and `B`, kept nested
+/// (`A::Arr<B::Arr<X>>`) and addressed by the flat index `i · B::N + j`: the columns and the
+/// right singular vectors of a least-squares problem whose unknown has two slots.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PairArr<A: Kind, B: Kind, X: crate::coef::Elem>(pub A::Arr<B::Arr<X>>);
+
+impl<A: Kind, B: Kind, X: crate::coef::Elem> core::ops::Index<usize> for PairArr<A, B, X> {
+    type Output = X;
+    #[inline(always)]
+    fn index(&self, f: usize) -> &X {
+        &self.0.as_ref()[f / B::N].as_ref()[f % B::N]
+    }
+}
+
+impl<A: Kind, B: Kind, X: crate::coef::Elem> core::ops::IndexMut<usize> for PairArr<A, B, X> {
+    #[inline(always)]
+    fn index_mut(&mut self, f: usize) -> &mut X {
+        &mut self.0.as_mut()[f / B::N].as_mut()[f % B::N]
+    }
+}
+
+impl<A: Kind, B: Kind, C: crate::coef::Elem> linalg::Columns<C> for PairArr<A, B, C> {
+    #[inline(always)]
+    fn col(&self, i: usize) -> &C {
+        &self[i]
+    }
+    #[inline(always)]
+    fn pair_mut(&mut self, p: usize, q: usize) -> (&mut C, &mut C) {
+        let ((p1, p2), (q1, q2)) = ((p / B::N, p % B::N), (q / B::N, q % B::N));
+        let outer = self.0.as_mut();
+        if p1 == q1 {
+            let (lo, hi) = outer[p1].as_mut().split_at_mut(q2);
+            (&mut lo[p2], &mut hi[0])
+        } else {
+            let (lo, hi) = outer.split_at_mut(q1);
+            (&mut lo[p1].as_mut()[p2], &mut hi[0].as_mut()[q2])
+        }
+    }
+}
+
+/// The `(A·B) × (A·B)` matrices of [`PairArr`]s.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PairSq<A: Kind, B: Kind, T: Real>(PairArr<A, B, PairArr<A, B, T>>);
+
+impl<A: Kind, B: Kind, T: Real> core::ops::Index<usize> for PairSq<A, B, T> {
+    type Output = PairArr<A, B, T>;
+    #[inline(always)]
+    fn index(&self, f: usize) -> &PairArr<A, B, T> {
+        &self.0[f]
+    }
+}
+
+impl<A: Kind, B: Kind, T: Real> core::ops::IndexMut<usize> for PairSq<A, B, T> {
+    #[inline(always)]
+    fn index_mut(&mut self, f: usize) -> &mut PairArr<A, B, T> {
+        &mut self.0[f]
+    }
+}
+
+impl<A: Kind, B: Kind, T: Real> SquareArr<T> for PairSq<A, B, T> {
+    const N: usize = A::N * B::N;
+    type Vector = PairArr<A, B, T>;
+    #[inline(always)]
+    fn zero() -> Self {
+        let row = Self::zero_vector();
+        PairSq(PairArr(A::arr_from_fn(|_| B::arr_from_fn(|_| row))))
+    }
+    #[inline(always)]
+    fn zero_vector() -> PairArr<A, B, T> {
+        PairArr(A::arr_from_fn(|_| B::arr_from_fn(|_| T::zero())))
+    }
+}
+
+/// The dispatch behind [`LeastSquaresPair`] on a slot list `(A, B, R…)`: the map's columns, one
+/// per pair of blades of its first two slots, each a `K` over the remaining slots `R…`.
+pub trait PairSlots<K: Kind, T: Real>: Slots {
+    /// The first slot.
+    type First: Kind;
+    /// The second slot.
+    type Second: Kind;
+    /// The remaining slots.
+    type Rest: Slots;
+    /// The image of each pair of blades.
+    #[allow(clippy::type_complexity)]
+    fn columns(
+        m: &K::Arr<Self::Arr<T>>,
+    ) -> PairArr<Self::First, Self::Second, Col<K, Self::Rest, T>>;
+}
+
+macro_rules! pair_slots {
+    ($($R:ident),*) => {
+        impl<K: Kind, T: Real, A: Kind, B: Kind $(, $R: Kind)*> PairSlots<K, T> for (A, B, $($R,)*) {
+            type First = A;
+            type Second = B;
+            type Rest = ($($R,)*);
+            #[inline(always)]
+            fn columns(m: &K::Arr<Self::Arr<T>>) -> PairArr<A, B, Col<K, ($($R,)*), T>> {
+                let rows = m.as_ref();
+                PairArr(A::arr_from_fn(|i| {
+                    B::arr_from_fn(|j| {
+                        Col(K::arr_from_fn(|k| {
+                            let a = <Self as SplitFirst>::split(&rows[k]);
+                            <(B, $($R,)*) as SplitFirst>::split(&a.as_ref()[i]).as_ref()[j]
+                        }))
+                    })
+                }))
+            }
+        }
+    };
+}
+
+pair_slots!();
+pair_slots!(A1);
+pair_slots!(A1, A2);
+pair_slots!(A1, A2, A3);
+pair_slots!(A1, A2, A3, A4);
+pair_slots!(A1, A2, A3, A4, A5);
+pair_slots!(A1, A2, A3, A4, A5, A6);
+pair_slots!(A1, A2, A3, A4, A5, A6, A7);
+pair_slots!(A1, A2, A3, A4, A5, A6, A7, A8);
+pair_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9);
+pair_slots!(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10);
+
+/// A map `K <- (A, B, R…)` with a two-slot value `x: A<(B,)>` bound into its first two slots:
+/// `Σᵢⱼ xᵢⱼ self(aᵢ, bⱼ)`, a `K` over `R…` (numga's binding of a tensor to two slots at once).
+pub trait OfPair: Extensor<Coef: Real> {
+    /// The two-slot value, `A<(B,)>`.
+    type Pair: Extensor;
+    /// The result, `K` over `R…`.
+    type Image: Extensor;
+    /// `Σᵢⱼ xᵢⱼ self(aᵢ, bⱼ)`.
+    fn of_pair(self, x: Self::Pair) -> Self::Image;
+}
+
+impl<M> OfPair for M
+where
+    M: Extensor<Coef: Real>,
+    M::Slots: PairSlots<M::Kind, M::Coef>,
+{
+    type Pair = <<M::Slots as PairSlots<M::Kind, M::Coef>>::First as Kind>::Mv<
+        (<M::Slots as PairSlots<M::Kind, M::Coef>>::Second,),
+        M::Coef,
+    >;
+    type Image = <M::Kind as Kind>::Mv<<M::Slots as PairSlots<M::Kind, M::Coef>>::Rest, M::Coef>;
+
+    fn of_pair(self, x: Self::Pair) -> Self::Image {
+        of_pair::<M::Kind, M::Slots, M::Coef>(self.coeffs(), &x)
+    }
+}
+
+/// Least squares for an unknown in a map's first *two* slots, as numga's `lstsq` unbinding two
+/// slots at once: for `self: K <- (A, B, R…)` and `rhs: K` over `R…`, the `x: A<(B,)>` of least
+/// norm with `self.of_pair(x) ≈ rhs` ([`OfPair`]). The columns stay nested (no flat array of
+/// `A::N · B::N` is needed), and the factorization is [`PseudoInverse::pinv`]'s one-sided
+/// Jacobi.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// use gax::ApproxEq;
+/// // The dyad `x` on (Point, Point) of least norm whose joins sum to a given line: an
+/// // antisymmetric one (a symmetric part joins to zero).
+/// let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
+/// let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+/// let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
+/// assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
+/// for i in 0..4 {
+///     for j in 0..4 {
+///         assert!((x.c[i][j] + x.c[j][i]).abs() < 1e-12);
+///     }
+/// }
+/// ```
+pub trait LeastSquaresPair<X>: OfPair {
+    /// With the default cutoff (see [`PseudoInverse::pinv`]).
+    fn lstsq_pair(self, rhs: X) -> Self::Pair;
+    /// With the cutoff `rcond` relative to the largest singular value.
+    fn lstsq_pair_with(self, rhs: X, rcond: Self::Coef) -> Self::Pair;
+}
+
+impl<M, X> LeastSquaresPair<X> for M
+where
+    M: Extensor<Coef: Real>,
+    M::Slots: PairSlots<M::Kind, M::Coef>,
+    X: Extensor<Coef = M::Coef, Slots = <M::Slots as PairSlots<M::Kind, M::Coef>>::Rest>,
+    X::Kind: SubKind<M::Kind>,
+{
+    fn lstsq_pair(self, rhs: X) -> Self::Pair {
+        lstsq_pair::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, None)
+    }
+
+    fn lstsq_pair_with(self, rhs: X, rcond: M::Coef) -> Self::Pair {
+        lstsq_pair::<M::Kind, M::Slots, M::Coef, X>(self.coeffs(), &rhs, Some(rcond))
+    }
+}
+
+#[inline]
+fn lstsq_pair<K, S, T, X>(
+    m: &K::Arr<S::Arr<T>>,
+    rhs: &X,
+    rcond: Option<T>,
+) -> <S::First as Kind>::Mv<(S::Second,), T>
+where
+    K: Kind,
+    T: Real,
+    S: PairSlots<K, T>,
+    X: Extensor<Coef = T, Slots = S::Rest>,
+    X::Kind: SubKind<K>,
+{
+    T::vectorize(
+        #[inline(always)]
+        || {
+            let cols = S::columns(m);
+            let n = <PairSq<S::First, S::Second, T> as SquareArr<T>>::N;
+            let (w, v): (_, PairSq<S::First, S::Second, T>) =
+                linalg::orthogonalize(&cols, sweeps(n));
+            let size = (K::N * <S::Rest as Slots>::SIZE).max(n);
+            let cut = rcond.unwrap_or_else(|| T::epsilon() * T::from_i64(size as i64));
+            let weights =
+                linalg::pinv_weights::<T, Col<K, S::Rest, T>, _, PairSq<S::First, S::Second, T>>(
+                    &w, cut,
+                );
+            let b = crate::cast::cast::<X, K>(rhs);
+            let x = linalg::pinv_apply(&w, &v, &weights, &Col::<K, S::Rest, T>(*b.coeffs()));
+            let x = x.0.as_ref();
+            <<S::First as Kind>::Mv<(S::Second,), T> as Extensor>::from_coeffs(
+                <S::First as Kind>::arr_from_fn(|i| {
+                    <(S::Second,) as Slots>::from_flat(&mut |j| x[i].as_ref()[j], 0)
+                }),
+            )
+        },
+    )
+}
+
+#[inline]
+fn of_pair<K, S, T>(
+    m: &K::Arr<S::Arr<T>>,
+    x: &<S::First as Kind>::Mv<(S::Second,), T>,
+) -> K::Mv<S::Rest, T>
+where
+    K: Kind,
+    T: Real,
+    S: PairSlots<K, T>,
+{
+    let cols = S::columns(m);
+    let xs = x.coeffs().as_ref();
+    let mut acc = K::arr_map(&cols[0].0, |r| {
+        <S::Rest as Slots>::zip(r, r, &mut |_, _| T::zero())
+    });
+    for (i, xi) in xs.iter().enumerate() {
+        for j in 0..<S::Second as Kind>::N {
+            let w = <(S::Second,) as Slots>::get_flat(xi, j);
+            let c = &cols.0.as_ref()[i].as_ref()[j].0;
+            acc = K::arr_zip(&acc, c, |a, b| {
+                <S::Rest as Slots>::zip(a, b, &mut |p, q| q.mul_add(w, *p))
+            });
+        }
+    }
+    <K::Mv<S::Rest, T> as Extensor>::from_coeffs(acc)
+}

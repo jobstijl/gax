@@ -134,35 +134,16 @@ mod station {
     /// Matching its line input against the noise and solving for the coefficients on the two
     /// twist inputs gives the settled covariance, `sum x_ij e_i (e_j & l)`.
     ///
-    /// numga solves for both twist slots at once with one `lstsq`. gax's `lstsq` solves for one
-    /// leading slot, so the two are flattened here into a 9 x 9 system by binding each pair of
-    /// basis twists, and solved with gax's dense LU.
+    /// Solved for both twist slots at once with `lstsq_pair`, as numga's `lstsq` does: the
+    /// dyad coefficients `x` with `lyapunov.of_pair(x) = −noise`, put back together by the map
+    /// that builds the dyads.
     pub fn settled(dynamics: Dynamics, noise: Covariance) -> Covariance {
         let t = Point::slot();
         // Twist <- (Twist, Twist, Line): the dynamics applied to t, and applied to s.
         let lyapunov = dynamics.of(t) * (t & Line::slot()) + t * (dynamics.of(t) & Line::slot());
-        let twists = [yw(1.0), wx(1.0), xy(1.0)];
-        let mut a = [[0.0f64; 9]; 9];
-        for (i, ti) in twists.iter().enumerate() {
-            for (j, sj) in twists.iter().enumerate() {
-                let column: Covariance = lyapunov.of(*ti).of(*sj);
-                for (k, v) in column.coeffs().iter().flatten().enumerate() {
-                    a[k][3 * i + j] = *v;
-                }
-            }
-        }
-        let mut b = [0.0f64; 9];
-        for (k, v) in noise.coeffs().iter().flatten().enumerate() {
-            b[k] = -v;
-        }
-        let x = gax::linalg::lu_solve(&gax::linalg::lu(&a), &b);
-        let mut out = Point::zero();
-        for (i, ti) in twists.iter().enumerate() {
-            for (j, sj) in twists.iter().enumerate() {
-                out += ti.gp(x[3 * i + j]) * (*sj & Line::slot());
-            }
-        }
-        out
+        let x: Point<(Point,), f64> = lyapunov.lstsq_pair(-noise);
+        let dyads = Point::slot() * (Point::slot() & Line::slot());
+        dyads.of_pair(x)
     }
 
     /// The covariance of readings of the vessel's position. An error moves the set point by its

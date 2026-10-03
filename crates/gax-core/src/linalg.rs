@@ -662,6 +662,27 @@ impl<T: Real, const N: usize> Column<T> for [T; N] {
     }
 }
 
+/// The columns of a least-squares problem, addressed by one index: any array or slice of
+/// [`Column`]s, or (in gax) the columns of a map's first two slots, kept nested.
+pub trait Columns<C> {
+    /// Column `i`.
+    fn col(&self, i: usize) -> &C;
+    /// Columns `p` and `q`, `p < q`, both mutable.
+    fn pair_mut(&mut self, p: usize, q: usize) -> (&mut C, &mut C);
+}
+
+impl<C, A: AsRef<[C]> + AsMut<[C]> + ?Sized> Columns<C> for A {
+    #[inline(always)]
+    fn col(&self, i: usize) -> &C {
+        &self.as_ref()[i]
+    }
+    #[inline(always)]
+    fn pair_mut(&mut self, p: usize, q: usize) -> (&mut C, &mut C) {
+        let (lo, hi) = self.as_mut().split_at_mut(q);
+        (&mut lo[p], &mut hi[0])
+    }
+}
+
 /// One-sided (Hestenes) Jacobi on the columns `a` of a matrix of any shape (one column per
 /// row of `M`, so `M::N` columns): rotated pairwise until orthogonal, `W = A V`. Returns the
 /// rotated columns `W` and `V` with its columns as *rows* (`v[i]` is the `i`-th right
@@ -672,7 +693,7 @@ pub fn orthogonalize<T, C, A, M>(a: &A, sweeps: usize) -> (A, M)
 where
     T: Real,
     C: Column<T>,
-    A: Copy + AsRef<[C]> + AsMut<[C]>,
+    A: Copy + Columns<C>,
     M: SquareArr<T>,
 {
     T::vectorize(
@@ -682,7 +703,7 @@ where
             let mut w = *a;
             let mut v: M = identity();
             let tol = T::epsilon() * T::epsilon();
-            let cols = w.as_mut();
+            let cols = &mut w;
             for _ in 0..sweeps {
                 // Converged when every pair is orthogonal relative to its own lengths,
                 // `γ² ≤ ε² α β`: a test on sums would let large columns hide a small pair that is
@@ -691,8 +712,9 @@ where
                 let mut open = T::zero();
                 for p in 0..n {
                     for q in p + 1..n {
-                        let g = cols[p].dot(&cols[q]);
-                        let ab = cols[p].dot(&cols[p]) * cols[q].dot(&cols[q]);
+                        let (cp, cq) = (cols.col(p), cols.col(q));
+                        let g = cp.dot(cq);
+                        let ab = cp.dot(cp) * cq.dot(cq);
                         open = open + T::select_lt(tol * ab, g * g, T::one(), T::zero());
                     }
                 }
@@ -701,12 +723,12 @@ where
                 }
                 for p in 0..n {
                     for q in p + 1..n {
-                        let alpha = cols[p].dot(&cols[p]);
-                        let beta = cols[q].dot(&cols[q]);
-                        let gamma = cols[p].dot(&cols[q]);
+                        let (cp, cq) = cols.pair_mut(p, q);
+                        let alpha = cp.dot(cp);
+                        let beta = cq.dot(cq);
+                        let gamma = cp.dot(cq);
                         let (c, s) = jacobi_rotation(alpha, beta, gamma);
-                        let (lo, hi) = cols.split_at_mut(q);
-                        C::rotate(&mut lo[p], &mut hi[0], c, s);
+                        C::rotate(cp, cq, c, s);
                         for k in 0..n {
                             let (x, y) = (v[p][k], v[q][k]);
                             v[p][k] = c * x - s * y;
@@ -727,14 +749,13 @@ pub fn pinv_weights<T, C, A, M>(w: &A, rcond: T) -> M::Vector
 where
     T: Real,
     C: Column<T>,
-    A: AsRef<[C]>,
+    A: Columns<C> + ?Sized,
     M: SquareArr<T>,
 {
-    let cols = w.as_ref();
     let mut sq = M::zero_vector();
     let mut largest = T::zero();
     for i in 0..M::N {
-        sq[i] = cols[i].dot(&cols[i]);
+        sq[i] = w.col(i).dot(w.col(i));
         largest = largest.max(sq[i]);
     }
     let cut = rcond * rcond * largest;
@@ -754,13 +775,12 @@ pub fn pinv_apply<T, C, A, M>(w: &A, v: &M, weights: &M::Vector, b: &C) -> M::Ve
 where
     T: Real,
     C: Column<T>,
-    A: AsRef<[C]>,
+    A: Columns<C> + ?Sized,
     M: SquareArr<T>,
 {
-    let cols = w.as_ref();
     let mut x = M::zero_vector();
     for i in 0..M::N {
-        let t = cols[i].dot(b) * weights[i];
+        let t = w.col(i).dot(b) * weights[i];
         for h in 0..M::N {
             x[h] = v[i][h].mul_add(t, x[h]);
         }

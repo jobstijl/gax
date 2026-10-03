@@ -11,7 +11,7 @@
 //!   [`fp::Fp`], a prime field for exact randomized identity checks, and [`dual::Dual`], dual
 //!   numbers for forward-mode derivatives, and [`strict::Strict`], coefficients that give the
 //!   same bits on every target and SIMD level).
-//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`], [`LeastSquares`], [`PseudoInverse`]:
+//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`], [`LeastSquares`], [`LeastSquaresPair`], [`OfPair`], [`PseudoInverse`]:
 //!   solving, eigenproblems, pairings and least squares on maps and forms, built on [`linalg`].
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
 //! * [`study`]: functions of Study numbers, behind exp, log, normalization and inverses.
@@ -60,8 +60,8 @@ pub use cast::{Cast, GradePart, SubKind};
 pub use coef::{Coef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
-    Endomorphism, Form, FormAsMap, LeastSquares, OfBoth, Pairing, PseudoInverse, SingularValues,
-    SquareMap, TraceFirst,
+    Endomorphism, Form, FormAsMap, LeastSquares, LeastSquaresPair, OfBoth, OfPair, Pairing,
+    PseudoInverse, SingularValues, SquareMap, TraceFirst,
 };
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;

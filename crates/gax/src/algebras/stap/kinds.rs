@@ -146,6 +146,34 @@ impl<S: gx::Slots, T: gx::Coef> Scalar<S, T> {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
     }
 
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Scalar<<S as gx::MoveToFront<I>>::Moved, T>
@@ -968,6 +996,34 @@ impl<S: gx::Slots, T: gx::Coef> Vector<S, T> {
         Self: gx::LeastSquares<X, Coef = T>,
     {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
@@ -1838,6 +1894,34 @@ impl<S: gx::Slots, T: gx::Coef> Bivector<S, T> {
         Self: gx::LeastSquares<X, Coef = T>,
     {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
@@ -3144,6 +3228,34 @@ impl<S: gx::Slots, T: gx::Coef> Trivector<S, T> {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
     }
 
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Trivector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -4219,6 +4331,34 @@ impl<S: gx::Slots, T: gx::Coef> Quadvector<S, T> {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
     }
 
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Quadvector<<S as gx::MoveToFront<I>>::Moved, T>
@@ -5066,6 +5206,34 @@ impl<S: gx::Slots, T: gx::Coef> Pseudoscalar<S, T> {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
     }
 
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Pseudoscalar<<S as gx::MoveToFront<I>>::Moved, T>
@@ -5780,6 +5948,34 @@ impl<S: gx::Slots, T: gx::Coef> Motor<S, T> {
         Self: gx::LeastSquares<X, Coef = T>,
     {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
@@ -7485,6 +7681,34 @@ impl<S: gx::Slots, T: gx::Coef> Odd<S, T> {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
     }
 
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
+    }
+
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.
     #[inline(always)]
     pub fn at<const I: usize>(self) -> Odd<<S as gx::MoveToFront<I>>::Moved, T>
@@ -9115,6 +9339,34 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
         Self: gx::LeastSquares<X, Coef = T>,
     {
         gx::LeastSquares::lstsq_with(self, rhs, rcond)
+    }
+
+    /// Least squares for an unknown in the first two slots: the least-norm `x: A<(B,)>` with
+    /// `self.of_pair(x) â rhs`, `rhs` over the remaining slots ([`gx::LeastSquaresPair`]).
+    #[inline]
+    pub fn lstsq_pair<X>(self, rhs: X) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X>,
+    {
+        gx::LeastSquaresPair::lstsq_pair(self, rhs)
+    }
+
+    /// [`Self::lstsq_pair`] with singular values below `rcond` times the largest treated as zero.
+    #[inline]
+    pub fn lstsq_pair_with<X>(self, rhs: X, rcond: T) -> <Self as gx::OfPair>::Pair
+    where
+        Self: gx::LeastSquaresPair<X, Coef = T>,
+    {
+        gx::LeastSquaresPair::lstsq_pair_with(self, rhs, rcond)
+    }
+
+    /// A two-slot value `x: A<(B,)>` bound into the first two slots: `Î£áµ¢â±¼ xáµ¢â±¼ self(aáµ¢, bâ±¼)`.
+    #[inline]
+    pub fn of_pair(self, x: <Self as gx::OfPair>::Pair) -> <Self as gx::OfPair>::Image
+    where
+        Self: gx::OfPair,
+    {
+        gx::OfPair::of_pair(self, x)
     }
 
     /// Move open slot `I` to the front, so that `.of(x)` fills it: `m.at::<1>().of(x)`.

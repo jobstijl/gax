@@ -264,6 +264,23 @@ assert!((x ^ floor).approx_eq(&l, 1e-12));
 let back: Plane<(Line,), f64> = meet.pinv();
 ```
 
+When the unknown itself has two slots (a dyad, a covariance, a second moment), `lstsq_pair`
+solves for both of the map's first two slots at once, as numga's `lstsq` does when it unbinds
+two slots, and `of_pair` binds such a value back in: for `m: K <- (A, B, R…)` the result is the
+least-norm `x: A<(B,)>` with `m.of_pair(x) ≈ rhs`. The examples `geometry_pose_diffusion`
+(a Lyapunov equation) and `mechanics_inertia` (a second moment from its inertia) use it:
+
+```rust
+use gax::ApproxEq;
+use gax::pga3d::{Line, Point};
+
+// A dyad on points whose joins sum to a given line: the least-norm one is antisymmetric.
+let (p, q) = (Point::<(), f64>::xyz(1.0, 0.0, 0.0), Point::xyz(0.0, 2.0, 1.0));
+let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
+let x: Point<(Point,), f64> = join.lstsq_pair(p & q);
+assert!(join.of_pair(x).approx_eq(&(p & q), 1e-12));
+```
+
 Forms (`Scalar<(A, A)>`) have `eigh_with(metric)` for the generalized eigenproblem between two
 forms. The eigenvectors come back as values of the slot kind. For vibration modes of a rigid body
 they are twists, each one a rotation about a point

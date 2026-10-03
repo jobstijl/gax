@@ -91,7 +91,6 @@ macro_rules! principal_frame {
         pub type Pt = Point<(), f64>;
         pub type Mo = gax::Unit<Motor<(), f64>>;
         const N: usize = $n;
-        const N2: usize = $n * $n;
 
         /// The `i`-th basis plane and point.
         pub fn plane_blade(i: usize) -> Pl {
@@ -114,44 +113,13 @@ macro_rules! principal_frame {
         ///
         /// The construction `Point & [Plane.dual(), Line]` has slots (Point, Plane, Line) and
         /// gives a forque; the inertia matches its Line slot, leaving the second moment, a
-        /// tensor on (Point, Plane), as the unknown. numga's `lstsq` unbinds both slots at
-        /// once; gax's solves for one slot, so the tensor's `n²` entries are unknowns of a
-        /// local least-squares problem: the inertia as a combination of the construction bound
-        /// to each pair of basis blades. The system is overdetermined yet consistent; its
-        /// normal equations are singular (the construction only sees the moment's symmetric
-        /// part), so it is solved by the pseudo-inverse, the least-norm solution, as numga's.
+        /// tensor on (Point, Plane), as the unknown. `lstsq_pair` unbinds both slots at once,
+        /// as numga's `lstsq` does. The system is overdetermined yet consistent, and singular
+        /// (the construction only sees the moment's symmetric part): the pseudo-inverse gives
+        /// the least-norm solution, as numga's.
         pub fn second_moment(inertia: Inertia) -> Moment {
             let construction = Point::slot() & Plane::slot().dual().commutator(Line::slot());
-            let columns: Vec<Vec<f64>> = (0..N2)
-                .map(|ij| {
-                    let bound = construction.of(point_blade(ij / N)).of(plane_blade(ij % N));
-                    bound.c.iter().flatten().copied().collect()
-                })
-                .collect();
-            let target: Vec<f64> = inertia.c.iter().flatten().copied().collect();
-            let dot = |a: &[f64], b: &[f64]| a.iter().zip(b).map(|(x, y)| x * y).sum::<f64>();
-            let mut gram = [[0.0; N2]; N2];
-            let mut rhs = [0.0; N2];
-            for a in 0..N2 {
-                rhs[a] = dot(&columns[a], &target);
-                for b in 0..N2 {
-                    gram[a][b] = dot(&columns[a], &columns[b]);
-                }
-            }
-            let (values, vectors) = gax::linalg::eigh(&gram, 16);
-            let largest = values.iter().fold(0.0, |m: f64, v| m.max(v.abs()));
-            let mut x = [0.0; N2];
-            for (lam, v) in values.iter().zip(&vectors) {
-                if lam.abs() > 1e-12 * largest {
-                    let along = dot(v, &rhs) / lam;
-                    for (xi, vi) in x.iter_mut().zip(v) {
-                        *xi += along * vi;
-                    }
-                }
-            }
-            Moment::from_coeffs(core::array::from_fn(|i| {
-                core::array::from_fn(|j| x[i * N + j])
-            }))
+            construction.lstsq_pair(inertia)
         }
 
         /// The principal planes of a second moment, with their eigenvalues: the generalized

@@ -154,7 +154,7 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Grade-preserving sandwiches of certified versors in 5D and up (`Unit<Even> >> Vector` is a `Vector` in CGA3D, STAP and CSTA; `tests/unit_versors.rs`)
 - [x] `normalized`, closed-form `inverse` and `renormalize_fast` for 5D even and odd versors (`x ~x` a scalar plus a 4-vector); the Newton step moved to the left, where odd kinds in 4D need it
 - [x] `of_both` (both slots filled with maps), `svdvals` and `svd_thin` for maps of any shape, `as_map` for forms, `eigh_semidefinite` (generalized eigenproblems against a semidefinite metric, infinite modes last)
-- [ ] `lstsq` over several leading slots (pose diffusion's two-slot Lyapunov unknown; inertia's two-slot recovery)
+- [x] `lstsq_pair` and `of_pair`: least squares for an unknown in a map's first two slots, columns kept nested (`linalg::Columns`); pose diffusion's Lyapunov unknown and inertia's second moment use it
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D
 
 ## Decisions for the project owner
