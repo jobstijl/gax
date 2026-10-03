@@ -13,7 +13,7 @@
 //! over every direction.
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
-use gax::{Extensor, Unit};
+use gax::Unit;
 use gax_numga_examples::{Align, Anim, Axes, Canvas, backdrop, caption, palette, plot, run};
 use std::sync::OnceLock;
 
@@ -265,7 +265,7 @@ mod station {
     /// The largest coefficient of a covariance.
     #[cfg(test)]
     pub fn max_abs(c: Covariance) -> f64 {
-        c.coeffs()
+        c.c
             .iter()
             .flatten()
             .fold(0.0f64, |m, v| m.max(v.abs()))

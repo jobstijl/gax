@@ -6,6 +6,7 @@
 use crate::canvas::{Canvas, Px, Rgb, scale};
 use crate::plot::{Marker, arrow, mark};
 use crate::view::Camera;
+use gax::pga3d::{Motor, Plane, Point};
 
 enum Prim {
     Tri([Px; 3], Rgb, f32),
@@ -23,33 +24,26 @@ pub struct Scene3 {
     pub light: [f32; 3],
 }
 
-fn sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+fn point(p: [f32; 3]) -> Point<(), f32> {
+    Point::xyz(p[0], p[1], p[2])
 }
 
-fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
-    [
-        a[1] * b[2] - a[2] * b[1],
-        a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
-    ]
-}
-
-fn dot(a: [f32; 3], b: [f32; 3]) -> f32 {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+/// The direction `d` at unit length.
+fn unit(d: Point<(), f32>) -> Point<(), f32> {
+    d.gp(d.ideal_norm().max(1e-12).recip())
 }
 
 impl Scene3 {
     /// An empty scene seen by `cam`, lit from above and behind the viewer's left shoulder.
     pub fn new(cam: Camera) -> Scene3 {
-        let eye = cam.eye();
-        let n = dot(eye, eye).sqrt().max(1e-6);
-        let l = [eye[0] / n - 0.3, eye[1] / n + 0.2, eye[2] / n + 0.9];
-        let ln = dot(l, l).sqrt();
+        // The direction to the eye, turned a little to the left and up.
+        let [x, y, z] = cam.eye();
+        let towards = unit(Point::direction(x, y, z)) + Point::direction(-0.3, 0.2, 0.9);
+        let l = unit(towards);
         Scene3 {
             cam,
             prims: Vec::new(),
-            light: l.map(|v| v / ln),
+            light: [l.e032(), l.e013(), l.e021()],
         }
     }
 
@@ -57,11 +51,14 @@ impl Scene3 {
         self.cam.local(p)[2]
     }
 
-    /// `color` shaded by how squarely the triangle `a b c` faces the light (two-sided).
+    /// `color` shaded by how squarely the triangle `a b c` faces the light (two-sided): the
+    /// inner product of its plane `a & b & c` with the plane facing the light, the cosine
+    /// between their normals once divided by the face's norm.
     pub fn lit(&self, a: [f32; 3], b: [f32; 3], c: [f32; 3], color: Rgb) -> Rgb {
-        let n = cross(sub(b, a), sub(c, a));
-        let len = dot(n, n).sqrt().max(1e-12);
-        let k = 0.35 + 0.65 * (dot(n, self.light) / len).abs();
+        let face = point(a) & point(b) & point(c);
+        let [x, y, z] = self.light;
+        let facing = Plane::orthogonal_to(Point::direction(x, y, z));
+        let k = 0.35 + 0.65 * ((face | facing).s() / face.norm().max(1e-12)).abs();
         scale(color, k)
     }
 
@@ -157,12 +154,13 @@ impl Scene3 {
 
     /// A wireframe sphere: `n` meridians and `n / 2` parallels.
     pub fn sphere_wire(&mut self, centre: [f32; 3], r: f32, n: usize, color: Rgb, alpha: f32) {
+        // The point `r` along x, raised by the latitude (about -y) and turned by the longitude
+        // (about z), then moved to the centre.
+        let to_centre = Motor::translation(centre[0], centre[1], centre[2]);
         let pt = |lon: f32, lat: f32| {
-            [
-                centre[0] + r * lat.cos() * lon.cos(),
-                centre[1] + r * lat.cos() * lon.sin(),
-                centre[2] + r * lat.sin(),
-            ]
+            let turn = Motor::rotation_about(0.0, 0.0, 1.0, lon)
+                * Motor::rotation_about(0.0, -1.0, 0.0, lat);
+            ((to_centre * turn) >> Point::xyz(r, 0.0, 0.0)).to_euclidean()
         };
         let tau = core::f32::consts::TAU;
         let steps = 48;

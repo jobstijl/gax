@@ -1,9 +1,10 @@
 //! A software canvas: linear-light RGB pixels, antialiased by coverage. Lines and disks take
-//! their coverage from the distance of each pixel centre to the shape, polygons and shaded
-//! images from sub-pixel samples; colours blend in linear light and are encoded to sRGB once,
-//! when the canvas is shown or saved.
+//! their coverage from the distance of each pixel centre to the shape (in PGA2D: joins and their
+//! norms), polygons and shaded images from sub-pixel samples; colours blend in linear light and
+//! are encoded to sRGB once, when the canvas is shown or saved.
 
 use crate::font::{self, Align};
+use gax::pga2d::Point;
 
 /// A colour in linear light, each channel in `[0, 1]`.
 pub type Rgb = [f32; 3];
@@ -141,14 +142,25 @@ impl Canvas {
             [a[0].min(b[0]) - pad, a[1].min(b[1]) - pad],
             [a[0].max(b[0]) + pad, a[1].max(b[1]) + pad],
         );
-        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-        let len2 = (dx * dx + dy * dy).max(1e-12);
+        // The pixel's distance to the segment: to its line where the foot falls between the
+        // ends (the pixel lies between the perpendiculars `l | a` and `l | b`, so their joins
+        // with it differ in sign), else to the nearer end. A join of unit points is a line
+        // whose norm is their distance.
+        let (pa, pb) = (Point::xy(a[0], a[1]), Point::xy(b[0], b[1]));
+        let join = pa & pb;
+        let len = join.norm();
+        let l = join.gp(len.max(1e-12).recip());
+        let (ends_a, ends_b) = (l | pa, l | pb);
         for y in ys {
             for x in xs.clone() {
-                let (px, py) = (x as f32 + 0.5 - a[0], y as f32 + 0.5 - a[1]);
-                let t = ((px * dx + py * dy) / len2).clamp(0.0, 1.0);
-                let (ex, ey) = (px - t * dx, py - t * dy);
-                let cover = (half + 0.5 - (ex * ex + ey * ey).sqrt()).clamp(0.0, 1.0);
+                let q = Point::xy(x as f32 + 0.5, y as f32 + 0.5);
+                let between = len > 1e-6 && (ends_a & q).s() * (ends_b & q).s() <= 0.0;
+                let e = if between {
+                    (l & q).s().abs()
+                } else {
+                    (q & pa).norm().min((q & pb).norm())
+                };
+                let cover = (half + 0.5 - e).clamp(0.0, 1.0);
                 if cover > 0.0 {
                     self.blend(x, y, c, cover * faint);
                 }
@@ -181,11 +193,11 @@ impl Canvas {
             return;
         }
         let pad = r + width.unwrap_or(0.0) + 1.0;
+        let centre = Point::xy(o[0], o[1]);
         let (xs, ys) = self.span([o[0] - pad, o[1] - pad], [o[0] + pad, o[1] + pad]);
         for y in ys {
             for x in xs.clone() {
-                let (dx, dy) = (x as f32 + 0.5 - o[0], y as f32 + 0.5 - o[1]);
-                let d = (dx * dx + dy * dy).sqrt();
+                let d = (Point::xy(x as f32 + 0.5, y as f32 + 0.5) & centre).norm();
                 let cover = match width {
                     None => (r + 0.5 - d).clamp(0.0, 1.0),
                     Some(w) => {

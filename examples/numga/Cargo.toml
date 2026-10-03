@@ -10,6 +10,11 @@ publish = false
 # A standalone crate, so that the windowing dependencies stay out of gax's workspace.
 [workspace]
 
+# The binaries port numga's formulas as written; the float-geometry ban of clippy.toml is an
+# error in the shared library only (src/lib.rs).
+[lints.clippy]
+disallowed_methods = "allow"
+
 [dependencies]
 gax = { path = "../../crates/gax", default-features = false, features = ["std", "macros", "pga2d", "pga3d", "vga2d", "vga3d", "sta", "cga2d", "cga3d", "stap", "csta"] }
 winit = "0.30"

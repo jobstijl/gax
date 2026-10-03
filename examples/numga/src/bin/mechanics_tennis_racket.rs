@@ -112,6 +112,9 @@ pub fn racket<G: Lie>(seed: u64) -> Body<G> {
     }
 }
 
+/// Motors and rates over time, `[step][body]`.
+pub type History<G> = (Vec<Vec<M<G>>>, Vec<Vec<R<G>>>);
+
 /// Torque-free motion: motors and rates over time (`[step][body]`), starting with the initial
 /// state.
 pub fn simulate<G: Lie>(
@@ -119,7 +122,7 @@ pub fn simulate<G: Lie>(
     step: Step<G>,
     dt: f64,
     steps: usize,
-) -> (Vec<Vec<M<G>>>, Vec<Vec<R<G>>>) {
+) -> History<G> {
     let mut motors = vec![body.motor.clone()];
     let mut rates = vec![body.rate.clone()];
     for _ in 0..steps {

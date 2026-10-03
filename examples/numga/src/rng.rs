@@ -1,5 +1,10 @@
 //! A small seeded random generator (xorshift64) with uniform and Gaussian draws: numpy's streams
 //! cannot be reproduced, so the examples use this one and keep their checks robust to the draw.
+//!
+//! The Gaussian draw (Box and Muller) and the normalization of a random direction are sampling
+//! formulas, not geometry: the one place in the shared code with float square roots and
+//! trigonometry.
+#![allow(clippy::disallowed_methods)]
 
 /// The generator's state.
 #[derive(Clone, Debug)]

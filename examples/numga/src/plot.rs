@@ -5,6 +5,7 @@
 use crate::canvas::{Canvas, Px, Rgb};
 use crate::font::Align;
 use crate::{contour, palette};
+use gax::pga2d::{Motor, Point};
 
 /// A marker's shape.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -290,7 +291,8 @@ impl Axes {
         let mut along = 0.0f32;
         for w in pts.windows(2) {
             let (a, b) = (self.px(w[0]), self.px(w[1]));
-            let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+            let (pa, pb) = (Point::xy(a[0], a[1]), Point::xy(b[0], b[1]));
+            let len = (pa & pb).norm();
             let mut s = 0.0;
             while s < len {
                 let phase = (along + s) % (2.0 * dash);
@@ -301,12 +303,7 @@ impl Axes {
                 };
                 let e = (s + run).min(len);
                 if phase < dash {
-                    let p = |t: f32| {
-                        [
-                            a[0] + (b[0] - a[0]) * t / len,
-                            a[1] + (b[1] - a[1]) * t / len,
-                        ]
-                    };
+                    let p = |t: f32| (pa + (pb - pa).gp(t / len)).to_euclidean();
                     c.line(p(s), p(e), width, color, alpha);
                 }
                 s = e;
@@ -361,12 +358,13 @@ impl Axes {
         alpha: f32,
     ) {
         let big = 4.0 * ((self.x[1] - self.x[0]).abs() + (self.y[1] - self.y[0]).abs());
-        let n = (d[0] * d[0] + d[1] * d[1]).sqrt().max(1e-30);
-        let (dx, dy) = (d[0] / n * big, d[1] / n * big);
+        let d = Point::direction(d[0], d[1]);
+        let reach = d.gp(big / d.ideal_norm().max(1e-30));
+        let p = Point::xy(p[0], p[1]);
         self.line(
             c,
-            [p[0] - dx, p[1] - dy],
-            [p[0] + dx, p[1] + dy],
+            (p - reach).to_euclidean(),
+            (p + reach).to_euclidean(),
             width,
             color,
             alpha,
@@ -497,11 +495,13 @@ pub fn mark(c: &mut Canvas, p: Px, marker: Marker, size: f32, color: Rgb, alpha:
             );
         }
         Marker::Star => {
+            // Ten corners a tenth of a turn apart, alternately long and short, from the top.
+            let centre = Point::xy(p[0], p[1]);
             let pts: Vec<Px> = (0..10)
                 .map(|k| {
-                    let a = core::f32::consts::PI * (0.5 + k as f32 / 5.0);
                     let rr = if k % 2 == 0 { r * 1.2 } else { r * 0.5 };
-                    [p[0] + rr * a.cos(), p[1] - rr * a.sin()]
+                    let turn = Motor::rotation(centre, core::f32::consts::TAU * k as f32 / 10.0);
+                    (turn >> Point::xy(p[0], p[1] - rr)).to_euclidean()
                 })
                 .collect();
             c.fill(&pts, color, alpha);
@@ -511,20 +511,22 @@ pub fn mark(c: &mut Canvas, p: Px, marker: Marker, size: f32, color: Rgb, alpha:
 
 /// An arrow between pixels with a head of `head` pixels.
 pub fn arrow(c: &mut Canvas, a: Px, b: Px, width: f32, head: f32, color: Rgb, alpha: f32) {
-    let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-    let len = (dx * dx + dy * dy).sqrt();
+    let (pa, pb) = (Point::xy(a[0], a[1]), Point::xy(b[0], b[1]));
+    // The shaft's line: its norm is the length, its normal `(e1, e2)` the head's crossbar.
+    let shaft = pa & pb;
+    let len = shaft.norm();
     if len.is_nan() || len <= 1e-6 {
         return;
     }
-    let (ux, uy) = (dx / len, dy / len);
     let h = head.min(len * 0.6);
-    let base = [b[0] - ux * h, b[1] - uy * h];
-    c.line(a, base, width, color, alpha);
+    let base = pb - (pb - pa).gp(h / len);
+    let across = Point::direction(shaft.e1(), shaft.e2()).gp(h * 0.45 / len);
+    c.line(a, base.to_euclidean(), width, color, alpha);
     c.fill(
         &[
             b,
-            [base[0] - uy * h * 0.45, base[1] + ux * h * 0.45],
-            [base[0] + uy * h * 0.45, base[1] - ux * h * 0.45],
+            (base + across).to_euclidean(),
+            (base - across).to_euclidean(),
         ],
         color,
         alpha,

@@ -2,8 +2,15 @@
 //! `src/bin/` that computes with gax and draws its frames on a [`Canvas`]; [`run`] shows them in
 //! a window or writes a GIF or PNG.
 //!
+//! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are the
+//! norms of joins, turns are rotation motors, shading is the inner product of planes. Square
+//! roots and trigonometry on floats are denied here (`clippy.toml`); the random generator's
+//! Gaussian draws are the one exception.
+//!
 //! The ports follow the examples of numga (Eelco Hoogendoorn,
 //! <https://github.com/EelcoHoogendoorn/numga>), one binary each, with their tests.
+
+#![deny(clippy::disallowed_methods)]
 
 pub mod app;
 pub mod canvas;
@@ -56,10 +63,15 @@ mod tests {
         c.fill(&[[0.0, 0.0], [40.0, 0.0], [0.0, 40.0]], [1.0; 3], 1.0);
         assert!((c.mean()[0] - 0.5).abs() < 2e-3, "{:?}", c.mean());
         let mut c = Canvas::new(60, 60);
+        // A pentagram: every second corner of a pentagon, by turns of two fifths.
+        let centre = gax::pga2d::Point::xy(30.0, 30.0);
         let star: Vec<Px> = (0..5)
             .map(|k| {
-                let a = core::f32::consts::TAU * (k * 2) as f32 / 5.0;
-                [30.0 + 25.0 * a.cos(), 30.0 + 25.0 * a.sin()]
+                let turn = gax::pga2d::Motor::rotation(
+                    centre,
+                    core::f32::consts::TAU * (k * 2) as f32 / 5.0,
+                );
+                (turn >> gax::pga2d::Point::xy(55.0, 30.0)).to_euclidean()
             })
             .collect();
         c.fill(&star, [1.0; 3], 1.0);
@@ -117,10 +129,9 @@ mod tests {
         assert!(segs.len() > 20);
         for [a, b] in segs {
             for p in [a, b] {
-                assert!(
-                    ((p[0] * p[0] + p[1] * p[1]).sqrt() - 1.0).abs() < 0.02,
-                    "{p:?}"
-                );
+                let origin = gax::pga2d::Point::xy(0.0, 0.0);
+                let r = (gax::pga2d::Point::xy(p[0], p[1]) & origin).norm();
+                assert!((r - 1.0).abs() < 0.02, "{p:?}");
             }
         }
     }
@@ -192,6 +203,24 @@ mod tests {
         assert!(
             (hit[0] - 1.0).abs() < 1e-3 && hit[1].abs() < 1e-3,
             "{hit:?}"
+        );
+    }
+
+    #[test]
+    fn a_right_angle_field_of_view_reaches_the_edges() {
+        // 90 degrees: half the view rises one unit per unit ahead, so the point one unit up at
+        // distance one is on the top edge.
+        let cam = Camera::looking(
+            100,
+            80,
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            Lens::Perspective(core::f32::consts::FRAC_PI_2),
+        );
+        let top = cam.px([1.0, 0.0, 1.0]).expect("in view");
+        assert!(
+            (top[1] - 0.0).abs() < 1e-3 && (top[0] - 50.0).abs() < 1e-3,
+            "{top:?}"
         );
     }
 }

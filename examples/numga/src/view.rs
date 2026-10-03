@@ -126,7 +126,14 @@ impl Camera {
     /// Pixels per unit at unit depth (perspective) or per world unit (parallel).
     fn focal(&self) -> f32 {
         match self.lens {
-            Lens::Perspective(fov) => self.size[1] * 0.5 / (fov * 0.5).tan(),
+            Lens::Perspective(fov) => {
+                // The edge of the view: the direction along x turned by half the field of view;
+                // its height over its width is the tangent.
+                let origin = gax::pga2d::Point::xy(0.0, 0.0);
+                let edge = gax::pga2d::Motor::rotation(origin, fov * 0.5)
+                    >> gax::pga2d::Point::direction(1.0, 0.0);
+                self.size[1] * 0.5 * edge.e20() / edge.e01()
+            }
             Lens::Parallel(half) => self.size[1] * 0.5 / half,
         }
     }
@@ -170,8 +177,8 @@ impl Camera {
         );
         match self.lens {
             Lens::Perspective(_) => {
-                let d = (sx * sx + sy * sy + 1.0).sqrt();
-                let dir = self.pose >> Point::direction(-sx / d, sy / d, 1.0 / d);
+                let d = Point::direction(-sx, sy, 1.0);
+                let dir = self.pose >> d.gp(d.ideal_norm().recip());
                 (self.pose >> Point::xyz(0.0, 0.0, 0.0), dir)
             }
             Lens::Parallel(_) => (
