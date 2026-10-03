@@ -601,7 +601,9 @@ record which of its coefficients are structurally zero.
 
 Generic over the *algebra* is the next step: one function for the plane and for space, or for
 rotations in any dimension. `gax::motions::Motions` names the kinds that play each role in
-rigid motion, a marker type per algebra (`Pga2d`, `Pga3d`, `Vga2d`, `Vga3d`): the `Motor`
+rigid motion, a marker type per algebra: rigid motions in `Pga2d`, `Pga3d`, `Cga2d` and
+`Cga3d`, rotations in `Vga2d` and `Vga3d`, the Lorentz group in `Sta` and the Poincaré group in
+`Stap` and `Csta` (a spacetime's motions, with an indefinite metric). The roles are the `Motor`
 (a unit even versor), its Lie algebra the `Twist`, their dual the `Forque`, the `Point`, and
 the maps `Inertia`, `Mobility` and `TwistMap`. The operations come with them, as operators on
 the associated types (composition, `>>` and `<<`, `+`, `-`, scaling, `.of`) which a generic
@@ -628,8 +630,13 @@ let e3 = energy::<Pga3d>(&[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]], spin3);
 assert!((e2 - e3).abs() < 1e-12);
 ```
 
-An algebra declared with `gax::algebra!` joins in with `gax::motions!`, which implements the
-trait from the module's kinds (`commutative struct` where rotations commute). The numga
+In the conformal algebras a translation carries a forque into parts that pair with no twist
+(a CGA3D forque is a trivector up to those), so their mobility inverts the inertia on the
+forques proper. One law holds for every implementation, and `tests/motions.rs` checks it: an
+inertia pairs a twist `b` to the same multiple of `⟨v, v⟩` (the metric's, `v` the points'
+velocities under `exp(t b)`), twice the kinetic energy. An algebra declared with
+`gax::algebra!` joins in with `gax::motions!`, which implements the trait from the module's
+kinds (`commutative struct` where rotations commute, and an optional `mobility`). The numga
 examples' Lie-group steppers are written once this way (`shared/mechanics_lie.rs`), and the
 tennis racket runs them on VGA2D and VGA3D and on its own VGA4D and VGA5D.
 

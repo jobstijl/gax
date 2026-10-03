@@ -16,8 +16,9 @@
 //! of differences between roots that are apart.
 
 use super::{
-    Channel, Cx, LOG6_TERMS, Real, Series, cbrt, cubic6, g_series, log_coeffs_6d, phi_complex,
-    phi_pair, phi_real, phi_series, reduce2, split6, turn_alpha3,
+    Channel, Cx, LOG6_TERMS, Real, Series, cbrt, cubic6, derivative, f_maclaurin, g_series,
+    integral, log_coeffs_6d, phi_complex, phi_pair, phi_real, phi_series, reduce2, split6,
+    taylor_shift, turn_alpha3,
 };
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
@@ -439,6 +440,28 @@ pub(super) fn grouping_apart<T: Real>(sp: &Split8<T>) -> (T, T, T) {
 
 pub(super) type CxSeries<T> = [Cx<T>; LOG6_TERMS];
 
+/// The line `[l0, l1]` through a function at the roots `mid ± √d2` from its series `ph` at
+/// `mid` (in `s = t/ρ`): `Σ φₖ sᵏ` modulo `s² − d2/ρ²`, where `s (b s + e) = b d2/ρ² + e s`.
+pub(super) fn reduce_pair_cx<T: Real>(
+    ph: &CxSeries<T>,
+    mid: Cx<T>,
+    rho: T,
+    d2: Cx<T>,
+) -> [Cx<T>; 2] {
+    let d2s = d2 / Cx::real(rho * rho);
+    let (mut b, mut e) = (Cx::real(T::zero()), Cx::real(T::one()));
+    let (mut sb, mut se) = (b, Cx::real(T::zero()));
+    for f in ph {
+        sb = sb + *f * b;
+        se = se + *f * e;
+        let (nb, ne) = (e, b * d2s);
+        b = nb;
+        e = ne;
+    }
+    let sb = sb / Cx::real(rho);
+    [se - sb * mid, sb]
+}
+
 pub(super) fn cx_mul<T: Real>(a: &CxSeries<T>, b: &CxSeries<T>) -> CxSeries<T> {
     let mut out = [Cx::real(T::zero()); LOG6_TERMS];
     for i in 0..LOG6_TERMS {
@@ -492,24 +515,9 @@ fn phi_series_cx<T: Real>(m: Cx<T>, rho: T) -> CxSeries<T> {
     let near = if T::all_lt(quarter, ax) {
         zero
     } else {
-        let mut c = [Cx::real(T::zero()); 90];
-        let mut b = 1.0f64;
-        for (n, f) in c.iter_mut().enumerate() {
-            let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
-            *f = Cx::real(T::from_f64(sign * b / (2.0 * n as f64 + 1.0)));
-            b *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
-        }
+        let c = f_maclaurin::<90>().map(|f| Cx::real(T::from_f64(f)));
         let x = Cx::select(ax, quarter, x0, Cx::real(T::zero()));
-        let mut out = zero;
-        let mut power = T::one();
-        for (i, o) in out.iter_mut().enumerate() {
-            for j in (i..c.len() - 1).rev() {
-                c[j] = c[j] + x * c[j + 1];
-            }
-            *o = c[i] * Cx::real(power);
-            power = power * rho;
-        }
-        out
+        taylor_shift(c, x, rho, Cx::real(T::zero()), Cx::real)
     };
     let far = if T::all_lt(ax, quarter) {
         zero
@@ -518,17 +526,9 @@ fn phi_series_cx<T: Real>(m: Cx<T>, rho: T) -> CxSeries<T> {
         let mm = x + one;
         let v = cx_sqrt(x, false, rho);
         let r = cx_sqrt(mm, true, rho);
-        let mut dv = zero;
-        for k in 1..LOG6_TERMS {
-            dv[k - 1] = v[k] * Cx::real(T::from_i64(k as i64));
-        }
-        let d = cx_mul(&dv, &r);
-        let mut a = zero;
-        a[0] = (v[0] + mm.sqrt()).ln();
-        for k in 1..LOG6_TERMS {
-            a[k] = d[k - 1] * Cx::real(T::from_i64(k as i64).recip());
-        }
-        cx_div(&a, &v)
+        let cz = Cx::real(T::zero());
+        let d = cx_mul(&derivative(&v, cz, Cx::real), &r);
+        cx_div(&integral(&d, (v[0] + mm.sqrt()).ln(), cz, Cx::real), &v)
     };
     let f: CxSeries<T> = core::array::from_fn(|k| Cx::select(ax, quarter, near[k], far[k]));
     cx_mul(&cx_sqrt(m, false, rho), &f)
@@ -550,20 +550,7 @@ fn phi_pair_cx<T: Real>(s: Cx<T>, p: Cx<T>) -> [Cx<T>; 2] {
     } else {
         // In s = t/ρ, ρ the distance to the cut.
         let rho = (reach * T::from_i64(4)).max(T::from_f64(1e-30));
-        let ph = phi_series_cx(mid, rho);
-        let d2s = d2 / Cx::real(rho * rho);
-        // Σ φₖ sᵏ modulo s² − d2/ρ²: s (b s + e) = b d2/ρ² + e s.
-        let (mut b, mut e) = (Cx::real(T::zero()), Cx::real(T::one()));
-        let (mut sb, mut se) = (b, Cx::real(T::zero()));
-        for f in &ph {
-            sb = sb + *f * b;
-            se = se + *f * e;
-            let (nb, ne) = (e, b * d2s);
-            b = nb;
-            e = ne;
-        }
-        let sb = sb / Cx::real(rho);
-        [se - sb * mid, sb]
+        reduce_pair_cx(&phi_series_cx(mid, rho), mid, rho, d2)
     };
     let (z, w) = (mid + d, mid - d);
     let (fz, fw) = (phi_complex(z), phi_complex(w));

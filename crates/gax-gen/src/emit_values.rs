@@ -201,6 +201,82 @@ fn value_kernel(
     })
 }
 
+/// A value method around one call of a Study function: `pre` computes the call's arguments (its
+/// outputs `args`) from `x`, the call binds `outs`, and `post` computes the result from `x` and
+/// `locals` (its variables `nv..`, in order).
+struct StudyCall<'a> {
+    pre: &'a crate::slp::Program,
+    args: &'a [usize],
+    outs: &'a [&'a str],
+    post: &'a crate::slp::Program,
+    locals: &'a [&'a str],
+}
+
+/// The method's `let` lines (for its body after `let x = …;`) and the result's coefficient
+/// expressions. `call` writes the call from its arguments' expressions; `kernel`, the name, doc,
+/// result type and Study function of the same steps as a kernel (for the WGSL modules).
+fn study_method(
+    k: &KindSpec,
+    c: &StudyCall,
+    call: impl FnOnce(&[String]) -> String,
+    kernel: Option<(String, String, Ty, StudyFn)>,
+    kernels: &mut Vec<Kernel>,
+) -> (String, Vec<String>) {
+    let nv = k.layout.len();
+    if let Some((name, doc, result, func)) = kernel {
+        let mut post_vars = arg_vars(nv);
+        for (i, l) in c.locals.iter().enumerate() {
+            post_vars.push(((nv + i) as Var, Source::Local((*l).into())));
+        }
+        kernels.extend(value_kernel(
+            k,
+            &name,
+            &doc,
+            result,
+            vec![
+                Step::Lets {
+                    prog: c.pre.clone(),
+                    prefix: "p".into(),
+                    vars: arg_vars(nv),
+                },
+                Step::Study {
+                    func,
+                    args: c.args.iter().map(|&i| (0, i)).collect(),
+                    outs: c.outs.iter().map(|o| (*o).to_string()).collect(),
+                },
+                Step::Lets {
+                    prog: c.post.clone(),
+                    prefix: "t".into(),
+                    vars: post_vars,
+                },
+            ],
+        ));
+    }
+    let xvar = |v: Var| format!("x[{v}]");
+    let mut lets = String::new();
+    c.pre.emit_lets(&xvar, "p", &mut lets);
+    let args: Vec<String> = c
+        .args
+        .iter()
+        .map(|&i| render(&c.pre.outputs[i], &xvar, "p"))
+        .collect();
+    let lhs = match c.outs {
+        [one] => (*one).to_string(),
+        many => format!("[{}]", many.join(", ")),
+    };
+    let _ = writeln!(lets, "        let {lhs} = {};", call(&args));
+    let names = |v: Var| {
+        let v = v as usize;
+        if v < nv {
+            format!("x[{v}]")
+        } else {
+            c.locals[v - nv].to_string()
+        }
+    };
+    c.post.emit_lets(&names, "t", &mut lets);
+    (lets, c.post.render_outputs(&names, "t"))
+}
+
 /// Emit the value methods of kind `k`, returning the code of an inherent impl block (and
 /// trait impls) for `K<(), T>`, and what was emitted.
 #[allow(clippy::too_many_lines)]
@@ -292,94 +368,41 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                 let mu = study.blade.map_or_else(Poly::zero, |b| coef(&bsq, b));
                 let pre = cse::compile_best(&[lam, mu], &BTreeSet::new(), &[]);
                 let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-                let names = move |v: Var| match v {
-                    v if v < nv => format!("x[{v}]"),
-                    v if v == c0 => "c0".into(),
-                    v if v == c1 => "c1".into(),
-                    v if v == s0 => "s0".into(),
-                    _ => "s1".into(),
+                let call = StudyCall {
+                    pre: &pre,
+                    args: &[0, 1],
+                    outs: &["c0", "c1", "s0", "s1"],
+                    post: &prog,
+                    locals: &["c0", "c1", "s0", "s1"],
                 };
-                let mut lets = String::new();
-                pre.emit_lets(&xvar, "p", &mut lets);
-                let lam_e = render(&pre.outputs[0], &xvar, "p");
-                let mu_e = render(&pre.outputs[1], &xvar, "p");
-                if nonpositive(&coef(&bsq, 0)) && (study.isq == 0 || study.blade.is_none()) {
-                    // A rotation (the scalar part of B² is minus a sum of squares): real trig.
-                    let _ = writeln!(
-                        lets,
-                        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_rotation({lam_e}, {mu_e});"
-                    );
-                    let mut post_vars = arg_vars(n);
-                    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
-                        post_vars.push((nv + i as Var, Source::Local((*l).into())));
-                    }
-                    if out_kind.layout.len() <= crate::emit::WGSL_MAX {
-                        meta.kernels.extend(value_kernel(
-                            k,
-                            &format!("{ks}_exp"),
-                            &format!(
-                                "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B`.",
-                                out_kind.name
-                            ),
-                            Ty::Kind(out_kind.name.clone()),
-                            vec![
-                                Step::Lets {
-                                    prog: pre.clone(),
-                                    prefix: "p".into(),
-                                    vars: arg_vars(n),
-                                },
-                                Step::Study {
-                                    func: StudyFn::ExpRotation,
-                                    args: vec![(0, 0), (0, 1)],
-                                    outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
-                                },
-                                Step::Lets {
-                                    prog: prog.clone(),
-                                    prefix: "t".into(),
-                                    vars: post_vars,
-                                },
-                            ],
-                        ));
-                    }
+                let rotation =
+                    nonpositive(&coef(&bsq, 0)) && (study.isq == 0 || study.blade.is_none());
+                let doc = format!(
+                    "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B`.",
+                    out_kind.name
+                );
+                let result = Ty::Kind(out_kind.name.clone());
+                // A rotation (the scalar part of B² is minus a sum of squares): real trig.
+                let kernel = if rotation {
+                    (out_kind.layout.len() <= crate::emit::WGSL_MAX)
+                        .then(|| (format!("{ks}_exp"), doc, result, StudyFn::ExpRotation))
                 } else {
-                    let _ = writeln!(
-                        lets,
-                        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs({}, {lam_e}, {mu_e});",
-                        study.isq
-                    );
-                    let mut post_vars = arg_vars(n);
-                    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
-                        post_vars.push((nv + i as Var, Source::Local((*l).into())));
-                    }
-                    meta.kernels.extend(value_kernel(
-                        k,
-                        &format!("{ks}_exp"),
-                        &format!(
-                            "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B`.",
-                            out_kind.name
-                        ),
-                        Ty::Kind(out_kind.name.clone()),
-                        vec![
-                            Step::Lets {
-                                prog: pre.clone(),
-                                prefix: "p".into(),
-                                vars: arg_vars(n),
-                            },
-                            Step::Study {
-                                func: StudyFn::Exp(study.isq),
-                                args: vec![(0, 0), (0, 1)],
-                                outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
-                            },
-                            Step::Lets {
-                                prog: prog.clone(),
-                                prefix: "t".into(),
-                                vars: post_vars,
-                            },
-                        ],
-                    ));
-                }
-                prog.emit_lets(&names, "t", &mut lets);
-                let outs: Vec<String> = prog.render_outputs(&names, "t");
+                    Some((format!("{ks}_exp"), doc, result, StudyFn::Exp(study.isq)))
+                };
+                let isq = study.isq;
+                let (lets, outs) = study_method(
+                    k,
+                    &call,
+                    |a| {
+                        if rotation {
+                            format!("gx::study::exp_coeffs_rotation({}, {})", a[0], a[1])
+                        } else {
+                            format!("gx::study::exp_coeffs({isq}, {}, {})", a[0], a[1])
+                        }
+                    },
+                    kernel,
+                    &mut meta.kernels,
+                );
                 let on = &out_kind.name;
                 meta.exp = Some(on.clone());
                 let _ = write!(
@@ -677,69 +700,40 @@ fn emit_normalized(
     let nb = study.blade.map_or_else(Poly::zero, |b| coef(norm, b));
     let pre = cse::compile_best(&[n0, nb], &BTreeSet::new(), &[]);
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let names = move |v: Var| match v {
-        v if v < nv => format!("x[{v}]"),
-        v if v == s0 => "s0".into(),
-        _ => "s1".into(),
-    };
-    let mut lets = String::new();
-    pre.emit_lets(&xvar, "p", &mut lets);
-    let a = render(&pre.outputs[0], &xvar, "p");
     let func = match (study.blade, study.isq) {
         (None, _) => StudyFn::RsqrtAbs,
         (Some(_), 0) => StudyFn::RsqrtNil,
         (Some(_), isq) => StudyFn::Rsqrt(isq),
     };
-    let (args, outs) = if study.blade.is_some() {
-        (
-            vec![(0, 0), (0, 1)],
-            vec!["s0".to_string(), "s1".to_string()],
-        )
+    let (args, outs): (&[usize], &[&str]) = if study.blade.is_some() {
+        (&[0, 1], &["s0", "s1"])
     } else {
-        (vec![(0, 0)], vec!["s0".to_string()])
+        (&[0], &["s0"])
     };
-    let mut post_vars = arg_vars(nv as usize);
-    post_vars.push((s0, Source::Local("s0".into())));
-    post_vars.push((s1, Source::Local("s1".into())));
-    kernels.extend(value_kernel(
+    let call = StudyCall {
+        pre: &pre,
+        args,
+        outs,
+        post: &prog,
+        locals: &["s0", "s1"],
+    };
+    let isq = study.isq;
+    let (lets, outs) = study_method(
         k,
-        &format!("{}_normalized", snake(&k.name)),
-        "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.",
-        Ty::Kind(k.name.clone()),
-        vec![
-            Step::Lets {
-                prog: pre.clone(),
-                prefix: "p".into(),
-                vars: arg_vars(nv as usize),
-            },
-            Step::Study { func, args, outs },
-            Step::Lets {
-                prog: prog.clone(),
-                prefix: "t".into(),
-                vars: post_vars,
-            },
-        ],
-    ));
-    if study.blade.is_some() {
-        let b = render(&pre.outputs[1], &xvar, "p");
-        if study.isq == 0 {
-            let _ = writeln!(
-                lets,
-                "        let [s0, s1] = gx::study::rsqrt_nil({a}, {b});"
-            );
-        } else {
-            let _ = writeln!(
-                lets,
-                "        let [s0, s1] = gx::study::rsqrt({}, {a}, {b});",
-                study.isq
-            );
-        }
-    } else {
-        let _ = writeln!(lets, "        let s0 = ({a}).abs().sqrt().recip();");
-    }
-    prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&names, "t");
+        &call,
+        |a| match (study.blade, isq) {
+            (None, _) => format!("({}).abs().sqrt().recip()", a[0]),
+            (Some(_), 0) => format!("gx::study::rsqrt_nil({}, {})", a[0], a[1]),
+            (Some(_), isq) => format!("gx::study::rsqrt({isq}, {}, {})", a[0], a[1]),
+        },
+        Some((
+            format!("{}_normalized", snake(&k.name)),
+            "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.".into(),
+            Ty::Kind(k.name.clone()),
+            func,
+        )),
+        kernels,
+    );
     let name = &k.name;
     let _ = write!(
         body,
@@ -774,47 +768,25 @@ fn emit_normalized_q(
     };
     let pre = cse::compile_best(&[n0.clone(), qq.clone()], &BTreeSet::new(), &[]);
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let names = move |v: Var| match v {
-        v if v < nv => format!("x[{v}]"),
-        v if v == s0 => "s0".into(),
-        _ => "s1".into(),
+    let call = StudyCall {
+        pre: &pre,
+        args: &[0, 1],
+        outs: &["s0", "s1"],
+        post: &prog,
+        locals: &["s0", "s1"],
     };
-    let mut post_vars = arg_vars(nv as usize);
-    post_vars.push((s0, Source::Local("s0".into())));
-    post_vars.push((s1, Source::Local("s1".into())));
-    kernels.extend(value_kernel(
+    let (lets, outs) = study_method(
         k,
-        &format!("{}_normalized", snake(&k.name)),
-        "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.",
-        Ty::Kind(k.name.clone()),
-        vec![
-            Step::Lets {
-                prog: pre.clone(),
-                prefix: "p".into(),
-                vars: arg_vars(nv as usize),
-            },
-            Step::Study {
-                func: StudyFn::RsqrtQ,
-                args: vec![(0, 0), (0, 1)],
-                outs: vec!["s0".to_string(), "s1".to_string()],
-            },
-            Step::Lets {
-                prog: prog.clone(),
-                prefix: "t".into(),
-                vars: post_vars,
-            },
-        ],
-    ));
-    let mut lets = String::new();
-    pre.emit_lets(&xvar, "p", &mut lets);
-    let (a, b) = (
-        render(&pre.outputs[0], &xvar, "p"),
-        render(&pre.outputs[1], &xvar, "p"),
+        &call,
+        |a| format!("gx::study::rsqrt_q({}, {})", a[0], a[1]),
+        Some((
+            format!("{}_normalized", snake(&k.name)),
+            "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.".into(),
+            Ty::Kind(k.name.clone()),
+            StudyFn::RsqrtQ,
+        )),
+        kernels,
     );
-    let _ = writeln!(lets, "        let [s0, s1] = gx::study::rsqrt_q({a}, {b});");
-    prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let name = &k.name;
     let _ = write!(
         body,
@@ -934,82 +906,57 @@ fn emit_log(
     let ub = blade.map_or_else(Poly::zero, |b| coef(&u, b));
     let pre = cse::compile_best(&[c0, cb, u0, ub], &BTreeSet::new(), &[]);
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let names = move |v: Var| match v {
-        v if v < nv => format!("x[{v}]"),
-        v if v == h0 => "h0".into(),
-        _ => "h1".into(),
+    let call = StudyCall {
+        pre: &pre,
+        args: &[0, 1, 2, 3],
+        outs: &["h0", "h1"],
+        post: &prog,
+        locals: &["h0", "h1"],
     };
-    let mut lets = String::new();
-    pre.emit_lets(&xvar, "p", &mut lets);
-    let r: Vec<String> = pre.render_outputs(&xvar, "p");
-    if nonpositive(&coef(&u, 0)) && (isq == 0 || blade.is_none()) {
-        let _ = writeln!(
-            lets,
-            "        let [h0, h1] = gx::study::log_coeffs_rotation(({}, {}), ({}, {}));",
-            r[0], r[1], r[2], r[3]
-        );
-        let mut post_vars = arg_vars(nv as usize);
-        post_vars.push((h0, Source::Local("h0".into())));
-        post_vars.push((h1, Source::Local("h1".into())));
-        if out_kind.layout.len() <= crate::emit::WGSL_MAX {
-            kernels.extend(value_kernel(
-                k,
-                &format!("unit_{}_log", snake(&k.name)),
-                &format!(
+    let rotation = nonpositive(&coef(&u, 0)) && (isq == 0 || blade.is_none());
+    let kernel_name = format!("unit_{}_log", snake(&k.name));
+    let kernel = if rotation {
+        (out_kind.layout.len() <= crate::emit::WGSL_MAX).then(|| {
+            (
+                kernel_name,
+                format!(
                     "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x` (rotation half-angle in [0, pi]).",
                     k.name, out_kind.name
                 ),
                 Ty::Kind(out_kind.name.clone()),
-                vec![
-                    Step::Lets { prog: pre.clone(), prefix: "p".into(), vars: arg_vars(nv as usize) },
-                    Step::Study {
-                        func: StudyFn::LogRotation,
-                        args: vec![(0, 0), (0, 1), (0, 2), (0, 3)],
-                        outs: vec!["h0".into(), "h1".into()],
-                    },
-                    Step::Lets { prog: prog.clone(), prefix: "t".into(), vars: post_vars },
-                ],
-            ));
-        }
+                StudyFn::LogRotation,
+            )
+        })
     } else {
-        let _ = writeln!(
-            lets,
-            "        let [h0, h1] = gx::study::log_coeffs({isq}, ({}, {}), ({}, {}));",
-            r[0], r[1], r[2], r[3]
-        );
-        let mut post_vars = arg_vars(nv as usize);
-        post_vars.push((h0, Source::Local("h0".into())));
-        post_vars.push((h1, Source::Local("h1".into())));
-        kernels.extend(value_kernel(
-            k,
-            &format!("unit_{}_log", snake(&k.name)),
-            &format!(
+        Some((
+            kernel_name,
+            format!(
                 "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x`.",
                 k.name, out_kind.name
             ),
             Ty::Kind(out_kind.name.clone()),
-            vec![
-                Step::Lets {
-                    prog: pre.clone(),
-                    prefix: "p".into(),
-                    vars: arg_vars(nv as usize),
-                },
-                Step::Study {
-                    func: StudyFn::Log(isq),
-                    args: vec![(0, 0), (0, 1), (0, 2), (0, 3)],
-                    outs: vec!["h0".into(), "h1".into()],
-                },
-                Step::Lets {
-                    prog: prog.clone(),
-                    prefix: "t".into(),
-                    vars: post_vars,
-                },
-            ],
-        ));
-    }
-    prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&names, "t");
+            StudyFn::Log(isq),
+        ))
+    };
+    let (lets, outs) = study_method(
+        k,
+        &call,
+        |r| {
+            if rotation {
+                format!(
+                    "gx::study::log_coeffs_rotation(({}, {}), ({}, {}))",
+                    r[0], r[1], r[2], r[3]
+                )
+            } else {
+                format!(
+                    "gx::study::log_coeffs({isq}, ({}, {}), ({}, {}))",
+                    r[0], r[1], r[2], r[3]
+                )
+            }
+        },
+        kernel,
+        kernels,
+    );
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
@@ -1059,49 +1006,28 @@ fn emit_exp_general(
     let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
     let pre = cse::compile_best(&[coef(&bsq, 0), qpoly], &BTreeSet::new(), &[]);
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let names = move |v: Var| match v {
-        v if v < nv => format!("x[{v}]"),
-        v if v == c0 => "c0".into(),
-        v if v == c1 => "c1".into(),
-        v if v == s0 => "s0".into(),
-        _ => "s1".into(),
+    let call = StudyCall {
+        pre: &pre,
+        args: &[0, 1],
+        outs: &["c0", "c1", "s0", "s1"],
+        post: &prog,
+        locals: &["c0", "c1", "s0", "s1"],
     };
-    let mut lets = String::new();
-    pre.emit_lets(&xvar, "p", &mut lets);
-    let (lam, qq) = (
-        render(&pre.outputs[0], &xvar, "p"),
-        render(&pre.outputs[1], &xvar, "p"),
-    );
-    let _ = writeln!(
-        lets,
-        "        let [c0, c1, s0, s1] = gx::study::exp_coeffs_q({lam}, {qq});"
-    );
-    let n = nv as usize;
-    let mut post_vars = arg_vars(n);
-    for (i, l) in ["c0", "c1", "s0", "s1"].iter().enumerate() {
-        post_vars.push((nv + i as Var, Source::Local((*l).into())));
-    }
-    kernels.extend(value_kernel(
+    let (lets, outs) = study_method(
         k,
-        &format!("{}_exp", snake(&k.name)),
-        &format!(
-            "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B` with `B² = λ + Q`, `Q²` a scalar.",
-            out_kind.name
-        ),
-        Ty::Kind(out_kind.name.clone()),
-        vec![
-            Step::Lets { prog: pre.clone(), prefix: "p".into(), vars: arg_vars(n) },
-            Step::Study {
-                func: StudyFn::ExpQ,
-                args: vec![(0, 0), (0, 1)],
-                outs: ["c0", "c1", "s0", "s1"].map(String::from).to_vec(),
-            },
-            Step::Lets { prog: prog.clone(), prefix: "t".into(), vars: post_vars },
-        ],
-    ));
-    prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&names, "t");
+        &call,
+        |a| format!("gx::study::exp_coeffs_q({}, {})", a[0], a[1]),
+        Some((
+            format!("{}_exp", snake(&k.name)),
+            format!(
+                "The exponential, a unit `{}`: `exp(B) = C(B²) + S(B²) B` with `B² = λ + Q`, `Q²` a scalar.",
+                out_kind.name
+            ),
+            Ty::Kind(out_kind.name.clone()),
+            StudyFn::ExpQ,
+        )),
+        kernels,
+    );
     let on = &out_kind.name;
     let _ = write!(
         body,
@@ -1155,54 +1081,28 @@ fn emit_log_general(
     let coeffs = symbolic::to_coeffs(&out_kind.layout, &out).expect("fits");
     let pre = cse::compile_best(&[coef(x, 0), coef(&cc, 0)], &BTreeSet::new(), &[]);
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let xvar = |v: Var| format!("x[{v}]");
-    let names = move |v: Var| match v {
-        v if v < nv => format!("x[{v}]"),
-        v if v == h0 => "h0".into(),
-        _ => "h1".into(),
+    let call = StudyCall {
+        pre: &pre,
+        args: &[0, 1],
+        outs: &["h0", "h1"],
+        post: &prog,
+        locals: &["h0", "h1"],
     };
-    let mut lets = String::new();
-    pre.emit_lets(&xvar, "p", &mut lets);
-    let (c0, qc) = (
-        render(&pre.outputs[0], &xvar, "p"),
-        render(&pre.outputs[1], &xvar, "p"),
-    );
-    let _ = writeln!(
-        lets,
-        "        let [h0, h1] = gx::study::log_coeffs_q({c0}, {qc});"
-    );
-    let n = nv as usize;
-    let mut post_vars = arg_vars(n);
-    post_vars.push((h0, Source::Local("h0".into())));
-    post_vars.push((h1, Source::Local("h1".into())));
-    kernels.extend(value_kernel(
+    let (lets, outs) = study_method(
         k,
-        &format!("unit_{}_log", snake(&k.name)),
-        &format!(
-            "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x`.",
-            k.name, out_kind.name
-        ),
-        Ty::Kind(out_kind.name.clone()),
-        vec![
-            Step::Lets {
-                prog: pre.clone(),
-                prefix: "p".into(),
-                vars: arg_vars(n),
-            },
-            Step::Study {
-                func: StudyFn::LogQ,
-                args: vec![(0, 0), (0, 1)],
-                outs: vec!["h0".into(), "h1".into()],
-            },
-            Step::Lets {
-                prog: prog.clone(),
-                prefix: "t".into(),
-                vars: post_vars,
-            },
-        ],
-    ));
-    prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog.render_outputs(&names, "t");
+        &call,
+        |a| format!("gx::study::log_coeffs_q({}, {})", a[0], a[1]),
+        Some((
+            format!("unit_{}_log", snake(&k.name)),
+            format!(
+                "The logarithm of a unit `{}`: the `{}` B with `exp(B) = x`.",
+                k.name, out_kind.name
+            ),
+            Ty::Kind(out_kind.name.clone()),
+            StudyFn::LogQ,
+        )),
+        kernels,
+    );
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,

@@ -743,6 +743,81 @@ fn series_sqrt<T: Real>(c: T, sigma: f64, inverse: bool, rho: T) -> Series<T> {
     out
 }
 
+/// The Maclaurin coefficients of `F(x) = asinh(√x)/√x = Σ (−1)ⁿ C(2n, n) xⁿ / (4ⁿ (2n + 1))`.
+fn f_maclaurin<const N: usize>() -> [f64; N] {
+    let mut c = [0.0f64; N];
+    let mut b = 1.0f64;
+    for (n, f) in c.iter_mut().enumerate() {
+        let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
+        *f = sign * b / (2.0 * n as f64 + 1.0);
+        b *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
+    }
+    c
+}
+
+/// The power series `c` (in `x`, `M` terms) shifted to `x0` and rescaled, in `s = (x − x0)/ρ`:
+/// repeated Horner steps, the `i`-th coefficient scaled by `ρⁱ`. Its first `LOG6_TERMS`
+/// coefficients, for real or complex series (`real` embeds `ρⁱ`).
+fn taylor_shift<T: Real, F, const M: usize>(
+    mut c: [F; M],
+    x0: F,
+    rho: T,
+    zero: F,
+    real: impl Fn(T) -> F,
+) -> [F; LOG6_TERMS]
+where
+    F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>,
+{
+    let mut out = [zero; LOG6_TERMS];
+    let mut power = T::one();
+    for (i, o) in out.iter_mut().enumerate() {
+        for j in (i..M - 1).rev() {
+            c[j] = c[j] + x0 * c[j + 1];
+        }
+        *o = c[i] * real(power);
+        power = power * rho;
+    }
+    out
+}
+
+/// The series of the derivative, `(s')ₖ = (k + 1) sₖ₊₁` (its last coefficient zero).
+fn derivative<T: Real, F>(s: &[F; LOG6_TERMS], zero: F, real: impl Fn(T) -> F) -> [F; LOG6_TERMS]
+where
+    F: Copy + core::ops::Mul<Output = F>,
+{
+    let mut d = [zero; LOG6_TERMS];
+    for k in 1..LOG6_TERMS {
+        d[k - 1] = s[k] * real(T::from_i64(k as i64));
+    }
+    d
+}
+
+/// The series whose derivative is `d` and whose value at 0 is `a0`.
+fn integral<T: Real, F>(
+    d: &[F; LOG6_TERMS],
+    a0: F,
+    zero: F,
+    real: impl Fn(T) -> F,
+) -> [F; LOG6_TERMS]
+where
+    F: Copy + core::ops::Mul<Output = F>,
+{
+    let mut a = [zero; LOG6_TERMS];
+    a[0] = a0;
+    for k in 1..LOG6_TERMS {
+        a[k] = d[k - 1] * real(T::from_i64(k as i64).recip());
+    }
+    a
+}
+
+/// A guard against division by zero that holds in every precision: `1e-300` where the
+/// coefficient type represents it, `1e-37` where it does not (`f32`, whose `1e-300` is zero).
+/// Lane-wise, so `f64` results are unchanged.
+fn tiny<T: Real>() -> T {
+    let t = T::from_f64(1e-300);
+    T::select_lt(T::zero(), t, t, T::from_f64(1e-37))
+}
+
 /// The Taylor series of `φ(u) = √u · F(u − 1)` at `u = m`, `F(x) = asinh(√x)/√x`, in the scaled
 /// variable `s = (u − m)/ρ`. With `ρ` the distance to φ's singularity (`m` itself), its
 /// coefficients stay bounded: in `u − m` they grow like `m⁻ᵏ`, which overflows `f32` for a
@@ -758,24 +833,14 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
     let near = if T::all_lt(quarter, x0.abs()) {
         zero
     } else {
-        let mut c = [T::zero(); 90];
-        let mut b = 1.0f64;
-        for (n, f) in c.iter_mut().enumerate() {
-            let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
-            *f = T::from_f64(sign * b / (2.0 * n as f64 + 1.0));
-            b *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
-        }
         let x = T::select_lt(x0.abs(), quarter, x0, T::zero());
-        let mut out = [T::zero(); LOG6_TERMS];
-        let mut power = T::one();
-        for (i, o) in out.iter_mut().enumerate() {
-            for j in (i..c.len() - 1).rev() {
-                c[j] = c[j] + x * c[j + 1];
-            }
-            *o = c[i] * power;
-            power = power * rho;
-        }
-        out
+        taylor_shift(
+            f_maclaurin::<90>().map(T::from_f64),
+            x,
+            rho,
+            T::zero(),
+            |p| p,
+        )
     };
     // x0 > 0: v = √(x0 + t), asinh(v)' = v' / √(m + t), F = asinh(v) / v.
     let skip_above = T::all_lt(x0, quarter);
@@ -786,17 +851,9 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
         let mm = x + one;
         let v = series_sqrt(x, 1.0, false, rho);
         let r = series_sqrt(mm, 1.0, true, rho);
-        let mut dv = [T::zero(); LOG6_TERMS];
-        for k in 1..LOG6_TERMS {
-            dv[k - 1] = v[k] * T::from_i64(k as i64);
-        }
-        let d = series_mul(&dv, &r);
-        let mut a = [T::zero(); LOG6_TERMS];
-        a[0] = (v[0] + (v[0] * v[0] + one).sqrt()).ln();
-        for k in 1..LOG6_TERMS {
-            a[k] = d[k - 1] * T::from_i64(k as i64).recip();
-        }
-        series_div(&a, &v)
+        let d = series_mul(&derivative(&v, T::zero(), |k| k), &r);
+        let a0 = (v[0] + (v[0] * v[0] + one).sqrt()).ln();
+        series_div(&integral(&d, a0, T::zero(), |k| k), &v)
     };
     // x0 < 0: w = √(−x0 − t), asin(w)' = w' / √(m + t), F = asin(w) / w.
     let skip_below = T::all_lt(-quarter, x0);
@@ -804,20 +861,11 @@ fn phi_series<T: Real>(m: T, rho: T) -> Series<T> {
         zero
     } else {
         let x = (-x0).max(T::from_f64(0.25));
-        let mm = (one - x).max(T::from_f64(1e-300));
+        let mm = (one - x).max(tiny());
         let w = series_sqrt(x, -1.0, false, rho);
         let r = series_sqrt(mm, 1.0, true, rho);
-        let mut dw = [T::zero(); LOG6_TERMS];
-        for k in 1..LOG6_TERMS {
-            dw[k - 1] = w[k] * T::from_i64(k as i64);
-        }
-        let d = series_mul(&dw, &r);
-        let mut a = [T::zero(); LOG6_TERMS];
-        a[0] = w[0].atan2(mm.sqrt());
-        for k in 1..LOG6_TERMS {
-            a[k] = d[k - 1] * T::from_i64(k as i64).recip();
-        }
-        series_div(&a, &w)
+        let d = series_mul(&derivative(&w, T::zero(), |k| k), &r);
+        series_div(&integral(&d, w[0].atan2(mm.sqrt()), T::zero(), |k| k), &w)
     };
     let f: Series<T> = core::array::from_fn(|k| {
         let far = T::select_lt(x0, T::zero(), below[k], above[k]);
@@ -831,19 +879,12 @@ fn phi_real<T: Real>(u: T) -> T {
     let one = T::one();
     let x = u - one;
     let ax = x.abs();
-    let r = ax.max(T::from_f64(1e-300)).sqrt();
+    let r = ax.max(tiny()).sqrt();
     let above = (r + (ax + one).sqrt()).ln() / r;
     let below = r.atan2((one - ax).max(T::zero()).sqrt()) / r;
     // |x| < 1/20: 13 terms of the series (20^-13 < 1e-16).
     let mut series = T::zero();
-    let mut c = 1.0f64;
-    let mut coef = [0.0f64; 13];
-    for (n, f) in coef.iter_mut().enumerate() {
-        let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
-        *f = sign * c / (2.0 * n as f64 + 1.0);
-        c *= (2.0 * n as f64 + 1.0) / (2.0 * n as f64 + 2.0);
-    }
-    for f in coef.iter().rev() {
+    for f in f_maclaurin::<13>().iter().rev() {
         series = series * x + T::from_f64(*f);
     }
     let far = T::select_lt(x, T::zero(), below, above);
@@ -900,8 +941,8 @@ fn reduce2<T: Real>(ph: &Series<T>, c: T, rho: T, d2: T) -> [T; 2] {
 /// `sign(x) |x|^(1/3)`.
 fn cbrt<T: Real>(x: T) -> T {
     let a = x.abs();
-    let r = (a.max(T::from_f64(1e-300)).ln() * T::from_f64(1.0 / 3.0)).exp();
-    let r = T::select_lt(a, T::from_f64(1e-300), T::zero(), r);
+    let r = (a.max(tiny()).ln() * T::from_f64(1.0 / 3.0)).exp();
+    let r = T::select_lt(a, tiny(), T::zero(), r);
     T::select_lt(x, T::zero(), -r, r)
 }
 
@@ -967,12 +1008,12 @@ fn phi_pair<T: Real>(mid: T, d2: T, d: T) -> [T; 2] {
     let real_far = {
         let (a, b) = (mid + d, mid - d);
         let (fa, fb) = (phi_real(a), phi_real(b));
-        let slope = (fa - fb) / (a - b).max(T::from_f64(1e-300));
+        let slope = (fa - fb) / (a - b).max(tiny());
         [fa - slope * a, slope]
     };
     let conj_far = {
         let f = phi_complex(Cx { re: mid, im: d });
-        let slope = f.im / d.max(T::from_f64(1e-300));
+        let slope = f.im / d.max(tiny());
         [f.re - slope * mid, slope]
     };
     core::array::from_fn(|k| {
@@ -1028,8 +1069,7 @@ fn split6<T: Real>(c: &Cubic6<T>, p1: T, p2: T, p3: T) -> Split6<T> {
     let cardano = cbrt(-qq * T::from_f64(0.5) + sq) + cbrt(-qq * T::from_f64(0.5) - sq);
     // Three real roots (trigonometric) where disc < 0: the most isolated one.
     let rad = (-pp * three.recip()).max(T::zero()).sqrt();
-    let arg = qq * T::from_f64(1.5) / pp.min(T::from_f64(-1e-300))
-        * (-three / pp.min(T::from_f64(-1e-300))).sqrt();
+    let arg = qq * T::from_f64(1.5) / pp.min(-tiny::<T>()) * (-three / pp.min(-tiny::<T>())).sqrt();
     let arg = arg.max(-T::one()).min(T::one());
     let ang = (T::one() - arg * arg).max(T::zero()).sqrt().atan2(arg) * three.recip();
     let third = T::from_f64(2.0 * core::f64::consts::PI / 3.0);
@@ -1047,7 +1087,7 @@ fn split6<T: Real>(c: &Cubic6<T>, p1: T, p2: T, p3: T) -> Split6<T> {
     // multiple root the derivative vanishes, and the step would throw the root off.
     let f = |r: T| ((r - p1) * r + p2) * r - p3;
     let df = (three * r - (p1 + p1)) * r + p2;
-    let df_safe = T::select_lt(df.abs(), T::from_f64(1e-300), T::one(), df);
+    let df_safe = T::select_lt(df.abs(), tiny(), T::one(), df);
     let next = r - f(r) / df_safe;
     r = T::select_lt(f(next).abs(), f(r).abs(), next, r);
     // The pair's sum and product, each from the side with the smaller error: forward from p1

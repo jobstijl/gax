@@ -19,12 +19,12 @@
 //! of the roots as the logarithm's (`log8`), for any analytic data ([`Data`]).
 
 use super::log8::{
-    CxSeries, Quartic8, add_root, crt22, cx_div, cx_sqrt, euler, grouping_apart, quartic8, reduce4,
-    split8,
+    CxSeries, Quartic8, add_root, crt22, cx_div, cx_sqrt, euler, grouping_apart, quartic8,
+    reduce_pair_cx, reduce4, split8,
 };
 use super::{
-    Channel, Cx, LOG6_TERMS, Real, Series, add_isolated, cubic6, reduce2, reduce3, series_div,
-    series_sqrt, split6,
+    Channel, Cx, LOG6_TERMS, Real, Series, add_isolated, cubic6, derivative, integral, reduce2,
+    reduce3, series_div, series_sqrt, split6, taylor_shift,
 };
 
 /// Terms of `τ`'s and `ln cosh √x`'s Maclaurin series (radius `π²/4`), shifted to centres within
@@ -100,6 +100,19 @@ fn cx_series_exp<T: Real>(g: &CxSeries<T>) -> CxSeries<T> {
     e
 }
 
+/// The first 16 terms of a Maclaurin series `table` at `x`, by Horner.
+fn horner16<F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>>(
+    table: &[f64; TAU_TERMS],
+    x: F,
+    k: impl Fn(f64) -> F,
+) -> F {
+    let mut acc = k(table[15]);
+    for i in (0..15).rev() {
+        acc = acc * x + k(table[i]);
+    }
+    acc
+}
+
 /// `τ(x) = tanh(√x)/√x`: the weight of `T` on `B`'s planes.
 pub(super) struct Tau;
 
@@ -109,11 +122,7 @@ impl Tau {
         x: F,
         k: impl Fn(f64) -> F,
     ) -> F {
-        let mut acc = k(TAU[15]);
-        for i in (0..15).rev() {
-            acc = acc * x + k(TAU[i]);
-        }
-        acc
+        horner16(&TAU, x, k)
     }
 
     /// The Maclaurin series shifted to `x0` (`|x0| ≤ 1`), in `s = (x − x0)/ρ`.
@@ -127,17 +136,7 @@ impl Tau {
     where
         F: Copy + core::ops::Add<Output = F> + core::ops::Mul<Output = F>,
     {
-        let mut c: [F; TAU_TERMS] = core::array::from_fn(|i| k(TAU[i]));
-        let mut out = [zero; LOG6_TERMS];
-        let mut power = T::one();
-        for (i, o) in out.iter_mut().enumerate() {
-            for j in (i..TAU_TERMS - 1).rev() {
-                c[j] = c[j] + x0 * c[j + 1];
-            }
-            *o = c[i] * real(power);
-            power = power * rho;
-        }
-        out
+        taylor_shift(TAU.map(k), x0, rho, zero, real)
     }
 }
 
@@ -263,20 +262,11 @@ pub(super) struct LnCosh;
 
 /// The series of `ln(1 + w)` for a series `w` (`|w₀| < 1`): `L' = w'/(1 + w)`.
 fn cx_series_log1p<T: Real>(w: &CxSeries<T>) -> CxSeries<T> {
-    let one = Cx::real(T::one());
-    let mut dw = [Cx::real(T::zero()); LOG6_TERMS];
-    for k in 1..LOG6_TERMS {
-        dw[k - 1] = w[k] * Cx::real(T::from_i64(k as i64));
-    }
+    let (one, zero) = (Cx::real(T::one()), Cx::real(T::zero()));
     let mut den = *w;
     den[0] = den[0] + one;
-    let d = cx_div(&dw, &den);
-    let mut out = [Cx::real(T::zero()); LOG6_TERMS];
-    out[0] = (one + w[0]).ln();
-    for k in 1..LOG6_TERMS {
-        out[k] = d[k - 1] * Cx::real(T::from_i64(k as i64).recip());
-    }
-    out
+    let d = cx_div(&derivative(w, zero, Cx::real), &den);
+    integral(&d, (one + w[0]).ln(), zero, Cx::real)
 }
 
 impl LnCosh {
@@ -284,11 +274,7 @@ impl LnCosh {
         x: F,
         k: impl Fn(f64) -> F,
     ) -> F {
-        let mut acc = k(LNCOSH[15]);
-        for i in (0..15).rev() {
-            acc = acc * x + k(LNCOSH[i]);
-        }
-        acc
+        horner16(&LNCOSH, x, k)
     }
 
     /// `z + ln(1 + e^−2z) − ln 2` as a series, `z = √(c + ρ s)` (`Re z > 0`).
@@ -333,18 +319,7 @@ impl<T: Real> Data<T> for LnCosh {
         let near = if T::all_lt(one, c) {
             zero
         } else {
-            let mut m: [T; TAU_TERMS] = core::array::from_fn(|i| T::from_f64(LNCOSH[i]));
-            let x0 = c.min(one);
-            let mut out = zero;
-            let mut power = one;
-            for (i, o) in out.iter_mut().enumerate() {
-                for j in (i..TAU_TERMS - 1).rev() {
-                    m[j] = m[j] + x0 * m[j + 1];
-                }
-                *o = m[i] * power;
-                power = power * rho;
-            }
-            out
+            taylor_shift(LNCOSH.map(T::from_f64), c.min(one), rho, T::zero(), |p| p)
         };
         let far = if T::all_lt(c, one) {
             zero
@@ -362,18 +337,8 @@ impl<T: Real> Data<T> for LnCosh {
         let near = if T::all_lt(T::one(), ac) {
             zero
         } else {
-            let mut m: [Cx<T>; TAU_TERMS] =
-                core::array::from_fn(|i| Cx::real(T::from_f64(LNCOSH[i])));
-            let mut out = zero;
-            let mut power = T::one();
-            for (i, o) in out.iter_mut().enumerate() {
-                for j in (i..TAU_TERMS - 1).rev() {
-                    m[j] = m[j] + c * m[j + 1];
-                }
-                *o = m[i] * Cx::real(power);
-                power = power * rho;
-            }
-            out
+            let m = LNCOSH.map(|v| Cx::real(T::from_f64(v)));
+            taylor_shift(m, c, rho, Cx::real(T::zero()), Cx::real)
         };
         let far = if T::all_lt(ac, T::one()) {
             zero
@@ -481,19 +446,7 @@ fn pair_line_cx<T: Real, D: Data<T>>(data: &D, s: Cx<T>, p: Cx<T>) -> [Cx<T>; 2]
         [Cx::real(T::zero()); 2]
     } else {
         let rho = reach.max(T::from_f64(1e-30));
-        let ph = data.series_cx(mid, rho);
-        let d2s = d2 / Cx::real(rho * rho);
-        let (mut b, mut e) = (Cx::real(T::zero()), Cx::real(T::one()));
-        let (mut sb, mut se) = (b, Cx::real(T::zero()));
-        for f in &ph {
-            sb = sb + *f * b;
-            se = se + *f * e;
-            let (nb, ne) = (e, b * d2s);
-            b = nb;
-            e = ne;
-        }
-        let sb = sb / Cx::real(rho);
-        [se - sb * mid, sb]
+        reduce_pair_cx(&data.series_cx(mid, rho), mid, rho, d2)
     };
     let (z, w) = (mid + d, mid - d);
     let (fz, fw) = (data.at_cx(z), data.at_cx(w));
