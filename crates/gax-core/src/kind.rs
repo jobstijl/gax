@@ -137,11 +137,13 @@ where
 /// use gax::pga3d::{Motor, Point};
 /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, std::f64::consts::FRAC_PI_2);
 /// assert!((m >> Point::xyz(1.0, 0.0, 0.0)).approx_eq(&Point::xyz(0.0, 1.0, 0.0), 1e-12));
+/// // A NaN coefficient is never close.
+/// assert!(!Point::<(), f64>::xyz(f64::NAN, 0.0, 0.0).approx_eq(&Point::xyz(0.0, 0.0, 0.0), 1.0));
 /// ```
 pub trait ApproxEq {
     /// Whether every coefficient is within `tol` (relative to the magnitude, see above).
     fn approx_eq(&self, other: &Self, tol: f64) -> bool;
-    /// The largest difference of two coefficients (absolute).
+    /// The largest difference of two coefficients (absolute); NaN if any difference is NaN.
     fn max_abs_diff(&self, other: &Self) -> f64;
 }
 
@@ -157,9 +159,11 @@ where
     }
 
     fn max_abs_diff(&self, other: &Self) -> f64 {
-        flat(self)
-            .zip(flat(other))
-            .fold(0.0f64, |m, (x, y)| m.max((x - y).abs()))
+        // NaN propagates (`f64::max` would drop it), so a NaN coefficient is never close.
+        flat(self).zip(flat(other)).fold(0.0f64, |m, (x, y)| {
+            let d = (x - y).abs();
+            if d.is_nan() || d > m { d } else { m }
+        })
     }
 }
 

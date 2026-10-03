@@ -155,8 +155,9 @@ macro_rules! principal_frame {
         /// the eigenvalue the source plane's norm times either sign; the maps commute, so their
         /// weighted sum (weights of descending powers of two keep the sign choices apart) finds
         /// the common eigenvectors in one eigenproblem. PGA's null planes contribute zero on
-        /// the even versors. numga solves it with a general complex `eig`; gax has no
-        /// non-symmetric eigensolver, but here the spectrum is known in advance, one eigenvalue
+        /// the even versors. numga solves it with a general complex `eig`; gax's `eig` would too,
+        /// but the null planes' repeated zero eigenvalues make its eigenvectors fragile, and here
+        /// the spectrum is known in advance, one eigenvalue
         /// per sign choice `Σ w σ |source|`, so each eigenvector comes from a few steps of
         /// inverse iteration with gax's `solve`. As in numga, the one with the largest scalar
         /// part is the motor (the pure ideal candidates of PGA have none).
@@ -190,9 +191,7 @@ macro_rules! principal_frame {
                     best = Some(x);
                 }
             }
-            let x = best.expect("a motor eigenvector");
-            let norm = x.scalar_product(x.reverse()).s().sqrt();
-            gax::Unit::new_unchecked(x * (1.0 / norm))
+            best.expect("a motor eigenvector").normalized()
         }
 
         /// The inertia moved by a motor: its input and its output.
@@ -735,12 +734,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

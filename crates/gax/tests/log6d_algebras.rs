@@ -6,6 +6,10 @@
 
 #![cfg(feature = "macros")]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 gax::algebra! {
     algebra r60 "Euclidean 6D, R(6,0).";
     basis e1 = 1, e2 = 1, e3 = 1, e4 = 1, e5 = 1, e6 = 1;
@@ -33,16 +37,6 @@ gax::algebra! {
     versor Even = [1, e01, e02, e03, e04, e05, e12, e13, e14, e15, e23, e24, e25, e34, e35, e45, e0123, e0124, e0125, e0134, e0135, e0145, e0234, e0235, e0245, e0345, e1234, e1235, e1245, e1345, e2345, e012345];
 }
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
-
 fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
     let scale = a.iter().chain(b).fold(1.0f64, |m, x| m.max(x.abs()));
     a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol * scale)
@@ -58,7 +52,7 @@ macro_rules! log6d_checks {
             use gax::Unit;
 
             fn bivector(rng: &mut Rng, size: f64) -> Bivector<(), f64> {
-                Bivector::from_coeffs(core::array::from_fn(|_| size * rng.next()))
+                Bivector::from_coeffs(core::array::from_fn(|_| size * rng.next_f64()))
             }
 
             /// Small enough that every plane is well below a half turn: `log(exp B) = B`.

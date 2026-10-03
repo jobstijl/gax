@@ -68,7 +68,7 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
 /// A phase accumulator with band-limited waveforms (PolyBLEP), and a phasor for the sine.
 #[derive(Clone, Copy, Debug)]
 pub struct Osc {
-    /// Phase in `[0, 1)` (saw, pulse, triangle).
+    /// Phase in `[0, 1)` (saw, triangle).
     pub phase: f32,
     /// The sine's phasor: a unit direction going round the origin.
     turning: Point<(), f32>,
@@ -133,18 +133,6 @@ impl Osc {
         y
     }
 
-    /// Band-limited pulse of `width` in `(0, 1)`.
-    #[inline]
-    #[allow(dead_code)] // for the fragment and texture layers (M3)
-    pub fn pulse(&mut self, inc: f32, width: f32) -> f32 {
-        let mut y = if self.phase < width { 1.0 } else { -1.0 };
-        y += poly_blep(self.phase, inc);
-        let t2 = (self.phase + 1.0 - width) % 1.0;
-        y -= poly_blep(t2, inc);
-        self.advance(inc);
-        y
-    }
-
     /// Triangle (integrated square, cheap and soft).
     #[inline]
     pub fn tri(&mut self, inc: f32) -> f32 {
@@ -200,12 +188,6 @@ impl Svf {
             bp: v1,
             hp: x - k * v1 - v2,
         }
-    }
-
-    /// Clear the state.
-    #[allow(dead_code)] // for the fragment and texture layers (M3)
-    pub fn reset(&mut self) {
-        *self = Svf::default();
     }
 }
 

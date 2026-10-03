@@ -10,12 +10,7 @@ use crate::table::{BinOp, UnOp, blade_unop};
 use std::collections::BTreeSet;
 
 fn single_grade(k: &KindSpec) -> Option<u32> {
-    let g: BTreeSet<u32> = k
-        .layout
-        .blades
-        .iter()
-        .map(|(m, _)| m.count_ones())
-        .collect();
+    let g: BTreeSet<u32> = k.layout.grades();
     (g.len() == 1).then(|| *g.iter().next().expect("one"))
 }
 

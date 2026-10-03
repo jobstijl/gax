@@ -80,16 +80,8 @@ fn unop_trait(op: UnOp) -> (&'static str, &'static str) {
     }
 }
 
-fn grades(k: &KindSpec) -> BTreeSet<u32> {
-    k.layout
-        .blades
-        .iter()
-        .map(|(m, _)| m.count_ones())
-        .collect()
-}
-
 fn single_grade(k: &KindSpec) -> bool {
-    grades(k).len() == 1
+    k.layout.grades().len() == 1
 }
 
 fn sandwich(spec: &AlgebraSpec, v: &SymMv, x: &SymMv) -> SymMv {

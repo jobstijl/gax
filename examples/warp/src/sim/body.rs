@@ -15,7 +15,7 @@ pub fn identity() -> Pose {
 
 /// The pose at `(x, y)` turned by `angle` (counterclockwise from the x axis).
 pub fn pose_at(x: f32, y: f32, angle: f32) -> Pose {
-    Motor::translation(x, y) * Motor::rotation(Point::xy(0.0, 0.0), angle)
+    Motor::translation(x, y) * Motor::rotation(ORIGIN, angle)
 }
 
 /// A moving rigid body.
@@ -44,7 +44,7 @@ impl Body {
 
     /// Its position.
     pub fn pos(&self) -> Point<(), f32> {
-        self.pose >> Point::xy(0.0, 0.0)
+        self.pose >> ORIGIN
     }
 
     /// Its position as `[x, y]` (for tests).
@@ -68,7 +68,7 @@ impl Body {
     /// Advance by `dt`: `pose ← exp(dt B) pose`, then one Newton step towards `m ~m = 1`.
     pub fn step(&mut self, dt: f32) {
         self.prev = self.pose;
-        self.pose = ((self.twist() * dt).exp() * self.pose).renormalize_fast();
+        self.pose = (self.twist() * dt).exp().mul_renormalized(self.pose);
     }
 
     /// Move by `(dx, dy)` in world coordinates (a wall bounce, a respawn).
@@ -88,22 +88,16 @@ impl Body {
     }
 }
 
-/// Motor interpolation: `a exp(t log(~a b))`, a screw motion from `a` to `b`.
+/// Motor interpolation: `a exp(t log(~a b))`, a screw motion from `a` to `b` the shorter way,
+/// renormalized (the serpent's chain feeds it its own output every tick).
 pub fn interpolate(a: Pose, b: Pose, t: f32) -> Pose {
-    let rel = a.reverse() * b;
-    let log: Point<(), f32> = rel.log();
-    a * (log * t).exp()
+    gax::pga2d::Motor::interpolate(a, b, t).renormalize_fast()
 }
 
 /// `|m ~m - 1|`: how far a pose has drifted from a unit motor (logged per session).
 pub fn drift(m: Pose) -> f32 {
-    let x = m.into_inner();
-    let n = x * x.reverse();
-    (n.c[0] - 1.0)
-        .abs()
-        .max(n.c[1].abs())
-        .max(n.c[2].abs())
-        .max(n.c[3].abs())
+    // A PGA2D motor's `m ~m` is a scalar.
+    (m.into_inner().norm_squared() - 1.0).abs()
 }
 
 pub use crate::geom::ORIGIN;
@@ -112,6 +106,13 @@ pub use crate::geom::ORIGIN;
 /// rotation motor.
 pub fn heading(angle: f32, speed: f32) -> Point<(), f32> {
     Motor::rotation(ORIGIN, angle) >> Point::direction(speed, 0.0)
+}
+
+/// The velocity of the point `p` (a unit point) of a body moving with the world twist `twist`:
+/// the rate of `exp(t B) p exp(-t B)`, `B p - p B`, twice gax's commutator (which is half the
+/// bracket).
+pub fn velocity_at(twist: Point<(), f32>, p: Point<(), f32>) -> Point<(), f32> {
+    twist.commutator(p) * 2.0
 }
 
 /// The direction `d` turned by `angle`.
@@ -178,11 +179,11 @@ mod tests {
         let a = pose_at(0.0, 0.0, 0.0);
         let b = pose_at(2.0, 0.0, 1.0);
         assert!(close(
-            (interpolate(a, b, 0.0) >> Point::xy(0.0, 0.0)).to_euclidean(),
+            (interpolate(a, b, 0.0) >> crate::geom::ORIGIN).to_euclidean(),
             [0.0, 0.0]
         ));
         assert!(close(
-            (interpolate(a, b, 1.0) >> Point::xy(0.0, 0.0)).to_euclidean(),
+            (interpolate(a, b, 1.0) >> crate::geom::ORIGIN).to_euclidean(),
             [2.0, 0.0]
         ));
         let mid = interpolate(a, b, 0.5);
@@ -201,6 +202,21 @@ mod tests {
             drift(b.pose) < 1e-5,
             "drift after 10 minutes: {}",
             drift(b.pose)
+        );
+    }
+
+    #[test]
+    fn a_twist_moves_a_point_with_its_velocity_and_spin() {
+        // v + ω × r, with r the arm from the centre: the formula the commutator replaces.
+        let mut b = Body::new(Motor::translation(1.0, 2.0));
+        b.vel = Point::direction(3.0, -1.0);
+        b.spin = 0.5;
+        let p = Point::xy(4.0, 6.0);
+        let v = velocity_at(b.twist(), p);
+        let want = [3.0 - 0.5 * 4.0, -1.0 + 0.5 * 3.0];
+        assert!(
+            (v.e20() - want[0]).abs() < 1e-5 && (v.e01() - want[1]).abs() < 1e-5,
+            "{v:?}"
         );
     }
 }

@@ -69,14 +69,10 @@ impl<T: Real> Complex<T> {
         let (a, b) = (self.re.abs(), self.im.abs());
         let big = a.max(b);
         let small = a.min(b);
-        let safe = T::select_lt(big, T::from_f64(1e-300), T::one(), big);
-        let r = small / safe;
-        T::select_lt(
-            big,
-            T::from_f64(1e-300),
-            T::zero(),
-            big * (T::one() + r * r).sqrt(),
-        )
+        // Zero stays zero (in any precision: a guard such as 1e-300 is zero in f32).
+        let zero = T::zero();
+        let r = small / T::select_lt(zero, big, big, T::one());
+        T::select_lt(zero, big, big * (T::one() + r * r).sqrt(), zero)
     }
 
     /// The argument, in `(−π, π]`.
@@ -107,8 +103,8 @@ impl<T: Real> Complex<T> {
         let r = self.abs();
         // The larger of the two parts first, the other from `im = 2 re' im'`.
         let a = ((r + self.re.abs()) * half).sqrt();
-        let safe = T::select_lt(a, T::from_f64(1e-300), T::one(), a);
-        let b = self.im * half / safe;
+        let zero = T::zero();
+        let b = self.im * half / T::select_lt(zero, a, a, T::one());
         let pos = Complex { re: a, im: b };
         // re < 0: the root is `(|b|, sign(im) a)`.
         let sign = T::select_lt(self.im, T::zero(), -T::one(), T::one());
@@ -116,17 +112,13 @@ impl<T: Real> Complex<T> {
             re: b.abs(),
             im: sign * a,
         };
-        let z = Complex {
-            re: T::zero(),
-            im: T::zero(),
-        };
         let root = Complex {
-            re: T::select_lt(self.re, T::zero(), neg.re, pos.re),
-            im: T::select_lt(self.re, T::zero(), neg.im, pos.im),
+            re: T::select_lt(self.re, zero, neg.re, pos.re),
+            im: T::select_lt(self.re, zero, neg.im, pos.im),
         };
         Complex {
-            re: T::select_lt(a, T::from_f64(1e-300), z.re, root.re),
-            im: T::select_lt(a, T::from_f64(1e-300), z.im, root.im),
+            re: T::select_lt(zero, a, root.re, zero),
+            im: T::select_lt(zero, a, root.im, zero),
         }
     }
 
@@ -246,5 +238,14 @@ mod tests {
             Complex::real(-1.0)
         ));
         assert!(close(z.ln().exp(), z));
+    }
+
+    #[test]
+    fn zero_in_f32() {
+        // Guards must hold in f32 too, where 1e-300 underflows to zero.
+        let z = Complex::<f32>::new(0.0, 0.0);
+        assert_eq!(z.abs(), 0.0);
+        assert_eq!(z.sqrt(), z);
+        assert_eq!(Complex::<f32>::new(0.0, -2.0).abs(), 2.0);
     }
 }

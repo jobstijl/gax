@@ -79,7 +79,7 @@ impl Track {
         let o = Point::xyz(0.0, 0.0, 0.0);
         let level = Line::rotation_twist(o & Point::direction(-uy, ux, 0.0), -0.05 * uz / across);
         let step = ((Track::twist(pitch, yaw, roll) + level) * SEG).exp();
-        self.keys.push((last * step).renormalize_fast());
+        self.keys.push(last.mul_renormalized(step));
     }
 
     fn grow(&mut self) {

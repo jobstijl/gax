@@ -51,10 +51,9 @@ mod dirac {
         Scalar::new(s).cast::<Even>()
     }
 
-    /// `exp(I angle)`, with `I = e0123` squaring to minus one: `cos + I sin`. (STA's
-    /// pseudoscalar has no `exp` in gax; numga exponentiates any blade.)
+    /// `exp(I angle)`, with `I = e0123` squaring to minus one: `cos + I sin`, a phasor.
     pub fn phase(angle: f64) -> Spinor {
-        scalar(angle.cos()) + (Pseudoscalar::new(angle.sin())).cast::<Even>()
+        Pseudoscalar::new(angle).exp().cast::<Even>()
     }
 
     // Used by the tests (part of numga's core).
@@ -398,21 +397,7 @@ mod tests {
     use super::dirac::*;
     use gax::sta::{Bivector, Even, Vector};
 
-    /// numga's `np.random.default_rng(0).normal` cannot be reproduced: a xorshift stream with
-    /// Box-Muller normals stands in (the check holds for any probe).
-    struct Rng(u64);
-    impl Rng {
-        fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    use gax_numga_examples::rng::Rng;
 
     fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
         a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
@@ -482,12 +467,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

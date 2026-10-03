@@ -204,11 +204,7 @@ mod pga3d_moments {
             crate::linalg::sort_pairs(&mut values, &mut vectors);
             // A right-handed frame: the third axis the cross product of the first two.
             let [a, b, _] = vectors;
-            let c = [
-                a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0],
-            ];
+            let c = super::cross3(a, b);
             let rotation = super::rotor_from_frame([a, b, c]);
             let [x, y, z] = self.centroid().to_euclidean();
             let frame = Motor::translation(x, y, z) * rotation;
@@ -216,6 +212,16 @@ mod pga3d_moments {
             (PrincipalInertia::new(mass, values), frame)
         }
     }
+}
+
+#[cfg(feature = "pga3d")]
+/// The cross product of two triples.
+pub(crate) fn cross3<T: Real>(a: [T; 3], b: [T; 3]) -> [T; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
 }
 
 /// The rotation that takes the x, y and z axes to the orthonormal, right-handed directions

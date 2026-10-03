@@ -162,9 +162,7 @@ where
     let prod = <M1::Slots as Slots>::outer::<M2::Slots, _, _, R>(&av, &bv, &mut |x, y| f(*x, *y));
     // Back to output-first coefficients.
     let c = <R::Kind as Kind>::arr_from_fn(|o| {
-        <Cat<M1::Slots, M2::Slots> as Slots>::map(&prod, &mut |r: &R| {
-            <R::Kind as Kind>::arr_map(r.coeffs(), |x| *x).as_ref()[o]
-        })
+        <Cat<M1::Slots, M2::Slots> as Slots>::map(&prod, &mut |r: &R| r.coeffs().as_ref()[o])
     });
     <Retype<R, Cat<M1::Slots, M2::Slots>, R::Coef> as Extensor>::from_coeffs(c)
 }

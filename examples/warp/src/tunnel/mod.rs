@@ -535,7 +535,7 @@ impl Field {
         let mut acc = dir(0.0, 0.0, 0.0);
         for &(w, strength) in &self.wells {
             let d = w - p;
-            let soft = d.ideal_norm() * d.ideal_norm() + 1.0;
+            let soft = d.ideal_norm_squared() + 1.0;
             acc += d * (k * strength / soft.powf(1.5));
         }
         acc

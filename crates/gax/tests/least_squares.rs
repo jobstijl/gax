@@ -6,29 +6,20 @@
 
 #![cfg(feature = "pga3d")]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::ApproxEq;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
-
-struct Rng(u64);
-impl Rng {
-    fn unit(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-    fn map<const O: usize, const I: usize>(&mut self) -> [[f64; I]; O] {
-        core::array::from_fn(|_| core::array::from_fn(|_| self.unit()))
-    }
-}
 
 /// On a square map of full rank the pseudo-inverse is the inverse, and least squares solves.
 #[test]
 fn square_full_rank_is_the_inverse() {
     let mut rng = Rng(0x0015_0eab);
     for _ in 0..200 {
-        let a = Line::<(Line,), f64>::from_coeffs(rng.map());
-        let b = Line::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+        let a = rng.value::<Line<(Line,), f64>>(1.0);
+        let b = Line::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         assert!(a.pinv().approx_eq(&a.inverse(), 1e-9));
         assert!(a.lstsq(b).approx_eq(&a.solve(b), 1e-9));
     }
@@ -40,10 +31,10 @@ fn square_full_rank_is_the_inverse() {
 fn tall_full_rank_recovers_values_and_maps() {
     let mut rng = Rng(0x7a11);
     for _ in 0..200 {
-        let a = Line::<(Point,), f64>::from_coeffs(rng.map());
-        let x = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+        let a = rng.value::<Line<(Point,), f64>>(1.0);
+        let x = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         assert!(a.lstsq(a.of(x)).approx_eq(&x, 1e-9));
-        let y = Point::<(Plane,), f64>::from_coeffs(rng.map());
+        let y = rng.value::<Point<(Plane,), f64>>(1.0);
         let back: Point<(Plane,), f64> = a.lstsq(a.of(y));
         assert!(back.approx_eq(&y, 1e-9));
     }
@@ -57,12 +48,13 @@ fn normal_equations_and_least_norm() {
     let mut rng = Rng(0xbead);
     for _ in 0..200 {
         // A wide map (lines to points) of rank 3: its last column a combination of the others.
-        let mut c: [[f64; 6]; 4] = rng.map();
+        let mut c: [[f64; 6]; 4] =
+            core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
         for row in &mut c {
             row[5] = 0.5 * row[0] - 2.0 * row[3];
         }
         let a = Point::<(Line,), f64>::from_coeffs(c);
-        let b = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+        let b = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         let x = a.lstsq(b);
         let r = a.of(x) - b;
         for j in 0..6 {
@@ -86,8 +78,8 @@ fn normal_equations_and_least_norm() {
 fn several_slots_solve_for_the_first() {
     let mut rng = Rng(0x5107);
     for _ in 0..100 {
-        let t = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
-        let l = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+        let t = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
+        let l = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         let pairing: Scalar<(Plane, Point), f64> = Plane::slot() & Point::slot();
         let x: Plane<(), f64> = pairing.lstsq(t & Point::slot());
         assert!(x.approx_eq(&t, 1e-9));
@@ -97,7 +89,7 @@ fn several_slots_solve_for_the_first() {
         let x: Plane<(), f64> = three.lstsq(rhs);
         assert!(x.approx_eq(&t, 1e-9));
         // Another slot first with `at`: the point `p` with `t' & p == r` for every plane `t'`.
-        let p = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+        let p = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         let q: Point<(), f64> = pairing.at::<1>().lstsq(Plane::slot() & p);
         assert!(q.approx_eq(&p, 1e-9));
     }
@@ -107,8 +99,8 @@ fn several_slots_solve_for_the_first() {
 #[test]
 fn smaller_kind_on_the_right() {
     let mut rng = Rng(0xe4b);
-    let a = Motor::<(Rotor,), f64>::from_coeffs(rng.map());
-    let r = Rotor::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.unit()));
+    let a = rng.value::<Motor<(Rotor,), f64>>(1.0);
+    let r = Rotor::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
     assert_eq!(a.lstsq(r), a.lstsq(r.cast::<Motor>()));
 }
 
@@ -128,7 +120,7 @@ fn zero_map() {
 fn single_precision() {
     let mut rng = Rng(0xf32);
     for _ in 0..100 {
-        let c: [[f64; 4]; 6] = rng.map();
+        let c: [[f64; 4]; 6] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
         let a = Line::<(Point,), f64>::from_coeffs(c);
         let a32 = Line::<(Point,), f32>::from_coeffs(c.map(|r| r.map(|v| v as f32)));
         let (p, p32) = (a.pinv(), a32.pinv());

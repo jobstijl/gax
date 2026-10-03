@@ -56,7 +56,7 @@ pub fn walls(hw: f32, hh: f32) -> [Line<(), f32>; 4] {
 
 /// Is `p` in front of a body at `pose` (on the side its local x axis points to)?
 pub fn in_front(pose: Pose, p: Point<(), f32>) -> bool {
-    let (o, up) = (pose >> Point::xy(0.0, 0.0), pose >> Point::xy(0.0, 1.0));
+    let (o, up) = (pose >> crate::geom::ORIGIN, pose >> Point::xy(0.0, 1.0));
     // The line from the centre along the local y axis; the heading side is negative for this
     // orientation of the join.
     ((o & up) & p).s() < 0.0
@@ -151,20 +151,20 @@ mod tests {
         let c = Point::xy(5.0, 0.3);
         // Passes by at distance 0.3: a hit for radius 0.5, not for 0.2.
         assert!(segment_hits_circle(
-            Point::xy(0.0, 0.0),
+            crate::geom::ORIGIN,
             Point::xy(10.0, 0.0),
             c,
             0.5
         ));
         assert!(!segment_hits_circle(
-            Point::xy(0.0, 0.0),
+            crate::geom::ORIGIN,
             Point::xy(10.0, 0.0),
             c,
             0.2
         ));
         // Stops short of the closest approach: no hit, though the line passes close.
         assert!(!segment_hits_circle(
-            Point::xy(0.0, 0.0),
+            crate::geom::ORIGIN,
             Point::xy(3.0, 0.0),
             c,
             0.5
@@ -188,7 +188,7 @@ mod tests {
     #[test]
     fn walls_face_inwards() {
         for w in walls(10.0, 5.0) {
-            assert!((w & Point::xy(0.0, 0.0)).s() > 0.0);
+            assert!((w & crate::geom::ORIGIN).s() > 0.0);
             assert!(
                 (w & Point::xy(30.0, 30.0)).s() < 0.0 || (w & Point::xy(-30.0, -30.0)).s() < 0.0
             );

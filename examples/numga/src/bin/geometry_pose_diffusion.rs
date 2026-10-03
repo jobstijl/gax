@@ -12,8 +12,8 @@
 //! settled one (dashed). The gusts hit the side much harder than the bow; turning spreads them
 //! over every direction.
 
-use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::Unit;
+use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{Align, Anim, Axes, Canvas, backdrop, caption, palette, plot, run};
 use std::sync::OnceLock;
 
@@ -185,21 +185,7 @@ mod station {
             .collect()
     }
 
-    /// A small xorshift generator with normal deviates by Box-Muller (numga's stream cannot be
-    /// reproduced; the checks are statistical and hold for any stream).
-    pub struct Rng(pub u64);
-    impl Rng {
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// A run: snapshots of the bodies' errors and of the predicted covariance every few steps,
     /// and the settled covariance.
@@ -265,10 +251,7 @@ mod station {
     /// The largest coefficient of a covariance.
     #[cfg(test)]
     pub fn max_abs(c: Covariance) -> f64 {
-        c.c
-            .iter()
-            .flatten()
-            .fold(0.0f64, |m, v| m.max(v.abs()))
+        c.c.iter().flatten().fold(0.0f64, |m, v| m.max(v.abs()))
     }
 
     /// The largest coefficient difference of two covariances.
@@ -454,12 +437,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            2.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 2.5);
     }
 }

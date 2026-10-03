@@ -1265,7 +1265,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let f = render::Frame {
         camera,
         hud: hud_cam,
-        centre: (game.cam >> gax::pga2d::Point::xy(0.0, 0.0)).to_euclidean(),
+        centre: (game.cam >> crate::geom::ORIGIN).to_euclidean(),
         world: &game.world_lines,
         hud_lines: &game.hud_lines,
         grid_steps: &game.fx.grid_steps,

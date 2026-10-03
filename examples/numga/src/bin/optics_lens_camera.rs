@@ -820,12 +820,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

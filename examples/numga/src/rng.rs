@@ -6,14 +6,14 @@
 //! trigonometry.
 #![allow(clippy::disallowed_methods)]
 
-/// The generator's state.
+/// The generator's state: `Rng(seed)` starts from the seed as given, `Rng::new` scrambles it.
 #[derive(Clone, Debug)]
-pub struct Rng(u64);
+pub struct Rng(pub u64);
 
 impl Rng {
-    /// A generator from a seed (any value; zero is replaced).
+    /// A generator from a scrambled seed (any value).
     pub fn new(seed: u64) -> Rng {
-        Rng(seed.max(1).wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
+        Rng(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
     }
 
     fn bits(&mut self) -> u64 {
@@ -23,20 +23,20 @@ impl Rng {
         self.0
     }
 
-    /// Uniform in `[0, 1)`.
+    /// Uniform in `(0, 1)`: the midpoints of `2^53` bins, so neither end (`ln` and division
+    /// are safe).
     pub fn uniform(&mut self) -> f64 {
-        (self.bits() >> 11) as f64 / (1u64 << 53) as f64
+        ((self.bits() >> 11) as f64 + 0.5) / (1u64 << 53) as f64
     }
 
-    /// Uniform in `[lo, hi)`.
+    /// Uniform in `(lo, hi)`.
     pub fn range(&mut self, lo: f64, hi: f64) -> f64 {
         lo + (hi - lo) * self.uniform()
     }
 
-    /// A standard normal draw (Box-Muller).
+    /// A standard normal draw (Box and Muller).
     pub fn normal(&mut self) -> f64 {
-        let u = self.uniform().max(1e-300);
-        let v = self.uniform();
+        let (u, v) = (self.uniform(), self.uniform());
         (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
     }
 

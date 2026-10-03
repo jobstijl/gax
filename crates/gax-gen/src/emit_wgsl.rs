@@ -1835,17 +1835,3 @@ pub fn kernels(spec: &AlgebraSpec, stats: &Stats) -> Vec<Kernel> {
     }
     kernels
 }
-
-/// The WGSL text with `public` before each top-level declaration, for WESL resolvers that
-/// implement visibility (the `wesl` crate from 0.5): imports across packages need it.
-pub fn with_public(src: &str) -> String {
-    let mut out = String::with_capacity(src.len() + src.len() / 16);
-    for line in src.lines() {
-        if line.starts_with("fn ") || line.starts_with("struct ") || line.starts_with("alias ") {
-            out.push_str("public ");
-        }
-        out.push_str(line);
-        out.push('\n');
-    }
-    out
-}

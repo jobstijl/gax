@@ -6,15 +6,10 @@
 
 #![cfg(all(feature = "pga2d", feature = "pga3d"))]
 
+use gax::ApproxEq;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Translator};
-use gax::{Extensor, Unit, pga2d};
+use gax::{Unit, pga2d};
 use proptest::prelude::*;
-
-fn close<M: Extensor<Slots = (), Coef = f64>>(a: &M, b: &M, tol: f64) -> bool {
-    let (a, b) = (a.coeffs().as_ref(), b.coeffs().as_ref());
-    let scale = a.iter().chain(b).fold(1.0f64, |m, x| m.max(x.abs()));
-    a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol * scale)
-}
 
 fn xyz() -> impl Strategy<Value = [f64; 3]> {
     prop::array::uniform3(-2.0f64..2.0)
@@ -54,23 +49,23 @@ proptest! {
     fn between_planes(a in plane(), b in plane()) {
         prop_assume!(not_opposite(a, b));
         let m = Motor::between(a, b);
-        prop_assert!(close(&(m >> a).normalized().into_inner(), &b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
     }
 
     #[test]
     fn between_lines(a in line(), b in line()) {
         prop_assume!(not_opposite(a, b));
         let m = Motor::between(a, b);
-        prop_assert!(close(&(m >> a).normalized().into_inner(), &b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
     }
 
     /// Points of either weight: the translation between them, a pure translation.
     #[test]
     fn between_points(a in point(), b in point()) {
         let m = Motor::between(a, b);
-        prop_assert!(close(&(m >> a).unitized(), &b.unitized(), 1e-9));
+        prop_assert!((m >> a).unitized().approx_eq(&b.unitized(), 1e-9));
         let r = m.into_inner();
-        prop_assert!(close(&Rotor::new(r.s(), r.e12(), r.e31(), r.e23()), &Rotor::new(1.0, 0.0, 0.0, 0.0), 1e-12));
+        prop_assert!(Rotor::new(r.s(), r.e12(), r.e31(), r.e23()).approx_eq(&Rotor::new(1.0, 0.0, 0.0, 0.0), 1e-12));
     }
 
     /// For unit elements the literal formula, `(b / a).sqrt()`, is the same motor.
@@ -79,8 +74,8 @@ proptest! {
         prop_assume!(not_opposite(a, b));
         let (a, b) = (a.normalized().into_inner(), b.normalized().into_inner());
         let root = (b / a).sqrt();
-        prop_assert!(close(&root.into_inner(), &Motor::between(a, b).into_inner(), 1e-9));
-        prop_assert!(close(&(root * root).into_inner(), &(b / a), 1e-9));
+        prop_assert!(root.into_inner().approx_eq(&Motor::between(a, b).into_inner(), 1e-9));
+        prop_assert!((root * root).into_inner().approx_eq(&(b / a), 1e-9));
     }
 
     #[test]
@@ -89,25 +84,25 @@ proptest! {
         prop_assume!(a.e1().hypot(a.e2()) > 0.3 && b.e1().hypot(b.e2()) > 0.3);
         prop_assume!((b / a).normalized().s() > -0.9);
         let m = pga2d::Motor::between(a, b);
-        prop_assert!(close(&(m >> a).normalized().into_inner(), &b.normalized().into_inner(), 1e-9));
+        prop_assert!((m >> a).normalized().into_inner().approx_eq(&b.normalized().into_inner(), 1e-9));
         let (p, q) = (pga2d::Point::xy(a.e1(), a.e2()), pga2d::Point::new(b.e0(), b.e1(), -0.5));
         let t = pga2d::Motor::between(p, q);
-        prop_assert!(close(&(t >> p).unitized(), &q.unitized(), 1e-9));
+        prop_assert!((t >> p).unitized().approx_eq(&q.unitized(), 1e-9));
     }
 
     /// Division is the product with the inverse, and undoes it; the dividend may be a map.
     #[test]
     fn division_undoes_the_product(a in line(), b in plane(), p in point()) {
-        prop_assert!(close(&((a * b) / b), &Motor::from(a), 1e-9));
+        prop_assert!(((a * b) / b).approx_eq(&Motor::from(a), 1e-9));
         let pb: Motor<(), f64> = p * b; // grades 2 and 4
-        prop_assert!(close(&(pb / b), &gax::pga3d::Flector::from(p), 1e-9));
+        prop_assert!((pb / b).approx_eq(&gax::pga3d::Flector::from(p), 1e-9));
         let map: Motor<(Plane,), f64> = Plane::slot() / b;
-        prop_assert!(close(&map.of(b), &Motor::from(gax::pga3d::Scalar::new(1.0)), 1e-12));
-        prop_assert!(close(&(p / 2.0), &(p * 0.5), 0.0));
+        prop_assert!(map.of(b).approx_eq(&Motor::from(gax::pga3d::Scalar::new(1.0)), 1e-12));
+        prop_assert!((p / 2.0).approx_eq(&(p * 0.5), 0.0));
         // By a unit versor: the reverse, the same as the inverse.
         let u = (Line::new(0.3, -0.2, 0.5, 0.1, 0.7, -0.4) * 0.8).exp();
-        prop_assert!(close(&(a / u), &(a / u.into_inner()), 1e-12));
-        prop_assert!(close(&((p / u) * u.into_inner()), &gax::pga3d::Flector::from(p), 1e-12));
+        prop_assert!((a / u).approx_eq(&(a / u.into_inner()), 1e-12));
+        prop_assert!(((p / u) * u.into_inner()).approx_eq(&gax::pga3d::Flector::from(p), 1e-12));
     }
 }
 
@@ -118,16 +113,12 @@ fn embeddings_keep_the_action() {
     let t: Unit<Translator<(), f64>> =
         (Point::xyz(1.0, -2.0, 0.5) / Point::xyz(0.0, 0.0, 0.0)).sqrt();
     let p = Point::xyz(0.3, 0.4, -1.0);
-    assert!(close(&(r.widen::<Motor<(), f64>>() >> p), &(r >> p), 1e-15));
-    assert!(close(&(t.widen::<Motor<(), f64>>() >> p), &(t >> p), 1e-15));
+    assert!((r.widen::<Motor<(), f64>>() >> p).approx_eq(&(r >> p), 1e-15));
+    assert!((t.widen::<Motor<(), f64>>() >> p).approx_eq(&(t >> p), 1e-15));
     // Blades stored with another orientation change sign: e31 in a rotor, e13 nowhere; the
     // multivector is the same, so the products agree.
     let m: Motor<(), f64> = r.into_inner().into();
-    assert!(close(
-        &(m * m),
-        &Motor::from(r.into_inner() * r.into_inner()),
-        1e-15
-    ));
+    assert!((m * m).approx_eq(&Motor::from(r.into_inner() * r.into_inner()), 1e-15));
 }
 
 /// Near a half turn the motor between two elements stays as precise in `f32` as the geometry

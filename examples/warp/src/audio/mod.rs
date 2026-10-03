@@ -435,7 +435,7 @@ impl Sound {
         // pan is that direction's angle from the left (a rotation between directions), from
         // `-1` at the left through `0` ahead to `1` at the right.
         const EAR: f32 = 12.0;
-        let off = (cam << p) - Point::xy(0.0, 0.0);
+        let off = (cam << p) - crate::geom::ORIGIN;
         let ahead = Point::direction(off.e01(), EAR).ideal_norm();
         let from_left = gax::pga2d::Motor::rotation_between(
             Point::direction(-1.0, 0.0),
@@ -545,7 +545,7 @@ impl Sound {
                 Event::Respawn => self.push(
                     Family::Spawn,
                     s.note(14),
-                    Point::xy(0.0, 0.0),
+                    crate::geom::ORIGIN,
                     cam,
                     1.5,
                     0.0,

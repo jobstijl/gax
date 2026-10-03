@@ -59,7 +59,7 @@ impl Layout {
             .map(|i| (i, self.blades[i].1))
     }
 
-    /// Whether all coefficients have the given grade parity (for even/odd subalgebras).
+    /// The grades of its blades.
     pub fn grades(&self) -> BTreeSet<u32> {
         self.blades.iter().map(|b| b.0.count_ones()).collect()
     }

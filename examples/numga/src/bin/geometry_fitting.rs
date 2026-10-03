@@ -29,22 +29,7 @@ mod fitting {
     pub type Pl = Plane<(), f64>;
     pub type M = gax::Unit<Motor<(), f64>>;
 
-    /// A small xorshift generator with Gaussian draws (numga's NumPy streams cannot be
-    /// reproduced, so the seeds differ from numga's).
-    pub struct Rng(pub u64);
-    impl Rng {
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        /// A standard normal draw (Box and Muller).
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// The least finite mode of the pencil `(misfit, unit)`, `unit` semidefinite: the greatest
     /// mode of the turned-round pencil `unit.eigh_with(misfit + σ unit)`.
@@ -57,11 +42,6 @@ mod fitting {
         modes[modes.len() - 1]
     }
 
-    /// The mean of a form's diagonal, over the coefficients.
-    pub fn diagonal<const N: usize>(c: &[[f64; N]; N]) -> f64 {
-        (0..N).map(|i| c[i][i]).sum::<f64>() / N as f64
-    }
-
     /// A point fitted to points: the misfit sums the squared lines joining each sample to the
     /// unknown point.
     pub fn point_to_points(samples: &[P]) -> P {
@@ -71,7 +51,7 @@ mod fitting {
             acc + r.reverse().scalar_product(r)
         });
         let unit = x.reverse().scalar_product(x);
-        let sigma = diagonal(&misfit.c[0]) / diagonal(&unit.c[0]);
+        let sigma = misfit.as_map().trace() / unit.as_map().trace();
         least_mode(misfit, unit, sigma)
     }
 
@@ -85,7 +65,7 @@ mod fitting {
             acc + r.reverse().scalar_product(r)
         });
         let unit = x.reverse().scalar_product(x);
-        let sigma = diagonal(&misfit.c[0]) / diagonal(&unit.c[0]);
+        let sigma = misfit.as_map().trace() / unit.as_map().trace();
         least_mode(misfit, unit, sigma)
     }
 
@@ -97,7 +77,7 @@ mod fitting {
             acc + r.reverse().scalar_product(r)
         });
         let unit = x.reverse().scalar_product(x);
-        let sigma = diagonal(&misfit.c[0]) / diagonal(&unit.c[0]);
+        let sigma = misfit.as_map().trace() / unit.as_map().trace();
         least_mode(misfit, unit, sigma)
     }
 
@@ -109,7 +89,7 @@ mod fitting {
             acc + r.reverse().scalar_product(r)
         });
         let unit = x.reverse().scalar_product(x);
-        let sigma = diagonal(&misfit.c[0]) / diagonal(&unit.c[0]);
+        let sigma = misfit.as_map().trace() / unit.as_map().trace();
         least_mode(misfit, unit, sigma)
     }
 

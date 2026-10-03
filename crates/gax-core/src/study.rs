@@ -361,10 +361,7 @@ pub fn study1<T: Real>(isq: i8, a: T, b: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T
             (r.p.re, r.d.re)
         }
         1 => {
-            let lift = |x: T| Dual {
-                p: Cx::real(x),
-                d: Cx::real(zero),
-            };
+            let lift = <Dual<Cx<T>> as Channel<T>>::real;
             let (fp, fm) = (f(lift(a + b)).p.re, f(lift(a - b)).p.re);
             let half = T::from_f64(0.5);
             ((fp + fm) * half, (fp - fm) * half)
@@ -404,10 +401,7 @@ pub fn study2<T: Real>(
             (r.p.re, r.d.re)
         }
         1 => {
-            let lift = |v: T| Dual {
-                p: Cx::real(v),
-                d: Cx::real(zero),
-            };
+            let lift = <Dual<Cx<T>> as Channel<T>>::real;
             let fp = f(lift(x.0 + x.1), lift(y.0 + y.1)).p.re;
             let fm = f(lift(x.0 - x.1), lift(y.0 - y.1)).p.re;
             let half = T::from_f64(0.5);
@@ -468,10 +462,7 @@ pub fn log_coeffs<T: Real>(isq: i8, c: (T, T), u: (T, T)) -> [T; 2] {
 #[inline(always)]
 pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     let (r0, r1) = study1(isq, a, b, |z| {
-        Dual {
-            p: Cx::real(T::one()),
-            d: Cx::real(T::zero()),
-        } / z.sqrt()
+        <Dual<Cx<T>> as Channel<T>>::real(T::one()) / z.sqrt()
     });
     [r0, r1]
 }

@@ -125,7 +125,7 @@ impl Lattice {
                 for src in sources {
                     // Away from the source, softened: `strength (p - s) / (|p - s|² + r²)`.
                     let away = at - src.pos;
-                    let n2 = away.ideal_norm() * away.ideal_norm();
+                    let n2 = away.ideal_norm_squared();
                     let reach = if src.reach2 > 0.0 {
                         src.reach2 / (n2 + src.reach2)
                     } else {

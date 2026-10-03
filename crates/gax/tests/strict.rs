@@ -3,20 +3,14 @@
 
 #![cfg(all(feature = "batch", feature = "pga3d", not(feature = "deterministic")))]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::batch::{self, Map};
 use gax::pga3d::{Line, Point};
 use gax::strict::Strict;
 use gax::{Extensor, Real};
-
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        ((self.0 >> 11) as f64 / (1u64 << 53) as f64) * 2.0 - 1.0
-    }
-}
 
 /// exp, the motor's action on a point, log, and `exp` of a coefficient.
 struct Pipeline;
@@ -50,7 +44,7 @@ fn every_level_gives_the_scalar_bits() {
     let mut rng = Rng(0x57_1c7);
     let n = 37;
     let lines: Vec<Line<(), f64>> = (0..n)
-        .map(|_| Line::from_coeffs(core::array::from_fn(|_| rng.next())))
+        .map(|_| Line::from_coeffs(core::array::from_fn(|_| rng.next_f64())))
         .collect();
     let s32: Vec<Line<(), Strict<f32>>> = lines
         .iter()
@@ -82,7 +76,7 @@ fn every_level_gives_the_scalar_bits() {
 fn close_to_plain_floats() {
     let mut rng = Rng(3);
     for _ in 0..100 {
-        let b = Line::<(), f32>::from_coeffs(core::array::from_fn(|_| rng.next() as f32));
+        let b = Line::<(), f32>::from_coeffs(core::array::from_fn(|_| rng.next_f64() as f32));
         let plain = Pipeline.call(b);
         let strict: Line<(), f32> = Strict::unwrap(Pipeline.call(Strict::wrap(b)));
         for (x, y) in plain.c.iter().zip(strict.c) {

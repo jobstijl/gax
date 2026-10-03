@@ -642,21 +642,11 @@ mod tests {
 
     /// numga draws normals from `np.random.default_rng(seed)`, which cannot be reproduced: a
     /// xorshift stream with Box-Muller normals stands in (the identities hold for any vectors).
-    struct Rng(u64);
-    impl Rng {
-        fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-        fn vector(&mut self) -> V {
-            Vector::new(self.normal(), self.normal(), self.normal(), self.normal())
-        }
+    use gax_numga_examples::rng::Rng;
+
+    /// A vector of four standard normal coefficients.
+    fn vector(rng: &mut Rng) -> V {
+        Vector::new(rng.normal(), rng.normal(), rng.normal(), rng.normal())
     }
 
     fn close<'a>(
@@ -697,7 +687,7 @@ mod tests {
         let (plus, cross) = polarizations();
         let curvature = plus * 1.3 - cross * 0.7;
         let mut rng = Rng(7);
-        let [a, b, c, d] = core::array::from_fn(|_| rng.vector());
+        let [a, b, c, d] = core::array::from_fn(|_| vector(&mut rng));
         let (ab, cd) = (a ^ b, c ^ d);
         assert!(((ab | curvature.of(cd)).s() - (curvature.of(ab) | cd).s()).abs() < 1e-13);
         let cyclic = curvature.of(ab).commutator(c)
@@ -730,7 +720,7 @@ mod tests {
         let dyad = curvature + tx * (tx | Bivector::slot()) * 0.7;
         let frame_map = ricci(dyad);
         let mut rng = Rng(11);
-        let (a, b) = (rng.vector(), rng.vector());
+        let (a, b) = (vector(&mut rng), vector(&mut rng));
         let form = ricci_form(dyad).of(a).of(b).s();
         assert!((form - (a | frame_map.of(b)).s()).abs() < 1e-13);
         assert!(form.abs() > 1e-3);
@@ -924,7 +914,7 @@ mod tests {
         let displacement = integrate(&time, &accelerations(&time, 3.0, &reference));
         let (plus, _) = polarizations();
         let mut rng = Rng(5);
-        let edge = rng.vector();
+        let edge = vector(&mut rng);
         let mut largest = 0.0f64;
         for k in 0..time.len() {
             let predicted = polarized_strain(plus_strain, cross_strain, strain[k]);
@@ -983,12 +973,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

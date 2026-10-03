@@ -4,17 +4,11 @@
 
 #![cfg(all(feature = "pga3d", feature = "sta"))]
 
-use gax::pga3d::{Line, Plane, Point, Scalar};
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
+use gax::pga3d::{Line, Plane, Point, Scalar};
 
 /// `A v = σ u` with unit `u`, `v`, for a map `K <- (H,)` given as rows.
 fn check_pairs<const K: usize, const H: usize>(
@@ -43,7 +37,7 @@ fn tall_and_wide_maps() {
     for _ in 0..50 {
         // Tall: points (4) to lines (6).
         let tall = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
-            core::array::from_fn(|_| rng.next())
+            core::array::from_fn(|_| rng.next_f64())
         }));
         let (s, right, left) = tall.svd_thin();
         check_pairs(tall.c, &s, &right.map(|v| v.c), &left.map(|u| u.c));
@@ -63,7 +57,7 @@ fn tall_and_wide_maps() {
         }
         // Wide: lines (6) to points (4): two singular values are zero, their vectors null.
         let wide = Point::<(Line,), f64>::from_coeffs(core::array::from_fn(|_| {
-            core::array::from_fn(|_| rng.next())
+            core::array::from_fn(|_| rng.next_f64())
         }));
         let (s, right, left) = wide.svd_thin();
         check_pairs(wide.c, &s, &right.map(|v| v.c), &left.map(|u| u.c));
@@ -120,13 +114,13 @@ fn of_both_is_the_chain() {
     use gax::pga3d::Motor;
     let mut rng = Rng(0x00b0_7400);
     let form = Scalar::<(Line, Line), f64>::from_coeffs([core::array::from_fn(|_| {
-        core::array::from_fn(|_| rng.next())
+        core::array::from_fn(|_| rng.next_f64())
     })]);
     let p = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
-        core::array::from_fn(|_| rng.next())
+        core::array::from_fn(|_| rng.next_f64())
     }));
     let q = Line::<(Motor,), f64>::from_coeffs(core::array::from_fn(|_| {
-        core::array::from_fn(|_| rng.next())
+        core::array::from_fn(|_| rng.next_f64())
     }));
     let both: Scalar<(Point, Motor), f64> = form.of_both(p, q);
     let chain: Scalar<(Point, Motor), f64> = form.of(p).at::<1>().of(q).swap();
@@ -149,9 +143,9 @@ fn a_semidefinite_metric_s_finite_modes() {
     let pts: Vec<Point<(), f64>> = (0..40)
         .map(|_| {
             Point::xyz(
-                1.0 + 0.1 * rng.next(),
-                -2.0 + 0.1 * rng.next(),
-                0.5 + 0.1 * rng.next(),
+                1.0 + 0.1 * rng.next_f64(),
+                -2.0 + 0.1 * rng.next_f64(),
+                0.5 + 0.1 * rng.next_f64(),
             )
         })
         .collect();

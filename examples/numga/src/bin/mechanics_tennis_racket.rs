@@ -117,12 +117,7 @@ pub type History<G> = (Vec<Vec<M<G>>>, Vec<Vec<R<G>>>);
 
 /// Torque-free motion: motors and rates over time (`[step][body]`), starting with the initial
 /// state.
-pub fn simulate<G: Lie>(
-    body: &Body<G>,
-    step: Step<G>,
-    dt: f64,
-    steps: usize,
-) -> History<G> {
+pub fn simulate<G: Lie>(body: &Body<G>, step: Step<G>, dt: f64, steps: usize) -> History<G> {
     let mut motors = vec![body.motor.clone()];
     let mut rates = vec![body.rate.clone()];
     for _ in 0..steps {
@@ -562,12 +557,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

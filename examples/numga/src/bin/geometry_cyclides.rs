@@ -179,20 +179,6 @@ mod cyclides {
         (m >> s).cast::<Vector>()
     }
 
-    /// `x` scaled to `x ~x = 1`, for an even `x` whose `x ~x` is a positive scalar (such as
-    /// `1 + a b` for unit vectors `a` and `b`). The generated even kind of a 5D algebra has no
-    /// `normalized`, since `x ~x` has a grade-4 part in general.
-    pub fn normalized(x: Even<(), f64>) -> Motor {
-        let n2 = (x * x.reverse()).s();
-        gax::Unit::new_unchecked(x.gp(1.0 / n2.sqrt()))
-    }
-
-    /// A 2-blade scaled to `b ~b = ±1` (the bivector kind of a 5D algebra has no `normalized`:
-    /// `b ~b` has a grade-4 part unless `b` is a blade).
-    pub fn unit_bivector(b: Biv) -> Biv {
-        b.gp(1.0 / (b * b.reverse()).s().abs().sqrt())
-    }
-
     /// The unit versor `exp(b angle)`.
     pub fn turn(b: Biv, angle: f64) -> Motor {
         b.gp(angle).exp()
@@ -202,7 +188,7 @@ mod cyclides {
     /// about it.
     pub fn placement(toward: Sphere, ahead: f64, tilt: f64) -> Motor {
         let target = moved_sphere(turn(w() ^ x(), ahead / 2.0), w());
-        normalized(one() + target * toward) * turn(y() ^ w(), tilt / 2.0)
+        (one() + target * toward).normalized() * turn(y() ^ w(), tilt / 2.0)
     }
 
     /// A rotation of R⁴ by the given angles in the planes xy, xz, xw, yz, yw and zw, in turn.
@@ -226,7 +212,7 @@ mod cyclides {
     pub fn view(centre: Sphere, angles: [f64; 6], ahead: f64, yaw: f64, pitch: f64) -> Motor {
         let turned = orientation(angles);
         let target = moved_sphere(turn(w() ^ x(), ahead / 2.0), w());
-        let carry = normalized(one() + target * moved_sphere(turned, centre));
+        let carry = (one() + target * moved_sphere(turned, centre)).normalized();
         let look = turn(x() ^ y(), yaw / 2.0) * turn(x() ^ z(), pitch / 2.0);
         look * carry * turned
     }
@@ -625,7 +611,9 @@ mod cyclides {
 
     /// The core circle of radius `radius` about z, in the plane z = 0, as a unit bivector.
     fn core_circle(radius: f64) -> Biv {
-        unit_bivector(z() ^ chart_sphere(radius * radius))
+        (z() ^ chart_sphere(radius * radius))
+            .normalized()
+            .into_inner()
     }
 
     pub fn linked_vortex() -> Vec<Part> {
@@ -633,7 +621,7 @@ mod cyclides {
         // Invert a circle about the uninverted hyperboloid's waist together with the body:
         // the vortex circle threads its opening transversely.
         let sphere = chart_sphere(2.5 * 2.5);
-        let circle = unit_bivector(inversion >> (z() ^ sphere));
+        let circle = (inversion >> (z() ^ sphere)).normalized().into_inner();
         // The inverted circle still lies in z = 0. Normalize its sphere to recover its radius,
         // then give it a thin tube of constant thickness.
         let sphere = inversion >> sphere;
@@ -772,8 +760,8 @@ mod cyclides {
         // `(forward ∧ z) xyz⁻¹`, the cross product with z (numga computes it with the
         // trivector; this algebra declares no trivector kind).
         let right = unit([forward[1], -forward[0], 0.0]);
-        let aim = normalized(one() - chart_point(forward) * x());
-        let roll = normalized(one() + chart_point(right) * moved_sphere(aim, y()));
+        let aim = (one() - chart_point(forward) * x()).normalized();
+        let roll = (one() + chart_point(right) * moved_sphere(aim, y())).normalized();
         (shift(chart_point(position)) * roll * aim).inverse()
     }
 

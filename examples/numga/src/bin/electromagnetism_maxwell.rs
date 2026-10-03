@@ -94,8 +94,8 @@ mod maxwell {
         [p.e1(), p.e2(), p.e3()]
     }
 
-    /// The real spectrum of a stress-energy map, ascending. numga calls a general eigensolver;
-    /// gax has symmetric ones. `T` is self-adjoint for the Minkowski metric `g`, so
+    /// The real spectrum of a stress-energy map, ascending. numga calls a general eigensolver
+    /// (gax's `eigvals`); the symmetric pencil keeps the values exactly real. `T` is self-adjoint for the Minkowski metric `g`, so
     /// `T v = λ v` is the symmetric pencil `S(v, ·) = λ g(v, ·)` with `S(a, b) = a · T(b)`.
     /// The metric is indefinite, but a cloud's `S(v, v) = Σ m (u · v)²` is positive definite,
     /// so the pencil is solved the other way round, `g(v, ·) = λ⁻¹ S(v, ·)`.
@@ -136,30 +136,15 @@ mod maxwell {
         dyad(t()).gp(energy + pressure) - pressure * open()
     }
 
-    /// A small xorshift generator: numga's NumPy streams cannot be reproduced, so the clouds
-    /// differ from numga's; the checks on them are statistical, with numga's tolerances.
-    pub struct Rng(pub u64);
-    impl Rng {
-        fn unit(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        /// A standard normal sample (Box–Muller).
-        pub fn normal(&mut self) -> f64 {
-            let (a, b) = (self.unit(), self.unit());
-            (-2.0 * a.ln()).sqrt() * (core::f64::consts::TAU * b).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// `n` unit spatial directions, uniform on the sphere.
     pub fn sphere_directions(n: usize, rng: &mut Rng) -> Vec<V> {
         (0..n)
             .map(|_| {
-                let s = Vector::new(0.0, rng.normal(), rng.normal(), rng.normal());
-                // A spatial vector squares to minus its length squared.
-                s.gp(1.0 / (-s.dot(s).s()).sqrt())
+                Vector::new(0.0, rng.normal(), rng.normal(), rng.normal())
+                    .normalized()
+                    .into_inner()
             })
             .collect()
     }
@@ -711,12 +696,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

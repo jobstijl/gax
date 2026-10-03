@@ -27,22 +27,7 @@ mod kalman {
     /// A covariance: each readout line to the twist correlated with it.
     pub type Covariance = Point<(Line,), f64>;
 
-    /// A small xorshift generator with Gaussian draws (numga's NumPy streams cannot be
-    /// reproduced, so the seeds differ from numga's).
-    pub struct Rng(pub u64);
-    impl Rng {
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        /// A standard normal draw (Box and Muller).
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// One state of the filter: after a prediction step, or after an update at a reading.
     #[derive(Clone, Copy, Debug)]
@@ -472,12 +457,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

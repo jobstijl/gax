@@ -351,25 +351,6 @@ impl Poly {
         self.0.is_empty()
     }
 
-    /// Substitute polynomials for variables.
-    pub fn substitute(&self, f: &impl Fn(Var) -> Option<Poly>) -> Poly {
-        let mut out = Poly::zero();
-        for (m, &c) in &self.0 {
-            let mut term = Poly::constant(c);
-            let mut plain = Monomial::one();
-            for &v in &m.0 {
-                match f(v) {
-                    Some(p) => term = &term * &p,
-                    None => plain = plain.mul(&Monomial::var(v)),
-                }
-            }
-            for (tm, tc) in term.0 {
-                out.add_term(tm.mul(&plain), tc);
-            }
-        }
-        out
-    }
-
     /// Evaluate with `f64` values for the variables.
     pub fn eval(&self, value: &impl Fn(Var) -> f64) -> f64 {
         self.0

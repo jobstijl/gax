@@ -416,9 +416,9 @@ pub fn needle(frames: usize) -> Scene3 {
 pub struct Tunnel {
     pub scene: Scene3,
     // Read by the tests, numga's checks of the light's placement.
-    #[allow(dead_code)]
+    #[cfg_attr(not(test), allow(dead_code))]
     pub wall_hit: s3::P,
-    #[allow(dead_code)]
+    #[cfg_attr(not(test), allow(dead_code))]
     pub camera: s3::P,
 }
 

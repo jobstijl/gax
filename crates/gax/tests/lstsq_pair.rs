@@ -5,17 +5,12 @@
 
 #![cfg(feature = "pga3d")]
 
-use gax::pga3d::{Line, Plane, Point};
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
+use gax::ApproxEq;
+use gax::pga3d::{Line, Plane, Point};
 
 /// The dyad with a single 1 at `(i, j)`.
 fn unit_dyad(i: usize, j: usize) -> Point<(Point,), f64> {
@@ -31,10 +26,12 @@ fn normal_equations() {
     let mut rng = Rng(0x00a1_2b3c);
     for _ in 0..20 {
         let m = Line::<(Point, Point, Plane), f64>::from_coeffs(core::array::from_fn(|_| {
-            core::array::from_fn(|_| core::array::from_fn(|_| core::array::from_fn(|_| rng.next())))
+            core::array::from_fn(|_| {
+                core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()))
+            })
         }));
         let rhs = Line::<(Plane,), f64>::from_coeffs(core::array::from_fn(|_| {
-            core::array::from_fn(|_| rng.next())
+            core::array::from_fn(|_| rng.next_f64())
         }));
         let x = m.lstsq_pair(rhs);
         let r = m.of_pair(x) - rhs;
@@ -53,7 +50,7 @@ fn normal_equations() {
         }
         // A right-hand side in the image comes back exactly, and with it the dyad.
         let y = Point::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
-            core::array::from_fn(|_| rng.next())
+            core::array::from_fn(|_| rng.next_f64())
         }));
         let back = m.lstsq_pair(m.of_pair(y));
         for (a, b) in back.c.iter().flatten().zip(y.c.iter().flatten()) {
@@ -70,18 +67,16 @@ fn least_norm_on_a_kernel() {
     let mut rng = Rng(0x0bad_cafe);
     for _ in 0..20 {
         let l = Line::<(), f64>::new(
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
+            rng.next_f64(),
+            rng.next_f64(),
+            rng.next_f64(),
+            rng.next_f64(),
+            rng.next_f64(),
+            rng.next_f64(),
         );
         let x = join.lstsq_pair(l);
         let back = join.of_pair(x);
-        for (a, b) in back.c.iter().zip(l.c) {
-            assert!((a - b).abs() < 1e-12);
-        }
+        assert!(back.approx_eq(&l, 1e-12));
         for i in 0..4 {
             for j in 0..4 {
                 assert!((x.c[i][j] + x.c[j][i]).abs() < 1e-12);

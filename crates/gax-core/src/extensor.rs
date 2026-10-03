@@ -134,7 +134,7 @@ where
         <M::Kind as Kind>::Arr<A::Mv<(), M::Coef>>,
     ) {
         let a = self.coeffs();
-        let n = <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
+        let n = <M::Kind as Kind>::N;
         let (mut vals, mut vecs) = linalg::eigh(&symmetrize(a), sweeps(n));
         linalg::sort_pairs(&mut vals, &mut vecs);
         (
@@ -171,7 +171,7 @@ where
         X: Extensor<Kind = M::Kind, Coef = M::Coef>,
     {
         let f = linalg::lu(self.coeffs());
-        let n = <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
+        let n = <M::Kind as Kind>::N;
         let size = <X::Slots as Slots>::SIZE;
         let cols = rhs.coeffs().as_ref();
         // One solve per entry of the right-hand side's slot arrays.
@@ -208,7 +208,7 @@ where
         <M::Kind as Kind>::Arr<M::Coef>,
         A::Arr<A::Mv<(), M::Coef>>,
     ) {
-        let n = <<M::Kind as Kind>::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
+        let n = <M::Kind as Kind>::N;
         let (u, s, v) = linalg::svd(self.coeffs(), sweeps(n));
         (
             <M::Kind as Kind>::arr_from_fn(|k| value_from::<M::Kind, M::Coef>(|i| u[k][i])),
@@ -469,14 +469,11 @@ pub trait TraceFirst: Extensor {
 impl<M> TraceFirst for M
 where
     M: Extensor,
-    M::Slots: crate::slots::SplitFirst<Head = M::Kind>,
+    M::Slots: SplitFirst<Head = M::Kind>,
 {
-    type Output = <<M::Kind as Kind>::Scalar as Kind>::Mv<
-        <M::Slots as crate::slots::SplitFirst>::Tail,
-        M::Coef,
-    >;
+    type Output = <<M::Kind as Kind>::Scalar as Kind>::Mv<<M::Slots as SplitFirst>::Tail, M::Coef>;
     fn trace_first(self) -> Self::Output {
-        use crate::slots::{SlotArr, SplitFirst};
+        use crate::slots::SlotArr;
         type Tail<M> = <<M as Extensor>::Slots as SplitFirst>::Tail;
         let c = self.coeffs().as_ref();
         let term = |k: usize| {
@@ -693,8 +690,9 @@ where
         let left = H::arr_from_fn(|r| {
             let i = sigma.index(r);
             let len = sigma.value(r);
-            let tiny = T::<M>::from_f64(1e-300);
-            let inv = T::<M>::select_lt(len, tiny, T::<M>::zero(), len.max(tiny).recip());
+            // A zero singular value has no left vector: zero (in any precision).
+            let zero = T::<M>::zero();
+            let inv = T::<M>::select_lt(zero, len, len.recip(), zero);
             value_from::<M::Kind, T<M>>(|k| wc[i].0.as_ref()[k] * inv)
         });
         (s, right, left)
@@ -1244,9 +1242,7 @@ where
 {
     let cols = S::columns(m);
     let xs = x.coeffs().as_ref();
-    let mut acc = K::arr_map(&cols[0].0, |r| {
-        <S::Rest as Slots>::zip(r, r, &mut |_, _| T::zero())
-    });
+    let mut acc = K::arr_from_fn(|_| <S::Rest as Slots>::from_flat(&mut |_| T::zero(), 0));
     for (i, xi) in xs.iter().enumerate() {
         for j in 0..<S::Second as Kind>::N {
             let w = <(S::Second,) as Slots>::get_flat(xi, j);

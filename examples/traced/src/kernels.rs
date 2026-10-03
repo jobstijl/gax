@@ -23,7 +23,7 @@ pub fn compose_apply<T: Real>(
     b: Unit<Motor<(), T>>,
     p: Point<(), T>,
 ) -> Point<(), T> {
-    Unit::new_unchecked(a.into_inner() * b.into_inner()) >> p
+    (a * b) >> p
 }
 
 /// Normalize a point to unit weight (a division: the reciprocal is computed once).

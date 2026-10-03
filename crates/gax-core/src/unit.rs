@@ -68,6 +68,23 @@ impl<M> Unit<M> {
     {
         Unit(N::from(self.0))
     }
+
+    /// The logarithm, a bivector `B` with `B.exp() == self`.
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga3d::Line;
+    /// let twist = Line::<(), f64>::new(0.1, -0.2, 0.3, 0.4, 0.5, -0.6);
+    /// let back: Line<(), f64> = twist.exp().log();
+    /// assert!(back.approx_eq(&twist, 1e-12));
+    /// ```
+    #[inline(always)]
+    pub fn log<B>(self) -> B
+    where
+        Self: crate::ops::Log<B>,
+    {
+        crate::ops::Log::log(self)
+    }
 }
 
 /// A conversion `M -> N` that keeps the unit condition, so [`Unit::widen`] may carry the
@@ -188,31 +205,13 @@ impl<M: crate::ops::Reverse<Output = M>> Unit<M> {
     /// ```
     #[inline(always)]
     pub fn inverse(self) -> Unit<M> {
-        Unit(self.0.reverse())
+        self.reverse()
     }
 
     /// The reverse, which for a unit versor is also its inverse.
     #[inline(always)]
     pub fn reverse(self) -> Unit<M> {
         Unit(self.0.reverse())
-    }
-}
-
-impl<M> Unit<M> {
-    /// The logarithm, a bivector `B` with `B.exp() == self`.
-    ///
-    /// ```
-    /// use gax::pga3d::{Line, Motor};
-    /// let twist = Line::<(), f64>::new(0.1, -0.2, 0.3, 0.4, 0.5, -0.6);
-    /// let back: Line<(), f64> = twist.exp().log();
-    /// assert!(back.c.iter().zip(twist.c).all(|(a, b)| (a - b).abs() < 1e-12));
-    /// ```
-    #[inline(always)]
-    pub fn log<B>(self) -> B
-    where
-        Self: crate::ops::Log<B>,
-    {
-        crate::ops::Log::log(self)
     }
 }
 

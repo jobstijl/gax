@@ -28,24 +28,7 @@ const CLOSING: (f64, f64) = (0.001, 0.0003);
 const KNOWN: (f64, f64) = (0.01, 0.01);
 const VAGUE: (f64, f64) = (100.0, 30.0);
 
-/// A small xorshift generator with normal deviates by Box-Muller. numga's stream cannot be
-/// reproduced; the checks hold for any stream.
-pub struct Rng(u64);
-impl Rng {
-    pub fn new(seed: u64) -> Rng {
-        Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D)
-    }
-    fn uniform(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-    }
-    pub fn normal(&mut self) -> f64 {
-        let (u, v) = (self.uniform(), self.uniform());
-        (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-    }
-}
+pub use gax_numga_examples::rng::Rng;
 
 /// The odometry core over one algebra: `gax::$ga`'s `Motor`, `Twist` and `Forque` (numga's
 /// `Line`, the antibivector that reads a twist). Everything else is the same text for the plane
@@ -348,7 +331,7 @@ macro_rules! odometry_core {
         /// only vaguely, near where dead reckoning puts them.
         pub fn survey(steps: &[M], seed: u64) -> (Vec<M>, Vec<M>, Problem) {
             let n = steps.len();
-            let mut rng = Rng::new(seed);
+            let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D);
             // Each step composes on the right, in the robot's own frame.
             let mut truth = vec![identity()];
             for s in steps {
@@ -869,12 +852,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            1.0,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 1.0);
     }
 }

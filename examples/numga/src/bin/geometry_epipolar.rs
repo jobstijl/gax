@@ -170,24 +170,7 @@ mod epipolar {
         })
     }
 
-    /// A small xorshift generator with normal deviates by Box-Muller. numga's stream (seed 42)
-    /// cannot be reproduced.
-    pub struct Rng(u64);
-    impl Rng {
-        pub fn new(seed: u64) -> Rng {
-            Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D)
-        }
-        fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// The scene, its noisy images and the recovery.
     pub struct Scene {
@@ -212,7 +195,7 @@ mod epipolar {
         let image_1 = image(&landmarks);
         let moved: Vec<P> = landmarks.iter().map(|p| true_motor << *p).collect();
         let image_2 = image(&moved);
-        let mut rng = Rng::new(seed);
+        let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D);
         let mut jitter = |ps: &[P]| -> Vec<P> {
             ps.iter()
                 .map(|p| *p + Point::direction(noise * rng.normal(), noise * rng.normal(), 0.0))
@@ -512,12 +495,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            1.3,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 1.3);
     }
 }

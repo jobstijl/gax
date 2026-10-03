@@ -6,15 +6,9 @@
 
 #![cfg(all(feature = "cga3d", feature = "stap", feature = "csta"))]
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
 
 /// Newton's method with minimum-norm steps on `r(u) = 0`, `r` the components of `u ~u − 1`
 /// (Jacobian by central differences, `(J Jᵀ + 10⁻¹⁴) y = r` since the relations' rows can be
@@ -81,7 +75,8 @@ macro_rules! check {
             let mut rng = Rng($seed);
             let (mut checked, mut worst) = (0, 0.0f64);
             for _ in 0..60 {
-                let start: [f64; <$versor as gax::Kind>::N] = core::array::from_fn(|_| rng.next());
+                let start: [f64; <$versor as gax::Kind>::N] =
+                    core::array::from_fn(|_| rng.next_f64());
                 let resid = |c: &[f64; <$versor as gax::Kind>::N]| -> Vec<f64> {
                     let u = $versor::<(), f64>::from_coeffs(*c);
                     let m: Multivector<(), f64> = (u * u.reverse()).cast::<Multivector>();
@@ -94,7 +89,7 @@ macro_rules! check {
                 };
                 let u = gax::Unit::new_unchecked($versor::<(), f64>::from_coeffs(c));
                 for _ in 0..3 {
-                    let x = $x::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
+                    let x = $x::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
                     let typed: $x<(), f64> = u >> x;
                     let full: Multivector<(), f64> =
                         (u.into_inner() * x * u.reverse().into_inner()).cast::<Multivector>();

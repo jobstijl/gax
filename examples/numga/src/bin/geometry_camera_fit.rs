@@ -25,22 +25,7 @@ mod camera_fit {
     pub type B = Line<(), f64>;
     pub type D = Dual<f64, 6>;
 
-    /// A small xorshift generator with Gaussian draws (numga's NumPy streams cannot be
-    /// reproduced, so the seeds differ from numga's).
-    pub struct Rng(pub u64);
-    impl Rng {
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        /// A standard normal draw (Box and Muller).
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// The world: thirty points about the origin.
     pub fn world() -> Vec<P> {
@@ -63,10 +48,7 @@ mod camera_fit {
         let moved = rig >> camera.of(rig << Point::slot());
         world
             .iter()
-            .map(|w| {
-                let w = Point::new(c(w.c[0]), c(w.c[1]), c(w.c[2]), c(w.c[3]));
-                (rig << moved.of(w)).unitized()
-            })
+            .map(|w| (rig << moved.of(w.map_coefs(T::from_f64))).unitized())
             .collect()
     }
 
@@ -76,8 +58,7 @@ mod camera_fit {
         let c = T::from_f64;
         let mut sum = c(0.0);
         for (a, o) in images.iter().zip(observed) {
-            let o = Point::new(c(o.c[0]), c(o.c[1]), c(o.c[2]), c(o.c[3]));
-            sum = sum + (*a - o).dual().norm_squared();
+            sum = sum + (*a - o.map_coefs(c)).dual().norm_squared();
         }
         sum / c(images.len() as f64)
     }
@@ -319,12 +300,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

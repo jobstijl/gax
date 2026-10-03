@@ -4,19 +4,13 @@
 
 #![cfg(all(feature = "deterministic", feature = "batch", feature = "pga3d"))]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::batch::{self, BatchTransform, Map};
 use gax::pga3d::{Line, Motor, Point};
 use gax::{Extensor, Real, Unit};
-
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f32 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        ((self.0 >> 40) as f32 / (1u64 << 24) as f32) * 2.0 - 1.0
-    }
-}
 
 fn bits<M: Extensor<Slots = (), Coef = f32>>(m: &M) -> Vec<u32> {
     m.coeffs().as_ref().iter().map(|x| x.to_bits()).collect()
@@ -50,18 +44,18 @@ fn every_level_gives_the_scalar_bits() {
     let lines: Vec<Line> = (0..n)
         .map(|_| {
             Line::new(
-                rng.next(),
-                rng.next(),
-                rng.next(),
-                rng.next(),
-                rng.next(),
-                rng.next(),
+                rng.next_f32(),
+                rng.next_f32(),
+                rng.next_f32(),
+                rng.next_f32(),
+                rng.next_f32(),
+                rng.next_f32(),
             )
         })
         .collect();
     let motors: Vec<Unit<Motor>> = lines.iter().map(|b| b.exp()).collect();
     let points: Vec<Point> = (0..n)
-        .map(|_| Point::xyz(rng.next(), rng.next(), rng.next()))
+        .map(|_| Point::xyz(rng.next_f32(), rng.next_f32(), rng.next_f32()))
         .collect();
 
     let want_map: Vec<Line> = lines.iter().map(|&b| Pipeline.call(b)).collect();
@@ -98,12 +92,12 @@ fn the_feature_computes_as_strict() {
     let mut rng = Rng(7);
     for _ in 0..50 {
         let b = Line::new(
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
-            rng.next(),
+            rng.next_f32(),
+            rng.next_f32(),
+            rng.next_f32(),
+            rng.next_f32(),
+            rng.next_f32(),
+            rng.next_f32(),
         );
         let plain = Pipeline.call(b);
         let strict: Line<(), f32> = Strict::unwrap(Pipeline.call(Strict::wrap(b)));

@@ -3,6 +3,8 @@
 
 #![cfg(feature = "macros")]
 
+use gax::ApproxEq;
+
 gax::algebra! {
     algebra stap "Spacetime algebra with a projective (null) dimension, R(3,1,1).";
     basis ep = 0, e0 = 1, e1 = -1, e2 = -1, e3 = -1;
@@ -56,9 +58,7 @@ fn stap_bivector_exp_log_round_trip() {
     let b = Bivector::<(), f64>::new(0.1, -0.2, 0.05, 0.3, 0.2, 0.1, -0.15, 0.4, 0.25, -0.3);
     let r = b.exp();
     let back: Bivector<(), f64> = r.log();
-    for (x, y) in back.c.iter().zip(b.c.iter()) {
-        assert!((x - y).abs() < 1e-10, "{back:?} vs {b:?}");
-    }
+    assert!(back.approx_eq(&b, 1e-10), "{back:?} vs {b:?}");
     // exp(B) is a unit versor: R ~R = 1.
     let n: Even<(), f64> = r.into_inner() * r.into_inner().reverse();
     assert!((n.s() - 1.0).abs() < 1e-12);
@@ -109,9 +109,7 @@ fn pga4d_motors_move_points_rigidly() {
     let b = Bivector::<(), f64>::new(0.3, 0.0, 0.0, 0.0, 0.0, 0.5, 0.1, -0.2, 0.3, 0.4);
     let m = b.exp();
     let back: Bivector<(), f64> = m.log();
-    for (x, y) in back.c.iter().zip(b.c.iter()) {
-        assert!((x - y).abs() < 1e-10, "{back:?} vs {b:?}");
-    }
+    assert!(back.approx_eq(&b, 1e-10), "{back:?} vs {b:?}");
     // Rigid: the weight of a point and the distance between two points are preserved.
     let p = Point::<(), f64>::new(1.0, 2.0, 3.0, 4.0, 1.0);
     let q = Point::<(), f64>::new(-1.0, 0.5, 2.0, 0.0, 1.0);

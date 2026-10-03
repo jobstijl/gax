@@ -78,7 +78,7 @@ mod top {
 
     /// The Euclidean length of a direction.
     pub fn length(d: P) -> f64 {
-        d.dual().norm()
+        d.ideal_norm()
     }
 
     /// The value with its magnitude held to the limit.
@@ -555,8 +555,7 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
         .iter()
         .map(|q| motor >> q.of(motor << Point::slot()))
         .collect();
-    let to64 =
-        |p: Point<(), f32>| Point::new(p.c[0] as f64, p.c[1] as f64, p.c[2] as f64, p.c[3] as f64);
+    let to64 = |p: Point<(), f32>| p.map_coefs(f64::from);
     let colours = PART_COLOURS.map(|[r, g, b]| canvas::srgb(r, g, b));
     let ground_tone = canvas::srgb(0.95, 0.93, 0.88);
     c.clip([x0, y0, x0 + side, y0 + side]);

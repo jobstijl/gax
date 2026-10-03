@@ -238,6 +238,8 @@ pub struct Renderer {
     lines_world: wgpu::BindGroup,
     lines_hud: wgpu::BindGroup,
     instances: wgpu::Buffer,
+    /// The lattice's two buffers (bound at creation; read back by the tests).
+    #[cfg_attr(not(test), allow(dead_code))]
     grid_nodes: [wgpu::Buffer; 2],
     grid_uniform: wgpu::Buffer,
     grid_sources: Vec<wgpu::Buffer>,
@@ -1159,14 +1161,14 @@ impl Renderer {
     }
 
     /// Read the lattice back (blocking; for tests and checks).
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub fn read_grid(&self) -> Vec<Node> {
         let n = (self.grid.cols * self.grid.rows) as usize;
         self.read(&self.grid_nodes[self.grid_parity], n * size_of::<Node>())
     }
 
     /// Read the particle pool back (blocking; for tests).
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub fn read_particles(&self, n: usize) -> Vec<Particle> {
         self.read(
             &self.particles,
@@ -1175,7 +1177,7 @@ impl Renderer {
     }
 
     /// Replace the lattice's state (for tests).
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub fn write_grid(&mut self, nodes: &[Node]) {
         self.queue.write_buffer(
             &self.grid_nodes[self.grid_parity],
@@ -1184,7 +1186,7 @@ impl Renderer {
         );
     }
 
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     fn read<T: Pod>(&self, buf: &wgpu::Buffer, bytes: usize) -> Vec<T> {
         let read = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("readback"),

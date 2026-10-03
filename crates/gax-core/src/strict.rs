@@ -26,8 +26,7 @@
 //! ```
 
 use crate::coef::{Coef, Real};
-use crate::kind::{Extensor, Kind, Retype};
-use crate::slots::Slots;
+use crate::kind::{Extensor, Retype};
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
 /// A coefficient that computes with the same bits everywhere (see the [module](self)).
@@ -56,7 +55,7 @@ impl<T: Coef> Strict<T> {
     where
         Strict<T>: Coef,
     {
-        convert(&m, Strict)
+        m.map_coefs(Strict)
     }
 
     /// The reverse of [`Strict::wrap`]: `T` coefficients again.
@@ -65,17 +64,8 @@ impl<T: Coef> Strict<T> {
     where
         Strict<T>: Coef,
     {
-        convert(&m, |x| x.0)
+        m.map_coefs(|x| x.0)
     }
-}
-
-/// Every coefficient of `m` mapped by `f`, slots and kind kept.
-#[inline]
-fn convert<M: Extensor, U: Coef>(m: &M, mut f: impl FnMut(M::Coef) -> U) -> Retype<M, M::Slots, U> {
-    let c = <M::Kind as Kind>::arr_map(m.coeffs(), |col| {
-        <M::Slots as Slots>::map(col, &mut |x| f(*x))
-    });
-    <Retype<M, M::Slots, U> as Extensor>::from_coeffs(c)
 }
 
 impl<T> From<T> for Strict<T> {

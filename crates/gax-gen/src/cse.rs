@@ -324,7 +324,7 @@ fn compile_staged_with(
         b.prog.outputs.push(env[v]);
     }
     let mut prog = b.prog;
-    prog.compact_keep_live_of(n);
+    prog.compact();
     let extra = prog.outputs.split_off(n);
     let env = stage_vars.into_iter().zip(extra).collect();
     (prog, env)

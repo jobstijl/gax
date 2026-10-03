@@ -379,11 +379,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
                     ));
                 }
                 prog.emit_lets(&names, "t", &mut lets);
-                let outs: Vec<String> = prog
-                    .outputs
-                    .iter()
-                    .map(|o| render(o, &names, "t"))
-                    .collect();
+                let outs: Vec<String> = prog.render_outputs(&names, "t");
                 let on = &out_kind.name;
                 meta.exp = Some(on.clone());
                 let _ = write!(
@@ -494,7 +490,7 @@ fn emit_inverse_by(
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "t", &mut lets);
-    let outs: Vec<String> = prog.outputs.iter().map(|o| render(o, &xvar, "t")).collect();
+    let outs: Vec<String> = prog.render_outputs(&xvar, "t");
     let on = &out_kind.name;
     let _ = write!(
         body,
@@ -518,22 +514,7 @@ fn emit_inverse_by(
 /// then restore the digits the recursion loses at high degree (ADR-037).
 fn emit_inverse_general(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
     let alg = &spec.algebra;
-    let mut closure: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
-    closure.insert(0);
-    loop {
-        let mut next = closure.clone();
-        for &a in &closure {
-            for &b in &closure {
-                for &(m, _) in alg.blade_product(a, b) {
-                    next.insert(m);
-                }
-            }
-        }
-        if next == closure {
-            break;
-        }
-        closure = next;
-    }
+    let closure = product_closure(alg, k);
     let e = spec.kind_for_support(&closure)?.clone();
     let (p, q, r) = alg.signature();
     if !some_invertible(alg, k, 1u32 << ((p + q).div_ceil(2) + r)) {
@@ -758,11 +739,7 @@ fn emit_normalized(
         let _ = writeln!(lets, "        let s0 = ({a}).abs().sqrt().recip();");
     }
     prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|o| render(o, &names, "t"))
-        .collect();
+    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let name = &k.name;
     let _ = write!(
         body,
@@ -837,11 +814,7 @@ fn emit_normalized_q(
     );
     let _ = writeln!(lets, "        let [s0, s1] = gx::study::rsqrt_q({a}, {b});");
     prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|o| render(o, &names, "t"))
-        .collect();
+    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let name = &k.name;
     let _ = write!(
         body,
@@ -889,7 +862,7 @@ fn emit_newton_step(
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
     prog.emit_lets(&xvar, "t", &mut lets);
-    let outs: Vec<String> = prog.outputs.iter().map(|o| render(o, &xvar, "t")).collect();
+    let outs: Vec<String> = prog.render_outputs(&xvar, "t");
     let name = &k.name;
     let _ = write!(
         traits,
@@ -910,12 +883,7 @@ fn emit_log(
     let nv = k.layout.len() as Var;
     // Parts: scalar, bivector P, and at most one grade-4 blade.
     k.layout.position(0)?;
-    let grades: BTreeSet<u32> = k
-        .layout
-        .blades
-        .iter()
-        .map(|(m, _)| m.count_ones())
-        .collect();
+    let grades: BTreeSet<u32> = k.layout.grades();
     if !grades.contains(&2) || grades.iter().any(|g| ![0, 2, 4].contains(g)) {
         return None;
     }
@@ -974,7 +942,7 @@ fn emit_log(
     };
     let mut lets = String::new();
     pre.emit_lets(&xvar, "p", &mut lets);
-    let r: Vec<String> = pre.outputs.iter().map(|o| render(o, &xvar, "p")).collect();
+    let r: Vec<String> = pre.render_outputs(&xvar, "p");
     if nonpositive(&coef(&u, 0)) && (isq == 0 || blade.is_none()) {
         let _ = writeln!(
             lets,
@@ -1041,11 +1009,7 @@ fn emit_log(
         ));
     }
     prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|o| render(o, &names, "t"))
-        .collect();
+    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
@@ -1137,11 +1101,7 @@ fn emit_exp_general(
         ],
     ));
     prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|o| render(o, &names, "t"))
-        .collect();
+    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let on = &out_kind.name;
     let _ = write!(
         body,
@@ -1161,12 +1121,7 @@ fn emit_log_general(
     let alg = &spec.algebra;
     let nv = k.layout.len() as Var;
     k.layout.position(0)?;
-    let grades: BTreeSet<u32> = k
-        .layout
-        .blades
-        .iter()
-        .map(|(m, _)| m.count_ones())
-        .collect();
+    let grades: BTreeSet<u32> = k.layout.grades();
     if !grades.contains(&2) || !grades.contains(&4) || grades.iter().any(|g| ![0, 2, 4].contains(g))
     {
         return None;
@@ -1247,11 +1202,7 @@ fn emit_log_general(
         ],
     ));
     prog.emit_lets(&names, "t", &mut lets);
-    let outs: Vec<String> = prog
-        .outputs
-        .iter()
-        .map(|o| render(o, &names, "t"))
-        .collect();
+    let outs: Vec<String> = prog.render_outputs(&names, "t");
     let (name, on) = (&k.name, &out_kind.name);
     let _ = write!(
         traits,
@@ -1262,8 +1213,8 @@ fn emit_log_general(
 }
 
 /// The logarithm of a unit versor by inverse scaling and squaring, for even kinds without a
-/// closed form (CSTA's `Even`, whose bivectors split into three commuting parts): the
-/// counterpart of [`emit_exp_fallback`]. Emitted for a kind of even grades, with a scalar and
+/// closed form (6D to 9D take `emit_log_6d` and `emit_log_8d` instead): the counterpart of
+/// [`emit_exp_fallback`]. Emitted for a kind of even grades, with a scalar and
 /// the whole grade 2, closed under the product, whose bivector part is a kind of its own.
 #[allow(clippy::too_many_lines)]
 fn emit_log_fallback(
@@ -1273,7 +1224,7 @@ fn emit_log_fallback(
     kernels: &mut Vec<Kernel>,
 ) -> Option<String> {
     let alg = &spec.algebra;
-    let blades: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
+    let blades = k.layout.support();
     if !blades.contains(&0) || blades.iter().any(|m| m.count_ones() % 2 == 1) {
         return None;
     }
@@ -2229,13 +2180,9 @@ fn emit_exp_closed(
     Some(en.clone())
 }
 
-/// The exponential by scaling and squaring, for bivector kinds without a closed form (the
-/// invariant decomposition of a 6D bivector has three parts): a Taylor series of `B / 2^8` in
-/// the smallest kind closed under the product, then eight squarings. Works in any algebra.
-fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
-    let alg = &spec.algebra;
-    // The support closure of {1} and B's blades under the geometric product.
-    let mut closure: BTreeSet<u32> = k.layout.blades.iter().map(|(m, _)| *m).collect();
+/// The support closure of `{1}` and the kind's blades under the geometric product.
+fn product_closure(alg: &Algebra, k: &KindSpec) -> BTreeSet<u32> {
+    let mut closure = k.layout.support();
     closure.insert(0);
     loop {
         let mut next = closure.clone();
@@ -2247,10 +2194,19 @@ fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Opt
             }
         }
         if next == closure {
-            break;
+            return closure;
         }
         closure = next;
     }
+}
+
+/// The exponential by scaling and squaring, for bivector kinds without a closed form: in the
+/// smallest kind closed under the product, `B` halved until `‖B / 2^s‖₁ ≤ 1/16`, a Taylor series
+/// of degree 10, Newton steps, and `s` squarings. Works in any algebra (6D to 9D bivectors take
+/// the closed form instead, `emit_exp_closed`).
+fn emit_exp_fallback(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) -> Option<String> {
+    let alg = &spec.algebra;
+    let closure = product_closure(alg, k);
     let e = spec.kind_for_support(&closure)?.clone();
     let (en, name) = (&e.name, &k.name);
     let mut embed = String::new();

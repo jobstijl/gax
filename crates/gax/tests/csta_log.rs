@@ -5,21 +5,12 @@
 
 #![cfg(feature = "csta")]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::Unit;
 use gax::csta::{Bivector, Even};
-
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-    fn bivector(&mut self, size: f64) -> Bivector<(), f64> {
-        Bivector::from_coeffs(core::array::from_fn(|_| size * self.next()))
-    }
-}
 
 fn close<const N: usize>(a: &[f64; N], b: &[f64; N], tol: f64) -> bool {
     let scale = a.iter().chain(b).fold(1.0f64, |m, x| m.max(x.abs()));
@@ -31,7 +22,7 @@ fn exp_of_log_is_the_versor() {
     let mut rng = Rng(0x0c57_a106);
     for size in [0.01, 0.1, 0.3, 0.6] {
         for _ in 0..40 {
-            let r: Unit<Even<(), f64>> = rng.bivector(size).exp();
+            let r: Unit<Even<(), f64>> = rng.value::<Bivector<(), f64>>(size).exp();
             let b: Bivector<(), f64> = r.log();
             let back = b.exp();
             assert!(
@@ -48,7 +39,7 @@ fn log_of_exp_is_the_bivector_on_the_principal_branch() {
     // Small enough that every rotation part is well below a half turn.
     for size in [0.01, 0.1, 0.25] {
         for _ in 0..40 {
-            let b = rng.bivector(size);
+            let b = rng.value::<Bivector<(), f64>>(size);
             let back: Bivector<(), f64> = b.exp().log();
             assert!(
                 close(&back.c, &b.c, 1e-9),
@@ -67,7 +58,7 @@ fn large_boosts_and_dilations() {
         for _ in 0..20 {
             let mut c = [0.0f64; 15];
             for k in [3, 4, 5, 14] {
-                c[k] = size * rng.next();
+                c[k] = size * rng.next_f64();
             }
             let pure = Bivector::from_coeffs(c);
             let back: Bivector<(), f64> = pure.exp().log();
@@ -76,7 +67,7 @@ fn large_boosts_and_dilations() {
                 "size {size}: log(exp B) for a boost"
             );
             for k in [0, 1, 2] {
-                c[k] = 0.2 * rng.next();
+                c[k] = 0.2 * rng.next_f64();
             }
             let r = Bivector::from_coeffs(c).exp();
             let again = r.log().exp();
@@ -169,7 +160,7 @@ fn every_versor() {
     let mut rng = Rng(0x00e7_e3ee);
     for size in [1.2, 1.6] {
         for _ in 0..400 {
-            let r = rng.bivector(size).exp();
+            let r = rng.value::<Bivector<(), f64>>(size).exp();
             let b: Bivector<(), f64> = r.log();
             let again = b.exp();
             assert!(
@@ -190,7 +181,7 @@ fn larger_versors() {
     let mut rng = Rng(0x0006_d106);
     let mut checked = 0;
     for _ in 0..400 {
-        let r = rng.bivector(1.0).exp();
+        let r = rng.value::<Bivector<(), f64>>(1.0).exp();
         let b: Bivector<(), f64> = r.log();
         let again = b.exp();
         assert!(
@@ -236,7 +227,9 @@ fn lanes_mix_the_closed_form_and_turning() {
 #[test]
 fn in_f32() {
     let mut rng = Rng(0x00f3_2f32);
-    let mut cases: Vec<Bivector<(), f64>> = (0..100).map(|_| rng.bivector(0.5)).collect();
+    let mut cases: Vec<Bivector<(), f64>> = (0..100)
+        .map(|_| rng.value::<Bivector<(), f64>>(0.5))
+        .collect();
     cases.push(plane(&[("e1i", 0.8)]));
     cases.push(plane(&[("e12", 0.7)]));
     cases.push(plane(&[("e23", 0.5), ("e1i", 0.3), ("e1o", -0.3)]));

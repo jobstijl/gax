@@ -8,6 +8,10 @@
 //!   may get extra tiny rotations: the values agree within `c · n · ε · ‖A‖`.
 #![cfg(all(feature = "batch", feature = "pga3d"))]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::Real;
 use gax::batch::{self, Map};
 use gax::pga3d::{Multivector, Point, Scalar};
@@ -90,29 +94,19 @@ impl Map for Projection {
     }
 }
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
-
 /// Random maps, and nearly singular ones (the last row a combination of the others plus
 /// `delta` noise, `delta` from 1e-3 down to 1e-12), some with a zero leading entry.
 fn inputs(n: usize) -> Vec<Multivector<(), f64>> {
     let mut rng = Rng(0x1ee7_c0de);
     (0..n)
         .map(|k| {
-            let mut a: [f64; 16] = core::array::from_fn(|_| rng.next());
+            let mut a: [f64; 16] = core::array::from_fn(|_| rng.next_f64());
             if k % 3 != 0 {
-                let w = [rng.next(), rng.next(), rng.next()];
+                let w = [rng.next_f64(), rng.next_f64(), rng.next_f64()];
                 let delta = 10f64.powi(-3 - (k % 10) as i32);
                 for j in 0..4 {
                     a[12 + j] =
-                        (0..3).map(|i| a[4 * i + j] * w[i]).sum::<f64>() + delta * rng.next();
+                        (0..3).map(|i| a[4 * i + j] * w[i]).sum::<f64>() + delta * rng.next_f64();
                 }
             }
             if k % 5 == 0 {
@@ -189,9 +183,9 @@ fn pseudo_inverse_agrees_on_every_level() {
     let mut rng = Rng(0x9e17);
     let xs: Vec<Multivector<(), f64>> = (0..101)
         .map(|k| {
-            let mut a: [f64; 16] = core::array::from_fn(|_| rng.next());
+            let mut a: [f64; 16] = core::array::from_fn(|_| rng.next_f64());
             if k % 2 == 1 {
-                let w = [rng.next(), rng.next(), rng.next()];
+                let w = [rng.next_f64(), rng.next_f64(), rng.next_f64()];
                 for j in 0..4 {
                     a[12 + j] = (0..3).map(|i| a[4 * i + j] * w[i]).sum::<f64>();
                 }

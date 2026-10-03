@@ -5,17 +5,11 @@
 
 #![cfg(feature = "csta")]
 
-use gax::csta::{Bivector, Even, Vector};
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
 
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
+use gax::csta::{Bivector, Even, Vector};
 
 fn close(a: &[f64], b: &[f64]) -> bool {
     let scale = a.iter().chain(b).fold(1.0f64, |m, x| m.max(x.abs()));
@@ -26,10 +20,10 @@ fn close(a: &[f64], b: &[f64]) -> bool {
 fn large_slot_products_match_the_value_products() {
     let mut rng = Rng(0x0005_1075);
     for _ in 0..20 {
-        let p = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
-        let b = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
-        let c = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
-        let v = Vector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next()));
+        let p = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
+        let b = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
+        let c = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
+        let v = Vector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         // One slot on either side, and a sandwich through two products.
         let left = p * Bivector::<(), f64>::slot();
         assert!(close(&left.of(b).c, &(p * b).c));

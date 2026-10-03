@@ -3,29 +3,15 @@
 
 #![cfg(all(feature = "batch", feature = "pga3d", feature = "pga2d"))]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::batch::{self, Batch, BatchTransform, Kernel, Map, SandwichKernel, Soa};
 use gax::{Coef, Extensor, Real, Unit};
 
 /// Lengths around every lane count and block size.
 const LENS: &[usize] = &[0, 1, 3, 4, 5, 7, 8, 9, 15, 16, 17, 23, 31, 32, 33, 100];
-
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-    fn value<M: Extensor<Slots = ()>>(&mut self) -> M {
-        M::from_coeffs(<M::Kind as gax::Kind>::arr_from_fn(|_| {
-            M::Coef::from_f64(self.next())
-        }))
-    }
-    fn values<M: Extensor<Slots = ()>>(&mut self, n: usize) -> Vec<M> {
-        (0..n).map(|_| self.value()).collect()
-    }
-}
 
 fn coeffs<M: Extensor<Slots = ()>>(m: &M) -> Vec<f64>
 where
@@ -73,7 +59,7 @@ where
     each_level(|| {
         for &n in LENS {
             let v = make_versor(rng);
-            let xs: Vec<M> = rng.values(n);
+            let xs: Vec<M> = rng.values(n, 1.0);
             let want: Vec<M> = xs.iter().map(|&x| v.transform(x)).collect();
             // Array of structs, one versor.
             let mut out: Vec<batch::Mv<M::Kind, M::Coef>> = vec![zero(); n];
@@ -118,7 +104,7 @@ mod pga3d {
     use gax::pga3d::{Line, Motor, Plane, Point};
 
     fn unit_motor<T: Real>(rng: &mut Rng) -> Unit<Motor<(), T>> {
-        let m: Motor<(), T> = rng.value();
+        let m: Motor<(), T> = rng.value(1.0);
         (m + Motor::from_coeffs(core::array::from_fn(|i| {
             if i == 0 { T::from_f64(2.0) } else { T::zero() }
         })))
@@ -131,8 +117,13 @@ mod pga3d {
         check_sandwich::<Unit<Motor>, Point>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Point");
         check_sandwich::<Unit<Motor>, Line>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Line");
         check_sandwich::<Unit<Motor>, Plane>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Plane");
-        check_sandwich::<Motor, Point>(&mut rng, Rng::value, 2e-5, "Motor >> Point");
-        check_sandwich::<Plane, Line>(&mut rng, Rng::value, 2e-5, "Plane >> Line");
+        check_sandwich::<Motor, Point>(
+            &mut rng,
+            |r: &mut Rng| r.value(1.0),
+            2e-5,
+            "Motor >> Point",
+        );
+        check_sandwich::<Plane, Line>(&mut rng, |r: &mut Rng| r.value(1.0), 2e-5, "Plane >> Line");
     }
 
     #[test]
@@ -146,7 +137,7 @@ mod pga3d {
         );
         check_sandwich::<Motor<(), f64>, Line<(), f64>>(
             &mut rng,
-            Rng::value,
+            |r: &mut Rng| r.value(1.0),
             1e-12,
             "Motor >> Line (f64)",
         );
@@ -161,11 +152,11 @@ mod pga3d {
         each_level(|| {
             for &n in LENS {
                 let m = unit_motor::<f32>(&mut rng);
-                let eye: Point = rng.value();
-                let screen: Plane = rng.value();
+                let eye: Point = rng.value(1.0);
+                let screen: Plane = rng.value(1.0);
                 let square: Point<(Point,)> = (eye & (m >> Point::slot())) ^ screen;
                 let wide: Line<(Point,)> = eye & Point::slot();
-                let xs: Vec<Point> = rng.values(n);
+                let xs: Vec<Point> = rng.values(n, 1.0);
                 let want: Vec<Point> = xs.iter().map(|&x| square.of(x)).collect();
                 let mut got = vec![Point::zero(); n];
                 square.of_slice(&xs, &mut got);
@@ -179,7 +170,7 @@ mod pga3d {
                 wide.of_slice(&xs, &mut got);
                 assert_lanes(&got, &want, 2e-5, &format!("Line <- Point of_slice n={n}"));
                 let map64: Point<(Point,), f64> = unit_motor::<f64>(&mut rng) >> Point::slot();
-                let xs: Vec<Point<(), f64>> = rng.values(n);
+                let xs: Vec<Point<(), f64>> = rng.values(n, 1.0);
                 let want: Vec<Point<(), f64>> = xs.iter().map(|&x| map64.of(x)).collect();
                 let mut got = vec![Point::zero(); n];
                 map64.of_slice(&xs, &mut got);
@@ -205,12 +196,12 @@ mod pga3d {
         let mut rng = Rng(3);
         each_level(|| {
             for &n in LENS {
-                let bs: Vec<Line> = rng.values(n);
+                let bs: Vec<Line> = rng.values(n, 1.0);
                 let want: Vec<Line> = bs.iter().map(|&b| ExpLog.call(b)).collect();
                 let mut got = vec![Line::zero(); n];
                 batch::map(&ExpLog, &bs, &mut got);
                 assert_lanes(&got, &want, 1e-5, &format!("exp/log n={n}"));
-                let bs: Vec<Line<(), f64>> = rng.values(n);
+                let bs: Vec<Line<(), f64>> = rng.values(n, 1.0);
                 let want: Vec<Line<(), f64>> = bs.iter().map(|&b| ExpLog.call(b)).collect();
                 let mut got = vec![Line::zero(); n];
                 batch::map(&ExpLog, &bs, &mut got);
@@ -228,12 +219,17 @@ mod pga2d {
     fn sandwiches() {
         let mut rng = Rng(4);
         let unit = |r: &mut Rng| {
-            let m: Motor = r.value();
+            let m: Motor = r.value(1.0);
             (m + Motor::new(2.0, 0.0, 0.0, 0.0)).normalized()
         };
         check_sandwich::<Unit<Motor>, Point>(&mut rng, unit, 2e-5, "pga2d Unit<Motor> >> Point");
         check_sandwich::<Unit<Motor>, Line>(&mut rng, unit, 2e-5, "pga2d Unit<Motor> >> Line");
-        check_sandwich::<Line, Point>(&mut rng, Rng::value, 2e-5, "pga2d Line >> Point");
+        check_sandwich::<Line, Point>(
+            &mut rng,
+            |r: &mut Rng| r.value(1.0),
+            2e-5,
+            "pga2d Line >> Point",
+        );
     }
 }
 

@@ -203,7 +203,7 @@ pub fn emit_hom(
     let vectors = images
         .iter()
         .all(|img| img.keys().all(|m| m.is_power_of_two()));
-    let orthogonal = (0..n).all(|i| (0..n).all(|j| i == j || sa.metric()[i][j] == 0));
+    let orthogonal = sa.is_diagonal();
     if !vectors && !orthogonal {
         return Err(format!(
             "{} -> {}: vectors must go to vectors unless the source basis is orthogonal",

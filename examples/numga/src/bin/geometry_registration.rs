@@ -27,22 +27,7 @@ mod registration {
     pub type M = Unit<Motor<(), f64>>;
     pub type MotorForm = Scalar<(Motor, Motor), f64>;
 
-    /// A small xorshift generator with Gaussian draws (numga's NumPy streams cannot be
-    /// reproduced, so the seeds differ from numga's).
-    pub struct Rng(pub u64);
-    impl Rng {
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        /// A standard normal draw (Box and Muller).
-        pub fn normal(&mut self) -> f64 {
-            let (u, v) = (self.uniform(), self.uniform());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// The motor's own metric: the scalar part of `M ~M`, the squares of the rotor part.
     pub fn motor_metric() -> MotorForm {
@@ -71,7 +56,7 @@ mod registration {
 
     /// The mean of a form's diagonal: its scale.
     pub fn scale(form: MotorForm) -> f64 {
-        (0..8).map(|i| form.c[0][i][i]).sum::<f64>() / 8.0
+        form.as_map().trace() / 8.0
     }
 
     /// Fit a motor by the one-sided residual: the least finite mode of the misfit against the
@@ -108,7 +93,7 @@ mod registration {
     /// A centered point as the plane through the origin normal to its offset: its vector.
     fn vector(p: P, centre: P) -> Plane<(), f64> {
         let d = p.unitized() - centre;
-        Plane::new(d.e032(), d.e013(), d.e021(), 0.0)
+        Plane::orthogonal_to(d)
     }
 
     /// The centered fit: the rotor aligning the centered clouds, then the translation carrying
@@ -350,12 +335,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

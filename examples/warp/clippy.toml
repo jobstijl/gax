@@ -6,6 +6,9 @@
 # Lengths are ideal norms and joins, angles come from rotations between directions (and
 # their logarithms), turns are rotation motors, oscillations are phasors (`signal.rs`). The
 # exception is the audio DSP (`src/audio`), which allows it at its root.
+# The square roots that are not lengths (a radius from a mass or an area, uniform sampling in a
+# disc, an RMS level, an Einstein radius) are written `gax::Real::sqrt`, which the ban leaves
+# alone on purpose: grep for it to review them.
 disallowed-types = [
     { path = "glam::Vec2", reason = "use gax types (input.rs is the only boundary)" },
     { path = "glam::Vec3", reason = "use gax types" },

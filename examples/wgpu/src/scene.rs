@@ -5,6 +5,9 @@
 use crate::gfx::{Gfx, Instance, MAX_PARTICLES, Particle};
 use gax::pga2d::{Motor, Point};
 
+/// The origin of the plane.
+const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
+
 /// A small xorshift generator (no dependencies).
 pub struct Rng(u64);
 
@@ -25,7 +28,7 @@ impl Rng {
 /// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
 /// at `spin` radians per second: twists add.
 pub fn rate(speed: f32, spin: f32) -> Point<(), f32> {
-    Point::translation_twist(speed, 0.0) + Point::rotation_twist(Point::xy(0.0, 0.0), spin)
+    Point::translation_twist(speed, 0.0) + Point::rotation_twist(ORIGIN, spin)
 }
 
 struct Ship {
@@ -70,10 +73,9 @@ impl Scene {
         let ships = (0..ships)
             .map(|k| {
                 let hue = k as f32 / ships as f32;
-                let start = Motor::translation(rng.range(-8.0, 8.0), rng.range(-5.0, 5.0))
-                    .into_inner()
-                    * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU))
-                        .into_inner();
+                let start = (Motor::translation(rng.range(-8.0, 8.0), rng.range(-5.0, 5.0))
+                    * Motor::rotation(ORIGIN, rng.range(0.0, std::f32::consts::TAU)))
+                .into_inner();
                 let c = hsv(hue);
                 Ship {
                     motor: start,
@@ -107,7 +109,7 @@ impl Scene {
         for s in &mut self.ships {
             s.motor = crate::particle_step(s.motor, s.rate, dt);
             // Keep ships near the view: wrap by moving the motor's translation.
-            let p = (gax::Unit::new_unchecked(s.motor) >> Point::xy(0.0, 0.0)).to_euclidean();
+            let p = (gax::Unit::new_unchecked(s.motor) >> ORIGIN).to_euclidean();
             let (w, h) = (HALF_WIDTH + 1.0, HALF_WIDTH * 0.6 + 1.0);
             let (dx, dy) = (wrap(p[0], w) - p[0], wrap(p[1], h) - p[1]);
             if dx != 0.0 || dy != 0.0 {
@@ -142,11 +144,8 @@ impl Scene {
         let (origin, hue) = (self.ships[ship].motor, self.ships[ship].hue);
         let ps: Vec<Particle> = (0..self.burst)
             .map(|_| {
-                let turn = Motor::rotation(
-                    Point::xy(0.0, 0.0),
-                    self.rng.range(0.0, std::f32::consts::TAU),
-                )
-                .into_inner();
+                let turn = Motor::rotation(ORIGIN, self.rng.range(0.0, std::f32::consts::TAU))
+                    .into_inner();
                 Particle {
                     motor: (origin * turn).into(),
                     rate: rate(self.rng.range(0.5, 6.0), self.rng.range(-6.0, 6.0)).into(),

@@ -229,6 +229,16 @@ pub struct Wreck {
     pub radius: f32,
 }
 
+impl Wreck {
+    /// The world velocity of its point at `p` (a unit point): its twist's, a translation at
+    /// `vel` plus a turn at `spin` about its centre.
+    pub fn velocity_at(&self, p: P) -> P {
+        let twist = Point::translation_twist(self.vel.e20(), self.vel.e01())
+            + Point::rotation_twist(self.pose >> ORIGIN, self.spin);
+        body::velocity_at(twist, p)
+    }
+}
+
 /// What happened in a tick, for the renderer (particles, grid impulses, shake) and the audio.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Event {
@@ -387,16 +397,9 @@ impl World {
             .map(|e| (e.body.pos(), 18.0 + 6.0 * e.mass))
     }
 
-    /// The acceleration the wells give a body at `p`: `s d / (|d|² + r²)^(3/2)` towards each,
-    /// an inverse square with a softened core.
+    /// The acceleration the wells give a body at `p`.
     fn gravity(&self, p: P, scale: f32) -> P {
-        let mut acc = dir(0.0, 0.0);
-        for (w, s) in self.wells() {
-            let d = w - p;
-            let d2 = d.ideal_norm() * d.ideal_norm();
-            acc += d * (scale * s / (d2 + 1.5).powf(1.5));
-        }
-        acc
+        pull(self.wells(), p, scale)
     }
 
     /// Spawn an enemy now.
@@ -770,7 +773,7 @@ impl World {
             .bullets
             .iter()
             .map(|b| {
-                let l = (b.pos & (b.pos + b.vel)).normalized().into_inner();
+                let l = (b.pos & b.vel).normalized().into_inner();
                 (l, b.pos, b.vel)
             })
             .collect();
@@ -845,7 +848,7 @@ impl World {
                             // Ahead of the shot: on the side of the perpendicular through it
                             // that the shot moves towards.
                             let across = l | bp;
-                            let ahead = (across & p).s() * (across & (bp + bv)).s() > 0.0;
+                            let ahead = (across & p).s() * (across & bv).s() > 0.0;
                             if !ahead || distance(p, bp) > 8.0 {
                                 continue;
                             }
@@ -890,11 +893,7 @@ impl World {
             // Wells pull everything but wells: the pull accumulates, and decays slowly.
             e.pull = e.pull * (1.0 - 0.6 * DT);
             if e.kind != Kind::Singularity {
-                for &(w, s) in &wells {
-                    let d = w - p;
-                    let d2 = d.ideal_norm() * d.ideal_norm();
-                    e.pull += d * (2.5 * s / (d2 + 1.5).powf(1.5) * DT);
-                }
+                e.pull += pull(wells.iter().copied(), p, 2.5 * DT);
             }
             e.body.vel += e.pull;
             e.body.step(DT);
@@ -1114,6 +1113,15 @@ impl World {
             self.events.push(Event::Extra { life: false });
         }
     }
+}
+
+/// The pull of wells `(position, strength)` on a body at `p`: `k s d / (|d|² + r²)^(3/2)`
+/// towards each, an inverse square with a softened core.
+fn pull(wells: impl Iterator<Item = (P, f32)>, p: P, k: f32) -> P {
+    wells.fold(dir(0.0, 0.0), |acc, (w, s)| {
+        let d = w - p;
+        acc + d * (k * s / (d.ideal_norm_squared() + 1.5).powf(1.5))
+    })
 }
 
 #[cfg(test)]

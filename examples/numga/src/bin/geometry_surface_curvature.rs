@@ -132,7 +132,7 @@ mod curvature {
             // The projector of directions onto the tangent plane.
             let d = direction();
             let project = d - normal * (tangent & d).gp(1.0 / (tangent & normal).s());
-            let length = (normal.dual() | normal.dual()).s().sqrt();
+            let length = normal.ideal_norm();
             let second = self
                 .form
                 .of(project)
@@ -183,8 +183,7 @@ fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> V
     let rows: Vec<usize> = (0..h).collect();
     let threads = std::thread::available_parallelism().map_or(4, |t| t.get());
     let per = h.div_ceil(threads).max(1);
-    let f64p =
-        |p: Point<(), f32>| Point::new(p.c[0].into(), p.c[1].into(), p.c[2].into(), p.c[3].into());
+    let f64p = |p: Point<(), f32>| p.map_coefs(f64::from);
     let mut out = vec![None; w * h];
     std::thread::scope(|s| {
         for (chunk, part) in rows.chunks(per).zip(out.chunks_mut(per * w)) {

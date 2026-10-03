@@ -207,23 +207,7 @@ mod decomposition {
 
     /// A small xorshift stream of standard normal numbers (numga's generator cannot be
     /// reproduced).
-    pub struct Normal(u64);
-
-    impl Normal {
-        pub fn new(seed: u64) -> Normal {
-            Normal(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
-        }
-        fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        pub fn next(&mut self) -> f64 {
-            let (a, b) = (self.uniform(), self.uniform());
-            (-2.0 * a.ln()).sqrt() * (core::f64::consts::TAU * b).cos()
-        }
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// The example: a random bivector and unit start, the planes by both ways, the times of
     /// one turn of the slowest plane, and a random motion of the projective algebra.
@@ -238,15 +222,15 @@ mod decomposition {
     }
 
     pub fn example(seed: u64) -> Example {
-        let mut rng = Normal::new(seed);
-        let bivector = B::from_coeffs(core::array::from_fn(|_| rng.next()));
-        let start = V::from_coeffs(core::array::from_fn(|_| rng.next()));
+        let mut rng = Rng::new(seed);
+        let bivector = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
+        let start = V::from_coeffs(core::array::from_fn(|_| rng.normal()));
         let start = start.gp(1.0 / start.norm());
         let (squares, parts) = from_spectrum(bivector);
         let wedge = from_wedge_powers(bivector);
         let slowest = squares.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let period = core::f64::consts::TAU / (-slowest).sqrt();
-        let motion = p6::Bivector::from_coeffs(core::array::from_fn(|_| rng.next()));
+        let motion = p6::Bivector::from_coeffs(core::array::from_fn(|_| rng.normal()));
         Example {
             bivector,
             start,
@@ -500,12 +484,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

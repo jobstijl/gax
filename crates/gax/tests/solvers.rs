@@ -4,27 +4,18 @@
 
 #![cfg(feature = "pga3d")]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 #[path = "support/solver_checks.rs"]
 mod solver_checks;
-
-struct Rng(u64);
-impl Rng {
-    fn next(&mut self) -> u64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        self.0
-    }
-    fn unit(&mut self) -> f64 {
-        (self.next() >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
 
 #[test]
 fn random_singular_and_badly_scaled_matrices() {
     let mut rng = Rng(0xdead_beef_1234);
     for k in 0..3000 {
-        let mut x: Vec<f64> = (0..83).map(|_| rng.unit()).collect();
+        let mut x: Vec<f64> = (0..83).map(|_| rng.next_f64()).collect();
         match k % 5 {
             // Rank-deficient: repeat rows.
             1 => {
@@ -42,13 +33,16 @@ fn random_singular_and_badly_scaled_matrices() {
             // Mostly zeros.
             3 => {
                 for v in &mut x {
-                    if !rng.next().is_multiple_of(3) {
+                    if !rng.next_u64().is_multiple_of(3) {
                         *v = 0.0;
                     }
                 }
             }
             // Non-finite entries: nothing may panic.
-            4 => x[(rng.next() % 83) as usize] = [f64::NAN, f64::INFINITY, -f64::INFINITY][k % 3],
+            4 => {
+                x[(rng.next_u64() % 83) as usize] =
+                    [f64::NAN, f64::INFINITY, -f64::INFINITY][k % 3];
+            }
             _ => {}
         }
         solver_checks::check(&x);

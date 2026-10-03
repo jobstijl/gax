@@ -16,8 +16,8 @@
 //!
 //! In an even number of dimensions the pseudoscalar commutes with every spinor. When it squares
 //! to plus one it splits the spinors into two halves; when it squares to minus one it acts on
-//! them as the complex unit (its eigenvalues, found here by a small local eigensolver for real
-//! matrices, are then ±i). In four Euclidean dimensions each generator is the sum of two
+//! them as the complex unit (its eigenvalues, from gax's `eigvals` of the map, are then
+//! ±i). In four Euclidean dimensions each generator is the sum of two
 //! commuting halves, each turning every plane through one angle; their orbits on the
 //! three-sphere are the fibres of the Hopf fibration and of its mirror image.
 //!
@@ -160,234 +160,14 @@ gax::algebra! {
     kind Odd = [e1, e2, e3, et, es, er, e123, e12t, e12s, e12r, e13t, e13s, e13r, e1ts, e1tr, e1sr, e23t, e23s, e23r, e2ts, e2tr, e2sr, e3ts, e3tr, e3sr, etsr, e123ts, e123tr, e123sr, e12tsr, e13tsr, e23tsr];
 }
 
-/// Complex numbers and the eigenvalues of a real square matrix.
-#[allow(clippy::needless_range_loop)]
+/// Eigenvalues as `(re, im)` pairs.
 mod eig {
     /// A complex number `(re, im)`.
     pub type C = (f64, f64);
 
-    /// The eigenvalues of a real square matrix: reduction to Hessenberg form by elimination,
-    /// then the shifted QR algorithm with Francis double steps (after Numerical Recipes'
-    /// `elmhes` and `hqr`). Complex eigenvalues come in conjugate pairs.
-    pub fn eigvals(m: &[Vec<f64>]) -> Vec<C> {
-        let n = m.len();
-        // One-based copy, as in the classic formulation.
-        let mut a = vec![vec![0.0f64; n + 1]; n + 1];
-        for i in 0..n {
-            for j in 0..n {
-                a[i + 1][j + 1] = m[i][j];
-            }
-        }
-        hessenberg(&mut a, n);
-        hqr(&mut a, n)
-    }
-
-    fn hessenberg(a: &mut [Vec<f64>], n: usize) {
-        for m in 2..n {
-            let mut x = 0.0f64;
-            let mut i = m;
-            for j in m..=n {
-                if a[j][m - 1].abs() > x.abs() {
-                    x = a[j][m - 1];
-                    i = j;
-                }
-            }
-            if i != m {
-                for j in (m - 1)..=n {
-                    let t = a[i][j];
-                    a[i][j] = a[m][j];
-                    a[m][j] = t;
-                }
-                for row in a.iter_mut().skip(1) {
-                    row.swap(i, m);
-                }
-            }
-            if x != 0.0 {
-                for i in (m + 1)..=n {
-                    let mut y = a[i][m - 1];
-                    if y != 0.0 {
-                        y /= x;
-                        a[i][m - 1] = y;
-                        for j in m..=n {
-                            a[i][j] -= y * a[m][j];
-                        }
-                        for j in 1..=n {
-                            a[j][m] += y * a[j][i];
-                        }
-                    }
-                }
-            }
-        }
-        // Clear the multipliers below the subdiagonal.
-        for i in 3..=n {
-            for j in 1..(i - 1) {
-                a[i][j] = 0.0;
-            }
-        }
-    }
-
-    fn sign(a: f64, b: f64) -> f64 {
-        if b >= 0.0 { a.abs() } else { -a.abs() }
-    }
-
-    #[allow(clippy::many_single_char_names)]
-    fn hqr(a: &mut [Vec<f64>], n: usize) -> Vec<C> {
-        let mut wr = vec![0.0; n + 1];
-        let mut wi = vec![0.0; n + 1];
-        let mut anorm = 0.0;
-        for i in 1..=n {
-            for j in (i.max(2) - 1)..=n {
-                anorm += a[i][j].abs();
-            }
-        }
-        let mut nn = n;
-        let mut t = 0.0;
-        let (mut p, mut q, mut r): (f64, f64, f64);
-        while nn >= 1 {
-            let mut its = 0;
-            loop {
-                let mut l = nn;
-                while l >= 2 {
-                    let mut s = a[l - 1][l - 1].abs() + a[l][l].abs();
-                    if s == 0.0 {
-                        s = anorm;
-                    }
-                    if a[l][l - 1].abs() + s == s {
-                        a[l][l - 1] = 0.0;
-                        break;
-                    }
-                    l -= 1;
-                }
-                let mut x = a[nn][nn];
-                if l == nn {
-                    wr[nn] = x + t;
-                    wi[nn] = 0.0;
-                    nn -= 1;
-                    break;
-                }
-                let mut y = a[nn - 1][nn - 1];
-                let mut w = a[nn][nn - 1] * a[nn - 1][nn];
-                if l == nn - 1 {
-                    p = 0.5 * (y - x);
-                    q = p * p + w;
-                    let mut z = q.abs().sqrt();
-                    x += t;
-                    if q >= 0.0 {
-                        z = p + sign(z, p);
-                        wr[nn - 1] = x + z;
-                        wr[nn] = x + z;
-                        if z != 0.0 {
-                            wr[nn] = x - w / z;
-                        }
-                        wi[nn - 1] = 0.0;
-                        wi[nn] = 0.0;
-                    } else {
-                        wr[nn - 1] = x + p;
-                        wr[nn] = x + p;
-                        wi[nn - 1] = -z;
-                        wi[nn] = z;
-                    }
-                    nn -= 2;
-                    break;
-                }
-                assert!(its < 60, "too many iterations in hqr");
-                if its == 10 || its == 20 || its == 40 {
-                    // An exceptional shift, to break cycles.
-                    t += x;
-                    for i in 1..=nn {
-                        a[i][i] -= x;
-                    }
-                    let s = a[nn][nn - 1].abs() + a[nn - 1][nn - 2].abs();
-                    x = 0.75 * s;
-                    y = x;
-                    w = -0.4375 * s * s;
-                }
-                its += 1;
-                let mut m = nn - 2;
-                let mut z;
-                loop {
-                    z = a[m][m];
-                    r = x - z;
-                    let s = y - z;
-                    p = (r * s - w) / a[m + 1][m] + a[m][m + 1];
-                    q = a[m + 1][m + 1] - z - r - s;
-                    r = a[m + 2][m + 1];
-                    let s = p.abs() + q.abs() + r.abs();
-                    p /= s;
-                    q /= s;
-                    r /= s;
-                    if m == l {
-                        break;
-                    }
-                    let u = a[m][m - 1].abs() * (q.abs() + r.abs());
-                    let v = p.abs() * (a[m - 1][m - 1].abs() + z.abs() + a[m + 1][m + 1].abs());
-                    if u + v == v {
-                        break;
-                    }
-                    m -= 1;
-                }
-                for i in (m + 2)..=nn {
-                    a[i][i - 2] = 0.0;
-                    if i != m + 2 {
-                        a[i][i - 3] = 0.0;
-                    }
-                }
-                let mut k = m;
-                while k < nn {
-                    if k != m {
-                        p = a[k][k - 1];
-                        q = a[k + 1][k - 1];
-                        r = 0.0;
-                        if k != nn - 1 {
-                            r = a[k + 2][k - 1];
-                        }
-                        x = p.abs() + q.abs() + r.abs();
-                        if x != 0.0 {
-                            p /= x;
-                            q /= x;
-                            r /= x;
-                        }
-                    }
-                    let s = sign((p * p + q * q + r * r).sqrt(), p);
-                    if s != 0.0 {
-                        if k == m {
-                            if l != m {
-                                a[k][k - 1] = -a[k][k - 1];
-                            }
-                        } else {
-                            a[k][k - 1] = -s * x;
-                        }
-                        p += s;
-                        x = p / s;
-                        y = q / s;
-                        z = r / s;
-                        q /= p;
-                        r /= p;
-                        for j in k..=nn {
-                            p = a[k][j] + q * a[k + 1][j];
-                            if k != nn - 1 {
-                                p += r * a[k + 2][j];
-                                a[k + 2][j] -= p * z;
-                            }
-                            a[k + 1][j] -= p * y;
-                            a[k][j] -= p * x;
-                        }
-                        let mmin = if nn < k + 3 { nn } else { k + 3 };
-                        for i in l..=mmin {
-                            p = x * a[i][k] + y * a[i][k + 1];
-                            if k != nn - 1 {
-                                p += z * a[i][k + 2];
-                                a[i][k + 2] -= p * r;
-                            }
-                            a[i][k + 1] -= p * q;
-                            a[i][k] -= p;
-                        }
-                    }
-                    k += 1;
-                }
-            }
-        }
-        (1..=n).map(|i| (wr[i], wi[i])).collect()
+    /// gax's eigenvalues of a map (`map.eigvals()`) as pairs.
+    pub fn pairs(values: impl AsRef<[gax::Complex<f64>]>) -> Vec<C> {
+        values.as_ref().iter().map(|z| (z.re, z.im)).collect()
     }
 }
 
@@ -399,28 +179,7 @@ mod spin {
 
     /// A small xorshift stream of standard normal numbers (numga's generator cannot be
     /// reproduced; the checks hold for any sample).
-    pub struct Normal(u64);
-
-    impl Normal {
-        pub fn new(seed: u64) -> Normal {
-            Normal(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
-        }
-        fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            ((self.0 >> 11) as f64 + 0.5) / (1u64 << 53) as f64
-        }
-        pub fn next(&mut self) -> f64 {
-            let (a, b) = (self.uniform(), self.uniform());
-            (-2.0 * a.ln()).sqrt() * (core::f64::consts::TAU * b).cos()
-        }
-    }
-
-    /// A map's coefficient matrix, rows the output's blades and columns the input's.
-    pub fn matrix<const I: usize, const O: usize>(c: &[[f64; I]; O]) -> Vec<Vec<f64>> {
-        c.iter().map(|row| row.to_vec()).collect()
-    }
+    pub use gax_numga_examples::rng::Rng;
 
     /// One signature: its numbers, and the maps they come from.
     #[derive(Clone, Debug)]
@@ -559,7 +318,7 @@ mod spin {
                 .iter()
                 .map(|a| basis.iter().map(|b| (*a | *b).s()).collect())
                 .collect();
-            let sample: Vec<f64> = (0..basis.len()).map(|_| $rng.next()).collect();
+            let sample: Vec<f64> = (0..basis.len()).map(|_| $rng.normal()).collect();
             let pair = |m: &Vec<Vec<f64>>| -> f64 {
                 (0..sample.len())
                     .map(|i| {
@@ -576,10 +335,10 @@ mod spin {
                 .flatten()
                 .zip(inner.iter().flatten())
                 .all(|(f, i)| *f == scale * *i);
-            let signs = eig::eigvals(&matrix(&involution!($m, $p).c));
+            let signs = eig::pairs(involution!($m, $p).eigvals());
             let (even, odd) = blade_product!($m, n);
             let square = (even * even).s() + (odd * odd).s();
-            let action = (n % 2 == 0).then(|| eig::eigvals(&matrix(&action!($m, n).c)));
+            let action = (n % 2 == 0).then(|| eig::pairs(action!($m, n).eigvals()));
             Row {
                 p: $p,
                 q: $q,
@@ -595,7 +354,7 @@ mod spin {
 
     /// The signatures, in numga's order.
     pub fn zoo(seed: u64) -> Vec<Row> {
-        let mut rng = Normal::new(seed);
+        let mut rng = Rng::new(seed);
         vec![
             row!(cl30, 3, 0, rng),
             row!(cl21, 2, 1, rng),
@@ -684,8 +443,8 @@ mod spin {
         /// A random rotor of the four Euclidean directions and its two isoclinic factors, with
         /// the halves of its generator.
         pub fn split(seed: u64) -> (E, E, E, B, B) {
-            let mut rng = Normal::new(seed);
-            let generator = B::from_coeffs(core::array::from_fn(|_| rng.next()));
+            let mut rng = Rng::new(seed);
+            let generator = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
             let (along, against) = isoclinic(generator);
             (
                 generator.exp().into_inner(),
@@ -817,7 +576,7 @@ fn checks() -> &'static Checks {
         let (rotor, left, right, _, _) = split(1);
         // The spread of the turning angles of each factor's eigenvalues.
         let angles = [left, right].map(|factor| {
-            let a: Vec<f64> = eig::eigvals(&matrix(&turn_map(factor).c))
+            let a: Vec<f64> = eig::pairs(turn_map(factor).eigvals())
                 .iter()
                 .map(|(re, im)| im.atan2(*re).abs())
                 .collect();
@@ -984,23 +743,11 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::eig::eigvals;
     use super::spin::four::*;
     use super::*;
 
     fn max_abs(c: &[f64]) -> f64 {
         c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
-    }
-
-    /// The local eigensolver on a rotation by 0.3 in a plane and a diagonal matrix.
-    #[test]
-    fn the_eigensolver_finds_complex_pairs() {
-        let (c, s) = (0.3f64.cos(), 0.3f64.sin());
-        let values = eigvals(&[vec![c, -s, 0.0], vec![s, c, 0.0], vec![0.0, 0.0, 2.0]]);
-        let mut im: Vec<f64> = values.iter().map(|v| v.1).collect();
-        im.sort_by(f64::total_cmp);
-        assert!((im[0] + s).abs() < 1e-14 && im[1].abs() < 1e-14 && (im[2] - s).abs() < 1e-14);
-        assert!(values.iter().any(|v| (v.0 - 2.0).abs() < 1e-14));
     }
 
     /// numga's first test: in the signature (3, 1) the involution fixes the planes of rotations
@@ -1015,7 +762,7 @@ mod tests {
         let xt: Bivector<(), f64> = Bivector::from_coeffs([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
         assert!(max_abs(&(involution.of(xy) - xy).c) < 1e-12);
         assert!(max_abs(&(involution.of(xt) + xt).c) < 1e-12);
-        for v in eigvals(&matrix(&action!(cl31, 4).c)) {
+        for v in eig::pairs(action!(cl31, 4).eigvals()) {
             assert!((v.1.abs() - 1.0).abs() < 1e-12, "{v:?}");
         }
     }
@@ -1057,7 +804,7 @@ mod tests {
         assert!(max_abs(&along.commutator(against).c) < 1e-12);
         assert!(max_abs(&(left * right - rotor).c) < 1e-8);
         for factor in [left, right] {
-            let angles: Vec<f64> = eigvals(&matrix(&turn_map(factor).c))
+            let angles: Vec<f64> = eig::pairs(turn_map(factor).eigvals())
                 .iter()
                 .map(|(re, im)| im.atan2(*re).abs())
                 .collect();
@@ -1090,12 +837,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

@@ -22,10 +22,9 @@ pub fn run(gfx: &mut Gfx) {
     let mut rng = Rng::new(1);
     let motors: Vec<Motor<(), f32>> = (0..n)
         .map(|_| {
-            (Motor::translation(rng.range(-10.0, 10.0), rng.range(-6.0, 6.0)).into_inner()
-                * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU))
-                    .into_inner())
-            .normalized()
+            // A product of unit motors is a unit motor.
+            (Motor::translation(rng.range(-10.0, 10.0), rng.range(-6.0, 6.0))
+                * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU)))
             .into_inner()
         })
         .collect();

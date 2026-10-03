@@ -182,24 +182,10 @@ mod constitutive {
         (k ^ open()).cast::<Odd>() + (k ^ medium).hodge().cast::<Odd>()
     }
 
-    /// The singular values (descending) and right singular vectors of a wave map. gax's
-    /// `svd` takes square maps only, and this one is 8 x 6; gax's one-sided Jacobi
-    /// (`linalg::orthogonalize`) takes columns of any length, so it runs on the map's six
-    /// columns directly.
+    /// The singular values (descending) and right singular vectors of a wave map (8 x 6).
     pub fn svd(w: WaveMap) -> ([f64; 6], [B; 6]) {
-        let c = w.c;
-        let columns: [[f64; 8]; 6] = core::array::from_fn(|j| core::array::from_fn(|i| c[i][j]));
-        let (rotated, v): ([[f64; 8]; 6], [[f64; 6]; 6]) = gax::linalg::orthogonalize(&columns, 14);
-        let norm = |k: usize| rotated[k].iter().map(|a| a * a).sum::<f64>().sqrt();
-        let mut order: [usize; 6] = core::array::from_fn(|i| i);
-        order.sort_by(|&p, &q| norm(q).total_cmp(&norm(p)));
-        (
-            order.map(norm),
-            order.map(|k| {
-                let r = v[k];
-                Bivector::new(r[0], r[1], r[2], r[3], r[4], r[5])
-            }),
-        )
+        let (values, right, _) = w.svd_thin();
+        (values, right)
     }
 
     /// The smallest singular value of the wave map over trial phase speeds, for waves along
@@ -549,18 +535,14 @@ fn draw_polarizations(c: &mut Canvas, rect: [f32; 4], tau: f64) {
     ax.frame(c, "CRYSTAL MODES", "X", "");
     ax.line(c, [-1.3, 0.0], [1.3, 0.0], 1.0, palette::grid(), 0.6);
     ax.line(c, [0.0, -1.3], [0.0, 1.3], 1.0, palette::grid(), 0.6);
-    for (k, (f, col)) in fields
-        .iter()
-        .zip([palette::red(), palette::blue()])
-        .enumerate()
-    {
+    // Each mode's field oscillating in its plane at the entrance face, in phase.
+    let s = tau.cos() as f32;
+    for (f, col) in fields.iter().zip([palette::red(), palette::blue()]) {
         let (e, _) = arrows(*f);
         let n = (e[0] * e[0] + e[1] * e[1]).sqrt();
         let a = [(e[0] / n) as f32, (e[1] / n) as f32];
         ax.dashed(c, &[[-a[0], -a[1]], a], 1.0, 4.0, col, 0.7);
         ax.arrow(c, [0.0, 0.0], a, 2.5, 9.0, col);
-        // Each mode's field oscillating in its plane at the entrance face.
-        let s = (tau + k as f64 * 0.0).cos() as f32;
         ax.scatter(
             c,
             &[[a[0] * s, a[1] * s]],
@@ -1027,12 +1009,6 @@ mod tests {
 
     #[test]
     fn a_frame_draws() {
-        let mut draw = super::draw;
-        let c = gax_numga_examples::app::frame(
-            &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-            0.5,
-            &mut draw,
-        );
-        assert!(c.mean()[0] > 0.0);
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 }

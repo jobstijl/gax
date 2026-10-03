@@ -47,7 +47,6 @@ pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
         .map(|&p| crate::render::scene::scaled(p, r))
         .collect();
     let g = Moments::of_polygon(&pts).centroid();
-    let centre = wreck.pose >> ORIGIN;
     (0..pts.len())
         .map(|i| {
             let tri = [g, pts[i], pts[(i + 1) % pts.len()]];
@@ -55,15 +54,10 @@ pub fn shatter(hull: &[P], wreck: &Wreck, kick: f32) -> Vec<(Body, [P; 3])> {
             let [cx, cy] = c.to_euclidean();
             let local = Motor::translation(-cx, -cy);
             let pose = wreck.pose * Motor::translation(cx, cy);
-            // The body's velocity at the piece's centroid: its velocity plus its spin turning
-            // the offset from its centre a quarter turn; then the kick, along the offset from
+            // The body's velocity at the piece's centroid, then the kick, along the offset from
             // the centre of area.
-            let at = pose >> ORIGIN;
-            let arm = at - centre;
             let mut body = Body::new(pose);
-            body.vel = wreck.vel
-                + turned(arm, core::f32::consts::FRAC_PI_2) * wreck.spin
-                + (wreck.pose >> (c - g)) * (kick / r);
+            body.vel = wreck.velocity_at(pose >> ORIGIN) + (wreck.pose >> (c - g)) * (kick / r);
             body.spin = wreck.spin;
             (body, tri.map(|p| local >> p))
         })
@@ -371,7 +365,7 @@ impl Fx {
         let omega = 5.0;
         let err: P = (target * self.cam.reverse()).log();
         self.cam_vel += (err * (omega * omega) - self.cam_vel * (2.0 * omega)) * dt;
-        self.cam = ((self.cam_vel * dt).exp() * self.cam).renormalize_fast();
+        self.cam = (self.cam_vel * dt).exp().mul_renormalized(self.cam);
         for p in &mut self.popups {
             p.2 += dt;
         }
@@ -501,8 +495,7 @@ mod tests {
                 .collect();
             let whole = Moments::of_polygon(&pts).moved(wreck.pose);
             let (area, g) = (whole.area(), whole.centroid());
-            let centre = wreck.pose >> ORIGIN;
-            let v_g = wreck.vel + turned(g - centre, core::f32::consts::FRAC_PI_2) * wreck.spin;
+            let v_g = wreck.velocity_at(g);
             let (mut p, mut l, mut a) = (Point::direction(0.0, 0.0), 0.0, 0.0);
             for (body, tri) in shatter(&hull, &wreck, 4.0) {
                 let m = Moments::of_polygon(&tri);

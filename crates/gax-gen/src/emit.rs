@@ -712,7 +712,6 @@ impl Emitter<'_> {
     fn kind(&mut self, k: &KindSpec) {
         let name = &k.name;
         let n = k.layout.len();
-        let core = self.cfg.core.clone();
         let scalar = self.spec.scalar_kind().name.clone();
         let blades_list: Vec<String> = k.blades.iter().map(|b| format!("{b:?}")).collect();
         let doc = if k.doc.is_empty() {
@@ -1374,7 +1373,6 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 "impl<S: Slots, T: Coef, R> core::ops::{std_tr}<R> for {name}<S, T>\nwhere\n    Self: {tr}<R>,\n{{\n    type Output = <Self as {tr}<R>>::Output;\n    #[inline(always)]\n    fn {std_m}(self, rhs: R) -> Self::Output {{\n        {tr}::{m}(self, rhs)\n    }}\n}}\n\n"
             );
         }
-        let _ = core;
     }
 
     /// `a / b = a b⁻¹` for every value `b` with a closed-form inverse whose product with `a`
@@ -1592,7 +1590,6 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
 
     /// Fused `v x ~v` with `v` a value of versor kind `vk` and `x` of kind `xk` with any slots.
     #[allow(clippy::too_many_lines)]
-    #[allow(clippy::too_many_lines)]
     fn sandwich(&mut self, vk: &KindSpec, xk: &KindSpec, unit: bool, math: SandwichMath) {
         let SandwichMath {
             out,
@@ -1634,11 +1631,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
                 let vname = |var: Var| format!("v[{var}]");
                 let mut lets = String::new();
                 prog.emit_lets(&vname, "u", &mut lets);
-                let parts: Vec<String> = prog
-                    .outputs
-                    .iter()
-                    .map(|o| render(o, &vname, "u"))
-                    .collect();
+                let parts: Vec<String> = prog.render_outputs(&vname, "u");
                 format!(
                     "        {gate}\n        {{\n{lets}            T::check_unit(&[{}]);\n        }}\n",
                     parts.join(", ")
@@ -1668,11 +1661,7 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
         let mut s = String::new();
         let mut lets = String::new();
         direct.emit_lets(&var_name, "t", &mut lets);
-        let outs: Vec<String> = direct
-            .outputs
-            .iter()
-            .map(|o| render(o, &var_name, "t"))
-            .collect();
+        let outs: Vec<String> = direct.render_outputs(&var_name, "t");
         // A plain sandwich's kernel is a function of its own: the map applies it to each basis
         // element of the passenger.
         let helper = format!(
@@ -1897,10 +1886,6 @@ impl<S: Slots> core::ops::Mul<{name}<S, f64>> for f64 {{
     }
 }
 
-/// The program made homogeneous in the versor variables
-/// `0..nv`: each monomial of lower degree than the highest is multiplied by a power of `norm`,
-/// the scalar part of `v ~v`, which is 1 modulo the unit relations. The result is equal to the
-/// program modulo the relations, and a uniform drift of the versor scales it uniformly.
 impl Emitter<'_> {
     /// `{Kind}Gpu` per kind: the layout of the WGSL modules, `ceil(N/4)` `vec4<f32>`, with
     /// conversions, `bytemuck::Pod`, and compile-time layout assertions; and `GpuMat`
@@ -2185,6 +2170,10 @@ impl From<gx::GpuMat<{c}>> for {xn}<({yn},), f32> {{
     }
 }
 
+/// The program made homogeneous in the versor variables
+/// `0..nv`: each monomial of lower degree than the highest is multiplied by a power of `norm`,
+/// the scalar part of `v ~v`, which is 1 modulo the unit relations. The result is equal to the
+/// program modulo the relations, and a uniform drift of the versor scales it uniformly.
 fn homogeneous(prog: &Program, nv: Var, norm: &Poly, passengers: &BTreeSet<Var>) -> Program {
     let recompiled = homogeneous_recompiled(prog, nv, norm, passengers);
     match cse::repair_degree(prog, nv, norm, 2) {

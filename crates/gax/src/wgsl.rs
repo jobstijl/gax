@@ -53,13 +53,13 @@ impl Module {
 }
 
 macro_rules! modules {
-    ($($feature:literal $name:ident $name16:ident $file:literal $doc:literal;)*) => {
+    ($($feature:literal $name:ident $name16:ident;)*) => {
         $(
-            #[doc = $doc]
+            #[doc = concat!("The ", stringify!($name), " module, `gax::", $feature, "`.")]
             #[cfg(feature = $feature)]
             pub const $name: Module = Module {
                 path: concat!("gax::", $feature),
-                source: include_str!(concat!("wgsl/", $file, ".wgsl")),
+                source: include_str!(concat!("wgsl/", $feature, ".wgsl")),
             };
 
             #[doc = concat!("The same module in `f16`, `gax::", $feature, "_f16`: the same functions on")]
@@ -68,7 +68,7 @@ macro_rules! modules {
             #[cfg(feature = $feature)]
             pub const $name16: Module = Module {
                 path: concat!("gax::", $feature, "_f16"),
-                source: include_str!(concat!("wgsl/", $file, "_f16.wgsl")),
+                source: include_str!(concat!("wgsl/", $feature, "_f16.wgsl")),
             };
         )*
 
@@ -88,13 +88,13 @@ macro_rules! modules {
 }
 
 modules! {
-    "pga2d" PGA2D PGA2D_F16 "pga2d" "The PGA2D module, `gax::pga2d`.";
-    "pga3d" PGA3D PGA3D_F16 "pga3d" "The PGA3D module, `gax::pga3d`.";
-    "vga2d" VGA2D VGA2D_F16 "vga2d" "The VGA2D module, `gax::vga2d`.";
-    "vga3d" VGA3D VGA3D_F16 "vga3d" "The VGA3D module, `gax::vga3d`.";
-    "sta" STA STA_F16 "sta" "The STA module, `gax::sta`.";
-    "cga2d" CGA2D CGA2D_F16 "cga2d" "The CGA2D module, `gax::cga2d`.";
-    "cga3d" CGA3D CGA3D_F16 "cga3d" "The CGA3D module, `gax::cga3d`.";
-    "stap" STAP STAP_F16 "stap" "The STAP module, `gax::stap`.";
-    "csta" CSTA CSTA_F16 "csta" "The CSTA module, `gax::csta`.";
+    "pga2d" PGA2D PGA2D_F16;
+    "pga3d" PGA3D PGA3D_F16;
+    "vga2d" VGA2D VGA2D_F16;
+    "vga3d" VGA3D VGA3D_F16;
+    "sta" STA STA_F16;
+    "cga2d" CGA2D CGA2D_F16;
+    "cga3d" CGA3D CGA3D_F16;
+    "stap" STAP STAP_F16;
+    "csta" CSTA CSTA_F16;
 }

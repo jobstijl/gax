@@ -9,15 +9,10 @@
 
 #![cfg(feature = "pga3d")]
 
+use gax::ApproxEq;
 use gax::pga3d::*;
 use gax::{Extensor, Unit};
 use proptest::prelude::*;
-
-fn close<M: Extensor<Slots = (), Coef = f64>>(a: &M, b: &M) -> bool {
-    let (a, b) = (a.coeffs().as_ref(), b.coeffs().as_ref());
-    let scale = a.iter().chain(b).fold(1.0f64, |m, x| m.max(x.abs()));
-    a.iter().zip(b).all(|(x, y)| (x - y).abs() <= 1e-12 * scale)
-}
 
 fn point() -> impl Strategy<Value = Point<(), f64>> {
     prop::array::uniform4(-1.0f64..1.0).prop_map(Point::from_coeffs)
@@ -47,8 +42,8 @@ proptest! {
     #[test]
     fn sandwich_composes_as_product(a in unit_motor(), b in unit_motor(), p in point()) {
         let ab = a * b;
-        prop_assert!(close(&(ab >> p), &(a >> (b >> p))));
-        prop_assert!(close(&(a << (a >> p)), &p));
+        prop_assert!((ab >> p).approx_eq(&(a >> (b >> p)), 1e-12));
+        prop_assert!((a << (a >> p)).approx_eq(&p, 1e-12));
     }
 
     #[test]
@@ -70,7 +65,7 @@ proptest! {
         prop_assert!(((induced.of(l) & p).s() - (l & t.of(p)).s()).abs() < 1e-10);
         // For a rigid motion it pulls planes back: (m >> l) & (m >> p) == l & p, so the
         // induced map is m << l.
-        prop_assert!(close(&induced.of(l), &(m << l)));
+        prop_assert!(induced.of(l).approx_eq(&(m << l), 1e-12));
     }
 }
 

@@ -1,7 +1,10 @@
-//! Hand-written conveniences for the standard algebras: constructors with geometric meaning.
+//! Hand-written conveniences for the standard algebras: constructors with geometric meaning,
+//! and the geometry built on them.
 //!
-//! These are inherent functions on the generated types. For example, `Point::xyz(x, y, z)` and
-//! `Motor::translation(dx, dy, dz)` are thin wrappers that fix the sign conventions in one place.
+//! These are inherent functions on the generated types. Constructors such as
+//! `Point::xyz(x, y, z)` and `Motor::translation(dx, dy, dz)` fix the sign conventions in one
+//! place; on top of them come motors between flats ([`Between`]), `look_at`, `interpolate`,
+//! `angle`, reflections, principal frames of inertia, and conformal points and spheres.
 
 #[cfg(feature = "pga3d")]
 pub use pga3d_extras::PrincipalInertia;
@@ -11,13 +14,13 @@ pub use pga3d_extras::PrincipalInertia;
 /// points in PGA3D, lines and points in PGA2D.
 ///
 /// ```
+/// use gax::ApproxEq;
 /// use gax::pga3d::{Motor, Plane};
 /// let a = Plane::<(), f64>::from_normal([1.0, 0.0, 0.0], 0.0);
 /// let b = Plane::from_normal([0.0, 1.0, 0.0], 2.0);
 /// let m = Motor::between(a, b);
 /// let moved = (m >> a).normalized().into_inner();
-/// let want = b.normalized().into_inner();
-/// assert!(moved.c.iter().zip(want.c).all(|(x, y)| (x - y).abs() < 1e-12));
+/// assert!(moved.approx_eq(&b.normalized().into_inner(), 1e-12));
 /// ```
 pub trait Between<M>: Sized {
     /// The motor that carries `a` onto `b`.
@@ -164,8 +167,19 @@ mod pga3d_extras {
         /// ```
         #[inline]
         pub fn ideal_norm(self) -> T {
+            self.ideal_norm_squared().sqrt()
+        }
+
+        /// The squared ideal norm `x² + y² + z²`: a squared length, without the square root.
+        ///
+        /// ```
+        /// use gax::pga3d::Point;
+        /// assert_eq!(Point::direction(2.0, 3.0, 6.0).ideal_norm_squared(), 49.0);
+        /// ```
+        #[inline]
+        pub fn ideal_norm_squared(self) -> T {
             let (x, y, z) = (self.e032(), self.e013(), self.e021());
-            (x * x + y * y + z * z).sqrt()
+            x * x + y * y + z * z
         }
     }
 
@@ -347,14 +361,14 @@ mod pga3d_extras {
         ///
         /// ```
         /// use gax::pga3d::{Motor, Plane, Point};
+        /// use gax::ApproxEq;
         /// let (p, q) = (Point::<(), f64>::xyz(1.0, 2.0, 3.0), Point::xyz(0.0, 5.0, 3.0));
         /// let (r, s) = (Point::xyz(1.0, 2.0, 4.0), Point::xyz(0.0, 6.0, 3.0));
         /// // The motor that lays the line p r onto the line q s.
         /// let m = Motor::between(p & r, q & s);
         /// let l = (m >> (p & r)).normalized().into_inner();
-        /// let want = (q & s).normalized().into_inner();
-        /// assert!(l.c.iter().zip(want.c).all(|(x, y)| (x - y).abs() < 1e-12));
-        /// assert!(((m >> p).to_euclidean()[0] - 0.0).abs() < 1e-12); // p lands on q s
+        /// assert!(l.approx_eq(&(q & s).normalized().into_inner(), 1e-12));
+        /// assert!((m >> p).to_euclidean()[0].abs() < 1e-12); // p lands on q s
         /// ```
         #[inline]
         pub fn between<X: crate::extras::Between<Self>>(a: X, b: X) -> Unit<Self> {
@@ -386,7 +400,7 @@ mod pga3d_extras {
         /// let z_axis = Point::xyz(0.0, 0.0, 0.0) & Point::xyz(0.0, 0.0, 1.0);
         /// let r = Motor::rotation(z_axis, std::f64::consts::FRAC_PI_2);
         /// let p = (r >> Point::xyz(1.0, 0.0, 0.0)).to_euclidean();
-        /// assert!((p[0] - 0.0).abs() < 1e-12 && (p[1] - 1.0).abs() < 1e-12);
+        /// assert!(p[0].abs() < 1e-12 && (p[1] - 1.0).abs() < 1e-12);
         /// ```
         #[inline]
         pub fn rotation(axis: Line<(), T>, angle: T) -> Unit<Self> {
@@ -485,17 +499,12 @@ mod pga3d_extras {
             // rather than as a turn and a roll: a shortest rotation between nearly opposite
             // directions takes its axis from rounding, and looking nearly along `up` (from above,
             // `+z` up) once turned an `f32` camera round.
+            let norm2 = |v: [T; 3]| v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
             let unit = |v: [T; 3]| {
-                let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+                let n = norm2(v).sqrt();
                 v.map(|c| c / n)
             };
-            let cross = |a: [T; 3], b: [T; 3]| {
-                [
-                    a[1] * b[2] - a[2] * b[1],
-                    a[2] * b[0] - a[0] * b[2],
-                    a[0] * b[1] - a[1] * b[0],
-                ]
-            };
+            let cross = crate::moments::cross3;
             let z = unit([tx - ex, ty - ey, tz - ez]);
             let u = [up.e032(), up.e013(), up.e021()];
             let x = cross(u, z);
@@ -503,7 +512,6 @@ mod pga3d_extras {
             // least along).
             let other = T::select_lt(z[0].abs(), T::from_f64(0.5), o, zero);
             let fallback = cross([other, o - other, zero], z);
-            let norm2 = |v: [T; 3]| v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
             let tiny = T::epsilon() * T::epsilon() * norm2(u);
             let x = unit(core::array::from_fn(|i| {
                 T::select_lt(norm2(x), tiny, fallback[i], x[i])
@@ -617,8 +625,19 @@ mod pga2d_extras {
         /// ```
         #[inline]
         pub fn ideal_norm(self) -> T {
+            self.ideal_norm_squared().sqrt()
+        }
+
+        /// The squared ideal norm `x² + y²`: a squared length, without the square root.
+        ///
+        /// ```
+        /// use gax::pga2d::Point;
+        /// assert_eq!(Point::direction(3.0, 4.0).ideal_norm_squared(), 25.0);
+        /// ```
+        #[inline]
+        pub fn ideal_norm_squared(self) -> T {
             let (x, y) = (self.e20(), self.e01());
-            (x * x + y * y).sqrt()
+            x * x + y * y
         }
 
         /// The twist (a bivector: in PGA2D, a point) of a translation at velocity `(vx, vy)`:
@@ -753,9 +772,6 @@ mod pga2d_extras {
         pub fn interpolate(a: Unit<Self>, b: Unit<Self>, t: T) -> Unit<Self> {
             crate::extras::shared::interpolate::<Self, Point<(), T>, T>(a, b, t)
         }
-    }
-
-    impl<T: Real> Motor<(), T> {
         /// The angle of a rotation (a unit motor), counterclockwise, in `[-π, π]`: from its
         /// logarithm, whose point part is `-angle/2` times the (unit) centre.
         ///

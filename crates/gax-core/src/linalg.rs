@@ -2,8 +2,9 @@
 //!
 //! Extensor maps and forms are small (at most 32 × 32 for the algebras shipped) and their
 //! size is known at compile time, so the algorithms here are written over
-//! [`SquareArr`], implemented for `[[T; N]; N]`: `N` is only a loop bound, which LLVM unrolls,
-//! and no `generic_const_exprs` is needed. Every algorithm is branch free, using
+//! [`SquareArr`], implemented for `[[T; N]; N]` (and for the pairs of blades of a two-slot
+//! unknown): `N` is only a loop bound, which LLVM unrolls, and no `generic_const_exprs` is
+//! needed. Every algorithm is branch free, using
 //! [`Real::select_lt`] where a scalar implementation would branch, so the same code runs
 //! lane-wise on SIMD coefficients, one independent problem per lane.
 //!
@@ -165,44 +166,36 @@ pub fn lu<T: Real, M: SquareArr<T>>(a: &M) -> Lu<M, M::Vector> {
                         perm[p] = t;
                         sign[0] = -sign[0];
                     }
-                    let inv = m[k][k].recip();
+                } else {
+                    // Find the pivot row lane-wise: the largest |m[r][k]| for r >= k.
+                    let mut best = m[k][k].abs();
+                    let mut best_row = T::from_i64(k as i64);
                     for r in k + 1..n {
-                        let f = m[r][k] * inv;
-                        m[r][k] = f;
-                        for j in k + 1..n {
-                            m[r][j] = m[r][j] - f * m[k][j];
+                        let v = m[r][k].abs();
+                        best_row = T::select_lt(best, v, T::from_i64(r as i64), best_row);
+                        best = best.max(v);
+                    }
+                    // Swap row k with the pivot row, lane-wise; skipped when no lane needs a swap.
+                    let half = T::from_f64(0.5);
+                    let no_swap = T::all_lt((best_row - T::from_i64(k as i64)).abs(), half);
+                    for r in (k + 1..n).filter(|_| !no_swap) {
+                        let rr = T::from_i64(r as i64);
+                        // is_pivot: best_row == r, as a select on (best_row < r+0.5) and (r-0.5 < best_row).
+                        let lo = rr - half;
+                        let hi = rr + half;
+                        let sel = |x: T, y: T| {
+                            T::select_lt(best_row, hi, T::select_lt(lo, best_row, x, y), y)
+                        };
+                        for j in 0..n {
+                            let (a_k, a_r) = (m[k][j], m[r][j]);
+                            m[k][j] = sel(a_r, a_k);
+                            m[r][j] = sel(a_k, a_r);
                         }
+                        let (p_k, p_r) = (perm[k], perm[r]);
+                        perm[k] = sel(p_r, p_k);
+                        perm[r] = sel(p_k, p_r);
+                        sign[0] = sel(-sign[0], sign[0]);
                     }
-                    continue;
-                }
-                // Find the pivot row lane-wise: the largest |m[r][k]| for r >= k.
-                let mut best = m[k][k].abs();
-                let mut best_row = T::from_i64(k as i64);
-                for r in k + 1..n {
-                    let v = m[r][k].abs();
-                    best_row = T::select_lt(best, v, T::from_i64(r as i64), best_row);
-                    best = best.max(v);
-                }
-                // Swap row k with the pivot row, lane-wise; skipped when no lane needs a swap.
-                let half = T::from_f64(0.5);
-                let no_swap = T::all_lt((best_row - T::from_i64(k as i64)).abs(), half);
-                for r in (k + 1..n).filter(|_| !no_swap) {
-                    let rr = T::from_i64(r as i64);
-                    // is_pivot: best_row == r, as a select on (best_row < r+0.5) and (r-0.5 < best_row).
-                    let lo = rr - half;
-                    let hi = rr + half;
-                    let sel = |x: T, y: T| {
-                        T::select_lt(best_row, hi, T::select_lt(lo, best_row, x, y), y)
-                    };
-                    for j in 0..n {
-                        let (a_k, a_r) = (m[k][j], m[r][j]);
-                        m[k][j] = sel(a_r, a_k);
-                        m[r][j] = sel(a_k, a_r);
-                    }
-                    let (p_k, p_r) = (perm[k], perm[r]);
-                    perm[k] = sel(p_r, p_k);
-                    perm[r] = sel(p_k, p_r);
-                    sign[0] = sel(-sign[0], sign[0]);
                 }
                 let inv = m[k][k].recip();
                 for r in k + 1..n {
@@ -421,8 +414,8 @@ fn jacobi_rotation<T: Real>(app: T, aqq: T, apq: T) -> (T, T) {
 ///
 /// Returns the eigenvalues (unsorted) and the eigenvectors as the *rows* of the second
 /// matrix: `vectors[k]` is the eigenvector of `values[k]`. Runs a fixed number of sweeps
-/// (`sweeps`), enough for full precision at these sizes (quadratic convergence); 8 is a good
-/// default for `N ≤ 8`, 12 for `N ≤ 32`.
+/// (`sweeps`), enough for full precision at these sizes (quadratic convergence); the map
+/// methods take `extensor::sweeps(N)`: 8, 10 or 14 by size.
 #[inline]
 pub fn eigh<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M::Vector, M) {
     T::vectorize(
@@ -559,19 +552,23 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
             let mut u = transpose(a); // rows of u = columns of A
             let mut v: M = identity(); // rows of v accumulate the right rotations
             let tol = T::epsilon() * T::epsilon();
+            // The Gram entries of columns `p` and `q`: `(|u_p|², |u_q|², u_p · u_q)`.
+            let gram = |u: &M, p: usize, q: usize| {
+                let (mut alpha, mut beta, mut gamma) =
+                    (u[p][0] * u[p][0], u[q][0] * u[q][0], u[p][0] * u[q][0]);
+                for k in 1..n {
+                    alpha = alpha + u[p][k] * u[p][k];
+                    beta = beta + u[q][k] * u[q][k];
+                    gamma = gamma + u[p][k] * u[q][k];
+                }
+                (alpha, beta, gamma)
+            };
             for _ in 0..sweeps {
                 // Converged when every pair of columns is orthogonal to working precision, in every lane.
                 let mut worst = T::zero();
                 for p in 0..n {
                     for q in p + 1..n {
-                        let mut alpha = u[p][0] * u[p][0];
-                        let mut beta = u[q][0] * u[q][0];
-                        let mut gamma = u[p][0] * u[q][0];
-                        for k in 1..n {
-                            alpha = alpha + u[p][k] * u[p][k];
-                            beta = beta + u[q][k] * u[q][k];
-                            gamma = gamma + u[p][k] * u[q][k];
-                        }
+                        let (alpha, beta, gamma) = gram(&u, p, q);
                         // gamma² / (alpha beta), guarded against zero columns
                         let r = gamma * gamma - tol * alpha * beta;
                         worst = worst.max(r);
@@ -582,14 +579,7 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
                 }
                 for p in 0..n {
                     for q in p + 1..n {
-                        let mut alpha = u[p][0] * u[p][0];
-                        let mut beta = u[q][0] * u[q][0];
-                        let mut gamma = u[p][0] * u[q][0];
-                        for k in 1..n {
-                            alpha = alpha + u[p][k] * u[p][k];
-                            beta = beta + u[q][k] * u[q][k];
-                            gamma = gamma + u[p][k] * u[q][k];
-                        }
+                        let (alpha, beta, gamma) = gram(&u, p, q);
                         let (c, s) = jacobi_rotation(alpha, beta, gamma);
                         for k in 0..n {
                             let (x, y) = (u[p][k], u[q][k]);
@@ -620,15 +610,13 @@ pub fn svd<T: Real, M: SquareArr<T>>(a: &M, sweeps: usize) -> (M, M::Vector, M) 
             for i in 0..n {
                 neg[i] = -sigma[i];
             }
-            let mut uv_sort_u = u;
-            let mut neg_u = neg;
-            sort_pairs(&mut neg_u, &mut uv_sort_u);
-            let mut vv = v;
-            sort_pairs(&mut neg, &mut vv);
+            let mut neg_v = neg;
+            sort_pairs(&mut neg, &mut u);
+            sort_pairs(&mut neg_v, &mut v);
             for i in 0..n {
                 sigma[i] = -neg[i];
             }
-            (uv_sort_u, sigma, vv)
+            (u, sigma, v)
         },
     )
 }

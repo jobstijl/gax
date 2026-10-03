@@ -490,14 +490,14 @@ impl Sfx {
         v.filt.start(0.0, patch.cut_time.max(1e-3), sr);
     }
 
-    /// Voices sounding (for tests and the debug overlay).
-    #[cfg_attr(not(test), allow(dead_code))]
+    /// Voices sounding (for tests).
+    #[cfg(test)]
     pub fn active(&self) -> usize {
         self.voices.iter().filter(|v| v.active).count()
     }
 
     /// Voices of a family sounding.
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub fn active_in(&self, f: Family) -> usize {
         self.voices
             .iter()

@@ -11,8 +11,11 @@
 //!   [`fp::Fp`], a prime field for exact randomized identity checks, and [`dual::Dual`], dual
 //!   numbers for forward-mode derivatives, and [`strict::Strict`], coefficients that give the
 //!   same bits on every target and SIMD level).
-//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`Pairing`], [`LeastSquares`], [`LeastSquaresPair`], [`OfPair`], [`PseudoInverse`]:
-//!   solving, eigenproblems, pairings and least squares on maps and forms, built on [`linalg`].
+//! * [`SquareMap`], [`Endomorphism`], [`Form`], [`FormAsMap`], [`Pairing`], [`OfBoth`],
+//!   [`TraceFirst`], [`SingularValues`], [`PseudoInverse`], [`LeastSquares`],
+//!   [`LeastSquaresPair`] and [`OfPair`]: solving, eigenproblems (real, and [`Complex`] for
+//!   general maps), singular values, pairings and least squares on maps and forms, built on
+//!   [`linalg`].
 //! * [`Unit`] and [`Prepared`]: certified unit versors and prepared versor actions.
 //! * [`study`]: functions of Study numbers, behind exp, log, normalization and inverses.
 //!

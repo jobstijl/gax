@@ -28,15 +28,7 @@ impl Packed {
     /// Pack an input at the ship's arc length `s` (lossy: the simulation sees `unpack`).
     pub fn pack(i: &Input, s: f32) -> Packed {
         let q = |x: f32, k: f32| (x * k).round().clamp(-127.0, 127.0) as i8;
-        let (mut mx, mut my) = (q(i.movement.e032(), 127.0), q(i.movement.e013(), 127.0));
-        // Stay within the unit disc after rounding: step the larger component inward.
-        while i32::from(mx).pow(2) + i32::from(my).pow(2) > 127 * 127 {
-            if mx.unsigned_abs() >= my.unsigned_abs() {
-                mx -= mx.signum();
-            } else {
-                my -= my.signum();
-            }
-        }
+        let (mx, my) = crate::sim::replay::pack_stick(i.movement.e032(), i.movement.e013());
         let aim = i.aim.unitized();
         Packed {
             mx,

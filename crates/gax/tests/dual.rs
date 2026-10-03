@@ -4,22 +4,16 @@
 
 #![cfg(feature = "pga3d")]
 
+#[path = "support/rng.rs"]
+mod rng;
+use rng::Rng;
+
 use gax::dual::{Dual, derivative, gradient, jacobian};
 use gax::fp::Fp;
 use gax::pga3d::{Line, Motor, Plane, Point};
 use gax::{Coef, Real};
 
 type D1 = Dual<f64, 1>;
-
-struct Rng(u64);
-impl Rng {
-    fn unit(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    }
-}
 
 /// The central difference of `f` at `x`.
 fn central(f: impl Fn(f64) -> f64, x: f64) -> f64 {
@@ -37,11 +31,11 @@ fn line<T: Real>(c: [T; 6]) -> Line<(), T> {
 fn exp_along_a_line() {
     let mut rng = Rng(0xd0a1);
     for k in 0..200 {
-        let mut b: [f64; 6] = core::array::from_fn(|_| rng.unit());
+        let mut b: [f64; 6] = core::array::from_fn(|_| rng.next_f64());
         if k % 3 == 1 {
             b[..3].fill(0.0); // a translation
         }
-        let t0 = rng.unit();
+        let t0 = rng.next_f64();
         for i in 0..8 {
             let (_, d) = derivative(
                 |t: D1| line(b.map(D1::constant)).gp(t).exp().into_inner().c[i],
@@ -63,8 +57,8 @@ fn exp_along_a_line() {
 fn log_of_exp() {
     let mut rng = Rng(0x10_9e);
     for _ in 0..200 {
-        let b: [f64; 6] = core::array::from_fn(|_| 0.5 * rng.unit());
-        let t0 = 0.3 + 0.5 * rng.unit().abs();
+        let b: [f64; 6] = core::array::from_fn(|_| 0.5 * rng.next_f64());
+        let t0 = 0.3 + 0.5 * rng.next_f64().abs();
         for i in 0..6 {
             let (_, d) = derivative(
                 |t: D1| {
@@ -89,7 +83,7 @@ fn gradient_through_motions() {
     };
     let mut rng = Rng(0x9ad);
     for _ in 0..100 {
-        let x0: [f64; 3] = core::array::from_fn(|_| rng.unit());
+        let x0: [f64; 3] = core::array::from_fn(|_| rng.next_f64());
         let (v, g) = gradient(
             |[x, y, a]: [Dual<f64, 3>; 3]| {
                 let c = Dual::constant;
@@ -167,9 +161,9 @@ fn jacobian_of_a_join() {
 fn derivative_of_a_solve() {
     let mut rng = Rng(0x501e);
     for _ in 0..50 {
-        let a: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.unit()));
-        let e: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.unit()));
-        let b: [f64; 4] = core::array::from_fn(|_| rng.unit());
+        let a: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
+        let e: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
+        let b: [f64; 4] = core::array::from_fn(|_| rng.next_f64());
         let am = Point::<(Point,), f64>::from_coeffs(a);
         let em = Point::<(Point,), f64>::from_coeffs(e);
         let x: Point<(), f64> = am.solve(Point::<(), f64>::from_coeffs(b));
@@ -239,8 +233,8 @@ fn csta_exp_along_a_bivector() {
     let mut rng = Rng(0xc57a);
     for k in 0..60 {
         let size = [0.3, 1.0, 2.5][k % 3];
-        let b: [f64; 15] = core::array::from_fn(|_| size * rng.unit());
-        let t0 = 0.5 + 0.5 * rng.unit().abs();
+        let b: [f64; 15] = core::array::from_fn(|_| size * rng.next_f64());
+        let t0 = 0.5 + 0.5 * rng.next_f64().abs();
         let bv = Bivector::<(), f64>::from_coeffs(b);
         let m = bv.gp(t0).exp().into_inner();
         let want: Even<(), f64> = bv * m;

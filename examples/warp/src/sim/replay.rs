@@ -69,19 +69,25 @@ const FIRE: u8 = 1;
 const BOMB: u8 = 2;
 const AIMING: u8 = 4;
 
+/// A stick's `(x, y)` in `[-1, 1]` as two bytes, kept within the unit disc after rounding (the
+/// larger component steps inward). Both games' replays pack their movement with it.
+pub fn pack_stick(x: f32, y: f32) -> (i8, i8) {
+    let q = |x: f32| (x.clamp(-1.0, 1.0) * 127.0).round() as i8;
+    let (mut mx, mut my) = (q(x), q(y));
+    while i32::from(mx).pow(2) + i32::from(my).pow(2) > 127 * 127 {
+        if mx.unsigned_abs() >= my.unsigned_abs() {
+            mx -= mx.signum();
+        } else {
+            my -= my.signum();
+        }
+    }
+    (mx, my)
+}
+
 impl Packed {
     /// Pack an input (lossy: see `quantize`).
     pub fn pack(i: &Input) -> Packed {
-        let q = |x: f32| (x.clamp(-1.0, 1.0) * 127.0).round() as i8;
-        let (mut mx, mut my) = (q(i.movement.e20()), q(i.movement.e01()));
-        // Stay within the unit disc after rounding: step the larger component inward.
-        while i32::from(mx).pow(2) + i32::from(my).pow(2) > 127 * 127 {
-            if mx.unsigned_abs() >= my.unsigned_abs() {
-                mx -= mx.signum();
-            } else {
-                my -= my.signum();
-            }
-        }
+        let (mx, my) = pack_stick(i.movement.e20(), i.movement.e01());
         // The aim's angle: of the rotation from the x axis to it.
         let aiming = i.aim.ideal_norm() > 0.2;
         let angle = super::body::angle_of(i.aim);

@@ -198,14 +198,8 @@ impl Program {
         live
     }
 
-    /// Remove dead instructions and renumber.
+    /// Remove instructions not needed by any output, and renumber.
     pub fn compact(&mut self) {
-        self.compact_keep_live_of(self.outputs.len());
-    }
-
-    /// Remove instructions not needed by any output, renumbering all outputs. (The
-    /// argument is accepted for call-site clarity; every listed output is kept alive.)
-    pub fn compact_keep_live_of(&mut self, _primary: usize) {
         let live = self.live();
         let mut map = vec![usize::MAX; self.instrs.len()];
         let mut out = Vec::new();
@@ -413,6 +407,15 @@ impl Program {
     /// `var` renders an input variable, and temporaries are named `{prefix}{k}`.
     pub fn emit_lets(&self, var: &impl Fn(Var) -> String, prefix: &str, out: &mut String) {
         self.emit_lets_to(Target::Rust, var, prefix, out);
+    }
+
+    /// The outputs as expressions, after [`Program::emit_lets`] with the same `var` and
+    /// `prefix`.
+    pub fn render_outputs(&self, var: &impl Fn(Var) -> String, prefix: &str) -> Vec<String> {
+        self.outputs
+            .iter()
+            .map(|o| render(o, var, prefix))
+            .collect()
     }
 
     /// Emit the instructions as `let` statements in the language `target`.

@@ -107,26 +107,32 @@ fn main() {
     sim_hash();
 }
 
-/// A hash of everything a replay depends on: the simulation's sources and gax's. Replays
+/// A hash of everything a replay depends on: both games' simulations (the Plane's `sim`, the
+/// Tunnel's `tunnel`), the helpers they call (`geom`, `signal`), and gax's sources. Replays
 /// record it, so a replay from another build is flagged instead of silently diverging.
 fn sim_hash() {
-    fn walk(dir: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
-        let Ok(entries) = std::fs::read_dir(dir) else {
+    fn walk(path: &std::path::Path, files: &mut Vec<std::path::PathBuf>) {
+        if path.extension().is_some_and(|x| x == "rs") {
+            files.push(path.to_path_buf());
+        }
+        let Ok(entries) = std::fs::read_dir(path) else {
             return;
         };
         for e in entries.flatten() {
-            let p = e.path();
-            if p.is_dir() {
-                walk(&p, files);
-            } else if p.extension().is_some_and(|x| x == "rs") {
-                files.push(p);
-            }
+            walk(&e.path(), files);
         }
     }
     let mut files = Vec::new();
-    for dir in ["src/sim", "../../crates/gax/src"] {
-        walk(std::path::Path::new(dir), &mut files);
-        println!("cargo:rerun-if-changed={dir}");
+    for path in [
+        "src/sim",
+        "src/tunnel",
+        "src/geom.rs",
+        "src/signal.rs",
+        "../../crates/gax/src",
+        "../../crates/gax-core/src",
+    ] {
+        walk(std::path::Path::new(path), &mut files);
+        println!("cargo:rerun-if-changed={path}");
     }
     files.sort();
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;

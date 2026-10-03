@@ -239,7 +239,6 @@ macro_rules! float_impl {
 float_impl!(f32);
 float_impl!(f64);
 
-/// Elementary functions for `f32`/`f64`: `std` when available, else the `libm` crate.
 /// The elementary functions of `f32` and `f64`: the platform's (through `std`) by default; with
 /// the `deterministic` feature, pure Rust everywhere: `crate::math` for `f32` (the functions the
 /// SIMD lanes use) and the `libm` crate for `f64`.
@@ -305,7 +304,7 @@ pub(crate) mod elementary {
 #[cfg_attr(feature = "deterministic", allow(dead_code))]
 mod libm_shim {
     macro_rules! shim {
-        ($t:ident, $libm:ident, [$($f:ident => $lf:ident ($($a:ident),*)),*]) => {
+        ($t:ident, [$($f:ident => $lf:ident ($($a:ident),*)),*]) => {
             pub mod $t {
                 $(
                     #[inline(always)]
@@ -324,8 +323,8 @@ mod libm_shim {
             }
         };
     }
-    shim!(f32, Libm, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
+    shim!(f32, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
         cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x)]);
-    shim!(f64, Libm, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
+    shim!(f64, [sqrt => sqrt(x), abs => fabs(x), sin => sin(x), cos => cos(x), sinh => sinh(x),
         cosh => cosh(x), atan2 => atan2(y, x), ln => log(x), exp => exp(x)]);
 }
