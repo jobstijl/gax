@@ -9,7 +9,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::motions::{Linear, Motions, Pga2d, Pga3d, Vga2d, Vga3d};
 use gax::{Extensor, Of};
@@ -23,7 +23,7 @@ fn close<X: Extensor<Slots = (), Coef = f64>>(a: X, b: X, tol: f64) -> bool {
 }
 
 fn laws<G: Motions<f64>>(seed: u64, euclidean: bool) {
-    let mut rng = Rng(seed);
+    let mut rng = rng(seed);
     for _ in 0..50 {
         // Points: coordinates round trip.
         let c = G::coords_from_fn(|_| 3.0 * rng.next_f64());
@@ -37,7 +37,12 @@ fn laws<G: Motions<f64>>(seed: u64, euclidean: bool) {
 
         // exp and log, for a twist small enough to be the principal one.
         let b: G::Twist = rng.value(0.4);
-        assert!(close(G::log(G::exp(b)), b, 1e-12));
+        let name = std::any::type_name::<G>();
+        assert!(
+            close(G::log(G::exp(b)), b, 1e-12),
+            "{name}: log(exp({b:?})) = {:?}",
+            G::log(G::exp(b))
+        );
         let m = G::exp(b);
         assert!(close(G::log(G::reverse(m) * m), Linear::zero(), 1e-12));
 
@@ -79,7 +84,7 @@ fn every_algebra() {
 /// under `exp(t b)` (central differences of its coordinates) and `sig` the metric's diagonal
 /// on the coordinates: twice the kinetic energy, in one convention for every algebra.
 fn energy_ratios<G: Motions<f64>>(seed: u64, sig: &[f64]) -> Vec<f64> {
-    let mut rng = Rng(seed);
+    let mut rng = rng(seed);
     (0..20)
         .map(|_| {
             let p = G::point(G::coords_from_fn(|_| 2.0 * rng.next_f64()));

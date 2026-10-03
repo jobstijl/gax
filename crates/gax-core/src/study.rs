@@ -495,31 +495,34 @@ pub fn rsqrt_q<T: Real>(a: T, q: T) -> [T; 2] {
 /// This covers any direction `X`, not only a fixed blade, which is what 5D algebras need: there
 /// the square of a bivector is a scalar plus a 4-vector whose square is a scalar. With
 /// `w = √q` (a complex root), `f0 = (f(a+w) + f(a−w))/2` and `f1 = (f(a+w) − f(a−w))/(2w)`;
-/// near `q = 0` the derivative is used instead, `f1 = f'(a)`.
+/// near `q = 0`, Simpson's rule on `f'` over `[a − w, a + w]` instead of the quotient.
 #[inline(always)]
 pub fn study_q<T: Real>(a: T, q: T, f: impl Fn(Dual<Cx<T>>) -> Dual<Cx<T>>) -> (T, T) {
-    let zero = T::zero();
     let w = Cx::real(q).sqrt(); // real for q > 0, imaginary for q < 0
-    let lift = |z: Cx<T>| Dual {
-        p: z,
-        d: Cx::real(zero),
+    // f and f' (dual evaluation) at a − w, a and a + w.
+    let at = |z: Cx<T>| {
+        f(Dual {
+            p: z,
+            d: Cx::real(T::one()),
+        })
     };
-    let plus = f(lift(Cx::real(a) + w)).p;
-    let minus = f(lift(Cx::real(a) - w)).p;
-    let half = T::from_f64(0.5);
-    let f0 = (plus.re + minus.re) * half;
-    let diff = (plus - minus) / (w + w);
-    // Near q = 0: the derivative, from a dual evaluation.
-    let d = f(Dual {
-        p: Cx::real(a),
-        d: Cx::real(T::one()),
-    });
-    // Lane-wise: where |q| is tiny the finite difference is 0/0, and the select discards it.
-    let eps = T::from_f64(1e-8);
-    (
-        T::select_lt(q.abs(), eps, d.p.re, f0),
-        T::select_lt(q.abs(), eps, d.d.re, diff.re),
-    )
+    let (minus, mid, plus) = (at(Cx::real(a) - w), at(Cx::real(a)), at(Cx::real(a) + w));
+    // f0 = Σ f⁽²ᵏ⁾(a) qᵏ/(2k)! is the mean of f(a ± w): a sum, exact for every q.
+    let f0 = (plus.p.re + minus.p.re) * T::from_f64(0.5);
+    // f1 = (f(a + w) − f(a − w))/(2w), the mean of f' over [a − w, a + w]. The quotient cancels
+    // as q shrinks (error ε/√|q|), so below a threshold Simpson's rule on f' takes over (error
+    // q² f⁽⁵⁾/180), written to give f'(a) exactly at q = 0. The two errors meet where
+    // ε/√q = q²/180: 4e-6 in f64 (both then about 1e-13), 1e-2 in f32.
+    let quotient = (plus.p - minus.p) / (w + w);
+    let simpson = mid.d + (minus.d + plus.d - mid.d - mid.d) * Cx::real(T::from_f64(1.0 / 6.0));
+    let small = T::select_lt(
+        T::epsilon(),
+        T::from_f64(1e-10),
+        T::from_f64(4e-6),
+        T::from_f64(1e-2),
+    );
+    // Lane-wise: where q is 0 the quotient is 0/0, and the select discards it.
+    (f0, T::select_lt(q.abs(), small, simpson.re, quotient.re))
 }
 
 /// [`exp_coeffs`] for `B² = lambda + Q` with `Q² = q`: `exp(B) = c0 + c1 Q + (s0 + s1 Q) B`.
@@ -1396,6 +1399,38 @@ pub fn turn_polynomial<T: Real>(n: T) -> [T; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `study_q` for `f = exp`, whose answer is known in closed form: `f0 = eᵃ cosh √q` and
+    /// `f1 = eᵃ sinh √q / √q` (cos and sin for `q < 0`), across the small-`q` switch.
+    #[test]
+    fn study_q_is_accurate_for_every_q() {
+        let exp = |x: Dual<Cx<f64>>| x.cosh() + x.sinh();
+        for a in [-0.7, 0.0, 0.3, 1.2] {
+            for q in [
+                0.0, 1e-14, 1e-11, 1e-9, 3e-7, 1e-6, 2e-6, 1e-4, 1e-2, 0.1, -1e-12, -1e-8, -5e-7,
+                -1e-6, -3e-6, -1e-3, -0.1,
+            ] {
+                let (f0, f1) = study_q(a, q, exp);
+                let r = q.abs().sqrt();
+                let (c, s) = if q >= 0.0 {
+                    (r.cosh(), if r == 0.0 { 1.0 } else { r.sinh() / r })
+                } else {
+                    (r.cos(), r.sin() / r)
+                };
+                let e = a.exp();
+                assert!(
+                    (f0 - e * c).abs() < 2e-15 * e,
+                    "f0 at {a}, {q}: {f0} vs {}",
+                    e * c
+                );
+                assert!(
+                    (f1 - e * s).abs() < 2e-13 * e,
+                    "f1 at {a}, {q}: {f1} vs {}",
+                    e * s
+                );
+            }
+        }
+    }
 
     #[test]
     fn scalar_channels() {
