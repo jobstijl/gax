@@ -35,6 +35,55 @@ where
     all.gp(size * T::from_i64(n * (n + 1)).recip())
 }
 
+/// What the moments in 2D and 3D share, on the form's slot kind `$P` (lines or planes): the
+/// sum of two bodies, the dyad of a point and `moved`.
+macro_rules! scaffolding {
+    ($P:ident, $ps:literal, $body:literal, $bodies:literal) => {
+        impl<T: Real> Default for Moments<T> {
+            fn default() -> Self {
+                Moments {
+                    form: Scalar::zero(),
+                }
+            }
+        }
+
+        impl<T: Real> core::ops::Add for Moments<T> {
+            type Output = Self;
+            #[doc = concat!("The moments of two ", $bodies, " together.")]
+            fn add(self, o: Self) -> Self {
+                Moments {
+                    form: self.form + o.form,
+                }
+            }
+        }
+
+        impl<T: Real> core::ops::AddAssign for Moments<T> {
+            fn add_assign(&mut self, o: Self) {
+                self.form += o.form;
+            }
+        }
+
+        #[doc = concat!("`(P & x)(Q & x)`: the dyad of a point, a form on ", $ps, ".")]
+        #[inline]
+        fn dyad<T: Real>(x: Point<(), T>) -> Scalar<($P, $P), T> {
+            ($P::slot() & x) * ($P::slot() & x)
+        }
+
+        impl<T: Real> Moments<T> {
+            #[doc = concat!("The moments after moving the ", $body, " by `m`.")]
+            pub fn moved(&self, m: Unit<Motor<(), T>>) -> Self {
+                // ∫ over the moved body of (P & x)(Q & x) is ∫ over this one of
+                // ((m << P) & x)((m << Q) & x): compose both slots with the map of `~m`.
+                let back = m << $P::<(), T>::slot();
+                Moments {
+                    form: self.form.of(back).at::<1>().of(back),
+                }
+            }
+        }
+    };
+}
+use scaffolding;
+
 #[cfg(feature = "pga3d")]
 mod pga3d_moments {
     use super::simplex_dyads;
@@ -64,35 +113,7 @@ mod pga3d_moments {
         pub form: Scalar<(Plane, Plane), T>,
     }
 
-    impl<T: Real> Default for Moments<T> {
-        fn default() -> Self {
-            Moments {
-                form: Scalar::zero(),
-            }
-        }
-    }
-
-    impl<T: Real> core::ops::Add for Moments<T> {
-        type Output = Self;
-        /// The moments of two bodies together.
-        fn add(self, o: Self) -> Self {
-            Moments {
-                form: self.form + o.form,
-            }
-        }
-    }
-
-    impl<T: Real> core::ops::AddAssign for Moments<T> {
-        fn add_assign(&mut self, o: Self) {
-            self.form += o.form;
-        }
-    }
-
-    /// `(P & x)(Q & x)`: the dyad of a point, a form on planes.
-    #[inline]
-    fn dyad<T: Real>(x: Point<(), T>) -> Scalar<(Plane, Plane), T> {
-        (Plane::slot() & x) * (Plane::slot() & x)
-    }
+    super::scaffolding!(Plane, "planes", "body", "bodies");
 
     /// The planes whose pairings with a point `w (x, y, z, 1)` are `w x`, `w y`, `w z` and `w`.
     #[inline]
@@ -176,16 +197,6 @@ mod pga3d_moments {
                     self.form.of(planes[i]).of(planes[j]).s() - v * c[i] * c[j]
                 })
             })
-        }
-
-        /// The moments after moving the body by `m`.
-        pub fn moved(&self, m: Unit<Motor<(), T>>) -> Self {
-            // ∫ over the moved body of (P & x)(Q & x) is ∫ over this one of
-            // ((m << P) & x)((m << Q) & x): compose both slots with the plane map of `~m`.
-            let back = m << Plane::<(), T>::slot();
-            Moments {
-                form: self.form.of(back).at::<1>().of(back),
-            }
         }
 
         /// The inertia of the body at `density`, about its centre of mass: the principal
@@ -321,35 +332,7 @@ mod pga2d_moments {
         pub form: Scalar<(Line, Line), T>,
     }
 
-    impl<T: Real> Default for Moments<T> {
-        fn default() -> Self {
-            Moments {
-                form: Scalar::zero(),
-            }
-        }
-    }
-
-    impl<T: Real> core::ops::Add for Moments<T> {
-        type Output = Self;
-        /// The moments of two regions together.
-        fn add(self, o: Self) -> Self {
-            Moments {
-                form: self.form + o.form,
-            }
-        }
-    }
-
-    impl<T: Real> core::ops::AddAssign for Moments<T> {
-        fn add_assign(&mut self, o: Self) {
-            self.form += o.form;
-        }
-    }
-
-    /// `(P & x)(Q & x)`: the dyad of a point, a form on lines.
-    #[inline]
-    fn dyad<T: Real>(x: Point<(), T>) -> Scalar<(Line, Line), T> {
-        (Line::slot() & x) * (Line::slot() & x)
-    }
+    super::scaffolding!(Line, "lines", "region", "regions");
 
     /// The lines whose pairings with a point `w (x, y, 1)` are `w x`, `w y` and `w`.
     #[inline]
@@ -414,14 +397,6 @@ mod pga2d_moments {
         pub fn polar_moment(&self, density: T) -> T {
             let c = self.central_second_moments();
             (c[0][0] + c[1][1]) * density
-        }
-
-        /// The moments after moving the region by `m`.
-        pub fn moved(&self, m: Unit<Motor<(), T>>) -> Self {
-            let back = m << Line::<(), T>::slot();
-            Moments {
-                form: self.form.of(back).at::<1>().of(back),
-            }
         }
     }
 }

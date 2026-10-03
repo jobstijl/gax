@@ -29,42 +29,25 @@ pub trait Between<M>: Sized {
 
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
 /// `exp(log(b / a) / 2)`, the square root of the ratio: the motion that carries `a` onto `b`.
-/// The ratio is normalized first, so `a` and `b` need not be.
-macro_rules! between_by_ratio {
-    ($alg:ident: $($k:ident),* => $biv:ident) => {$(
+/// The ratio is normalized first, so `a` and `b` need not be. A kind listed with a method
+/// passes both through it first: points are unitized, as no motor carries a point onto its
+/// negative (motors keep the sign of the weight).
+macro_rules! between {
+    ($alg:ident: $($k:ident $(.$prep:ident())?),* => $biv:ident) => {$(
         impl<T: crate::Real> Between<crate::$alg::Motor<(), T>> for crate::$alg::$k<(), T> {
             #[inline]
             fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
-                let half: crate::$alg::$biv<(), T> = (b / a).normalized().log();
+                let half: crate::$alg::$biv<(), T> =
+                    (b$(.$prep())? / a$(.$prep())?).normalized().log();
                 half.gp(T::from_f64(0.5)).exp()
             }
         }
     )*};
 }
 #[cfg(feature = "pga3d")]
-between_by_ratio!(pga3d: Plane, Line => Line);
+between!(pga3d: Plane, Line, Point.unitized() => Line);
 #[cfg(feature = "pga2d")]
-between_by_ratio!(pga2d: Line => Point);
-
-#[cfg(any(feature = "pga2d", feature = "pga3d"))]
-/// Points: the translation between them. No motor carries a point onto its negative (motors
-/// keep the sign of the weight), so the points are unitized first.
-macro_rules! between_points {
-    ($alg:ident => $biv:ident) => {
-        impl<T: crate::Real> Between<crate::$alg::Motor<(), T>> for crate::$alg::Point<(), T> {
-            #[inline]
-            fn between(a: Self, b: Self) -> crate::Unit<crate::$alg::Motor<(), T>> {
-                let half: crate::$alg::$biv<(), T> =
-                    (b.unitized() / a.unitized()).normalized().log();
-                half.gp(T::from_f64(0.5)).exp()
-            }
-        }
-    };
-}
-#[cfg(feature = "pga3d")]
-between_points!(pga3d => Line);
-#[cfg(feature = "pga2d")]
-between_points!(pga2d => Point);
+between!(pga2d: Line, Point.unitized() => Point);
 
 /// Written once for PGA2D and PGA3D through the value traits: their kinds differ (a rotation is
 /// about a point in 2D and about a line in 3D), the expressions do not.

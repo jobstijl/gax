@@ -4,6 +4,14 @@
 //! dependency on those libraries: the arrays are the boundary (docs/guide.md, "Other math
 //! libraries").
 
+/// The column-major homogeneous matrix of a map on points given by its rows (its outputs,
+/// the weight last), divided by its weight entry (a motor's squared norm).
+#[cfg(any(feature = "pga2d", feature = "pga3d"))]
+fn columns<T: crate::Real, const N: usize>(rows: [[T; N]; N]) -> [[T; N]; N] {
+    let s = rows[N - 1][N - 1].recip();
+    core::array::from_fn(|j| core::array::from_fn(|i| rows[i][j] * s))
+}
+
 #[cfg(feature = "pga3d")]
 mod pga3d_interop {
     use crate::pga3d::{Motor, Point, Rotor};
@@ -101,10 +109,7 @@ mod pga3d_interop {
         /// ```
         #[inline]
         pub fn to_matrix(self) -> [[T; 4]; 4] {
-            // The map's rows are its outputs (x, y, z, w); its weight entry is the squared norm.
-            let rows = (self >> Point::slot()).c;
-            let s = rows[3][3].recip();
-            core::array::from_fn(|j| core::array::from_fn(|i| rows[i][j] * s))
+            super::columns((self >> Point::slot()).c)
         }
 
         /// The motion of a rigid column-major homogeneous 4×4 matrix (a rotation and a
@@ -145,9 +150,7 @@ mod pga2d_interop {
         /// ```
         #[inline]
         pub fn to_matrix(self) -> [[T; 3]; 3] {
-            let rows = (self >> Point::slot()).c;
-            let s = rows[2][2].recip();
-            core::array::from_fn(|j| core::array::from_fn(|i| rows[i][j] * s))
+            super::columns((self >> Point::slot()).c)
         }
 
         /// The motion of a rigid column-major homogeneous 3×3 matrix (a rotation and a

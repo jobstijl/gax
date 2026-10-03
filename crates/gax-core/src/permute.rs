@@ -65,8 +65,8 @@ fn permute<S: Slots, D: Slots, X: Elem>(a: &S::Arr<X>, dims: &[usize], i: usize)
 }
 
 macro_rules! move_impl {
-    ($i:literal; [$($A:ident),+]; $moved:ty) => {
-        impl<$($A: Kind),+> MoveToFront<$i> for ($($A,)+) {
+    ($i:expr; [$($A:ident),+]; $moved:ty) => {
+        impl<$($A: Kind),+> MoveToFront<{ $i }> for ($($A,)+) {
             type Moved = $moved;
             #[inline(always)]
             fn dims() -> [usize; MAX_SLOTS] {
@@ -77,88 +77,49 @@ macro_rules! move_impl {
             }
             #[inline(always)]
             fn move_arr<X: Elem>(a: &Self::Arr<X>) -> <Self::Moved as Slots>::Arr<X> {
-                let d = <Self as MoveToFront<$i>>::dims();
+                let d = <Self as MoveToFront<{ $i }>>::dims();
                 permute::<Self, Self::Moved, X>(a, &d[..<Self as Slots>::LEN], $i)
             }
         }
     };
 }
 
-move_impl!(0; [A0]; (A0,));
-move_impl!(0; [A0, A1]; (A0, A1));
-move_impl!(1; [A0, A1]; (A1, A0));
-move_impl!(0; [A0, A1, A2]; (A0, A1, A2));
-move_impl!(1; [A0, A1, A2]; (A1, A0, A2));
-move_impl!(2; [A0, A1, A2]; (A2, A0, A1));
-move_impl!(0; [A0, A1, A2, A3]; (A0, A1, A2, A3));
-move_impl!(1; [A0, A1, A2, A3]; (A1, A0, A2, A3));
-move_impl!(2; [A0, A1, A2, A3]; (A2, A0, A1, A3));
-move_impl!(3; [A0, A1, A2, A3]; (A3, A0, A1, A2));
-move_impl!(0; [A0, A1, A2, A3, A4]; (A0, A1, A2, A3, A4));
-move_impl!(1; [A0, A1, A2, A3, A4]; (A1, A0, A2, A3, A4));
-move_impl!(2; [A0, A1, A2, A3, A4]; (A2, A0, A1, A3, A4));
-move_impl!(3; [A0, A1, A2, A3, A4]; (A3, A0, A1, A2, A4));
-move_impl!(4; [A0, A1, A2, A3, A4]; (A4, A0, A1, A2, A3));
-move_impl!(0; [A0, A1, A2, A3, A4, A5]; (A0, A1, A2, A3, A4, A5));
-move_impl!(1; [A0, A1, A2, A3, A4, A5]; (A1, A0, A2, A3, A4, A5));
-move_impl!(2; [A0, A1, A2, A3, A4, A5]; (A2, A0, A1, A3, A4, A5));
-move_impl!(3; [A0, A1, A2, A3, A4, A5]; (A3, A0, A1, A2, A4, A5));
-move_impl!(4; [A0, A1, A2, A3, A4, A5]; (A4, A0, A1, A2, A3, A5));
-move_impl!(5; [A0, A1, A2, A3, A4, A5]; (A5, A0, A1, A2, A3, A4));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6]; (A0, A1, A2, A3, A4, A5, A6));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6]; (A1, A0, A2, A3, A4, A5, A6));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6]; (A2, A0, A1, A3, A4, A5, A6));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6]; (A3, A0, A1, A2, A4, A5, A6));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6]; (A4, A0, A1, A2, A3, A5, A6));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6]; (A5, A0, A1, A2, A3, A4, A6));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6]; (A6, A0, A1, A2, A3, A4, A5));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6, A7]; (A0, A1, A2, A3, A4, A5, A6, A7));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6, A7]; (A1, A0, A2, A3, A4, A5, A6, A7));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6, A7]; (A2, A0, A1, A3, A4, A5, A6, A7));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6, A7]; (A3, A0, A1, A2, A4, A5, A6, A7));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6, A7]; (A4, A0, A1, A2, A3, A5, A6, A7));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6, A7]; (A5, A0, A1, A2, A3, A4, A6, A7));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6, A7]; (A6, A0, A1, A2, A3, A4, A5, A7));
-move_impl!(7; [A0, A1, A2, A3, A4, A5, A6, A7]; (A7, A0, A1, A2, A3, A4, A5, A6));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A0, A1, A2, A3, A4, A5, A6, A7, A8));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A1, A0, A2, A3, A4, A5, A6, A7, A8));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A2, A0, A1, A3, A4, A5, A6, A7, A8));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A3, A0, A1, A2, A4, A5, A6, A7, A8));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A4, A0, A1, A2, A3, A5, A6, A7, A8));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A5, A0, A1, A2, A3, A4, A6, A7, A8));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A6, A0, A1, A2, A3, A4, A5, A7, A8));
-move_impl!(7; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A7, A0, A1, A2, A3, A4, A5, A6, A8));
-move_impl!(8; [A0, A1, A2, A3, A4, A5, A6, A7, A8]; (A8, A0, A1, A2, A3, A4, A5, A6, A7));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A0, A1, A2, A3, A4, A5, A6, A7, A8, A9));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A1, A0, A2, A3, A4, A5, A6, A7, A8, A9));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A2, A0, A1, A3, A4, A5, A6, A7, A8, A9));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A3, A0, A1, A2, A4, A5, A6, A7, A8, A9));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A4, A0, A1, A2, A3, A5, A6, A7, A8, A9));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A5, A0, A1, A2, A3, A4, A6, A7, A8, A9));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A6, A0, A1, A2, A3, A4, A5, A7, A8, A9));
-move_impl!(7; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A7, A0, A1, A2, A3, A4, A5, A6, A8, A9));
-move_impl!(8; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A8, A0, A1, A2, A3, A4, A5, A6, A7, A9));
-move_impl!(9; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9]; (A9, A0, A1, A2, A3, A4, A5, A6, A7, A8));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A1, A0, A2, A3, A4, A5, A6, A7, A8, A9, A10));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A2, A0, A1, A3, A4, A5, A6, A7, A8, A9, A10));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A3, A0, A1, A2, A4, A5, A6, A7, A8, A9, A10));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A4, A0, A1, A2, A3, A5, A6, A7, A8, A9, A10));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A5, A0, A1, A2, A3, A4, A6, A7, A8, A9, A10));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A6, A0, A1, A2, A3, A4, A5, A7, A8, A9, A10));
-move_impl!(7; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A7, A0, A1, A2, A3, A4, A5, A6, A8, A9, A10));
-move_impl!(8; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A8, A0, A1, A2, A3, A4, A5, A6, A7, A9, A10));
-move_impl!(9; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A9, A0, A1, A2, A3, A4, A5, A6, A7, A8, A10));
-move_impl!(10; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]; (A10, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9));
-move_impl!(0; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11));
-move_impl!(1; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A1, A0, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11));
-move_impl!(2; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A2, A0, A1, A3, A4, A5, A6, A7, A8, A9, A10, A11));
-move_impl!(3; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A3, A0, A1, A2, A4, A5, A6, A7, A8, A9, A10, A11));
-move_impl!(4; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A4, A0, A1, A2, A3, A5, A6, A7, A8, A9, A10, A11));
-move_impl!(5; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A5, A0, A1, A2, A3, A4, A6, A7, A8, A9, A10, A11));
-move_impl!(6; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A6, A0, A1, A2, A3, A4, A5, A7, A8, A9, A10, A11));
-move_impl!(7; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A7, A0, A1, A2, A3, A4, A5, A6, A8, A9, A10, A11));
-move_impl!(8; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A8, A0, A1, A2, A3, A4, A5, A6, A7, A9, A10, A11));
-move_impl!(9; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A9, A0, A1, A2, A3, A4, A5, A6, A7, A8, A10, A11));
-move_impl!(10; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A10, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A11));
-move_impl!(11; [A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]; (A11, A0, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10));
+// Slot `i` to the front, for `i` from `$i` on: `$c` is slot `i`, `$b` those before, `$a` after.
+macro_rules! moves {
+    ($i:expr; [$($b:ident),*]; $c:ident; [$($a:ident),*]) => {
+        move_impl!($i; [$($b,)* $c $(, $a)*]; ($c, $($b,)* $($a,)*));
+        moves!(@next $i + 1; [$($b,)* $c]; [$($a),*]);
+    };
+    (@next $i:expr; [$($b:ident),*]; []) => {};
+    (@next $i:expr; [$($b:ident),*]; [$c:ident $(, $a:ident)*]) => {
+        moves!($i; [$($b),*]; $c; [$($a),*]);
+    };
+}
+
+// Every move of every arity from `$have`'s up to `MAX_SLOTS`.
+macro_rules! all_moves {
+    ([$f:ident $(, $h:ident)*]; []) => {
+        moves!(0; []; $f; [$($h),*]);
+    };
+    ([$f:ident $(, $h:ident)*]; [$next:ident $(, $rest:ident)*]) => {
+        moves!(0; []; $f; [$($h),*]);
+        all_moves!([$f $(, $h)*, $next]; [$($rest),*]);
+    };
+}
+
+all_moves!([A0]; [A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]);
+
+// Every arity has every move: the first, a middle and the last slot of the smallest and
+// largest tuples.
+const _: () = {
+    const fn moves<const I: usize, T: MoveToFront<I>>() {}
+    #[allow(dead_code)]
+    fn every_arity<A: Kind>() {
+        moves::<0, (A,)>();
+        moves::<0, (A, A)>();
+        moves::<1, (A, A)>();
+        moves::<0, (A, A, A, A, A, A, A, A, A, A, A, A)>();
+        moves::<6, (A, A, A, A, A, A, A, A, A, A, A, A)>();
+        moves::<11, (A, A, A, A, A, A, A, A, A, A, A, A)>();
+    }
+};

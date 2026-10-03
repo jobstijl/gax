@@ -42,6 +42,24 @@ impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
             marker: PhantomData,
         }
     }
+
+    /// The dense map of this action (for composing it with other maps): the entries written in
+    /// place, without multiplying through an identity map.
+    ///
+    /// ```
+    /// use gax::ApproxEq;
+    /// use gax::pga3d::{Motor, Point};
+    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.3);
+    /// let map: Point<(Point,), f64> = m.prepare::<Point>().to_map();
+    /// assert!(map.approx_eq(&(m >> Point::slot()), 1e-12));
+    /// ```
+    #[inline(always)]
+    pub fn to_map<M>(self) -> M
+    where
+        M: From<Self>,
+    {
+        M::from(self)
+    }
 }
 
 impl<V, X, T: Copy, const N: usize> Clone for Prepared<V, X, T, N> {
@@ -96,25 +114,5 @@ impl<M> crate::unit::Unit<M> {
         Self: Prepare<X>,
     {
         Prepare::prepare(self)
-    }
-}
-
-impl<V, X, T, const N: usize> Prepared<V, X, T, N> {
-    /// The dense map of this action (for composing it with other maps): the entries written in
-    /// place, without multiplying through an identity map.
-    ///
-    /// ```
-    /// use gax::ApproxEq;
-    /// use gax::pga3d::{Motor, Point};
-    /// let m = Motor::<(), f64>::rotation_about(0.0, 0.0, 1.0, 0.3);
-    /// let map: Point<(Point,), f64> = m.prepare::<Point>().to_map();
-    /// assert!(map.approx_eq(&(m >> Point::slot()), 1e-12));
-    /// ```
-    #[inline(always)]
-    pub fn to_map<M>(self) -> M
-    where
-        M: From<Self>,
-    {
-        M::from(self)
     }
 }

@@ -284,18 +284,14 @@ impl<T: StrictElementary> Real for Strict<T> {
 
 /// `StrictElementary` for a lane type of `f32` or `f64`, lane by lane with the scalar's
 /// functions, through `to_array` and a constructor from an array.
-#[cfg(feature = "wide")]
+#[cfg(any(feature = "wide", feature = "batch"))]
 macro_rules! per_lane {
-    ($ty:ty, $e:ty, $to:expr, $from:expr) => {
-        impl StrictElementary for $ty {
+    ($(@[$($g:tt)*])? $ty:ty, $e:ty, $to:expr, $from:expr) => {
+        impl$(<$($g)*>)? StrictElementary for $ty {
             #[inline(always)]
             fn strict_sin_cos(self) -> (Self, Self) {
-                let a = $to(self);
-                let (s, c): (Self, Self) = (
-                    $from(a.map(|x: $e| x.strict_sin_cos().0)),
-                    $from(a.map(|x: $e| x.strict_sin_cos().1)),
-                );
-                (s, c)
+                let sc = $to(self).map(<$e>::strict_sin_cos);
+                ($from(sc.map(|p| p.0)), $from(sc.map(|p| p.1)))
             }
             #[inline(always)]
             fn strict_sinh(self) -> Self {
@@ -337,40 +333,6 @@ mod batch_lanes {
     use super::StrictElementary;
     use crate::batch::Lanes;
 
-    macro_rules! lanes {
-        ($e:ty) => {
-            impl<const N: usize> StrictElementary for Lanes<$e, N> {
-                #[inline(always)]
-                fn strict_sin_cos(self) -> (Self, Self) {
-                    let (mut s, mut c) = (self, self);
-                    for i in 0..N {
-                        (s.v[i], c.v[i]) = self.v[i].strict_sin_cos();
-                    }
-                    (s, c)
-                }
-                #[inline(always)]
-                fn strict_sinh(self) -> Self {
-                    Lanes::new(self.v.map(<$e>::strict_sinh))
-                }
-                #[inline(always)]
-                fn strict_cosh(self) -> Self {
-                    Lanes::new(self.v.map(<$e>::strict_cosh))
-                }
-                #[inline(always)]
-                fn strict_atan2(self, x: Self) -> Self {
-                    Lanes::new(core::array::from_fn(|i| self.v[i].strict_atan2(x.v[i])))
-                }
-                #[inline(always)]
-                fn strict_ln(self) -> Self {
-                    Lanes::new(self.v.map(<$e>::strict_ln))
-                }
-                #[inline(always)]
-                fn strict_exp(self) -> Self {
-                    Lanes::new(self.v.map(<$e>::strict_exp))
-                }
-            }
-        };
-    }
-    lanes!(f32);
-    lanes!(f64);
+    per_lane!(@[const N: usize] Lanes<f32, N>, f32, |x: Lanes<f32, N>| x.v, Lanes::new);
+    per_lane!(@[const N: usize] Lanes<f64, N>, f64, |x: Lanes<f64, N>| x.v, Lanes::new);
 }

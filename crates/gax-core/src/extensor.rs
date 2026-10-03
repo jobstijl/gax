@@ -133,14 +133,7 @@ where
         <M::Kind as Kind>::Arr<M::Coef>,
         <M::Kind as Kind>::Arr<A::Mv<(), M::Coef>>,
     ) {
-        let a = self.coeffs();
-        let n = <M::Kind as Kind>::N;
-        let (mut vals, mut vecs) = linalg::eigh(&symmetrize(a), sweeps(n));
-        linalg::sort_pairs(&mut vals, &mut vecs);
-        (
-            <M::Kind as Kind>::arr_from_fn(|k| vals[k]),
-            <M::Kind as Kind>::arr_from_fn(|k| value_from::<A, M::Coef>(|i| vecs[k][i])),
-        )
+        eigh_pairs::<_, _, M::Kind, A>(self.coeffs())
     }
 
     fn eigvals(self) -> <M::Kind as Kind>::Arr<Complex<M::Coef>> {
@@ -319,10 +312,7 @@ where
         let b = &metric.coeffs().as_ref()[0];
         let n = <A::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
         let (vals, xs) = linalg::eigh_generalized(&symmetrize(a), &symmetrize(b), sweeps(n));
-        (
-            A::arr_from_fn(|k| vals[k]),
-            A::arr_from_fn(|k| value_from::<A, M::Coef>(|i| xs[k][i])),
-        )
+        pairs::<_, _, A, A>(&vals, &xs)
     }
 
     fn eigh_semidefinite(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
@@ -372,14 +362,7 @@ where
     }
 
     fn eigh(self) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
-        let a = &self.coeffs().as_ref()[0];
-        let n = <A::Arr<A::Arr<M::Coef>> as SquareArr<M::Coef>>::N;
-        let (mut vals, mut vecs) = linalg::eigh(&symmetrize(a), sweeps(n));
-        linalg::sort_pairs(&mut vals, &mut vecs);
-        (
-            A::arr_from_fn(|k| vals[k]),
-            A::arr_from_fn(|k| value_from::<A, M::Coef>(|i| vecs[k][i])),
-        )
+        eigh_pairs::<_, _, A, A>(&self.coeffs().as_ref()[0])
     }
 }
 
@@ -454,6 +437,28 @@ where
 fn symmetrize<T: Real, S: SquareArr<T>>(f: &S) -> S {
     let half = T::from_f64(0.5);
     matrix_from(|i, j| (f[i][j] + f[j][i]) * half)
+}
+
+/// Eigenvalues `vals` on `K` and eigenvectors (the rows of `vecs`) as values of `A`.
+#[allow(clippy::type_complexity)]
+fn pairs<T: Real, S: SquareArr<T>, K: Kind, A: Kind>(
+    vals: &S::Vector,
+    vecs: &S,
+) -> (K::Arr<T>, K::Arr<A::Mv<(), T>>) {
+    (
+        K::arr_from_fn(|k| vals[k]),
+        K::arr_from_fn(|k| value_from::<A, T>(|i| vecs[k][i])),
+    )
+}
+
+/// The symmetric eigenproblem of `a`'s symmetric part, eigenvalues ascending, as [`pairs`].
+#[allow(clippy::type_complexity)]
+fn eigh_pairs<T: Real, S: SquareArr<T>, K: Kind, A: Kind>(
+    a: &S,
+) -> (K::Arr<T>, K::Arr<A::Mv<(), T>>) {
+    let (mut vals, mut vecs) = linalg::eigh(&symmetrize(a), sweeps(S::N));
+    linalg::sort_pairs(&mut vals, &mut vecs);
+    pairs::<T, S, K, A>(&vals, &vecs)
 }
 
 /// Contract an extensor's output with its first slot, which must be the output's own kind
