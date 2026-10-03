@@ -22,6 +22,8 @@ use gax_numga_examples::{
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
+#[allow(unused_imports)]
+use lie::Lie as _;
 
 /// R(4,0,0): numga's spherical model `x+y+z+w+`, laid out as PGA3D with `e0` squaring to +1.
 mod sga3d {
@@ -284,8 +286,9 @@ pub mod e4 {
 
 /// The Lie steppers for PGA3D motors.
 mod rigid {
-    use gax::pga3d::{Line as Rate, Line as Forque, Motor, Point};
-    crate::lie::integrators!();
+    /// The algebra.
+    pub type G = gax::motions::Pga3d;
+    pub type M = crate::lie::M<G>;
 }
 
 /// numga's `simplex.py`: inertia maps of simplices, in PGA3D.
@@ -426,7 +429,7 @@ fn scene() -> &'static Scene {
         let mut motors = vec![motor];
         for _ in 0..(f64::from(SECONDS) / DT).round() as usize {
             (motor, rate) =
-                rigid::explicit_rkmk4(motor, rate, inertia, inertia_inv, DT, &rigid::free);
+                rigid::G::explicit_rkmk4(motor, rate, inertia, inertia_inv, DT, &rigid::G::free);
             motors.push(motor);
         }
         // numga's demo tetrahedron, sampled.

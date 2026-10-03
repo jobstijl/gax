@@ -187,6 +187,18 @@ renormalization), with the body's constants known at build time:
   * for a hot single-value kernel, measure `Tracer::fma(false)` against the default on the target;
   * tracing pays off whenever constants remove work, and a fused kernel's operation count is what
     runs on lanes.
+* **Two experiments, measured and not merged** (2026-10-03, idle machine, each against its own
+  base commit, `benches/transform.rs` twice and `benches/batch.rs` once):
+  * *Explicit SIMD for the PGA3D motor sandwich and product* (`std::arch` per target): a single
+    `Unit<Motor> >> Point` on the default target went from 6.5 to 4.7 ns, but with
+    `target-cpu=native` it was within noise (4.6 against 4.7 ns), and the loop over 1024 points
+    went from 1.42 to 3.81 µs (native) and 1.70 to 4.84 µs (default): the explicit kernel keeps
+    LLVM from vectorizing across points, where the scalar kernel is vectorized.
+  * *16-byte alignment of the kind structs*: no change on 69 batch rows (median +0.1%), the SoA
+    point transform 11–12% slower, single values within noise.
+  * Noise: the same binary measured twice moved single-value rows by up to 50% (and an inverse
+    from 1.2 to 3.0 ns), which is larger than most effects under test; rows over 1 µs agree to
+    within a few percent.
 
 ## Fused sandwich kernels (op counts from the generator)
 

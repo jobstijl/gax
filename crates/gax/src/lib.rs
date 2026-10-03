@@ -9,6 +9,7 @@ mod extras;
 mod interop;
 #[cfg(any(feature = "pga2d", feature = "pga3d"))]
 mod moments;
+pub mod motions;
 
 /// The homomorphisms between the standard algebras, as `From` impls (generated from
 /// `gax_gen::emit_homs::HOMS`; see the guide, "Between algebras").

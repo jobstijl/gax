@@ -27,11 +27,18 @@ use gax_numga_examples::{
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
+#[allow(unused_imports)]
+use lie::Lie as _;
 
 /// The Lie steppers for PGA3D motors: rates and forques are both lines.
 mod rigid {
-    use gax::pga3d::{Line as Rate, Line as Forque, Motor, Point};
-    crate::lie::integrators!();
+    /// The algebra.
+    pub type G = gax::motions::Pga3d;
+    pub type M = crate::lie::M<G>;
+    pub type R = crate::lie::R<G>;
+    pub type P = crate::lie::P<G>;
+    pub type Inertia = crate::lie::Inertia<G>;
+    pub type InertiaInv = crate::lie::InertiaInv<G>;
 }
 
 mod top {
@@ -275,7 +282,7 @@ mod top {
 
         // Dynamic friction: the rate the corrected step implies, less the contacts' sliding
         // velocity, with at most the dynamic coefficient times the normal impulse.
-        let rate = crate::rigid::rate_between(before, motor, dt);
+        let rate = crate::rigid::G::rate_between(before, motor, dt);
         let mut twist = Line::zero();
         for i in 0..n {
             let sliding = along_ground(contact[i].commutator(motor >> rate), normal[i]);
@@ -381,7 +388,7 @@ mod scenarios {
             })
             .collect();
         let (points, masses) = sigma_points(&centres, &semi, &mass);
-        let (inertia, inertia_inv) = crate::rigid::inertia_of(&points, &masses);
+        let (inertia, inertia_inv) = crate::rigid::G::inertia_of(&points, &masses);
         Top {
             parts,
             inertia,
@@ -419,7 +426,7 @@ mod scenarios {
             let before = motor;
             // Predict with a free step, then correct against the ground.
             // The free step's rate is not needed: the contacts read it back from the motors.
-            let (m, _) = crate::rigid::explicit_rk4(
+            let (m, _) = crate::rigid::G::explicit_rk4(
                 motor,
                 rate,
                 body.inertia,

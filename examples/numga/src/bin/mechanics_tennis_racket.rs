@@ -4,8 +4,9 @@
 //! tumbles about its intermediate one (the Dzhanibekov effect). The body is a box with half
 //! sides 1, 2, 3, ... in p dimensions, its inertia the sum of `p & [p, ·]` over its corners;
 //! one body is spun in each bivector plane with a tiny perturbation, and the Lie-group steppers
-//! of the shared `mechanics_lie` module carry them, the same lines for the rotors of every
-//! dimension. In three dimensions exactly one spin, the medial one, flips; in four and five
+//! of the shared `mechanics_lie` module carry them, the same generic functions over
+//! `gax::motions::Motions` for the rotors of every dimension (VGA4D and VGA5D are declared here
+//! and join in with `gax::motions!`). In three dimensions exactly one spin, the medial one, flips; in four and five
 //! some medial planes wander chaotically and some stabilize.
 //!
 //! The animation shows three boxes in 3D spun about their major, medial and minor axes (the
@@ -66,153 +67,141 @@ impl Rng {
     }
 }
 
-/// The racket in the dimension of the kinds in scope (numga instantiates its `core` per
-/// algebra; here the same text expands per algebra, after the Lie steppers).
-macro_rules! racket {
-    () => {
-        /// Batched bodies, one per bivector plane, sharing one inertia.
-        pub struct Body {
-            pub motor: Vec<M>,
-            pub rate: Vec<R>,
-            pub inertia: Inertia,
-            pub inertia_inv: InertiaInv,
-        }
+use gax::{Extensor, Kind, Of};
+use lie::{Inertia, InertiaInv, Lie, M, R, Step};
 
-        /// The dimension.
-        pub fn dimension() -> usize {
-            Vector::<(), f64>::zero().c.len()
-        }
+/// Batched bodies, one per bivector plane, sharing one inertia.
+pub struct Body<G: Lie> {
+    pub motor: Vec<M<G>>,
+    pub rate: Vec<R<G>>,
+    pub inertia: Inertia<G>,
+    pub inertia_inv: InertiaInv<G>,
+}
 
-        /// The corners of the box with half sides 1, 2, ..., p, as vectors.
-        pub fn corners() -> Vec<Vector<(), f64>> {
-            let p = dimension();
-            (0..1usize << p)
-                .map(|bits| {
-                    Vector::from_coeffs(core::array::from_fn(|i| {
-                        let sign = if bits >> i & 1 == 1 { 1.0 } else { -1.0 };
-                        sign * (i as f64 + 1.0)
-                    }))
+/// The corners of the box with half sides 1, 2, ..., p.
+pub fn corners<G: Lie>() -> Vec<G::Coords> {
+    (0..1usize << G::DIM)
+        .map(|bits| {
+            G::coords_from_fn(|i| {
+                let sign = if bits >> i & 1 == 1 { 1.0 } else { -1.0 };
+                sign * (i as f64 + 1.0)
+            })
+        })
+        .collect()
+}
+
+/// One body spinning in each independent bivector plane, with a small perturbation.
+pub fn racket<G: Lie>(seed: u64) -> Body<G> {
+    let points: Vec<_> = corners::<G>().into_iter().map(G::point).collect();
+    let (inertia, inertia_inv) = G::inertia_from_points(&points);
+    type Planes<G> = <R<G> as Extensor>::Kind;
+    let planes = <Planes<G> as Kind>::N;
+    let mut rng = crate::Rng::new(seed);
+    let rate: Vec<R<G>> = (0..planes)
+        .map(|i| {
+            R::<G>::from_coeffs(<Planes<G> as Kind>::arr_from_fn(|j| {
+                f64::from(u8::from(i == j)) + 1e-5 * rng.normal()
+            }))
+        })
+        .collect();
+    Body {
+        motor: vec![G::identity(); planes],
+        rate,
+        inertia,
+        inertia_inv,
+    }
+}
+
+/// Torque-free motion: motors and rates over time (`[step][body]`), starting with the initial
+/// state.
+pub fn simulate<G: Lie>(
+    body: &Body<G>,
+    step: Step<G>,
+    dt: f64,
+    steps: usize,
+) -> (Vec<Vec<M<G>>>, Vec<Vec<R<G>>>) {
+    let mut motors = vec![body.motor.clone()];
+    let mut rates = vec![body.rate.clone()];
+    for _ in 0..steps {
+        let (m, r): (Vec<M<G>>, Vec<R<G>>) = motors[motors.len() - 1]
+            .iter()
+            .zip(&rates[rates.len() - 1])
+            .map(|(m, r)| step(*m, *r, body.inertia, body.inertia_inv, dt, &G::free))
+            .unzip();
+        motors.push(m);
+        rates.push(r);
+    }
+    (motors, rates)
+}
+
+/// The relative drift of the world-frame angular momentum, per step and body: the Euclidean
+/// norm of the momentum's coefficients, which in a vector algebra is its magnitude.
+pub fn momentum_drift<G: Lie>(
+    motors: &[Vec<M<G>>],
+    rates: &[Vec<R<G>>],
+    inertia: Inertia<G>,
+) -> Vec<Vec<f64>> {
+    let world = |k: usize, b: usize| motors[k][b] >> inertia.of(rates[k][b]);
+    let size = |f: lie::F<G>| f.coeffs().as_ref().iter().map(|x| x * x).sum::<f64>();
+    (0..motors.len())
+        .map(|k| {
+            (0..motors[k].len())
+                .map(|b| {
+                    let start = world(0, b);
+                    (size(world(k, b) - start) / size(start)).sqrt()
                 })
                 .collect()
-        }
+        })
+        .collect()
+}
 
-        /// One body spinning in each independent bivector plane, with a small perturbation.
-        pub fn racket(seed: u64) -> Body {
-            // The corners as mass points: the duals of the vectors.
-            let points: Vec<P> = corners().into_iter().map(|v| v.dual()).collect();
-            let (inertia, inertia_inv) = inertia_from_points(&points);
-            let planes = R::zero().c.len();
-            let mut rng = crate::Rng::new(seed);
-            let rate: Vec<R> = (0..planes)
-                .map(|i| {
-                    R::from_coeffs(core::array::from_fn(|j| {
-                        f64::from(u8::from(i == j)) + 1e-5 * rng.normal()
-                    }))
-                })
-                .collect();
-            Body {
-                motor: vec![R::zero().exp(); planes],
-                rate,
-                inertia,
-                inertia_inv,
-            }
-        }
+/// A stepper by numga's name.
+pub fn stepper<G: Lie>(name: &str) -> Step<G> {
+    match name {
+        "verlet" => G::explicit_verlet,
+        "rk4" => G::explicit_rk4,
+        _ => G::explicit_rkmk4,
+    }
+}
 
-        /// Torque-free motion: motors and rates over time (`[step][body]`), starting with the
-        /// initial state.
-        pub fn simulate(
-            body: &Body,
-            step: Step,
-            dt: f64,
-            steps: usize,
-        ) -> (Vec<Vec<M>>, Vec<Vec<R>>) {
-            let mut motors = vec![body.motor.clone()];
-            let mut rates = vec![body.rate.clone()];
-            for _ in 0..steps {
-                let (m, r): (Vec<M>, Vec<R>) = motors[motors.len() - 1]
-                    .iter()
-                    .zip(&rates[rates.len() - 1])
-                    .map(|(m, r)| step(*m, *r, body.inertia, body.inertia_inv, dt, &free))
-                    .unzip();
-                motors.push(m);
-                rates.push(r);
-            }
-            (motors, rates)
-        }
-
-        /// The relative drift of the world-frame angular momentum, per step and body. The
-        /// squared magnitude of a momentum is the scalar part of `p ~p`, in any dimension.
-        pub fn momentum_drift(
-            motors: &[Vec<M>],
-            rates: &[Vec<R>],
-            inertia: Inertia,
-        ) -> Vec<Vec<f64>> {
-            let world = |k: usize, b: usize| motors[k][b] >> inertia.of(rates[k][b]);
-            (0..motors.len())
-                .map(|k| {
-                    (0..motors[k].len())
-                        .map(|b| {
-                            let start = world(0, b);
-                            ((world(k, b) - start).norm_squared() / start.norm_squared()).sqrt()
-                        })
-                        .collect()
-                })
-                .collect()
-        }
-
-        /// A stepper by numga's name.
-        pub fn stepper(name: &str) -> Step {
-            match name {
-                "verlet" => explicit_verlet,
-                "rk4" => explicit_rk4,
-                _ => explicit_rkmk4,
-            }
-        }
-
-        /// The worst world-momentum drift over all bodies and steps of a run of `runtime`.
-        pub fn worst_drift(name: &str, dt: f64, runtime: f64) -> f64 {
-            let body = racket(42);
-            let (m, r) = simulate(&body, stepper(name), dt, (runtime / dt).round() as usize);
-            momentum_drift(&m, &r, body.inertia)
-                .iter()
-                .flatten()
-                .fold(0.0, |a: f64, &b| a.max(b))
-        }
-    };
+/// The worst world-momentum drift over all bodies and steps of a run of `runtime`.
+pub fn worst_drift<G: Lie>(name: &str, dt: f64, runtime: f64) -> f64 {
+    let body = racket::<G>(42);
+    let (m, r) = simulate(
+        &body,
+        stepper::<G>(name),
+        dt,
+        (runtime / dt).round() as usize,
+    );
+    momentum_drift::<G>(&m, &r, body.inertia)
+        .iter()
+        .flatten()
+        .fold(0.0, |a: f64, &b| a.max(b))
 }
 
 /// The plane: one spin plane, nothing to tumble.
-pub mod d2 {
-    use gax::vga2d::{Bivector as Rate, Rotor as Motor, Scalar as Forque, Vector, Vector as Point};
-    crate::lie::integrators!(commutative);
-    racket!();
-}
-
+pub use gax::motions::Vga2d as D2;
 /// Space: three spin planes, the classical theorem.
-pub mod d3 {
-    use gax::vga3d::{
-        Bivector as Rate, Bivector as Point, Rotor as Motor, Vector, Vector as Forque,
-    };
-    crate::lie::integrators!();
-    racket!();
+pub use gax::motions::Vga3d as D3;
+
+gax::motions! {
+    /// Four dimensions: six spin planes.
+    pub struct D4 in crate::vga4d {
+        Motor = Even, Twist = Bivector, Forque = Bivector, Point = Trivector,
+        Coords = [T; 4],
+        point(c) = Vector::<(), T>::from_coeffs(c).dual(),
+        coords(p) = p.undual().c,
+    }
 }
 
-/// Four dimensions: six spin planes.
-pub mod d4 {
-    use crate::vga4d::{
-        Bivector as Rate, Bivector as Forque, Even as Motor, Trivector as Point, Vector,
-    };
-    crate::lie::integrators!();
-    racket!();
-}
-
-/// Five dimensions: ten spin planes.
-pub mod d5 {
-    use crate::vga5d::{
-        Bivector as Rate, Even as Motor, Quadvector as Point, Trivector as Forque, Vector,
-    };
-    crate::lie::integrators!();
-    racket!();
+gax::motions! {
+    /// Five dimensions: ten spin planes.
+    pub struct D5 in crate::vga5d {
+        Motor = Even, Twist = Bivector, Forque = Trivector, Point = Quadvector,
+        Coords = [T; 5],
+        point(c) = Vector::<(), T>::from_coeffs(c).dual(),
+        coords(p) = p.undual().c,
+    }
 }
 
 /// The simulated time the loop shows, and the loop's length in seconds.
@@ -224,10 +213,10 @@ const SHOW_DT: f64 = 0.05;
 /// Everything the frames show, simulated once.
 struct Scenes {
     /// The three 3D boxes spun in the planes e23, e31 and e12 (`[step][body]`).
-    motors3: Vec<Vec<d3::M>>,
-    rates3: Vec<Vec<d3::R>>,
+    motors3: Vec<Vec<M<D3>>>,
+    rates3: Vec<Vec<R<D3>>>,
     /// The six 4D bodies' rates.
-    rates4: Vec<Vec<d4::R>>,
+    rates4: Vec<Vec<R<D4>>>,
     /// numga's integrator comparison: the worst world-momentum drift over the bodies per step,
     /// per dimension and stepper, at dt = 0.25 over 100.
     drift: Vec<(usize, &'static str, Vec<f64>)>,
@@ -241,10 +230,10 @@ fn scenes() -> &'static Scenes {
     static SCENES: std::sync::OnceLock<Scenes> = std::sync::OnceLock::new();
     SCENES.get_or_init(|| {
         let steps = (SPAN / SHOW_DT).round() as usize;
-        let body3 = d3::racket(42);
-        let (motors3, rates3) = d3::simulate(&body3, d3::explicit_rkmk4, SHOW_DT, steps);
-        let body4 = d4::racket(42);
-        let (_, rates4) = d4::simulate(&body4, d4::explicit_rkmk4, SHOW_DT, steps);
+        let body3 = racket::<D3>(42);
+        let (motors3, rates3) = simulate::<D3>(&body3, D3::explicit_rkmk4, SHOW_DT, steps);
+        let body4 = racket::<D4>(42);
+        let (_, rates4) = simulate::<D4>(&body4, D4::explicit_rkmk4, SHOW_DT, steps);
         let worst = |d: Vec<Vec<f64>>| -> Vec<f64> {
             d.iter()
                 .map(|b| b.iter().fold(0.0, |a: f64, &x| a.max(x)))
@@ -253,15 +242,15 @@ fn scenes() -> &'static Scenes {
         let n = (COMPARE_RUN / COMPARE_DT).round() as usize;
         let mut drift = Vec::new();
         for name in ["verlet", "rk4", "rkmk4"] {
-            let b = d3::racket(42);
-            let (m, r) = d3::simulate(&b, d3::stepper(name), COMPARE_DT, n);
-            drift.push((3, name, worst(d3::momentum_drift(&m, &r, b.inertia))));
-            let b = d4::racket(42);
-            let (m, r) = d4::simulate(&b, d4::stepper(name), COMPARE_DT, n);
-            drift.push((4, name, worst(d4::momentum_drift(&m, &r, b.inertia))));
-            let b = d5::racket(42);
-            let (m, r) = d5::simulate(&b, d5::stepper(name), COMPARE_DT, n);
-            drift.push((5, name, worst(d5::momentum_drift(&m, &r, b.inertia))));
+            let b = racket::<D3>(42);
+            let (m, r) = simulate::<D3>(&b, stepper::<D3>(name), COMPARE_DT, n);
+            drift.push((3, name, worst(momentum_drift::<D3>(&m, &r, b.inertia))));
+            let b = racket::<D4>(42);
+            let (m, r) = simulate::<D4>(&b, stepper::<D4>(name), COMPARE_DT, n);
+            drift.push((4, name, worst(momentum_drift::<D4>(&m, &r, b.inertia))));
+            let b = racket::<D5>(42);
+            let (m, r) = simulate::<D5>(&b, stepper::<D5>(name), COMPARE_DT, n);
+            drift.push((5, name, worst(momentum_drift::<D5>(&m, &r, b.inertia))));
         }
         Scenes {
             motors3,
@@ -278,7 +267,7 @@ fn v3(v: gax::vga3d::Vector<(), f64>) -> [f32; 3] {
 
 /// One box of the 3D racket, turned by its rotor, drawn with its spin axis about pixel `centre`
 /// at `scale` pixels per unit.
-fn draw_box(c: &mut Canvas, rotor: d3::M, axis: usize, centre: [f32; 2], scale: f32) {
+fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: [f32; 2], scale: f32) {
     use gax_numga_examples::{Camera, Lens};
     // A parallel camera whose canvas centre falls on `centre`.
     let half = centre[1] / scale;
@@ -290,7 +279,10 @@ fn draw_box(c: &mut Canvas, rotor: d3::M, axis: usize, centre: [f32; 2], scale: 
         Lens::Parallel(half),
     );
     let mut s = Scene3::new(cam);
-    let corners: Vec<[f32; 3]> = d3::corners().into_iter().map(|v| v3(rotor >> v)).collect();
+    let corners: Vec<[f32; 3]> = corners::<D3>()
+        .into_iter()
+        .map(|c| v3(rotor >> gax::vga3d::Vector::<(), f64>::from_coeffs(c)))
+        .collect();
     let face_colours = [palette::orange(), palette::sky(), palette::green()];
     for a in 0..3 {
         let (b, d) = ((a + 1) % 3, (a + 2) % 3);
@@ -490,15 +482,15 @@ mod tests {
     /// All steppers run the same RK4 on the autonomous body-frame rate, so energies agree.
     #[test]
     fn energy_is_blind_to_the_motor_step() {
-        let body = d4::racket(42);
+        let body = racket::<D4>(42);
         let histories: Vec<Vec<f64>> = ["verlet", "rk4", "rkmk4"]
             .iter()
             .map(|name| {
-                let (_, rates) = d4::simulate(&body, d4::stepper(name), 0.25, 40);
+                let (_, rates) = simulate::<D4>(&body, stepper::<D4>(name), 0.25, 40);
                 rates
                     .iter()
                     .flatten()
-                    .map(|r| d4::kinetic_energy(*r, body.inertia))
+                    .map(|r| D4::kinetic_energy(*r, body.inertia))
                     .collect()
             })
             .collect();
@@ -512,7 +504,7 @@ mod tests {
     /// Halving dt cuts RKMK4's momentum drift about sixteenfold; Verlet and RK4 only halve it.
     #[test]
     fn rkmk4_conserves_world_momentum_to_fourth_order() {
-        let checks: [fn(&str, f64, f64) -> f64; 2] = [d3::worst_drift, d4::worst_drift];
+        let checks: [fn(&str, f64, f64) -> f64; 2] = [worst_drift::<D3>, worst_drift::<D4>];
         for drift in checks {
             let coarse = drift("rkmk4", 0.25, 20.0);
             let fine = drift("rkmk4", 0.125, 20.0);
@@ -532,22 +524,22 @@ mod tests {
     /// The same stepper integrates Spin(5) rotors with fourth-order momentum conservation.
     #[test]
     fn rkmk4_in_five_dimensions() {
-        let coarse = d5::worst_drift("rkmk4", 0.25, 20.0);
-        let fine = d5::worst_drift("rkmk4", 0.125, 20.0);
+        let coarse = worst_drift::<D5>("rkmk4", 0.25, 20.0);
+        let fine = worst_drift::<D5>("rkmk4", 0.125, 20.0);
         assert!(coarse < 0.01, "{coarse}");
         assert!(
             10.0 < coarse / fine && coarse / fine < 24.0,
             "{}",
             coarse / fine
         );
-        assert!(d5::worst_drift("verlet", 0.25, 20.0) > 1e-2);
+        assert!(worst_drift::<D5>("verlet", 0.25, 20.0) > 1e-2);
     }
 
     /// In 3D the spin about the medial axis flips sign; the major and minor axes stay put.
     #[test]
     fn intermediate_axis_tumbles_and_others_do_not() {
-        let body = d3::racket(42);
-        let (_, rates) = d3::simulate(&body, d3::explicit_rkmk4, 0.25, 800);
+        let body = racket::<D3>(42);
+        let (_, rates) = simulate::<D3>(&body, D3::explicit_rkmk4, 0.25, 800);
         let flips = (0..3)
             .filter(|&i| rates.iter().any(|r| r[i].c[i] * rates[0][i].c[i] < 0.0))
             .count();
@@ -558,10 +550,10 @@ mod tests {
     /// momentum exactly.
     #[test]
     fn the_plane_has_nothing_to_tumble() {
-        let body = d2::racket(42);
-        let (motors, rates) = d2::simulate(&body, d2::explicit_rkmk4, 0.25, 40);
+        let body = racket::<D2>(42);
+        let (motors, rates) = simulate::<D2>(&body, D2::explicit_rkmk4, 0.25, 40);
         assert!((rates[40][0].c[0] - rates[0][0].c[0]).abs() < 1e-15);
-        let drift = d2::momentum_drift(&motors, &rates, body.inertia);
+        let drift = momentum_drift::<D2>(&motors, &rates, body.inertia);
         assert!(drift.iter().flatten().all(|d| *d < 1e-14));
     }
 

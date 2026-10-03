@@ -599,6 +599,40 @@ This is also how a narrower operand gives a narrower result: evaluate the expres
 Binding it into a map already built keeps the map's output kind, since a map's type does not
 record which of its coefficients are structurally zero.
 
+Generic over the *algebra* is the next step: one function for the plane and for space, or for
+rotations in any dimension. `gax::motions::Motions` names the kinds that play each role in
+rigid motion, a marker type per algebra (`Pga2d`, `Pga3d`, `Vga2d`, `Vga3d`): the `Motor`
+(a unit even versor), its Lie algebra the `Twist`, their dual the `Forque`, the `Point`, and
+the maps `Inertia`, `Mobility` and `TwistMap`. The operations come with them, as operators on
+the associated types (composition, `>>` and `<<`, `+`, `-`, scaling, `.of`) which a generic
+function uses without writing a bound, and as the trait's functions (`exp`, `log`,
+`commutator`, `pair`, `point_inertia`, `mobility`, `point`, …). `Linear` gives `zero()`:
+
+```rust
+use gax::motions::{Linear, Motions, Pga2d, Pga3d};
+use gax::Of;
+
+/// Kinetic energy of unit point masses moving with `rate`, in any algebra.
+fn energy<G: Motions<f64>>(points: &[G::Coords], rate: G::Twist) -> f64 {
+    let mut inertia = G::Inertia::zero();
+    for c in points {
+        inertia += G::point_inertia(G::point(*c));
+    }
+    G::pair(inertia.of(rate), rate) * 0.5
+}
+
+let spin2 = gax::pga2d::Point::<(), f64>::new(0.0, 0.0, 1.0); // a turn about the origin
+let spin3 = gax::pga3d::Line::<(), f64>::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0); // about z
+let e2 = energy::<Pga2d>(&[[1.0, 0.0], [0.0, 2.0]], spin2);
+let e3 = energy::<Pga3d>(&[[1.0, 0.0, 0.0], [0.0, 2.0, 0.0]], spin3);
+assert!((e2 - e3).abs() < 1e-12);
+```
+
+An algebra declared with `gax::algebra!` joins in with `gax::motions!`, which implements the
+trait from the module's kinds (`commutative struct` where rotations commute). The numga
+examples' Lie-group steppers are written once this way (`shared/mechanics_lie.rs`), and the
+tennis racket runs them on VGA2D and VGA3D and on its own VGA4D and VGA5D.
+
 ## 14. Mass properties
 
 `pga3d::Moments` and `pga2d::Moments` compute the size, the centre of mass and the inertia of a

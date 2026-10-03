@@ -28,11 +28,19 @@ use gax_numga_examples::{
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
+#[allow(unused_imports)]
+use lie::Lie as _;
 
 /// The Lie steppers for PGA3D motors: rates and forques are both lines.
 mod rigid {
-    use gax::pga3d::{Line as Rate, Line as Forque, Motor, Point};
-    crate::lie::integrators!();
+    /// The algebra.
+    pub type G = gax::motions::Pga3d;
+    pub type M = crate::lie::M<G>;
+    pub type R = crate::lie::R<G>;
+    pub type F = crate::lie::F<G>;
+    pub type P = crate::lie::P<G>;
+    pub type Inertia = crate::lie::Inertia<G>;
+    pub type InertiaInv = crate::lie::InertiaInv<G>;
 }
 
 mod xpbd {
@@ -140,7 +148,7 @@ mod xpbd {
         // 1. Unconstrained inertial pre-integration.
         let (mut motor, _): (Vec<M>, Vec<R>) = (0..chain.motor.len())
             .map(|b| {
-                crate::rigid::explicit_rk4(
+                crate::rigid::G::explicit_rk4(
                     chain.motor[b],
                     chain.rate[b],
                     chain.inertia,
@@ -169,7 +177,7 @@ mod xpbd {
             .motor
             .iter()
             .zip(&motor)
-            .map(|(before, after)| crate::rigid::rate_between(*before, *after, dt))
+            .map(|(before, after)| crate::rigid::G::rate_between(*before, *after, dt))
             .collect();
         // 4. Resolve the velocity constraints.
         for joints in partitions {
@@ -241,7 +249,7 @@ mod xpbd {
         gravity: f64,
     ) -> (Chain, Vec<Joints>) {
         let points = cloud(size);
-        let (inertia, inertia_inv) = crate::rigid::inertia_from_points(&points);
+        let (inertia, inertia_inv) = crate::rigid::G::inertia_from_points(&points);
         let first_moment = points[1..].iter().fold(points[0], |a, b| a + *b);
         let state = Chain {
             motor: (0..bodies)
@@ -512,7 +520,7 @@ mod tests {
         let energy = |s: &Chain| {
             s.rate
                 .iter()
-                .map(|r| crate::rigid::kinetic_energy(*r, s.inertia))
+                .map(|r| <crate::rigid::G as crate::lie::Lie>::kinetic_energy(*r, s.inertia))
                 .sum::<f64>()
         };
         let mut last = energy(&state);
