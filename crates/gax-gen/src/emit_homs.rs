@@ -237,14 +237,8 @@ pub fn emit_hom(
         for b in &src.kinds {
             let va = symbolic::variables(&a.layout, 0);
             let vb = symbolic::variables(&b.layout, a.layout.len() as crate::poly::Var);
-            let image = |mv: &SymMv| -> SymMv {
-                mv.iter().fold(SymMv::new(), |acc, (&m, p)| {
-                    let img: SymMv = blade(m).into_iter().map(|(t, c)| (t, &c * p)).collect();
-                    symbolic::add(&acc, &img)
-                })
-            };
-            let lhs = image(&symbolic::binop(sa, BinOp::Gp, &va, &vb));
-            let rhs = symbolic::binop(ta, BinOp::Gp, &image(&va), &image(&vb));
+            let lhs = image(&blade, &symbolic::binop(sa, BinOp::Gp, &va, &vb));
+            let rhs = symbolic::binop(ta, BinOp::Gp, &image(&blade, &va), &image(&blade, &vb));
             if lhs != rhs {
                 return Err(format!(
                     "{} -> {}: the image of {} * {} is not the product of the images",
@@ -262,6 +256,13 @@ pub fn emit_hom(
     }
     out.push_str("}\n\n");
     Ok((out, kinds))
+}
+
+/// The image of `mv` under the map that sends each blade `m` to `blade(m)`.
+fn image(blade: &impl Fn(u32) -> SymMv, mv: &SymMv) -> SymMv {
+    mv.iter().fold(SymMv::new(), |acc, (&m, p)| {
+        symbolic::add(&acc, &symbolic::scale_mv(&blade(m), p))
+    })
 }
 
 /// The `From` impl for source kind `a`, if its image is not zero.
@@ -311,14 +312,8 @@ fn kind_impl(
     // The reverse commutes with the map on this kind (`φ(~a) = ~φ(a)`), so it keeps
     // `x ~x = 1`: then `Unit::widen` may carry a unit versor across.
     let va = symbolic::variables(&a.layout, 0);
-    let image = |mv: &SymMv| -> SymMv {
-        mv.iter().fold(SymMv::new(), |acc, (&m, p)| {
-            let img: SymMv = blade(m).into_iter().map(|(t, c)| (t, &c * p)).collect();
-            symbolic::add(&acc, &img)
-        })
-    };
-    let keeps_unit = image(&symbolic::unop(&src.algebra, UnOp::Reverse, &va))
-        == symbolic::unop(&tgt.algebra, UnOp::Reverse, &image(&va));
+    let keeps_unit = image(blade, &symbolic::unop(&src.algebra, UnOp::Reverse, &va))
+        == symbolic::unop(&tgt.algebra, UnOp::Reverse, &image(blade, &va));
     let (an, bn) = (&a.name, &b.name);
     let widen = if keeps_unit {
         format!(

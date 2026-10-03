@@ -18,6 +18,53 @@ pub enum Operand {
     Const(Rational),
 }
 
+/// The float types a [`Program`] evaluates in.
+trait Float:
+    Copy
+    + PartialOrd
+    + std::ops::Add<Output = Self>
+    + std::ops::Sub<Output = Self>
+    + std::ops::Mul<Output = Self>
+    + std::ops::Div<Output = Self>
+    + std::ops::Neg<Output = Self>
+{
+    /// The nearest value to `c`.
+    fn of(c: f64) -> Self;
+    /// `atan2(self, x)`.
+    fn atan2(self, x: Self) -> Self;
+    /// `f(self)`.
+    fn call(self, f: Func) -> Self;
+}
+
+macro_rules! float {
+    ($t:ty, $of:expr) => {
+        impl Float for $t {
+            fn of(c: f64) -> Self {
+                $of(c)
+            }
+            fn atan2(self, x: Self) -> Self {
+                <$t>::atan2(self, x)
+            }
+            fn call(self, f: Func) -> Self {
+                match f {
+                    Func::Recip => 1.0 / self,
+                    Func::Sqrt => self.sqrt(),
+                    Func::Sin => self.sin(),
+                    Func::Cos => self.cos(),
+                    Func::Sinh => self.sinh(),
+                    Func::Cosh => self.cosh(),
+                    Func::Ln => self.ln(),
+                    Func::Abs => self.abs(),
+                    Func::Exp => self.exp(),
+                }
+            }
+        }
+    };
+}
+
+float!(f64, |c| c);
+float!(f32, |c| c as f32);
+
 /// Elementary functions of one argument.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Func {
@@ -258,55 +305,21 @@ impl Program {
 
     /// Evaluate in `f64`.
     pub fn eval(&self, var: &impl Fn(Var) -> f64) -> Vec<f64> {
-        let mut vals: Vec<f64> = Vec::with_capacity(self.instrs.len());
-        let get = |o: &Operand, vals: &Vec<f64>| match o {
-            Operand::Var(v) => var(*v),
-            Operand::Temp(k) => vals[*k],
-            Operand::Const(c) => c.to_f64(),
-        };
-        for i in &self.instrs {
-            let x = match i {
-                Instr::Add(a, b) => get(a, &vals) + get(b, &vals),
-                Instr::Sub(a, b) => get(a, &vals) - get(b, &vals),
-                Instr::Mul(a, b) => get(a, &vals) * get(b, &vals),
-                Instr::Neg(a) => -get(a, &vals),
-                Instr::Div(a, b) => get(a, &vals) / get(b, &vals),
-                Instr::Atan2(a, b) => get(a, &vals).atan2(get(b, &vals)),
-                Instr::Select(a, b, x, y) => {
-                    if get(a, &vals) < get(b, &vals) {
-                        get(x, &vals)
-                    } else {
-                        get(y, &vals)
-                    }
-                }
-                Instr::Call(f, a) => {
-                    let x = get(a, &vals);
-                    match f {
-                        Func::Recip => 1.0 / x,
-                        Func::Sqrt => x.sqrt(),
-                        Func::Sin => x.sin(),
-                        Func::Cos => x.cos(),
-                        Func::Sinh => x.sinh(),
-                        Func::Cosh => x.cosh(),
-                        Func::Ln => x.ln(),
-                        Func::Abs => x.abs(),
-                        Func::Exp => x.exp(),
-                    }
-                }
-            };
-            vals.push(x);
-        }
-        self.outputs.iter().map(|o| get(o, &vals)).collect()
+        self.eval_in(var)
     }
 
     /// Evaluate in `f32`, rounding every operation (no fused multiply-adds): the program as
     /// scalar code runs it on a target without FMA.
     pub fn eval_f32(&self, var: &impl Fn(Var) -> f32) -> Vec<f32> {
-        let mut vals: Vec<f32> = Vec::with_capacity(self.instrs.len());
-        let get = |o: &Operand, vals: &Vec<f32>| match o {
+        self.eval_in(var)
+    }
+
+    fn eval_in<T: Float>(&self, var: &impl Fn(Var) -> T) -> Vec<T> {
+        let mut vals: Vec<T> = Vec::with_capacity(self.instrs.len());
+        let get = |o: &Operand, vals: &Vec<T>| match o {
             Operand::Var(v) => var(*v),
             Operand::Temp(k) => vals[*k],
-            Operand::Const(c) => c.to_f64() as f32,
+            Operand::Const(c) => T::of(c.to_f64()),
         };
         for i in &self.instrs {
             let x = match i {
@@ -323,20 +336,7 @@ impl Program {
                         get(y, &vals)
                     }
                 }
-                Instr::Call(f, a) => {
-                    let x = get(a, &vals);
-                    match f {
-                        Func::Recip => 1.0 / x,
-                        Func::Sqrt => x.sqrt(),
-                        Func::Sin => x.sin(),
-                        Func::Cos => x.cos(),
-                        Func::Sinh => x.sinh(),
-                        Func::Cosh => x.cosh(),
-                        Func::Ln => x.ln(),
-                        Func::Abs => x.abs(),
-                        Func::Exp => x.exp(),
-                    }
-                }
+                Instr::Call(f, a) => get(a, &vals).call(*f),
             };
             vals.push(x);
         }

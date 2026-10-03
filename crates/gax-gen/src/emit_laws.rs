@@ -57,27 +57,11 @@ pub struct Equivariance {
 }
 
 fn trait_of(op: BinOp) -> (&'static str, &'static str, &'static str) {
-    match op {
-        BinOp::Gp => ("Gp", "gp", "*"),
-        BinOp::Wedge => ("Wedge", "wedge", "^"),
-        BinOp::Vee => ("Vee", "vee", "&"),
-        BinOp::Lc => ("Lc", "lc", "⌋"),
-        BinOp::Rc => ("Rc", "rc", "⌊"),
-        BinOp::Dot => ("Dot", "dot", "|"),
-        BinOp::Scalar => ("ScalarProduct", "scalar_product", "∗"),
-        BinOp::Commutator => ("Commutator", "commutator", "×"),
-        BinOp::Anticommutator => ("Anticommutator", "anticommutator", "⊗"),
-    }
+    op.names()
 }
 
 fn unop_trait(op: UnOp) -> (&'static str, &'static str) {
-    match op {
-        UnOp::Reverse => ("Reverse", "reverse"),
-        UnOp::Involute => ("Involute", "involute"),
-        UnOp::Conjugate => ("Conjugate", "conjugate"),
-        UnOp::Dual => ("Dual", "dual"),
-        UnOp::Undual => ("Undual", "undual"),
-    }
+    (op.trait_name(), op.name())
 }
 
 fn single_grade(k: &KindSpec) -> bool {
@@ -92,13 +76,6 @@ fn sandwich(spec: &AlgebraSpec, v: &SymMv, x: &SymMv) -> SymMv {
         &symbolic::binop(alg, BinOp::Gp, v, x),
         &symbolic::unop(alg, UnOp::Reverse, v),
     )
-}
-
-fn scale(mv: &SymMv, p: &Poly) -> SymMv {
-    mv.iter()
-        .map(|(m, c)| (*m, c * p))
-        .filter(|(_, c)| !c.is_zero())
-        .collect()
 }
 
 /// A versor's norm `N` and the Gröbner basis of its conditions.
@@ -137,7 +114,7 @@ fn find_factor(lhs: &SymMv, rhs: &SymMv, n: &Poly, basis: &[Poly]) -> Option<Fac
     for k in 0..=4 {
         for sign in [1i8, -1] {
             let f = power.scale(Rational::int(i128::from(sign)));
-            if equal_mod(lhs, &scale(rhs, &f), basis) {
+            if equal_mod(lhs, &symbolic::scale_mv(rhs, &f), basis) {
                 return Some(Factor { sign, power: k });
             }
         }

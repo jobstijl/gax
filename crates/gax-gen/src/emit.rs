@@ -681,7 +681,7 @@ struct Emitter<'a> {
 }
 
 /// Rust identifier for a blade accessor (`1` becomes `s`).
-fn blade_ident(b: &str) -> String {
+pub(crate) fn blade_ident(b: &str) -> String {
     if b == "1" { "s".into() } else { b.to_string() }
 }
 
@@ -2236,27 +2236,12 @@ fn check_equal(prog: &Program, want: &[Poly], relations: &[Poly]) -> bool {
 }
 
 fn trait_of(op: BinOp) -> (&'static str, &'static str) {
-    match op {
-        BinOp::Gp => ("Gp", "gp"),
-        BinOp::Wedge => ("Wedge", "wedge"),
-        BinOp::Vee => ("Vee", "vee"),
-        BinOp::Lc => ("Lc", "lc"),
-        BinOp::Rc => ("Rc", "rc"),
-        BinOp::Dot => ("Dot", "dot"),
-        BinOp::Scalar => ("ScalarProduct", "scalar_product"),
-        BinOp::Commutator => ("Commutator", "commutator"),
-        BinOp::Anticommutator => ("Anticommutator", "anticommutator"),
-    }
+    let (t, m, _) = op.names();
+    (t, m)
 }
 
 fn unop_trait(op: UnOp) -> (&'static str, &'static str) {
-    match op {
-        UnOp::Reverse => ("Reverse", "reverse"),
-        UnOp::Involute => ("Involute", "involute"),
-        UnOp::Conjugate => ("Conjugate", "conjugate"),
-        UnOp::Dual => ("Dual", "dual"),
-        UnOp::Undual => ("Undual", "undual"),
-    }
+    (op.trait_name(), op.name())
 }
 
 /// Emit an integration test that checks every generated kernel against the dense oracle in

@@ -13,9 +13,9 @@
 //! Every function body is printed from the same verified [`Program`]s as the Rust code.
 
 use crate::cse;
-use crate::emit::{Stats, WGSL_MAX};
+use crate::emit::{Stats, WGSL_MAX, blade_ident};
 use crate::kernel::{
-    Kernel, Precision, Source, Step, StudyFn, Ty, snake, vec4s, wgsl_coeff, wgsl_construct_in,
+    Kernel, Precision, Step, StudyFn, Ty, arg_vars, snake, vec4s, wgsl_coeff, wgsl_construct_in,
 };
 use crate::poly::{Poly, Var};
 use crate::slp::Program;
@@ -1202,6 +1202,19 @@ fn embedding(from: &KindSpec, to: &KindSpec, x: &str) -> Option<Vec<String>> {
     )
 }
 
+/// The coefficients of `to`'s scalar 1, and its scalar coefficient of the variable `x` times
+/// `sign` as text; `None` if `to` has no scalar.
+fn unit_scalar(to: &KindSpec) -> Option<(Vec<String>, impl Fn(&str, i64) -> String)> {
+    let (pos, sign) = to.layout.position(0)?;
+    let mut one = vec!["0.0".to_string(); to.layout.len()];
+    one[pos] = if sign > 0 { "1.0" } else { "-1.0" }.into();
+    let scalar = move |x: &str, s: i64| {
+        let c = wgsl_coeff(x, pos);
+        if s * sign > 0 { c } else { format!("-{c}") }
+    };
+    Some((one, scalar))
+}
+
 /// A two-parameter product kernel `a op b`, or `None` when the result is zero or has no kind.
 fn product(
     spec: &AlgebraSpec,
@@ -1226,19 +1239,7 @@ fn product(
     }
     let coeffs = symbolic::to_coeffs(&out.layout, &res)?;
     let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
-    let vars = (0..na + b.layout.len())
-        .map(|i| {
-            let src = if i < na {
-                Source::Arg { param: 0, index: i }
-            } else {
-                Source::Arg {
-                    param: 1,
-                    index: i - na,
-                }
-            };
-            (i as Var, src)
-        })
-        .collect();
+    let vars = arg_vars(&[na, b.layout.len()]);
     Some(Kernel {
         name: name.into(),
         doc: doc.into(),
@@ -1267,9 +1268,7 @@ fn unary(k: &KindSpec, out: &KindSpec, coeffs: &[Poly], name: &str, doc: &str) -
         steps: vec![Step::Lets {
             prog,
             prefix: "t".into(),
-            vars: (0..k.layout.len())
-                .map(|i| (i as Var, Source::Arg { param: 0, index: i }))
-                .collect(),
+            vars: arg_vars(&[k.layout.len()]),
         }],
         entries: None,
     }
@@ -1330,9 +1329,7 @@ pub fn fallback_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<Strin
         .into_iter()
         .map(|c| if c == "0.0" { c } else { format!("({c}) * h") })
         .collect();
-    let (one_pos, one_sign) = e.layout.position(0)?;
-    let mut one = vec!["0.0".to_string(); e.layout.len()];
-    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
+    let (one, _) = unit_scalar(e)?;
     let newton = format!(
         "{es}_mul_{es}(r, {es}_scale({es}_sub(three, {es}_mul_{es}({es}_reverse(r), r)), 0.5))"
     );
@@ -1394,15 +1391,8 @@ pub fn closed_exp(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String>
     let (ks, es) = (snake(&k.name), snake(&e.name));
     let (kn, en) = (&k.name, &e.name);
     let embed = embedding(k, e, "z")?;
-    let (one_pos, one_sign) = e.layout.position(0)?;
-    let scalar = wgsl_coeff("z2", one_pos);
-    let n = if one_sign > 0 {
-        format!("-{scalar}")
-    } else {
-        scalar
-    };
-    let mut one = vec!["0.0".to_string(); e.layout.len()];
-    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
+    let (one, scalar) = unit_scalar(e)?;
+    let n = scalar("z2", -1);
     Some(format!(
         "// The exponential of a `{kn}`, a unit `{en}`, in closed form (docs/log6d.md §12, gax's Rust
 // `exp` for this kind): `x` is halved `s` times until `{ks}_exp_reach` is below 1 (rotations
@@ -1461,32 +1451,8 @@ fn {ks}_exp_closed(x: {kn}) -> {en} {{
 pub fn fallback_log(k: &KindSpec, e: &KindSpec, prec: Precision) -> Option<String> {
     let es = snake(&e.name);
     let (kn, en) = (&k.name, &e.name);
-    let (one_pos, one_sign) = e.layout.position(0)?;
-    let scalar = |x: &str| {
-        let c = wgsl_coeff(x, one_pos);
-        if one_sign > 0 { c } else { format!("-{c}") }
-    };
-    let mut one = vec!["0.0".to_string(); e.layout.len()];
-    one[one_pos] = if one_sign > 0 { "1.0" } else { "-1.0" }.into();
-    let embed: Vec<String> = e
-        .layout
-        .blades
-        .iter()
-        .map(|&(m, se)| match k.layout.position(m) {
-            Some((i, sk)) => {
-                let c = wgsl_coeff("zb", i);
-                if sk * se > 0 { c } else { format!("-{c}") }
-            }
-            None => "0.0".into(),
-        })
-        .collect();
-    if k.layout
-        .blades
-        .iter()
-        .any(|(m, _)| e.layout.position(*m).is_none())
-    {
-        return None;
-    }
+    let embed = embedding(k, e, "zb")?;
+    let (one, scalar) = unit_scalar(e)?;
     let fields = vec4s(k.layout.len());
     let sum: Vec<String> = (0..fields)
         .map(|f| format!("b.c{f} + zb.c{f} * 1.5707963"))
@@ -1518,9 +1484,9 @@ fn unit_{es}_log(x: {en}) -> {kn} {{
     return {kn}({});
 }}
 ",
-        scalar("x"),
+        scalar("x", 1),
         wgsl_construct_in(prec, en, &embed),
-        scalar("z2"),
+        scalar("z2", 1),
         wgsl_construct_in(prec, en, &one),
         sum.join(", "),
     ))
@@ -1647,13 +1613,9 @@ pub fn module_in(spec: &AlgebraSpec, stats: &Stats, fma: bool, prec: Precision) 
         let params: Vec<String> = k
             .blades
             .iter()
-            .map(|b| format!("{}: {t}", if b == "1" { "s" } else { b }))
+            .map(|b| format!("{}: {t}", blade_ident(b)))
             .collect();
-        let parts: Vec<String> = k
-            .blades
-            .iter()
-            .map(|b| if b == "1" { "s".into() } else { b.clone() })
-            .collect();
+        let parts: Vec<String> = k.blades.iter().map(|b| blade_ident(b)).collect();
         let _ = writeln!(
             s,
             "// A `{}` from its coefficients.\nfn {}_new({}) -> {} {{\n    return {};\n}}\n",

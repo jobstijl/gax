@@ -106,3 +106,46 @@ pub fn unit_relations(alg: &Algebra, x: &SymMv) -> Vec<Poly> {
     let diff = add(&norm, &scalar(-Rational::ONE));
     diff.into_values().filter(|p| !p.is_zero()).collect()
 }
+
+/// The coefficient of `blade` (zero if absent).
+pub fn coef(mv: &SymMv, blade: u32) -> Poly {
+    mv.get(&blade).cloned().unwrap_or_default()
+}
+
+/// The multivector `p` times `blade` (empty for a zero `p`).
+pub fn blade_mv(blade: u32, p: Poly) -> SymMv {
+    let mut m = SymMv::new();
+    if !p.is_zero() {
+        m.insert(blade, p);
+    }
+    m
+}
+
+/// The scalar `p`.
+pub fn scalar_mv(p: Poly) -> SymMv {
+    blade_mv(0, p)
+}
+
+/// `mv` times the polynomial `p`.
+pub fn scale_mv(mv: &SymMv, p: &Poly) -> SymMv {
+    let mut out: SymMv = mv.iter().map(|(b, c)| (*b, c * p)).collect();
+    out.retain(|_, c| !c.is_zero());
+    out
+}
+
+/// The grade-`g` part of `mv`.
+pub fn grade_part(mv: &SymMv, g: u32) -> SymMv {
+    mv.iter()
+        .filter(|(m, _)| m.count_ones() == g)
+        .map(|(m, c)| (*m, c.clone()))
+        .collect()
+}
+
+/// The square of a basis blade when it is `0` or `±1` (the Study structures), else `None`.
+pub fn blade_square(alg: &Algebra, b: u32) -> Option<i8> {
+    match alg.blade_product(b, b) {
+        [] => Some(0),
+        [(0, c)] if c.abs() == 1 => Some(*c as i8),
+        _ => None,
+    }
+}

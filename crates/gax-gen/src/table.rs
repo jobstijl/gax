@@ -116,6 +116,21 @@ impl BinOp {
             BinOp::Anticommutator => "anticommutator",
         }
     }
+
+    /// The gax trait, its method, and the operator's symbol in law listings.
+    pub fn names(self) -> (&'static str, &'static str, &'static str) {
+        match self {
+            BinOp::Gp => ("Gp", "gp", "*"),
+            BinOp::Wedge => ("Wedge", "wedge", "^"),
+            BinOp::Vee => ("Vee", "vee", "&"),
+            BinOp::Lc => ("Lc", "lc", "⌋"),
+            BinOp::Rc => ("Rc", "rc", "⌊"),
+            BinOp::Dot => ("Dot", "dot", "|"),
+            BinOp::Scalar => ("ScalarProduct", "scalar_product", "∗"),
+            BinOp::Commutator => ("Commutator", "commutator", "×"),
+            BinOp::Anticommutator => ("Anticommutator", "anticommutator", "⊗"),
+        }
+    }
 }
 
 /// The unary linear operations the generator knows.
@@ -151,6 +166,17 @@ impl UnOp {
             UnOp::Conjugate => "conjugate",
             UnOp::Dual => "dual",
             UnOp::Undual => "undual",
+        }
+    }
+
+    /// The gax trait.
+    pub fn trait_name(self) -> &'static str {
+        match self {
+            UnOp::Reverse => "Reverse",
+            UnOp::Involute => "Involute",
+            UnOp::Conjugate => "Conjugate",
+            UnOp::Dual => "Dual",
+            UnOp::Undual => "Undual",
         }
     }
 }

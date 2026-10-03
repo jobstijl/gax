@@ -9,11 +9,11 @@
 
 use crate::algebra::Algebra;
 use crate::cse::{self, Stage, StageOp};
-use crate::kernel::{Kernel, Source, Step, StudyFn, Ty, snake};
+use crate::kernel::{Kernel, Source, Step, StudyFn, Ty, arg_vars, snake};
 use crate::poly::{Poly, Rational, Var};
 use crate::slp::{Func, render};
 use crate::spec::{AlgebraSpec, KindSpec};
-use crate::symbolic::{self, SymMv};
+use crate::symbolic::{self, SymMv, blade_mv, blade_square, coef, grade_part, scalar_mv, scale_mv};
 use crate::table::{BinOp, UnOp};
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -36,20 +36,10 @@ fn study_structure(alg: &Algebra, mv: &SymMv) -> Option<Study> {
             blade: None,
             isq: -1,
         }),
-        [b] => {
-            let sq = alg.blade_product(*b, *b);
-            match sq {
-                [] => Some(Study {
-                    blade: Some(*b),
-                    isq: 0,
-                }),
-                [(0, c)] if c.abs() == 1 => Some(Study {
-                    blade: Some(*b),
-                    isq: *c as i8,
-                }),
-                _ => None,
-            }
-        }
+        [b] => blade_square(alg, *b).map(|isq| Study {
+            blade: Some(*b),
+            isq,
+        }),
         _ => None,
     }
 }
@@ -66,10 +56,8 @@ fn emit_exp_single_blade(spec: &AlgebraSpec, k: &KindSpec, body: &mut String) {
     let [(b, sb)] = others.as_slice() else {
         return;
     };
-    let isq = match alg.blade_product(*b, *b) {
-        [] => 0,
-        [(0, c)] if c.abs() == 1 => *c,
-        _ => return,
+    let Some(isq) = blade_square(alg, *b) else {
+        return;
     };
     let support: BTreeSet<u32> = [0, *b].into_iter().collect();
     let Some(out) = spec.kinds.iter().find(|o| {
@@ -134,24 +122,6 @@ fn nonpositive(p: &Poly) -> bool {
             .all(|(m, c)| *c < Rational::ZERO && m.0.len() == 2 && m.0[0] == m.0[1])
 }
 
-fn coef(mv: &SymMv, blade: u32) -> Poly {
-    mv.get(&blade).cloned().unwrap_or_default()
-}
-
-fn blade_mv(blade: u32, p: Poly) -> SymMv {
-    let mut m = SymMv::new();
-    if !p.is_zero() {
-        m.insert(blade, p);
-    }
-    m
-}
-
-fn scale_mv(mv: &SymMv, p: &Poly) -> SymMv {
-    let mut out: SymMv = mv.iter().map(|(b, c)| (*b, c * p)).collect();
-    out.retain(|_, c| !c.is_zero());
-    out
-}
-
 /// Which value methods were emitted for a kind, and their output kinds.
 #[derive(Clone, Debug, Default)]
 #[allow(clippy::struct_excessive_bools)] // one flag per optional method, not a state machine
@@ -174,13 +144,6 @@ pub struct ValueMethods {
     pub sqrt: bool,
     /// The methods that have a WGSL form, in language-neutral form (see [`crate::kernel`]).
     pub kernels: Vec<Kernel>,
-}
-
-/// The sources of a kind parameter's coefficients `0..n` as program variables `0..n`.
-fn arg_vars(n: usize) -> Vec<(Var, Source)> {
-    (0..n)
-        .map(|i| (i as Var, Source::Arg { param: 0, index: i }))
-        .collect()
 }
 
 /// A one-parameter kernel on kind `k`, or `None` when it is too large for the WGSL modules.
@@ -224,7 +187,7 @@ fn study_method(
 ) -> (String, Vec<String>) {
     let nv = k.layout.len();
     if let Some((name, doc, result, func)) = kernel {
-        let mut post_vars = arg_vars(nv);
+        let mut post_vars = arg_vars(&[nv]);
         for (i, l) in c.locals.iter().enumerate() {
             post_vars.push(((nv + i) as Var, Source::Local((*l).into())));
         }
@@ -237,7 +200,7 @@ fn study_method(
                 Step::Lets {
                     prog: c.pre.clone(),
                     prefix: "p".into(),
-                    vars: arg_vars(nv),
+                    vars: arg_vars(&[nv]),
                 },
                 Step::Study {
                     func,
@@ -300,7 +263,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     let n0 = coef(&norm, 0);
     meta.norm = !n0.is_zero();
     let ks = snake(name);
-    if !n0.is_zero() {
+    if meta.norm {
         let prog = cse::compile_best(std::slice::from_ref(&n0), &BTreeSet::new(), &[]);
         meta.kernels.extend(value_kernel(
             k,
@@ -310,7 +273,7 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
             vec![Step::Lets {
                 prog: prog.clone(),
                 prefix: "t".into(),
-                vars: arg_vars(n),
+                vars: arg_vars(&[n]),
             }],
         ));
         let mut lets = String::new();
@@ -323,13 +286,13 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     }
 
     if let Some(study) = study_structure(alg, &norm)
-        && !n0.is_zero()
+        && meta.norm
     {
         meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
         meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body, &mut meta.kernels);
         emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
     } else if let Some((q, qq)) = general_four(alg, &norm)
-        && !n0.is_zero()
+        && meta.norm
     {
         // 5D: x ~x = a + X with X a 4-vector, X² = q a scalar.
         let conj = symbolic::add(
@@ -458,10 +421,6 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
     }
     out.push_str(&traits);
     (out, meta)
-}
-
-fn scalar_mv(p: Poly) -> SymMv {
-    blade_mv(0, p)
 }
 
 fn emit_inverse(
@@ -828,7 +787,7 @@ fn emit_newton_step(
         vec![Step::Lets {
             prog: prog.clone(),
             prefix: "t".into(),
-            vars: arg_vars(k.layout.len()),
+            vars: arg_vars(&[k.layout.len()]),
         }],
     ));
     let xvar = |v: Var| format!("x[{v}]");
@@ -869,11 +828,7 @@ fn emit_log(
     if four.len() > 1 {
         return None;
     }
-    let p: SymMv = x
-        .iter()
-        .filter(|(m, _)| m.count_ones() == 2)
-        .map(|(m, c)| (*m, c.clone()))
-        .collect();
+    let p = grade_part(x, 2);
     let u = symbolic::binop(alg, BinOp::Gp, &p, &p);
     let study = study_structure(alg, &u)?;
     if let (Some(b), Some(&f)) = (study.blade, four.first())
@@ -883,11 +838,7 @@ fn emit_log(
     }
     let blade = study.blade.or(four.first().copied());
     let isq = match blade {
-        Some(b) => match alg.blade_product(b, b) {
-            [] => 0,
-            [(0, c)] if c.abs() == 1 => *c as i8,
-            _ => return None,
-        },
+        Some(b) => blade_square(alg, b)?,
         None => -1,
     };
     let (h0, h1) = (nv, nv + 1);
@@ -1052,16 +1003,8 @@ fn emit_log_general(
     {
         return None;
     }
-    let c4: SymMv = x
-        .iter()
-        .filter(|(m, _)| m.count_ones() == 4)
-        .map(|(m, c)| (*m, c.clone()))
-        .collect();
-    let p: SymMv = x
-        .iter()
-        .filter(|(m, _)| m.count_ones() == 2)
-        .map(|(m, c)| (*m, c.clone()))
-        .collect();
+    let c4 = grade_part(x, 4);
+    let p = grade_part(x, 2);
     let cc = symbolic::binop(alg, BinOp::Gp, &c4, &c4);
     if symbolic::support(&cc).iter().any(|&m| m != 0) {
         return None;
@@ -1253,12 +1196,7 @@ fn emit_log_6d(
 ) {
     let alg = &spec.algebra;
     let x = symbolic::variables(&k.layout, 0);
-    let grade = |g: u32| -> SymMv {
-        x.iter()
-            .filter(|(m, _)| m.count_ones() == g)
-            .map(|(m, c)| (*m, c.clone()))
-            .collect()
-    };
+    let grade = |g: u32| grade_part(&x, g);
     let (r2, r4, r6) = (grade(2), grade(4), grade(6));
     let r0 = coef(&x, 0);
     let a2 = coef(&symbolic::binop(alg, BinOp::Gp, &r2, &r2), 0);
@@ -1267,12 +1205,7 @@ fn emit_log_6d(
     let p3 = &r0 * &r0;
     let p2 = &(&three * &p3) - &a2;
     let p1 = &(&a4 + &(&three * &p3)) - &a2.scale(Rational::int(2));
-    let two = |mv: &SymMv| -> SymMv {
-        mv.iter()
-            .filter(|(m, _)| m.count_ones() == 2)
-            .map(|(m, c)| (*m, c.clone()))
-            .collect()
-    };
+    let two = |mv: &SymMv| grade_part(mv, 2);
     let g1 = symbolic::to_coeffs(&bv.layout, &r2).expect("the bivectors");
     let g2 = symbolic::to_coeffs(
         &bv.layout,
@@ -1325,7 +1258,7 @@ fn emit_log_6d(
             Step::Lets {
                 prog: prog.clone(),
                 prefix: "p".into(),
-                vars: arg_vars(k.layout.len()),
+                vars: arg_vars(&[k.layout.len()]),
             },
             Step::Study {
                 func: StudyFn::Log6,
@@ -1386,7 +1319,7 @@ fn emit_log_6d(
             Step::Lets {
                 prog: prog.clone(),
                 prefix: "p".into(),
-                vars: arg_vars(k.layout.len()),
+                vars: arg_vars(&[k.layout.len()]),
             },
             Step::Study {
                 func: StudyFn::Log6Turn,
@@ -1519,12 +1452,7 @@ impl<T: gx::Real> gx::Log<{bn}<(), T>> for gx::Unit<{en}<(), T>> {{
 fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut String) {
     let alg = &spec.algebra;
     let x = symbolic::variables(&k.layout, 0);
-    let grade = |g: u32| -> SymMv {
-        x.iter()
-            .filter(|(m, _)| m.count_ones() == g)
-            .map(|(m, c)| (*m, c.clone()))
-            .collect()
-    };
+    let grade = |g: u32| grade_part(&x, g);
     let parts = [grade(2), grade(4), grade(6), grade(8)];
     let r0 = coef(&x, 0);
     let square = |mv: &SymMv| coef(&symbolic::binop(alg, BinOp::Gp, mv, mv), 0);
@@ -1536,11 +1464,7 @@ fn emit_log_8d(spec: &AlgebraSpec, k: &KindSpec, bv: &KindSpec, traits: &mut Str
     let p2 = &(&(&int(6) * &p4) - &(&int(3) * &a1)) + &a2;
     let p1 = &(&(&(&int(4) * &p4) - &(&int(3) * &a1)) + &(&int(2) * &a2)) - &a3;
     let bivectors = |mv: &SymMv| -> Vec<Poly> {
-        let two: SymMv = mv
-            .iter()
-            .filter(|(m, _)| m.count_ones() == 2)
-            .map(|(m, c)| (*m, c.clone()))
-            .collect();
+        let two = grade_part(mv, 2);
         symbolic::to_coeffs(&bv.layout, &two).expect("the bivectors")
     };
     let mut outs = vec![r0.clone(), p1, p2, p3, p4];
@@ -1793,7 +1717,7 @@ fn emit_exp_closed(
         let first = Step::Lets {
             prog: pre,
             prefix: "p".into(),
-            vars: arg_vars(nb),
+            vars: arg_vars(&[nb]),
         };
         let study = |func: StudyFn, outs: [&str; 4]| Step::Study {
             func,
