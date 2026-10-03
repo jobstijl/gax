@@ -17,6 +17,7 @@
 
 use std::sync::OnceLock;
 
+use gax::{sta, vga3d};
 use gax_numga_examples::canvas::srgb;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, plot,
@@ -25,13 +26,12 @@ use gax_numga_examples::{
 
 mod curvature {
     use core::ops::{Add, Mul};
-    use gax::sta::{Bivector, Even, Odd, Pseudoscalar, Scalar, Vector};
+    use gax::sta::{Bivector, Odd, Pseudoscalar, Vector};
 
     pub type V = Vector<(), f64>;
     pub type B = Bivector<(), f64>;
-    /// A scalar plus a pseudoscalar: an amplitude and a phase. STA declares no kind for it, so
-    /// it is an even multivector whose other parts stay zero.
-    pub type Phasor = Even<(), f64>;
+    /// A scalar plus a pseudoscalar: an amplitude and a phase.
+    pub type Phasor = gax::sta::Phasor<(), f64>;
     /// Area bivector to curvature bivector.
     pub type Curvature = Bivector<(Bivector,), f64>;
     /// Separation to relative acceleration.
@@ -60,9 +60,9 @@ mod curvature {
         Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
     }
 
-    /// `a + I p`.
-    pub fn phasor(a: f64, p: f64) -> Phasor {
-        Scalar::new(a).cast::<Even>() + Pseudoscalar::new(p).cast::<Even>()
+    /// The product of two phasors, a phasor: they multiply as complex numbers.
+    pub fn times(a: Phasor, b: Phasor) -> Phasor {
+        (a * b).cast::<gax::sta::Phasor>()
     }
 
     /// Vacuum plane-wave curvature along the null direction `k`, polarized on the transverse
@@ -142,12 +142,10 @@ mod curvature {
             .map(|t| {
                 let s = t - duration / 2.0;
                 let envelope = amplitude * (-s * s / (2.0 * sigma * sigma)).exp();
-                let profile = phasor((b * s).cos(), -(b * s).sin()) * envelope;
-                let rate = phasor(-s / (sigma * sigma), -b);
-                (
-                    profile,
-                    (rate * rate - phasor(1.0 / (sigma * sigma), 0.0)) * profile,
-                )
+                let profile = Pseudoscalar::new(-b * s).exp() * envelope;
+                let rate = Phasor::new(-s / (sigma * sigma), -b);
+                let curving = times(rate, rate) - Phasor::new(1.0 / (sigma * sigma), 0.0);
+                (profile, times(curving, profile))
             })
             .unzip()
     }
@@ -159,7 +157,7 @@ mod curvature {
         [
             plus * second.s(),
             Pseudoscalar::new(second.e0123()) * plus,
-            (second * plus).cast::<Bivector>(),
+            second * plus,
         ]
         .map(|w| w * -0.5)
     }
@@ -302,7 +300,7 @@ mod curvature {
         let rapidities = linspace(-0.7, 0.7, 15);
         let amplitudes = boosted_observers(&rapidities, z())
             .into_iter()
-            .map(|o| tidal_map(plus, o).svd().1[0])
+            .map(|o| tidal_map(plus, o).svdvals()[0])
             .collect();
         (rapidities, amplitudes)
     }
@@ -326,20 +324,38 @@ fn tracking() -> [Rgb; 4] {
 struct Rings {
     reference: Vec<V>,
     profile: Vec<Phasor>,
-    positions: Vec<Vec<Vec<[f32; 2]>>>,
-    arrows: Vec<Vec<Vec<[f32; 2]>>>,
+    positions: Vec<Vec<Vec<V>>>,
+    arrows: Vec<Vec<Vec<V>>>,
     limit: f32,
-    strain: Vec<[f32; 2]>,
-    time: Vec<f32>,
+    /// Plus and cross strain over time, in units of `1e-4`.
+    strain: Vec<[f64; 2]>,
+    time: Vec<f64>,
     doppler: (Vec<f64>, Vec<f64>),
+}
+
+/// A separation's coordinates in the plane transverse to the wave (the ring panels' axes).
+fn transverse(v: V) -> [f64; 2] {
+    [v.e1(), v.e2()]
+}
+
+/// `[polarization][time][bead]` values, each mapped by `f`.
+fn per_bead(values: &[Vec<Vec<V>>], f: impl Fn(V) -> V) -> Vec<Vec<Vec<V>>> {
+    values
+        .iter()
+        .map(|per_time| {
+            per_time
+                .iter()
+                .map(|row| row.iter().map(|v| f(*v)).collect())
+                .collect()
+        })
+        .collect()
 }
 
 fn rings() -> &'static Rings {
     static RINGS: OnceLock<Rings> = OnceLock::new();
     RINGS.get_or_init(|| {
         let d = detector_scenario();
-        let xy = |v: V| [(v.e1() / RADIUS) as f32, (v.e2() / RADIUS) as f32];
-        let positions: Vec<Vec<Vec<[f32; 2]>>> = d
+        let positions = d
             .displacement
             .iter()
             .map(|per_time| {
@@ -348,51 +364,35 @@ fn rings() -> &'static Rings {
                     .map(|row| {
                         row.iter()
                             .zip(&d.reference)
-                            .map(|(u, r)| xy(*r + *u * AMPLIFICATION))
+                            .map(|(u, r)| (*r + *u * AMPLIFICATION) * (1.0 / RADIUS))
                             .collect()
                     })
                     .collect()
             })
-            .collect();
+            .collect::<Vec<Vec<Vec<V>>>>();
         // One arrow scale for the whole animation: the largest arrow is 0.31 radii long.
         let largest = d
             .acceleration
             .iter()
             .flatten()
             .flatten()
-            .map(|a| a.e1().hypot(a.e2()))
+            .map(|a| a.norm())
             .fold(0.0, f64::max)
             .max(1e-300);
-        let arrows = d
-            .acceleration
-            .iter()
-            .map(|per_time| {
-                per_time
-                    .iter()
-                    .map(|row| {
-                        row.iter()
-                            .map(|a| {
-                                let k = 0.31 / largest;
-                                [(a.e1() * k) as f32, (a.e2() * k) as f32]
-                            })
-                            .collect()
-                    })
-                    .collect()
-            })
-            .collect();
+        let arrows = per_bead(&d.acceleration, |a| a * (0.31 / largest));
         let limit = positions
             .iter()
             .flatten()
             .flatten()
-            .map(|p| p[0].abs().max(p[1].abs()))
-            .fold(1.35f32 - 0.31, f32::max)
+            .map(|p| transverse(*p).map(f64::abs).into_iter().fold(0.0, f64::max))
+            .fold(1.35 - 0.31, f64::max)
             + 0.31;
         Rings {
             reference: d.reference.clone(),
             profile: d.strain.clone(),
             positions,
             arrows,
-            limit,
+            limit: limit as f32,
             strain: d
                 .strain
                 .iter()
@@ -400,10 +400,10 @@ fn rings() -> &'static Rings {
                     // Plus is the phasor's scalar part, cross its pseudoscalar part turned back
                     // by `I`: the scalar part of `p I`.
                     let turned = *p * i();
-                    [(p.s() * 1e4) as f32, (turned.s() * 1e4) as f32]
+                    [p.s() * 1e4, turned.s() * 1e4]
                 })
                 .collect(),
-            time: d.time.iter().map(|t| *t as f32).collect(),
+            time: d.time.clone(),
             doppler: doppler_scenario(),
         }
     })
@@ -413,12 +413,11 @@ fn rings() -> &'static Rings {
 /// acceleration arrows.
 fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     let blue = palette::sky();
-    let circle: Vec<[f32; 2]> = (0..=120)
-        .map(|j| {
-            let a = core::f32::consts::TAU * j as f32 / 120.0;
-            [a.cos(), a.sin()]
-        })
-        .collect();
+    let closed = |mut pts: Vec<[f64; 2]>| {
+        pts.push(pts[0]);
+        pts
+    };
+    let circle = closed(detector_ring(120).into_iter().map(transverse).collect());
     ax.dashed(c, &circle, 1.0, 4.0, palette::grid(), 1.0);
     ax.line(c, [-1.08, 0.0], [1.08, 0.0], 0.8, palette::grid(), 0.5);
     ax.line(c, [0.0, -1.08], [0.0, 1.08], 0.8, palette::grid(), 0.5);
@@ -426,45 +425,44 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     // beads land on it.
     let (plus, cross) = strain_patterns();
     let strain = polarized_strain(plus, cross, r.profile[k])[polarization];
-    let mut predicted: Vec<[f32; 2]> = r
-        .reference
-        .iter()
-        .map(|s| {
-            let p = (*s + strain.of(*s) * AMPLIFICATION) * (1.0 / RADIUS);
-            [p.e1() as f32, p.e2() as f32]
-        })
-        .collect();
-    predicted.push(predicted[0]);
+    let predicted = closed(
+        r.reference
+            .iter()
+            .map(|s| transverse((*s + strain.of(*s) * AMPLIFICATION) * (1.0 / RADIUS)))
+            .collect(),
+    );
     ax.dashed(c, &predicted, 1.0, 3.0, palette::ink(), 0.5);
-    let now = &r.positions[polarization][k];
-    let mut outline = now.clone();
-    outline.push(now[0]);
-    ax.polyline(c, &outline, 1.2, blue, 0.45);
+    let beads = &r.positions[polarization][k];
+    let now: Vec<[f64; 2]> = beads.iter().map(|p| transverse(*p)).collect();
+    ax.polyline(c, &closed(now.clone()), 1.2, blue, 0.45);
     let tracked = [0, 6, 12, 18];
     let first = k.saturating_sub(r.time.len() / 7);
     for (j, bead) in tracked.iter().enumerate() {
-        let trail: Vec<[f32; 2]> = r.positions[polarization][first..=k]
+        let trail: Vec<[f64; 2]> = r.positions[polarization][first..=k]
             .iter()
-            .map(|row| row[*bead])
+            .map(|row| transverse(row[*bead]))
             .collect();
         ax.polyline(c, &trail, 1.6, tracking()[j], 0.6);
     }
-    for (b, p) in now.iter().enumerate() {
-        if b % 3 == 0 {
-            let a = r.arrows[polarization][k][b];
-            ax.arrow(c, *p, [p[0] + a[0], p[1] + a[1]], 1.4, 6.0, blue);
-        }
+    for (p, a) in beads.iter().zip(&r.arrows[polarization][k]).step_by(3) {
+        ax.arrow(c, transverse(*p), transverse(*p + *a), 1.4, 6.0, blue);
     }
-    ax.scatter(c, now, Marker::Dot, 5.0, blue, 1.0);
+    ax.scatter(c, &now, Marker::Dot, 5.0, blue, 1.0);
     for (j, bead) in tracked.iter().enumerate() {
         ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, tracking()[j], 1.0);
     }
     ax.scatter(c, &[[0.0, 0.0]], Marker::Dot, 5.0, palette::orange(), 1.0);
 }
 
-/// x, z and t of a spacetime vector: the axes of the curvature-map view (t up).
-fn xzt(v: V) -> [f32; 3] {
-    [v.e1() as f32, v.e3() as f32, v.e0() as f32]
+/// The curvature-map view of spacetime: `x` across, `z` along and `t` up, as a map to the
+/// space the camera sees (`y`, the other transverse direction, drops out).
+fn view() -> vga3d::Vector<(sta::Vector,), f64> {
+    vga3d::Vector::from_images([
+        vga3d::Vector::new(0.0, 0.0, 1.0),
+        vga3d::Vector::new(1.0, 0.0, 0.0),
+        vga3d::Vector::new(0.0, 0.0, 0.0),
+        vga3d::Vector::new(0.0, 1.0, 0.0),
+    ])
 }
 
 /// The curvature map at one event: the ribbon `t ∧ x`, its image under the plus curvature (a
@@ -486,17 +484,13 @@ fn curvature_map(c: &mut Canvas, rect: [f32; 4], azimuth: f32) {
         Lens::Parallel(1.25 * 2.0 * cy / (rect[3] - rect[1])),
     );
     let mut s = Scene3::new(cam);
-    for axis in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] {
-        s.arrow(
-            [0.0; 3],
-            axis.map(|v: f32| v * 1.05),
-            1.0,
-            6.0,
-            palette::grid(),
-        );
+    let view = view();
+    let origin = [0.0; 3];
+    for axis in [x(), z(), t()] {
+        s.arrow(origin, view.of(axis) * 1.05, 1.0, 6.0, palette::grid());
     }
-    let ribbon = plane_patch(incoming, edge).map(xzt);
-    let image = plane_patch(outgoing, edge).map(xzt);
+    let ribbon = plane_patch(incoming, edge).map(|v| view.of(v));
+    let image = plane_patch(outgoing, edge).map(|v| view.of(v));
     let (blue, orange) = (palette::sky(), palette::orange());
     s.quad(ribbon[0], ribbon[1], ribbon[2], ribbon[3], blue, 0.2);
     s.polyline(
@@ -512,9 +506,9 @@ fn curvature_map(c: &mut Canvas, rect: [f32; 4], azimuth: f32) {
         orange,
         1.0,
     );
-    s.arrow([0.0; 3], xzt(observer), 2.0, 8.0, palette::ink());
-    s.arrow([0.0; 3], xzt(wave), 2.0, 8.0, palette::yellow());
-    s.arrow([0.0; 3], xzt(readout), 2.6, 8.0, palette::red());
+    s.arrow(origin, view.of(observer), 2.0, 8.0, palette::ink());
+    s.arrow(origin, view.of(wave), 2.0, 8.0, palette::yellow());
+    s.arrow(origin, view.of(readout), 2.6, 8.0, palette::red());
     c.clip(rect);
     s.draw(c);
     c.unclip();
@@ -527,6 +521,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let size = (h / 40.0).clamp(7.0, 13.0);
     let phase = (t_now / SECONDS).rem_euclid(1.0);
     let k = ((phase * (r.time.len() - 1) as f32).round() as usize).min(r.time.len() - 1);
+    let now = r.time[k];
 
     // The three rings.
     let (top, bottom) = (h * 0.13, h * 0.6);
@@ -550,28 +545,16 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let row = [0.0, bottom + h * 0.06, w, h - size * 3.0];
     let rect = plot::inset([row[0], row[1], w * 0.42, row[3]], 50.0, 18.0, 10.0, 0.0);
     let ax = Axes::new(rect, [0.0, 6.0], [-1.15, 1.15]);
-    let plus: Vec<[f32; 2]> = r
-        .time
-        .iter()
-        .zip(&r.strain)
-        .map(|(t, s)| [*t, s[0]])
-        .collect();
-    let cross: Vec<[f32; 2]> = r
-        .time
-        .iter()
-        .zip(&r.strain)
-        .map(|(t, s)| [*t, s[1]])
-        .collect();
-    ax.polyline(c, &plus, 1.3, palette::sky(), 0.9);
-    ax.polyline(c, &cross, 1.3, palette::orange(), 0.9);
-    ax.line(
-        c,
-        [r.time[k], -1.15],
-        [r.time[k], 1.15],
-        1.2,
-        palette::yellow(),
-        0.9,
-    );
+    for (part, colour) in [palette::sky(), palette::orange()].into_iter().enumerate() {
+        let curve: Vec<[f64; 2]> = r
+            .time
+            .iter()
+            .zip(&r.strain)
+            .map(|(t, s)| [*t, s[part]])
+            .collect();
+        ax.polyline(c, &curve, 1.3, colour, 0.9);
+    }
+    ax.line(c, [now, -1.15], [now, 1.15], 1.2, palette::yellow(), 0.9);
     ax.frame(c, "STRAIN / 1E-4: PLUS, CROSS", "TIME (C = 1)", "");
 
     // The curvature map at one event, the view turning.
@@ -613,12 +596,12 @@ fn draw(c: &mut Canvas, t_now: f32) {
         })
         .collect();
     ax.polyline(c, &fine, 1.3, palette::ink(), 0.9);
-    let dots: Vec<[f32; 2]> = r
+    let dots: Vec<[f64; 2]> = r
         .doppler
         .0
         .iter()
         .zip(&r.doppler.1)
-        .map(|(q, a)| [*q as f32, *a as f32])
+        .map(|(q, a)| [*q, *a])
         .collect();
     ax.scatter(c, &dots, Marker::Dot, 6.0, palette::sky(), 1.0);
     ax.frame(c, "TIDE VS BOOST", "RAPIDITY", "");
@@ -638,27 +621,26 @@ fn main() {
 #[allow(clippy::needless_range_loop)]
 mod tests {
     use super::curvature::*;
+    use gax::ApproxEq;
+    use gax::motions::Linear;
     use gax::sta::{Bivector, Vector};
 
-    /// numga draws normals from `np.random.default_rng(seed)`, which cannot be reproduced: a
-    /// xorshift stream with Box-Muller normals stands in (the identities hold for any vectors).
-    use gax_numga_examples::rng::Rng;
+    /// numga draws normals from `np.random.default_rng(seed)`, which cannot be reproduced; the
+    /// identities hold for any vectors.
+    use gax_numga_examples::rng::{Draw, Rng, rng};
 
     /// A vector of four standard normal coefficients.
-    fn vector(rng: &mut Rng) -> V {
-        Vector::new(rng.normal(), rng.normal(), rng.normal(), rng.normal())
+    fn vector(draws: &mut Rng) -> V {
+        Vector::from_coeffs(core::array::from_fn(|_| draws.normal()))
     }
 
-    fn close<'a>(
-        a: impl IntoIterator<Item = &'a f64>,
-        b: impl IntoIterator<Item = &'a f64>,
-        tol: f64,
-    ) -> bool {
-        a.into_iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+    /// The largest coefficient of a value or map, in magnitude.
+    fn largest<X: Linear<f64>>(x: X) -> f64 {
+        x.max_abs_diff(&X::zero())
     }
 
-    fn zero<'a>(a: impl IntoIterator<Item = &'a f64>, tol: f64) -> bool {
-        a.into_iter().all(|x| x.abs() <= tol)
+    fn close<X: ApproxEq>(a: X, b: X, tol: f64) -> bool {
+        a.max_abs_diff(&b) <= tol
     }
 
     /// The reciprocal Lorentz basis: `basis[i] · reciprocal[j] = δij`.
@@ -674,10 +656,10 @@ mod tests {
             let (_, sigma, _) = curvature.svd();
             let rank = sigma.iter().filter(|s| **s > sigma[0] * 1e-12).count();
             assert_eq!(rank, 2, "{sigma:?}");
-            assert!(zero(curvature.of(curvature).c.iter().flatten(), 1e-14));
+            assert!(largest(curvature.of(curvature)) <= 1e-14);
             // Null output planes are nonzero even though their Lorentz norms vanish.
-            let image = curvature.of(Bivector::new(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0));
-            assert!(image.c.iter().map(|v| v * v).sum::<f64>().sqrt() > 0.5);
+            let image = curvature.of(t() ^ x());
+            assert!(largest(image) > 0.5);
             assert!(image.norm_squared().abs() < 1e-14);
         }
     }
@@ -686,14 +668,14 @@ mod tests {
     fn riemann_pair_symmetry_bianchi_identity_and_vacuum_ricci() {
         let (plus, cross) = polarizations();
         let curvature = plus * 1.3 - cross * 0.7;
-        let mut rng = Rng(7);
-        let [a, b, c, d] = core::array::from_fn(|_| vector(&mut rng));
+        let mut draws = rng(7);
+        let [a, b, c, d] = core::array::from_fn(|_| vector(&mut draws));
         let (ab, cd) = (a ^ b, c ^ d);
         assert!(((ab | curvature.of(cd)).s() - (curvature.of(ab) | cd).s()).abs() < 1e-13);
         let cyclic = curvature.of(ab).commutator(c)
             + curvature.of(b ^ c).commutator(a)
             + curvature.of(c ^ a).commutator(b);
-        assert!(zero(&cyclic.c, 1e-13));
+        assert!(largest(cyclic) <= 1e-13);
         // Contract one curvature slot with the reciprocal Lorentz basis.
         let (basis, reciprocal) = frames();
         let ricci = |r: Curvature| {
@@ -701,9 +683,9 @@ mod tests {
                 .iter()
                 .zip(&reciprocal)
                 .map(|(e, f)| r.of(*e ^ Vector::slot()).commutator(*f))
-                .fold(Vector::<(Vector,), f64>::zero(), |acc, m| acc + m)
+                .fold(Tidal::zero(), |acc, m| acc + m)
         };
-        assert!(zero(ricci(curvature).c.iter().flatten(), 1e-13));
+        assert!(largest(ricci(curvature)) <= 1e-13);
         // Frame-free: the Ricci form is the trace of the curvature against its wedge slot, with
         // the inner-product slot and the separation left open.
         let ricci_form = |r: Curvature| {
@@ -711,16 +693,13 @@ mod tests {
                 .commutator(r.of(Vector::slot() ^ Vector::slot()))
                 .trace_at::<1>()
         };
-        assert!(zero(
-            ricci_form(curvature).c.iter().flatten().flatten(),
-            1e-13
-        ));
+        assert!(largest(ricci_form(curvature)) <= 1e-13);
         // The same trace on a non-vacuum curvature reproduces the frame contraction as a form.
-        let tx = Bivector::new(-1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        let tx = t() ^ x();
         let dyad = curvature + tx * (tx | Bivector::slot()) * 0.7;
         let frame_map = ricci(dyad);
-        let mut rng = Rng(11);
-        let (a, b) = (vector(&mut rng), vector(&mut rng));
+        let mut draws = rng(11);
+        let (a, b) = (vector(&mut draws), vector(&mut draws));
         let form = ricci_form(dyad).of(a).of(b).s();
         assert!((form - (a | frame_map.of(b)).s()).abs() < 1e-13);
         assert!(form.abs() > 1e-3);
@@ -743,9 +722,15 @@ mod tests {
             // so the tide scales with the frequency squared. Eigenvalues `[-a, 0, 0, a]`.
             let a = (-2.0 * rapidity).exp();
             let expected = [0.0, 2.0 * a * a, 0.0, 2.0 * a.powi(4)];
-            assert!(close(&power_traces(response), &expected, 1e-12));
-            assert!(zero(&response.of(observer).c, 1e-13));
-            assert!(zero(&response.of(t() + z()).c, 1e-13));
+            let traces = power_traces(response);
+            assert!(
+                traces
+                    .iter()
+                    .zip(expected)
+                    .all(|(p, e)| (p - e).abs() <= 1e-12)
+            );
+            assert!(largest(response.of(observer)) <= 1e-13);
+            assert!(largest(response.of(t() + z())) <= 1e-13);
         }
         let (rapidities, amplitudes) = doppler_scenario();
         for (r, a) in rapidities.iter().zip(&amplitudes) {
@@ -759,61 +744,44 @@ mod tests {
         // The duality turn -I is the eighth turn about the wave axis.
         let eighth = (xy() * (core::f64::consts::PI / 8.0)).exp();
         let turned = eighth >> plus.of(eighth << Bivector::slot());
-        assert!(close(
-            cross.c.iter().flatten(),
-            turned.c.iter().flatten(),
-            1e-9
-        ));
+        assert!(close(cross, turned, 1e-9));
         // numga's `exp(tx * .31) exp(yz * -.23)`, with `tx = -e10`.
         let rotor = Bivector::new(-0.31, 0.0, 0.0, 0.0, 0.0, 0.0).exp()
             * Bivector::new(0.0, 0.0, 0.0, -0.23, 0.0, 0.0).exp();
         let transformed = plane_wave_curvature(rotor >> (t() + z()), rotor >> x(), rotor >> y());
         let conjugated = rotor >> plus.of(rotor << Bivector::slot());
-        assert!(close(
-            transformed.c.iter().flatten(),
-            conjugated.c.iter().flatten(),
-            1e-13
-        ));
+        assert!(close(transformed, conjugated, 1e-13));
         let observer_response = tidal_map(transformed, rotor >> t());
         let transformed_response = rotor >> tidal_map(plus, t()).of(rotor << Vector::slot());
-        assert!(close(
-            observer_response.c.iter().flatten(),
-            transformed_response.c.iter().flatten(),
-            1e-13
-        ));
+        assert!(close(observer_response, transformed_response, 1e-13));
     }
 
     #[test]
     fn packet_acceleration_matches_the_strain_second_derivative() {
         let time = linspace(-0.5, 6.5, 2801);
-        let (strain, second) = wave_packet(&time, 6.0, 3.0, 1e-4);
-        let parts = |p: &Phasor| [p.s(), p.e0123()];
-        let h: Vec<[f64; 2]> = strain.iter().map(parts).collect();
-        let a: Vec<[f64; 2]> = second.iter().map(parts).collect();
+        let (h, a) = wave_packet(&time, 6.0, 3.0, 1e-4);
         let dt = time[1] - time[0];
         for k in 2..time.len() - 2 {
             if time[k] > 0.1 && time[k] < 5.9 {
-                for j in 0..2 {
-                    let numerical = (-h[k - 2][j] + 16.0 * h[k - 1][j] - 30.0 * h[k][j]
-                        + 16.0 * h[k + 1][j]
-                        - h[k + 2][j])
-                        / (12.0 * dt * dt);
-                    assert!((numerical - a[k][j]).abs() < 1e-11);
-                }
+                // A five-point stencil, on the phasors.
+                let numerical = (-h[k - 2] + h[k - 1] * 16.0 - h[k] * 30.0 + h[k + 1] * 16.0
+                    - h[k + 2])
+                    * (1.0 / (12.0 * dt * dt));
+                assert!(close(numerical, a[k], 1e-11));
             }
         }
         // Outside the window only the Gaussian's tails remain.
         for (k, t) in time.iter().enumerate() {
             if *t <= 0.0 || *t >= 6.0 {
-                assert!(zero(&h[k], 1e-11) && zero(&a[k], 1e-9));
+                assert!(largest(h[k]) <= 1e-11 && largest(a[k]) <= 1e-9);
             }
         }
-        assert!(close(&h[time.len() / 2], &[1e-4, 0.0], 1e-16));
+        assert!(close(h[time.len() / 2], Phasor::new(1e-4, 0.0), 1e-16));
     }
 
     /// The independent prediction: half the strain applied to the separation, for the three
     /// polarizations, from the packet's envelope and carrier.
-    fn expected(time: &[f64], reference: &[V]) -> Vec<Vec<Vec<[f64; 2]>>> {
+    fn expected(time: &[f64], reference: &[V]) -> Vec<Vec<Vec<V>>> {
         (0..3)
             .map(|p| {
                 time.iter()
@@ -826,7 +794,8 @@ mod tests {
                             .iter()
                             .map(|r| {
                                 let (rx, ry) = (r.e1(), r.e2());
-                                [0.5 * (hp * rx + hc * ry), 0.5 * (hc * rx - hp * ry)]
+                                let (dx, dy) = (hp * rx + hc * ry, hc * rx - hp * ry);
+                                Vector::new(0.0, 0.5 * dx, 0.5 * dy, 0.0)
                             })
                             .collect()
                     })
@@ -850,8 +819,7 @@ mod tests {
                 for k in 0..count {
                     for b in 0..reference.len() {
                         let d = displacement[p][k][b];
-                        let e = prediction[p][k][b];
-                        error = error.max((d.e1() - e[0]).abs()).max((d.e2() - e[1]).abs());
+                        error = error.max(d.max_abs_diff(&prediction[p][k][b]));
                     }
                 }
             }
@@ -869,14 +837,13 @@ mod tests {
                     let d = displacement[p][k][b];
                     // At rest before the packet, and after it, to within the Gaussian's tails.
                     if *t <= 0.0 {
-                        assert!(zero(&[d.e1(), d.e2()], 1e-11));
+                        assert!(largest(d) <= 1e-11);
                     }
                     if *t >= 6.0 {
-                        assert!(zero(&[d.e1(), d.e2()], 2e-10));
+                        assert!(largest(d) <= 2e-10);
                         if k + 1 < time.len() {
-                            let n = displacement[p][k + 1][b];
-                            let rate = [(n.e1() - d.e1()) / dt, (n.e2() - d.e2()) / dt];
-                            assert!(zero(&rate, 1e-10));
+                            let rate = (displacement[p][k + 1][b] - d) * (1.0 / dt);
+                            assert!(largest(rate) <= 1e-10);
                         }
                     }
                 }
@@ -890,15 +857,15 @@ mod tests {
             .map(|per_time| per_time[..=middle].to_vec())
             .collect();
         let prefix = integrate(&time[..=middle], &prefix_accel);
-        let mut largest = 0.0f64;
+        let mut biggest = 0.0f64;
         for p in 0..3 {
             for b in 0..reference.len() {
                 let (a, d) = (prefix[p][middle][b], displacement[p][middle][b]);
-                assert!(close(&a.c[1..3], &d.c[1..3], 1e-15));
-                largest = largest.max(a.c.iter().fold(0.0, |m, v| m.max(v.abs())));
+                assert!(close(a, d, 1e-15));
+                biggest = biggest.max(largest(a));
             }
         }
-        assert!(largest > 4e-5);
+        assert!(biggest > 4e-5);
     }
 
     #[test]
@@ -906,16 +873,15 @@ mod tests {
         let (plus_strain, cross_strain) = strain_patterns();
         // Stretch along x, squeeze along y, nothing along time or the wave.
         for (separation, image) in [(x(), x()), (y(), -y()), (t(), t() * 0.0), (z(), z() * 0.0)] {
-            assert!(close(&plus_strain.of(separation).c, &image.c, 1e-15));
+            assert!(close(plus_strain.of(separation), image, 1e-15));
         }
         let time = linspace(-1.0, 7.0, 641);
         let (strain, second) = wave_packet(&time, 6.0, 3.0, 1e-4);
         let reference = detector_ring(12);
         let displacement = integrate(&time, &accelerations(&time, 3.0, &reference));
         let (plus, _) = polarizations();
-        let mut rng = Rng(5);
-        let edge = vector(&mut rng);
-        let mut largest = 0.0f64;
+        let edge = vector(&mut rng(5));
+        let mut biggest = 0.0f64;
         for k in 0..time.len() {
             let predicted = polarized_strain(plus_strain, cross_strain, strain[k]);
             let waves = polarized_waves(plus, second[k]);
@@ -923,29 +889,20 @@ mod tests {
             for p in 0..3 {
                 for (b, r) in reference.iter().enumerate() {
                     let pr = predicted[p].of(*r);
-                    assert!(close(&displacement[p][k][b].c, &pr.c, 2e-9));
-                    largest = largest.max(pr.c.iter().fold(0.0, |m, v| m.max(v.abs())));
+                    assert!(close(displacement[p][k][b], pr, 2e-9));
+                    biggest = biggest.max(largest(pr));
                 }
                 // The tidal map is the strain's second time derivative as a map on separations.
-                let tidal = tidal_map(waves[p], t());
-                assert!(close(
-                    tidal.c.iter().flatten(),
-                    acceleration_map[p].c.iter().flatten(),
-                    1e-12
-                ));
+                assert!(close(tidal_map(waves[p], t()), acceleration_map[p], 1e-12));
                 // Wedged with the wave vector, that second derivative is the curvature on pairs
                 // of vectors.
                 let two_form = curvature_of_strain(t() + z(), acceleration_map[p]);
                 let bound = two_form.of(edge);
                 let direct = waves[p].of(edge ^ Vector::slot());
-                assert!(close(
-                    bound.c.iter().flatten(),
-                    direct.c.iter().flatten(),
-                    1e-12
-                ));
+                assert!(close(bound, direct, 1e-12));
             }
         }
-        assert!(largest > 4e-5);
+        assert!(biggest > 4e-5);
     }
 
     /// The scenario checks: the curvature is nonzero and squares to zero, and the integrated
@@ -953,19 +910,15 @@ mod tests {
     #[test]
     fn scenarios_pass_their_checks() {
         let (plus, _) = polarizations();
-        assert!(zero(plus.of(plus).c.iter().flatten(), 1e-14));
-        assert!(plus.c.iter().flatten().any(|v| v.abs() > 0.0));
+        assert!(largest(plus.of(plus)) <= 1e-14);
+        assert!(largest(plus) > 0.0);
         let d = detector_scenario();
         let (plus_strain, cross_strain) = strain_patterns();
         for (k, s) in d.strain.iter().enumerate() {
             let predicted = polarized_strain(plus_strain, cross_strain, *s);
             for p in 0..3 {
                 for (b, r) in d.reference.iter().enumerate() {
-                    assert!(close(
-                        &d.displacement[p][k][b].c,
-                        &predicted[p].of(*r).c,
-                        1e-12
-                    ));
+                    assert!(close(d.displacement[p][k][b], predicted[p].of(*r), 1e-12));
                 }
             }
         }

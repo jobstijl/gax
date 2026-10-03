@@ -8,15 +8,14 @@
 //! The animation feeds the samples in, a few more each frame, and refits: the fitted point,
 //! line, plane and meeting point (red) settle onto the truth (blue) as the turning view shows.
 //!
-//! The unit forms are singular, so numga's general eigensolver sends the modes of the free
-//! coefficients to infinity. gax has only the symmetric definite solver, so the pencil is turned
-//! round: with `A` the misfit and `B` the unit form, the finite modes of `(A, B)` are those of
-//! `B.eigh_with(A + σB)`, with eigenvalue `μ = 1 / (λ + σ)`; the free modes get `μ = 0`, and the
-//! least `λ` is the greatest `μ`.
+//! The unit forms are singular: numga's general eigensolver sends the modes of the free
+//! coefficients to infinity, and so does gax's `eigh_semidefinite`, which lists the finite
+//! modes first.
 
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
-use gax::{Form, Gp, Kind};
+use gax::{Form, Kind, Reverse, ScalarProduct};
 use gax_numga_examples::canvas::{Rgb, mix};
+use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
 };
@@ -29,30 +28,29 @@ mod fitting {
     pub type Pl = Plane<(), f64>;
     pub type M = gax::Unit<Motor<(), f64>>;
 
-    pub use gax_numga_examples::rng::Rng;
-
-    /// The least finite mode of the pencil `(misfit, unit)`, `unit` semidefinite: the greatest
-    /// mode of the turned-round pencil `unit.eigh_with(misfit + σ unit)`.
-    pub fn least_mode<F>(misfit: F, unit: F, sigma: f64) -> <F::Slot as Kind>::Mv<(), f64>
+    /// The squared norm of `r`, the scalar part of `r ~r`: a form on the unknown when `r` is
+    /// linear in it.
+    pub fn squared<R>(r: R) -> <R::Output as ScalarProduct<R>>::Output
     where
-        F: Form<Coef = f64> + core::ops::Add<Output = F> + Gp<f64, Output = F>,
+        R: Reverse + Copy,
+        R::Output: ScalarProduct<R>,
     {
-        let (_, modes) = unit.eigh_with(misfit + unit.gp(sigma));
-        let modes = modes.as_ref();
-        modes[modes.len() - 1]
+        r.reverse().scalar_product(r)
+    }
+
+    /// The least finite mode of the pencil `(misfit, unit)`, `unit` semidefinite.
+    pub fn least_mode<F: Form<Coef = f64>>(misfit: F, unit: F) -> <F::Slot as Kind>::Mv<(), f64> {
+        misfit.eigh_semidefinite(unit).1.as_ref()[0]
     }
 
     /// A point fitted to points: the misfit sums the squared lines joining each sample to the
     /// unknown point.
     pub fn point_to_points(samples: &[P]) -> P {
         let x = Point::slot();
-        let misfit = samples.iter().fold(Scalar::zero(), |acc, s| {
-            let r = s.unitized() & x;
-            acc + r.reverse().scalar_product(r)
-        });
-        let unit = x.reverse().scalar_product(x);
-        let sigma = misfit.as_map().trace() / unit.as_map().trace();
-        least_mode(misfit, unit, sigma)
+        let misfit = samples
+            .iter()
+            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        least_mode(misfit, squared(x))
     }
 
     /// A line fitted to points: the squared planes joining each sample to the unknown line. The
@@ -60,37 +58,28 @@ mod fitting {
     /// centroid's about the fitted direction, which meets it.
     pub fn line_to_points(samples: &[P]) -> L {
         let x = Line::slot();
-        let misfit = samples.iter().fold(Scalar::zero(), |acc, s| {
-            let r = s.unitized() & x;
-            acc + r.reverse().scalar_product(r)
-        });
-        let unit = x.reverse().scalar_product(x);
-        let sigma = misfit.as_map().trace() / unit.as_map().trace();
-        least_mode(misfit, unit, sigma)
+        let misfit = samples
+            .iter()
+            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        least_mode(misfit, squared(x))
     }
 
     /// A plane fitted to points: the squared signed distances.
     pub fn plane_to_points(samples: &[P]) -> Pl {
         let x = Plane::slot();
-        let misfit = samples.iter().fold(Scalar::zero(), |acc, s| {
-            let r = s.unitized() & x;
-            acc + r.reverse().scalar_product(r)
-        });
-        let unit = x.reverse().scalar_product(x);
-        let sigma = misfit.as_map().trace() / unit.as_map().trace();
-        least_mode(misfit, unit, sigma)
+        let misfit = samples
+            .iter()
+            .fold(Scalar::zero(), |acc, s| acc + squared(s.unitized() & x));
+        least_mode(misfit, squared(x))
     }
 
     /// A point fitted to lines: the squared planes joining each line to the unknown point.
     pub fn point_to_lines(samples: &[L]) -> P {
         let x = Point::slot();
         let misfit = samples.iter().fold(Scalar::zero(), |acc, l| {
-            let r = l.normalized().into_inner() & x;
-            acc + r.reverse().scalar_product(r)
+            acc + squared(l.normalized().into_inner() & x)
         });
-        let unit = x.reverse().scalar_product(x);
-        let sigma = misfit.as_map().trace() / unit.as_map().trace();
-        least_mode(misfit, unit, sigma)
+        least_mode(misfit, squared(x))
     }
 
     /// The shared pose of every scene.
@@ -131,12 +120,9 @@ mod fitting {
 
     /// Points on a square of the plane `z = 0`.
     pub fn patch(n: usize, half_width: f64, rng: &mut Rng) -> Vec<P> {
+        let mut across = || rng.range(-half_width, half_width);
         (0..n)
-            .map(|_| {
-                let u = half_width * (2.0 * rng.uniform() - 1.0);
-                let v = half_width * (2.0 * rng.uniform() - 1.0);
-                Point::xyz(u, v, 0.0)
-            })
+            .map(|_| Point::xyz(across(), across(), 0.0))
             .collect()
     }
 
@@ -158,14 +144,13 @@ mod fitting {
     pub fn bundle(n: usize, spread: f64, rng: &mut Rng) -> Vec<L> {
         (0..n)
             .map(|_| {
-                let d = [rng.normal(), rng.normal(), rng.normal()];
-                let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+                let [x, y, z] = rng.direction::<3>();
                 let foot = Point::xyz(
                     spread * rng.normal(),
                     spread * rng.normal(),
                     spread * rng.normal(),
                 );
-                foot & Point::direction(d[0] / len, d[1] / len, d[2] / len)
+                foot & Point::direction(x, y, z)
             })
             .collect()
     }
@@ -199,7 +184,7 @@ mod fitting {
     pub fn samples() -> Samples {
         let pose = pose();
         let posed = |v: Vec<P>| -> Vec<P> { v.iter().map(|p| pose >> *p).collect() };
-        let mut rng = Rng(0x0f17_0001);
+        let mut rng = rng(0x0f17_0001);
         let cloud = posed(cloud(200, 0.5, &mut rng));
         let cloud = jitter(&cloud, 0.05, &mut rng);
         let segment = jitter(&posed(segment(120, 2.0)), 0.05, &mut rng);
@@ -225,11 +210,6 @@ mod fitting {
 }
 
 use fitting::*;
-
-fn xyz(p: P) -> [f32; 3] {
-    let [x, y, z] = p.to_euclidean();
-    [x as f32, y as f32, z as f32]
-}
 
 const SECONDS: f32 = 8.0;
 
@@ -272,7 +252,7 @@ fn tile(c: &mut Canvas, cam: Camera, title: &str, n: usize, draw: impl FnOnce(&m
 fn samples_dots(s: &mut Scene3, pts: &[P]) {
     for p in pts {
         s.dot(
-            xyz(*p),
+            *p,
             Marker::Dot,
             3.5,
             mix(palette::grid(), palette::ink(), 0.45),
@@ -285,7 +265,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let az = 0.5 + core::f32::consts::TAU * phase;
     let data = samples();
     let pose = pose();
-    let centre = xyz(pose >> origin());
+    let centre = pose >> origin();
     let (truth, fit): (Rgb, Rgb) = (palette::sky(), palette::red());
     let header = 64;
     let (w, h) = (c.width / 2, (c.height - header) / 2);
@@ -298,17 +278,11 @@ fn draw(c: &mut Canvas, t: f32) {
             0 => {
                 let n = seen(data.cloud.len(), phase, 4);
                 let fitted = point_to_points(&data.cloud[..n]);
-                tile(
-                    &mut sub,
-                    camera(w, h, 4.0),
-                    "POINT: MINIMIZE |P & X|^2",
-                    n,
-                    |s| {
-                        samples_dots(s, &data.cloud[..n]);
-                        s.dot(centre, Marker::Ring, 20.0, truth);
-                        s.dot(xyz(fitted), Marker::Dot, 9.0, fit);
-                    },
-                );
+                tile(&mut sub, camera(w, h, 4.0), "POINT: MIN |P V X|", n, |s| {
+                    samples_dots(s, &data.cloud[..n]);
+                    s.dot(centre, Marker::Ring, 20.0, truth);
+                    s.dot(fitted, Marker::Dot, 9.0, fit);
+                });
             }
             1 => {
                 let n = seen(data.segment.len(), phase, 3);
@@ -317,23 +291,11 @@ fn draw(c: &mut Canvas, t: f32) {
                 let fitted = line_to_points(&pts);
                 let ends = end_planes(2.5).map(|e| pose >> e);
                 let true_line = pose >> (origin() & Point::xyz(0.0, 1.0, 0.0));
-                tile(
-                    &mut sub,
-                    camera(w, h, 9.0),
-                    "LINE: MINIMIZE |P & L|^2",
-                    n,
-                    |s| {
-                        samples_dots(s, &pts);
-                        s.seg(
-                            xyz(true_line ^ ends[0]),
-                            xyz(true_line ^ ends[1]),
-                            2.5,
-                            truth,
-                            0.8,
-                        );
-                        s.seg(xyz(fitted ^ ends[0]), xyz(fitted ^ ends[1]), 2.0, fit, 1.0);
-                    },
-                );
+                tile(&mut sub, camera(w, h, 9.0), "LINE: MIN |P V L|", n, |s| {
+                    samples_dots(s, &pts);
+                    s.seg(true_line ^ ends[0], true_line ^ ends[1], 2.5, truth, 0.8);
+                    s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, fit, 1.0);
+                });
             }
             2 => {
                 let n = seen(data.patch.len(), phase, 4);
@@ -343,11 +305,11 @@ fn draw(c: &mut Canvas, t: f32) {
                 tile(
                     &mut sub,
                     camera(w, h, 10.0),
-                    "PLANE: MINIMIZE |P & PI|^2",
+                    "PLANE: MIN |P V PI|",
                     n,
                     |s| {
                         samples_dots(s, &data.patch[..n]);
-                        let quad = |p: Pl| edges.map(|e| xyz(p ^ e));
+                        let quad = |p: Pl| edges.map(|e| p ^ e);
                         let (tq, fq) = (quad(true_plane), quad(fitted));
                         let mut tl = tq.to_vec();
                         tl.push(tq[0]);
@@ -365,7 +327,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 tile(
                     &mut sub,
                     camera(w, h, 7.0),
-                    "POINT TO LINES: MINIMIZE |L & X|^2",
+                    "POINT OF LINES: MIN |L V X|",
                     n,
                     |s| {
                         for l in &data.bundle[..n] {
@@ -374,10 +336,10 @@ fn draw(c: &mut Canvas, t: f32) {
                             let d = direction(*l);
                             let foot = (*l ^ (*l | fitted)).unitized();
                             let (a, b) = (foot + d.gp(-2.0), foot + d.gp(2.0));
-                            s.seg(xyz(a), xyz(b), 0.8, palette::grid(), 0.7);
+                            s.seg(a, b, 0.8, palette::grid(), 0.7);
                         }
                         s.dot(centre, Marker::Ring, 20.0, truth);
-                        s.dot(xyz(fitted), Marker::Dot, 9.0, fit);
+                        s.dot(fitted, Marker::Dot, 9.0, fit);
                     },
                 );
             }
@@ -386,8 +348,8 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     caption(
         c,
-        "FITTING: ONE EIGENPROBLEM FOR POINTS, LINES AND PLANES",
-        "THE TRUTH (BLUE), THE FIT (RED), AS THE SAMPLES COME IN (PGA3D)",
+        "FITTING: ONE EIGENPROBLEM FOR ALL FLATS",
+        "JOINS (V) WITH THE SAMPLES: TRUTH BLUE, FIT RED (PGA3D)",
     );
 }
 
@@ -399,7 +361,8 @@ fn main() {
 mod tests {
     use super::fitting::*;
     use gax::pga3d::{Line, Plane, Point};
-    use gax::vga3d;
+    use gax::{ApproxEq, vga3d};
+    use gax_numga_examples::rng::rng;
 
     /// Whether two values agree as projective elements, up to scale and sign.
     fn same_element<const N: usize>(a: [f64; N], b: [f64; N], tol: f64) -> bool {
@@ -417,13 +380,10 @@ mod tests {
     /// are degenerate on the coefficients least squares leaves free.
     #[test]
     fn unit_forms_are_degenerate_on_the_free_coefficients() {
-        let p = Point::<(), f64>::slot();
-        let l = Line::<(), f64>::slot();
-        let q = Plane::<(), f64>::slot();
         let ranks = [
-            rank(p.reverse().scalar_product(p).eigh().0),
-            rank(l.reverse().scalar_product(l).eigh().0),
-            rank(q.reverse().scalar_product(q).eigh().0),
+            rank(squared(Point::<(), f64>::slot()).eigh().0),
+            rank(squared(Line::<(), f64>::slot()).eigh().0),
+            rank(squared(Plane::<(), f64>::slot()).eigh().0),
         ];
         assert_eq!(ranks, [1, 3, 3]);
     }
@@ -434,7 +394,7 @@ mod tests {
         let seg: Vec<P> = segment(50, 2.0).iter().map(|p| pose >> *p).collect();
         let truth = pose >> (origin() & Point::xyz(0.0, 1.0, 0.0));
         assert!(same_element(line_to_points(&seg).c, truth.c, 1e-10));
-        let pat: Vec<P> = patch(50, 2.0, &mut Rng(1))
+        let pat: Vec<P> = patch(50, 2.0, &mut rng(1))
             .iter()
             .map(|p| pose >> *p)
             .collect();
@@ -444,77 +404,72 @@ mod tests {
 
     #[test]
     fn point_fit_is_the_centroid() {
-        let mut rng = Rng(2);
+        let mut draws = rng(2);
         let pose = pose();
-        let cloud: Vec<P> = cloud(300, 0.5, &mut rng)
+        let cloud: Vec<P> = cloud(300, 0.5, &mut draws)
             .iter()
             .map(|p| pose >> *p)
             .collect();
-        let points = jitter(&cloud, 0.05, &mut rng);
-        let centroid = point_to_points(&points);
-        let mean = points.iter().fold([0.0; 3], |m, p| {
-            let e = p.to_euclidean();
-            [m[0] + e[0], m[1] + e[1], m[2] + e[2]]
-        });
-        let fitted = centroid.to_euclidean();
-        for i in 0..3 {
-            assert!((fitted[i] - mean[i] / 300.0).abs() < 1e-10);
-        }
-        let sum = points.iter().fold(Point::zero(), |s, p| s + *p);
-        assert!(same_element(centroid.c, sum.c, 1e-10));
+        let points = jitter(&cloud, 0.05, &mut draws);
+        let centroid = point_to_points(&points).unitized();
+        assert!(centroid.approx_eq(&mean(&points), 1e-10));
+    }
+
+    /// The mean of points: their sum, unitized.
+    fn mean(points: &[P]) -> P {
+        points
+            .iter()
+            .fold(Point::zero(), |s, p| s + p.unitized())
+            .unitized()
     }
 
     /// The principal axes of points about their centroid, by the symmetric eigenproblem of the
     /// scatter form on vectors (ascending).
     fn principal_axes(points: &[P]) -> [vga3d::Vector<(), f64>; 3] {
-        let n = points.len() as f64;
-        let mean = points.iter().fold([0.0; 3], |m, p| {
-            let e = p.to_euclidean();
-            [m[0] + e[0] / n, m[1] + e[1] / n, m[2] + e[2] / n]
-        });
+        let centre = mean(points);
         let v = vga3d::Vector::<(), f64>::slot();
         let scatter = points.iter().fold(
             vga3d::Scalar::<(vga3d::Vector, vga3d::Vector), f64>::zero(),
             |acc, p| {
-                let e = p.to_euclidean();
-                let d = vga3d::Vector::new(e[0] - mean[0], e[1] - mean[1], e[2] - mean[2]);
+                let d = p.unitized() - centre;
+                let d = vga3d::Vector::new(d.e032(), d.e013(), d.e021());
                 acc + (d | v) * (d | v)
             },
         );
         scatter.eigh().1
     }
 
+    /// The cosine of the angle between a direction and a vector: the inner product of the
+    /// planes through the origin orthogonal to them, normalized.
+    fn cosine(d: P, v: vga3d::Vector<(), f64>) -> f64 {
+        let (a, b) = (Plane::orthogonal_to(d), Plane::from(v));
+        (a | b).s() / (a.norm() * b.norm())
+    }
+
     #[test]
     fn line_fit_matches_principal_axis_and_is_a_line() {
-        let mut rng = Rng(3);
         let pose = pose();
         let seg: Vec<P> = segment(200, 2.0).iter().map(|p| pose >> *p).collect();
-        let points = jitter(&seg, 0.05, &mut rng);
+        let points = jitter(&seg, 0.05, &mut rng(3));
         let line = line_to_points(&points);
         let scale = line.c.iter().fold(0.0f64, |m, x| m.max(x.abs())).powi(2);
         assert!((line ^ line).c.iter().all(|v| (v / scale).abs() < 1e-13));
         let axis = principal_axes(&points)[2];
-        let [a, b] = end_planes(2.0).map(|e| (line ^ (pose >> e)).to_euclidean());
-        let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-        let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-        let along = (d[0] * axis.c[0] + d[1] * axis.c[1] + d[2] * axis.c[2]) / len;
-        assert!((along.abs() - 1.0).abs() < 1e-6);
+        assert!((cosine(direction(line), axis).abs() - 1.0).abs() < 1e-6);
     }
 
     #[test]
     fn plane_fit_matches_the_normal_through_the_centroid() {
-        let mut rng = Rng(4);
+        let mut draws = rng(4);
         let pose = pose();
-        let pat: Vec<P> = patch(300, 2.0, &mut rng)
+        let pat: Vec<P> = patch(300, 2.0, &mut draws)
             .iter()
             .map(|p| pose >> *p)
             .collect();
-        let points = jitter(&pat, 0.05, &mut rng);
+        let points = jitter(&pat, 0.05, &mut draws);
         let plane = plane_to_points(&points);
         let normal = principal_axes(&points)[0];
-        let n = [plane.e1(), plane.e2(), plane.e3()];
-        let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
-        let along = (n[0] * normal.c[0] + n[1] * normal.c[1] + n[2] * normal.c[2]) / len;
+        let along = (plane | Plane::from(normal)).s() / plane.norm();
         assert!((along.abs() - 1.0).abs() < 1e-6);
         let centroid = point_to_points(&points);
         assert!((centroid.unitized() & plane).s().abs() < 1e-10);
@@ -522,9 +477,9 @@ mod tests {
 
     #[test]
     fn point_fitted_to_a_bundle_is_the_point_of_closest_approach() {
-        let mut rng = Rng(5);
+        let mut draws = rng(5);
         let pose = pose();
-        let exact: Vec<L> = bundle(20, 0.0, &mut rng)
+        let exact: Vec<L> = bundle(20, 0.0, &mut draws)
             .iter()
             .map(|l| pose >> *l)
             .collect();
@@ -533,7 +488,7 @@ mod tests {
             (pose >> origin()).c,
             1e-10
         ));
-        let rays: Vec<L> = bundle(40, 0.05, &mut rng)
+        let rays: Vec<L> = bundle(40, 0.05, &mut draws)
             .iter()
             .map(|l| pose >> *l)
             .collect();
@@ -543,9 +498,9 @@ mod tests {
         let mut b = [0.0; 3];
         for l in &rays {
             let d = direction(*l);
-            let d = [d.e032(), d.e013(), d.e021()];
             // A point on the line: its meet with the plane through the origin normal to it.
-            let p = (*l ^ Plane::new(d[0], d[1], d[2], 0.0)).to_euclidean();
+            let p = (*l ^ Plane::orthogonal_to(d)).to_euclidean();
+            let d = [d.e032(), d.e013(), d.e021()];
             for i in 0..3 {
                 for j in 0..3 {
                     let proj = f64::from(u8::from(i == j)) - d[i] * d[j];

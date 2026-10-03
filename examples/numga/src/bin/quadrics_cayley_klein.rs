@@ -11,6 +11,7 @@
 //! Gauss-Bonnet, the perpendicular through the pole and the reflection all follow, and grows
 //! two families of circles about their centres.
 
+use gax::pga2d::{Line, Point};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
 };
@@ -26,11 +27,6 @@ mod cayley_klein {
     pub type Polarity = Line<(Point,), f64>;
     /// A pole map, lines to points (`Point <- Line`).
     pub type Pole = Point<(Line,), f64>;
-
-    /// A finite point.
-    pub fn point(x: f64, y: f64) -> P {
-        Point::xy(x, y)
-    }
 
     /// The absolute from three line dyads, `x (x ∨ P) + y (y ∨ P) ± w (w ∨ P)`: the conic
     /// `x² + y² ± w² = 0`. With `-` it is the unit circle (hyperbolic), with `+` a conic with no
@@ -156,12 +152,12 @@ mod cayley_klein {
     pub fn hyperbolic_plane(t: f64) -> Scene {
         let c = hyperbolic();
         let vertices = [
-            point(0.0, 0.0),
-            point(0.65, 0.0),
-            point(0.2 + 0.25 * t.sin(), 0.55 + 0.2 * (2.0 * t).cos()),
+            Point::xy(0.0, 0.0),
+            Point::xy(0.65, 0.0),
+            Point::xy(0.2 + 0.25 * t.sin(), 0.55 + 0.2 * (2.0 * t).cos()),
         ];
         let triangle = triangle(c, vertices);
-        let p = point(-0.15 + 0.2 * t.cos(), 0.15 + 0.15 * t.sin());
+        let p = Point::xy(-0.15 + 0.2 * t.cos(), 0.15 + 0.15 * t.sin());
         let (pole, normal, foot, reflected) = perpendicular(c, triangle.sides[1], p);
         let grow = (t / core::f64::consts::TAU).rem_euclid(1.0);
         Scene {
@@ -173,7 +169,7 @@ mod cayley_klein {
             normal,
             foot,
             reflected,
-            centres: [point(0.0, 0.0), point(0.45, 0.25)],
+            centres: [Point::xy(0.0, 0.0), Point::xy(0.45, 0.25)],
             radii: [0.25, 0.55, 0.9, 1.3].map(|r| r + 0.4 * grow),
         }
     }
@@ -181,17 +177,11 @@ mod cayley_klein {
 
 use cayley_klein::*;
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
-/// A line `a x + b y + c = 0`, through its foot from the origin along its direction.
+/// A line, drawn through its point nearest the origin (its meet with the perpendicular from
+/// the origin) along its direction (its meet with the line at infinity).
 fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Rgb) {
-    let (a, b, d) = (l.e1(), l.e2(), l.e0());
-    let n = a * a + b * b;
-    let foot = [(-a * d / n) as f32, (-b * d / n) as f32];
-    ax.axline(c, foot, [-b as f32, a as f32], width, color, 1.0);
+    let foot = l ^ (l | Point::xy(0.0, 0.0));
+    ax.axline(c, foot, l ^ Line::new(0.0, 0.0, 1.0), width, color, 1.0);
 }
 
 /// The locus `P ∨ quadric(P) = 0`.
@@ -199,7 +189,7 @@ fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Rg
     ax.contour(
         c,
         |x, y| {
-            let p = point(f64::from(x), f64::from(y));
+            let p = Point::xy(f64::from(x), f64::from(y));
             (p & quadric.of(p)).s() as f32
         },
         260,
@@ -225,32 +215,17 @@ fn draw(c: &mut Canvas, t: f32) {
         line(&ax, c, side, 1.6, palette::sky());
     }
     line(&ax, c, s.normal, 1.4, palette::red());
-    let tri: Vec<[f32; 2]> = s.vertices.iter().map(|v| xy(*v)).collect();
-    ax.fill(c, &tri, palette::sky(), 0.18);
-    ax.scatter(c, &tri, Marker::Dot, 8.0, palette::sky(), 1.0);
-    ax.scatter(c, &[xy(s.p)], Marker::Dot, 9.0, palette::red(), 1.0);
-    ax.scatter(c, &[xy(s.foot)], Marker::Square, 8.0, palette::red(), 1.0);
-    ax.scatter(
-        c,
-        &[xy(s.reflected)],
-        Marker::Dot,
-        9.0,
-        palette::orange(),
-        1.0,
-    );
-    ax.scatter(
-        c,
-        &[xy(s.pole)],
-        Marker::Triangle,
-        10.0,
-        palette::purple(),
-        1.0,
-    );
+    ax.fill(c, &s.vertices, palette::sky(), 0.18);
+    ax.scatter(c, &s.vertices, Marker::Dot, 8.0, palette::sky(), 1.0);
+    ax.scatter(c, &[s.p], Marker::Dot, 9.0, palette::red(), 1.0);
+    ax.scatter(c, &[s.foot], Marker::Square, 8.0, palette::red(), 1.0);
+    ax.scatter(c, &[s.reflected], Marker::Dot, 9.0, palette::orange(), 1.0);
+    ax.scatter(c, &[s.pole], Marker::Triangle, 10.0, palette::purple(), 1.0);
+    // The angles beside their vertices, the lengths beside the midpoints of the sides.
     for (v, angle) in s.vertices.iter().zip(s.triangle.angles) {
-        let [x, y] = xy(*v);
         ax.text(
             c,
-            [x + 0.04, y + 0.06],
+            *v + Point::direction(0.04, 0.06),
             &format!("{:.1}", angle.to_degrees()),
             11.0,
             palette::ink(),
@@ -258,10 +233,10 @@ fn draw(c: &mut Canvas, t: f32) {
         );
     }
     for i in 0..3 {
-        let [a, b] = [xy(s.vertices[i]), xy(s.vertices[(i + 1) % 3])];
+        let midpoint = (s.vertices[i] + s.vertices[(i + 1) % 3]).gp(0.5);
         ax.text(
             c,
-            [(a[0] + b[0]) / 2.0 + 0.03, (a[1] + b[1]) / 2.0 - 0.07],
+            midpoint + Point::direction(0.03, -0.07),
             &format!("{:.2}", s.triangle.lengths[i]),
             10.0,
             palette::sky(),
@@ -280,7 +255,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let r = rect(0);
     c.text(
         &format!(
-            "ANGLE SUM {:.1} DEG (ELLIPTIC {:.1}), AREA PI - SUM = {:.3}",
+            "ANGLE SUM {:.1} (ELLIPTIC {:.1}), AREA {:.3}",
             s.triangle.angles.iter().sum::<f64>().to_degrees(),
             triangle(elliptic(), s.vertices)
                 .angles
@@ -291,7 +266,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         r[0],
         r[1] - 10.0,
-        12.0,
+        10.0,
         palette::ink(),
         Align::Left,
     );
@@ -305,25 +280,24 @@ fn draw(c: &mut Canvas, t: f32) {
             level_set(&ax, c, circle(s.c, *centre, r), 1.4, colour);
         }
     }
-    let centres: Vec<[f32; 2]> = s.centres.iter().map(|p| xy(*p)).collect();
-    ax.scatter(c, &centres, Marker::Dot, 7.0, palette::ink(), 1.0);
+    ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::ink(), 1.0);
     c.unclip();
     let r = rect(1);
     c.text(
         &format!(
-            "CIRCLES OF RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
+            "CIRCLES, RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
             s.radii[0], s.radii[3]
         ),
         r[0],
         r[1] - 10.0,
-        12.0,
+        10.0,
         palette::ink(),
         Align::Left,
     );
     caption(
         c,
         "CAYLEY-KLEIN: THE HYPERBOLIC PLANE FROM ITS ABSOLUTE",
-        "ONE POLARITY C = X(X & P) + Y(Y & P) - W(W & P) GIVES DISTANCES, ANGLES, CIRCLES (PGA2D)",
+        "C = X(X & P) + Y(Y & P) - W(W & P): DISTANCES, ANGLES, CIRCLES (PGA2D)",
     );
 }
 
@@ -334,6 +308,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::cayley_klein::*;
+    use gax::ApproxEq;
     use gax::pga2d::Point;
 
     fn assert_close(a: f64, b: f64, tol: f64) {
@@ -353,19 +328,15 @@ mod tests {
         };
         assert_eq!(hyperbolic().c, diag([1.0, 1.0, -1.0]));
         let q: Pole = hyperbolic().inverse();
-        for (row, want) in q.c.iter().zip(diag([1.0, 1.0, -1.0])) {
-            for (a, b) in row.iter().zip(want) {
-                assert_close(*a, b, 1e-14);
-            }
-        }
+        assert!(q.max_abs_diff(&Pole::from_coeffs(diag([1.0, 1.0, -1.0]))) < 1e-14);
         assert_eq!(elliptic().c, diag([1.0, 1.0, 1.0]));
     }
 
     #[test]
     fn hyperbolic_distance_along_a_diameter_is_arctanh() {
-        let origin = point(0.0, 0.0);
+        let origin = Point::xy(0.0, 0.0);
         for x in [0.2, 0.5, 0.75] {
-            let d = (-point_invariant(hyperbolic(), origin, point(x, 0.0)))
+            let d = (-point_invariant(hyperbolic(), origin, Point::xy(x, 0.0)))
                 .max(1.0)
                 .acosh();
             assert_close(d, f64::atanh(x), 1e-12);
@@ -376,9 +347,9 @@ mod tests {
     /// the radius.
     #[test]
     fn elliptic_distance_along_a_diameter_is_arctan() {
-        let origin = point(0.0, 0.0);
+        let origin = Point::xy(0.0, 0.0);
         for x in [0.2, 0.5, 2.0] {
-            let d = point_invariant(elliptic(), origin, point(x, 0.0))
+            let d = point_invariant(elliptic(), origin, Point::xy(x, 0.0))
                 .clamp(-1.0, 1.0)
                 .acos();
             assert_close(d, x.atan(), 1e-12);
@@ -389,8 +360,8 @@ mod tests {
     fn perpendicular_through_the_pole_and_reflection_in_both_geometries() {
         for c in [hyperbolic(), elliptic()] {
             let q: Pole = c.inverse();
-            let side = point(0.65, 0.0) & point(0.2, 0.55);
-            let p = point(-0.15, 0.15);
+            let side = Point::xy(0.65, 0.0) & Point::xy(0.2, 0.55);
+            let p = Point::xy(-0.15, 0.15);
             let pole = q.of(side);
             let perpendicular = p & pole;
             let foot = side ^ perpendicular;
@@ -406,9 +377,7 @@ mod tests {
             // The scenario's construction, through `C.solve`, is the same.
             let (pole2, normal, foot2, reflected2) = super::cayley_klein::perpendicular(c, side, p);
             for (a, b) in [(pole, pole2), (foot, foot2), (reflected, reflected2)] {
-                for (x, y) in a.c.iter().zip(b.c) {
-                    assert_close(*x, y, 1e-12);
-                }
+                assert!(a.max_abs_diff(&b) < 1e-12);
             }
             assert!((side & q.of(normal)).s().abs() < 1e-14);
         }
@@ -416,7 +385,11 @@ mod tests {
 
     #[test]
     fn triangle_angle_sum_is_below_pi_hyperbolic_and_above_pi_elliptic() {
-        let vertices = [point(0.0, 0.0), point(0.65, 0.0), point(0.2, 0.55)];
+        let vertices = [
+            Point::xy(0.0, 0.0),
+            Point::xy(0.65, 0.0),
+            Point::xy(0.2, 0.55),
+        ];
         let sum = |c| triangle(c, vertices).angles.iter().sum::<f64>();
         assert!(sum(hyperbolic()) < core::f64::consts::PI);
         assert!(core::f64::consts::PI < sum(elliptic()));
@@ -425,17 +398,17 @@ mod tests {
     #[test]
     fn circle_quadric_contains_the_points_at_its_radius() {
         let c = hyperbolic();
-        let (centre, r) = (point(0.45, 0.25), 0.9);
+        let (centre, r) = (Point::xy(0.45, 0.25), 0.9);
         let ring = circle(c, centre, r);
         let (mut lo, mut hi) = (0.45, 0.999);
         for _ in 0..60 {
             let mid = 0.5 * (lo + hi);
-            let d = (-point_invariant(c, centre, point(mid, 0.25)))
+            let d = (-point_invariant(c, centre, Point::xy(mid, 0.25)))
                 .max(1.0)
                 .acosh();
             if d < r { lo = mid } else { hi = mid }
         }
-        let on = point(lo, 0.25);
+        let on = Point::xy(lo, 0.25);
         assert!((on & ring.of(on)).s().abs() < 1e-12);
     }
 

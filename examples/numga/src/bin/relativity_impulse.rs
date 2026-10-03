@@ -20,7 +20,9 @@ use std::sync::OnceLock;
 
 use gax_numga_examples::canvas::srgb;
 use gax_numga_examples::font;
-use gax_numga_examples::{Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, run};
+use gax_numga_examples::{
+    Align, Anim, Axes, Canvas, Marker, Pos2, Rgb, backdrop, caption, f32s, palette, run,
+};
 
 gax::algebra! {
     algebra spacetime "The spacetime plane R(1,1): time `et` and one direction of space `ex`.";
@@ -73,7 +75,7 @@ mod impulse {
     /// The left kink is at the origin.
     pub fn strain_preserving_kinks(before: V, after: V) -> [V; 2] {
         let separation = ((before + after) * tx()) * (1.0 / (1.0 + (before | after).s()));
-        [separation * 0.0, separation]
+        [Vector::zero(), separation]
     }
 
     /// A rigid-to-rigid step anchored at the left end's kink: the two kink events, and the unit
@@ -408,14 +410,16 @@ fn contact() -> Rgb {
     srgb(0.92, 0.36, 0.36)
 }
 
-/// `[x, ct]`: an event where the diagram draws it.
-fn pt(v: V) -> [f32; 2] {
-    [position_of(v) as f32, time_of(v) as f32]
+/// An event where the diagrams draw it: position across, time up.
+impl Pos2 for V {
+    fn xy(self) -> [f32; 2] {
+        f32s([position_of(self), time_of(self)])
+    }
 }
 
-/// One end's polyline from a list of `[left, right]` events.
-fn end_line(events: &[[V; 2]], end: usize) -> Vec<[f32; 2]> {
-    events.iter().map(|e| pt(e[end])).collect()
+/// One end's worldline from a list of `[left, right]` events.
+fn end_line(events: &[[V; 2]], end: usize) -> Vec<V> {
+    events.iter().map(|e| e[end]).collect()
 }
 
 /// Axes of equal scales showing `xr` by `yr`, as large as fits in `rect`, centred.
@@ -441,41 +445,41 @@ fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Rgb) {
     );
 }
 
-/// The part of a timelike polyline (`[x, ct]`, time increasing) up to time `tau`.
-fn upto(points: &[[f32; 2]], tau: f32) -> Vec<[f32; 2]> {
+/// The part of a worldline (events in time order) up to the observer time `tau`.
+fn upto(events: &[V], tau: f64) -> Vec<V> {
     let mut out = vec![];
-    for w in points.windows(2) {
-        let [a, b] = [w[0], w[1]];
+    for w in events.windows(2) {
+        let (a, b) = (w[0], w[1]);
         if out.is_empty() {
-            if a[1] > tau {
+            if time_of(a) > tau {
                 return out;
             }
             out.push(a);
         }
-        if b[1] <= tau {
+        if time_of(b) <= tau {
             out.push(b);
         } else {
-            let f = (tau - a[1]) / (b[1] - a[1]);
-            out.push([a[0] + f * (b[0] - a[0]), tau]);
+            out.push(coasting(a, b - a, tau));
             return out;
         }
     }
     out
 }
 
-/// Where a timelike polyline is at time `tau`, if it is there.
-fn at(points: &[[f32; 2]], tau: f32) -> Option<f32> {
-    points.windows(2).find_map(|w| {
-        let [a, b] = [w[0], w[1]];
-        (a[1] <= tau && tau <= b[1] && b[1] > a[1])
-            .then(|| a[0] + (tau - a[1]) / (b[1] - a[1]) * (b[0] - a[0]))
+/// Where a worldline is at the observer time `tau`, if it is there then.
+fn at(events: &[V], tau: f64) -> Option<V> {
+    events.windows(2).find_map(|w| {
+        let (a, b) = (w[0], w[1]);
+        (time_of(a) <= tau && tau <= time_of(b) && time_of(b) > time_of(a))
+            .then(|| coasting(a, b - a, tau))
     })
 }
 
 /// A spacetime diagram with its worldlines growing up to the time `tau`.
 struct Diagram<'a> {
     ax: Axes,
-    tau: f32,
+    /// The present, an observer time.
+    tau: f64,
     size: f32,
     c: &'a mut Canvas,
 }
@@ -491,7 +495,7 @@ impl Diagram<'_> {
         let ax = fit(rect, xr, yr);
         let size = ((ax.rect[2] - ax.rect[0]) / 26.0).clamp(7.0, 11.0);
         // The present rises from the bottom of the diagram to its top.
-        let tau = yr[0] + (yr[1] - yr[0]) * reveal;
+        let tau = f64::from(yr[0] + (yr[1] - yr[0]) * reveal);
         // Light cones through the origin, faint.
         let big = 10.0;
         ax.line(c, [-big, -big], [big, big], 0.8, palette::grid(), 0.35);
@@ -500,10 +504,10 @@ impl Diagram<'_> {
     }
 
     /// A worldline: faint in full, bright up to the present.
-    fn worldline(&mut self, points: &[[f32; 2]], colour: Rgb, width: f32) {
-        self.ax.polyline(self.c, points, width * 0.6, colour, 0.18);
+    fn worldline(&mut self, events: &[V], colour: Rgb, width: f32) {
+        self.ax.polyline(self.c, events, width * 0.6, colour, 0.18);
         self.ax
-            .polyline(self.c, &upto(points, self.tau), width, colour, 1.0);
+            .polyline(self.c, &upto(events, self.tau), width, colour, 1.0);
     }
 
     /// Both ends' worldlines.
@@ -514,30 +518,30 @@ impl Diagram<'_> {
 
     /// A dashed line through events, shown once the present has passed its first.
     fn dashed(&mut self, events: &[V], colour: Rgb, width: f32) {
-        let pts: Vec<[f32; 2]> = events.iter().map(|e| pt(*e)).collect();
-        let first = pts.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
+        let first = events
+            .iter()
+            .map(|e| time_of(*e))
+            .fold(f64::INFINITY, f64::min);
         let alpha = if first <= self.tau { 0.95 } else { 0.25 };
-        self.ax.dashed(self.c, &pts, width, 4.0, colour, alpha);
+        self.ax.dashed(self.c, events, width, 4.0, colour, alpha);
     }
 
     /// Events, bright once the present has passed them.
     fn events(&mut self, events: &[V], marker: Marker, size: f32, colour: Rgb) {
         for e in events {
-            let p = pt(*e);
-            let alpha = if p[1] <= self.tau { 1.0 } else { 0.25 };
-            self.ax.scatter(self.c, &[p], marker, size, colour, alpha);
+            let alpha = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
+            self.ax.scatter(self.c, &[*e], marker, size, colour, alpha);
         }
     }
 
     /// A length bar across two equal-time events, labelled above (`dy > 0`) or below, once the
     /// present has reached it.
-    fn bar(&mut self, ends: [V; 2], label: &str, dy: f32, colour: Rgb) {
-        let (a, b) = (pt(ends[0]), pt(ends[1]));
-        if a[1] > self.tau {
+    fn bar(&mut self, [a, b]: [V; 2], label: &str, dy: f32, colour: Rgb) {
+        if time_of(a) > self.tau {
             return;
         }
         self.ax.line(self.c, a, b, 5.0, colour, 0.35);
-        let [px, py] = self.ax.px([(a[0] + b[0]) * 0.5, a[1]]);
+        let [px, py] = self.ax.px((a + b) * 0.5);
         let y = if dy > 0.0 {
             py - self.size * 0.8
         } else {
@@ -547,12 +551,11 @@ impl Diagram<'_> {
     }
 
     /// The present: the equal-time slice between two worldlines, with its length.
-    fn now(&mut self, left: &[[f32; 2]], right: &[[f32; 2]]) {
+    fn now(&mut self, left: &[V], right: &[V]) {
         if let (Some(a), Some(b)) = (at(left, self.tau), at(right, self.tau)) {
-            let (a, b) = ([a, self.tau], [b, self.tau]);
             self.ax.line(self.c, a, b, 1.6, palette::yellow(), 0.9);
             let [px, py] = self.ax.px(b);
-            let text = format!("{:.2}", b[0] - a[0]);
+            let text = format!("{:.2}", position_of(b) - position_of(a));
             self.c.text(
                 &text,
                 px + self.size * 0.6,
@@ -568,7 +571,7 @@ impl Diagram<'_> {
         title(self.c, &self.ax, text, palette::ink());
     }
 
-    fn text(&mut self, at: [f32; 2], text: &str, colour: Rgb) {
+    fn text(&mut self, at: impl Pos2, text: &str, colour: Rgb) {
         self.ax
             .text(self.c, at, text, self.size, colour, Align::Center);
     }
@@ -629,8 +632,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         } else {
             "SAME LINE, BOOSTED"
         };
-        let k = pt(s.kinks[v][1]);
-        d.text([k[0] * 0.5 + 0.35, k[1] * 0.5 + 0.16], label, kink());
+        d.text(s.kinks[v][1] * 0.5 + event(0.16, 0.35), label, kink());
         d.now(
             &end_line(&s.worldlines[v], 0),
             &end_line(&s.worldlines[v], 1),
@@ -638,7 +640,7 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         d.frame();
         d.title(heading);
     }
-    let end = pt(s.train[s.train.len() - 1][0])[1];
+    let end = time_of(s.train[s.train.len() - 1][0]) as f32;
     let mut d = Diagram::new(c, rect(2), [-0.16, 2.7], [-0.38, end + 0.30], r);
     d.rod(&s.train, 2.4);
     for step in &s.steps {
@@ -754,7 +756,7 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
 fn draw_spaceships(c: &mut Canvas, r: f32) {
     let (_, _, s) = scenes();
     let (w, h) = (c.width as f32, c.height as f32);
-    let end = pt(s.tracks[0][s.tracks[0].len() - 1][0])[1];
+    let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]) as f32;
     let titles = ["STRAIN-PRESERVING TRAIN", "BELL: IDENTICAL CLOCK PROGRAMS"];
     let notes = ["FRONT IMPULSES ON THE BISECTORS", "MATCHING CLOCK READINGS"];
     let colours = [kink(), elastic()];
@@ -900,6 +902,7 @@ fn main() {
 #[allow(clippy::needless_range_loop)]
 mod tests {
     use super::impulse::*;
+    use gax::ApproxEq;
 
     const ATOL: f64 = 1e-9;
 
@@ -915,7 +918,7 @@ mod tests {
     fn velocity_step_preserves_proper_spacing_and_requested_directions() {
         let (before, after) = (0.6f64, -0.75f64);
         let (events, directions) = velocity_step(before, after);
-        assert!(close(events[0].et(), 0.0) && close(events[0].ex(), 0.0));
+        assert!(events[0].max_abs_diff(&V::zero()) <= ATOL);
         for (d, r) in directions.iter().zip([before, after]) {
             assert!(close(d.norm_squared(), 1.0));
             assert!(close(velocity(*d), r.tanh()));
@@ -969,8 +972,7 @@ mod tests {
             let (train, directions) = small_impulses(rapidity, 1, 0.2);
             let (events, step_directions) = velocity_step(0.0, rapidity);
             for end in 0..2 {
-                assert!(close(train[0][end].et(), events[end].et()));
-                assert!(close(train[0][end].ex(), events[end].ex()));
+                assert!(train[0][end].max_abs_diff(&events[end]) <= ATOL);
             }
             for (a, b) in directions.iter().zip(step_directions) {
                 assert!(close(velocity(*a), velocity(b)));
@@ -1053,16 +1055,11 @@ mod tests {
         }
     }
 
+    /// A frame of each scene.
     #[test]
-    fn frames_draw() {
-        let mut draw = super::draw;
+    fn a_frame_draws() {
         for t in [0.5, super::SCENE + 3.0, 2.0 * super::SCENE + 6.5] {
-            let c = gax_numga_examples::app::frame(
-                &gax_numga_examples::Anim::new("t", 1.0).size(320, 180),
-                t,
-                &mut draw,
-            );
-            assert!(c.mean()[0] > 0.0);
+            gax_numga_examples::app::assert_draws(super::draw, t);
         }
     }
 }

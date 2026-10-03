@@ -89,6 +89,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let radius = h * 0.42;
     let sharpness = 2.0 * f64::from(radius);
     let (cell_a, cell_b) = (palette::sky(), palette::blue());
+    // Lit from the upper left, so the disk reads as a sphere: the inner product of the normal
+    // (on the unit sphere, the point itself) with the direction to the light.
+    let light = Vector::new(-0.35, 0.45, 0.82);
     c.shade(2, |x, y| {
         let (u, v) = ((x - centre[0]) / radius, (centre[1] - y) / radius);
         let r2 = u * u + v * v;
@@ -100,9 +103,8 @@ fn draw(c: &mut Canvas, t: f32) {
         let p = Vector::new(f64::from(u), f64::from(v), f64::from(z));
         let s = sides(p, &planes, sharpness) as f32;
         let colour = mix(cell_b, cell_a, (s + 1.0) / 2.0);
-        // Lit from the upper left, so the disk reads as a sphere.
-        let light = (0.55 + 0.45 * (-0.35 * u + 0.45 * v + 0.82 * z)).clamp(0.2, 1.0);
-        Some(scale(colour, light))
+        let lit = (0.55 + 0.45 * (p | light).s()).clamp(0.2, 1.0);
+        Some(scale(colour, lit as f32))
     });
     c.ring(centre, radius, 1.5, palette::ink(), 0.6);
     caption(

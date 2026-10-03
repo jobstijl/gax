@@ -19,54 +19,6 @@ use gax_numga_examples::{
 };
 use scenes::{Scene3, s2};
 
-/// A small xorshift generator: numga's streams (numpy's PCG64) cannot be reproduced, so the S³
-/// populations differ from numga's, and their checks are robust to the stream.
-mod rng {
-    pub struct Rng(u64);
-
-    impl Rng {
-        pub fn new(seed: u64) -> Rng {
-            Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
-        }
-
-        fn next(&mut self) -> u64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            self.0.wrapping_mul(0x2545_F491_4F6C_DD1D)
-        }
-
-        /// Uniform in `[0, 1)`.
-        pub fn uniform(&mut self) -> f64 {
-            (self.next() >> 11) as f64 / (1u64 << 53) as f64
-        }
-
-        /// A standard normal sample (Box–Muller).
-        pub fn normal(&mut self) -> f64 {
-            let u = 1.0 - self.uniform();
-            let v = self.uniform();
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-
-        /// A uniform direction in `n` dimensions (empty for `n = 0`).
-        pub fn unit_vector(&mut self, n: usize) -> Vec<f64> {
-            let v: Vec<f64> = (0..n).map(|_| self.normal()).collect();
-            let norm = v.iter().map(|x| x * x).sum::<f64>().sqrt();
-            v.iter().map(|x| x / norm).collect()
-        }
-
-        /// A random permutation, in place.
-        pub fn shuffle<T>(&mut self, items: &mut [T]) {
-            for i in (1..items.len()).rev() {
-                let j = (self.uniform() * (i + 1) as f64) as usize;
-                items.swap(i, j.min(i));
-            }
-        }
-    }
-}
-
-/// The time step of the S² scenes and of the S³ scenes.
-const DT2: f64 = 0.015;
 const SECONDS: f32 = 12.0;
 const FRAMES: usize = 240;
 
@@ -150,7 +102,7 @@ fn hemisphere(
 /// tumbles; a cursor at frame `f`.
 fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
     let frames = show.s2.energy.len();
-    let time = |k: usize| (k as f64 * DT2) as f32;
+    let time = |k: usize| (k as f64 * scenes::DT2) as f32;
     let tumbling = show.s2_name == "TUMBLING";
     let range = if tumbling {
         [-16.0, 16.0]
@@ -160,11 +112,11 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
     let ax = Axes::new(rect, [0.0, time(frames - 1).max(1e-3)], range);
     let (energy_drift, momentum_drift) = scenes::conserved_s2(&show.s2);
     let title = format!(
-        "{}: DRIFT {energy_drift:.0E}, {momentum_drift:.0E}",
+        "{} {energy_drift:.0E}, {momentum_drift:.0E}",
         if tumbling {
-            "RATES, ENERGY, MOMENTUM"
+            "RATES, E AND P DRIFT"
         } else {
-            "ENERGY, MOMENTUM"
+            "ENERGY, MOMENTUM: DRIFT"
         }
     );
     ax.frame(c, &title, "", "");
@@ -265,7 +217,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     c.unclip();
     c.text(
         &format!(
-            "S3: {}, {} ELLIPSOIDS, {} IMPULSES IN ALL",
+            "S3: {}, {} BODIES, {} IMPULSES",
             show.s3_name,
             view.surfaces.len(),
             trajectory.impulses
@@ -298,7 +250,6 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::rng::Rng;
     use super::scenes::{self, s2, s3};
     use gax::vga3d::{Bivector, Vector};
 
@@ -391,7 +342,7 @@ mod tests {
                 half_angles: [25.0, 15.0],
                 mass: 1.0,
                 placement: Bivector::new(-f64::to_radians(*angle) / 2.0, 0.0, 0.0).exp(),
-                rate: [*spin, 0.0, 0.0],
+                rate: Bivector::new(*spin, 0.0, 0.0),
                 color: 0x38bdf8,
             })
             .collect();
@@ -412,7 +363,7 @@ mod tests {
     /// its mass.
     #[test]
     fn filled_points_lie_inside_with_the_given_mass() {
-        let mut rng = Rng::new(0);
+        let mut rng = gax_numga_examples::rng::rng(0);
         for q in [
             s3::ellipsoid([0.3, 0.2, 0.1]),
             s3::quadric([-1.0, -1.0, 2.0, 3.0]),
@@ -484,10 +435,17 @@ mod tests {
         }
     }
 
-    /// No body of the crowd shown by default passes over the eye in the animation's frames.
+    /// No body of any S³ scene passes over the eye in the animation's frames.
     #[test]
-    fn the_crowd_keeps_off_the_eye() {
-        assert_eq!(scenes::eye_inside(&scenes::crowd(super::FRAMES)), None);
+    fn the_bodies_keep_off_the_eye() {
+        for (name, scene) in [
+            ("crowd", scenes::crowd(super::FRAMES)),
+            ("gap", scenes::gap(super::FRAMES)),
+            ("needle", scenes::needle(super::FRAMES)),
+            ("tunnel", scenes::tunnel(super::FRAMES).scene),
+        ] {
+            assert_eq!(scenes::eye_inside(&scene), None, "{name}");
+        }
     }
 
     #[test]

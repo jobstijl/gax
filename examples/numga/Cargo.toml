@@ -21,6 +21,8 @@ winit = "0.30"
 softbuffer = "0.4"
 gif = "0.13"
 png = "0.17"
+rand = "0.9"
+rand_distr = "0.5"
 
 [profile.dev]
 opt-level = 1

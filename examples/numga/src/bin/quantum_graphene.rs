@@ -18,10 +18,12 @@
 //! (with a gap of 0.5 eV) while a transported frame vector turns along it, and the Berry phase of
 //! loops of every radius is plotted for four gaps.
 
+use gax::vga3d::Vector;
 use gax_numga_examples::canvas::{mix, scale};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, colormap,
-    palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, caption,
+    colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -47,6 +49,11 @@ mod graphene {
     }
     fn xy() -> Bivector<(), f64> {
         Bivector::new(0.0, 0.0, 1.0)
+    }
+
+    /// The rotation about `z` by `angle`, from `x` towards `y`.
+    pub fn turn(angle: f64) -> Unit<R> {
+        (xy() * (-angle / 2.0)).exp()
     }
 
     /// The bonds from an atom to its three neighbours, in carbon-carbon distances (0.142 nm).
@@ -98,17 +105,15 @@ mod graphene {
 
     /// The rotors that carry a frame along a curve of unit directions, each step the smallest
     /// rotation from one direction to the next, `normalize(1 + d' d)`: from the first direction to
-    /// each of the others. Around a closed curve the last is the holonomy.
+    /// each of the others, renormalized as they accumulate. Around a closed curve the last is the
+    /// holonomy.
     pub fn transport(directions: &[V]) -> Vec<Unit<R>> {
         let mut running: Option<Unit<R>> = None;
         directions
             .windows(2)
             .map(|w| {
                 let step = (Rotor::new(1.0, 0.0, 0.0, 0.0) + w[1] * w[0]).normalized();
-                let next = match running {
-                    Some(r) => step * r,
-                    None => step,
-                };
+                let next = running.map_or(step, |r| step.mul_renormalized(r));
                 running = Some(next);
                 next
             })
@@ -118,10 +123,7 @@ mod graphene {
     /// Unit vectors around the circle in the plane in `count` steps, the last equal to the first.
     pub fn circle(count: usize) -> Vec<V> {
         (0..=count)
-            .map(|k| {
-                let angle = core::f64::consts::TAU * k as f64 / count as f64;
-                (xy() * (-angle / 2.0)).exp() >> x()
-            })
+            .map(|k| turn(core::f64::consts::TAU * k as f64 / count as f64) >> x())
             .collect()
     }
 
@@ -252,30 +254,15 @@ fn data() -> &'static Data {
     })
 }
 
-fn v3(v: V) -> [f32; 3] {
-    [v.e1() as f32, v.e2() as f32, v.e3() as f32]
-}
-
-/// A 3D panel: the scene drawn on its own canvas over the matching stretch of the backdrop, and
-/// copied into `rect`.
-fn panel3(c: &mut Canvas, rect: [usize; 4], cam: Camera, fill: impl FnOnce(&mut Scene3)) {
-    let [x0, y0, x1, y1] = rect;
-    let mut sub = Canvas::new(x1 - x0, y1 - y0);
-    let rows = (c.height.max(2) - 1) as f32;
-    sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / rows),
-        mix(palette::top(), palette::bottom(), (y1 - 1) as f32 / rows),
-    );
-    let mut scene = Scene3::new(cam);
-    fill(&mut scene);
-    scene.draw(&mut sub);
-    c.blit(&sub, x0, y0);
+/// A momentum's coordinates in the momentum plane, for the plots.
+fn in_plane(k: V) -> [f64; 2] {
+    [k.e1(), k.e2()]
 }
 
 /// The two bands over the momentum plane, energies scaled down to sit beside the momenta.
 fn draw_bands(s: &mut Scene3, b: &Bands) {
     let n = b.count;
-    let squash = 0.3f32;
+    let squash = 0.3;
     let top = 3.0 * HOPPING as f32;
     let node = |u: f32, v: f32| {
         let (i, j) = (
@@ -291,9 +278,9 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
         s.surface(
             |u, v| {
                 let (i, j) = node(u, v);
-                let k = b.momenta[j * n + i];
-                let e = b.values[j * n + i][band] as f32;
-                [k.e1() as f32, k.e2() as f32, e * squash]
+                // The momentum, raised by the band's energy.
+                let e = b.values[j * n + i][band];
+                (b.momenta[j * n + i] + z() * (e * squash)).xyz()
             },
             n - 1,
             n - 1,
@@ -311,39 +298,37 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let d = data();
-    let (w, h) = (c.width, c.height);
-    let (wf, hf) = (w as f32, h as f32);
-    let tau = core::f32::consts::TAU;
-    let phase_t = t / SECONDS;
+    let (wf, hf) = (c.width as f32, c.height as f32);
+    let tau = core::f64::consts::TAU;
+    let phase_t = f64::from(t / SECONDS);
     // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
     let radius = 0.01 + 0.59 * (0.5 - 0.5 * (tau * phase_t).cos());
     let around = (6.0 * phase_t).fract();
-    let top = (hf * 0.13) as usize;
+    let top = hf * 0.13;
 
     // The bands, turning.
-    let left = (wf * 0.42) as usize;
+    let left = wf * 0.42;
     let cam = Camera::orbit(
-        left,
-        h - top,
+        left as usize,
+        (hf - top) as usize,
         [0.0, 0.0, 0.0],
-        19.0,
-        tau * phase_t - 1.05,
+        23.0,
+        (tau * phase_t) as f32 - 1.05,
         0.42,
         Lens::Perspective(0.62),
     );
-    panel3(c, [0, top, left, h], cam, |s| draw_bands(s, &d.bands));
+    panel3(c, [0.0, top, left, hf], cam, |s| draw_bands(s, &d.bands));
     c.text(
         "THE TWO BANDS: CONES WHERE THEY MEET",
         wf * 0.21,
-        top as f32 + 4.0,
-        12.0,
+        top + 4.0,
+        10.0,
         palette::ink(),
         Align::Center,
     );
 
     // The field over the momentum plane, with the loop about K.
     let [valley_k, _] = valleys();
-    let kv = v3(valley_k);
     let map_rect = [wf * 0.46, hf * 0.16, wf * 0.72, hf * 0.56];
     let ax = Axes::equal(map_rect, [0.0, 0.0], 3.2);
     ax.image(c, 1, |x, y| {
@@ -351,13 +336,9 @@ fn draw(c: &mut Canvas, t: f32) {
         let len = f.norm() as f32;
         Some(scale(colormap::viridis(len / (3.0 * HOPPING as f32)), 0.75))
     });
-    // The Brillouin zone: the hexagon through the six valleys.
-    let corner = 4.0 * core::f32::consts::PI / (3.0 * 3f32.sqrt());
-    let hexagon: Vec<[f32; 2]> = (0..=6)
-        .map(|k| {
-            let a = tau / 12.0 + tau * k as f32 / 6.0;
-            [corner * a.cos(), corner * a.sin()]
-        })
+    // The Brillouin zone: the hexagon through the six valleys, K turned by sixths of a turn.
+    let hexagon: Vec<[f64; 2]> = (0..=6)
+        .map(|k| in_plane(turn(tau * k as f64 / 6.0) >> valley_k))
         .collect();
     ax.polyline(c, &hexagon, 1.0, palette::ink(), 0.6);
     // The upper band's pseudospin with the gap: in the plane it turns once around each corner,
@@ -365,32 +346,36 @@ fn draw(c: &mut Canvas, t: f32) {
     let step = 0.8f32;
     for i in -4..=4 {
         for j in -4..=4 {
-            let p = [i as f32 * step, j as f32 * step];
-            let d = v3(upper_pseudospin(momentum(p[0], p[1]), GAPS[SHOWN]));
-            let half = 0.3;
+            let k = momentum(i as f32 * step, j as f32 * step);
+            let d = upper_pseudospin(k, GAPS[SHOWN]);
+            let half = d * 0.3;
             ax.arrow(
                 c,
-                [p[0] - half * d[0], p[1] - half * d[1]],
-                [p[0] + half * d[0], p[1] + half * d[1]],
+                in_plane(k - half),
+                in_plane(k + half),
                 1.2,
                 5.0,
-                colormap::coolwarm(0.5 + 0.5 * d[2]),
+                colormap::coolwarm(0.5 + 0.5 * d.e3() as f32),
             );
         }
     }
-    let ring: Vec<[f32; 2]> = (0..=64)
-        .map(|k| {
-            let a = tau * k as f32 / 64.0;
-            [kv[0] + radius * a.cos(), kv[1] + radius * a.sin()]
-        })
+    let ring: Vec<[f64; 2]> = circle(64)
+        .iter()
+        .map(|u| in_plane(valley_k + *u * radius))
         .collect();
     ax.polyline(c, &ring, 2.0, palette::orange(), 1.0);
-    let a = tau * around;
-    let here = [kv[0] + radius * a.cos(), kv[1] + radius * a.sin()];
-    ax.scatter(c, &[here], Marker::Dot, 7.0, palette::orange(), 1.0);
+    let here = valley_k + (turn(tau * around) >> x()) * radius;
+    ax.scatter(
+        c,
+        &[in_plane(here)],
+        Marker::Dot,
+        7.0,
+        palette::orange(),
+        1.0,
+    );
     ax.text(
         c,
-        [kv[0] + 0.25, kv[1] + 0.2],
+        in_plane(valley_k + Vector::new(0.25, 0.2, 0.0)),
         "K",
         12.0,
         palette::ink(),
@@ -401,13 +386,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along.
     let count = 240;
     let gap = GAPS[SHOWN];
-    let dirs = loop_directions(valley_k, f64::from(radius), gap, count);
+    let dirs = loop_directions(valley_k, radius, gap, count);
     let rotors = transport(&dirs);
-    let at = ((around * count as f32) as usize).min(count - 1);
+    let at = ((around * count as f64) as usize).min(count - 1);
     let start = dirs[0];
     // A frame vector perpendicular to the start: `(z ^ d) d` is z less its part along d.
-    let first_frame = ((z() ^ start) * start).cast::<gax::vga3d::Vector>();
-    let first_frame = first_frame / first_frame.norm();
+    let first_frame = ((z() ^ start) * start)
+        .cast::<Vector>()
+        .normalized()
+        .into_inner();
     let carried = if at == 0 {
         first_frame
     } else {
@@ -417,48 +404,46 @@ fn draw(c: &mut Canvas, t: f32) {
     let holonomy = *rotors.last().expect("a closed loop");
     let gamma = phase(holonomy, start) / core::f64::consts::PI;
     // A small loop sees a cone of slope VELOCITY: its phase in closed form.
-    let v_r = VELOCITY * f64::from(radius);
+    let v_r = VELOCITY * radius;
     let cone = 1.0 - gap / (gap * gap + v_r * v_r).sqrt();
-    let sphere_rect = [(wf * 0.74) as usize, top, w, (hf * 0.6) as usize];
+    let sphere_rect = [wf * 0.74, top, wf, hf * 0.6];
     let cam = Camera::orbit(
-        sphere_rect[2] - sphere_rect[0],
-        sphere_rect[3] - sphere_rect[1],
+        (sphere_rect[2] - sphere_rect[0]) as usize,
+        (sphere_rect[3] - sphere_rect[1]) as usize,
         [0.0; 3],
         4.6,
-        0.6 + 0.3 * (tau * phase_t).sin(),
+        0.6 + 0.3 * (tau * phase_t).sin() as f32,
         0.35,
         Lens::Perspective(0.6),
     );
     panel3(c, sphere_rect, cam, |s| {
         s.sphere_wire([0.0; 3], 1.0, 16, palette::grid(), 0.5);
-        let curve: Vec<[f32; 3]> = dirs.iter().map(|v| v3(*v)).collect();
-        s.polyline(&curve, 2.0, palette::orange(), 1.0);
-        s.arrow([0.0; 3], v3(current), 2.5, 9.0, palette::orange());
-        let tip = v3(current);
-        let f0 = v3(first_frame);
-        let s0 = v3(start);
-        s.arrow(s0, f0.map(|v| 0.45 * v), 1.5, 6.0, palette::grid());
-        s.arrow(
-            tip,
-            v3(carried).map(|v| 0.45 * v),
-            2.0,
-            7.0,
-            palette::green(),
-        );
+        s.polyline(&dirs, 2.0, palette::orange(), 1.0);
+        s.arrow([0.0; 3], current, 2.5, 9.0, palette::orange());
+        s.arrow(start, first_frame * 0.45, 1.5, 6.0, palette::grid());
+        s.arrow(current, carried * 0.45, 2.0, 7.0, palette::green());
     });
     c.text(
-        "PSEUDOSPIN AROUND THE LOOP",
+        "PSEUDOSPIN ON THE LOOP",
         wf * 0.87,
-        top as f32 + 4.0,
-        12.0,
+        top + 4.0,
+        10.0,
         palette::ink(),
         Align::Center,
     );
     c.text(
-        &format!("GAP {gap:.1} EV: PHASE {gamma:+.3} PI, CONE {cone:.3}"),
+        &format!("PHASE {gamma:+.3} PI"),
         wf * 0.87,
         hf * 0.6 + 2.0,
-        11.0,
+        10.0,
+        palette::green(),
+        Align::Center,
+    );
+    c.text(
+        &format!("GAP {gap:.1} EV, CONE {cone:.3} PI"),
+        wf * 0.87,
+        hf * 0.6 + 16.0,
+        9.0,
         palette::green(),
         Align::Center,
     );
@@ -475,11 +460,11 @@ fn draw(c: &mut Canvas, t: f32) {
     for (g, pair) in d.phases.iter().enumerate() {
         let colour = palette::series(g + 1);
         for (valley, row) in pair.iter().enumerate() {
-            let pts: Vec<[f32; 2]> = d
+            let pts: Vec<[f64; 2]> = d
                 .radii
                 .iter()
                 .zip(row)
-                .map(|(r, p)| [*r as f32, (*p / core::f64::consts::PI) as f32])
+                .map(|(r, p)| [*r, *p / core::f64::consts::PI])
                 .collect();
             let width = if g == SHOWN { 2.2 } else { 1.3 };
             if valley == 0 {
@@ -500,7 +485,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.scatter(
         c,
-        &[[radius, gamma as f32]],
+        &[[radius, gamma]],
         Marker::Dot,
         7.0,
         palette::series(SHOWN + 1),
@@ -511,13 +496,13 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "GRAPHENE: DIRAC CONES AND THE BERRY PHASE",
-        "THE PSEUDOSPIN FIELD IN VGA3D; H(PSI) = FIELD PSI Z",
+        "THE PSEUDOSPIN FIELD IN VGA3D, H(PSI) = FIELD PSI Z",
     );
 }
 
 /// A momentum in the plane, from drawing coordinates.
 fn momentum(x: f32, y: f32) -> V {
-    gax::vga3d::Vector::new(f64::from(x), f64::from(y), 0.0)
+    Vector::new(f64::from(x), f64::from(y), 0.0)
 }
 
 fn main() {
@@ -527,10 +512,11 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::graphene::*;
+    use gax::ApproxEq;
     use gax::vga3d::{Rotor, Vector};
 
     fn close(a: V, b: V, tol: f64) -> bool {
-        a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() <= tol)
+        a.max_abs_diff(&b) <= tol
     }
 
     /// `H(H(psi)) == (field | field) psi`, so the eigenvalues are plus and minus the field's length.
@@ -539,8 +525,11 @@ mod tests {
         let field = Vector::new(0.3, -1.1, 0.7);
         let psi = Rotor::new(0.4, -0.2, 1.3, 0.5);
         let h = hamiltonian(field);
-        let twice = h.of(h.of(psi)) - psi * (field | field).s();
-        assert!(twice.c.iter().all(|v| v.abs() < 1e-12), "{twice:?}");
+        let twice = h.of(h.of(psi));
+        assert!(
+            twice.max_abs_diff(&(psi * field.norm_squared())) < 1e-12,
+            "{twice:?}"
+        );
     }
 
     /// Around the circle at polar angle `theta` the enclosed solid angle is `2 pi (1 - cos theta)`,
@@ -565,8 +554,7 @@ mod tests {
         for count in [21, 121] {
             let b = bands(4.5, count, 0.0);
             for (k, v) in b.momenta.iter().zip(&b.values) {
-                let f = pseudospin(*k, 0.0);
-                let l = (f | f).s().sqrt();
+                let l = pseudospin(*k, 0.0).norm();
                 for (got, want) in v.iter().zip([-l, -l, l, l]) {
                     assert!((got - want).abs() < 1e-9, "{v:?} vs {l}");
                 }

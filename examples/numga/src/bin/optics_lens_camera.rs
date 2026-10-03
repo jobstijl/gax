@@ -19,7 +19,6 @@ mod lens {
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
-    pub type L = Line<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
     /// A collineation maps points to points.
     pub type PointMap = Point<(Point,), f64>;
@@ -42,21 +41,6 @@ mod lens {
         Plane::new(1.0, 0.0, 0.0, 0.0)
     }
 
-    /// The origin carried by the translator with the given displacement.
-    pub fn point(c: [f64; 3]) -> P {
-        Motor::translation(c[0], c[1], c[2]) >> origin()
-    }
-
-    /// The ideal point in direction `c`.
-    pub fn direction(c: [f64; 3]) -> P {
-        Point::direction(c[0], c[1], c[2])
-    }
-
-    /// numga's rotor `exp(B angle / 2)` (a turn by `-angle` about the axis of `B`).
-    pub fn rotor(generator: L, angle: f64) -> M {
-        generator.gp(angle * 0.5).exp()
-    }
-
     /// A thin lens of focal length `focal` in the home plane, as a collineation of points and as
     /// the induced map on lines.
     pub fn thin_lens(focal: f64) -> (PointMap, LineMap) {
@@ -68,16 +52,14 @@ mod lens {
     }
 
     /// A ball of the given radius about the origin; its section with the home plane is the
-    /// aperture rim.
+    /// aperture rim. The coordinate planes through the origin, each with its pairing (the
+    /// squared distances add up), less the plane at infinity times the squared radius.
     pub fn ball(radius: f64) -> Quadric {
         let x = Point::slot();
-        let mut q = (Plane::new(0.0, 0.0, 0.0, 1.0) * (Plane::new(0.0, 0.0, 0.0, 1.0) & x))
-            .gp(-radius * radius);
-        for e in [
-            Plane::new(1.0, 0.0, 0.0, 0.0),
-            Plane::new(0.0, 1.0, 0.0, 0.0),
-            Plane::new(0.0, 0.0, 1.0, 0.0),
-        ] {
+        let infinity = Plane::new(0.0, 0.0, 0.0, 1.0);
+        let mut q = (infinity * (infinity & x)).gp(-radius * radius);
+        for normal in [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]] {
+            let e = Plane::from_normal(normal, 0.0);
             q += e * (e & x);
         }
         q
@@ -181,12 +163,12 @@ mod lens {
     /// sensor plane: along each direction the cone's form is a quadratic, and its root is the
     /// boundary.
     pub fn section(cone: Quadric, start: P, frame: M, samples: usize) -> Vec<P> {
-        let yz = Line::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         (0..samples)
             .map(|k| {
                 let theta = core::f64::consts::TAU * k as f64 / (samples - 1) as f64;
-                // The direction `+y` (numga's `y.dual()`) turned by theta about `x`, in the sensor.
-                let across = frame >> (rotor(yz, -theta) >> direction([0.0, 1.0, 0.0]));
+                // The direction `+y` turned by theta about `x`, in the sensor.
+                let turn = Motor::rotation_about(1.0, 0.0, 0.0, theta);
+                let across = frame >> (turn >> Point::direction(0.0, 1.0, 0.0));
                 let (a, b, c) = (
                     (across & cone.of(across)).s(),
                     (across & cone.of(start)).s(),
@@ -204,6 +186,7 @@ mod lens {
 /// the rear lens, picks the point to focus on, tilts the sensor and sets the aperture.
 mod scenes {
     use super::lens::*;
+    use gax::pga3d::{Motor, Point};
 
     /// Focal lengths of the front and the rear lens. The front lens sits at `x = 1`; the rear
     /// lens moves to zoom.
@@ -217,7 +200,7 @@ mod scenes {
         for x in [-3.2, -2.2, -1.6] {
             for h in 0..5 {
                 for w in 0..4 {
-                    pts.push(point([x, -0.8 + 0.4 * h as f64, -0.5 + w as f64 / 3.0]));
+                    pts.push(Point::xyz(x, -0.8 + 0.4 * h as f64, -0.5 + w as f64 / 3.0));
                 }
             }
         }
@@ -226,17 +209,17 @@ mod scenes {
 
     /// The subject on the far layer whose rays through the aperture rim are traced.
     pub fn subject() -> P {
-        point([-3.2, 0.0, -1.0 / 6.0])
+        Point::xyz(-3.2, 0.0, -1.0 / 6.0)
     }
 
     /// Expose the scene with the rear lens at `rear_at`, focused on the axis at `focus_at`, the
     /// sensor tilted by `tilt` radians, and an aperture of the given radius.
     pub fn setting(rear_at: f64, focus_at: f64, tilt: f64, radius: f64) -> Exposure {
-        let placements = [FRONT_AT, rear_at].map(|x| gax::pga3d::Motor::translation(x, 0.0, 0.0));
-        let focus = point([focus_at, 0.0, 0.0]);
-        let xy = gax::pga3d::Line::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0);
-        let turn = rotor(xy, tilt);
-        let rim = [[0.0, radius, 0.0], [0.0; 3], [0.0, -radius, 0.0]].map(point);
+        let placements = [FRONT_AT, rear_at].map(|x| Motor::translation(x, 0.0, 0.0));
+        let focus = Point::xyz(focus_at, 0.0, 0.0);
+        // The sensor tilts clockwise about the vertical through the focus point's image.
+        let turn = Motor::rotation_about(0.0, 0.0, 1.0, -tilt);
+        let rim = [radius, 0.0, -radius].map(|y| Point::xyz(0.0, y, 0.0));
         expose(
             &scene(),
             subject(),
@@ -307,8 +290,7 @@ mod raster {
         /// cone's form over the length of its gradient, twice the polar plane's normal.
         fn distance(&self, p: pga2d::Point<(), f64>) -> f64 {
             let f = self.form.of(p).of(p).s();
-            let n = self.polar.of(p);
-            f / (2.0 * (n.e1() * n.e1() + n.e2() * n.e2() + n.e3() * n.e3()).sqrt())
+            f / (2.0 * self.polar.of(p).norm())
         }
 
         /// The disc's coverage of a sensor point: a logistic edge two of numga's samples wide,
@@ -432,7 +414,9 @@ mod raster {
     }
 }
 
-use lens::{Exposure, P};
+use gax::pga2d;
+use gax::pga3d::Point;
+use lens::Exposure;
 use scenes::*;
 
 const SECONDS: f32 = 8.0;
@@ -458,14 +442,20 @@ fn stills_images() -> &'static [Vec<[f32; 3]>; 3] {
     STILLS.get_or_init(|| stills().map(|e| raster::rasterise(&e, 1.0, THUMB[0], THUMB[1])))
 }
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y, _] = p.to_euclidean();
-    [x as f32, y as f32]
+/// The side view: points of space seen along `z`, as points of the `x`-`y` plane (PGA2D).
+fn side_view() -> pga2d::Point<(Point,), f64> {
+    pga2d::Point::from_images([
+        pga2d::Point::new(1.0, 0.0, 0.0),
+        pga2d::Point::new(0.0, 1.0, 0.0),
+        pga2d::Point::new(0.0, 0.0, 0.0),
+        pga2d::Point::new(0.0, 0.0, 1.0),
+    ])
 }
 
 /// Side view in the `x`-`y` plane: the element planes as segments, the scene layers, and the
 /// ray fan leg by leg.
 fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
+    let flat = side_view();
     let z = gax::pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
     let at = |h: f64| gax::pga3d::Plane::new(0.0, 1.0, 0.0, -h);
     let heights = [radius, 0.6, 0.35];
@@ -477,18 +467,18 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         } else {
             palette::sky()
         };
-        ax.line(c, xy(top), xy(bottom), 2.5, colour, 1.0);
-        let [tx, ty] = xy(top);
+        let top = flat.of(top);
+        ax.line(c, top, flat.of(bottom), 2.5, colour, 1.0);
         ax.text(
             c,
-            [tx, ty + 0.12],
+            pga2d::Motor::translation(0.0, 0.12) >> top,
             name,
             7.0,
             palette::grid(),
             Align::Center,
         );
     }
-    let pts: Vec<[f32; 2]> = scene().iter().map(|p| xy(*p)).collect();
+    let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
     let layer = [palette::red(), palette::green(), palette::blue()];
     for (k, chunk) in pts.chunks(20).enumerate() {
         ax.scatter(
@@ -501,9 +491,9 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         );
     }
     // Where the collineation puts each point: its image cone's vertex, the point's focus.
-    let images: Vec<[f32; 2]> = scene()
+    let images: Vec<_> = scene()
         .iter()
-        .map(|p| xy(exposure.collineation.of(*p)))
+        .map(|p| flat.of(exposure.collineation.of(*p)))
         .collect();
     for (k, chunk) in images.chunks(20).enumerate() {
         ax.scatter(
@@ -516,7 +506,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         );
     }
     for ray in 0..3 {
-        let fan: Vec<[f32; 2]> = exposure.legs.iter().map(|leg| xy(leg[ray])).collect();
+        let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
         ax.polyline(c, &fan, 1.0, palette::yellow(), 0.9);
     }
 }
@@ -619,11 +609,15 @@ fn main() {
 mod tests {
     use super::lens::*;
     use super::scenes::*;
+    use gax::ApproxEq;
     use gax::pga2d;
     use gax::pga3d::{Plane, Point};
 
-    fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
-        a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+    /// Whether a point is within `tol` of `want`, coordinate by coordinate.
+    fn near(p: P, want: [f64; 3], tol: f64) -> bool {
+        p.unitized()
+            .max_abs_diff(&Point::xyz(want[0], want[1], want[2]))
+            <= tol
     }
 
     /// numga's checks in `stills`: the train on lines is the join of the collineation's images;
@@ -644,11 +638,15 @@ mod tests {
         let (sensor, centre) = (*frame >> home(), place_front >> origin());
         // The train on lines is the join of the collineation's images: the lens is a
         // collineation.
-        for other in [[-1.0, 0.3, 0.1], [-1.5, 0.2, -0.4], [-2.0, -0.5, 0.6]].map(point) {
+        for other in [
+            Point::xyz(-1.0, 0.3, 0.1),
+            Point::xyz(-1.5, 0.2, -0.4),
+            Point::xyz(-2.0, -0.5, 0.6),
+        ] {
             let via_cam = cam.of(scene[0]).of(other);
             let joined = (collineation.of(scene[0]) & collineation.of(other)) ^ sensor;
             assert!(
-                close(&via_cam.c, &joined.c, 1e-12),
+                via_cam.max_abs_diff(&joined) <= 1e-12,
                 "{via_cam:?} {joined:?}"
             );
         }
@@ -658,7 +656,10 @@ mod tests {
             assert!((v & cone.of(v)).c.iter().all(|x| x.abs() < 1e-9));
         }
         // The aperture disc as a flat dual quadric, at the front lens.
-        let (dy, dz) = (direction([0.0, 1.0, 0.0]), direction([0.0, 0.0, 1.0]));
+        let (dy, dz) = (
+            Point::direction(0.0, 1.0, 0.0),
+            Point::direction(0.0, 0.0, 1.0),
+        );
         let pl = Plane::slot();
         let r2 = 0.45f64 * 0.45;
         let disc = (dy * (dy & pl) + dz * (dz & pl)).gp(r2) - origin() * (origin() & pl);
@@ -700,7 +701,7 @@ mod tests {
         } = &wide;
         let start = (collineation.of(scene[29]) & collineation.of(centre)) ^ (*frame >> home());
         for b in section(cones[29], start, *frame, 48) {
-            assert!(close(&b.unitized().c, &start.unitized().c, 1e-6));
+            assert!(b.unitized().max_abs_diff(&start.unitized()) <= 1e-6);
         }
     }
 
@@ -737,38 +738,24 @@ mod tests {
             ),
         ];
         for (e, sensor_x, image, rear, hit, vertex) in cases {
-            let at = (e.frame >> origin()).to_euclidean();
-            assert!(close(&at, &[sensor_x, 0.0, 0.0], 1e-11), "{at:?}");
-            assert!(close(
-                &e.collineation.of(subject()).to_euclidean(),
-                &image,
-                1e-11
-            ));
-            assert!(close(
-                &e.legs[1][0].to_euclidean(),
-                &[1.0, 0.45, 0.0],
-                1e-12
-            ));
-            assert!(close(&e.legs[2][0].to_euclidean(), &rear, 1e-11));
-            assert!(close(&e.legs[3][0].to_euclidean(), &hit, 1e-11));
-            assert!(close(
-                &e.collineation.of(scene[59]).to_euclidean(),
-                &vertex,
-                1e-11
-            ));
+            assert!(near(e.frame >> origin(), [sensor_x, 0.0, 0.0], 1e-11));
+            assert!(near(e.collineation.of(subject()), image, 1e-11));
+            assert!(near(e.legs[1][0], [1.0, 0.45, 0.0], 1e-12));
+            assert!(near(e.legs[2][0], rear, 1e-11));
+            assert!(near(e.legs[3][0], hit, 1e-11));
+            assert!(near(e.collineation.of(scene[59]), vertex, 1e-11));
         }
         // Inside the far corner's blur disc, at the chief-ray hit, the distance is positive.
-        let centre = point([FRONT_AT, 0.0, 0.0]);
+        let centre = Point::xyz(FRONT_AT, 0.0, 0.0);
         let col = wide.collineation;
         let start = (col.of(scene[0]) & col.of(centre)) ^ (wide.frame >> home());
-        assert!(close(
-            &start.to_euclidean(),
-            &[1.782417582418, 0.100470957614, 0.062794348509],
+        assert!(near(
+            start,
+            [1.782417582418, 0.100470957614, 0.062794348509],
             1e-11
         ));
         let polar = wide.cones[0].of(start);
-        let n = (polar.e1().powi(2) + polar.e2().powi(2) + polar.e3().powi(2)).sqrt();
-        let d = (start & polar).s() / (2.0 * n);
+        let d = (start & polar).s() / (2.0 * polar.norm());
         assert!((d - 0.04291163382074708).abs() < 1e-10, "{d}");
         // numga's section from there, 8 samples.
         let want = [
@@ -785,9 +772,8 @@ mod tests {
             .iter()
             .zip(want)
         {
-            let [x, y, z] = b.to_euclidean();
-            assert!((x - 1.782417582418).abs() < 1e-11);
-            assert!(close(&[y, z], &want, 1e-9), "{y} {z}");
+            assert!((b.to_euclidean()[0] - 1.782417582418).abs() < 1e-11);
+            assert!(near(*b, [1.782417582418, want[0], want[1]], 1e-9), "{b:?}");
         }
     }
 
@@ -796,21 +782,22 @@ mod tests {
     #[test]
     fn a_thin_lens_images_by_the_lens_equation() {
         let (points, lines) = thin_lens(0.8);
-        let image = points.of(point([-2.0, 0.3, 0.0]));
+        let image = points.of(Point::xyz(-2.0, 0.3, 0.0));
         let [x, _, _] = image.to_euclidean();
         assert!((x - 2.0 * 0.8 / (2.0 - 0.8)).abs() < 1e-14);
         // And on lines: the image of a join is the join of the images.
-        let (a, b) = (point([-2.0, 0.3, 0.1]), point([-1.0, -0.2, 0.4]));
+        let (a, b) = (Point::xyz(-2.0, 0.3, 0.1), Point::xyz(-1.0, -0.2, 0.4));
         let l = lines.of(a & b);
         let j = points.of(a) & points.of(b);
-        assert!(close(&l.c, &j.c, 1e-14), "{l:?} {j:?}");
+        assert!(l.max_abs_diff(&j) <= 1e-14, "{l:?} {j:?}");
     }
 
     /// The motion loops, and its frames rasterise to light on every channel.
     #[test]
     fn the_motion_loops_and_rasterises() {
         let (a, b) = (motion(0.0), motion(core::f64::consts::TAU));
-        assert!(close(&[a.0, a.1, a.2], &[b.0, b.1, b.2], 1e-12));
+        let drift = [a.0 - b.0, a.1 - b.1, a.2 - b.2];
+        assert!(drift.iter().all(|d| d.abs() <= 1e-12), "{drift:?}");
         let image = super::raster::rasterise(&a.3, 1.0, 28, 36);
         let sum = image
             .iter()

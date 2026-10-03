@@ -7,7 +7,9 @@
 //! because every element is a collineation.
 
 use gax::pga2d::{Line, Motor, Point};
-use gax_numga_examples::{Anim, Axes, Canvas, Marker, backdrop, caption, palette, plot, run};
+use gax_numga_examples::{
+    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
+};
 
 mod optics {
     use super::*;
@@ -39,13 +41,15 @@ mod optics {
         l - (l & origin()) * home().gp(1.0 / focal)
     }
 
-    /// A thin lens in a vertical `plane`: the lens at home conjugated by the translation onto
-    /// the plane.
+    /// A thin lens in a `plane`: the lens at home conjugated by the motion that carries the
+    /// home plane onto it.
     pub fn thin_lens(plane: L, focal: f64) -> LineMap {
-        // The plane's signed offset from the origin along x.
-        let offset = -(plane & origin()).s() / plane.e1();
-        let shift = Motor::translation(offset, 0.0);
-        shift >> lens_at_home(focal).of(shift << Line::slot())
+        placed(Motor::between(home(), plane), lens_at_home(focal))
+    }
+
+    /// An element defined at home, placed by a motor: `m >> element(m << line)`.
+    pub fn placed(m: M, element: LineMap) -> LineMap {
+        m >> element.of(m << Line::slot())
     }
 
     /// The train's elements, each a map on lines defined in the home plane: a lens of focal
@@ -73,7 +77,7 @@ mod optics {
         let mut train = Line::slot();
         let mut legs = vec![rays.to_vec()];
         for (motor, element) in motors.iter().zip(elements) {
-            let placed = *motor >> element.of(*motor << Line::slot());
+            let placed = placed(*motor, *element);
             let next = legs
                 .last()
                 .expect("a leg")
@@ -84,11 +88,6 @@ mod optics {
             train = placed.of(train);
         }
         (motors.iter().map(|m| *m >> home()).collect(), legs, train)
-    }
-
-    /// The point where two lines meet.
-    pub fn meet(a: L, b: L) -> P {
-        a ^ b
     }
 
     /// One frame of the train at phase `t` (radians): the subject, the planes, the legs, the
@@ -112,20 +111,32 @@ mod optics {
         ];
         let (planes, legs, composed) = trace(&fan, &motors, &elements());
         let back: Vec<L> = fan.iter().map(|r| composed.of(*r)).collect();
-        let image = meet(back[0], back[back.len() - 1]);
+        let image = back[0] ^ back[back.len() - 1];
         (subject, planes, legs, composed, image)
     }
 
-    /// One lens imaging a point, and two lenses focusing parallel rays: the bundles leg by leg
-    /// as `(rays, start plane, stop plane)`, the lens planes, and the image and focus.
-    #[allow(clippy::type_complexity)]
-    pub fn lenses() -> (
-        Vec<(Vec<L>, L, L)>,
-        Vec<(Vec<L>, L, L)>,
-        P,
-        P,
-        [(L, f64); 2],
-    ) {
+    /// A bundle of rays between two planes.
+    pub struct Leg {
+        pub rays: Vec<L>,
+        pub start: L,
+        pub stop: L,
+    }
+
+    /// One lens imaging a point, and two lenses focusing parallel rays.
+    pub struct Bench {
+        /// The bundle through one lens, leg by leg.
+        pub one: Vec<Leg>,
+        /// The bundle through two lenses, leg by leg.
+        pub two: Vec<Leg>,
+        /// Where the one lens images the object point.
+        pub image: P,
+        /// Where the two lenses focus the parallel rays.
+        pub focus: P,
+        /// The lens planes and focal lengths.
+        pub lenses: [(L, f64); 2],
+    }
+
+    pub fn lenses() -> Bench {
         let (plane_1, focal_1) = (vertical(1.5), 1.0);
         let (plane_2, focal_2) = (vertical(2.1), 0.5);
         let (lens_1, lens_2) = (thin_lens(plane_1, focal_1), thin_lens(plane_2, focal_2));
@@ -137,56 +148,60 @@ mod optics {
             .collect();
         let rays: Vec<L> = pupil.iter().map(|p| obj & *p).collect();
         let out: Vec<L> = rays.iter().map(|r| lens_1.of(*r)).collect();
-        let image = meet(out[0], out[1]);
+        let image = out[0] ^ out[1];
         // Two lenses: one map. Parallel rays meet after it in the back focal point.
         let system = lens_2.of(lens_1);
         let along_x = Point::direction(1.0, 0.0);
         let parallel: Vec<L> = pupil.iter().map(|p| along_x & *p).collect();
         let focused: Vec<L> = parallel.iter().map(|r| system.of(*r)).collect();
-        let focus = meet(focused[0], focused[1]);
-        let after = |p: P| vertical(p.to_euclidean()[0] + 0.25);
-        let one = vec![
-            (rays, vertical(-2.0), plane_1),
-            (out, plane_1, after(image)),
-        ];
-        let two = vec![
-            (parallel.clone(), vertical(1.0), plane_1),
-            (
-                parallel.iter().map(|r| lens_1.of(*r)).collect(),
-                plane_1,
-                plane_2,
-            ),
-            (focused, plane_2, after(focus)),
-        ];
-        (
-            one,
-            two,
+        let focus = focused[0] ^ focused[1];
+        // The bundles stop a little past the point they meet in.
+        let after = |p: P| Motor::translation(0.25, 0.0) >> (p & Point::direction(0.0, 1.0));
+        let leg = |rays: Vec<L>, start: L, stop: L| Leg { rays, start, stop };
+        let through_1 = parallel.iter().map(|r| lens_1.of(*r)).collect();
+        Bench {
+            one: vec![
+                leg(rays, vertical(-2.0), plane_1),
+                leg(out, plane_1, after(image)),
+            ],
+            two: vec![
+                leg(parallel, vertical(1.0), plane_1),
+                leg(through_1, plane_1, plane_2),
+                leg(focused, plane_2, after(focus)),
+            ],
             image,
             focus,
-            [(plane_1, focal_1), (plane_2, focal_2)],
-        )
+            lenses: [(plane_1, focal_1), (plane_2, focal_2)],
+        }
     }
 }
 
 use optics::*;
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
 /// The bundle between two planes.
-fn rays(ax: &Axes, c: &mut Canvas, rays: &[L], start: L, stop: L, color: gax_numga_examples::Rgb) {
-    for r in rays {
-        ax.line(c, xy(*r ^ start), xy(*r ^ stop), 1.2, color, 0.9);
+fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Rgb) {
+    for r in &leg.rays {
+        ax.line(c, *r ^ leg.start, *r ^ leg.stop, 1.2, color, 0.9);
     }
 }
 
 /// An element's plane between heights `-h` and `h`.
 fn plane(ax: &Axes, c: &mut Canvas, plane: L, h: f64) {
-    let a = xy(plane ^ Line::new(0.0, 1.0, h));
-    let b = xy(plane ^ Line::new(0.0, 1.0, -h));
+    let a = plane ^ Line::new(0.0, 1.0, h);
+    let b = plane ^ Line::new(0.0, 1.0, -h);
     ax.line(c, a, b, 2.5, palette::grid(), 1.0);
+}
+
+/// A ray's heading: the unit direction along a line (its point at infinity), flipped to the
+/// side of `plane` that `towards` gives, the sign of its pairing with the plane.
+fn heading(ray: L, plane: L, towards: f64) -> P {
+    let d = ray ^ Line::new(0.0, 0.0, 1.0);
+    let d = d.gp(d.ideal_norm().recip());
+    if (plane & d).s() * towards >= 0.0 {
+        d
+    } else {
+        -d
+    }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -202,63 +217,40 @@ fn draw(c: &mut Canvas, t: f32) {
     let (subject, planes, legs, _, image) = train(phase);
     // Each ray's direction of travel, carried along: a line has none of its own, so each leg
     // takes the direction of its line that continues forward through a lens or prism, and
-    // that turns back across the plane at the mirror (the last element).
-    let along = |l: L| {
-        let (a, b) = (l.e1() as f32, l.e2() as f32);
-        let n = (a * a + b * b).sqrt();
-        [-b / n, a / n]
-    };
-    let dot = |u: [f32; 2], v: [f32; 2]| u[0] * v[0] + u[1] * v[1];
-    let mut start: Vec<[f32; 2]> = vec![xy(subject); legs[0].len()];
-    let mut dir: Vec<[f32; 2]> = legs[0]
+    // that turns back across the plane at the mirror (the last element). The side of a plane
+    // a direction points to is the sign of its pairing with the plane.
+    let mut start: Vec<P> = vec![subject; legs[0].len()];
+    // From the subject towards the first plane: the side the subject is not on.
+    let mut dir: Vec<P> = legs[0]
         .iter()
-        .map(|r| {
-            let d = along(*r);
-            let to = xy(*r ^ planes[0]);
-            let s = xy(subject);
-            if dot(d, [to[0] - s[0], to[1] - s[1]]) >= 0.0 {
-                d
-            } else {
-                [-d[0], -d[1]]
-            }
-        })
+        .map(|r| heading(*r, planes[0], -(planes[0] & subject).s()))
         .collect();
     for (k, pl) in planes.iter().enumerate() {
         let colour = palette::series(k);
-        let normal = [pl.e1() as f32, pl.e2() as f32];
+        let mirror = k == planes.len() - 1;
         for (i, r) in legs[k].iter().enumerate() {
-            let stop = xy(*r ^ *pl);
-            ax.line(c, start[i], stop, 1.3, colour, 0.9);
-            start[i] = xy(legs[k + 1][i] ^ *pl);
-            let d = along(legs[k + 1][i]);
-            let mirror = k == planes.len() - 1;
-            // Through: the same side of the plane as before; at the mirror: the other side.
-            let same = dot(d, normal) * dot(dir[i], normal) >= 0.0;
-            dir[i] = if same != mirror { d } else { [-d[0], -d[1]] };
+            ax.line(c, start[i], *r ^ *pl, 1.3, colour, 0.9);
+            start[i] = (legs[k + 1][i] ^ *pl).unitized();
+            // Through: on to the side it was heading; at the mirror: back.
+            let side = (*pl & dir[i]).s();
+            dir[i] = heading(legs[k + 1][i], *pl, if mirror { -side } else { side });
         }
         plane(&ax, c, *pl, 0.8);
     }
     for (s, d) in start.iter().zip(&dir) {
-        ax.line(
-            c,
-            *s,
-            [s[0] + 2.5 * d[0], s[1] + 2.5 * d[1]],
-            1.3,
-            palette::series(4),
-            0.9,
-        );
+        ax.line(c, *s, *s + d.gp(2.5), 1.3, palette::series(4), 0.9);
     }
-    ax.scatter(c, &[xy(subject)], Marker::Dot, 9.0, palette::series(0), 1.0);
-    ax.scatter(c, &[xy(image)], Marker::Star, 13.0, palette::yellow(), 1.0);
+    ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0), 1.0);
+    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow(), 1.0);
     caption(
         c,
         "THIN LENS: AN OPTICAL TRAIN AS ONE MAP ON LINES",
         "LENS, PRISM, LENS, MIRROR (PGA2D)",
     );
     // One lens and two lenses, still, on the right.
-    let (one, two, image_1, focus, lens_planes) = lenses();
+    let bench = lenses();
     let right = [w * 0.64, 0.0, w, h];
-    for (k, (legs, title)) in [(one, "ONE LENS"), (two, "TWO LENSES")]
+    for (k, (legs, title)) in [(&bench.one, "ONE LENS"), (&bench.two, "TWO LENSES")]
         .into_iter()
         .enumerate()
     {
@@ -271,21 +263,21 @@ fn draw(c: &mut Canvas, t: f32) {
             14.0,
         );
         let ax = Axes::equal(rect, [0.4, 0.0], 1.1);
-        for (i, (r, start, stop)) in legs.iter().enumerate() {
-            rays(&ax, c, r, *start, *stop, palette::series(i + 1));
+        for (i, leg) in legs.iter().enumerate() {
+            rays(&ax, c, leg, palette::series(i + 1));
         }
-        for (pl, _) in &lens_planes[..=k] {
+        for (pl, _) in &bench.lenses[..=k] {
             plane(&ax, c, *pl, 1.0);
         }
-        let mark = if k == 0 { image_1 } else { focus };
-        ax.scatter(c, &[xy(mark)], Marker::Star, 11.0, palette::yellow(), 1.0);
+        let mark = if k == 0 { bench.image } else { bench.focus };
+        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow(), 1.0);
         ax.text(
             c,
             [ax.x[0] + 0.1, ax.y[1] - 0.25],
             title,
             11.0,
             palette::ink(),
-            gax_numga_examples::Align::Left,
+            Align::Left,
         );
     }
 }
@@ -297,6 +289,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::optics::*;
+    use gax::ApproxEq;
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
@@ -312,9 +305,7 @@ mod tests {
             for (first, last) in legs[0].iter().zip(&legs[legs.len() - 1]) {
                 let out = train.of(*first);
                 assert!((out ^ image).c[0].abs() < 1e-10 * (1.0 + image.e12().abs()));
-                for (a, b) in out.c.iter().zip(last.c) {
-                    assert!(close(*a, b, 1e-10), "{out:?} vs {last:?}");
-                }
+                assert!(out.max_abs_diff(last) < 1e-10, "{out:?} vs {last:?}");
             }
         }
     }
@@ -323,8 +314,14 @@ mod tests {
     /// focus lies on the axis.
     #[test]
     fn lens_equations() {
-        let (one, _, image, focus, [(plane_1, f1), (plane_2, f2)]) = lenses();
-        for r in &one[1].0 {
+        let Bench {
+            one,
+            image,
+            focus,
+            lenses: [(_, f1), (_, f2)],
+            ..
+        } = lenses();
+        for r in &one[1].rays {
             assert!((*r ^ image).c[0].abs() < 1e-11);
         }
         let x = |p: P| p.to_euclidean()[0];
@@ -337,7 +334,6 @@ mod tests {
         let back_focal = f_eff * (f1 - gap) / f1;
         assert!(close(x(focus) - 2.1, back_focal, 1e-12));
         assert!(focus.to_euclidean()[1].abs() < 1e-12);
-        let _ = (plane_1, plane_2);
     }
 
     #[test]

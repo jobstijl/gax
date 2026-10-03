@@ -15,8 +15,10 @@
 //! plane on the left with each pose's 2σ ellipse, and a short lap in space on the right.
 
 use gax_numga_examples::canvas::mix;
+use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, f32s, palette,
+    plot, run,
 };
 use std::sync::OnceLock;
 
@@ -28,16 +30,14 @@ const CLOSING: (f64, f64) = (0.001, 0.0003);
 const KNOWN: (f64, f64) = (0.01, 0.01);
 const VAGUE: (f64, f64) = (100.0, 30.0);
 
-pub use gax_numga_examples::rng::Rng;
-
 /// The odometry core over one algebra: `gax::$ga`'s `Motor`, `Twist` and `Forque` (numga's
 /// `Line`, the antibivector that reads a twist). Everything else is the same text for the plane
 /// and for space.
 macro_rules! odometry_core {
     ($ga:ident) => {
-        use super::{CLOSING, KNOWN, READING, Rng, VAGUE};
+        use super::{CLOSING, Draw, KNOWN, READING, VAGUE, rng};
         use gax::$ga::{Forque, Motor, Twist};
-        use gax::{Extensor, Kind, Unit};
+        use gax::{ApproxEq, Kind, Unit};
 
         pub type M = Unit<Motor<(), f64>>;
         pub type Tw = Twist<(), f64>;
@@ -331,7 +331,7 @@ macro_rules! odometry_core {
         /// only vaguely, near where dead reckoning puts them.
         pub fn survey(steps: &[M], seed: u64) -> (Vec<M>, Vec<M>, Problem) {
             let n = steps.len();
-            let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D);
+            let mut rng = rng(seed);
             // Each step composes on the right, in the robot's own frame.
             let mut truth = vec![identity()];
             for s in steps {
@@ -415,8 +415,8 @@ macro_rules! odometry_core {
         /// The largest coefficient of a list of forques.
         pub fn max_abs(v: &[Fq]) -> f64 {
             v.iter()
-                .flat_map(|f| f.coeffs().as_ref().to_vec())
-                .fold(0.0f64, |m, x| m.max(x.abs()))
+                .map(|f| f.max_abs_diff(&Fq::zero()))
+                .fold(0.0, f64::max)
         }
 
         /// The most likely poses given every reading, by full Gauss-Newton steps, and the
@@ -438,25 +438,34 @@ mod plane {
     odometry_core!(pga2d);
     use gax::pga2d::{Line, Point};
 
+    /// A point of the plane.
+    pub type P = Point<(), f64>;
+
     /// The steps of a lap in the plane.
     pub const STEPS: usize = 36;
 
-    /// numga's PGA2D twists by blade name, as gax `Point` coefficients `[e20, e01, e12]`:
-    /// `yw = e20`, `xw = -e01`, `xy = e12`.
-    fn twist(yw: f64, xw: f64, xy: f64) -> Tw {
-        Point::new(yw, -xw, xy)
+    /// The point each pose carries: the origin.
+    pub fn origin() -> P {
+        Point::xy(0.0, 0.0)
     }
 
-    /// A lap of 36 steps of 0.7 m, turning faster and slower twice a lap, and slipping sideways
-    /// a little, one way and back twice a lap, which leaves the lap closed.
+    /// Where a pose carries the origin.
+    pub fn position(pose: M) -> P {
+        pose >> origin()
+    }
+
+    /// A lap of 36 steps of 0.7 m, turning counterclockwise faster and slower twice a lap, and
+    /// slipping sideways a little, one way and back twice a lap, which leaves the lap closed.
+    /// Each step is a screw: the exponential of its twist, the sum of a translation and a
+    /// rotation twist (numga's lap, mirrored to turn counterclockwise).
     pub fn lap() -> Vec<M> {
         (0..STEPS)
             .map(|k| {
                 let phase = core::f64::consts::TAU * k as f64 / STEPS as f64;
                 let turn =
                     (1.0 + 0.4 * (2.0 * phase).sin()) * core::f64::consts::TAU / STEPS as f64;
-                let slip = 0.1 * (2.0 * phase).cos();
-                twist(slip, 0.7, turn).gp(0.5).exp()
+                let slip = -0.1 * (2.0 * phase).cos();
+                (Point::translation_twist(0.7, slip) + Point::rotation_twist(origin(), turn)).exp()
             })
             .collect()
     }
@@ -466,18 +475,13 @@ mod plane {
     /// A quadric on points, as the polar map `Line <- Point`.
     pub type Quadric = Line<(Point,), f64>;
 
-    /// The point each pose carries: the origin.
-    pub fn origin() -> Tw {
-        Point::xy(0.0, 0.0)
-    }
-
     /// The quadric `SIGMAS` standard deviations out within which a pose carries the origin. A
     /// twist moves the carried point by its commutator with it; reading that motion with a line
     /// is reading the twist with another line, solved from the incidence pairing. So the
     /// twist's uncertainty gives the point's; its second moment's inverse, paired twice with a
     /// point of unit weight, is one plus the squared number of standard deviations to it.
     pub fn ellipse(pose: M, uncertainty: Covariance) -> Quadric {
-        let here = pose >> origin();
+        let here = position(pose);
         let shift = twists().commutator(here).of(pose >> twists());
         let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
         let moment = here * (Line::slot() & here) + shift.of(uncertainty.of(readout));
@@ -485,28 +489,22 @@ mod plane {
         moment.inverse() - (w * (w & Point::slot())).gp(1.0 + SIGMAS * SIGMAS)
     }
 
-    /// The zero level of a quadric as a ring of points: along rays from its centre `here` the
-    /// quadric is a quadratic in the distance, whose positive root lies on the ellipse.
-    pub fn ring(quadric: Quadric, here: Tw, n: usize) -> Vec<[f32; 2]> {
-        let value = |a: Tw, b: Tw| (quadric.of(a) & b).s();
+    /// The zero level of a quadric as a ring of points: along rays from its centre `here` (unit
+    /// directions, turned round) the quadric is a quadratic in the distance, whose positive root
+    /// lies on the ellipse.
+    pub fn ring(quadric: Quadric, here: P, n: usize) -> Vec<P> {
+        let value = |a: P, b: P| (quadric.of(a) & b).s();
         let h = here.unitized();
         let c = value(h, h);
-        let [x, y] = h.to_euclidean();
         (0..=n)
             .map(|i| {
                 let angle = core::f64::consts::TAU * i as f64 / n as f64;
-                let d = Point::direction(angle.cos(), angle.sin());
+                let d = Motor::rotation(origin(), angle) >> Point::direction(1.0, 0.0);
                 let (a, b) = (value(d, d), value(h, d) + value(d, h));
                 let s = (-b + (b * b - 4.0 * a * c).max(0.0).sqrt()) / (2.0 * a);
-                [(x + s * angle.cos()) as f32, (y + s * angle.sin()) as f32]
+                h + d.gp(s)
             })
             .collect()
-    }
-
-    /// The position a pose carries the origin to.
-    pub fn xy(pose: M) -> [f32; 2] {
-        let [x, y] = (pose >> origin()).to_euclidean();
-        [x as f32, y as f32]
     }
 }
 
@@ -518,38 +516,30 @@ mod space {
     /// The steps of the lap in space.
     pub const STEPS: usize = 6;
 
-    /// numga's PGA3D twists by blade name, as gax `Line` coefficients
-    /// `[e23, e31, e12, e01, e02, e03]`: `yz = e23`, `zx = e31`, `xy = e12`, and
-    /// `xw = -e01`, `yw = -e02`, `zw = -e03`.
-    fn twist(yz: f64, zx: f64, xy: f64, xw: f64, yw: f64, zw: f64) -> Tw {
-        Line::new(yz, zx, xy, -xw, -yw, -zw)
+    /// Where a pose carries the origin.
+    pub fn position(pose: M) -> Point<(), f64> {
+        pose >> Point::xyz(0.0, 0.0, 0.0)
     }
 
     /// A turn of six steps of 0.7 m, pitching and rolling once a lap, and slipping sideways and
-    /// rising and falling twice a lap, which leaves the lap closed.
+    /// rising and falling twice a lap, which leaves the lap closed to 4 mm. Each step is the screw of a
+    /// translation twist plus a rotation twist about the axis of its angular velocity (numga's
+    /// lap, mirrored to turn counterclockwise).
     pub fn lap() -> Vec<M> {
+        let origin = Point::xyz(0.0, 0.0, 0.0);
         (0..STEPS)
             .map(|k| {
                 let phase = core::f64::consts::TAU * k as f64 / STEPS as f64;
                 let turn = core::f64::consts::TAU / STEPS as f64;
-                twist(
-                    0.1 * phase.sin(),
-                    0.1 * phase.cos(),
-                    turn,
+                let spin = Point::direction(0.1 * phase.sin(), -0.1 * phase.cos(), turn);
+                let velocity = Line::translation_twist(
                     0.7,
-                    0.1 * (2.0 * phase).cos(),
+                    -0.1 * (2.0 * phase).cos(),
                     0.05 * (2.0 * phase).sin(),
-                )
-                .gp(0.5)
-                .exp()
+                );
+                (velocity + Line::rotation_twist(origin & spin, spin.ideal_norm())).exp()
             })
             .collect()
-    }
-
-    /// The position a pose carries the origin to.
-    pub fn xyz(pose: M) -> [f32; 3] {
-        let [x, y, z] = (pose >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean();
-        [x as f32, y as f32, z as f32]
     }
 }
 
@@ -609,36 +599,37 @@ fn draw(c: &mut Canvas, t: f32) {
             c.gp(f)
         });
     // The plane, left: truth, dead reckoning with its ellipses, and the poses with theirs.
-    let pts = |ps: &[plane::M]| -> Vec<[f32; 2]> { ps.iter().map(|p| plane::xy(*p)).collect() };
-    let (truth, dead) = (pts(&lap.truth), pts(&lap.dead));
-    let all: Vec<[f32; 2]> = truth.iter().chain(&dead).copied().collect();
-    let (lo, hi) = all
-        .iter()
-        .fold(([f32::MAX; 2], [f32::MIN; 2]), |(l, u), p| {
+    let positions =
+        |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
+    let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
+    let (lo, hi) = truth.iter().chain(&dead).map(|p| p.to_euclidean()).fold(
+        ([f64::MAX; 2], [f64::MIN; 2]),
+        |(l, u), p| {
             (
                 [l[0].min(p[0]), l[1].min(p[1])],
                 [u[0].max(p[0]), u[1].max(p[1])],
             )
-        });
+        },
+    );
     let left = plot::inset([0.0, 50.0, w * 0.6, h], 10.0, 10.0, 10.0, 10.0);
-    let half =
-        0.5 * (hi[1] - lo[1]).max((hi[0] - lo[0]) * (left[3] - left[1]) / (left[2] - left[0]));
+    let aspect = f64::from((left[3] - left[1]) / (left[2] - left[0]));
+    let half = 0.5 * (hi[1] - lo[1]).max((hi[0] - lo[0]) * aspect);
     let ax = Axes::equal(
         left,
-        [0.5 * (lo[0] + hi[0]), 0.5 * (lo[1] + hi[1])],
-        half * 1.15,
+        f32s([0.5 * (lo[0] + hi[0]), 0.5 * (lo[1] + hi[1])]),
+        half as f32 * 1.15,
     );
     ax.polyline(c, &truth, 4.0, palette::grid(), 1.0);
     ax.dashed(c, &dead, 1.5, 5.0, palette::orange(), 0.9);
-    for (p, u) in lap.dead.iter().zip(&lap.reckoned) {
-        let ring = plane::ring(plane::ellipse(*p, *u), *p >> plane::origin(), 64);
+    for ((p, u), at) in lap.dead.iter().zip(&lap.reckoned).zip(&dead) {
+        let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
         ax.polyline(c, &ring, 1.0, palette::orange(), 0.35);
     }
-    for (p, u) in poses.iter().zip(&uncertainty) {
-        let ring = plane::ring(plane::ellipse(*p, *u), *p >> plane::origin(), 64);
+    let likely = positions(&poses);
+    for ((p, u), at) in poses.iter().zip(&uncertainty).zip(&likely) {
+        let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
         ax.polyline(c, &ring, 1.2, palette::sky(), 0.85);
     }
-    let likely = pts(&poses);
     ax.polyline(c, &likely, 1.4, palette::sky(), 1.0);
     ax.scatter(c, &likely, Marker::Dot, 4.0, palette::sky(), 1.0);
     ax.scatter(c, &truth[..1], Marker::Dot, 9.0, palette::ink(), 1.0);
@@ -664,13 +655,15 @@ fn draw(c: &mut Canvas, t: f32) {
         mix(palette::top(), palette::bottom(), y0 as f32 / h),
         palette::bottom(),
     );
-    // The camera circles the centre of the true lap.
-    let centre = space_lap
-        .truth
+    let positions = |ps: &[space::M]| -> Vec<gax::pga3d::Point<(), f64>> {
+        ps.iter().map(|p| space::position(*p)).collect()
+    };
+    let truth = positions(&space_lap.truth);
+    // The camera circles the centre of the true lap: the sum of its points, unitized.
+    let centre = truth
         .iter()
-        .map(|p| space::xyz(*p))
-        .fold([0.0f32; 3], |a, p| [a[0] + p[0], a[1] + p[1], a[2] + p[2]])
-        .map(|v| v / space_lap.truth.len() as f32);
+        .fold(gax::pga3d::Point::zero(), |a, p| a + *p)
+        .unitized();
     let cam = Camera::orbit(
         pw,
         ph,
@@ -681,29 +674,17 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.8),
     );
     let mut scene = Scene3::new(cam);
-    let path3 = |ps: &[space::M]| -> Vec<[f32; 3]> { ps.iter().map(|p| space::xyz(*p)).collect() };
-    scene.polyline(&path3(&space_lap.truth), 3.5, palette::grid(), 1.0);
-    scene.polyline(&path3(&space_lap.dead), 1.4, palette::orange(), 0.9);
-    let spath = path3(&sposes);
+    scene.polyline(&truth, 3.5, palette::grid(), 1.0);
+    scene.polyline(&positions(&space_lap.dead), 1.4, palette::orange(), 0.9);
+    let spath = positions(&sposes);
     scene.polyline(&spath, 1.6, palette::sky(), 1.0);
     for (p, q) in sposes.iter().zip(&spath) {
         scene.dot(*q, Marker::Dot, 5.0, palette::sky());
         // Each pose's heading, a short arrow along its local x.
-        let ahead = (*p >> gax::pga3d::Point::xyz(0.25, 0.0, 0.0)).to_euclidean();
-        scene.seg(
-            *q,
-            [ahead[0] as f32, ahead[1] as f32, ahead[2] as f32],
-            1.4,
-            palette::yellow(),
-            0.9,
-        );
+        let ahead = *p >> gax::pga3d::Point::xyz(0.25, 0.0, 0.0);
+        scene.seg(*q, ahead, 1.4, palette::yellow(), 0.9);
     }
-    scene.dot(
-        space::xyz(space_lap.truth[0]),
-        Marker::Dot,
-        8.0,
-        palette::ink(),
-    );
+    scene.dot(truth[0], Marker::Dot, 8.0, palette::ink());
     scene.draw(&mut sub);
     sub.text(
         "A SHORT LAP IN SPACE (PGA3D)",
@@ -818,7 +799,7 @@ mod tests {
         let run = plane::closing(&plane::lap(), 5, 0);
         let (poses, uncertainty) = run.iterates.last().expect("a state");
         for (p, u) in poses.iter().zip(uncertainty) {
-            let here = *p >> plane::origin();
+            let here = plane::position(*p);
             let q = plane::ellipse(*p, *u);
             let level = (q.of(here) & here).s();
             assert!(
@@ -828,8 +809,7 @@ mod tests {
         }
         // The closed lap ends where it started, far closer than dead reckoning.
         let gap = |ps: &[plane::M]| {
-            let (a, b) = (plane::xy(ps[0]), plane::xy(ps[ps.len() - 1]));
-            (a[0] - b[0]).hypot(a[1] - b[1])
+            (plane::position(ps[0]) - plane::position(ps[ps.len() - 1])).ideal_norm()
         };
         assert!(
             gap(poses) < 0.01 && gap(&run.dead) > 0.05,

@@ -4,8 +4,8 @@
 //!
 //! The drawing code's geometry goes through gax too, as in `examples/warp`: distances are the
 //! norms of joins, turns are rotation motors, shading is the inner product of planes. Square
-//! roots and trigonometry on floats are denied here (`clippy.toml`); the random generator's
-//! Gaussian draws are the one exception.
+//! roots and trigonometry on floats are denied here (`clippy.toml`); normalizing a random
+//! direction is the one exception.
 //!
 //! The ports follow the examples of numga (Eelco Hoogendoorn,
 //! <https://github.com/EelcoHoogendoorn/numga>), one binary each, with their tests.
@@ -16,7 +16,9 @@ pub mod app;
 pub mod canvas;
 pub mod colormap;
 pub mod contour;
+pub mod coords;
 pub mod font;
+pub mod measure;
 pub mod palette;
 pub mod plot;
 pub mod rng;
@@ -25,6 +27,7 @@ pub mod view;
 
 pub use app::{Anim, run};
 pub use canvas::{Canvas, Px, Rgb};
+pub use coords::{Dir2, Dir3, Pos2, Pos3, f32s};
 pub use font::Align;
 pub use plot::{Axes, Marker};
 pub use scene3::Scene3;
@@ -101,7 +104,8 @@ mod tests {
 
     #[test]
     fn the_generator_draws_standard_normals() {
-        let mut r = rng::Rng::new(7);
+        use rng::Draw;
+        let mut r = rng::rng(7);
         let n = 20000;
         let xs: Vec<f64> = (0..n).map(|_| r.normal()).collect();
         let mean = xs.iter().sum::<f64>() / n as f64;

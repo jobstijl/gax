@@ -16,6 +16,7 @@
 #[path = "../shared/geometry_scenegraph.rs"]
 mod scenegraph;
 
+use gax::pga3d::Point;
 use gax_numga_examples::canvas::{mix, scale, srgb};
 use gax_numga_examples::{Align, Anim, Canvas, Rgb, backdrop, caption, palette, run};
 
@@ -43,17 +44,18 @@ mod manipulability {
     }
 
     /// The arm's body maps, its gripper tip, and each joint's axis in the world: the base yaws
-    /// about `z`, the shoulder, elbow and wrist pitch about `y`, each axis the rotation's
-    /// generator carried into the world by its pivot.
+    /// about `z`, the shoulder, elbow and wrist pitch about `y`, each axis carried into the
+    /// world by its pivot.
     pub fn arm_axes(angles: [f64; 4]) -> ([PointMap; 5], P, [L; 4]) {
         let (bodies, pivots) = arm::robot_arm(angles);
         // The top face of the gripper, on the wrist.
-        let tip = pivots[3] >> arm::point([0.0, 0.0, 0.3]);
+        let tip = pivots[3] >> Point::xyz(0.0, 0.0, 0.3);
+        let (yaw, pitch) = (arm::axis(0.0, 0.0, 1.0), arm::axis(0.0, 1.0, 0.0));
         let axes = [
-            pivots[0] >> arm::xy(),
-            pivots[1] >> arm::zx(),
-            pivots[2] >> arm::zx(),
-            pivots[3] >> arm::zx(),
+            pivots[0] >> yaw,
+            pivots[1] >> pitch,
+            pivots[2] >> pitch,
+            pivots[3] >> pitch,
         ];
         (bodies, tip, axes)
     }
@@ -147,41 +149,32 @@ mod manipulability {
 /// the nearest box wins, and the ellipsoid lies over it, translucent, where the ray enters it
 /// first.
 mod render {
-    use super::manipulability::{Pose, Quadric};
-    use super::scenegraph::{P, Pl};
-    use gax::pga3d::{Plane, Point};
+    use super::manipulability::Quadric;
+    use super::scenegraph::{M, P, Pl, axis};
+    use gax::pga3d::{Motor, Plane, Point};
+    use gax_numga_examples::Rgb;
 
-    /// An orthographic view: the direction towards the viewer, the screen's right and up, and
-    /// the lamp.
+    /// An orthographic view: its frame (the view's `x` axis towards the viewer, `y` to the
+    /// screen's right and `z` up, from its centre), half width, and the plane facing the lamp.
     #[derive(Clone, Copy)]
     pub struct View {
-        pub centre: [f64; 3],
+        pub frame: M,
         pub extent: f64,
-        pub back: [f64; 3],
-        pub right: [f64; 3],
-        pub up: [f64; 3],
-        pub lamp: [f64; 3],
+        pub lamp: Pl,
     }
 
     /// numga's fixed view of the workspace: elevation and azimuth in degrees, centre, half width.
-    pub fn view(elevation: f64, azimuth: f64, centre: [f64; 3], extent: f64) -> View {
-        let (tilt, turn) = (elevation.to_radians(), azimuth.to_radians());
-        let back = [tilt.cos() * turn.cos(), tilt.cos() * turn.sin(), tilt.sin()];
-        let right = [-turn.sin(), turn.cos(), 0.0];
-        let up = [
-            back[1] * right[2] - back[2] * right[1],
-            back[2] * right[0] - back[0] * right[2],
-            back[0] * right[1] - back[1] * right[0],
-        ];
-        let lamp: [f64; 3] = core::array::from_fn(|i| back[i] - 0.4 * right[i] + 0.7 * up[i]);
-        let n = lamp.iter().map(|v| v * v).sum::<f64>().sqrt();
+    /// The frame tilts `x` up by the elevation (about `-y`), turns by the azimuth about `z` and
+    /// moves to the centre; the lamp is behind the viewer, up and to the left.
+    pub fn view(elevation: f64, azimuth: f64, centre: P, extent: f64) -> View {
+        let frame = Motor::between(Point::xyz(0.0, 0.0, 0.0), centre)
+            * Motor::rotation(axis(0.0, 0.0, 1.0), azimuth.to_radians())
+            * Motor::rotation(axis(0.0, -1.0, 0.0), elevation.to_radians());
+        let lamp = frame >> Point::direction(1.0, -0.4, 0.7);
         View {
-            centre,
+            frame,
             extent,
-            back,
-            right,
-            up,
-            lamp: lamp.map(|v| v / n),
+            lamp: Plane::orthogonal_to(lamp).normalized().into_inner(),
         }
     }
 
@@ -189,23 +182,16 @@ mod render {
         /// The ray at screen offsets `(u, v)` from the centre: its origin far out towards the
         /// viewer, and its heading.
         pub fn ray(&self, u: f64, v: f64) -> (P, P) {
-            let o: [f64; 3] = core::array::from_fn(|i| {
-                self.centre[i]
-                    + u * self.right[i]
-                    + v * self.up[i]
-                    + 20.0 * self.extent * self.back[i]
-            });
             (
-                Point::xyz(o[0], o[1], o[2]),
-                Point::direction(-self.back[0], -self.back[1], -self.back[2]),
+                self.frame >> Point::xyz(20.0 * self.extent, u, v),
+                self.frame >> Point::direction(-1.0, 0.0, 0.0),
             )
         }
 
         /// The screen offsets of a world point.
-        pub fn screen(&self, p: [f64; 3]) -> [f64; 2] {
-            let d: [f64; 3] = core::array::from_fn(|i| p[i] - self.centre[i]);
-            let dot = |a: [f64; 3]| a[0] * d[0] + a[1] * d[1] + a[2] * d[2];
-            [dot(self.right), dot(self.up)]
+        pub fn screen(&self, p: P) -> [f64; 2] {
+            let [_, u, v] = (self.frame << p).to_euclidean();
+            [u, v]
         }
     }
 
@@ -233,8 +219,8 @@ mod render {
     }
 
     impl BoxShape {
-        /// The ray parameter of the first hit and the world normal of the face hit.
-        pub fn hit(&self, origin: P, heading: P) -> Option<(f64, [f64; 3])> {
+        /// The ray parameter of the first hit and the world plane of the face hit.
+        pub fn hit(&self, origin: P, heading: P) -> Option<(f64, Pl)> {
             let (o, h) = (self.to_box.of(origin), self.to_box.of(heading));
             let weight = o.e123();
             let (mut enter, mut leave, mut face) = (f64::NEG_INFINITY, f64::INFINITY, 0);
@@ -248,16 +234,13 @@ mod render {
                 }
                 leave = leave.min(far);
             }
-            (enter < leave && enter > 0.0).then(|| {
-                let f = self.faces[face];
-                (enter, [f.e1(), f.e2(), f.e3()])
-            })
+            (enter < leave && enter > 0.0).then(|| (enter, self.faces[face]))
         }
     }
 
-    /// The ray parameter where the ray enters the solid quadric, and the normal there, from its
+    /// The ray parameter where the ray enters the solid quadric, and the tangent plane there, its
     /// polar plane. Bound to the ray in both slots the form is a quadratic in the parameter.
-    pub fn quadric_hit(q: Quadric, origin: P, heading: P) -> Option<(f64, [f64; 3])> {
+    pub fn quadric_hit(q: Quadric, origin: P, heading: P) -> Option<(f64, Pl)> {
         let qh = q.of(heading);
         let (a, b) = ((qh & heading).s(), (qh & origin).s());
         let c = (q.of(origin) & origin).s();
@@ -268,18 +251,13 @@ mod render {
         let root = disc.sqrt();
         // The entering root is the smaller one, whichever sign the form has.
         let t = ((-b - root) / a).min((-b + root) / a);
-        let polar = q.of(origin + heading.gp(t));
-        Some((t, [polar.e1(), polar.e2(), polar.e3()]))
+        Some((t, q.of(origin + heading.gp(t))))
     }
 
-    fn unit(v: [f64; 3]) -> [f64; 3] {
-        let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt() + 1e-12;
-        v.map(|x| x / n)
-    }
-
-    fn lit(n: [f64; 3], lamp: [f64; 3], ambient: f64) -> f64 {
-        let n = unit(n);
-        ambient + (1.0 - ambient) * (n[0] * lamp[0] + n[1] * lamp[1] + n[2] * lamp[2]).abs()
+    /// How brightly a surface with tangent plane `face` is lit: by the cosine between its normal
+    /// and the lamp's, the inner product of the planes over the face's norm.
+    fn lit(face: Pl, lamp: Pl, ambient: f64) -> f64 {
+        ambient + (1.0 - ambient) * ((face | lamp).s() / (face.norm() + 1e-12)).abs()
     }
 
     /// The colour along one ray: boxes opaque and shaded by how squarely their face meets the
@@ -287,15 +265,15 @@ mod render {
     /// first. `None` where the ray meets nothing.
     pub fn shade(
         boxes: &[BoxShape],
-        colours: &[[f32; 3]],
+        colours: &[Rgb],
         quadric: Quadric,
-        colour: [f32; 3],
+        colour: Rgb,
         view: &View,
         u: f64,
         v: f64,
-    ) -> Option<[f32; 3]> {
+    ) -> Option<Rgb> {
         let (origin, heading) = view.ray(u, v);
-        let mut nearest: Option<(f64, [f32; 3])> = None;
+        let mut nearest: Option<(f64, Rgb)> = None;
         for (shape, col) in boxes.iter().zip(colours) {
             if let Some((t, n)) = shape.hit(origin, heading)
                 && nearest.is_none_or(|(best, _)| t < best)
@@ -330,11 +308,6 @@ mod render {
             }
         }
     }
-
-    /// The pose's ellipsoid of either kind.
-    pub fn quadric(pose: &Pose, velocity: bool) -> Quadric {
-        if velocity { pose.velocity } else { pose.force }
-    }
 }
 
 use manipulability::*;
@@ -347,7 +320,7 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let pose = ellipsoids(sweep(phase), 0.25, 2.5);
-    let view = render::view(18.0, -60.0, [-0.9, 0.25, 1.3], 2.2);
+    let view = render::view(18.0, -60.0, Point::xyz(-0.9, 0.25, 1.3), 2.2);
     let boxes: Vec<render::BoxShape> = pose.bodies.iter().map(|b| render::prepare(*b)).collect();
     let colours = [
         srgb(0.45, 0.47, 0.52),
@@ -390,7 +363,7 @@ fn draw(c: &mut Canvas, t: f32) {
             PANEL,
             1.0,
         );
-        let q = render::quadric(&pose, velocity);
+        let q = if velocity { pose.velocity } else { pose.force };
         let extent = view.extent;
         let to_screen = move |x: f32, y: f32| {
             (
@@ -405,7 +378,7 @@ fn draw(c: &mut Canvas, t: f32) {
             render::shade(boxes, &colours, q, colour, &view, u, v)
         });
         // The tip.
-        let [u, v] = view.screen(pose.tip.to_euclidean());
+        let [u, v] = view.screen(pose.tip);
         let px = [
             rect[0] + ((u / extent + 1.0) * 0.5) as f32 * side,
             rect[1] + ((1.0 - v / extent) * 0.5) as f32 * side,
@@ -443,8 +416,8 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     caption(
         c,
-        "MANIPULABILITY: VELOCITY AND FORCE ELLIPSOIDS AT THE GRIPPER",
-        "QUADRICS FROM THE JOINT AXES, EACH THE OTHER'S POLAR IN THE UNIT SPHERE (PGA3D)",
+        "MANIPULABILITY: VELOCITY AND FORCE ELLIPSOIDS",
+        "AT THE GRIPPER, FROM THE JOINT AXES: EACH THE OTHER'S POLAR (PGA3D)",
     );
 }
 
@@ -458,8 +431,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::manipulability::*;
-    use super::scenegraph::point;
-    use gax::pga3d::Point;
+    use gax::pga3d::{Plane, Point};
 
     /// numga's checks inside `ellipsoids`, for one pose.
     fn checks(angles: [f64; 4]) {
@@ -478,9 +450,9 @@ mod tests {
         }
         // Both against the joint torques a unit tip force produces: each joint's axis paired
         // with the force's line through the tip.
-        for f in [[0.3, -0.2, 0.5], [1.0, 0.4, -0.7]] {
-            let n: f64 = f[0] * f[0] + f[1] * f[1] + f[2] * f[2];
-            let along = Point::direction(f[0], f[1], f[2]).gp(1.0 / n.sqrt());
+        for [x, y, z] in [[0.3, -0.2, 0.5], [1.0, 0.4, -0.7]] {
+            let force = Point::direction(x, y, z);
+            let along = force.gp(1.0 / force.ideal_norm());
             let torques = axes.map(|a| (a & (tip & along)).s());
             let squared: f64 = torques.iter().map(|t| t * t).sum();
             // A force lies on the force ellipsoid exactly when its joint torques have unit
@@ -495,7 +467,7 @@ mod tests {
             // The velocity ellipsoid reaches, along a direction, as far as a unit force that
             // way loads the joints: the plane normal to it at that distance is tangent.
             let reach = squared.sqrt();
-            let normal = gax::pga3d::Plane::orthogonal_to(along);
+            let normal = Plane::orthogonal_to(along);
             let tangent = normal - w().gp((normal & (tip + along.gp(reach))).s());
             let touch = (tangent & unit_velocity.of(tangent)).s();
             assert!(touch.abs() < 1e-8, "{touch}");
@@ -552,7 +524,6 @@ mod tests {
                 assert!((got + sign * want).abs() < 1e-9, "{v:?}");
             }
         }
-        let _ = point([0.0; 3]);
     }
 
     /// Rays enter the ellipsoids where the form changes sign, and boxes are hit where the
@@ -560,9 +531,8 @@ mod tests {
     #[test]
     fn rays_meet_the_ellipsoid_and_the_boxes() {
         let pose = ellipsoids(REACHING, 0.25, 2.5);
-        let tip = pose.tip.to_euclidean();
         let heading = Point::direction(0.0, 1.0, 0.0);
-        let origin = point([tip[0], tip[1] - 30.0, tip[2]]);
+        let origin = pose.tip - heading.gp(30.0);
         for q in [pose.velocity, pose.force] {
             let (t, _) = super::render::quadric_hit(q, origin, heading).expect("a hit");
             let p = origin + heading.gp(t);
@@ -571,11 +541,13 @@ mod tests {
         }
         // The pedestal from straight above: its top face at z = 0.25.
         let shape = super::render::prepare(pose.bodies[0]);
-        let (t, n) = shape
-            .hit(point([0.1, 0.1, 5.0]), Point::direction(0.0, 0.0, -1.0))
+        let (t, face) = shape
+            .hit(Point::xyz(0.1, 0.1, 5.0), Point::direction(0.0, 0.0, -1.0))
             .expect("the pedestal");
         assert!((t - 4.75).abs() < 1e-12);
-        assert!(n[0].abs() < 1e-12 && n[1].abs() < 1e-12 && n[2].abs() > 0.0);
+        // The face hit is horizontal: it meets the floor at infinity only.
+        let floor = Plane::from_normal([0.0, 0.0, 1.0], 0.0);
+        assert!(face.norm() > 0.1 && (face ^ floor).norm() < 1e-12);
     }
 
     #[test]

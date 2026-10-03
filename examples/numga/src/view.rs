@@ -3,6 +3,7 @@
 //! ray through each pixel for the ray-traced examples.
 
 use crate::canvas::Px;
+use crate::coords::{Pos2, Pos3};
 use gax::Unit;
 use gax::pga3d::{Motor, Point};
 
@@ -27,7 +28,8 @@ impl View2 {
     }
 
     /// The pixel of world point `(x, y)`.
-    pub fn px(&self, p: [f32; 2]) -> Px {
+    pub fn px(&self, p: impl Pos2) -> Px {
+        let p = p.xy();
         [
             self.size[0] * 0.5 + (p[0] - self.centre[0]) * self.scale,
             self.size[1] * 0.5 - (p[1] - self.centre[1]) * self.scale,
@@ -79,10 +81,12 @@ impl Camera {
     pub fn looking(
         width: usize,
         height: usize,
-        eye: [f32; 3],
-        target: [f32; 3],
+        eye: impl Pos3,
+        target: impl Pos3,
         lens: Lens,
     ) -> Camera {
+        let eye = eye.xyz();
+        let target = target.xyz();
         let p = |v: [f32; 3]| Point::xyz(v[0], v[1], v[2]);
         Camera {
             pose: Motor::look_at(p(eye), p(target), Point::direction(0.0, 0.0, 1.0)),
@@ -97,12 +101,13 @@ impl Camera {
     pub fn orbit(
         width: usize,
         height: usize,
-        target: [f32; 3],
+        target: impl Pos3,
         distance: f32,
         azimuth: f32,
         elevation: f32,
         lens: Lens,
     ) -> Camera {
+        let target = target.xyz();
         // The eye: the point at `distance` along x, raised by the elevation, then turned by the
         // azimuth (rotations about the y and z axes).
         let turn = Motor::rotation_about(0.0, 0.0, 1.0, azimuth)
@@ -110,6 +115,22 @@ impl Camera {
         let eye = (turn >> Point::xyz(distance, 0.0, 0.0)).to_euclidean();
         let eye = [eye[0] + target[0], eye[1] + target[1], eye[2] + target[2]];
         Camera::looking(width, height, eye, target, lens)
+    }
+
+    /// A parallel camera orbiting the origin (see [`Camera::orbit`]) that draws into the canvas
+    /// rectangle `view` at `scale` pixels per world unit.
+    pub fn parallel(view: [f32; 4], scale: f32, azimuth: f32, elevation: f32) -> Camera {
+        let height = view[3] - view[1];
+        Camera::orbit(
+            (view[2] - view[0]) as usize,
+            height as usize,
+            [0.0; 3],
+            20.0,
+            azimuth,
+            elevation,
+            Lens::Parallel(0.5 * height / scale),
+        )
+        .viewport(view)
     }
 
     /// The same camera drawing into the pixel rectangle `[x0, y0, x1, y1]` of a larger canvas (a
@@ -139,14 +160,16 @@ impl Camera {
     }
 
     /// A world point in the camera's frame: `[x, y, depth]` (`+x` to the right on screen).
-    pub fn local(&self, p: [f32; 3]) -> [f32; 3] {
+    pub fn local(&self, p: impl Pos3) -> [f32; 3] {
+        let p = p.xyz();
         let [x, y, z] = (self.pose.reverse() >> Point::xyz(p[0], p[1], p[2])).to_euclidean();
         // The frame looks along +z with +y up, so +x is to the left on screen.
         [-x, y, z]
     }
 
     /// The pixel of a world point, or `None` behind the camera.
-    pub fn px(&self, p: [f32; 3]) -> Option<Px> {
+    pub fn px(&self, p: impl Pos3) -> Option<Px> {
+        let p = p.xyz();
         let [x, y, z] = self.local(p);
         let f = self.focal();
         let (sx, sy) = match self.lens {
@@ -190,6 +213,11 @@ impl Camera {
 
     /// The camera's position.
     pub fn eye(&self) -> [f32; 3] {
-        (self.pose >> Point::xyz(0.0, 0.0, 0.0)).to_euclidean()
+        self.eye_point().to_euclidean()
+    }
+
+    /// The camera's position, as a point.
+    pub fn eye_point(&self) -> Point<(), f32> {
+        self.pose >> Point::xyz(0.0, 0.0, 0.0)
     }
 }

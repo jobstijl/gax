@@ -29,6 +29,7 @@ use gax_numga_examples::{
 
 mod poncelet {
     use super::*;
+    use gax::Unit;
 
     pub type L = Line<(), f64>;
     pub type P = Point<(), f64>;
@@ -115,41 +116,50 @@ mod poncelet {
                 .normalized()
                 .into_inner();
             let vertex = other_crossing(outer, last, side ^ infinity());
-            vertices.push(vertex.gp(1.0 / (infinity() & vertex).s()));
+            vertices.push(vertex.unitized());
         }
         vertices
     }
 
-    pub const CENTRE: [f64; 2] = [0.4, -0.2];
+    /// The semi-axes of the ellipse.
     pub const SEMI: [f64; 2] = [2.0, 1.2];
-    pub const TILT: f64 = 0.5;
     /// The corners of the pentagon, as angles around the ellipse, bunched to one side.
     pub const CORNERS: [f64; 5] = [0.1, 0.8, 1.9, 3.0, 5.2];
 
-    /// The ellipse about the centre with the semi-axes, its first axis turned from x by the
-    /// tilt: the lines through the centre along each axis, weighted by the inverse square of
-    /// the semi-axis, less the line at infinity twice.
+    /// Where the ellipse sits: its centre at (0.4, -0.2), its first axis turned from x by 0.5.
+    pub fn placement() -> Unit<Motor<(), f64>> {
+        Motor::translation(0.4, -0.2) * Motor::rotation(Point::xy(0.0, 0.0), 0.5)
+    }
+
+    /// The stretch of the unit circle onto the ellipse at the origin, as a map on points.
+    pub fn stretch() -> Point<(Point,), f64> {
+        Point::from_images([
+            Point::new(SEMI[0], 0.0, 0.0),
+            Point::new(0.0, SEMI[1], 0.0),
+            Point::new(0.0, 0.0, 1.0),
+        ])
+    }
+
+    /// The ellipse: the lines along its axes (the axes of the plane, placed), each weighted by
+    /// the inverse square of the semi-axis across it, less the line at infinity twice.
     pub fn ellipse() -> Conic {
-        let turn = Motor::rotation(Point::xy(0.0, 0.0), TILT);
-        let centre = Point::xy(CENTRE[0], CENTRE[1]);
         let p = Point::slot();
         let mut conic = -(infinity() * (infinity() & p));
         for (axis, semi) in [Line::new(1.0, 0.0, 0.0), Line::new(0.0, 1.0, 0.0)]
             .into_iter()
             .zip(SEMI)
         {
-            let axis = turn >> axis;
-            let through = axis - infinity().gp((axis & centre).s());
+            let through = placement() >> axis;
             conic += (through * (through & p)).gp(1.0 / (semi * semi));
         }
         conic
     }
 
-    /// The point at an angle on the ellipse, drawn in towards its centre by the scale.
+    /// The point at an angle on the ellipse, drawn in towards its centre by the scale: the
+    /// point of the circle of that radius at the angle, stretched and placed.
     pub fn on_ellipse(angle: f64, scale: f64) -> P {
-        let motor =
-            Motor::translation(CENTRE[0], CENTRE[1]) * Motor::rotation(Point::xy(0.0, 0.0), TILT);
-        motor >> Point::xy(scale * SEMI[0] * angle.cos(), scale * SEMI[1] * angle.sin())
+        let on_circle = Motor::rotation(Point::xy(0.0, 0.0), angle) >> Point::xy(scale, 0.0);
+        placement() >> stretch().of(on_circle)
     }
 
     /// The two inner conics: touching the inscribed pentagon, and touching it shrunk.
@@ -168,9 +178,9 @@ mod poncelet {
         inners().map(|inner| path(outer, inner, start, tangents(inner, start)[0], steps))
     }
 
-    /// The largest coefficient of the difference of two points: the gap of a path.
+    /// The distance between two points at unit weight: the gap of a path.
     pub fn gap(a: P, b: P) -> f64 {
-        (a - b).c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
+        (a & b).norm()
     }
 }
 
@@ -179,11 +189,6 @@ use poncelet::*;
 const SECONDS: f32 = 6.0;
 const TITLES: [&str; 2] = ["CLOSES FROM EVERY START", "MISSES FROM EVERY START"];
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (w, h) = (c.width as f32, c.height as f32);
@@ -191,7 +196,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let outer = ellipse();
     let inners = inners();
     let paths = paths(angle, 5);
-    for (k, inner) in inners.into_iter().enumerate() {
+    for (k, (inner, corners)) in inners.into_iter().zip(&paths).enumerate() {
         let rect = plot::inset(
             [k as f32 * w / 2.0, 0.0, (k + 1) as f32 * w / 2.0, h],
             14.0,
@@ -205,8 +210,7 @@ fn draw(c: &mut Canvas, t: f32) {
             |f: Conic| move |x: f32, y: f32| on(f, Point::xy(f64::from(x), f64::from(y))) as f32;
         ax.contour(c, level(outer), 260, 0.0, 2.0, palette::ink());
         ax.contour(c, level(conic), 260, 0.0, 1.8, palette::sky());
-        let corners: Vec<[f32; 2]> = paths[k].iter().map(|p| xy(*p)).collect();
-        ax.polyline(c, &corners, 1.8, palette::red(), 1.0);
+        ax.polyline(c, corners, 1.8, palette::red(), 1.0);
         ax.scatter(c, &corners[1..5], Marker::Dot, 6.0, palette::red(), 1.0);
         ax.scatter(c, &corners[..1], Marker::Dot, 12.0, palette::orange(), 1.0);
         ax.scatter(c, &corners[5..], Marker::Ring, 18.0, palette::red(), 1.0);
@@ -223,7 +227,7 @@ fn draw(c: &mut Canvas, t: f32) {
             colour,
             Align::Left,
         );
-        let miss = gap(paths[k][5], paths[k][0]);
+        let miss = gap(corners[5], corners[0]);
         ax.text(
             c,
             [ax.x[0] + 0.1, ax.y[0] + 0.15],

@@ -20,35 +20,24 @@
 //! its bowl, and plots the tilt and spin of numga's four variations: the base, a sharper tip,
 //! a heavier disc and a slippery bowl.
 
-use gax::pga3d::{Line, Motor, Plane, Point};
+use gax::pga3d::{Direction, Line, Motor, Plane, Point};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, backdrop, canvas, caption, palette, plot, run,
+    Anim, Axes, Camera, Canvas, Lens, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
-#[allow(unused_imports)]
-use lie::Lie as _;
-
-/// The Lie steppers for PGA3D motors: rates and forques are both lines.
-mod rigid {
-    /// The algebra.
-    pub type G = gax::motions::Pga3d;
-    pub type M = crate::lie::M<G>;
-    pub type R = crate::lie::R<G>;
-    pub type P = crate::lie::P<G>;
-    pub type Inertia = crate::lie::Inertia<G>;
-    pub type InertiaInv = crate::lie::InertiaInv<G>;
-}
 
 mod top {
     use super::*;
-    pub use crate::rigid::{InertiaInv, M, P, R};
+    pub use crate::lie::rigid::{G, Inertia, InertiaInv, M, P, R};
 
     /// A quadric: each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
     /// A plane.
     pub type Pl = Plane<(), f64>;
+    /// A direction: an ideal point, a point's weightless part (numga's `Direction` type).
+    pub type D = Direction<(), f64>;
 
     /// The plane at infinity, `e0`: its pairing with a point is the point's weight.
     pub fn w() -> Pl {
@@ -64,21 +53,24 @@ mod top {
         ]
     }
 
-    /// The direction part of a point: numga's cast to its `Direction` type, the degenerate
-    /// antivectors (gax has no kind for that set of blades, so this drops the weight by hand).
-    pub fn direction(p: P) -> P {
-        Point::direction(p.e032(), p.e013(), p.e021())
+    /// The directions of the x, y and z axes.
+    pub fn directions() -> [P; 3] {
+        [
+            Point::direction(1.0, 0.0, 0.0),
+            Point::direction(0.0, 1.0, 0.0),
+            Point::direction(0.0, 0.0, 1.0),
+        ]
     }
 
     /// The Euclidean inner product of two directions: of the planes through the origin they are
     /// normal to.
-    pub fn dot(a: P, b: P) -> f64 {
+    pub fn dot(a: D, b: D) -> f64 {
         (a.dual() | b.dual()).s()
     }
 
-    /// The Euclidean length of a direction.
-    pub fn length(d: P) -> f64 {
-        d.ideal_norm()
+    /// The Euclidean length of a direction: the norm of the planes normal to it.
+    pub fn length(d: D) -> f64 {
+        d.dual().norm()
     }
 
     /// The value with its magnitude held to the limit.
@@ -97,7 +89,7 @@ mod top {
         let mut q = -(w() * (w() & slot));
         for (a, s) in axes().into_iter().zip(semi) {
             let through = a - w() * (a & centre).s();
-            q += through * (through & slot) * (1.0 / (s * s));
+            q += through * (through & slot) / (s * s);
         }
         q
     }
@@ -110,20 +102,25 @@ mod top {
         (z * (w() & slot) + w() * (z & slot)) * 0.5 - (x * (x & slot) + y * (y & slot)) * curvature
     }
 
+    /// A quadric moved by a motor: its input and its output.
+    pub fn moved(motor: M, quadric: Quadric) -> Quadric {
+        motor >> quadric.of(motor << Point::slot())
+    }
+
+    /// A quadric's centre: the pole of the plane at infinity, unitized.
+    pub fn centre(quadric: Quadric) -> P {
+        quadric.solve(w()).unitized()
+    }
+
     /// Six mass points per solid ellipsoid with its mass, centroid and second moments, at
     /// `sqrt(3 / 5)` of each semi-axis on either side.
-    pub fn sigma_points(
-        centres: &[[f64; 3]],
-        semi: &[[f64; 3]],
-        mass: &[f64],
-    ) -> (Vec<P>, Vec<f64>) {
+    pub fn sigma_points(centres: &[P], semi: &[[f64; 3]], mass: &[f64]) -> (Vec<P>, Vec<f64>) {
+        let reach = (3.0f64 / 5.0).sqrt();
         let (mut points, mut masses) = (Vec::new(), Vec::new());
         for ((c, s), m) in centres.iter().zip(semi).zip(mass) {
             for sign in [1.0, -1.0] {
-                for axis in 0..3 {
-                    let mut x = *c;
-                    x[axis] += sign * s[axis] * (3.0f64 / 5.0).sqrt();
-                    points.push(Point::xyz(x[0], x[1], x[2]));
+                for (axis, half) in directions().into_iter().zip(s) {
+                    points.push(*c + axis * (sign * half * reach));
                     masses.push(m / 6.0);
                 }
             }
@@ -134,11 +131,11 @@ mod top {
     // --- contact -------------------------------------------------------------------------------
 
     /// The ground's unit normal at a point, toward the air, where its form grows. A point's
-    /// polar plane under the ground quadric is the gradient of the ground's form there; read as
-    /// a direction and divided by its length it is the normal, on the ground or off it.
-    pub fn ground_normal(ground: Quadric, p: P) -> P {
+    /// polar plane under the ground quadric is the gradient of the ground's form there; its
+    /// direction divided by its length is the normal, on the ground or off it.
+    pub fn ground_normal(ground: Quadric, p: P) -> D {
         let g = ground.of(p);
-        direction(g.dual()) * (1.0 / g.norm())
+        g.dual().cast::<Direction>() / g.norm()
     }
 
     /// The quadric's point furthest against the normal: the pole of its tangent plane on that
@@ -146,19 +143,19 @@ mod top {
     /// infinity, the direction conjugate to it, along which the centre reaches the planes
     /// tangent to the quadric parallel to it; scaled to reach the surface, it leads from the
     /// centre to the lowest point.
-    pub fn lowest_point(surface: Quadric, normal: P) -> P {
+    pub fn lowest_point(surface: Quadric, normal: D) -> P {
         // Planes to their poles.
         let dual = surface.inverse();
         let pole = dual.of(w());
-        let centre = pole * (1.0 / (w() & pole).s());
+        let centre = pole / (w() & pole).s();
         // The plane through the centre, normal to the direction, and its pole, a direction.
         let plane = normal.dual() - w() * (normal.dual() & centre).s();
         let conjugate = dual.of(plane);
-        centre + conjugate * (1.0 / (-(plane & conjugate).s() * (w() & pole).s()).sqrt())
+        centre + conjugate / (-(plane & conjugate).s() * (w() & pole).s()).sqrt()
     }
 
     /// The direction less its part along the ground's normal: its part in the ground's plane.
-    pub fn along_ground(d: P, normal: P) -> P {
+    pub fn along_ground(d: D, normal: D) -> D {
         d - normal * dot(d, normal)
     }
 
@@ -169,36 +166,29 @@ mod top {
         (step, (step & body).s())
     }
 
-    /// Carry the body by the summed twists of the forques.
+    /// Carry the body by the summed twists of the forques (renormalized against drift).
     pub fn move_by(motor: M, twist: R) -> M {
-        (motor * (twist * -0.5).exp()).normalized()
+        motor.mul_renormalized((twist * -0.5).exp())
     }
 
     /// The two principal curvatures at a point on the surface, in order; convex surfaces curve
-    /// positively (numga's `geometry/surface_curvature`). The Hessian form `Q(p) & p'` with
-    /// both slots composed with the projector onto the tangent plane is the second fundamental
-    /// form up to the length of the gradient; against the metric its eigenvalues are the
-    /// principal curvatures and zeros. numga takes the form on the directions only; gax has no
-    /// kind for them, so the form lives on all points, the projector also drops the weight, and
-    /// the metric adds the weight's square to stay positive definite: two more zero
-    /// eigenvalues, the normal's and the weight's.
+    /// positively (numga's `geometry/surface_curvature`). The Hessian form `Q(p) & p'` pulled
+    /// back on both sides through the projector of directions onto the tangent plane is the
+    /// second fundamental form up to the length of the gradient; against the Euclidean metric
+    /// on directions its eigenvalues are the principal curvatures and a zero, the normal's.
     pub fn principal(surface: Quadric, p: P) -> [f64; 2] {
         let tangent = surface.of(p);
-        let normal = direction(tangent.dual());
-        let slot = Point::slot();
-        let origin = Point::xyz(0.0, 0.0, 0.0);
-        // A point's direction part, then its projection along the normal onto the tangent plane.
-        let strip = slot - origin * (w() & slot);
-        let project = strip - normal * (tangent & strip) * (1.0 / (tangent & normal).s());
-        let hessian = surface & slot;
-        let second = hessian.of(project).at::<1>().of(project) * (1.0 / length(normal));
-        let metric = (slot.dual() | slot.dual()) + (w() & slot) * (w() & slot);
-        let (values, _) = second.eigh_with(metric);
-        // The two values that are not the zeros.
+        let normal = tangent.dual().cast::<Direction>();
+        // Directions, projected along the normal onto the tangent plane.
+        let d = Direction::<(), f64>::slot();
+        let project = d.cast::<Point>() - normal * ((tangent & d) / (tangent & normal).s());
+        let hessian = surface & Point::slot();
+        let second = hessian.of_both(project, project) / length(normal);
+        let (values, _) = second.eigh_with(d.dual() | d.dual());
+        // The two values that are not the zero.
         let mut v = values;
         v.sort_by(|a, b| a.abs().total_cmp(&b.abs()));
-        let [lo, hi] = [v[2].min(v[3]), v[2].max(v[3])];
-        [lo, hi]
+        [v[1].min(v[2]), v[1].max(v[2])]
     }
 
     /// Contact and friction, as numga's `project_contacts`: correct the predicted pose, pressing
@@ -216,21 +206,16 @@ mod top {
         indentation: f64,
         dt: f64,
     ) -> (M, R) {
+        use crate::lie::Lie;
         let [stat, dynamic] = friction;
-        // The parts in the world, and their centres: the poles of the plane at infinity.
-        let placed: Vec<Quadric> = parts
-            .iter()
-            .map(|q| motor >> q.of(motor << Point::slot()))
-            .collect();
-        // Each part's lowest point against the ground's normal at its centre is its contact.
+        // The parts in the world. Each part's lowest point against the ground's normal at its
+        // centre is its contact.
+        let placed: Vec<Quadric> = parts.iter().map(|q| moved(motor, *q)).collect();
         let contact: Vec<P> = placed
             .iter()
-            .map(|q| {
-                let c = q.solve(w());
-                lowest_point(*q, ground_normal(ground, c * (1.0 / (w() & c).s())))
-            })
+            .map(|q| lowest_point(*q, ground_normal(ground, centre(*q))))
             .collect();
-        let normal: Vec<P> = contact.iter().map(|c| ground_normal(ground, *c)).collect();
+        let normal: Vec<D> = contact.iter().map(|c| ground_normal(ground, *c)).collect();
         // The ground's form at the contact over its gradient's length: how far the point lies
         // below the ground, to first order in the depth; a part in the air has none.
         let depth: Vec<f64> = contact
@@ -256,9 +241,10 @@ mod top {
         // ground's plane.
         let mut twist = Line::zero();
         for i in 0..n {
-            let slid = along_ground(contact[i] - (before >> (motor << contact[i])), normal[i]);
+            let shift = contact[i] - (before >> (motor << contact[i]));
+            let slid = along_ground(shift.cast::<Direction>(), normal[i]);
             let back = length(slid);
-            let line = contact[i] & (slid * (-1.0 / (back + 1e-12)));
+            let line = contact[i] & (slid / -(back + 1e-12));
             let (step, give) = compliance(motor, inertia_inv, line);
             twist += step * clamp(back / give, pressed[i] * stat);
         }
@@ -282,12 +268,13 @@ mod top {
 
         // Dynamic friction: the rate the corrected step implies, less the contacts' sliding
         // velocity, with at most the dynamic coefficient times the normal impulse.
-        let rate = crate::rigid::G::rate_between(before, motor, dt);
+        let rate = G::rate_between(before, motor, dt);
         let mut twist = Line::zero();
         for i in 0..n {
-            let sliding = along_ground(contact[i].commutator(motor >> rate), normal[i]);
+            let velocity = contact[i].commutator(motor >> rate).cast::<Direction>();
+            let sliding = along_ground(velocity, normal[i]);
             let speed = length(sliding);
-            let line = contact[i] & (sliding * (-1.0 / (speed + 1e-12)));
+            let line = contact[i] & (sliding / -(speed + 1e-12));
             let (step, give) = compliance(motor, inertia_inv, line);
             twist += step * clamp(speed / give, pressed[i] * dynamic / dt);
         }
@@ -298,6 +285,7 @@ mod top {
 mod scenarios {
     use super::top::*;
     use super::*;
+    use crate::lie::Lie;
 
     /// A top and its ground: the spin it starts with, its tip's radius, its disc's height above
     /// the tip and mass, the bowl's curvature, the dynamic friction, the air's drag rate, and
@@ -359,7 +347,7 @@ mod scenarios {
     /// The top's parts, inertia, mass and the height of its centre of mass above the tip.
     pub struct Top {
         pub parts: Vec<Quadric>,
-        pub inertia: crate::rigid::Inertia,
+        pub inertia: Inertia,
         pub inertia_inv: InertiaInv,
         pub mass: f64,
         pub height: f64,
@@ -367,11 +355,8 @@ mod scenarios {
 
     /// A disc, a stem and a tip, each a solid ellipsoid, in the frame of their centre of mass.
     pub fn top(tip_radius: f64, tip_height: f64, disc_height: f64, disc_mass: f64) -> Top {
-        let centres = [
-            [0.0, 0.0, disc_height],
-            [0.0, 0.0, disc_height + 0.16],
-            [0.0, 0.0, tip_height],
-        ];
+        let centres =
+            [disc_height, disc_height + 0.16, tip_height].map(|z| Point::xyz(0.0, 0.0, z));
         let semi = [
             [0.25, 0.25, 0.04],
             [0.02, 0.02, 0.15],
@@ -379,22 +364,23 @@ mod scenarios {
         ];
         let mass = [disc_mass, 0.05, 0.15];
         let total: f64 = mass.iter().sum();
-        let com = (0..3).fold(0.0, |a, i| a + centres[i][2] * mass[i]) / total;
-        let centres = centres.map(|c| [c[0], c[1], c[2] - com]);
-        let parts = (0..3)
-            .map(|i| {
-                let [x, y, z] = centres[i];
-                ellipsoid(Point::xyz(x, y, z), semi[i])
-            })
+        // The centre of mass, and the parts moved to put it at the origin.
+        let com = centres.iter().zip(mass).map(|(c, m)| *c * m).sum::<P>() / total;
+        let centred = Motor::between(com, Point::xyz(0.0, 0.0, 0.0));
+        let centres = centres.map(|c| centred >> c);
+        let parts = centres
+            .iter()
+            .zip(semi)
+            .map(|(c, s)| ellipsoid(*c, s))
             .collect();
         let (points, masses) = sigma_points(&centres, &semi, &mass);
-        let (inertia, inertia_inv) = crate::rigid::G::inertia_of(&points, &masses);
+        let (inertia, inertia_inv) = G::inertia_of(&points, &masses);
         Top {
             parts,
             inertia,
             inertia_inv,
             mass: total,
-            height: com,
+            height: com.to_euclidean()[2],
         }
     }
 
@@ -412,10 +398,11 @@ mod scenarios {
         let ground = bowl(setup.bowl_curvature);
         let origin = Point::xyz(0.0, 0.0, 0.0);
         let up = Point::direction(0.0, 0.0, 1.0);
-        let tilt: f64 = 0.15;
-        // Lift the centre of mass so that the tip clears, then tilt.
-        let mut motor = Motor::translation(0.0, 0.0, body.height * tilt.cos() + 0.002)
-            * Motor::rotation_about(0.0, 1.0, 0.0, tilt);
+        // Tilt, then lift the centre of mass so that the tip, `height` below it, clears the
+        // ground by 2 mm.
+        let tilt = Motor::rotation_about(0.0, 1.0, 0.0, 0.15);
+        let [_, _, tip] = (tilt >> Point::xyz(0.0, 0.0, -body.height)).to_euclidean();
+        let mut motor = Motor::translation(0.0, 0.0, 0.002 - tip) * tilt;
         let mut rate = Line::new(0.0, 0.0, setup.spin_rate, 0.0, 0.0, 0.0);
         // The weight, a force line down through the centre of mass, and the air's drag,
         // opposing the momentum; in the body frame.
@@ -426,17 +413,10 @@ mod scenarios {
             let before = motor;
             // Predict with a free step, then correct against the ground.
             // The free step's rate is not needed: the contacts read it back from the motors.
-            let (m, _) = crate::rigid::G::explicit_rk4(
-                motor,
-                rate,
-                body.inertia,
-                body.inertia_inv,
-                dt,
-                &forces,
-            );
+            let (m, _) = G::explicit_rk4(motor, rate, body.inertia, body.inertia_inv, dt, &forces);
             (motor, rate) = project_contacts(
                 before,
-                m.normalized(),
+                m.renormalize_fast(),
                 body.inertia_inv,
                 &body.parts,
                 ground,
@@ -445,7 +425,8 @@ mod scenarios {
                 dt,
             );
             if i % every == 0 {
-                let lean = dot(motor >> up, up).abs().min(1.0).acos();
+                // The axis's angle from vertical: twice the size of the turn between them.
+                let lean = Motor::rotation_between(up, motor >> up).log().norm() * 2.0;
                 samples.push(Sample {
                     motor,
                     tilt: lean,
@@ -473,11 +454,9 @@ mod scenarios {
         (distance.is_finite() && distance > 0.0).then(|| (distance, origin + heading * distance))
     }
 
-    /// The unit normal of the quadric at a point on it: the normal of its polar plane.
-    pub fn normal_at(surface: Quadric, p: P) -> [f64; 3] {
-        let n = direction(surface.of(p).dual());
-        let l = length(n);
-        [n.e032() / l, n.e013() / l, n.e021() / l]
+    /// The normal of the quadric at a point on it: the direction of its polar plane.
+    pub fn normal_at(surface: Quadric, p: P) -> D {
+        surface.of(p).dual().cast::<Direction>()
     }
 }
 
@@ -528,41 +507,34 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
     let cam = Camera::orbit(
         side as usize,
         side as usize,
-        CENTRE.map(|v| v as f32),
+        CENTRE,
         (20.0 * EXTENT) as f32,
         azimuth as f32,
         elevation as f32,
         Lens::Parallel(EXTENT as f32),
     );
-    // The lamp, above the viewer's left shoulder.
-    let back = [
-        elevation.cos() * azimuth.cos(),
-        elevation.cos() * azimuth.sin(),
-        elevation.sin(),
-    ];
-    let right = [-azimuth.sin(), azimuth.cos(), 0.0];
-    let up = [
-        back[1] * right[2] - back[2] * right[1],
-        back[2] * right[0] - back[0] * right[2],
-        back[0] * right[1] - back[1] * right[0],
-    ];
-    let lamp = [0, 1, 2].map(|i| back[i] - 0.3 * right[i] + 0.8 * up[i]);
-    let ll = (lamp[0] * lamp[0] + lamp[1] * lamp[1] + lamp[2] * lamp[2]).sqrt();
-    let lamp = lamp.map(|v| v / ll);
-    let facing = |n: [f64; 3]| (n[0] * lamp[0] + n[1] * lamp[1] + n[2] * lamp[2]).abs() as f32;
-    // The parts in the world.
-    let placed: Vec<Quadric> = parts
-        .iter()
-        .map(|q| motor >> q.of(motor << Point::slot()))
-        .collect();
+    // The lamp, above the viewer's left shoulder: back toward the viewer (the camera looks
+    // along its +z), and up and to the right on screen (its +y and -x).
     let to64 = |p: Point<(), f32>| p.map_coefs(f64::from);
+    let lamp = to64(cam.pose >> Point::direction(0.3, 0.8, -1.0)).cast::<Direction>();
+    let facing = |n: D| (dot(n, lamp) / (length(n) * length(lamp))).abs() as f32;
+    // The parts in the world, and four planes through the top's axis an eighth of a turn
+    // apart: crossing any of them flips the sign of the product of a point's distances to
+    // them, so that sign alternates from one eighth of a turn about the axis to the next.
+    let placed: Vec<Quadric> = parts.iter().map(|q| moved(motor, *q)).collect();
+    let spokes = [
+        Plane::new(1.0, 0.0, 0.0, 0.0),
+        Plane::new(1.0, -1.0, 0.0, 0.0),
+        Plane::new(0.0, 1.0, 0.0, 0.0),
+        Plane::new(1.0, 1.0, 0.0, 0.0),
+    ];
     let colours = PART_COLOURS.map(|[r, g, b]| canvas::srgb(r, g, b));
     let ground_tone = canvas::srgb(0.95, 0.93, 0.88);
     c.clip([x0, y0, x0 + side, y0 + side]);
     c.shade(2, |x, y| {
         let (o, d) = cam.ray([x - x0, y - y0]);
         let (origin, heading) = (to64(o), to64(d));
-        let mut best: Option<(f64, [f32; 3])> = None;
+        let mut best: Option<(f64, Rgb)> = None;
         if let Some((distance, p)) = hit(ground, origin, heading) {
             let [hx, hy, _] = p.to_euclidean();
             let checker = ((hx / 0.15).floor() + (hy / 0.15).floor()).rem_euclid(2.0) as f32;
@@ -577,10 +549,9 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
                 && best.is_none_or(|(b, _)| distance < b)
             {
                 // Alternating sectors about the top's axis, in its own frame, show its spin.
-                let [lx, ly, _] = (motor << p).to_euclidean();
-                let sector = (ly.atan2(lx) / core::f64::consts::FRAC_PI_4)
-                    .floor()
-                    .rem_euclid(2.0) as f32;
+                let local = motor << p;
+                let sign: f64 = spokes.iter().map(|s| (*s & local).s()).product();
+                let sector = f32::from(u8::from(sign <= 0.0));
                 let tint = canvas::scale(colours[i], 1.0 - SECTOR_CONTRAST[i] * (1.0 - sector));
                 let shade = 0.35 + 0.65 * facing(normal_at(*q, p));
                 best = Some((distance, canvas::scale(tint, shade)));
@@ -629,12 +600,12 @@ fn draw(c: &mut Canvas, t: f32) {
         let ax = Axes::new(rect, [0.0, SECONDS as f32], *range);
         ax.frame(c, title, if p == 1 { "TIME (S)" } else { "" }, "");
         for (v, samples) in runs.samples.iter().enumerate() {
-            let pts: Vec<[f32; 2]> = samples[..=k]
+            let pts: Vec<[f64; 2]> = samples[..=k]
                 .iter()
                 .enumerate()
                 .map(|(j, s)| {
                     let value = if p == 0 { s.tilt.to_degrees() } else { s.spin };
-                    [(j as f64 * DT * EVERY as f64) as f32, value as f32]
+                    [j as f64 * DT * EVERY as f64, value]
                 })
                 .collect();
             ax.polyline(
@@ -655,7 +626,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
         // The legend where the spin has decayed.
         if p == 1 {
-            let entries: Vec<(&str, gax_numga_examples::Rgb)> = VARIATIONS
+            let entries: Vec<(&str, Rgb)> = VARIATIONS
                 .iter()
                 .enumerate()
                 .map(|(v, (name, _))| (*name, palette::series(v)))
@@ -678,7 +649,7 @@ fn main() {
 mod tests {
     use super::scenarios::*;
     use super::top::*;
-    use gax::pga3d::Point;
+    use gax::pga3d::{Direction, Point};
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
@@ -709,7 +680,8 @@ mod tests {
     #[test]
     fn contact_geometry() {
         let sphere = ellipsoid(Point::xyz(0.1, 0.0, 1.0), [0.5; 3]);
-        let low = lowest_point(sphere, Point::direction(0.0, 0.0, 1.0));
+        let up = Point::direction(0.0, 0.0, 1.0).cast::<Direction>();
+        let low = lowest_point(sphere, up);
         let [x, y, z] = low.to_euclidean();
         assert!(close(x, 0.1, 1e-12) && close(y, 0.0, 1e-12) && close(z, 0.5, 1e-12));
         let ground = bowl(0.15);
@@ -742,13 +714,14 @@ mod tests {
     #[test]
     fn the_top_spins_on_the_ground() {
         let (body, ground, samples) = spin(BASE, 1.0, 1e-3, 10);
+        // It starts tilted by 0.15 rad.
+        assert!(close(samples[0].tilt, 0.15, 1e-3), "{}", samples[0].tilt);
         let last = samples[samples.len() - 1];
         assert!(last.tilt < 0.5, "{}", last.tilt);
         assert!(last.spin > 10.0 && last.spin < 18.0, "{}", last.spin);
         for s in &samples {
-            let placed = s.motor >> body.parts[2].of(s.motor << Point::slot());
-            let c = placed.solve(w());
-            let low = lowest_point(placed, ground_normal(ground, c * (1.0 / (w() & c).s())));
+            let placed = moved(s.motor, body.parts[2]);
+            let low = lowest_point(placed, ground_normal(ground, centre(placed)));
             let g = ground.of(low);
             let height = (g & low).s() / (2.0 * g.norm());
             assert!(height > -2e-3 && height < 2e-2, "{height}");

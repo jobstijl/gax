@@ -82,20 +82,6 @@ mod hopf {
             .collect()
     }
 
-    /// Gauss's linking number of two closed polygons: the volume each pair of segments spans
-    /// with the line between them, over the cube of its length, summed and divided by four pi.
-    pub fn linking(first: &[V], second: &[V]) -> f64 {
-        let mut sum = 0.0;
-        for a in first.windows(2) {
-            for b in second.windows(2) {
-                let separation = (a[1] + a[0] - b[1] - b[0]).gp(0.5);
-                let volume = (separation ^ (a[1] - a[0]) ^ (b[1] - b[0])).dual().s();
-                sum += volume / separation.norm().powi(3);
-            }
-        }
-        sum / (4.0 * core::f64::consts::PI)
-    }
-
     /// The unit direction at a polar angle from z and an azimuth about it: z turned toward x by
     /// the polar angle, then about z by the azimuth.
     pub fn sphere(polar: f64, azimuth: f64) -> V {
@@ -167,12 +153,12 @@ const FRAMES: usize = 90;
 const LIMIT: f64 = 2.6;
 const LIFT_POLAR: f64 = 2.2;
 
-fn xyz(v: V) -> [f32; 3] {
-    let [x, y, z] = [v.e1(), v.e2(), v.e3()];
-    if (x * x + y * y + z * z).sqrt() > LIMIT {
-        [f32::NAN; 3]
+/// A projected point as drawn: beyond the limit, a gap in the curve.
+fn clipped(v: V) -> V {
+    if v.norm() > LIMIT {
+        Vector::new(f64::NAN, f64::NAN, f64::NAN)
     } else {
-        [x as f32, y as f32, z as f32]
+        v
     }
 }
 
@@ -221,7 +207,6 @@ fn draw(c: &mut Canvas, t: f32) {
             .map(|(d, fibre)| (d, fibre, false))
             .collect()
     };
-    let seen: Vec<V> = fibres.iter().map(|f| f.0).collect();
 
     // Space: the fibres so far, the newest heavier.
     let rect = [(w as f32 * 0.3) as usize, 0, w, h];
@@ -229,7 +214,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         space.width,
         space.height,
-        [0.0, 0.0, -0.3],
+        Vector::new(0.0, 0.0, -0.3),
         11.0,
         azimuth,
         elevation,
@@ -237,14 +222,14 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let mut scene = Scene3::new(cam);
     for (d, fibre, newest) in &fibres {
-        let pts: Vec<[f32; 3]> = fibre.iter().map(|v| xyz(*v)).collect();
+        let pts: Vec<V> = fibre.iter().map(|v| clipped(*v)).collect();
         let (width, alpha) = if *newest { (2.6, 1.0) } else { (0.9, 0.75) };
         scene.polyline(&pts, width, colour(*d), alpha);
     }
     scene.draw(&mut space);
     c.blit(&space, rect[0], rect[1]);
     // Any two fibres link once: the first and the last drawn.
-    let link = linking(&fibres[0].1, &fibres[fibres.len() - 1].1);
+    let link = gax_numga_examples::measure::linking(&fibres[0].1, &fibres[fibres.len() - 1].1);
     if fibres.len() > 1 {
         c.text(
             &format!("LINKING NUMBER OF THE FIRST AND LAST FIBRE: {link:+.3}"),
@@ -272,18 +257,17 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         base.width,
         base.height,
-        [0.0; 3],
+        Vector::new(0.0, 0.0, 0.0),
         6.0,
         azimuth,
         elevation,
         Lens::Perspective(0.45),
     );
     let mut scene = Scene3::new(cam);
-    scene.sphere_wire([0.0; 3], 1.0, 24, palette::grid(), 0.6);
-    for (k, d) in seen.iter().enumerate() {
-        let p = [d.e1() as f32, d.e2() as f32, d.e3() as f32];
-        let size = if fibres[k].2 { 10.0 } else { 5.0 };
-        scene.dot(p, Marker::Dot, size, colour(*d));
+    scene.sphere_wire(Vector::new(0.0, 0.0, 0.0), 1.0, 24, palette::grid(), 0.6);
+    for (d, _, newest) in &fibres {
+        let size = if *newest { 10.0 } else { 5.0 };
+        scene.dot(*d, Marker::Dot, size, colour(*d));
     }
     scene.draw(&mut base);
     c.blit(&base, rect[0], rect[1]);
@@ -303,25 +287,30 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         inset.width,
         inset.height,
-        [0.0, 0.0, 0.0],
+        Vector::new(0.0, 0.0, 0.0),
         9.0,
         azimuth,
         elevation,
         Lens::Perspective(0.42),
     );
     let mut scene = Scene3::new(cam);
-    let circle: Vec<[f32; 3]> = fibre(start, &turn(200))
+    let circle: Vec<V> = fibre(start, &turn(200))
         .into_iter()
-        .map(|r| xyz(stereographic(r)))
+        .map(|r| clipped(stereographic(r)))
         .collect();
     scene.polyline(&circle, 1.2, palette::grid(), 1.0);
     let upto = ((phase / SWEEP * carried.len() as f32) as usize).clamp(1, carried.len());
-    let track: Vec<[f32; 3]> = core::iter::once(start)
+    let track: Vec<V> = core::iter::once(start)
         .chain(carried[..upto].iter().copied())
-        .map(|r| xyz(stereographic(r)))
+        .map(|r| clipped(stereographic(r)))
         .collect();
     scene.polyline(&track, 1.8, palette::red(), 1.0);
-    scene.dot(xyz(stereographic(start)), Marker::Dot, 8.0, palette::sky());
+    scene.dot(
+        clipped(stereographic(start)),
+        Marker::Dot,
+        8.0,
+        palette::sky(),
+    );
     scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::red());
     scene.draw(&mut inset);
     c.blit(&inset, rect[0], rect[1]);
@@ -356,16 +345,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::hopf::*;
+    use gax::ApproxEq;
     use gax::vga3d::Vector;
-
-    /// The largest coefficient of a difference.
-    fn gap(a: R, b: R) -> f64 {
-        (a - b).c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
-    }
-
-    fn close(a: V, b: V, tol: f64) -> bool {
-        (a - b).c.iter().all(|v| v.abs() <= tol)
-    }
 
     /// numga's test: `(direction | HOPF)` has eigenvalues -1, -1, 1, 1, and both spinors of the
     /// top pair point along the direction; turning a spinor on the right in the xy plane keeps
@@ -378,10 +359,10 @@ mod tests {
             assert!((v - want).abs() < 1e-12, "{values:?}");
         }
         for s in &spinors[2..] {
-            assert!(close(hopf().of(*s).of(*s), direction, 1e-12));
+            assert!(hopf().of(*s).of(*s).approx_eq(&direction, 1e-12));
         }
         for r in fibre(spinors[3], &[0.4, 2.1]) {
-            assert!(close(hopf().of(r).of(r), direction, 1e-9));
+            assert!(hopf().of(r).of(r).approx_eq(&direction, 1e-9));
         }
     }
 
@@ -400,11 +381,11 @@ mod tests {
                     core::f64::consts::TAU * k as f64 / per_circle as f64,
                 );
                 for r in fibre(fibre_start(d), &turn(samples)) {
-                    assert!(close(hopf().of(r).of(r), d, 1e-9));
+                    assert!(hopf().of(r).of(r).approx_eq(&d, 1e-9));
                 }
             }
         }
-        let link = linking(&tori[0][0].1, &tori[1][per_circle / 3].1);
+        let link = gax_numga_examples::measure::linking(&tori[0][0].1, &tori[1][per_circle / 3].1);
         assert!((link - 1.0).abs() < 1e-2, "{link}");
     }
 
@@ -417,7 +398,8 @@ mod tests {
         let half_solid_angle = core::f64::consts::PI * (1.0 - polar.cos());
         let turned = start * along_fibre(-half_solid_angle);
         let last = carried[carried.len() - 1];
-        assert!(gap(last, turned) < 1e-4, "{}", gap(last, turned));
+        let gap = last.max_abs_diff(&turned);
+        assert!(gap < 1e-4, "{gap}");
     }
 
     #[test]

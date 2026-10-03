@@ -9,7 +9,10 @@
 //! is the contact forque. Elastic impulses along that forque reverse the closing rate.
 //!
 //! Nothing here knows its dimension. numga instantiates its module once per algebra; here the
-//! macro [`engine!`] is expanded inside a module that names the algebra's kinds:
+//! macro [`engine!`] is expanded inside a module that names the algebra's kinds. (The roles of
+//! `gax::motions::Motions` cover the motors, rates, momenta and points, but not the planes and
+//! the quadrics, maps between planes and points, with their solves and eigenproblems; a trait
+//! bound for each of those would be longer than the engine.) The kinds:
 //!
 //! * `Point`: a point of the sphere (numga's antivector), `Plane`: a plane through the centre
 //!   (the vectors), `Rate`: the bivectors, `Momentum`: the antibivectors, `Rotor`: the motors;
@@ -19,7 +22,7 @@
 /// `Scalar` and `DIM` into scope.
 macro_rules! engine {
     () => {
-        use crate::rng::Rng;
+        use gax_numga_examples::rng::{Draw, Rng};
 
         /// A point of the sphere.
         pub type P = Point<(), f64>;
@@ -41,9 +44,7 @@ macro_rules! engine {
         /// The poles of the basis planes.
         pub fn basis() -> [P; DIM] {
             core::array::from_fn(|i| {
-                let mut c = [0.0; DIM];
-                c[i] = 1.0;
-                Point::from_coeffs(c).normalized().into_inner()
+                Point::from_coeffs(core::array::from_fn(|j| if i == j { 1.0 } else { 0.0 }))
             })
         }
 
@@ -55,6 +56,13 @@ macro_rules! engine {
         /// The identity rotor.
         pub fn identity() -> M {
             Rate::<(), f64>::zero().exp()
+        }
+
+        /// The angle between two unit points of the sphere, or between one and the other's
+        /// antipode where that is smaller: the angle whose sine is the norm of their join (the
+        /// great circle through them) and whose cosine is their inner product, up to sign.
+        pub fn arc(a: P, b: P) -> f64 {
+            (a & b).norm().atan2((a | b).s().abs())
         }
 
         /// One body: its colour (display values), its motor, its momentum in the body frame, its
@@ -159,11 +167,7 @@ macro_rules! engine {
             masses: &[f64],
         ) -> Body {
             let inertia = pointcloud_inertia(points, masses);
-            let o = origin();
-            let reach = points
-                .iter()
-                .map(|p| (*p | o).s().abs().clamp(0.0, 1.0).acos())
-                .fold(0.0, f64::max);
+            let reach = points.iter().map(|p| arc(*p, origin())).fold(0.0, f64::max);
             Body {
                 color,
                 motor,
@@ -180,30 +184,37 @@ macro_rules! engine {
             Point::slot() & q.solve(Point::slot())
         }
 
+        /// A point uniform on the unit sphere of the span of orthonormal `axes`: normal draws on
+        /// them, normalized.
+        fn uniform_on(axes: &[P], rng: &mut Rng) -> P {
+            axes.iter()
+                .fold(P::zero(), |p, a| p + a.gp(rng.normal()))
+                .normalized()
+                .into_inner()
+        }
+
         /// Mass points filling the inside of any quadric, where its form is negative. In the
         /// form's eigenbasis the inside is where the negative block outweighs the positive one,
-        /// so a point is a core direction in the negative block, an extent direction in the
-        /// positive block, both uniform on their spheres, and the angle between them, up to the
-        /// angle where the blocks balance; the angle is drawn uniformly and weighted by the
-        /// sphere's measure `cos^(k-1) sin^(n-1-k)` for `k` core axes out of `n`, so the weighted
-        /// points are uniform in the inside.
+        /// so a point is a core point in the span of the negative block, an extent point in the
+        /// span of the positive block, both uniform on their spheres, and the angle between
+        /// them, up to the angle where the blocks balance; the angle is drawn uniformly and
+        /// weighted by the sphere's measure `cos^(k-1) sin^(n-1-k)` for `k` core axes out of
+        /// `n`, so the weighted points are uniform in the inside.
         pub fn filled(
             q: DualQuadric,
             mass: f64,
             count: usize,
             rng: &mut Rng,
         ) -> (Vec<P>, Vec<f64>) {
-            let (values, principal) = form(q).eigh();
+            let form = form(q);
+            let (values, principal) = form.eigh();
             let k = values.iter().filter(|v| **v < 0.0).count();
             let mut points = Vec::with_capacity(count);
             let mut weights = Vec::with_capacity(count);
             for _ in 0..count {
-                let core = rng.unit_vector(k);
-                let extent = rng.unit_vector(DIM - k);
-                let inward: f64 = (0..k).map(|i| -values[i] * core[i] * core[i]).sum();
-                let outward: f64 = (k..DIM)
-                    .map(|i| values[i] * extent[i - k] * extent[i - k])
-                    .sum();
+                let core = uniform_on(&principal[..k], rng);
+                let extent = uniform_on(&principal[k..], rng);
+                let (inward, outward) = (-form.fill(core).s(), form.fill(extent).s());
                 let balance = (inward / outward).sqrt().atan();
                 let angle = balance * rng.uniform();
                 weights.push(
@@ -211,16 +222,7 @@ macro_rules! engine {
                         * angle.sin().powi((DIM - 1 - k) as i32)
                         * balance,
                 );
-                let mut p = P::zero();
-                for i in 0..DIM {
-                    let coordinate = if i < k {
-                        angle.cos() * core[i]
-                    } else {
-                        angle.sin() * extent[i - k]
-                    };
-                    p += principal[i].gp(coordinate);
-                }
-                points.push(p);
+                points.push(core.gp(angle.cos()) + extent.gp(angle.sin()));
             }
             let total: f64 = weights.iter().sum();
             (points, weights.iter().map(|w| w * mass / total).collect())
@@ -231,12 +233,9 @@ macro_rules! engine {
         /// Advance a body by `dt` with a Lie midpoint step; the momentum is kept in the body
         /// frame, so the free step only turns it.
         pub fn step_motor(motor: M, momentum: Mom, i_inv: InverseInertia, dt: f64) -> (M, Mom) {
-            let half = (motor * i_inv.of(momentum).gp(0.25 * dt).exp())
-                .into_inner()
-                .normalized();
+            let half = motor.mul_renormalized(i_inv.of(momentum).gp(0.25 * dt).exp());
             let rate = i_inv.of((motor.inverse() * half) << momentum);
-            let step = rate.gp(0.5 * dt).exp();
-            let moved = (motor * step).into_inner().normalized();
+            let moved = motor.mul_renormalized(rate.gp(0.5 * dt).exp());
             (moved, (motor.inverse() * moved) << momentum)
         }
 
@@ -285,8 +284,7 @@ macro_rules! engine {
             let mut pairs = Vec::new();
             for i in 0..bodies.len() {
                 for j in i + 1..bodies.len() {
-                    let apart = (poles[i] | poles[j]).s().abs().clamp(0.0, 1.0).acos();
-                    if apart < bodies[i].reach + bodies[j].reach {
+                    if arc(poles[i], poles[j]) < bodies[i].reach + bodies[j].reach {
                         pairs.push((i, j));
                     }
                 }
@@ -317,11 +315,7 @@ macro_rules! engine {
             let now: Vec<M> = bodies.iter().map(|b| b.motor).collect();
             let ahead: Vec<M> = bodies
                 .iter()
-                .map(|b| {
-                    (b.motor * b.rate().gp(0.5 * dt).exp())
-                        .into_inner()
-                        .normalized()
-                })
+                .map(|b| b.motor.mul_renormalized(b.rate().gp(0.5 * dt).exp()))
                 .collect();
             let mut contacts = Vec::new();
             for &(i, j) in pairs {

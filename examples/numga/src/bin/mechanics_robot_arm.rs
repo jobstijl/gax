@@ -8,6 +8,7 @@
 //! loop by least-squares steps, two per target, with the joint angles plotted alongside.
 
 use gax::Unit;
+use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Line, Motor, Point};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, plot,
@@ -25,16 +26,11 @@ mod arm {
     /// The number of targets along the loop, one per frame of numga's animation.
     pub const TARGETS: usize = 72;
 
-    /// The identity motion.
-    pub fn identity() -> M {
-        Motor::translation(0.0, 0.0, 0.0)
-    }
-
     /// The tip pose and the frame before each joint's rotation: the product of the joints
     /// before it.
     pub fn forward_kinematics(joints: &[L; 3]) -> (M, [M; 3]) {
-        let mut pose = identity();
-        let mut frames = [identity(); 3];
+        let mut pose = Pga3d::identity();
+        let mut frames = [pose; 3];
         for (frame, joint) in frames.iter_mut().zip(joints) {
             *frame = pose;
             // numga writes `exp(joint / 2)`; gax's join orients the axis lines the other way
@@ -82,9 +78,8 @@ mod arm {
             let (pose, frames) = forward_kinematics(&joints);
             let tip = pose >> tip_home;
             // The tip velocity per unit rate of each joint: the Jacobian's columns, as points
-            // at infinity. numga solves against the stack of the three points; gax has no kind
-            // of three plain numbers in PGA3D, so the weights live in a `vga3d::Vector` and the
-            // columns are the images of its basis vectors.
+            // at infinity. The three joint rates are the components of a `vga3d::Vector`, so
+            // the Jacobian is the map from it whose images of the basis are the columns.
             let columns: [P; 3] = core::array::from_fn(|k| tip.commutator(frames[k] >> axis[k]));
             let jacobian = Point::<(gax::vga3d::Vector,), f64>::from_images(columns);
             // The joint increments whose tip velocities best sum to the remaining error, applied
@@ -115,14 +110,17 @@ mod arm {
         (axis, tip_home, rest)
     }
 
-    /// Target `k` along a tilted loop in front of the arm.
+    /// Target `k` along a loop in front of the arm: a circle of radius 0.5 about the vertical
+    /// through `(1, 1)`, traced clockwise from above by turns about that axis, lifted onto the
+    /// saddle `z = 1.2 + 2.4 (x - 1) (y - 1)` (so its height swings twice per loop, by 0.3).
     pub fn loop_target(k: usize) -> P {
-        let s = core::f64::consts::TAU * k as f64 / TARGETS as f64;
-        Point::xyz(
-            1.0 + 0.5 * s.sin(),
-            1.0 + 0.5 * s.cos(),
-            1.2 + 0.3 * (2.0 * s).sin(),
-        )
+        let centre = Point::xyz(1.0, 1.0, 0.0);
+        let turn = Motor::rotation(
+            centre & Point::direction(0.0, 0.0, 1.0),
+            -core::f64::consts::TAU * k as f64 / TARGETS as f64,
+        );
+        let [x, y, _] = (turn >> Point::xyz(1.0, 1.5, 0.0)).to_euclidean();
+        Point::xyz(x, y, 1.2 + 2.4 * (x - 1.0) * (y - 1.0))
     }
 
     /// The corners of slender boxes along `z`, one per unit link, in the home pose; corner
@@ -213,10 +211,6 @@ fn states() -> &'static [State] {
     S.get_or_init(tracking)
 }
 
-fn f3(p: P) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
 /// The box faces by corner index (`4 i + 2 j + k`).
 const FACES: [[usize; 4]; 6] = [
     [0, 1, 3, 2],
@@ -273,7 +267,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
     }
     // The loop of targets, faint.
-    let lp: Vec<[f32; 3]> = (0..=n).map(|k| f3(loop_target(k % n))).collect();
+    let lp: Vec<P> = (0..=n).map(|k| loop_target(k % n)).collect();
     sc.polyline(&lp, 1.0, palette::red(), 0.35);
     // The tip's trail over the last half loop, fading.
     let trail = n / 2;
@@ -282,8 +276,8 @@ fn draw(c: &mut Canvas, t: f32) {
         let k0 = (k1 + n - 1) % n;
         let alpha = 0.9 * (1.0 - back as f32 / trail as f32);
         sc.seg(
-            f3(states[k0].tip),
-            f3(states[k1].tip),
+            states[k0].tip,
+            states[k1].tip,
             2.0,
             palette::yellow(),
             alpha,
@@ -293,7 +287,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let boxes = link_boxes(0.15, 0.06);
     let colours = [palette::sky(), palette::blue(), palette::purple()];
     for ((corners, m), colour) in boxes.iter().zip(links).zip(colours) {
-        let p: Vec<[f32; 3]> = corners.iter().map(|q| f3(m >> *q)).collect();
+        let p: Vec<P> = corners.iter().map(|q| m >> *q).collect();
         for f in FACES {
             let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], colour);
             sc.quad(p[f[0]], p[f[1]], p[f[2]], p[f[3]], col, 0.8);
@@ -303,17 +297,12 @@ fn draw(c: &mut Canvas, t: f32) {
         }
     }
     // The joints: the home joint positions carried by the frame of the link they start.
-    for (k, m) in [arm::identity(), links[0], links[1]].iter().enumerate() {
+    for (k, m) in [Pga3d::identity(), links[0], links[1]].iter().enumerate() {
         let joint = *m >> Point::xyz(0.0, 0.0, k as f64);
-        sc.dot(f3(joint), Marker::Dot, 8.0, palette::ink());
+        sc.dot(joint, Marker::Dot, 8.0, palette::ink());
     }
-    sc.dot(
-        f3(links[2] >> tip_home),
-        Marker::Dot,
-        7.0,
-        palette::yellow(),
-    );
-    sc.dot(f3(target), Marker::Star, 14.0, palette::red());
+    sc.dot(links[2] >> tip_home, Marker::Dot, 7.0, palette::yellow());
+    sc.dot(target, Marker::Star, 14.0, palette::red());
     sc.draw(c);
 
     caption(
@@ -361,9 +350,9 @@ fn draw(c: &mut Canvas, t: f32) {
     // The statics at rest, in text.
     let (velocity, torques) = statics();
     let (error, _) = homing();
-    let x0 = w * 0.62 + 20.0;
+    let x0 = w * 0.6;
     let lines = [
-        "AT REST, A FORCE (0, 2, -1) AT (1, 0, 3):".to_string(),
+        "AT REST, FORCE (0,2,-1) AT (1,0,3):".to_string(),
         format!(
             "JOINT TORQUES  {:+.3} {:+.3} {:+.3}",
             torques[0], torques[1], torques[2]
@@ -381,8 +370,8 @@ fn draw(c: &mut Canvas, t: f32) {
         c.text(
             l,
             x0,
-            h * 0.70 + k as f32 * 22.0,
-            12.0,
+            h * 0.70 + k as f32 * 20.0,
+            10.0,
             if k == 0 {
                 palette::grid()
             } else {
@@ -424,6 +413,24 @@ mod tests {
         let a = angles(&rest, &axis);
         for (x, y) in a.iter().zip([0.3, 0.5, 0.8]) {
             assert!((x - y).abs() < 1e-12, "{a:?}");
+        }
+    }
+
+    /// The loop is numga's, `(1 + 0.5 sin s, 1 + 0.5 cos s, 1.2 + 0.3 sin 2s)`.
+    #[test]
+    fn the_loop_is_numgas() {
+        for k in 0..TARGETS {
+            let s = core::f64::consts::TAU * k as f64 / TARGETS as f64;
+            let expected = [
+                1.0 + 0.5 * s.sin(),
+                1.0 + 0.5 * s.cos(),
+                1.2 + 0.3 * (2.0 * s).sin(),
+            ];
+            let p = loop_target(k).to_euclidean();
+            assert!(
+                p.iter().zip(expected).all(|(a, b)| (a - b).abs() < 1e-12),
+                "{p:?}"
+            );
         }
     }
 

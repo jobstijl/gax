@@ -8,7 +8,7 @@
 //! ridge edge of a small patch into that vertex, the two faces flanking the edge shrinking away,
 //! with each quadric's error ellipsoid drawn around its vertex.
 
-use gax::pga3d::{Plane, Point};
+use gax::pga3d::{Motor, Plane, Point};
 use gax_numga_examples::canvas::{Rgb, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
@@ -110,10 +110,9 @@ mod qem {
 
     /// The radius of a quadric's error ellipsoid `error = epsilon²` along a unit direction,
     /// capped at `max_radius` where the error stays flat.
-    pub fn ellipsoid_radius(q: Quadric, d: [f64; 3], epsilon: f64, max_radius: f64) -> f64 {
-        // On an ideal point the quadric reads its quadratic part alone, the error's growth along
-        // that direction.
-        let dir = Point::direction(d[0], d[1], d[2]);
+    pub fn ellipsoid_radius(q: Quadric, dir: P, epsilon: f64, max_radius: f64) -> f64 {
+        // On a direction (an ideal point) the quadric reads its quadratic part alone, the
+        // error's growth along that direction.
         let growth = (q.of(dir) & dir).s();
         epsilon / growth.max((epsilon / max_radius).powi(2)).sqrt()
     }
@@ -121,13 +120,9 @@ mod qem {
 
 use qem::*;
 
-fn xyz(p: P) -> [f32; 3] {
-    let [x, y, z] = p.to_euclidean();
-    [x as f32, y as f32, z as f32]
-}
-
-fn lerp(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
-    [0, 1, 2].map(|i| a[i] + (b[i] - a[i]) * t)
+/// The point `t` of the way from `a` to `b` (unit points).
+fn lerp(a: P, b: P, t: f64) -> P {
+    a + (b - a).gp(t)
 }
 
 /// The face colours: blue for the flanking faces, red for the corner at a, purple for the ramp
@@ -138,26 +133,25 @@ fn face_colour(f: usize) -> Rgb {
     srgb(ch(16), ch(8), ch(0))
 }
 
-/// A quadric's error ellipsoid about `centre`, as a wireframe.
-fn ellipsoid(s: &mut Scene3, q: Quadric, centre: [f32; 3], colour: Rgb) {
+/// A quadric's error ellipsoid about `centre`, as a wireframe: along each direction (the pole
+/// `z` tilted by `theta` towards `x`, then turned by `phi` about `z`), the radius at which the
+/// error reaches its level.
+fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Rgb) {
     let (n_theta, n_phi) = (17, 25);
     let pt = |i: usize, j: usize| {
         let theta = core::f64::consts::PI * i as f64 / (n_theta - 1) as f64;
         let phi = core::f64::consts::TAU * j as f64 / (n_phi - 1) as f64;
-        let d = [
-            theta.sin() * phi.cos(),
-            theta.sin() * phi.sin(),
-            theta.cos(),
-        ];
-        let r = ellipsoid_radius(q, d, 0.12, 0.4);
-        [0, 1, 2].map(|k| centre[k] + (r * d[k]) as f32)
+        let turn =
+            Motor::rotation_about(0.0, 0.0, 1.0, phi) * Motor::rotation_about(0.0, 1.0, 0.0, theta);
+        let d = turn >> Point::direction(0.0, 0.0, 1.0);
+        centre + d.gp(ellipsoid_radius(q, d, 0.12, 0.4))
     };
     for i in 0..n_theta {
-        let ring: Vec<[f32; 3]> = (0..n_phi).map(|j| pt(i, j)).collect();
+        let ring: Vec<P> = (0..n_phi).map(|j| pt(i, j)).collect();
         s.polyline(&ring, 1.0, colour, 0.7);
     }
     for j in 0..n_phi {
-        let meridian: Vec<[f32; 3]> = (0..n_theta).map(|i| pt(i, j)).collect();
+        let meridian: Vec<P> = (0..n_theta).map(|i| pt(i, j)).collect();
         s.polyline(&meridian, 1.0, colour, 0.7);
     }
 }
@@ -175,7 +169,7 @@ fn camera(c: &Canvas, azimuth: f32) -> Camera {
 }
 
 /// Triangles with their edges.
-fn mesh(s: &mut Scene3, pts: &[[f32; 3]], faces: &[(usize, [usize; 3])], alpha: f32) {
+fn mesh(s: &mut Scene3, pts: &[P], faces: &[(usize, [usize; 3])], alpha: f32) {
     for &(f, [i, j, k]) in faces {
         let (a, b, c) = (pts[i], pts[j], pts[k]);
         let col = s.lit(a, b, c, face_colour(f));
@@ -190,7 +184,7 @@ fn mesh(s: &mut Scene3, pts: &[[f32; 3]], faces: &[(usize, [usize; 3])], alpha: 
 fn vertex_panel(c: &mut Canvas, scene: &Collapse, which: usize, azimuth: f32, title: &str) {
     backdrop(c);
     let mut s = Scene3::new(camera(c, azimuth));
-    let pts = scene.vertices.map(xyz);
+    let pts = scene.vertices;
     let (incident, q, colour) = if which == 0 {
         (INCIDENT_A, scene.qa, face_colour(2))
     } else {
@@ -206,11 +200,11 @@ fn vertex_panel(c: &mut Canvas, scene: &Collapse, which: usize, azimuth: f32, ti
 
 /// The contraction, `progress` of the way: a and b slide into the merged vertex, the flanking
 /// faces shrinking to nothing.
-fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f32, azimuth: f32) {
+fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f64, azimuth: f32) {
     backdrop(c);
     let mut s = Scene3::new(camera(c, azimuth));
-    let target = xyz(scene.v_edge);
-    let mut pts = scene.vertices.map(xyz);
+    let target = scene.v_edge;
+    let mut pts = scene.vertices;
     let (a, b) = (pts[0], pts[1]);
     pts[0] = lerp(a, target, progress);
     pts[1] = lerp(b, target, progress);
@@ -222,31 +216,30 @@ fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f32, azimuth: f32)
     ellipsoid(&mut s, scene.q_edge, target, palette::green());
     s.dot(target, Marker::Star, 14.0, palette::green());
     s.draw(c);
-    label(c, "3. EDGE CONTRACTION: V MINIMIZES QA + QB");
-    let size = (c.height as f32 / 32.0).clamp(8.0, 12.0);
+    label(c, "3. CONTRACTION: V MINIMIZES QA + QB");
     let err = |p: P| error(scene.q_edge, p);
-    c.text(
-        &format!(
-            "ERROR AT A {:.4}  AT B {:.4}  AT V {:.4}",
-            err(scene.vertices[0]),
-            err(scene.vertices[1]),
-            err(scene.v_edge)
-        ),
-        c.width as f32 * 0.5,
-        c.height as f32 * 0.93,
-        size,
-        palette::ink(),
-        Align::Center,
+    let text = format!(
+        "ERROR AT A {:.4}  AT B {:.4}  AT V {:.4}",
+        err(scene.vertices[0]),
+        err(scene.vertices[1]),
+        err(scene.v_edge)
     );
+    centred(c, &text, 0.93);
 }
 
 fn label(c: &mut Canvas, title: &str) {
+    centred(c, title, 0.2);
+}
+
+/// A line of text centred across the panel at `height` of the way down, small enough to fit.
+fn centred(c: &mut Canvas, text: &str, height: f32) {
     let size = (c.height as f32 / 32.0).clamp(8.0, 12.0);
+    let fit = c.width as f32 * 0.94 / gax_numga_examples::font::width(text, 1.0);
     c.text(
-        title,
+        text,
         c.width as f32 * 0.5,
-        c.height as f32 * 0.2,
-        size,
+        c.height as f32 * height,
+        size.min(fit),
         palette::ink(),
         Align::Center,
     );
@@ -258,7 +251,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let phase = t / SECONDS * core::f32::consts::TAU;
     let azimuth = 48f32.to_radians() + 0.5 * phase.sin();
     // Contract, hold, and open again.
-    let progress = (1.5 * (0.5 - 0.5 * phase.cos())).min(1.0);
+    let progress = f64::from((1.5 * (0.5 - 0.5 * phase.cos())).min(1.0));
     let scene = collapse();
     let w = c.width / 3;
     for i in 0..3 {
@@ -330,9 +323,8 @@ mod tests {
             assert!(error(scene.q_edge, scene.v_edge) < error(scene.q_edge, *end));
         }
         // And it is the minimum: any nearby point has a larger error.
-        for d in [[0.01, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.0, -0.01]] {
-            let [x, y, z] = scene.v_edge.to_euclidean();
-            let near = Point::xyz(x + d[0], y + d[1], z + d[2]);
+        for [x, y, z] in [[0.01, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.0, -0.01]] {
+            let near = scene.v_edge + Point::direction(x, y, z);
             assert!(error(scene.q_edge, near) > error(scene.q_edge, scene.v_edge));
         }
     }

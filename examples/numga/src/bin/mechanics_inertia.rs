@@ -15,15 +15,16 @@
 //! alone, and the convergence of grid and Monte Carlo sampling of a tetrahedron's inertia to
 //! the lumped one, which equals gax's mesh moments exactly.
 
-use gax::pga3d::{Line, Point};
+use gax::motions::Motions;
+use gax::pga3d::{Line, Motor, Point};
+use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
-#[allow(unused_imports)]
-use lie::Lie as _;
+use lie::{Lie, rigid};
 
 /// R(4,0,0): numga's spherical model `x+y+z+w+`, laid out as PGA3D with `e0` squaring to +1.
 mod sga3d {
@@ -57,34 +58,13 @@ mod pga4d {
     pub use pga4d::*;
 }
 
-/// A small xorshift generator: numga's NumPy streams cannot be reproduced.
-pub struct Rng(u64);
-
-impl Rng {
-    pub fn new(seed: u64) -> Rng {
-        Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
-    }
-
-    /// Uniform in `(0, 1]`.
-    pub fn unit(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        ((self.0 >> 11) as f64 + 1.0) / (1u64 << 53) as f64
-    }
-
-    /// Standard normal, by Box and Muller.
-    pub fn normal(&mut self) -> f64 {
-        let (u, v) = (self.unit(), self.unit());
-        (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-    }
-}
-
 /// numga's `inertia.py` over the kinds `Plane`, `Point`, `Line` (the bivectors, rates),
 /// `Forque` (the antibivectors) and `Motor` (the even versor) in scope, for an algebra whose
 /// points have `$n` coefficients (and whose motors list the scalar first).
 macro_rules! principal_frame {
     ($n:literal) => {
+        use crate::Draw as _;
+
         /// A rate-to-momentum map.
         pub type Inertia = Forque<(Line,), f64>;
         /// A second-moment map: `b & S(a)` is `Σ m (a & p)(b & p)` over the mass points.
@@ -199,33 +179,30 @@ macro_rules! principal_frame {
             m >> inertia.of(m << Line::slot())
         }
 
-        /// The energy form of an inertia on the bivector blades, `a & I(b)`.
+        /// The energy form of an inertia, `a & I(b)`, on the bivector blades: the coefficients
+        /// of the bilinear form `Line & inertia`.
         pub fn energies(inertia: Inertia) -> Vec<Vec<f64>> {
-            let blade = |i: usize| {
-                Line::<(), f64>::from_coeffs(core::array::from_fn(|k| f64::from(u8::from(k == i))))
-            };
-            let nb = Line::<(), f64>::zero().c.len();
-            (0..nb)
-                .map(|a| {
-                    (0..nb)
-                        .map(|b| (blade(a) & inertia.of(blade(b))).s())
-                        .collect()
-                })
-                .collect()
+            let form = Line::slot() & inertia;
+            form.c[0].iter().map(|row| row.to_vec()).collect()
+        }
+
+        /// A random motor: the exponential of a bivector of normal coefficients of size `size`.
+        pub fn random_motor(rng: &mut crate::Rng, size: f64) -> Mo {
+            Line::<(), f64>::from_coeffs(core::array::from_fn(|_| size * rng.normal())).exp()
         }
 
         /// Random points normalized, placed with a random motor, with masses in `[0.5, 1.5]`.
         pub fn cloud(seed: u64) -> (Vec<Pt>, Vec<f64>) {
-            let mut rng = crate::Rng::new(seed);
+            let mut rng = crate::rng(seed);
             let points: Vec<Pt> = (0..80)
                 .map(|_| {
-                    let p = Point::from_coeffs(core::array::from_fn(|_| rng.normal()));
-                    p * (1.0 / p.norm())
+                    Point::from_coeffs(core::array::from_fn(|_| rng.normal()))
+                        .normalized()
+                        .into_inner()
                 })
                 .collect();
-            let placement =
-                Line::<(), f64>::from_coeffs(core::array::from_fn(|_| 0.3 * rng.normal())).exp();
-            let masses = (0..80).map(|_| 0.5 + rng.unit()).collect();
+            let placement = random_motor(&mut rng, 0.3);
+            let masses = (0..80).map(|_| rng.range(0.5, 1.5)).collect();
             (points.into_iter().map(|p| placement >> p).collect(), masses)
         }
 
@@ -235,9 +212,7 @@ macro_rules! principal_frame {
         pub fn principal_frames(seed: u64) -> (Mo, Mo, [Vec<Vec<f64>>; 3]) {
             let (points, masses) = cloud(seed);
             let reference = reference();
-            let mut rng = crate::Rng::new(seed + 1);
-            let placement =
-                Line::<(), f64>::from_coeffs(core::array::from_fn(|_| 0.2 * rng.normal())).exp();
+            let placement = random_motor(&mut crate::rng(seed + 1), 0.2);
             // 1. Construct and diagonalize inertia from arbitrary mass points.
             let cloud_inertia = inertia_of(&points, &masses);
             let cloud_motor =
@@ -283,13 +258,6 @@ pub mod e4 {
     principal_frame!(5);
 }
 
-/// The Lie steppers for PGA3D motors.
-mod rigid {
-    /// The algebra.
-    pub type G = gax::motions::Pga3d;
-    pub type M = crate::lie::M<G>;
-}
-
 /// numga's `simplex.py`: inertia maps of simplices, in PGA3D.
 mod simplex {
     use super::*;
@@ -320,11 +288,8 @@ mod simplex {
             .iter()
             .map(|row| {
                 let mass: f64 = row.iter().sum();
-                let p = row
-                    .iter()
-                    .zip(corners)
-                    .fold(Point::zero(), |acc, (w, c)| acc + *c * *w);
-                p * (1.0 / mass.sqrt())
+                let p: P = row.iter().zip(corners).map(|(w, c)| *c * *w).sum();
+                p / mass.sqrt()
             })
             .collect()
     }
@@ -361,10 +326,10 @@ mod simplex {
     }
 
     /// Uniform barycentric weights: exponential variates normalized (a flat Dirichlet).
-    pub fn random_weights(count: usize, corners: usize, rng: &mut crate::Rng) -> Vec<Vec<f64>> {
+    pub fn random_weights(count: usize, corners: usize, rng: &mut Rng) -> Vec<Vec<f64>> {
         (0..count)
             .map(|_| {
-                let e: Vec<f64> = (0..corners).map(|_| -rng.unit().ln()).collect();
+                let e: Vec<f64> = (0..corners).map(|_| -(1.0 - rng.uniform()).ln()).collect();
                 let sum: f64 = e.iter().sum();
                 e.iter().map(|v| v / sum / count as f64).collect()
             })
@@ -408,22 +373,19 @@ fn scene() -> &'static Scene {
     static SCENE: std::sync::OnceLock<Scene> = std::sync::OnceLock::new();
     SCENE.get_or_init(|| {
         let raw = [
-            [1.3, 0.0, -0.2],
-            [-0.6, 0.9, 0.0],
-            [-0.5, -0.8, 0.1],
-            [0.1, 0.3, 1.5],
+            Point::xyz(1.3, 0.0, -0.2),
+            Point::xyz(-0.6, 0.9, 0.0),
+            Point::xyz(-0.5, -0.8, 0.1),
+            Point::xyz(0.1, 0.3, 1.5),
         ];
-        let c = (0..3)
-            .map(|k| raw.iter().map(|v| v[k]).sum::<f64>() / 4.0)
-            .collect::<Vec<_>>();
-        let corners: Vec<simplex::P> = raw
-            .iter()
-            .map(|v| Point::xyz(v[0] - c[0], v[1] - c[1], v[2] - c[2]))
-            .collect();
+        // Centred: moved by the translation from the centroid to the origin.
+        let centroid = raw.iter().copied().sum::<simplex::P>().unitized();
+        let centre = Motor::between(centroid, Point::xyz(0.0, 0.0, 0.0));
+        let corners: Vec<simplex::P> = raw.iter().map(|p| centre >> *p).collect();
         let inertia = simplex::lumped(&corners);
-        let inertia_inv = inertia.inverse();
+        let inertia_inv = rigid::G::mobility(inertia);
         // A spin about a skew axis through the centre of mass.
-        let mut motor = Line::<(), f64>::zero().exp();
+        let mut motor = rigid::G::identity();
         let mut rate = Line::new(0.4, 2.2, 0.9, 0.0, 0.0, 0.0);
         let mut motors = vec![motor];
         for _ in 0..(f64::from(SECONDS) / DT).round() as usize {
@@ -445,8 +407,7 @@ fn scene() -> &'static Scene {
             })
             .collect();
         // One Monte Carlo stream, its running mean read at logarithmic checkpoints.
-        let mut rng = Rng::new(0);
-        let draws = simplex::random_weights(100_000, 4, &mut rng);
+        let draws = simplex::random_weights(100_000, 4, &mut rng(0));
         let mut sum = e3::Inertia::zero();
         let mut monte_carlo = Vec::new();
         let mut next = 10;
@@ -486,10 +447,6 @@ fn scene() -> &'static Scene {
     })
 }
 
-fn xyz(p: Point<(), f64>) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let sc = scene();
@@ -507,7 +464,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let moment = e3::second_moment(world);
     let planes = e3::principal_planes(moment);
     let frame = e3::diagonalizing_motor(&planes, &e3::reference());
-    let back = frame.reverse();
     // The total mass is the moment form on the plane at infinity.
     let at_infinity = e3::plane_blade(3);
     let mass = (at_infinity & moment.of(at_infinity)).s();
@@ -515,6 +471,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // moment is 1 / its eigenvalue, and the equivalent solid ellipsoid has semi-axes
     // sqrt(5 c / m).
     let semi: [f64; 3] = core::array::from_fn(|axis| (5.0 / (planes[2 - axis].0 * mass)).sqrt());
+    // The ellipsoid as a map on points: the unit sphere stretched by the semi-axes along x, y
+    // and z, then carried into the recovered frame.
+    let stretch = Point::<(Point,), f64>::from_coeffs([
+        [semi[0], 0.0, 0.0, 0.0],
+        [0.0, semi[1], 0.0, 0.0],
+        [0.0, 0.0, semi[2], 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]);
+    let ellipsoid = frame.reverse() >> stretch;
     let left = w * 0.55;
     let cam = Camera::orbit(
         left as usize,
@@ -526,7 +491,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.42),
     );
     let mut s = Scene3::new(cam);
-    let corners: Vec<[f32; 3]> = sc.corners.iter().map(|p| xyz(m >> *p)).collect();
+    let corners: Vec<simplex::P> = sc.corners.iter().map(|p| m >> *p).collect();
     for f in [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]] {
         let (a, b, d) = (corners[f[0]], corners[f[1]], corners[f[2]]);
         let col = s.lit(a, b, d, palette::purple());
@@ -535,27 +500,28 @@ fn draw(c: &mut Canvas, t: f32) {
             s.seg(x, y, 1.2 * u, palette::ink(), 0.7);
         }
     }
-    // The principal axes and the second-moment ellipsoid, in the recovered frame.
+    // The principal axes and the second-moment ellipsoid, in the recovered frame: the images
+    // of the unit axes, and of the unit circles about them, turned by rotation motors.
     let colours = [palette::red(), palette::green(), palette::sky()];
-    let in_frame = |v: [f64; 3]| xyz(back >> Point::xyz(v[0], v[1], v[2]));
-    for axis in 0..3 {
-        let mut tip = [0.0; 3];
-        tip[axis] = semi[axis];
-        let (a, b) = (in_frame(tip.map(|v| -v)), in_frame(tip));
-        s.seg(a, b, 2.2 * u, colours[axis], 1.0);
-        s.dot(b, Marker::Dot, 6.0 * u, colours[axis]);
+    let origin = Point::xyz(0.0, 0.0, 0.0);
+    let axes = [
+        Point::direction(1.0, 0.0, 0.0),
+        Point::direction(0.0, 1.0, 0.0),
+        Point::direction(0.0, 0.0, 1.0),
+    ];
+    for (k, axis) in axes.into_iter().enumerate() {
+        let tip = ellipsoid.of(origin + axis);
+        s.seg(ellipsoid.of(origin - axis), tip, 2.2 * u, colours[k], 1.0);
+        s.dot(tip, Marker::Dot, 6.0 * u, colours[k]);
         // The ellipse in the plane of the other two axes.
-        let (i, j) = ((axis + 1) % 3, (axis + 2) % 3);
-        let ring: Vec<[f32; 3]> = (0..=64)
+        let start = origin + axes[(k + 1) % 3];
+        let ring: Vec<simplex::P> = (0..=64)
             .map(|q| {
-                let a = core::f64::consts::TAU * q as f64 / 64.0;
-                let mut v = [0.0; 3];
-                v[i] = semi[i] * a.cos();
-                v[j] = semi[j] * a.sin();
-                in_frame(v)
+                let turn = Motor::rotation(origin & axis, core::f64::consts::TAU * q as f64 / 64.0);
+                ellipsoid.of(turn >> start)
             })
             .collect();
-        s.polyline(&ring, 1.2 * u, colours[axis], 0.6);
+        s.polyline(&ring, 1.2 * u, colours[k], 0.6);
     }
     s.draw(c);
     // Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the
@@ -569,17 +535,14 @@ fn draw(c: &mut Canvas, t: f32) {
     .log_y();
     ax.frame(c, "SAMPLED SIMPLEX INERTIA", "SAMPLES", "RELATIVE ERROR");
     let shown = (t.rem_euclid(SECONDS) / SECONDS * 1.25).min(1.0);
-    let reveal = |pts: &[[f64; 2]]| -> Vec<[f32; 2]> {
+    let reveal = |pts: &'static [[f64; 2]]| -> &'static [[f64; 2]] {
         let n = ((pts.len() as f32 * shown).ceil() as usize).clamp(1, pts.len());
-        pts[..n]
-            .iter()
-            .map(|p| [p[0] as f32, p[1] as f32])
-            .collect()
+        &pts[..n]
     };
     let (g, r) = (reveal(&sc.grid), reveal(&sc.monte_carlo));
-    ax.polyline(c, &g, 1.8, palette::orange(), 1.0);
-    ax.scatter(c, &g, Marker::Dot, 5.0 * u, palette::orange(), 1.0);
-    ax.polyline(c, &r, 1.4, palette::sky(), 1.0);
+    ax.polyline(c, g, 1.8, palette::orange(), 1.0);
+    ax.scatter(c, g, Marker::Dot, 5.0 * u, palette::orange(), 1.0);
+    ax.polyline(c, r, 1.4, palette::sky(), 1.0);
     // The lumped inertia takes four points; gax's mesh moments agree with it to rounding.
     let floor = 2e-16f32;
     ax.scatter(
@@ -725,8 +688,8 @@ mod tests {
             ] {
                 let now = m.reverse() >> (frame(m).reverse() >> axis);
                 let then = start.reverse() >> axis;
-                let cos =
-                    now.e032() * then.e032() + now.e013() * then.e013() + now.e021() * then.e021();
+                // The inner product of the unit directions, by their planes through the origin.
+                let cos = (now.dual() | then.dual()).s();
                 assert!((cos.abs() - 1.0).abs() < 1e-9, "{cos}");
             }
         }

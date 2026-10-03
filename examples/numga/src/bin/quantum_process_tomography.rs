@@ -1,8 +1,8 @@
 //! numga's `quantum/process_tomography`: learning a qubit's noisy gate from prepared states and
-//! measured probabilities, in the Pauli algebra of space. A state is a scalar plus a vector,
-//! `(1 + r) / 2`; its scalar part keeps the normalization, so rotations and relaxation toward a
+//! measured probabilities, in the Pauli algebra of space (VGA3D). A state is a scalar plus a
+//! vector, `(1 + r) / 2` (VGA3D's `Paravector`); its scalar part keeps the normalization, so rotations and relaxation toward a
 //! preferred state are linear maps on states. Unobserved alternatives act by sandwiches whose
-//! results add: a noisy gate is a sum of sandwiches (Kraus operators), a map `State <- State`.
+//! results add: a noisy gate is a sum of sandwiches (Kraus operators), a map `Paravector <- Paravector`.
 //!
 //! Four preparations spanning the states determine such a map. A measurement reads a state by
 //! its scalar product with an effect, and a dual frame undoes the overlap between these readouts:
@@ -15,88 +15,94 @@
 //! Below, the probabilities the learned maps predict after as many uses, for states the
 //! reconstruction never saw, against the exact ones, and the measured probability tables.
 
-use gax_numga_examples::canvas::mix;
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, colormap,
-    palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, backdrop, caption, colormap, palette, run,
 };
 use std::sync::OnceLock;
 
-gax::algebra! {
-    algebra pauli "Euclidean space R(3,0) with the kinds a qubit's state needs: the Pauli algebra.";
-    basis e1 = 1, e2 = 1, e3 = 1;
-    kind Scalar = [1];
-    kind Vector = [e1, e2, e3];
-    kind Bivector = [e23, e31, e12];
-    kind Pseudoscalar = [e123];
-    versor Rotor = [1, e23, e31, e12];
-    kind State = [1, e1, e2, e3];
-    kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123];
-}
-
 mod tomography {
-    use super::pauli::*;
+    use gax::vga3d::{Bivector, Multivector, Paravector, Vector};
 
     /// A state `(1 + r) / 2`, and a channel: a map on states.
-    pub type St = State<(), f64>;
-    pub type Channel = State<(State,), f64>;
+    pub type St = Paravector<(), f64>;
+    pub type Channel = Paravector<(Paravector,), f64>;
     pub type Bi = Bivector<(), f64>;
+    /// A Bloch vector.
+    pub type Space = Vector<(), f64>;
 
     pub fn one() -> St {
-        State::new(1.0, 0.0, 0.0, 0.0)
+        Paravector::new(1.0, 0.0, 0.0, 0.0)
     }
-    pub fn x() -> Vector<(), f64> {
+    pub fn x() -> Space {
         Vector::new(1.0, 0.0, 0.0)
     }
-    pub fn z() -> Vector<(), f64> {
+    pub fn z() -> Space {
         Vector::new(0.0, 0.0, 1.0)
     }
     pub fn xy() -> Bi {
         Bivector::new(0.0, 0.0, 1.0)
     }
 
+    /// The open state.
+    fn open() -> Channel {
+        Paravector::slot()
+    }
+
     /// The state with Bloch vector `r`.
-    pub fn state(r: [f64; 3]) -> St {
-        State::new(1.0, r[0], r[1], r[2]) * 0.5
+    pub fn state(r: Space) -> St {
+        (one() + r.cast::<Paravector>()) * 0.5
     }
 
     /// The Bloch vector of a state: twice its vector part.
-    pub fn bloch(rho: St) -> [f64; 3] {
-        [2.0 * rho.e1(), 2.0 * rho.e2(), 2.0 * rho.e3()]
+    pub fn bloch(rho: St) -> Space {
+        rho.cast::<Vector>() * 2.0
     }
 
-    /// The sandwich by one path of a channel, `k rho ~k`. A path may be a scalar plus a vector
-    /// plus a bivector; its sandwich of a state (its own reverse) is a state again.
+    /// The sandwich by one path of a channel, `k rho ~k`. A path may be any multivector whose
+    /// sandwich keeps a state (its own reverse) a state, such as a scalar plus a vector plus a
+    /// bivector, or a rotor; the other grades of the product are zero and dropped.
     fn sandwich(k: Multivector<(), f64>) -> Channel {
-        (k * State::slot() * k.reverse()).cast::<State>()
+        (k * open() * k.reverse()).cast::<Paravector>()
     }
 
     /// A coherent turn in `plane` after independent phase noise and relaxation toward the north
-    /// pole. The noise's alternatives are not observed: their output states add, not their
-    /// amplitudes.
+    /// pole: each a sum of sandwiches, composed. The noise's alternatives are not observed:
+    /// their output states add, not their amplitudes.
     pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Bi) -> Channel {
-        let keep = Rotor::new((1.0 - phase_flip).sqrt(), 0.0, 0.0, 0.0);
-        let flip = (xy() * phase_flip.sqrt()).cast::<Rotor>();
-        let dephasing = (keep >> State::slot()) + (flip >> State::slot());
-        let north = (one() + z().cast::<State>()) * 0.5;
-        let south = (one() - z().cast::<State>()) * 0.5;
+        // Kept, or flipped in the xy plane; the square roots are amplitudes.
+        let keep = one().cast::<Multivector>() * (1.0 - phase_flip).sqrt();
+        let flip = xy().cast::<Multivector>() * phase_flip.sqrt();
+        let dephasing = sandwich(keep) + sandwich(flip);
+        let (north, south) = (state(z()), state(-z()));
         // The first path keeps north and attenuates south; the second carries south to north.
-        // The square roots are amplitudes, whose squares give the loss probability.
         let stay = (north + south * (1.0 - loss).sqrt()).cast::<Multivector>();
-        let fall = (x() * south * loss.sqrt()).cast::<Multivector>();
+        let fall = x() * south * loss.sqrt();
         let damping = sandwich(stay) + sandwich(fall);
         let rotation = (plane * (-angle / 2.0)).exp();
         // A map applied to another map composes them; the rotor then turns every output.
-        rotation >> damping.of(dephasing)
+        sandwich(rotation.cast::<Multivector>()).of(damping.of(dephasing))
+    }
+
+    /// The dyad that reads a state by its scalar product with `along` and sends the reading
+    /// out along `out`. (The product of a scalar plus a vector with a scalar is a state again;
+    /// gax types it as a multivector, so the empty grades are dropped.)
+    pub fn dyad(out: St, along: St) -> Channel {
+        (out * along.scalar_product(open())).cast::<Paravector>()
+    }
+
+    /// The overlap of a set of states: the sum of their dyads, each measuring the overlap with
+    /// its state and sending it back along it.
+    pub fn overlap(states: &[St]) -> Channel {
+        states
+            .iter()
+            .fold(Channel::zero(), |acc, s| acc + dyad(*s, *s))
     }
 
     /// Weights that recover any state from its scalar products with a spanning set of states:
-    /// the dyads measure the overlap with each state and send it back along it; the dual frame
-    /// undoes that overlap.
+    /// the dual frame undoes the overlap.
     pub fn dual_frame(states: &[St]) -> Vec<St> {
-        let overlap = states.iter().fold(Channel::zero(), |acc, s| {
-            acc + *s * s.scalar_product(State::slot())
-        });
+        let overlap = overlap(states);
         states.iter().map(|s| overlap.solve(*s)).collect()
     }
 
@@ -130,7 +136,7 @@ mod tomography {
                     .zip(&measurement_dual)
                     .fold(St::zero(), |o, (p, m)| o + *m * *p);
                 // Leaving the input open extends the measured action to every state.
-                acc + output * dual.scalar_product(State::slot())
+                acc + dyad(output, *dual)
             })
     }
 
@@ -155,8 +161,7 @@ mod tomography {
                     .map(|j| {
                         let azimuth = core::f64::consts::TAU * j as f64 / longitudes as f64;
                         let turn = (xy() * (-azimuth / 2.0)).exp();
-                        let d = turn >> (tilt >> z().cast::<State>());
-                        (one() + d) * 0.5
+                        state((turn * tilt) >> z())
                     })
                     .collect()
             })
@@ -172,21 +177,23 @@ mod tomography {
     pub const STEPS: usize = 48;
 
     pub fn rotation_plane() -> Bi {
-        Bivector::new(1.0, 1.0, 1.0) / 3f64.sqrt()
+        Bivector::new(1.0, 1.0, 1.0).normalized().into_inner()
     }
 
     /// The tetrahedral preparations, and the detector's effects: half of them.
     pub fn prepared() -> Vec<St> {
-        let k = 1.0 / 3f64.sqrt();
+        tetrahedron().into_iter().map(state).collect()
+    }
+
+    /// The unit directions to a regular tetrahedron's corners.
+    pub fn tetrahedron() -> [Space; 4] {
         [
-            [1.0, 1.0, 1.0],
-            [1.0, -1.0, -1.0],
-            [-1.0, 1.0, -1.0],
-            [-1.0, -1.0, 1.0],
+            Vector::new(1.0, 1.0, 1.0),
+            Vector::new(1.0, -1.0, -1.0),
+            Vector::new(-1.0, 1.0, -1.0),
+            Vector::new(-1.0, -1.0, 1.0),
         ]
-        .iter()
-        .map(|d| state(d.map(|v| v * k)))
-        .collect()
+        .map(|d| d.normalized().into_inner())
     }
     pub fn effects() -> Vec<St> {
         prepared().iter().map(|p| *p * 0.5).collect()
@@ -217,18 +224,12 @@ mod tomography {
 
     /// Pure and mixed states absent from the reconstruction.
     pub fn heldout() -> Vec<St> {
-        let dirs = [
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [-1.0, 0.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, 0.0, -1.0],
-        ];
-        let lengths = [1.0, 0.7, 0.3, 1.0, 0.7, 0.0];
-        dirs.iter()
+        let axes = [x(), Vector::new(0.0, 1.0, 0.0), z()];
+        let lengths = [1.0, 0.7, 0.3, -1.0, -0.7, 0.0];
+        axes.iter()
+            .cycle()
             .zip(lengths)
-            .map(|(d, l)| state(d.map(|v| v * l)))
+            .map(|(d, l)| state(*d * l))
             .collect()
     }
 
@@ -251,19 +252,11 @@ mod tomography {
             .collect()
     }
 
-    /// The singular values of the map the tetrahedron's dyads make, and of the map two opposite
-    /// probes make: how many state directions each determines.
+    /// The singular values of the tetrahedron's overlap, and of two opposite probes': how many
+    /// state directions each determines.
     pub fn completeness() -> [[f64; 4]; 2] {
-        let dyads = |states: &[St]| {
-            states.iter().fold(Channel::zero(), |acc, s| {
-                acc + *s * s.scalar_product(State::slot())
-            })
-        };
-        let opposite = [
-            (one() + z().cast::<State>()) * 0.5,
-            (one() - z().cast::<State>()) * 0.5,
-        ];
-        [dyads(&prepared()).svd().1, dyads(&opposite).svd().1]
+        let opposite = [state(z()), state(-z())];
+        [overlap(&prepared()).svdvals(), overlap(&opposite).svdvals()]
     }
 }
 
@@ -297,26 +290,6 @@ fn data() -> &'static Data {
     })
 }
 
-fn b3(rho: St) -> [f32; 3] {
-    bloch(rho).map(|v| v as f32)
-}
-
-/// A 3D panel: the scene drawn on its own canvas over the matching stretch of the backdrop, and
-/// copied into `rect`.
-fn panel3(c: &mut Canvas, rect: [usize; 4], cam: Camera, fill: impl FnOnce(&mut Scene3)) {
-    let [x0, y0, x1, y1] = rect;
-    let mut sub = Canvas::new(x1 - x0, y1 - y0);
-    let rows = (c.height.max(2) - 1) as f32;
-    sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / rows),
-        mix(palette::top(), palette::bottom(), (y1 - 1) as f32 / rows),
-    );
-    let mut scene = Scene3::new(cam);
-    fill(&mut scene);
-    scene.draw(&mut sub);
-    c.blit(&sub, x0, y0);
-}
-
 /// A table of values as coloured cells (a heat map), `[row][column]`, with the values written in
 /// and the rows and columns named.
 fn table(
@@ -336,7 +309,8 @@ fn table(
             let quad = [[x0, y0], [x0 + cw, y0], [x0 + cw, y0 + ch], [x0, y0 + ch]];
             c.fill(&quad, colour(*v), 1.0);
             c.text(
-                &format!("{v:.2}"),
+                // Probabilities, without the leading zero, to fit the cells.
+                format!("{v:.2}").trim_start_matches('0'),
                 x0 + cw * 0.5,
                 y0 + ch * 0.5 + size * 0.5,
                 size,
@@ -388,15 +362,15 @@ fn draw(c: &mut Canvas, t: f32) {
     let azimuth = (-54.0f32).to_radians() + 0.5 * (core::f32::consts::TAU * phase).sin();
     for k in 0..3 {
         let map = d.powers[k][uses - 1];
-        let image: Vec<Vec<[f32; 3]>> = d
+        let image: Vec<Vec<Space>> = d
             .surface
             .iter()
-            .map(|row| row.iter().map(|s| b3(map.of(*s))).collect())
+            .map(|row| row.iter().map(|s| bloch(map.of(*s))).collect())
             .collect();
-        let rect = [k * third, top, (k + 1) * third, bottom];
+        let rect = [k * third, top, (k + 1) * third, bottom].map(|v| v as f32);
         let cam = Camera::orbit(
-            rect[2] - rect[0],
-            rect[3] - rect[1],
+            third,
+            bottom - top,
             [0.0; 3],
             4.6,
             azimuth,
@@ -427,13 +401,13 @@ fn draw(c: &mut Canvas, t: f32) {
                 s.polyline(row, 1.0, colours[k], 0.85);
             }
             for j in (0..LONGITUDES).step_by(2) {
-                let meridian: Vec<[f32; 3]> = image.iter().map(|row| row[j]).collect();
+                let meridian: Vec<Space> = image.iter().map(|row| row[j]).collect();
                 s.polyline(&meridian, 1.0, colours[k], 0.85);
             }
             // Hollow and filled markers pair each preparation with its image.
             for (p, pc) in d.prepared.iter().zip(probe_colours) {
-                s.dot(b3(*p), Marker::Ring, 8.0, pc);
-                s.dot(b3(map.of(*p)), Marker::Dot, 6.0, pc);
+                s.dot(bloch(*p), Marker::Ring, 8.0, pc);
+                s.dot(bloch(map.of(*p)), Marker::Dot, 6.0, pc);
             }
         });
         c.text(
@@ -448,7 +422,7 @@ fn draw(c: &mut Canvas, t: f32) {
     c.text(
         &format!("{uses} USES OF EACH LEARNED CHANNEL"),
         wf * 0.5,
-        bottom as f32 + small * 0.5,
+        bottom as f32 - small * 0.8,
         small * 1.1,
         palette::ink(),
         Align::Center,
@@ -482,11 +456,11 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
     ax.line(c, [0.0, 0.0], [0.54, 0.54], 1.0, palette::grid(), 1.0);
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
-        let pts: Vec<[f32; 2]> = exact
+        let pts: Vec<[f64; 2]> = exact
             .iter()
             .flatten()
             .zip(predicted.iter().flatten())
-            .map(|(a, b)| [*a as f32, *b as f32])
+            .map(|(a, b)| [*a, *b])
             .collect();
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 0.85);
     }
@@ -541,62 +515,36 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::pauli::*;
     use super::tomography::*;
+    use gax::ApproxEq;
+    use gax::vga3d::{Bivector, Multivector, Pseudoscalar, Vector};
+    use gax_numga_examples::rng::{Draw, rng};
 
-    /// A small xorshift generator: numga's NumPy streams cannot be reproduced, and the checks
-    /// that use it hold for any states.
-    struct Rng(u64);
-    impl Rng {
-        fn unit(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            (self.0 >> 11) as f64 / (1u64 << 53) as f64
-        }
-        fn normal(&mut self) -> f64 {
-            let (u, v) = (self.unit().max(1e-300), self.unit());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-        /// Bloch vectors in random directions with lengths spread evenly over `[0, 1]`.
-        fn blochs(&mut self, n: usize) -> Vec<[f64; 3]> {
-            (0..n)
-                .map(|k| {
-                    let d = [self.normal(), self.normal(), self.normal()];
-                    let l = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-                    let length = k as f64 / (n - 1) as f64;
-                    d.map(|v| v / l * length)
-                })
-                .collect()
-        }
+    /// Bloch vectors in random directions with lengths spread evenly over `[0, 1]`.
+    fn blochs(seed: u64, n: usize) -> Vec<Space> {
+        let mut r = rng(seed);
+        (0..n)
+            .map(|k| Vector::from_coeffs(r.direction()) * (k as f64 / (n - 1) as f64))
+            .collect()
     }
 
-    /// Dephasing and amplitude damping followed by Rodrigues' rotation about `axis`.
-    fn analytical_bloch(
-        r: [f64; 3],
-        angle: f64,
-        phase_flip: f64,
-        loss: f64,
-        axis: [f64; 3],
-    ) -> [f64; 3] {
+    /// Dephasing and amplitude damping followed by Rodrigues' rotation about the unit `axis`,
+    /// written out with the cross product (the vector at right angles to the plane `axis ^ v`)
+    /// rather than a rotor.
+    fn analytical_bloch(r: Space, angle: f64, phase_flip: f64, loss: f64, axis: Space) -> Space {
         let transverse = (1.0 - 2.0 * phase_flip) * (1.0 - loss).sqrt();
-        let v = [
-            transverse * r[0],
-            transverse * r[1],
-            (1.0 - loss) * r[2] + loss,
-        ];
-        let (c, s) = (angle.cos(), angle.sin());
-        let cross = [
-            axis[1] * v[2] - axis[2] * v[1],
-            axis[2] * v[0] - axis[0] * v[2],
-            axis[0] * v[1] - axis[1] * v[0],
-        ];
-        let along = axis[0] * v[0] + axis[1] * v[1] + axis[2] * v[2];
-        [0, 1, 2].map(|i| c * v[i] + s * cross[i] + (1.0 - c) * axis[i] * along)
+        let v = Vector::new(
+            transverse * r.e1(),
+            transverse * r.e2(),
+            (1.0 - loss) * r.e3() + loss,
+        );
+        let cross = -(Pseudoscalar::new(1.0) * (axis ^ v));
+        let along = (axis | v).s();
+        v * angle.cos() + cross * angle.sin() + axis * ((1.0 - angle.cos()) * along)
     }
 
     fn close(a: St, b: St, tol: f64) -> bool {
-        a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() <= tol)
+        a.max_abs_diff(&b) <= tol
     }
 
     #[test]
@@ -604,19 +552,10 @@ mod tests {
         let angles = [0.0, 0.47, -0.9, 0.3];
         let phase_flip = [0.0, 0.22, 0.08, 0.5];
         let loss = [0.0, 0.45, 1.0, 0.3];
-        let n = 14f64.sqrt();
-        let axis = [2.0 / n, -1.0 / n, 3.0 / n];
-        let plane = Bivector::new(2.0, -1.0, 3.0) / n;
-        let blochs = Rng(180).blochs(29);
-        let detector: Vec<[f64; 3]> = [
-            [1.0, 1.0, 1.0],
-            [1.0, -1.0, -1.0],
-            [-1.0, 1.0, -1.0],
-            [-1.0, -1.0, 1.0],
-        ]
-        .iter()
-        .map(|d| d.map(|v| v / 3f64.sqrt()))
-        .collect();
+        let axis = Vector::new(2.0, -1.0, 3.0).normalized().into_inner();
+        let plane = Bivector::new(2.0, -1.0, 3.0).normalized().into_inner();
+        let blochs = blochs(180, 29);
+        let detector = tetrahedron();
         let effects: Vec<St> = detector.iter().map(|d| state(*d) * 0.5).collect();
         for c in 0..4 {
             let device = noisy_gate(angles[c], phase_flip[c], loss[c], plane);
@@ -627,11 +566,9 @@ mod tests {
                 let want = analytical_bloch(*r, angles[c], phase_flip[c], loss[c], axis);
                 assert!(close(out, state(want), 1e-8), "{out:?} vs {want:?}");
                 assert!((2.0 * out.s() - 1.0).abs() < 1e-8);
-                let b = bloch(out);
-                assert!((b[0] * b[0] + b[1] * b[1] + b[2] * b[2]).sqrt() <= 1.0 + 1e-8);
+                assert!(bloch(out).norm() <= 1.0 + 1e-8);
                 for (prob, dir) in row.iter().zip(&detector) {
-                    let expected =
-                        (1.0 + want[0] * dir[0] + want[1] * dir[1] + want[2] * dir[2]) / 4.0;
+                    let expected = (1.0 + (want | *dir).s()) / 4.0;
                     assert!((prob - expected).abs() < 1e-8);
                     assert!(*prob >= -1e-8);
                 }
@@ -645,26 +582,17 @@ mod tests {
         let angles = [0.31, -0.76];
         let phase_flip = [0.12, 0.07];
         let loss = [0.26, 0.54];
-        let plane = Bivector::new(1.0, 0.0, 1.0) / 2f64.sqrt();
+        let plane = Bivector::new(1.0, 0.0, 1.0).normalized().into_inner();
         // Six preparations are redundant, while the four detector directions are rotated
         // independently: the reconstruction cannot rely on matching the two frames.
-        let prepared: Vec<St> = [
-            [1.0, 0.0, 0.0],
-            [-1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, -1.0, 0.0],
-            [0.0, 0.0, 1.0],
-            [0.0, 0.0, -1.0],
-        ]
-        .iter()
-        .map(|d| state(*d))
-        .collect();
+        let axes = [x(), Vector::new(0.0, 1.0, 0.0), z()];
+        let prepared: Vec<St> = axes.iter().flat_map(|a| [state(*a), state(-*a)]).collect();
         let rotation = (xy() * -0.23).exp() * (Bivector::new(1.0, 0.0, 0.0) * 0.17).exp();
         let effects: Vec<St> = super::tomography::effects()
             .iter()
-            .map(|e| rotation >> *e)
+            .map(|e| (rotation >> *e).cast::<gax::vga3d::Paravector>())
             .collect();
-        let unseen: Vec<St> = Rng(972).blochs(37).iter().map(|r| state(*r)).collect();
+        let unseen: Vec<St> = blochs(972, 37).into_iter().map(state).collect();
         for c in 0..2 {
             let device = noisy_gate(angles[c], phase_flip[c], loss[c], plane);
             let measured = probabilities(device, &prepared, &effects);
@@ -689,8 +617,12 @@ mod tests {
                 assert!((a - b).abs() < 1e-12);
             }
         }
-        let blochs = [[0.2, -0.3, 0.4], [-0.6, 0.1, 0.2], [0.0, 0.0, -1.0]];
-        let axis = [1.0 / 3f64.sqrt(); 3];
+        let blochs = [
+            Vector::new(0.2, -0.3, 0.4),
+            Vector::new(-0.6, 0.1, 0.2),
+            Vector::new(0.0, 0.0, -1.0),
+        ];
+        let axis = Vector::new(1.0, 1.0, 1.0).normalized().into_inner();
         for (c, l) in learned.iter().enumerate() {
             let mut expected = blochs;
             for accumulated in powers(*l, 4) {
@@ -720,8 +652,11 @@ mod tests {
     fn the_surface_is_pure_and_the_animation_draws() {
         for row in sphere(8, 16) {
             for s in row {
-                let square = s * s - s.cast::<Multivector>();
-                assert!(square.c.iter().all(|v| v.abs() < 1e-8), "{square:?}");
+                let square = s * s;
+                assert!(
+                    square.max_abs_diff(&s.cast::<Multivector>()) < 1e-8,
+                    "{square:?}"
+                );
             }
         }
         let mut draw = super::draw;

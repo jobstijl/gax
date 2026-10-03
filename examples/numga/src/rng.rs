@@ -1,49 +1,40 @@
-//! A small seeded random generator (xorshift64) with uniform and Gaussian draws: numpy's streams
-//! cannot be reproduced, so the examples use this one and keep their checks robust to the draw.
-//!
-//! The Gaussian draw (Box and Muller) and the normalization of a random direction are sampling
-//! formulas, not geometry: the one place in the shared code with float square roots and
-//! trigonometry.
-#![allow(clippy::disallowed_methods)]
+//! Random numbers for the examples: `rand`'s seeded generator, with the draws they use
+//! (numpy's streams cannot be reproduced, so the checks hold for any draw).
 
-/// The generator's state: `Rng(seed)` starts from the seed as given, `Rng::new` scrambles it.
-#[derive(Clone, Debug)]
-pub struct Rng(pub u64);
+use rand::SeedableRng;
 
-impl Rng {
-    /// A generator from a scrambled seed (any value).
-    pub fn new(seed: u64) -> Rng {
-        Rng(seed.wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1)
+/// The generator.
+pub type Rng = rand::rngs::StdRng;
+
+/// A generator from a seed.
+pub fn rng(seed: u64) -> Rng {
+    Rng::seed_from_u64(seed)
+}
+
+/// The draws the examples use, for any generator.
+pub trait Draw: rand::Rng {
+    /// Uniform in `[0, 1)`.
+    fn uniform(&mut self) -> f64 {
+        self.random()
     }
 
-    fn bits(&mut self) -> u64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        self.0
+    /// Uniform in `[lo, hi)`.
+    fn range(&mut self, lo: f64, hi: f64) -> f64 {
+        self.random_range(lo..hi)
     }
 
-    /// Uniform in `(0, 1)`: the midpoints of `2^53` bins, so neither end (`ln` and division
-    /// are safe).
-    pub fn uniform(&mut self) -> f64 {
-        ((self.bits() >> 11) as f64 + 0.5) / (1u64 << 53) as f64
+    /// A standard normal draw.
+    fn normal(&mut self) -> f64 {
+        self.sample(rand_distr::StandardNormal)
     }
 
-    /// Uniform in `(lo, hi)`.
-    pub fn range(&mut self, lo: f64, hi: f64) -> f64 {
-        lo + (hi - lo) * self.uniform()
-    }
-
-    /// A standard normal draw (Box and Muller).
-    pub fn normal(&mut self) -> f64 {
-        let (u, v) = (self.uniform(), self.uniform());
-        (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-    }
-
-    /// A direction uniform on the unit sphere in `n` dimensions.
-    pub fn direction<const N: usize>(&mut self) -> [f64; N] {
+    /// A direction uniform on the unit sphere in `n` dimensions (`n` normals, normalized).
+    fn direction<const N: usize>(&mut self) -> [f64; N] {
         let v: [f64; N] = core::array::from_fn(|_| self.normal());
+        #[allow(clippy::disallowed_methods)] // sampling, not geometry
         let n = v.iter().map(|x| x * x).sum::<f64>().sqrt().max(1e-300);
         v.map(|x| x / n)
     }
 }
+
+impl<R: rand::Rng + ?Sized> Draw for R {}

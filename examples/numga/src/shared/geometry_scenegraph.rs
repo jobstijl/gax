@@ -6,8 +6,8 @@
 //! box to sensor pixels.
 //!
 //! numga's rotors `exp(xy θ / 2)` turn by `-θ` about `z` (gax's `Motor::rotation` is right
-//! handed and so is `exp(-B θ / 2)`); the port writes numga's exponentials literally, so its
-//! joint angles pose the arm as numga's do.
+//! handed: `exp(-B θ / 2)`), so the joints turn by minus their angles, and numga's joint angles
+//! pose the arm as numga's do.
 
 // Each binary that includes this module uses a different part of it.
 #![allow(dead_code)]
@@ -33,40 +33,21 @@ pub fn origin() -> P {
     Point::xyz(0.0, 0.0, 0.0)
 }
 
-/// The finite point `(x, y, z)`.
-pub fn point(c: [f64; 3]) -> P {
-    Point::xyz(c[0], c[1], c[2])
+/// The axis through the origin along the direction `(x, y, z)`: their join. The `z` axis is
+/// numga's bivector `xy = e12`, the `y` axis its `zx = e31`.
+pub fn axis(x: f64, y: f64, z: f64) -> L {
+    origin() & Point::direction(x, y, z)
 }
 
-/// numga's bivector blades: `xy = e12`, `zx = e31`, `yz = e23` (the lines through the origin
-/// along `z`, `y` and `x`, numga's rotation generators).
-pub fn xy() -> L {
-    Line::new(0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
-}
-
-/// `zx = e31`.
-pub fn zx() -> L {
-    Line::new(0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
-}
-
-/// `yz = e23`.
-pub fn yz() -> L {
-    Line::new(1.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-}
-
-/// numga's rotor `exp(generator angle / 2)`.
-pub fn rotor(generator: L, angle: f64) -> M {
-    generator.gp(angle * 0.5).exp()
+/// A joint turned by `angle` about `axis` as numga turns it, `exp(axis angle / 2)`: by
+/// `-angle`, right handed.
+pub fn joint(axis: L, angle: f64) -> M {
+    Motor::rotation(axis, -angle)
 }
 
 /// The translation by `d` along `z`: numga's `exp(zw d / 2)`, with `zw = e3 e0 = -e03`.
 pub fn up(d: f64) -> M {
     Motor::translation(0.0, 0.0, d)
-}
-
-/// The Euclidean coordinates of a finite point.
-pub fn xyz(p: P) -> [f64; 3] {
-    p.to_euclidean()
 }
 
 // --- geometry primitives ------------------------------------------------------------------
@@ -83,7 +64,7 @@ pub fn canonical_unit_box() -> [P; 8] {
         [0.5, 0.5, 0.5],
         [-0.5, 0.5, 0.5],
     ]
-    .map(point)
+    .map(|[x, y, z]| Point::xyz(x, y, z))
 }
 
 /// The unit box's edges, as vertex index pairs: the bottom ring (`z = -0.5`), the top ring and
@@ -148,16 +129,17 @@ pub fn robot_arm(angles: [f64; 4]) -> ([PointMap; 5], [M; 4]) {
     // The pedestal rests on the floor `z = 0`.
     let body_0 = up(0.125) >> anisotropic_scale(0.9, 0.9, 0.25);
     // The turret yaws about the vertical at height 0.25.
-    let turret = up(0.25) * rotor(xy(), base);
+    let (yaw, pitch) = (axis(0.0, 0.0, 1.0), axis(0.0, 1.0, 0.0));
+    let turret = up(0.25) * joint(yaw, base);
     let body_1 = (turret * up(0.175)) >> anisotropic_scale(0.5, 0.5, 0.35);
     // The shoulder, 0.35 above the turret's base, pitches about its local y axis.
-    let shoulder = turret * up(0.35) * rotor(zx(), shoulder);
+    let shoulder = turret * up(0.35) * joint(pitch, shoulder);
     let body_2 = (shoulder * up(0.6)) >> anisotropic_scale(0.24, 0.24, 1.2);
     // The elbow at the tip of the upper arm, 1.2 along it.
-    let elbow = shoulder * up(1.2) * rotor(zx(), elbow);
+    let elbow = shoulder * up(1.2) * joint(pitch, elbow);
     let body_3 = (elbow * up(0.5)) >> anisotropic_scale(0.18, 0.18, 1.0);
     // The wrist at the tip of the forearm, 1.0 along it.
-    let wrist = elbow * up(1.0) * rotor(zx(), wrist);
+    let wrist = elbow * up(1.0) * joint(pitch, wrist);
     // The gripper block.
     let body_4 = (wrist * up(0.15)) >> anisotropic_scale(0.28, 0.14, 0.3);
     (
@@ -194,14 +176,12 @@ pub fn lens_camera(pose: M, front: LineMap, rear: LineMap, pupil: P, sensor: Pl)
     rear.of(front.of(incoming)) ^ sensor
 }
 
-/// The camera motor at `position` that turns its `+z` axis to `target`: a pitch about `x` (a
-/// quarter turn less the pitch down to the target), then the translation. The lenses and the
-/// sensor lie along `-z`, behind the pupil as light travels. (numga's docstring has the optical
-/// axis `-z` point at the target; its numbers, and this port's, have `+z`.)
-pub fn look_at(position: [f64; 3], target: [f64; 3]) -> M {
-    let translation = Motor::translation(position[0], position[1], position[2]);
-    let pitch = (target[2] - position[2]).atan2(target[1] - position[1]);
-    translation * rotor(yz(), core::f64::consts::FRAC_PI_2 - pitch)
+/// The camera motor at `position` that turns its `+z` axis to `target`, its `+y` axis as far
+/// down as it goes (numga's pitch about `x`, for a target straight ahead along `y`). The lenses
+/// and the sensor lie along `-z`, behind the pupil as light travels. (numga's docstring has the
+/// optical axis `-z` point at the target; its numbers, and this port's, have `+z`.)
+pub fn look_at(position: P, target: P) -> M {
+    Motor::look_at(position, target, Point::direction(0.0, 0.0, -1.0))
 }
 
 /// The viewport `Point <- Point` from metric sensor coordinates to pixels: the

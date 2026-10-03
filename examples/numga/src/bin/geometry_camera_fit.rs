@@ -13,6 +13,7 @@ use gax::dual::{Dual, gradient};
 use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
 use gax_numga_examples::canvas::mix;
+use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
 };
@@ -25,11 +26,9 @@ mod camera_fit {
     pub type B = Line<(), f64>;
     pub type D = Dual<f64, 6>;
 
-    pub use gax_numga_examples::rng::Rng;
-
     /// The world: thirty points about the origin.
     pub fn world() -> Vec<P> {
-        let mut rng = Rng(0xca3e_0001);
+        let mut rng = rng(0xca3e_0001);
         (0..30)
             .map(|_| Point::xyz(rng.normal(), rng.normal(), rng.normal()))
             .collect()
@@ -53,12 +52,12 @@ mod camera_fit {
     }
 
     /// The mean squared distance between two sets of images: two images of unit weight differ
-    /// by an ideal point, whose dual is the Euclidean displacement on the screen.
+    /// by a direction, the displacement on the screen.
     pub fn misfit<T: Real>(images: &[Point<(), T>], observed: &[P]) -> T {
         let c = T::from_f64;
         let mut sum = c(0.0);
         for (a, o) in images.iter().zip(observed) {
-            sum = sum + (*a - o.map_coefs(c)).dual().norm_squared();
+            sum = sum + (*a - o.map_coefs(c)).ideal_norm_squared();
         }
         sum / c(images.len() as f64)
     }
@@ -113,15 +112,10 @@ fn path() -> &'static [(B, f64)] {
     PATH.get_or_init(|| descend(STEPS))
 }
 
-fn xyz(p: P) -> [f32; 3] {
-    let [x, y, z] = p.to_euclidean();
-    [x as f32, y as f32, z as f32]
-}
-
 /// A camera's frustum: its centre, and the corners of its screen.
 fn frustum(s: &mut Scene3, generator: B, colour: gax_numga_examples::Rgb, width: f32) {
     let rig: Unit<_> = generator.exp();
-    let at = |x: f64, y: f64, z: f64| xyz(rig >> Point::xyz(x, y, z));
+    let at = |x: f64, y: f64, z: f64| rig >> Point::xyz(x, y, z);
     let centre = at(0.0, 0.0, 0.0);
     let corners = [
         at(-0.8, -0.6, 1.0),
@@ -153,13 +147,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let wl = (w * 0.55) as usize;
     let mut left = Canvas::new(wl, c.height);
     backdrop(&mut left);
-    // Centred between the world and the true camera.
-    let eye = xyz(truth().exp() >> Point::xyz(0.0, 0.0, 0.0));
+    // Centred between the world's origin and the true camera.
+    let origin = Point::xyz(0.0, 0.0, 0.0);
+    let middle = (origin + (truth().exp() >> origin)).gp(0.5);
     let cam = Camera::orbit(
         wl,
         c.height,
-        eye.map(|v| v * 0.5),
-        13.0,
+        middle,
+        17.0,
         -1.2 + 0.5 * (t / SECONDS * core::f32::consts::TAU).sin(),
         0.35,
         Lens::Perspective(0.65),
@@ -167,7 +162,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut scene = Scene3::new(cam);
     for p in &world {
         scene.dot(
-            xyz(*p),
+            *p,
             Marker::Dot,
             4.0,
             mix(palette::grid(), palette::ink(), 0.5),
@@ -176,9 +171,9 @@ fn draw(c: &mut Canvas, t: f32) {
     frustum(&mut scene, truth(), palette::sky(), 2.0);
     frustum(&mut scene, g, palette::red(), 1.5);
     // The rays of the estimate, from its centre through each world point.
-    let centre = xyz(g.exp() >> Point::xyz(0.0, 0.0, 0.0));
+    let centre = g.exp() >> origin;
     for p in &world {
-        scene.seg(centre, xyz(*p), 0.6, palette::red(), 0.25);
+        scene.seg(centre, *p, 0.6, palette::red(), 0.25);
     }
     scene.draw(&mut left);
     c.blit(&left, 0, 0);
@@ -192,15 +187,16 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let ax = Axes::equal(right, [0.0, 0.0], 0.75);
     ax.frame(c, "THE SCREEN Z = 1", "", "");
-    let flat = |p: &Point<(), f64>| {
+    // A point of the screen `z = 1` by its coordinates across it.
+    let flat = |p: &P| {
         let [x, y, _] = p.to_euclidean();
-        [x as f32, y as f32]
+        [x, y]
     };
     for (a, o) in images.iter().zip(&observed) {
         ax.line(c, flat(a), flat(o), 0.8, palette::red(), 0.5);
     }
-    let obs: Vec<[f32; 2]> = observed.iter().map(flat).collect();
-    let cur: Vec<[f32; 2]> = images.iter().map(flat).collect();
+    let obs: Vec<_> = observed.iter().map(flat).collect();
+    let cur: Vec<_> = images.iter().map(flat).collect();
     ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky(), 1.0);
     ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red(), 1.0);
     // The misfit over the steps, on a log scale.
@@ -243,7 +239,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     caption(
         c,
-        "CAMERA FIT: GRADIENT DESCENT THROUGH EXP, SANDWICH AND BIND",
+        "CAMERA FIT: DESCENT THROUGH EXP, SANDWICH AND BIND",
         "THE GRADIENT BY GAX'S DUAL NUMBERS (PGA3D)",
     );
 }
@@ -292,8 +288,9 @@ mod tests {
     #[test]
     fn images_lie_on_the_screen() {
         let world = world();
+        let screen = gax::pga3d::Plane::from_normal([0.0, 0.0, 1.0], 1.0);
         for p in image(truth(), &world) {
-            assert!((p.to_euclidean()[2] - 1.0).abs() < 1e-12);
+            assert!((screen & p).s().abs() < 1e-12);
         }
         assert!(misfit(&image(truth(), &world), &image(truth(), &world)) < 1e-30);
     }

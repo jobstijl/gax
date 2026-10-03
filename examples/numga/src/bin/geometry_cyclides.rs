@@ -68,9 +68,7 @@ mod cyclides {
 
     /// The scalar 1 as an even versor.
     fn one() -> Even<(), f64> {
-        let mut c = [0.0; 16];
-        c[0] = 1.0;
-        Even::from_coeffs(c)
+        Scalar::new(1.0).cast::<Even>()
     }
 
     /// The identity motor.
@@ -364,9 +362,7 @@ mod cyclides {
     /// up, scaled by the aspect.
     pub fn direction(u: f64, v: f64, fov: f64) -> Dir {
         let k = (fov / 2.0).tan();
-        let (x, y, z) = (-1.0, u * k, v * k);
-        let n = (x * x + y * y + z * z).sqrt();
-        Direction::new(x / n, y / n, z / n)
+        Direction::new(-1.0, u * k, v * k).normalized().into_inner()
     }
 
     /// numga's sensor: the pixel centres of a `rows` x `cols` image, row-major.
@@ -743,7 +739,7 @@ mod cyclides {
         },
     ];
 
-    fn chart_point(p: [f64; 3]) -> Sphere {
+    pub fn chart_point(p: [f64; 3]) -> Sphere {
         Vector::new(p[0], p[1], p[2], 0.0, 0.0)
     }
 
@@ -752,17 +748,16 @@ mod cyclides {
     /// S³ sits at the chart's origin looking along -x. Great circles through the eye are the
     /// chart's straight lines through its origin, so the view is the flat tracer's.
     pub fn flat_camera(position: [f64; 3], target: [f64; 3]) -> Motor {
-        let unit = |v: [f64; 3]| {
-            let n = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-            v.map(|c| c / n)
-        };
-        let forward = unit([0, 1, 2].map(|i| target[i] - position[i]));
+        let (position, target) = (chart_point(position), chart_point(target));
+        let forward = (target - position).normalized().into_inner();
         // `(forward ∧ z) xyz⁻¹`, the cross product with z (numga computes it with the
         // trivector; this algebra declares no trivector kind).
-        let right = unit([forward[1], -forward[0], 0.0]);
-        let aim = (one() - chart_point(forward) * x()).normalized();
-        let roll = (one() + chart_point(right) * moved_sphere(aim, y())).normalized();
-        (shift(chart_point(position)) * roll * aim).inverse()
+        let right = Vector::new(forward.c[1], -forward.c[0], 0.0, 0.0, 0.0)
+            .normalized()
+            .into_inner();
+        let aim = (one() - forward * x()).normalized();
+        let roll = (one() + right * moved_sphere(aim, y())).normalized();
+        (shift(position) * roll * aim).inverse()
     }
 
     /// A flat scene at phase `t` on S³: every part turned about its own vortex circle, all
@@ -913,11 +908,12 @@ fn flat_at(index: usize, s: f64) -> (Vec<Quadric>, f64) {
     if animated {
         flat_scene(scene, core::f64::consts::TAU * s)
     } else {
+        // The camera's position turned about the vertical through the target: the offset
+        // from the target turned in the chart's xy plane.
         let swing = 0.35 * (core::f64::consts::TAU * s).sin();
-        let (p, t) = (scene.position, scene.target);
-        let (dx, dy) = (p[0] - t[0], p[1] - t[1]);
-        let (sn, cs) = swing.sin_cos();
-        let position = [t[0] + cs * dx - sn * dy, t[1] + sn * dx + cs * dy, p[2]];
+        let (p, t) = (chart_point(scene.position), chart_point(scene.target));
+        let turned = t + moved_sphere(turn(x() ^ y(), -swing / 2.0), p - t);
+        let position = [0, 1, 2].map(|i| turned.c[i]);
         flat_scene_from(scene, flat_camera(position, scene.target), 0.0)
     }
 }

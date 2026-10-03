@@ -16,9 +16,10 @@
 //! under the correlation map) swells from a needle to a sphere; below, the largest Bell (CHSH)
 //! combination rises from 2 to `2 sqrt 2` and falls back.
 
-use gax_numga_examples::canvas::mix;
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, caption, palette,
+    run,
 };
 use std::sync::OnceLock;
 
@@ -74,7 +75,6 @@ mod spins {
     pub fn big_y() -> G {
         Second::new(0.0, 1.0, 0.0)
     }
-    #[cfg_attr(not(test), allow(dead_code))]
     pub fn big_z() -> G {
         Second::new(0.0, 0.0, 1.0)
     }
@@ -148,8 +148,8 @@ mod spins {
     /// The largest Bell combination over all directions, `2 sqrt(s1² + s2²)` from the two
     /// largest singular values of the correlation map.
     pub fn bell(correlations: Correlation) -> f64 {
-        let (_, s, _) = correlations.svd();
-        2.0 * (s[0] * s[0] + s[1] * s[1]).sqrt()
+        let s = correlations.svdvals();
+        2.0 * s[0].hypot(s[1])
     }
 
     /// The Bell combination along two directions of each spin as a multivector acting on states
@@ -212,37 +212,28 @@ fn swapped() -> &'static Swap {
     S.get_or_init(|| swap(121))
 }
 
-fn first3(v: F) -> [f32; 3] {
-    [v.e1() as f32, v.e2() as f32, v.e3() as f32]
+/// The drawing's space.
+type Space = gax::vga3d::Vector<(), f64>;
+
+/// Each spin's directions drawn as the directions of space: maps from the pair's algebra.
+fn first_in_space() -> gax::vga3d::Vector<(pair::First,), f64> {
+    gax::vga3d::Vector::from_images([
+        Space::new(1.0, 0.0, 0.0),
+        Space::new(0.0, 1.0, 0.0),
+        Space::new(0.0, 0.0, 1.0),
+    ])
+}
+fn second_in_space() -> gax::vga3d::Vector<(pair::Second,), f64> {
+    gax::vga3d::Vector::from_images([
+        Space::new(1.0, 0.0, 0.0),
+        Space::new(0.0, 1.0, 0.0),
+        Space::new(0.0, 0.0, 1.0),
+    ])
 }
 
-fn second3(v: G) -> [f32; 3] {
-    [v.e4() as f32, v.e5() as f32, v.e6() as f32]
-}
-
-/// A 3D panel: the scene drawn on its own canvas over the matching stretch of the backdrop, and
-/// copied into `rect`. `label` draws on the panel's canvas with its camera.
-fn panel3(
-    c: &mut Canvas,
-    rect: [usize; 4],
-    cam: impl Fn(usize, usize) -> Camera,
-    fill: impl FnOnce(&mut Scene3),
-    label: impl FnOnce(&mut Canvas, &Camera),
-) {
-    let [x0, y0, x1, y1] = rect;
-    let (w, h) = (x1 - x0, y1 - y0);
-    let mut sub = Canvas::new(w, h);
-    let rows = (c.height.max(2) - 1) as f32;
-    sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / rows),
-        mix(palette::top(), palette::bottom(), (y1 - 1) as f32 / rows),
-    );
-    let camera = cam(w, h);
-    let mut scene = Scene3::new(camera);
-    fill(&mut scene);
-    scene.draw(&mut sub);
-    label(&mut sub, &camera);
-    c.blit(&sub, x0, y0);
+/// The second spin's direction for each direction of space: the other way round.
+fn space_in_second() -> pair::Second<(gax::vga3d::Vector,), f64> {
+    pair::Second::from_images([big_x(), big_y(), big_z()])
 }
 
 /// The unit ball, faintly, with its three axes.
@@ -256,28 +247,33 @@ fn ball(s: &mut Scene3) {
 }
 
 /// Axis names at the ends of the axes.
-fn axis_names(sub: &mut Canvas, cam: &Camera) {
+fn axis_names(c: &mut Canvas, cam: &Camera) {
     for (k, name) in ["X", "Y", "Z"].iter().enumerate() {
         let mut a = [0.0; 3];
         a[k] = 1.18;
         if let Some(p) = cam.px(a) {
-            sub.text(name, p[0], p[1] + 4.0, 11.0, palette::grid(), Align::Center);
+            c.text(name, p[0], p[1] + 4.0, 11.0, palette::grid(), Align::Center);
         }
     }
 }
 
-/// The image of the second spin's unit sphere under the correlation map.
+/// The direction of space at longitude `lon` and latitude `lat`: `x` raised towards `z`, then
+/// turned about `z`.
+fn on_sphere(lon: f64, lat: f64) -> Space {
+    use gax::vga3d::Bivector;
+    let turn = (Bivector::new(0.0, 0.0, 1.0) * (-lon / 2.0)).exp()
+        * (Bivector::new(0.0, 1.0, 0.0) * (lat / 2.0)).exp();
+    turn >> Space::new(1.0, 0.0, 0.0)
+}
+
+/// The image of the second spin's unit sphere under the correlation map, as a map of space.
 fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Rgb) {
-    let tau = core::f32::consts::TAU;
+    let shown = first_in_space().of(corr.of(space_in_second()));
     s.surface(
         |u, v| {
-            let (lon, lat) = (tau * u, core::f32::consts::PI * (v - 0.5));
-            let b = pair::Second::new(
-                f64::from(lat.cos() * lon.cos()),
-                f64::from(lat.cos() * lon.sin()),
-                f64::from(lat.sin()),
-            );
-            first3(corr.of(b))
+            let lon = core::f64::consts::TAU * f64::from(u);
+            let lat = core::f64::consts::PI * (f64::from(v) - 0.5);
+            shown.of(on_sphere(lon, lat)).xyz()
         },
         28,
         14,
@@ -301,47 +297,48 @@ fn draw(c: &mut Canvas, t: f32) {
     let value = bell(corr);
     let azimuth = (-55.0f32).to_radians() + 0.35 * (tau * phase).sin() as f32;
     let elevation = 18.0f32.to_radians();
-    let cam = |w: usize, h: usize| {
-        Camera::orbit(
-            w,
-            h,
-            [0.0; 3],
-            4.4,
-            azimuth,
-            elevation,
-            Lens::Perspective(0.62),
-        )
-    };
     let top = h * 92 / 540;
     let bottom = h * 392 / 540;
     let third = w / 3;
+    let cam = Camera::orbit(
+        third,
+        bottom - top,
+        [0.0; 3],
+        4.4,
+        azimuth,
+        elevation,
+        Lens::Perspective(0.62),
+    );
     let colours: [Rgb; 3] = [palette::red(), palette::purple(), palette::sky()];
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
+    // Each Bloch vector in space, with its tip's path over the whole exchange.
+    let blochs = [
+        (
+            first_in_space().of(first),
+            data.first.iter().map(|v| first_in_space().of(*v)).collect(),
+        ),
+        (
+            second_in_space().of(second),
+            data.second
+                .iter()
+                .map(|v| second_in_space().of(*v))
+                .collect(),
+        ),
+    ];
     for k in 0..3 {
-        let rect = [k * third, top, (k + 1) * third, bottom];
-        panel3(
-            c,
-            rect,
-            cam,
-            |s| {
-                ball(s);
-                // Each Bloch vector's tip over the whole exchange, faintly, under its arrow.
-                match k {
-                    0 => {
-                        let path: Vec<[f32; 3]> = data.first.iter().map(|v| first3(*v)).collect();
-                        s.polyline(&path, 2.0, colours[0], 0.35);
-                        s.arrow([0.0; 3], first3(first), 3.0, 11.0, colours[0]);
-                    }
-                    2 => {
-                        let path: Vec<[f32; 3]> = data.second.iter().map(|v| second3(*v)).collect();
-                        s.polyline(&path, 2.0, colours[2], 0.35);
-                        s.arrow([0.0; 3], second3(second), 3.0, 11.0, colours[2]);
-                    }
-                    _ => ellipsoid(s, corr, colours[1]),
+        let rect = [k * third, top, (k + 1) * third, bottom].map(|v| v as f32);
+        let drawn = panel3(c, rect, cam, |s| {
+            ball(s);
+            match k {
+                1 => ellipsoid(s, corr, colours[1]),
+                _ => {
+                    let (now, path): &(Space, Vec<Space>) = &blochs[k / 2];
+                    s.polyline(path, 2.0, colours[k], 0.35);
+                    s.arrow([0.0; 3], *now, 3.0, 11.0, colours[k]);
                 }
-            },
-            axis_names,
-        );
+            }
+        });
+        axis_names(c, &drawn);
         c.text(
             titles[k],
             (k as f32 + 0.5) * third as f32,
@@ -352,10 +349,9 @@ fn draw(c: &mut Canvas, t: f32) {
         );
     }
     // The lengths of the Bloch vectors under their balls.
-    let len = |v: [f32; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-    for (k, l) in [(0, len(first3(first))), (2, len(second3(second)))] {
+    for (k, (now, _)) in [0, 2].into_iter().zip(&blochs) {
         c.text(
-            &format!("LENGTH {l:.2}"),
+            &format!("LENGTH {:.2}", now.norm()),
             (k as f32 + 0.5) * third as f32,
             bottom as f32 + 2.0,
             11.0,
@@ -438,25 +434,10 @@ fn main() {
 mod tests {
     use super::pair::*;
     use super::spins::*;
+    use gax_numga_examples::rng::{Draw, rng};
 
     fn small(s: Sp, tol: f64) -> bool {
         s.c.iter().all(|v| v.abs() <= tol)
-    }
-
-    /// A small xorshift generator: numga's NumPy streams cannot be reproduced, and the check that
-    /// uses it holds for any directions.
-    struct Rng(u64);
-    impl Rng {
-        fn unit(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            (self.0 >> 11) as f64 / (1u64 << 53) as f64
-        }
-        fn normal(&mut self) -> f64 {
-            let (u, v) = (self.unit().max(1e-300), self.unit());
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
     }
 
     /// The singlet and triplet parts are idempotent and add up to one; the coupling squares to
@@ -508,14 +489,13 @@ mod tests {
         for (across, along) in [(big_x(), x()), (big_y(), y()), (big_z(), z())] {
             assert!((corr.of(across) + along).c.iter().all(|v| v.abs() < 1e-12));
         }
-        let mut rng = Rng(0x5eed_0001);
+        // Any unit directions, drawn at random.
+        let mut rng = rng(0x5eed);
         for _ in 0..20 {
-            let mut n = || rng.normal();
-            let (a, a2) = (First::new(n(), n(), n()), First::new(n(), n(), n()));
-            let (b, b2) = (Second::new(n(), n(), n()), Second::new(n(), n(), n()));
-            let unit_f = |v: F| v / (v | v).s().sqrt();
-            let unit_g = |v: G| v / (v | v).s().sqrt();
-            let (a, a2, b, b2) = (unit_f(a), unit_f(a2), unit_g(b), unit_g(b2));
+            let mut f = || First::from_coeffs(rng.direction());
+            let (a, a2) = (f(), f());
+            let mut g = || Second::from_coeffs(rng.direction());
+            let (b, b2) = (g(), g());
             let e = bell_element(a, a2, b, b2);
             let want = one() * 4.0 - (a ^ a2) * (b ^ b2) * 4.0;
             assert!(small(e * e - want, 1e-12));

@@ -95,16 +95,7 @@ mod skinning {
 
 use skinning::*;
 
-const TITLES: [&str; 3] = [
-    "MOTOR BLEND (NORMALIZED LERP)",
-    "MOTOR BLEND (SLERP)",
-    "MATRIX BLEND",
-];
-
-fn xyz(p: P) -> [f32; 3] {
-    let [x, y, z] = p.to_euclidean();
-    [x as f32, y as f32, z as f32]
-}
+const TITLES: [&str; 3] = ["NORMALIZED MOTOR BLEND", "MOTOR SLERP", "MATRIX BLEND"];
 
 /// One skin as a lit quad mesh, striped around its length, with the bone axis inside.
 fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
@@ -121,17 +112,20 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     let mut s = Scene3::new(cam);
     // The skin, drawn here rather than through the scene: one polygon per quad (the scene
     // splits quads in two, and each triangle's fill scans the quad's whole box), far to near,
-    // leaving out the quads that face away (their outward normal, radial from the bone axis,
-    // points away from the eye). The bones go under it, seen faintly through.
-    let at = |i: usize, j: usize| xyz(skin[i * AROUND + j % AROUND]);
-    let eye = cam.eye();
+    // leaving out the quads that face away: those whose plane has the eye on the same side as
+    // the bone axis inside. The bones go under it, seen faintly through.
+    let at = |i: usize, j: usize| skin[i * AROUND + j % AROUND];
+    let [x, y, z] = cam.eye().map(f64::from);
+    let eye = Point::xyz(x, y, z);
     let mut quads = Vec::with_capacity((RINGS - 1) * AROUND);
     for i in 0..RINGS - 1 {
         for j in 0..AROUND {
             let q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
-            let mid = [0, 1, 2].map(|k| q.iter().map(|p| p[k]).sum::<f32>() / 4.0);
-            let to_eye = [0, 1, 2].map(|k| eye[k] - mid[k]);
-            if mid[1] * to_eye[1] + mid[2] * to_eye[2] < 0.0 {
+            let mid = (q[0] + q[1] + q[2] + q[3]).unitized();
+            let face = q[0] & q[1] & q[2];
+            // The bone axis inside, at the quad's middle.
+            let inside = Point::xyz(mid.to_euclidean()[0], 0.0, 0.0);
+            if (face & eye).s() * (face & inside).s() > 0.0 {
                 continue;
             }
             let colour = s.lit(
@@ -144,7 +138,7 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
         }
     }
     quads.sort_by(|a, b| b.0.total_cmp(&a.0));
-    // The bones along the axis, and each bone's frame: the root's y axis, and the tip's, turned.
+    // The bones along the axis, and each bone's frame: the root's z axis, and the tip's, turned.
     s.seg(
         [-0.25, 0.0, 0.0],
         [1.25, 0.0, 0.0],
@@ -152,17 +146,11 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
         palette::ink(),
         0.8,
     );
-    s.arrow(
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 1.5],
-        2.0,
-        8.0,
-        palette::orange(),
-    );
-    let up = xyz(twist(angle) >> Point::xyz(1.0, 0.0, 1.5));
+    let up = Point::direction(0.0, 0.0, 1.5);
+    s.arrow([0.0, 0.0, 0.0], up, 2.0, 8.0, palette::orange());
     s.arrow(
         [1.0, 0.0, 0.0],
-        [up[0] - 1.0, up[1], up[2]],
+        twist(angle) >> up,
         2.0,
         8.0,
         palette::orange(),
@@ -228,6 +216,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::skinning::*;
+    use gax::ApproxEq;
 
     /// numga's scenario checks: both motor blends are rigid about the axis, so every vertex
     /// keeps its unit radius.
@@ -267,14 +256,7 @@ mod tests {
     fn the_blends_agree_at_the_bones() {
         let [a, b, c] = skinning(2.0);
         for k in (0..AROUND).chain((RINGS - 1) * AROUND..RINGS * AROUND) {
-            let (x, y, z) = (
-                a[k].to_euclidean(),
-                b[k].to_euclidean(),
-                c[k].to_euclidean(),
-            );
-            for i in 0..3 {
-                assert!((x[i] - y[i]).abs() < 1e-12 && (x[i] - z[i]).abs() < 1e-12);
-            }
+            assert!(a[k].approx_eq(&b[k], 1e-12) && a[k].approx_eq(&c[k], 1e-12));
         }
     }
 

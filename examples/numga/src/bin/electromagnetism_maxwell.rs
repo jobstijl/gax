@@ -14,7 +14,7 @@
 //! cloud's exact third.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Marker, Rgb, Scene3, backdrop, caption, palette, run,
 };
 
 mod maxwell {
@@ -22,9 +22,12 @@ mod maxwell {
     #![cfg_attr(not(test), allow(dead_code))]
 
     use gax::sta::{Bivector, Even, Scalar, Vector};
+    use gax_numga_examples::rng::{Draw, Rng};
 
     pub type V = Vector<(), f64>;
     pub type F = Bivector<(), f64>;
+    /// A vector of the rest observer's space, for drawing.
+    pub type Space = gax::vga3d::Vector<(), f64>;
     /// A stress-energy map: an observer in, the momentum flux it sees out.
     pub type StressEnergy = Vector<(Vector,), f64>;
     pub type Boost = gax::Unit<Even<(), f64>>;
@@ -46,6 +49,11 @@ mod maxwell {
     }
     pub fn z() -> V {
         Vector::new(0.0, 0.0, 0.0, 1.0)
+    }
+
+    /// The spatial part of a vector as the rest observer `t` reads it, a vector of space.
+    pub fn spatial(v: V) -> Space {
+        Space::new(v.e1(), v.e2(), v.e3())
     }
 
     /// A field from numga's blade coefficients `tx, ty, tz, yz, zx, xy`. gax orders the
@@ -87,18 +95,17 @@ mod maxwell {
         (u | t_map.of(u)).s()
     }
 
-    /// The flux a rest observer sees, less its energy part: the Poynting vector `[x, y, z]`.
-    pub fn poynting(t_map: StressEnergy) -> [f64; 3] {
-        let flux = t_map.of(t());
-        let p = flux - t() * (t() | flux);
-        [p.e1(), p.e2(), p.e3()]
+    /// The Poynting vector: the spatial part of the flux the rest observer sees.
+    pub fn poynting(t_map: StressEnergy) -> Space {
+        spatial(t_map.of(t()))
     }
 
     /// The real spectrum of a stress-energy map, ascending. numga calls a general eigensolver
-    /// (gax's `eigvals`); the symmetric pencil keeps the values exactly real. `T` is self-adjoint for the Minkowski metric `g`, so
-    /// `T v = λ v` is the symmetric pencil `S(v, ·) = λ g(v, ·)` with `S(a, b) = a · T(b)`.
-    /// The metric is indefinite, but a cloud's `S(v, v) = Σ m (u · v)²` is positive definite,
-    /// so the pencil is solved the other way round, `g(v, ·) = λ⁻¹ S(v, ·)`.
+    /// (gax's `eigvals`); the symmetric pencil keeps the values exactly real. `T` is
+    /// self-adjoint for the Minkowski metric `g`, so `T v = λ v` is the symmetric pencil
+    /// `S(v, ·) = λ g(v, ·)` with `S(a, b) = a · T(b)`. The metric is indefinite, but a
+    /// cloud's `S(v, v) = Σ m (u · v)²` is positive definite, so the pencil is solved the
+    /// other way round, `g(v, ·) = λ⁻¹ S(v, ·)`.
     pub fn spectrum(t_map: StressEnergy) -> [f64; 4] {
         let s: Scalar<(Vector, Vector), f64> = open() | t_map;
         let g: Scalar<(Vector, Vector), f64> = open() | open();
@@ -136,34 +143,43 @@ mod maxwell {
         dyad(t()).gp(energy + pressure) - pressure * open()
     }
 
-    pub use gax_numga_examples::rng::Rng;
-
     /// `n` unit spatial directions, uniform on the sphere.
     pub fn sphere_directions(n: usize, rng: &mut Rng) -> Vec<V> {
         (0..n)
             .map(|_| {
-                Vector::new(0.0, rng.normal(), rng.normal(), rng.normal())
-                    .normalized()
-                    .into_inner()
+                let [a, b, c] = rng.direction();
+                Vector::new(0.0, a, b, c)
             })
             .collect()
     }
 
-    /// `n` four-velocities at one speed, directions uniform on the sphere.
-    pub fn isotropic_cloud(n: usize, speed: f64, rng: &mut Rng) -> Vec<V> {
-        let gamma = 1.0 / (1.0 - speed * speed).sqrt();
-        sphere_directions(n, rng)
-            .into_iter()
-            .map(|d| (t() + d.gp(speed)).gp(gamma))
-            .collect()
+    /// The four-velocities at one speed along each direction: the rest observer boosted by
+    /// the rapidity `atanh(speed)`.
+    pub fn moving(directions: &[V], speed: f64) -> Vec<V> {
+        let zeta = speed.atanh();
+        directions.iter().map(|d| boost(zeta, *d) >> t()).collect()
     }
 
-    /// `n` null rays `t + direction`.
+    /// The null rays `t + direction`.
+    pub fn rays(directions: &[V]) -> Vec<V> {
+        directions.iter().map(|d| t() + *d).collect()
+    }
+
+    /// `n` four-velocities at one speed, directions uniform on the sphere.
+    pub fn isotropic_cloud(n: usize, speed: f64, rng: &mut Rng) -> Vec<V> {
+        moving(&sphere_directions(n, rng), speed)
+    }
+
+    /// `n` null rays, directions uniform on the sphere.
     pub fn null_cloud(n: usize, rng: &mut Rng) -> Vec<V> {
-        sphere_directions(n, rng)
-            .into_iter()
-            .map(|d| t() + d)
-            .collect()
+        rays(&sphere_directions(n, rng))
+    }
+
+    /// A cloud's pressure and energy density from its spectrum: the energy is the timelike
+    /// eigenvalue, the pressure minus the mean of the three stresses.
+    pub fn pressure_energy(t_map: StressEnergy) -> (f64, f64) {
+        let s = spectrum(t_map);
+        (-(s[0] + s[1] + s[2]) / 3.0, s[3])
     }
 
     /// The general field of numga's commutator check, used by the animation.
@@ -173,10 +189,8 @@ mod maxwell {
 
     /// The electric and magnetic vectors a rest observer reads off a field: `t · F` and
     /// `t · F*` (the complement turns magnetic planes into electric ones).
-    pub fn electric_magnetic(f: F) -> ([f64; 3], [f64; 3]) {
-        let e = t() | f;
-        let b = t() | f.dual();
-        ([e.e1(), e.e2(), e.e3()], [b.e1(), b.e2(), b.e3()])
+    pub fn electric_magnetic(f: F) -> (Space, Space) {
+        (spatial(t() | f), spatial(t() | f.dual()))
     }
 }
 
@@ -185,10 +199,17 @@ use maxwell::*;
 const SECONDS: f32 = 8.0;
 /// The largest rapidity of the boost.
 const SWING: f64 = 0.9;
+/// Rapidities sampled across the swing.
+const SAMPLES: usize = 96;
 
 /// The rapidity of the boost at animation phase `p` (radians).
 fn rapidity(p: f64) -> f64 {
     SWING * p.sin()
+}
+
+/// The `i`-th of the sampled rapidities, from `-SWING` to `SWING`.
+fn sampled(i: usize) -> f64 {
+    SWING * (-1.0 + 2.0 * i as f64 / SAMPLES as f64)
 }
 
 /// The cloud's speed at animation phase `p`: from dust nearly to light and back.
@@ -196,38 +217,20 @@ fn cloud_speed(p: f64) -> f64 {
     0.02 + 0.94 * 0.5 * (1.0 - p.cos())
 }
 
-/// The fixed cloud directions; the animation scales them by its speed.
+/// The fixed cloud directions; the animation boosts the rest observer along them.
 fn directions() -> &'static [V] {
     static DIRS: std::sync::OnceLock<Vec<V>> = std::sync::OnceLock::new();
-    DIRS.get_or_init(|| sphere_directions(2000, &mut Rng(0x9e37_79b9_7f4a_7c15)))
+    DIRS.get_or_init(|| sphere_directions(2000, &mut gax_numga_examples::rng::rng(0x9e37)))
 }
 
 /// The null cloud's pressure over its energy, from its spectrum (exactly a third).
 fn null_ratio() -> f64 {
     static R: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
     *R.get_or_init(|| {
-        let rays: Vec<V> = directions().iter().map(|d| t() + *d).collect();
-        let s = spectrum(cloud_tensor(&rays, 1.0 / rays.len() as f64));
-        -(s[0] + s[1] + s[2]) / 3.0 / s[3]
+        let rays = rays(directions());
+        let (pressure, energy) = pressure_energy(cloud_tensor(&rays, 1.0 / rays.len() as f64));
+        pressure / energy
     })
-}
-
-/// A camera whose view centre lands on pixel `centre` with `scale` pixels per unit: the
-/// projection centres on half the camera's size, so the camera gets twice the centre's offsets.
-fn camera(centre: [f32; 2], scale: f32, azimuth: f32, elevation: f32) -> Camera {
-    Camera::orbit(
-        (2.0 * centre[0]) as usize,
-        (2.0 * centre[1]) as usize,
-        [0.0, 0.0, 0.0],
-        10.0,
-        azimuth,
-        elevation,
-        Lens::Parallel(centre[1] / scale),
-    )
-}
-
-fn f3(v: [f64; 3]) -> [f32; 3] {
-    v.map(|c| c as f32)
 }
 
 /// Grey axes with their names at the ends.
@@ -258,6 +261,16 @@ fn lower(rect: [f32; 4]) -> [f32; 4] {
     ]
 }
 
+/// The 3D view of a panel, above its plot, and its clipping rectangle (a margin above the
+/// plot's title).
+fn upper(rect: [f32; 4]) -> ([f32; 4], [f32; 4]) {
+    let bottom = lower(rect)[1];
+    (
+        [rect[0], rect[1], rect[2], bottom],
+        [rect[0], rect[1], rect[2], bottom - 12.0],
+    )
+}
+
 /// The general field boosted by rapidity `zeta` along x, and its stress-energy map. The map is
 /// boosted by covariance; it equals the boosted field's own map (checked in the tests).
 fn boosted_field(zeta: f64) -> (F, StressEnergy) {
@@ -270,10 +283,9 @@ fn boosted_field(zeta: f64) -> (F, StressEnergy) {
 /// trace, for the field boosted by `zeta`.
 fn readout(zeta: f64) -> [f64; 4] {
     let (g, tm) = boosted_field(zeta);
-    let p = poynting(tm);
     [
         energy(tm, t()),
-        (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]).sqrt(),
+        poynting(tm).norm(),
         lagrangian(g),
         tm.trace(),
     ]
@@ -283,31 +295,26 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
     let zeta = rapidity(phase);
     let (g, tm) = boosted_field(zeta);
     let (e, b) = electric_magnetic(g);
-    let s = poynting(tm);
-    let centre = [
-        (rect[0] + rect[2]) * 0.5,
-        rect[1] + (rect[3] - rect[1]) * 0.34,
-    ];
-    let cam = camera(centre, 48.0, 0.6 + spin, 0.35);
-    c.clip([rect[0], rect[1], rect[2], lower(rect)[1] - 12.0]);
+    let (view, clip) = upper(rect);
+    let cam = Camera::parallel(view, 48.0, 0.6 + spin, 0.35);
+    c.clip(clip);
     let mut sc = Scene3::new(cam);
     axes3(c, &cam, &mut sc, 2.2);
     // The tips' paths over the whole swing.
-    let n = 96;
-    let tips: Vec<[[f32; 3]; 3]> = (0..=n)
+    let tips: Vec<[Space; 3]> = (0..=SAMPLES)
         .map(|i| {
-            let (g, tm) = boosted_field(SWING * (-1.0 + 2.0 * i as f64 / n as f64));
+            let (g, tm) = boosted_field(sampled(i));
             let (e, b) = electric_magnetic(g);
-            [f3(e), f3(b), f3(poynting(tm))]
+            [e, b, poynting(tm)]
         })
         .collect();
     let cols = [palette::orange(), palette::sky(), palette::yellow()];
     for (k, col) in cols.iter().enumerate() {
-        let path: Vec<[f32; 3]> = tips.iter().map(|p| p[k]).collect();
+        let path: Vec<Space> = tips.iter().map(|p| p[k]).collect();
         sc.polyline(&path, 1.0, *col, 0.45);
     }
-    for (v, col) in [(e, cols[0]), (b, cols[1]), (s, cols[2])] {
-        sc.arrow([0.0; 3], f3(v), 2.5, 10.0, col);
+    for (v, col) in [(e, cols[0]), (b, cols[1]), (poynting(tm), cols[2])] {
+        sc.arrow([0.0; 3], v, 2.5, 10.0, col);
     }
     sc.draw(c);
     c.unclip();
@@ -325,14 +332,9 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
 
     let ax = Axes::new(lower(rect), [-SWING as f32, SWING as f32], [-1.0, 6.0]);
     ax.frame(c, "", "RAPIDITY", "");
-    let at = |k: usize| -> Vec<[f32; 2]> {
-        (0..=n)
-            .map(|i| {
-                let z = SWING * (-1.0 + 2.0 * i as f64 / n as f64);
-                [z as f32, readout(z)[k] as f32]
-            })
-            .collect()
-    };
+    let readouts: Vec<(f64, [f64; 4])> = (0..=SAMPLES)
+        .map(|i| (sampled(i), readout(sampled(i))))
+        .collect();
     let cols = [
         palette::orange(),
         palette::yellow(),
@@ -340,12 +342,13 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
         palette::purple(),
     ];
     for (k, col) in cols.iter().enumerate() {
-        ax.polyline(c, &at(k), 1.8, *col, 1.0);
+        let curve: Vec<[f64; 2]> = readouts.iter().map(|(z, r)| [*z, r[k]]).collect();
+        ax.polyline(c, &curve, 1.8, *col, 1.0);
     }
     let now = readout(zeta);
     ax.scatter(
         c,
-        &[[zeta as f32, now[0] as f32], [zeta as f32, now[1] as f32]],
+        &[[zeta, now[0]], [zeta, now[1]]],
         Marker::Dot,
         8.0,
         palette::ink(),
@@ -364,24 +367,18 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
 
 fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
     let speed = cloud_speed(phase);
-    let gamma = 1.0 / (1.0 - speed * speed).sqrt();
     let dirs = directions();
-    let us: Vec<V> = dirs.iter().map(|d| (t() + d.gp(speed)).gp(gamma)).collect();
+    let us = moving(dirs, speed);
     let tm = cloud_tensor(&us, 1.0 / us.len() as f64);
     let s = spectrum(tm);
-    let (stresses, energy) = ([s[0], s[1], s[2]], s[3]);
-    let pressure = -(stresses[0] + stresses[1] + stresses[2]) / 3.0;
-    let centre = [
-        (rect[0] + rect[2]) * 0.5,
-        rect[1] + (rect[3] - rect[1]) * 0.36,
-    ];
-    let cam = camera(centre, 80.0, -0.4 + spin, 0.3);
-    c.clip([rect[0], rect[1], rect[2], lower(rect)[1] - 12.0]);
+    let (pressure, energy) = pressure_energy(tm);
+    let (view, clip) = upper(rect);
+    let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
+    c.clip(clip);
     let mut sc = Scene3::new(cam);
     sc.sphere_wire([0.0; 3], 1.0, 12, palette::grid(), 0.5);
     for d in dirs.iter().step_by(4) {
-        let p = f3([d.e1(), d.e2(), d.e3()].map(|v| v * speed));
-        sc.dot(p, Marker::Dot, 3.0, palette::sky());
+        sc.dot(spatial(*d) * speed, Marker::Dot, 3.0, palette::sky());
     }
     sc.draw(c);
     c.unclip();
@@ -420,14 +417,11 @@ fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
         1.0,
     );
     // Each stress eigenvalue over the energy: the three nearly coincide (isotropy).
-    let marks: Vec<[f32; 2]> = stresses
-        .iter()
-        .map(|p| [speed as f32, (-p / energy) as f32])
-        .collect();
+    let marks: Vec<[f64; 2]> = s[..3].iter().map(|p| [speed, -p / energy]).collect();
     ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange(), 1.0);
     ax.scatter(
         c,
-        &[[1.0, null_ratio() as f32]],
+        &[[1.0, null_ratio()]],
         Marker::Star,
         12.0,
         palette::yellow(),
@@ -454,7 +448,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "MAXWELL: STRESS-ENERGY MAPS IN SPACETIME",
-        "T(V) = 1/2 F V ~F OF A BOOSTED FIELD (LEFT); A CLOUD OF DUST DYADS, DUST TO RADIATION (RIGHT)",
+        "LEFT: T(V) = F V REV(F)/2 OF A BOOSTED FIELD. RIGHT: A CLOUD OF DUST DYADS SPEEDING UP",
     );
 }
 
@@ -465,35 +459,44 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::maxwell::*;
+    use gax::ApproxEq;
+    use gax_numga_examples::rng::{Draw, Rng, rng};
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
     }
 
     fn maps_close(a: StressEnergy, b: StressEnergy, tol: f64) -> bool {
-        a.c.iter()
-            .flatten()
-            .zip(b.c.iter().flatten())
-            .all(|(p, q)| (p - q).abs() <= tol)
+        a.max_abs_diff(&b) <= tol
     }
 
     fn random_vector(rng: &mut Rng) -> V {
         V::new(rng.normal(), rng.normal(), rng.normal(), rng.normal())
     }
 
+    /// A cloud's three stresses agree with its pressure to `band`: isotropy, within the
+    /// sampling noise of a finite cloud.
+    fn isotropic(t_map: StressEnergy, band: f64) -> bool {
+        let (pressure, _) = pressure_energy(t_map);
+        spectrum(t_map)[..3]
+            .iter()
+            .all(|st| close(*st, -pressure, band * pressure.abs()))
+    }
+
     /// numga's `main`: every check of its tutorial.
     #[test]
     fn tutorial_checks() {
-        let mut rng = Rng(0x2545_f491_4f6c_dd1d);
+        let mut rng = rng(0x2545_f491);
         // A plane wave along +z: electric field along x, magnetic along y.
         let (ex, by) = (2.0, 2.0);
         let f = field(ex, 0.0, 0.0, 0.0, by, 0.0);
         let t_em = stress_energy(f);
-        let energy = (t() | t_em.of(t())).s();
-        assert!(close(energy, 0.5 * (ex * ex + by * by), 1e-14));
+        assert!(close(energy(t_em, t()), 0.5 * (ex * ex + by * by), 1e-14));
         let p = poynting(t_em);
-        assert!(close(p[0], 0.0, 1e-14) && close(p[1], 0.0, 1e-14));
-        assert!(close(p[2], ex * by, 1e-14), "{p:?}");
+        assert!(
+            p.max_abs_diff(&Space::new(0.0, 0.0, ex * by)) <= 1e-14,
+            "{p:?}"
+        );
         for n in [x(), y()] {
             assert!(close(normal_stress(t_em, n), 0.0, 1e-14));
         }
@@ -525,11 +528,7 @@ mod tests {
             assert!(close(normal_stress(t_dust, n), 0.0, 1e-14));
         }
         assert!(close(t_dust.trace(), rho, 1e-14));
-        assert!(close(
-            (t() | t_moving.of(t())).s(),
-            rho * gamma * gamma,
-            1e-14
-        ));
+        assert!(close(energy(t_moving, t()), rho * gamma * gamma, 1e-14));
         assert!(close(
             normal_stress(t_moving, z()),
             -rho * gamma * gamma * beta * beta,
@@ -543,28 +542,21 @@ mod tests {
         let cloud = isotropic_cloud(n, speed, &mut rng);
         let mass = 1.0 / n as f64;
         let t_cloud = cloud_tensor(&cloud, mass);
-        let s = spectrum(t_cloud);
-        let (stresses, energy_cloud) = ([s[0], s[1], s[2]], s[3]);
-        let pressure = -(stresses[0] + stresses[1] + stresses[2]) / 3.0;
+        let (pressure, energy_cloud) = pressure_energy(t_cloud);
         assert!(close(t_cloud.trace(), 1.0, 1e-14));
         let expected = energy_cloud * speed * speed / 3.0;
         assert!(close(pressure, expected, 0.05 * expected.abs()));
         // numga checks each stress to 5%, which its NumPy stream meets; the extreme eigenvalue
         // of 2000 directions strays by about 2% per standard deviation, so on another stream
         // the band is 8%, as numga's own null-cloud test allows.
-        for st in stresses {
-            assert!(
-                close(st, -pressure, 0.08 * pressure.abs()),
-                "{s:?} {pressure}"
-            );
-        }
+        assert!(isotropic(t_cloud, 0.08), "{:?}", spectrum(t_cloud));
 
         // A cloud of null rays is exactly traceless.
         let rays = null_cloud(n, &mut rng);
         let t_light = cloud_tensor(&rays, mass);
-        let ls = spectrum(t_light);
+        let (pressure_light, energy_light) = pressure_energy(t_light);
         assert!(close(t_light.trace(), 0.0, 1e-11));
-        assert!(close(-(ls[0] + ls[1] + ls[2]) / 3.0, ls[3] / 3.0, 1e-12));
+        assert!(close(pressure_light, energy_light / 3.0, 1e-12));
 
         // The ideal fluid matches the cloud.
         let t_fluid = fluid(energy_cloud, pressure);
@@ -587,12 +579,25 @@ mod tests {
         assert!(maps_close(boosted(b, t_dust), t_moving, 1e-14));
     }
 
+    /// The boost of the rest observer along a direction is the four-velocity `γ (t + β d)`.
+    #[test]
+    fn a_boosted_observer_moves_at_the_tanh_of_the_rapidity() {
+        let mut rng = rng(3);
+        for d in sphere_directions(5, &mut rng) {
+            for speed in [0.1f64, 0.6, 0.95] {
+                let gamma = 1.0 / (1.0 - speed * speed).sqrt();
+                let want = (t() + d.gp(speed)).gp(gamma);
+                assert!(moving(&[d], speed)[0].max_abs_diff(&want) <= 1e-12);
+            }
+        }
+    }
+
     #[test]
     fn maxwell_stress_tracelessness_and_symmetry() {
         let (ex, by) = (2.5, 2.5);
         let t_em = stress_energy(field(ex, 0.0, 0.0, 0.0, by, 0.0));
         assert!(close(t_em.trace(), 0.0, 1e-14));
-        let mut rng = Rng(123);
+        let mut rng = rng(123);
         let (a, b) = (random_vector(&mut rng), random_vector(&mut rng));
         assert!(close((a | t_em.of(b)).s(), (b | t_em.of(a)).s(), 1e-14));
     }
@@ -619,19 +624,16 @@ mod tests {
 
     #[test]
     fn particle_cloud_is_an_ideal_fluid() {
-        let mut rng = Rng(7);
+        let mut rng = rng(7);
         let speed = 0.7;
         let n = 4000;
         let u = isotropic_cloud(n, speed, &mut rng);
         let t_map = cloud_tensor(&u, 1.0 / n as f64);
-        let s = spectrum(t_map);
-        let pressure = -(s[0] + s[1] + s[2]) / 3.0;
+        let (pressure, energy) = pressure_energy(t_map);
         assert!(close(t_map.trace(), 1.0, 1e-14));
-        let expected = s[3] * speed * speed / 3.0;
+        let expected = energy * speed * speed / 3.0;
         assert!(close(pressure, expected, 0.05 * expected));
-        for st in &s[..3] {
-            assert!(close(*st, -pressure, 0.05 * pressure));
-        }
+        assert!(isotropic(t_map, 0.05), "{:?}", spectrum(t_map));
     }
 
     #[test]
@@ -639,9 +641,9 @@ mod tests {
         let e = 3.0;
         let t_map = stress_energy(field(e, 0.0, 0.0, 0.0, e, 0.0));
         assert!(maps_close(t_map, dyad(t() + z()).gp(e * e), 1e-14));
-        let mut rng = Rng(11);
-        let c: Vec<f64> = (0..6).map(|_| rng.normal()).collect();
-        let f = field(c[0], c[1], c[2], c[3], c[4], c[5]);
+        let mut rng = rng(11);
+        let mut c = || rng.normal();
+        let f = field(c(), c(), c(), c(), c(), c());
         assert!(maps_close(stress_energy(f), stress_from_force(f), 1e-13));
         let iterated = f.commutator(f.commutator(open()));
         assert!(close(iterated.trace(), 2.0 * lagrangian(f), 1e-13));
@@ -649,16 +651,17 @@ mod tests {
 
     #[test]
     fn null_cloud_is_exactly_traceless_radiation() {
-        let mut rng = Rng(12);
+        let mut rng = rng(12);
         let n = 3000;
         let rays = null_cloud(n, &mut rng);
         let t_map = cloud_tensor(&rays, 2.0 / n as f64);
-        let s = spectrum(t_map);
+        let (pressure, energy) = pressure_energy(t_map);
         assert!(close(t_map.trace(), 0.0, 1e-11));
-        assert!(close(-(s[0] + s[1] + s[2]) / 3.0, s[3] / 3.0, 1e-12));
-        for st in &s[..3] {
-            assert!(close(*st, -2.0 / 3.0, 0.08 * 2.0 / 3.0), "{s:?}");
-        }
+        assert!(close(pressure, energy / 3.0, 1e-12));
+        // The rays carry the energy 2; their spectrum's energy differs from it by the
+        // cloud's small net momentum, at second order.
+        assert!(close(pressure, 2.0 / 3.0, 0.01 * 2.0 / 3.0), "{pressure}");
+        assert!(isotropic(t_map, 0.08), "{:?}", spectrum(t_map));
     }
 
     #[test]

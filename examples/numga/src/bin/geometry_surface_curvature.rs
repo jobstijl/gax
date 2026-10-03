@@ -10,13 +10,11 @@
 //! curvature lines with two small symmetric eigensolves. The animation turns an ellipsoid and a
 //! hyperboloid of one sheet under the view.
 //!
-//! Directions are the slot kind of the forms. PGA3D has no kind for the ideal points alone, so
-//! the slot is VGA3D's vector, embedded by the homomorphism `vga3d::Vector -> pga3d::Plane` (a
-//! vector as the plane through the origin normal to it) and dualized to the ideal point. On it
-//! the metric is definite, so `eigh_with` applies as in numga's `eigvalsh(metric)`.
+//! Directions are the slot kind of the forms: PGA3D's `Direction`, the ideal points, widened
+//! into points where a form on points reads them. On directions the metric is definite, so
+//! `eigh_with` applies as in numga's `eigvalsh(metric)`.
 
-use gax::pga3d::{Plane, Point, Scalar};
-use gax::vga3d::Vector;
+use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
 use gax_numga_examples::canvas::{Rgb, mix, scale, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, backdrop, caption, colormap, palette, run,
@@ -31,33 +29,30 @@ mod curvature {
     /// A polarity: each point to its polar plane.
     pub type Quadric = Plane<(Point,), f64>;
     /// A form on directions.
-    pub type Form = Scalar<(Vector, Vector), f64>;
+    pub type Form = Scalar<(Direction, Direction), f64>;
 
     /// The plane at infinity.
     pub fn infinity() -> Pl {
         Plane::new(0.0, 0.0, 0.0, 1.0)
     }
 
-    /// Directions as ideal points: a vector's plane through the origin, dualized.
-    pub fn direction() -> Point<(Vector,), f64> {
-        Plane::from(Vector::<(), f64>::slot()).dual()
+    /// The open direction, as an ideal point.
+    pub fn direction() -> Point<(Direction,), f64> {
+        Direction::<(), f64>::slot().cast::<Point>()
     }
 
     /// The metric on directions: the inner product of the planes they are normal to.
     pub fn metric() -> Form {
-        let (a, b) = (direction().dual(), direction().dual());
-        a | b
+        let normal = Direction::<(), f64>::slot().dual();
+        normal.dot(normal)
     }
 
     /// A central quadric with one weight per axis, a sum of plane dyads less the plane at
     /// infinity's: `Σ wᵢ Aᵢ (Aᵢ & X) - e0 (e0 & X)`.
     pub fn quadric(weights: [f64; 3]) -> Quadric {
         let x = Point::slot();
-        let axes = [
-            Plane::new(1.0, 0.0, 0.0, 0.0),
-            Plane::new(0.0, 1.0, 0.0, 0.0),
-            Plane::new(0.0, 0.0, 1.0, 0.0),
-        ];
+        let axes =
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]].map(|n| Plane::from_normal(n, 0.0));
         let w = infinity();
         axes.iter()
             .zip(weights)
@@ -83,7 +78,7 @@ mod curvature {
         pub centre: P,
         /// The poles of the planes through the centre normal to each direction, as the planes
         /// those poles are normal to.
-        pub shape: Plane<(Vector,), f64>,
+        pub shape: Plane<(Direction,), f64>,
         pub metric: Form,
     }
 
@@ -94,7 +89,7 @@ mod curvature {
             // The pole of the plane at infinity is the centre.
             let pole = dual.of(w);
             let centre = pole.gp(1.0 / (w & pole).s());
-            let d = direction().dual();
+            let d = Direction::<(), f64>::slot().dual();
             let through_centre = d - w * (d & centre);
             Surface {
                 q,
@@ -126,13 +121,13 @@ mod curvature {
         /// its eigenvalues against the metric are the principal curvatures and the normal's 0.
         pub fn principal(&self, p: P) -> [f64; 2] {
             let tangent = self.q.of(p);
-            // The normal: the tangent plane's dual, less its weight.
-            let n = tangent.dual();
-            let normal = Point::new(n.c[0], n.c[1], n.c[2], 0.0);
+            // The normal: the tangent plane's dual, as a direction (its weight dropped), and
+            // the length of the gradient.
+            let normal = tangent.dual().cast::<Direction>();
+            let length = tangent.dual().ideal_norm();
             // The projector of directions onto the tangent plane.
             let d = direction();
             let project = d - normal * (tangent & d).gp(1.0 / (tangent & normal).s());
-            let length = normal.ideal_norm();
             let second = self
                 .form
                 .of(project)
@@ -146,10 +141,10 @@ mod curvature {
         /// shape less the point's own dyad. One is the surface itself; the level sets of the
         /// other two are its lines of curvature.
         pub fn confocal(&self, p: P) -> [f64; 2] {
-            let d = direction();
-            // The point's offset from the centre, as the plane it is normal to.
+            // The point's offset from the centre, a direction, as the plane it is normal to.
             let position = (p.unitized() - self.centre).dual();
-            let through_point = d & (self.shape - position * (position & d));
+            let through_point =
+                Direction::<(), f64>::slot() & (self.shape - position * (position & direction()));
             pair(through_point.eigh_with(self.metric).0)
         }
     }
@@ -178,6 +173,13 @@ struct Seen {
     t: [f64; 2],
 }
 
+/// Where the light comes from for a view along `heading`: from behind the viewer's right
+/// shoulder, the heading reversed, turned 22 degrees about the vertical and raised.
+fn lamp(heading: P) -> P {
+    let back = Motor::rotation_about(0.0, 0.0, 1.0, -0.38) >> -heading;
+    back + Point::direction(0.0, 0.0, 0.6 * heading.ideal_norm())
+}
+
 /// A ray-cast view of a surface, `w` x `h` pixels, cut at `|z| < height`.
 fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> Vec<Option<Seen>> {
     let rows: Vec<usize> = (0..h).collect();
@@ -196,21 +198,12 @@ fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> V
                         if disc < 0.0 || p.to_euclidean()[2].abs() >= height {
                             continue;
                         }
-                        // Lit from behind the viewer's shoulder, both sides alike.
-                        let n = surface.q.of(p);
-                        let n = [n.e1(), n.e2(), n.e3()];
-                        let back = [-d.e032(), -d.e013(), -d.e021()];
-                        let lamp = [
-                            back[0] + back[1] * 0.4,
-                            back[1] - back[0] * 0.4,
-                            back[2] + 0.6,
-                        ];
-                        let dot = n[0] * lamp[0] + n[1] * lamp[1] + n[2] * lamp[2];
-                        let len = (n.iter().map(|v| v * v).sum::<f64>()
-                            * lamp.iter().map(|v| v * v).sum::<f64>())
-                        .sqrt();
+                        // Lit from behind the viewer's shoulder, both sides alike: the cosine
+                        // between the tangent plane and the plane facing the lamp.
+                        let tangent = surface.q.of(p).normalized().into_inner();
+                        let facing = Plane::orthogonal_to(lamp(d)).normalized().into_inner();
                         part[i * w + x] = Some(Seen {
-                            light: (0.4 + 0.6 * (dot / len).abs()) as f32,
+                            light: (0.4 + 0.6 * (tangent | facing).s().abs()) as f32,
                             k: surface.principal(p),
                             t: surface.confocal(p),
                         });
@@ -247,22 +240,22 @@ fn scene() -> &'static Scene {
     SCENE.get_or_init(|| {
         let (e, h) = (Surface::new(ellipsoid()), Surface::new(hyperboloid()));
         let tau = core::f64::consts::TAU;
-        let [a, b, c] = SEMI_AXES;
+        // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
+        // about z by the longitude `v`, then stretched along the axes.
+        let turned = |v: f64, p: P| Motor::rotation_about(0.0, 0.0, 1.0, v * tau) >> p;
+        let stretched = |p: P, k: [f64; 3]| {
+            let [x, y, z] = p.to_euclidean();
+            Point::xyz(k[0] * x, k[1] * y, k[2] * z)
+        };
         let on_ellipsoid = |u: f64, v: f64| {
-            let (lat, lon) = ((u - 0.5) * tau / 2.0, v * tau);
-            Point::xyz(
-                a * lat.cos() * lon.cos(),
-                b * lat.cos() * lon.sin(),
-                c * lat.sin(),
-            )
+            let latitude = Motor::rotation_about(0.0, -1.0, 0.0, (u - 0.5) * tau / 2.0);
+            let p = turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0));
+            stretched(p, SEMI_AXES)
         };
         let on_hyperboloid = |u: f64, v: f64| {
             let s = (2.0 * u - 1.0) * 2f64.asinh();
-            Point::xyz(
-                1.6 * s.cosh() * (v * tau).cos(),
-                s.cosh() * (v * tau).sin(),
-                s.sinh(),
-            )
+            let p = turned(v, Point::xyz(s.cosh(), 0.0, s.sinh()));
+            stretched(p, [1.6, 1.0, 1.0])
         };
         Scene {
             ranges: [ranges(&e, on_ellipsoid), ranges(&h, on_hyperboloid)],
@@ -301,7 +294,7 @@ fn shade(
         ) else {
             continue;
         };
-        let rate = (dx * dx + dy * dy).sqrt() + 1e-9;
+        let rate = gax::pga2d::Point::direction(dx, dy).ideal_norm() + 1e-9;
         let cover = (1.0 - ((v - v.round()).abs() / rate - 0.5 * 1.2)).clamp(0.0, 1.0) as f32;
         rgb = mix(rgb, families[f], cover);
     }
@@ -366,7 +359,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::curvature::*;
-    use gax::pga3d::{Line, Motor, Point};
+    use gax::pga3d::{Motor, Point};
 
     /// The ellipsoid's four umbilics, where it curves equally in every direction: in the plane
     /// of its longest and shortest axes.
@@ -393,14 +386,13 @@ mod tests {
 
     const TOWARD: [[f64; 3]; 3] = [[10.0, 6.0, 4.0], [-7.0, 9.0, 3.0], [2.0, -8.0, -9.0]];
 
-    /// Where rays toward the centre from a few directions meet the surface.
+    /// Where rays toward the centre from a few points meet the surface.
     fn surface_points(s: &Surface) -> Vec<P> {
         TOWARD
             .iter()
             .map(|t| {
-                let n = (t[0] * t[0] + t[1] * t[1] + t[2] * t[2]).sqrt();
-                let heading = Point::direction(-t[0] / n, -t[1] / n, -t[2] / n);
-                s.hit(Point::xyz(t[0], t[1], t[2]), heading).0
+                let from = Point::xyz(t[0], t[1], t[2]);
+                s.hit(from, Point::xyz(0.0, 0.0, 0.0) - from).0
             })
             .collect()
     }
@@ -449,8 +441,7 @@ mod tests {
     fn curvature_and_confocal_parameters_do_not_depend_on_placement() {
         let s = Surface::new(ellipsoid());
         let points = surface_points(&s);
-        let m = Line::new(0.15, 0.0, 0.2, 0.0, 0.0, 0.0).exp()
-            * Line::new(0.0, 0.0, 0.0, -0.75, 0.0, 0.35).exp();
+        let m = Motor::rotation_about(0.6, 0.0, 0.8, 0.5) * Motor::translation(1.5, 0.0, -0.7);
         let moved = Surface::new(placed(ellipsoid(), m));
         for p in points {
             let q = m >> p;

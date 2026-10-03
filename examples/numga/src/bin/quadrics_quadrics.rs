@@ -7,14 +7,14 @@
 //! ellipsoid along a screw motion in the world (right); the world map's contact point and the
 //! moved body contact point stay one point.
 
-use gax::pga3d::Motor;
+use gax::pga3d::{Motor, Point};
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
 };
 
 mod quadrics {
-    use gax::pga3d::{Line, Motor, Plane, Point};
+    use gax::pga3d::{Motor, Plane, Point};
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
@@ -65,11 +65,11 @@ mod quadrics {
         )
     }
 
-    /// numga's motor: the translation `exp(0.5 xw + yw + 1.5 zw)` after a turn of `-π/12` in
-    /// the `xy` plane (`xw = e1 e0 = -e01`).
+    /// numga's motor `exp(0.5 xw + yw + 1.5 zw) exp(-π/12 xy)`: the translation by `(1, 2, 3)`
+    /// after a turn of `π/6` about z.
     pub fn motor() -> M {
-        Line::from_coeffs([0.0, 0.0, 0.0, -0.5, -1.0, -1.5]).exp()
-            * Line::from_coeffs([0.0, 0.0, -core::f64::consts::PI / 12.0, 0.0, 0.0, 0.0]).exp()
+        Motor::translation(1.0, 2.0, 3.0)
+            * Motor::rotation_about(0.0, 0.0, 1.0, core::f64::consts::FRAC_PI_6)
     }
 
     /// The tangent's normal: `(1, 2, 3)` swept around by the phase `t` (radians).
@@ -98,22 +98,20 @@ mod quadrics {
         (world, world_tangent, world.of(world_tangent), m >> contact)
     }
 
-    /// The ellipsoid sampled by sweeping the support normal over a sphere: `rows` parallels of
-    /// `cols + 1` contact points.
-    pub fn surface(quadric: DualQuadric, rows: usize, cols: usize) -> Vec<Vec<[f64; 3]>> {
+    /// The ellipsoid sampled by sweeping the support normal over a sphere: `rows + 1` parallels
+    /// of `cols + 1` contact points. The normal is the plane z turned toward x by the polar
+    /// angle, then about z by the longitude.
+    pub fn surface(quadric: DualQuadric, rows: usize, cols: usize) -> Vec<Vec<P>> {
+        let pole = Plane::new(0.0, 0.0, 1.0, 0.0);
         (0..=rows)
             .map(|i| {
-                let lat = core::f64::consts::PI * i as f64 / rows as f64;
+                let polar = core::f64::consts::PI * i as f64 / rows as f64;
+                let tilt = Motor::rotation_about(0.0, 1.0, 0.0, polar);
                 (0..=cols)
                     .map(|j| {
-                        let lon = core::f64::consts::TAU * j as f64 / cols as f64;
-                        let n = Plane::new(
-                            lat.sin() * lon.cos(),
-                            lat.sin() * lon.sin(),
-                            lat.cos(),
-                            0.0,
-                        );
-                        quadric.of(support_plane(quadric, n)).to_euclidean()
+                        let longitude = core::f64::consts::TAU * j as f64 / cols as f64;
+                        let n = (Motor::rotation_about(0.0, 0.0, 1.0, longitude) * tilt) >> pole;
+                        quadric.of(support_plane(quadric, n))
                     })
                     .collect()
             })
@@ -122,10 +120,6 @@ mod quadrics {
 }
 
 use quadrics::*;
-
-fn f32s(p: [f64; 3]) -> [f32; 3] {
-    p.map(|v| v as f32)
-}
 
 /// One panel: the ellipsoid's wireframe, its centre, the tangent patch and the contact point.
 fn panel(
@@ -140,44 +134,25 @@ fn panel(
     let mut s = Scene3::new(cam);
     if let Some(g) = ghost {
         for row in surface(g, 12, 32) {
-            let pts: Vec<[f32; 3]> = row.into_iter().map(f32s).collect();
-            s.polyline(&pts, 1.0, palette::grid(), 0.6);
+            s.polyline(&row, 1.0, palette::grid(), 0.6);
         }
     }
     let rows = surface(quadric, 16, 48);
     for row in &rows {
-        let pts: Vec<[f32; 3]> = row.iter().copied().map(f32s).collect();
-        s.polyline(&pts, 1.0, palette::sky(), 0.55);
+        s.polyline(row, 1.0, palette::sky(), 0.55);
     }
     for j in (0..rows[0].len()).step_by(3) {
-        let pts: Vec<[f32; 3]> = rows.iter().map(|r| f32s(r[j])).collect();
-        s.polyline(&pts, 1.0, palette::sky(), 0.55);
+        let meridian: Vec<P> = rows.iter().map(|r| r[j]).collect();
+        s.polyline(&meridian, 1.0, palette::sky(), 0.55);
     }
-    let centre = f32s(quadric.of(infinity()).to_euclidean());
-    s.dot(centre, Marker::Dot, 9.0, palette::sky());
-    // A square of the tangent plane about the contact point, from two directions in it.
-    let n = [tangent.e1(), tangent.e2(), tangent.e3()];
-    let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt();
-    let n = n.map(|v| v / len);
-    let a = if n[0].abs() < 0.8 {
-        [1.0, 0.0, 0.0]
-    } else {
-        [0.0, 1.0, 0.0]
-    };
-    let cross = |a: [f64; 3], b: [f64; 3]| {
-        [
-            a[1] * b[2] - a[2] * b[1],
-            a[2] * b[0] - a[0] * b[2],
-            a[0] * b[1] - a[1] * b[0],
-        ]
-    };
-    let u = cross(n, a);
-    let ul = (u[0] * u[0] + u[1] * u[1] + u[2] * u[2]).sqrt();
-    let u = u.map(|v| v / ul);
-    let v = cross(n, u);
-    let p = contact.to_euclidean();
-    let k = 1.3;
-    let corner = |su: f64, sv: f64| f32s([0, 1, 2].map(|i| p[i] + k * (su * u[i] + sv * v[i])));
+    s.dot(quadric.of(infinity()), Marker::Dot, 9.0, palette::sky());
+    // A square of the tangent plane about the contact point: a square of the plane z = 0,
+    // turned from z to the tangent's normal and carried to the contact point.
+    let normal = Point::direction(tangent.e1(), tangent.e2(), tangent.e3());
+    let normal = normal.gp(1.0 / normal.ideal_norm());
+    let frame = Motor::between(Point::xyz(0.0, 0.0, 0.0), contact)
+        * Motor::rotation_between(Point::direction(0.0, 0.0, 1.0), normal);
+    let corner = |u: f64, v: f64| frame >> Point::xyz(1.3 * u, 1.3 * v, 0.0);
     s.quad(
         corner(-1.0, -1.0),
         corner(1.0, -1.0),
@@ -186,21 +161,10 @@ fn panel(
         palette::red(),
         0.35,
     );
-    s.arrow(
-        f32s(p),
-        f32s(n.map(|x| 1.2 * x)),
-        2.0,
-        9.0,
-        palette::orange(),
-    );
-    s.dot(f32s(p), Marker::Dot, 11.0, palette::red());
+    s.arrow(contact, normal.gp(1.2), 2.0, 9.0, palette::orange());
+    s.dot(contact, Marker::Dot, 11.0, palette::red());
     if let Some(m) = moved {
-        s.dot(
-            f32s(m.to_euclidean()),
-            Marker::Ring,
-            20.0,
-            palette::yellow(),
-        );
+        s.dot(m, Marker::Ring, 20.0, palette::yellow());
     }
     s.draw(c);
 }
@@ -264,13 +228,9 @@ fn draw(c: &mut Canvas, t: f32) {
 
     let (wf, hf) = (w as f32, h as f32);
     let label = |c: &mut Canvas, x: f32, s: &str| {
-        c.text(s, x, hf - 18.0, 13.0, palette::ink(), Align::Center);
+        c.text(s, x, hf - 18.0, 11.0, palette::ink(), Align::Center);
     };
-    label(
-        c,
-        wf * 0.25,
-        "BODY FRAME: TANGENT -> Q -> CONTACT -> Q^-1 -> TANGENT",
-    );
+    label(c, wf * 0.25, "BODY FRAME: TANGENT -> CONTACT -> TANGENT");
     label(c, wf * 0.75, "WORLD FRAME: M >> Q(M << PLANE)");
     let key = [
         ("CENTRE Q(INFINITY)", palette::sky()),
@@ -292,7 +252,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "AN ELLIPSOID AS A MAP FROM PLANES TO POINTS",
-        "DUAL QUADRIC Q = SUM A (PLANE & A) - C (PLANE & C), MOVED BY A MOTOR (PGA3D)",
+        "Q = SUM A (PLANE & A) - C (PLANE & C) IN PGA3D, MOVED BY A MOTOR",
     );
 }
 
@@ -303,7 +263,17 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::quadrics::*;
-    use gax::pga3d::{Motor, Plane};
+    use gax::ApproxEq;
+    use gax::pga3d::{Line, Motor, Plane};
+
+    /// The motor is numga's product of exponentials (`xw = e1 e0 = -e01`; numga's `xy` is
+    /// gax's `e12`).
+    #[test]
+    fn the_motor_is_numga_s() {
+        let numga = Line::from_coeffs([0.0, 0.0, 0.0, -0.5, -1.0, -1.5]).exp()
+            * Line::from_coeffs([0.0, 0.0, -core::f64::consts::PI / 12.0, 0.0, 0.0, 0.0]).exp();
+        assert!(motor().into_inner().approx_eq(&numga.into_inner(), 1e-12));
+    }
 
     /// Every support plane contains its own contact point and keeps the requested
     /// orientation: its Euclidean part is the unit normal.

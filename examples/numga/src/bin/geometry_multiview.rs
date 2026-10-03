@@ -16,7 +16,8 @@
 //! three moving cameras, and the Schur complement with each camera's pose covariance. The sight
 //! cones (a pixel wide) and the fused splats are rasterized per pixel from the quadrics.
 
-use gax::Extensor;
+use gax::ApproxEq;
+use gax::motions::Linear;
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
@@ -24,12 +25,11 @@ use gax_numga_examples::{
 use std::sync::OnceLock;
 
 /// The multiview core over one algebra: `gax::$ga` with `$Plane` its vectors (numga's `Plane`,
-/// a line in the plane), and `gax::$vga::Vector` standing for numga's `Direction` (the ideal
-/// points), embedded into the points by a map.
+/// a line in the plane), and its `Direction`, the ideal points.
 macro_rules! multiview_core {
-    ($ga:ident, $Plane:ident, $vga:ident) => {
+    ($ga:ident, $Plane:ident) => {
         use gax::$ga::$Plane as Plane;
-        use gax::$ga::{Motor, Point, Scalar, Twist};
+        use gax::$ga::{Direction, Motor, Point, Scalar, Twist};
         use gax::{Kind, Unit};
 
         pub type P = Point<(), f64>;
@@ -42,9 +42,6 @@ macro_rules! multiview_core {
         pub type Quadric = Plane<(Point,), f64>;
         /// The curvature of a cost over pose twists.
         pub type Information = Scalar<(Twist, Twist), f64>;
-        /// A displacement of a point, an ideal point. gax has no kind for the ideal points of
-        /// PGA, so a Euclidean vector of the matching VGA stands in, embedded by `embed()`.
-        pub type Direction = gax::$vga::Vector;
         /// The dimension of the space.
         pub const DIM: usize = <Point as Kind>::N - 1;
 
@@ -74,13 +71,9 @@ macro_rules! multiview_core {
             (point(&[0.0; 3][..DIM]) & Point::slot()) ^ (plane(DIM - 1) - w())
         }
 
-        /// The directions embedded as ideal points, a map `Point <- Direction`.
+        /// The directions widened into points (of weight zero), a map `Point <- Direction`.
         pub fn embed() -> Point<(Direction,), f64> {
-            Point::from_images(<Direction as Kind>::arr_from_fn(|i| {
-                P::from_coeffs(<Point as Kind>::arr_from_fn(
-                    |k| if k == i { 1.0 } else { 0.0 },
-                ))
-            }))
+            Direction::<(), f64>::slot().cast::<Point>()
         }
 
         /// A point scaled so that the plane at infinity reads it as one, as numga normalizes
@@ -306,7 +299,7 @@ macro_rules! multiview_core {
             let sum: f64 = points
                 .iter()
                 .zip(truth)
-                .map(|(p, t)| (p.unitized() - t.unitized()).ideal_norm().powi(2))
+                .map(|(p, t)| (p.unitized() - t.unitized()).ideal_norm_squared())
                 .sum();
             (sum / points.len() as f64).sqrt()
         }
@@ -315,7 +308,7 @@ macro_rules! multiview_core {
 
 /// The plane: numga's scenarios and the drawings.
 mod plane {
-    multiview_core!(pga2d, Line, vga2d);
+    multiview_core!(pga2d, Line);
     use gax::pga2d::Line;
 
     /// Landmarks in front of the cameras, at depths from 0.85 to 2.55.
@@ -332,15 +325,18 @@ mod plane {
         18f64.to_radians()
     }
 
-    /// Camera poses at offsets along the x axis, each panned by its gaze: numga's
-    /// `exp(xw offset / 2) exp(xy gaze / 2)`, with `xw = -e01` and `xy = e12`.
+    /// The origin, where the pinhole sits in its camera's frame.
+    pub fn origin() -> P {
+        Point::xy(0.0, 0.0)
+    }
+
+    /// Camera poses at offsets along the x axis, each looking along its `+y` panned clockwise
+    /// (towards `+x`) by its gaze: numga's `exp(xw offset / 2) exp(xy gaze / 2)`.
     pub fn rig(offsets: &[f64], gazes: &[f64]) -> Vec<M> {
         offsets
             .iter()
             .zip(gazes)
-            .map(|(o, g)| {
-                Point::new(0.0, -o / 2.0, 0.0).exp() * Point::new(0.0, 0.0, g / 2.0).exp()
-            })
+            .map(|(o, g)| Motor::translation(*o, 0.0) * Motor::rotation(origin(), -g))
             .collect()
     }
 
@@ -480,26 +476,13 @@ mod plane {
         let map: Line<(Point,), f64> = (Line::slot() & Point::slot()).solve(information);
         map.pinv_with(1e-4)
     }
-
-    /// The position of a camera's centre.
-    pub fn centre(motor: M) -> [f32; 2] {
-        let [x, y] = (motor >> point(&[0.0, 0.0])).to_euclidean();
-        [x as f32, y as f32]
-    }
-
-    /// A camera's viewing direction, the image of its local `+y`.
-    pub fn axis(motor: M) -> [f32; 2] {
-        let d = motor >> Point::direction(0.0, 1.0);
-        let n = d.e20().hypot(d.e01());
-        [(d.e20() / n) as f32, (d.e01() / n) as f32]
-    }
 }
 
 /// Space: the same core, exercised by the tests (which use part of it).
 #[cfg(test)]
 #[allow(dead_code)]
 mod space {
-    multiview_core!(pga3d, Plane, vga3d);
+    multiview_core!(pga3d, Plane);
 }
 
 /// Each convergence scenario's states.
@@ -507,8 +490,8 @@ const ITERATIONS: usize = 10;
 /// Seconds per Gauss-Newton step, and the pause after each scenario.
 const PER_STEP: f32 = 0.33;
 const HOLD: f32 = 1.2;
-/// The viewport, and the angular half-width of a pixel (the cone radius per unit depth).
-const X_RANGE: [f32; 2] = [-1.25, 1.25];
+/// The viewport's height, and the angular half-width of a pixel (the cone radius per unit
+/// depth).
 const Y_RANGE: [f32; 2] = [-0.3, 2.95];
 const PIXEL_ANGLE: f64 = 0.035;
 
@@ -554,7 +537,7 @@ fn coverage(value: f64, level: f64, pixel: f64) -> f64 {
 /// The scene at some poses: the sight cones and fused splats rasterized from their quadrics,
 /// then the cameras.
 fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Quadric>]) {
-    use gax::pga2d::{Line, Point};
+    use gax::pga2d::{Line, Motor, Point};
     let world = plane::world_cones(motors, cones);
     let (points, fused) = plane::triangulate(motors, cones);
     // Each camera's focal line, oriented so that a point ahead reads a positive depth.
@@ -611,91 +594,88 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         }
         Some(colour)
     });
-    // The cameras: field-of-view wedge, sensor line and optical axis.
+    // The cameras, drawn in their own frames (looking along +y): a field-of-view wedge 38
+    // degrees either side of the axis to a depth of 0.28, the sensor line across it, and the
+    // optical axis.
+    let origin = plane::origin();
+    let depth = 0.28;
     for (k, m) in motors.iter().enumerate() {
-        let (o, a) = (plane::centre(*m), plane::axis(*m));
-        let n = [-a[1], a[0]];
-        let (scale, spread) = (0.28f32, 38f32.to_radians().tan() * 0.28);
-        let at = |s: f32, t: f32| [o[0] + a[0] * s + n[0] * t, o[1] + a[1] * s + n[1] * t];
-        let (l, r) = (at(scale, -spread), at(scale, spread));
+        let edge = |angle: f64| {
+            let d = Motor::rotation(origin, angle) >> Point::direction(0.0, 1.0);
+            *m >> (origin + d.gp(depth / d.e01()))
+        };
+        let (o, l, r) = (
+            *m >> origin,
+            edge(-38f64.to_radians()),
+            edge(38f64.to_radians()),
+        );
         let colour = camera_colour(k);
         ax.fill(c, &[o, l, r], colour, 0.25);
         ax.line(c, o, l, 1.1, colour, 0.7);
         ax.line(c, o, r, 1.1, colour, 0.7);
         ax.line(c, l, r, 2.0, colour, 1.0);
-        ax.dashed(c, &[o, at(scale * 1.15, 0.0)], 1.2, 3.0, colour, 1.0);
+        let ahead = *m >> Point::xy(0.0, depth * 1.15);
+        ax.dashed(c, &[o, ahead], 1.2, 3.0, colour, 1.0);
     }
-    let pts: Vec<[f32; 2]> = points
-        .iter()
-        .map(|p| {
-            let [x, y] = p.to_euclidean();
-            [x as f32, y as f32]
-        })
-        .collect();
-    ax.scatter(c, &pts, Marker::Dot, 3.0, palette::ink(), 1.0);
+    ax.scatter(c, &points, Marker::Dot, 3.0, palette::ink(), 1.0);
 }
 
 /// Each moving camera's position ellipse (scaled for display) and turning fan, from its
 /// marginal information.
 fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[plane::Information]) {
-    use gax::pga2d::{Line, Point};
+    use gax::pga2d::{Line, Motor, Point};
+    let origin = plane::origin();
+    // The centre moves by the commutator of a local twist with the origin; reading that
+    // displacement with a line is reading the twist with another line.
+    let shift = Point::slot().commutator(origin);
+    let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
+    // The line at infinity reads a twist's rotation.
+    let w = Line::new(0.0, 0.0, 1.0);
     for (k, (m, info)) in motors.iter().zip(information).enumerate() {
         let cov = plane::pose_covariance(*info);
-        let size = cov
-            .coeffs()
-            .iter()
-            .flatten()
-            .fold(0.0f64, |a, v| a.max(v.abs()));
-        if size == 0.0 {
+        if cov.max_abs_diff(&Linear::zero()) == 0.0 {
             continue;
         }
-        // The centre moves by the commutator of a local twist with the origin; reading that
-        // displacement with a line is reading the twist with another line.
-        let origin = Point::xy(0.0, 0.0);
-        let shift = Point::slot().commutator(origin);
-        let readout = (Line::slot() & Point::slot()).solve(Line::slot() & shift);
-        let spread = readout & cov.of(readout);
-        let (values, modes) = spread.eigh();
-        let axes: Vec<([f64; 2], f64)> = modes
+        // The ellipse's axes: the modes of the position's spread that read a position (lines
+        // with a direction), their normals with their standard deviations.
+        let (values, modes) = (readout & cov.of(readout)).eigh();
+        let axes: Vec<(Point<(), f64>, f64)> = modes
             .iter()
             .zip(values)
-            .filter(|(l, _)| l.e1().hypot(l.e2()) > 0.5)
+            .filter(|(l, _)| l.norm() > 0.5)
             .map(|(l, v)| {
-                let n = l.e1().hypot(l.e2());
+                let n = l.normalized().into_inner();
                 (
-                    [l.e1() / n, l.e2() / n],
+                    Point::direction(n.e1(), n.e2()),
                     (v.max(1e-8).sqrt() * 0.08).min(1.0),
                 )
             })
             .collect();
-        let ring: Vec<[f32; 2]> = (0..=64)
+        // Round the ellipse: a unit direction turned round, its coordinates along the axes.
+        let ring: Vec<Point<(), f64>> = (0..=64)
             .map(|i| {
-                let a = core::f64::consts::TAU * f64::from(i) / 64.0;
-                let mut q = [0.0, 0.0];
-                for (j, (n, r)) in axes.iter().enumerate() {
-                    let s = if j == 0 { a.cos() } else { a.sin() } * r;
-                    q = [q[0] + n[0] * s, q[1] + n[1] * s];
-                }
-                let [x, y] = (*m >> Point::xy(q[0], q[1])).to_euclidean();
-                [x as f32, y as f32]
+                let angle = core::f64::consts::TAU * f64::from(i) / 64.0;
+                let u = Motor::rotation(origin, angle) >> Point::direction(1.0, 0.0);
+                let offset = axes
+                    .iter()
+                    .zip([u.e20(), u.e01()])
+                    .fold(origin, |q, ((n, r), s)| q + n.gp(r * s));
+                *m >> offset
             })
             .collect();
         let colour = camera_colour(k);
         ax.fill(c, &ring, colour, 0.3);
         ax.dashed(c, &ring, 1.6, 4.0, colour, 1.0);
-        // The turning's standard deviation: the line at infinity reads a twist's rotation.
-        let w = Line::new(0.0, 0.0, 1.0);
-        let turn = (w & cov.of(w)).s().max(0.0).sqrt().to_degrees() * 0.35;
-        let (o, a) = (plane::centre(*m), plane::axis(*m));
-        let heading = a[1].atan2(a[0]);
-        let half = (turn as f32).min(180.0).to_radians();
-        let arc: Vec<[f32; 2]> = (0..=24)
+        // The turning's standard deviation, a fan either side of the axis (scaled for display).
+        let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.35;
+        let half = turn.min(core::f64::consts::PI);
+        let arc: Vec<Point<(), f64>> = (0..=24)
             .map(|i| {
-                let t = heading - half + 2.0 * half * i as f32 / 24.0;
-                [o[0] + 0.38 * t.cos(), o[1] + 0.38 * t.sin()]
+                let angle = half * (2.0 * f64::from(i) / 24.0 - 1.0);
+                *m >> (Motor::rotation(origin, angle) >> Point::xy(0.0, 0.38))
             })
             .collect();
-        ax.dashed(c, &[arc[0], o, arc[24]], 1.1, 2.0, colour, 1.0);
+        ax.dashed(c, &[arc[0], *m >> origin, arc[24]], 1.1, 2.0, colour, 1.0);
         ax.dashed(c, &arc, 1.3, 2.0, colour, 1.0);
     }
 }
@@ -721,7 +701,6 @@ fn draw(c: &mut Canvas, t: f32) {
     let rect = plot::inset([0.0, top, w * 0.5, h], 8.0, 4.0, 8.0, 8.0);
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
     let ax = Axes::equal(rect, [0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])], span);
-    let _ = X_RANGE;
     scene(c, &ax, &motors, &data.cones);
     if let Some(info) = &s.information {
         let blended: Vec<plane::Information> = info[k]
@@ -814,29 +793,18 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{plane, space};
-    use gax::Extensor;
-
-    /// A small xorshift generator for numga's uniform landmarks (its stream cannot be
-    /// reproduced).
-    struct Rng(u64);
-    impl Rng {
-        fn uniform(&mut self, lo: f64, hi: f64) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            lo + (hi - lo) * ((self.0 >> 11) as f64 / (1u64 << 53) as f64)
-        }
-    }
+    use gax::pga3d::Motor;
+    use gax::{ApproxEq, Extensor};
+    use gax_numga_examples::rng::{Draw, rng};
 
     /// Cone pullback and fusion reconstruct the landmarks given the true poses, and the fused
     /// precision is positive on every displacement: the splat is a bounded ellipse.
     #[test]
     fn triangulate_cones() {
-        let mut rng = Rng(123);
-        let xy: Vec<[f64; 2]> = (0..6)
-            .map(|_| [rng.uniform(-0.6, 0.6), rng.uniform(1.0, 2.5)])
+        let mut rng = rng(123);
+        let truth: Vec<plane::P> = (0..6)
+            .map(|_| gax::pga2d::Point::xy(rng.range(-0.6, 0.6), rng.range(1.0, 2.5)))
             .collect();
-        let truth: Vec<plane::P> = xy.iter().map(|c| plane::point(c)).collect();
         let motors = plane::rig(&[-0.75, 0.75], &[plane::gaze(), -plane::gaze()]);
         let camera = plane::pinhole();
         // A sensor quadric at the principal point, moved to each pixel, pulled back.
@@ -856,17 +824,14 @@ mod tests {
             })
             .collect();
         let (points, fused) = plane::triangulate(&motors, &cones);
-        for (p, c) in points.iter().zip(&xy) {
-            let [a, b] = p.to_euclidean();
-            assert!(
-                (a - c[0]).abs() < 1e-5 && (b - c[1]).abs() < 1e-5,
-                "{a} {b} {c:?}"
-            );
+        for (p, t) in points.iter().zip(&truth) {
+            assert!(p.max_abs_diff(t) < 1e-5, "{p:?} {t:?}");
         }
         for f in &fused {
             for i in 0..12 {
                 let a = core::f64::consts::PI * f64::from(i) / 12.0;
-                let d = gax::pga2d::Point::direction(a.cos(), a.sin());
+                let turn = gax::pga2d::Motor::rotation(plane::origin(), a);
+                let d = turn >> gax::pga2d::Point::direction(1.0, 0.0);
                 assert!((f.of(d) & d).s() > 0.0);
             }
         }
@@ -957,12 +922,6 @@ mod tests {
 
     // --- the same core in space ------------------------------------------------------------
 
-    /// numga's PGA3D twists by blade name, as gax `Line` coefficients
-    /// `[e23, e31, e12, e01, e02, e03]` (`xw = -e01`, `yw = -e02`, `zw = -e03`).
-    fn twist(yz: f64, zx: f64, xy: f64, xw: f64, yw: f64, zw: f64) -> gax::pga3d::Line<(), f64> {
-        gax::pga3d::Line::new(yz, zx, xy, -xw, -yw, -zw)
-    }
-
     const XYZ: [[f64; 3]; 8] = [
         [0.15, -0.20, 1.20],
         [-0.43, 0.15, 1.45],
@@ -974,17 +933,26 @@ mod tests {
         [-0.25, -0.25, 1.60],
     ];
 
+    /// The landmarks.
+    fn landmarks() -> Vec<space::P> {
+        XYZ.iter().map(|c| space::point(c)).collect()
+    }
+
+    /// The right camera of the rig in space, panned left by `pan` about its vertical.
+    fn right_camera(pan: f64) -> space::M {
+        Motor::translation(0.75, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, -pan)
+    }
+
     /// Three convergent cameras and eight landmarks in space with their sight cones: left
-    /// panned right, right panned left, and a central one raised and looking slightly down.
+    /// panned right, right panned left (18 degrees each), and a central one raised and looking
+    /// 12 degrees down.
     fn rig_3d() -> (Vec<space::M>, Vec<Vec<space::Quadric>>) {
         let theta = 18f64.to_radians();
         let truth = vec![
-            twist(0.0, 0.0, 0.0, -0.375, 0.0, 0.0).exp()
-                * twist(0.0, -theta / 2.0, 0.0, 0.0, 0.0, 0.0).exp(),
-            twist(0.0, 0.0, 0.0, 0.375, 0.0, 0.0).exp()
-                * twist(0.0, theta / 2.0, 0.0, 0.0, 0.0, 0.0).exp(),
-            twist(0.0, 0.0, 0.0, 0.0, 0.175, 0.0).exp()
-                * twist(-6f64.to_radians(), 0.0, 0.0, 0.0, 0.0, 0.0).exp(),
+            Motor::translation(-0.75, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, theta),
+            right_camera(theta),
+            Motor::translation(0.0, 0.35, 0.0)
+                * Motor::rotation_about(1.0, 0.0, 0.0, 12f64.to_radians()),
         ];
         let camera = space::pinhole();
         // 2D transverse uncertainty on the sensor plane z = 1 around the principal point.
@@ -992,10 +960,9 @@ mod tests {
         let p = gax::pga3d::Point::slot();
         let sensor = x * (x & p) + y * (y & p);
         let principal = space::point(&[0.0, 0.0, 1.0]);
-        let cones = XYZ
-            .iter()
-            .map(|c| {
-                let q = space::point(c);
+        let cones = landmarks()
+            .into_iter()
+            .map(|q| {
                 truth
                     .iter()
                     .map(|m| {
@@ -1013,27 +980,32 @@ mod tests {
     #[test]
     fn bundle_adjust_3d_recovers_a_badly_perturbed_camera() {
         let (truth, cones) = rig_3d();
+        // Rotation vectors in degrees (a turn by the length about the direction), translations
+        // and iterations.
         for (rotation, translation, iterations) in [
-            ([30.0, -20.0, 25.0], [-0.40, 0.30, 0.45], 30),
-            ([50.0, 35.0, -40.0], [0.60, -0.50, 0.80], 40),
+            ([-30.0, 20.0, -25.0], [-0.40, 0.30, 0.45], 30),
+            ([-50.0, -35.0, 40.0], [0.60, -0.50, 0.80], 40),
         ] {
-            let [rx, ry, rz]: [f64; 3] = rotation.map(|d: f64| d.to_radians());
+            let spin =
+                gax::pga3d::Point::<(), f64>::direction(rotation[0], rotation[1], rotation[2]);
             let [tx, ty, tz] = translation;
-            let perturbation = twist(0.0, 0.0, 0.0, tx, ty, tz).gp(0.5).exp()
-                * twist(rx, ry, rz, 0.0, 0.0, 0.0).gp(0.5).exp();
+            let perturbation = Motor::translation(tx, ty, tz)
+                * Motor::rotation_about(
+                    rotation[0],
+                    rotation[1],
+                    rotation[2],
+                    spin.ideal_norm().to_radians(),
+                );
             let motors = vec![truth[0], perturbation * truth[1], truth[2]];
             let (start, _) = space::triangulate(&motors, &cones);
             let initial_cost = space::cone_cost(&motors, &start, &cones);
             let (est, points, _) =
                 space::bundle_adjust(&motors, &cones, iterations, 0.7, &[0.0, 1.0, 0.0]);
-            let centre = (est[1] >> space::point(&[0.0, 0.0, 0.0])).to_euclidean();
-            for (a, b) in centre.iter().zip([0.75, 0.0, 0.0]) {
-                assert!((a - b).abs() < 0.02, "{centre:?}");
-            }
-            for (p, c) in points.iter().zip(&XYZ) {
-                for (a, b) in p.to_euclidean().iter().zip(c) {
-                    assert!((a - b).abs() < 0.02);
-                }
+            let centre = est[1] >> space::point(&[0.0, 0.0, 0.0]);
+            let true_centre = space::point(&[0.75, 0.0, 0.0]);
+            assert!(centre.max_abs_diff(&true_centre) < 0.02, "{centre:?}");
+            for (p, l) in points.iter().zip(&landmarks()) {
+                assert!(p.max_abs_diff(l) < 0.02);
             }
             // The residual rotation's scalar part is the cosine of half its angle.
             let residual = (est[1] * truth[1].reverse()).into_inner().s();
@@ -1047,14 +1019,8 @@ mod tests {
     #[test]
     fn bundle_adjust_3d_converges_from_a_small_perturbation() {
         let (truth, cones) = rig_3d();
-        let theta = 18f64.to_radians();
-        let motors = vec![
-            truth[0],
-            twist(0.0, 0.0, 0.0, 0.375, 0.0, 0.0).exp()
-                * twist(0.0, theta * 1.05 / 2.0, 0.0, 0.0, 0.0, 0.0).exp(),
-            truth[2],
-        ];
-        let landmarks: Vec<space::P> = XYZ.iter().map(|c| space::point(c)).collect();
+        let motors = vec![truth[0], right_camera(18f64.to_radians() * 1.05), truth[2]];
+        let landmarks = landmarks();
         let (start, _) = space::triangulate(&motors, &cones);
         let (_, points, _) = space::bundle_adjust(&motors, &cones, 10, 0.9, &[0.0, 1.0, 0.0]);
         let (e0, e1) = (
@@ -1062,6 +1028,31 @@ mod tests {
             space::rmse(&points, &landmarks),
         );
         assert!(e1 < e0 && e1 < 0.02, "{e0} {e1}");
+    }
+
+    /// The rig is numga's: its twists by blade name (`xw = -e01`, `zx = e31`, ...), exponentiated.
+    #[test]
+    fn the_rigs_are_numgas() {
+        let theta = 18f64.to_radians();
+        let twist = |c: [f64; 6]| gax::pga3d::Line::new(c[0], c[1], c[2], c[3], c[4], c[5]).exp();
+        let numga = [
+            twist([0.0, 0.0, 0.0, 0.375, 0.0, 0.0])
+                * twist([0.0, -theta / 2.0, 0.0, 0.0, 0.0, 0.0]),
+            twist([0.0, 0.0, 0.0, -0.375, 0.0, 0.0])
+                * twist([0.0, theta / 2.0, 0.0, 0.0, 0.0, 0.0]),
+            twist([0.0, 0.0, 0.0, 0.0, -0.175, 0.0])
+                * twist([-6f64.to_radians(), 0.0, 0.0, 0.0, 0.0, 0.0]),
+        ];
+        for (m, n) in rig_3d().0.iter().zip(&numga) {
+            assert!(
+                m.into_inner().approx_eq(&n.into_inner(), 1e-15),
+                "{m:?} {n:?}"
+            );
+        }
+        let numga = gax::pga2d::Point::new(0.0, -0.375, 0.0).exp()
+            * gax::pga2d::Point::new(0.0, 0.0, theta / 2.0).exp();
+        let m = plane::rig(&[0.75], &[theta])[0];
+        assert!(m.into_inner().approx_eq(&numga.into_inner(), 1e-15));
     }
 
     #[test]

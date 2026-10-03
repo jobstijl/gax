@@ -23,29 +23,16 @@
 
 use gax::pga3d::{Line, Motor, Point};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
 mod lie;
-#[allow(unused_imports)]
-use lie::Lie as _;
-
-/// The Lie steppers for PGA3D motors: rates and forques are both lines.
-mod rigid {
-    /// The algebra.
-    pub type G = gax::motions::Pga3d;
-    pub type M = crate::lie::M<G>;
-    pub type R = crate::lie::R<G>;
-    pub type F = crate::lie::F<G>;
-    pub type P = crate::lie::P<G>;
-    pub type Inertia = crate::lie::Inertia<G>;
-    pub type InertiaInv = crate::lie::InertiaInv<G>;
-}
 
 mod xpbd {
     use super::*;
-    pub use crate::rigid::{F, Inertia, InertiaInv, M, P, R};
+    use crate::lie::Lie;
+    pub use crate::lie::rigid::{F, G, Inertia, InertiaInv, M, P, R};
 
     /// The batched state of the chain's rigid bodies.
     #[derive(Clone)]
@@ -99,7 +86,7 @@ mod xpbd {
         // vanishing line; the small offsets keep its direction and multiplier at zero.
         let line = (motors[0] >> anchors[0]) & (motors[1] >> anchors[1]);
         let magnitude = line.norm();
-        let direction = line * (1.0 / (magnitude + 1e-24));
+        let direction = line / (magnitude + 1e-24);
         let (steps, inertial) = responses(motors, inv, direction);
         let total = compliance / (dt * dt) + inertial + 1e-24;
         // Equal and opposite multipliers, and the corrective motion by the exponential map.
@@ -126,7 +113,7 @@ mod xpbd {
         let velocity = |i: usize| motors[i] >> anchor_velocity(anchors[i]).of(rates[i]);
         let forque = velocity(1) - velocity(0);
         let magnitude = forque.norm();
-        let direction = forque * (1.0 / (magnitude + 1e-24));
+        let direction = forque / (magnitude + 1e-24);
         let (steps, inertial) = responses(motors, inv, direction);
         let multiplier = magnitude / (inertial + 1e-24);
         [
@@ -148,7 +135,7 @@ mod xpbd {
         // 1. Unconstrained inertial pre-integration.
         let (mut motor, _): (Vec<M>, Vec<R>) = (0..chain.motor.len())
             .map(|b| {
-                crate::rigid::G::explicit_rk4(
+                G::explicit_rk4(
                     chain.motor[b],
                     chain.rate[b],
                     chain.inertia,
@@ -172,12 +159,12 @@ mod xpbd {
             }
         }
         // 3. Post-integration: the rates from the motor displacements.
-        let motor: Vec<M> = motor.into_iter().map(|m| m.normalized()).collect();
+        let motor: Vec<M> = motor.into_iter().map(|m| m.renormalize_fast()).collect();
         let mut rate: Vec<R> = chain
             .motor
             .iter()
             .zip(&motor)
-            .map(|(before, after)| crate::rigid::G::rate_between(*before, *after, dt))
+            .map(|(before, after)| G::rate_between(*before, *after, dt))
             .collect();
         // 4. Resolve the velocity constraints.
         for joints in partitions {
@@ -219,21 +206,37 @@ mod xpbd {
             .collect()
     }
 
+    /// A link's anchors, halfway to its neighbours: on +x, then on -x.
+    pub fn anchors(distance: f64) -> [P; 2] {
+        let (origin, x) = (Point::xyz(0.0, 0.0, 0.0), axes()[0]);
+        [origin + x * (0.5 * distance), origin - x * (0.5 * distance)]
+    }
+
     /// The links' spacing in numga's scene.
     pub const LINK_SPACING: f64 = 9e-2;
 
+    /// The link's axes, x, y and z.
+    pub fn axes() -> [P; 3] {
+        [
+            Point::direction(1.0, 0.0, 0.0),
+            Point::direction(0.0, 1.0, 0.0),
+            Point::direction(0.0, 0.0, 1.0),
+        ]
+    }
+
     /// The mass points of one link: six unit masses on its axes, at `size / 3`, `2 size / 3`
-    /// and `size` along x, y and z, so its three moments of inertia differ.
+    /// and `size` along x, y and z on either side, so its three moments of inertia differ.
+    /// The first three are on the positive side.
     pub fn cloud(size: f64) -> Vec<P> {
-        let mut points = Vec::new();
-        for sign in [1.0, -1.0] {
-            for axis in 0..3 {
-                let mut x = [0.0; 3];
-                x[axis] = sign * (axis as f64 + 1.0) * size / 3.0;
-                points.push(Point::xyz(x[0], x[1], x[2]));
-            }
-        }
-        points
+        let origin = Point::xyz(0.0, 0.0, 0.0);
+        [1.0, -1.0]
+            .into_iter()
+            .flat_map(|sign| {
+                (1..=3)
+                    .zip(axes())
+                    .map(move |(k, axis)| origin + axis * (sign * f64::from(k) * size / 3.0))
+            })
+            .collect()
     }
 
     /// A chain of links along x, the first fixed at the origin, hanging in gravity along -z.
@@ -249,8 +252,8 @@ mod xpbd {
         gravity: f64,
     ) -> (Chain, Vec<Joints>) {
         let points = cloud(size);
-        let (inertia, inertia_inv) = crate::rigid::G::inertia_from_points(&points);
-        let first_moment = points[1..].iter().fold(points[0], |a, b| a + *b);
+        let (inertia, inertia_inv) = G::inertia_from_points(&points);
+        let first_moment = points.iter().copied().sum();
         let state = Chain {
             motor: (0..bodies)
                 .map(|i| Motor::translation(i as f64 * distance, 0.0, 0.0))
@@ -272,10 +275,7 @@ mod xpbd {
             gravity: Point::direction(0.0, 0.0, -gravity),
         };
         // Joint j connects the +x anchor of link j to the -x anchor of link j + 1.
-        let anchors = [
-            Point::xyz(0.5 * distance, 0.0, 0.0),
-            Point::xyz(-0.5 * distance, 0.0, 0.0),
-        ];
+        let anchors = anchors(distance);
         let partitions = [0, 1]
             .map(|parity| Joints {
                 bodies: (parity..bodies - 1)
@@ -333,10 +333,6 @@ fn scene() -> &'static History {
     SCENE.get_or_init(|| swinging_chain(LINKS, (f64::from(SECONDS) / DT).round() as usize, 5, DT))
 }
 
-fn xyz(p: P) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (motors, gaps) = scene();
@@ -371,45 +367,33 @@ fn draw(c: &mut Canvas, t: f32) {
         s.seg([-0.4, y, -0.62], [0.6, y, -0.62], 1.0, palette::grid(), 0.6);
     }
     // The free end's path so far.
-    let end = Point::xyz(0.5 * LINK_SPACING, 0.0, 0.0);
-    let trail: Vec<[f32; 3]> = motors[..=k]
-        .iter()
-        .map(|m| xyz(m[LINKS - 1] >> end))
-        .collect();
+    let [end, start] = anchors(LINK_SPACING);
+    let trail: Vec<P> = motors[..=k].iter().map(|m| m[LINKS - 1] >> end).collect();
     s.polyline(&trail, 1.5, palette::yellow(), 0.6);
     let cloud = cloud(5e-2);
     let colours = [palette::orange(), palette::sky(), palette::green()];
     let origin = Point::xyz(0.0, 0.0, 0.0);
-    for (i, m) in motors[k].iter().enumerate() {
+    for (i, &m) in motors[k].iter().enumerate() {
         // Each link's mass points, on its three axes, as three bars.
         for axis in 0..3 {
-            let (a, b) = (xyz(*m >> cloud[axis]), xyz(*m >> cloud[axis + 3]));
-            s.seg(a, b, 3.0 * u, colours[axis], 1.0);
+            s.seg(
+                m >> cloud[axis],
+                m >> cloud[axis + 3],
+                3.0 * u,
+                colours[axis],
+                1.0,
+            );
         }
         // The link's anchors and the rod between them.
-        let (a, b) = (
-            xyz(*m >> Point::xyz(-0.5 * LINK_SPACING, 0.0, 0.0)),
-            xyz(*m >> end),
-        );
-        s.seg(a, b, 1.5 * u, palette::ink(), 0.8);
+        s.seg(m >> start, m >> end, 1.5 * u, palette::ink(), 0.8);
         let col = if i == 0 {
             palette::red()
         } else {
             palette::ink()
         };
-        s.dot(
-            xyz(*m >> origin),
-            gax_numga_examples::Marker::Dot,
-            5.0 * u,
-            col,
-        );
+        s.dot(m >> origin, Marker::Dot, 5.0 * u, col);
     }
-    s.dot(
-        [0.0, 0.0, 0.0],
-        gax_numga_examples::Marker::Square,
-        9.0 * u,
-        palette::red(),
-    );
+    s.dot(origin, Marker::Square, 9.0 * u, palette::red());
     s.draw(c);
     // The joint gaps over time, as numga's figure: the largest and the mean.
     let ax = Axes::new(
@@ -419,11 +403,11 @@ fn draw(c: &mut Canvas, t: f32) {
     )
     .log_y();
     ax.frame(c, "JOINT GAPS", "TIME (S)", "METRES");
-    let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<[f32; 2]> {
+    let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<[f64; 2]> {
         gaps[1..=k.max(1)]
             .iter()
             .enumerate()
-            .map(|(j, g)| [((j + 1) as f64 * DT) as f32, f(g).max(1e-30) as f32])
+            .map(|(j, g)| [(j + 1) as f64 * DT, f(g).max(1e-30)])
             .collect()
     };
     let largest = series(&|g| g.iter().fold(0.0, |a: f64, &b| a.max(b)));
@@ -431,10 +415,10 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.polyline(c, &largest, 1.6, palette::red(), 1.0);
     ax.dashed(c, &mean, 1.6, 5.0, palette::sky(), 1.0);
     // numga's bound: the joints stay closed to within 1% of the spacing.
-    let bound = (1e-2 * LINK_SPACING) as f32;
+    let bound = 1e-2 * LINK_SPACING;
     ax.dashed(
         c,
-        &[[0.0, bound], [SECONDS, bound]],
+        &[[0.0, bound], [f64::from(SECONDS), bound]],
         1.0,
         3.0,
         palette::grid(),
@@ -446,7 +430,7 @@ fn draw(c: &mut Canvas, t: f32) {
         "1% OF THE SPACING",
         9.0 * u,
         palette::grid(),
-        gax_numga_examples::Align::Left,
+        Align::Left,
     );
     ax.legend(c, &[("LARGEST", palette::red()), ("MEAN", palette::sky())]);
 }
@@ -457,6 +441,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::lie::Lie;
     use super::xpbd::*;
     use gax::pga3d::{Line, Motor, Point};
 
@@ -520,7 +505,7 @@ mod tests {
         let energy = |s: &Chain| {
             s.rate
                 .iter()
-                .map(|r| <crate::rigid::G as crate::lie::Lie>::kinetic_energy(*r, s.inertia))
+                .map(|r| G::kinetic_energy(*r, s.inertia))
                 .sum::<f64>()
         };
         let mut last = energy(&state);

@@ -156,8 +156,8 @@ pub fn hit(eye_frame: Motor, depth: f64, pixel: Pixel) -> Point {
         .into_inner()
 }
 
-/// A scene to trace: the bodies' primal forms in the world, their colours (display values in
-/// `[0, 1]`), the light, and the field of view.
+/// A scene to trace: the eye, the bodies' primal forms in the world, their colours (display
+/// values in `[0, 1]`), the light (a unit point), and the field of view.
 #[derive(Clone)]
 pub struct View {
     pub eye: Motor,
@@ -240,10 +240,8 @@ impl Tracer<'_> {
         let hit = hit(self.view.eye, depth, pixel);
         let light = self.view.light;
         let polar = self.view.surfaces[body].of(hit);
-        let arc = (hit.dot(light).s() / light.dot(light).s())
-            .clamp(-1.0, 1.0)
-            .acos();
-        let sine = arc.sin();
+        // The sine of the arc: the norm of the great circle joining the unit points.
+        let sine = (hit & light).norm();
         let cosine = (polar & light).s() / (polar.norm() * sine);
         let mut lambert = if cosine < 0.0 {
             -cosine / (sine * sine)
@@ -286,6 +284,8 @@ mod tests {
         assert!(
             (moved.c[0] - 0.6f64.sin()).abs() < 1e-14 && (moved.c[3] - 0.6f64.cos()).abs() < 1e-14
         );
+        // The great circle joining two unit points has the sine of their arc as its norm.
+        assert!(((origin() & moved).norm() - 0.6f64.sin()).abs() < 1e-14);
     }
 
     /// Depths from the screen conic reconstruct points on the ellipsoid; misses are NaN.

@@ -10,14 +10,16 @@
 #[path = "../shared/geometry_scenegraph.rs"]
 mod scenegraph;
 
+use gax::pga3d::{Motor, Plane, Point};
 use gax_numga_examples::canvas::{mix, scale, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
 };
-use scenegraph::{BOX_FACES, M, P};
+use scenegraph::{BOX_FACES, M, P, axis};
 
 mod scene {
     use super::scenegraph::*;
+    use gax::pga3d::{Plane, Point};
 
     /// The compound camera: pose, front (objective) and rear (relay) lens, the rear lens plane,
     /// pupil, sensor plane, and the world-to-pixel map.
@@ -36,13 +38,13 @@ mod scene {
     pub const CHIP: [f64; 2] = [1.6, 1.2];
 
     pub fn camera_rig() -> Rig {
-        let pose = look_at([0.0, -3.6, 1.3], [0.0, 0.0, 1.18]);
+        let pose = look_at(Point::xyz(0.0, -3.6, 1.3), Point::xyz(0.0, 0.0, 1.18));
         // The objective at the origin and the relay lens 0.3 behind it.
         let (front, rear, rear_plane) = lens_train(1.0, 0.8, -0.3);
         // The pupil point on the entrance aperture, off the optical centre so that rays bend.
-        let pupil = gax::pga3d::Motor::translation(0.04, 0.0, 0.0) >> origin();
+        let pupil = Point::xyz(0.04, 0.0, 0.0);
         // The sensor plane `z = -1.25`.
-        let sensor = gax::pga3d::Plane::new(0.0, 0.0, 1.0, 1.25);
+        let sensor = Plane::from_normal([0.0, 0.0, 1.0], -1.25);
         let camera = lens_camera(pose, front, rear, pupil, sensor);
         // The 1.6 x 1.2 chip onto 640 x 480 pixels.
         let world_to_pixel = viewport(PIXELS[0], PIXELS[1], CHIP[0], CHIP[1]).of(camera);
@@ -134,16 +136,17 @@ fn ray_colour(i: usize) -> Rgb {
     ][i % 3]
 }
 
-fn f3(p: P) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
-/// A circle of `radius` at height `z` in the camera frame, in the world.
-fn rim(pose: M, radius: f64, z: f64) -> Vec<[f32; 3]> {
+/// A circle of `radius` at height `z` in the camera frame, in the world: a point of it turned
+/// about the camera's axis.
+fn rim(pose: M, radius: f64, z: f64) -> Vec<P> {
+    let start = Point::xyz(radius, 0.0, z);
     (0..=48)
         .map(|k| {
-            let a = core::f64::consts::TAU * k as f64 / 48.0;
-            f3(pose >> scenegraph::point([radius * a.cos(), radius * a.sin(), z]))
+            let turn = Motor::rotation(
+                axis(0.0, 0.0, 1.0),
+                core::f64::consts::TAU * k as f64 / 48.0,
+            );
+            (pose * turn) >> start
         })
         .collect()
 }
@@ -167,8 +170,7 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
         s.seg([g, -1.2, 0.0], [g, 1.2, 0.0], 1.0, line, 0.8);
         s.seg([-1.2, g, 0.0], [1.2, g, 0.0], 1.0, line, 0.8);
     }
-    for (i, body) in photo.world.iter().enumerate() {
-        let v = body.map(f3);
+    for (i, v) in photo.world.iter().enumerate() {
         for f in BOX_FACES {
             let [a, b, cc, d] = f.map(|k| v[k]);
             let col = s.lit(a, b, cc, body_colour(i));
@@ -192,7 +194,7 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
         1.0,
     );
     // The 1.6 x 1.2 sensor at z = -1.25.
-    let corner = |x: f64, y: f64| f3(rig.pose >> scenegraph::point([x, y, -1.25]));
+    let corner = |x: f64, y: f64| rig.pose >> Point::xyz(x, y, -1.25);
     let chip = [
         corner(-0.8, -0.6),
         corner(0.8, -0.6),
@@ -205,8 +207,7 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
         s.seg(chip[k], chip[(k + 1) % 4], 1.5, orange, 1.0);
     }
     // The rays: scene point to pupil, pupil to the rear lens, rear lens to the sensor.
-    for (i, path) in photo.rays.iter().enumerate() {
-        let p = path.map(f3);
+    for (i, p) in photo.rays.iter().enumerate() {
         for (leg, width) in [1.4, 1.8, 1.8].into_iter().enumerate() {
             s.seg(p[leg], p[leg + 1], width, ray_colour(i), 0.9);
         }
@@ -215,7 +216,9 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     s.draw(c);
 }
 
-/// The photograph: the sensor's pixels in `rect`, bodies painted from the base to the gripper.
+/// The photograph: the sensor's pixels in `rect`, bodies painted from the base to the gripper,
+/// each face shaded by how squarely its plane in the world faces a light from the camera's
+/// upper left: the inner product of the planes, over the face's norm.
 fn photograph_panel(c: &mut Canvas, rect: [f32; 4], photo: &Photo) {
     let k = (rect[2] - rect[0]) / PIXELS[0] as f32;
     let px = |p: P| {
@@ -230,25 +233,14 @@ fn photograph_panel(c: &mut Canvas, rect: [f32; 4], photo: &Photo) {
     ];
     c.fill(&frame, srgb(0.11, 0.12, 0.16), 1.0);
     c.clip(rect);
-    // A light from the camera's upper left, for the faces' shading.
-    let light = [-0.4f32, -0.8, 0.45];
-    for (i, (pixels, world)) in photo.pixels.iter().zip(&photo.world).enumerate() {
-        let w = world.map(f3);
+    let facing = Plane::orthogonal_to(Point::direction(-0.4, -0.8, 0.45))
+        .normalized()
+        .into_inner();
+    for (i, (pixels, w)) in photo.pixels.iter().zip(&photo.world).enumerate() {
         for f in BOX_FACES {
             let poly: Vec<[f32; 2]> = f.iter().map(|&j| px(pixels[j])).collect();
-            let (a, b, d) = (w[f[0]], w[f[1]], w[f[3]]);
-            let (u, v) = (
-                [b[0] - a[0], b[1] - a[1], b[2] - a[2]],
-                [d[0] - a[0], d[1] - a[1], d[2] - a[2]],
-            );
-            let n = [
-                u[1] * v[2] - u[2] * v[1],
-                u[2] * v[0] - u[0] * v[2],
-                u[0] * v[1] - u[1] * v[0],
-            ];
-            let len = (n[0] * n[0] + n[1] * n[1] + n[2] * n[2]).sqrt().max(1e-9);
-            let lit =
-                0.55 + 0.45 * ((n[0] * light[0] + n[1] * light[1] + n[2] * light[2]) / len).abs();
+            let face = w[f[0]] & w[f[1]] & w[f[3]];
+            let lit = 0.55 + 0.45 * ((face | facing).s() / face.norm().max(1e-9)).abs() as f32;
             c.fill(&poly, scale(body_colour(i), lit), 0.88);
             c.polyline(&poly, 1.0, srgb(0.12, 0.16, 0.23), 1.0, true);
         }
@@ -290,14 +282,22 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::ink(),
         Align::Left,
     );
-    c.text(
-        "BOX TO PIXEL: VIEWPORT . SENSOR . LENSES . PUPIL . POSE . JOINTS . SCALE",
-        x0,
-        y0 + ph + s * 1.8,
-        s * 0.8,
-        palette::grid(),
-        Align::Left,
-    );
+    for (k, line) in [
+        "BOX TO PIXEL: VIEWPORT . SENSOR . LENSES",
+        "  . PUPIL . POSE . JOINTS . SCALE",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        c.text(
+            line,
+            x0,
+            y0 + ph + s * (1.8 + 1.2 * k as f32),
+            s * 0.8,
+            palette::grid(),
+            Align::Left,
+        );
+    }
     caption(
         c,
         "SCENEGRAPH: A ROBOT ARM THROUGH A TWO-LENS CAMERA",
@@ -313,18 +313,20 @@ fn main() {
 mod tests {
     use super::scene::*;
     use super::scenegraph::*;
+    use gax::ApproxEq;
+    use gax::pga3d::{Motor, Plane, Point};
 
-    fn close3(a: [f64; 3], b: [f64; 3], tol: f64) -> bool {
-        a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+    /// Whether `p` is the Euclidean point `want` to within `tol` in each coordinate.
+    fn at(p: P, want: [f64; 3], tol: f64) -> bool {
+        let [x, y, z] = want;
+        p.unitized().max_abs_diff(&Point::xyz(x, y, z)) <= tol
     }
 
     /// The anisotropic scaling scales each coordinate and keeps the weight.
     #[test]
     fn anisotropic_scale_extensor() {
-        let scaled = anisotropic_scale(2.0, 0.5, 3.0).of(point([3.0, 4.0, 5.0]));
-        assert!(close3(xyz(scaled), [6.0, 2.0, 15.0], 1e-12));
-        let weight = gax::pga3d::Plane::new(0.0, 0.0, 0.0, 1.0) & scaled;
-        assert!((weight.s() - 1.0).abs() < 1e-12);
+        let scaled = anisotropic_scale(2.0, 0.5, 3.0).of(Point::xyz(3.0, 4.0, 5.0));
+        assert!(scaled.approx_eq(&Point::xyz(6.0, 2.0, 15.0), 1e-12));
     }
 
     /// Forward kinematics gives five rigidly placed bodies, whose vertices keep unit weight,
@@ -340,19 +342,19 @@ mod tests {
         }
         // The pedestal rests on the floor.
         let (bodies, _) = robot_arm([0.35, -0.45, 0.85, -0.40]);
-        assert!(close3(
-            xyz(bodies[0].of(point([0.0, 0.0, -0.5]))),
+        assert!(at(
+            bodies[0].of(Point::xyz(0.0, 0.0, -0.5)),
             [0.0; 3],
             1e-14
         ));
         // From numga, run on the same pose.
-        let gripper = canonical_unit_box().map(|v| xyz(bodies[4].of(v)));
-        assert!(close3(
+        let gripper = canonical_unit_box().map(|v| bodies[4].of(v));
+        assert!(at(
             gripper[0],
             [-0.031010286433, -0.063198174656, 2.601597516832],
             1e-11
         ));
-        assert!(close3(
+        assert!(at(
             gripper[6],
             [0.280019766211, -0.027697380946, 2.90159751683],
             1e-11
@@ -362,16 +364,24 @@ mod tests {
     /// The two-lens camera sends world points onto the sensor plane `z = -1.25`.
     #[test]
     fn compound_optics_lands_on_the_sensor() {
-        let pose = look_at([0.0, -4.0, 1.5], [0.0, 0.0, 1.0]);
+        let pose = look_at(Point::xyz(0.0, -4.0, 1.5), Point::xyz(0.0, 0.0, 1.0));
         let (front, rear, _) = lens_train(1.0, 0.8, -0.3);
-        let pupil = gax::pga3d::Motor::translation(0.04, 0.0, 0.0) >> origin();
-        let sensor = gax::pga3d::Plane::new(0.0, 0.0, 1.0, 1.25);
+        let pupil = Point::xyz(0.04, 0.0, 0.0);
+        let sensor = Plane::from_normal([0.0, 0.0, 1.0], -1.25);
         let camera = lens_camera(pose, front, rear, pupil, sensor);
-        let hit = camera.of(point([0.1, 0.2, 1.0]));
-        assert!((xyz(hit)[2] + 1.25).abs() < 1e-10);
-        // The camera looks along its +z, towards the target.
-        let ahead = pose >> gax::pga3d::Point::direction(0.0, 0.0, 1.0);
+        let hit = camera.of(Point::xyz(0.1, 0.2, 1.0)).unitized();
+        assert!((sensor & hit).s().abs() < 1e-10);
+        // The camera looks along its +z, towards the target, with its x axis level.
+        let ahead = pose >> Point::direction(0.0, 0.0, 1.0);
         assert!(ahead.e013() > 0.99 && ahead.e021() < 0.0);
+        let across = pose >> Point::direction(1.0, 0.0, 0.0);
+        assert!(across.approx_eq(&Point::direction(1.0, 0.0, 0.0), 1e-12));
+        // As numga builds it: a pitch about x, after the translation.
+        let pitch = (1.0f64 - 1.5).atan2(4.0);
+        let numga = Motor::translation(0.0, -4.0, 1.5)
+            * Motor::rotation(axis(1.0, 0.0, 0.0), pitch - core::f64::consts::FRAC_PI_2);
+        let p = Point::xyz(0.3, -0.2, 0.7);
+        assert!((pose >> p).approx_eq(&(numga >> p), 1e-12));
     }
 
     /// The scenario's check: the collapsed map per body agrees with kinematics, camera and
@@ -383,13 +393,7 @@ mod tests {
         for (world, pixels) in photo.world.iter().zip(&photo.pixels) {
             for (v, p) in world.iter().zip(pixels) {
                 let sequential = project(rig.world_to_pixel, *v);
-                let d: f64 = sequential
-                    .c
-                    .iter()
-                    .zip(p.c)
-                    .map(|(a, b)| (a - b).powi(2))
-                    .sum();
-                assert!(d < 1e-16, "{sequential:?} vs {p:?}");
+                assert!(sequential.max_abs_diff(p) < 1e-8, "{sequential:?} vs {p:?}");
             }
         }
         // Each body's first vertex on the sensor, and the gripper's, from numga. The two
@@ -402,26 +406,25 @@ mod tests {
             [266.264056485336, 191.21030591223],
             [309.970901155386, 94.735848590647],
         ];
-        for (pixels, want) in photo.pixels.iter().zip(first) {
-            let [u, v, z] = xyz(pixels[0]);
-            assert!(
-                (u - want[0]).abs() < 1e-6 && (v - want[1]).abs() < 1e-6,
-                "{u} {v}"
-            );
-            assert!((z + 1.25).abs() < 1e-12);
+        for (pixels, [u, v]) in photo.pixels.iter().zip(first) {
+            // On the sensor plane `z = -1.25` of the camera frame.
+            assert!(at(pixels[0], [u, v, -1.25], 1e-6), "{:?}", pixels[0]);
         }
-        let [u, v, _] = xyz(photo.pixels[4][6]);
-        assert!((u - 278.30194022331).abs() < 1e-6 && (v - 65.190187677343).abs() < 1e-6);
+        assert!(at(
+            photo.pixels[4][6],
+            [278.30194022331, 65.190187677343, -1.25],
+            1e-6
+        ));
         // The first ray's hits on the rear lens plane and on the sensor.
         let ray = photo.rays[0];
-        assert!(close3(xyz(ray[1]), [0.04, -3.6, 1.3], 1e-12));
-        assert!(close3(
-            xyz(ray[2]),
+        assert!(at(ray[1], [0.04, -3.6, 1.3], 1e-12));
+        assert!(at(
+            ray[2],
             [0.029910193552, -3.904599591948, 1.167010853104],
             1e-10
         ));
-        assert!(close3(
-            xyz(ray[3]),
+        assert!(at(
+            ray[3],
             [-0.037559215044, -4.863505199123, 0.91567157478],
             1e-10
         ));

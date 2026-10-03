@@ -270,8 +270,7 @@ mod cga {
     pub fn circle_intersection_vortex(center1: V, radius1: f64, center2: V, radius2: f64) -> B {
         let c1 = center1 + w().gp(radius1.cos());
         let c2 = center2 + w().gp(radius2.cos());
-        let b = c1 ^ c2;
-        b.gp(1.0 / (b * b).s().abs().sqrt())
+        (c1 ^ c2).normalized().into_inner()
     }
 
     /// numga's vortex: circles of radii 48° and 52° about the pole tilted toward x and toward y.
@@ -293,11 +292,6 @@ mod cga {
 use cga::*;
 
 const SECONDS: f32 = 6.0;
-
-fn hex(c: u32) -> Rgb {
-    let b = |s: u32| ((c >> s) & 0xff) as f32 / 255.0;
-    canvas::srgb(b(16), b(8), b(0))
-}
 
 /// The front hemisphere seen along z in the disc of `radius` pixels at `centre`: each pixel the
 /// colour of the last quadric that holds it, the disc and its rim otherwise.
@@ -343,7 +337,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let big = (h * 0.42).min(w * 0.24);
     let trio: Vec<(Quadric, Rgb)> = trio()
         .iter()
-        .map(|(_, q, col)| (carried(*q), hex(*col)))
+        .map(|(_, q, col)| (carried(*q), canvas::hex(*col)))
         .collect();
     hemisphere(c, [w * 0.26, h * 0.54], big, &trio);
     // Every shape on the right, in a grid of four by three.
@@ -356,7 +350,7 @@ fn draw(c: &mut Canvas, t: f32) {
             x0 + cw * ((k % 4) as f32 + 0.5),
             y0 + ch * ((k / 4) as f32 + 0.5) - label * 0.5,
         ];
-        hemisphere(c, centre, r, &[(carried(q), hex(col))]);
+        hemisphere(c, centre, r, &[(carried(q), canvas::hex(col))]);
         c.text(
             name,
             centre[0],

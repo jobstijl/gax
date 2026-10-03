@@ -11,7 +11,8 @@
 //! from the great circle `x = y = 0` is a wall that splits the sphere into two linked solid
 //! tori; ellipsoids bounce inside one, and the eye on its core circle looks down the tube.
 
-use crate::rng::Rng;
+use gax_numga_examples::rng::{Draw, Rng, rng};
+use rand::seq::SliceRandom;
 
 /// The engine on S², in `Cl(3)`: points are bivectors, planes vectors, momenta vectors. (One
 /// engine for both spheres: not every item is used on each.)
@@ -66,9 +67,12 @@ pub fn drift(x: &[f64]) -> f64 {
 
 // --- S² ------------------------------------------------------------------------------------
 
+/// The time between frames of the S² scenes, each in six steps.
+pub const DT2: f64 = 0.015;
+
 /// The camera rotor, folded into the initial orientation of every body.
 pub fn camera() -> s2::M {
-    gax::vga3d::Bivector::new(0.2714904022294391, 0.6097774271693677, 1.0148400517968847).exp()
+    s2::Rate::new(0.2714904022294391, 0.6097774271693677, 1.0148400517968847).exp()
 }
 
 /// A polar grid of mass points over an ellipse with half-angles `(a, b)` (radians), in its
@@ -93,11 +97,7 @@ pub fn ellipse_mesh(
             // a uniform mass over the ellipse. The omitted node at r = 0 has zero area element.
             let area = tx * ty * r / (1.0 + x * x + y * y).powf(1.5);
             masses.push(area * w_phi * w_r);
-            points.push(
-                gax::vga3d::Bivector::new(x, y, 1.0)
-                    .normalized()
-                    .into_inner(),
-            );
+            points.push(s2::Point::new(x, y, 1.0).normalized().into_inner());
         }
     }
     let total: f64 = masses.iter().sum();
@@ -107,18 +107,17 @@ pub fn ellipse_mesh(
 /// The rotor carrying the pole to polar angle `theta` at azimuth `phi`: about the plane `zx`
 /// turned about z by the azimuth.
 pub fn toward(theta: f64, phi: f64) -> s2::M {
-    use gax::vga3d::Bivector;
-    let axis = Bivector::new(0.0, 0.0, -phi / 2.0).exp() >> Bivector::new(0.0, 1.0, 0.0);
+    let axis = s2::Rate::new(0.0, 0.0, -phi / 2.0).exp() >> s2::Rate::new(0.0, 1.0, 0.0);
     axis.gp(theta / 2.0).exp()
 }
 
-/// One ellipse: half-angles in degrees, mass, placement under the camera, body-frame rate on
-/// `yz`, `zx`, `xy`, and colour.
+/// One ellipse: half-angles in degrees, mass, placement under the camera, body-frame rate, and
+/// colour.
 pub struct Ellipse {
     pub half_angles: [f64; 2],
     pub mass: f64,
     pub placement: s2::M,
-    pub rate: [f64; 3],
+    pub rate: s2::B,
     pub color: u32,
 }
 
@@ -133,7 +132,7 @@ pub fn ellipses(specs: &[Ellipse], n_phi: usize) -> Vec<s2::Body> {
                 hex(e.color),
                 s2::ellipsoid(half.map(f64::tan)),
                 camera() * e.placement,
-                gax::vga3d::Bivector::new(e.rate[0], e.rate[1], e.rate[2]),
+                e.rate,
                 &points,
                 &masses,
             )
@@ -178,28 +177,27 @@ pub fn crowded(frames: usize) -> s2::Trajectory {
             half_angles: half[k],
             mass: mass[k],
             placement: toward(theta[k], phi[k]),
-            rate: rate[k],
+            rate: s2::Rate::from_coeffs(rate[k]),
             color: colors[k],
         })
         .collect();
-    s2::simulate(ellipses(&specs, 384), frames, 0.015, 6)
+    s2::simulate(ellipses(&specs, 384), frames, DT2, 6)
 }
 
 /// One oval 40° by 8° spinning near its intermediate axis: it flips over and back,
 /// periodically.
 pub fn tumbling(frames: usize) -> s2::Trajectory {
-    use gax::vga3d::Bivector;
     // numga's `xz` turn is a `zx` turn the other way.
-    let tilt = Bivector::new(0.0, -15f64.to_radians() / 2.0, 0.0).exp()
-        * Bivector::new(10f64.to_radians() / 2.0, 0.0, 0.0).exp();
+    let tilt = s2::Rate::new(0.0, -15f64.to_radians() / 2.0, 0.0).exp()
+        * s2::Rate::new(10f64.to_radians() / 2.0, 0.0, 0.0).exp();
     let spec = Ellipse {
         half_angles: [40.0, 8.0],
         mass: 1.0,
         placement: tilt,
-        rate: [14.0, -0.1, 0.05],
+        rate: s2::Rate::new(14.0, -0.1, 0.05),
         color: 0x38bdf8,
     };
-    s2::simulate(ellipses(&[spec], 384), frames, 0.015, 6)
+    s2::simulate(ellipses(&[spec], 384), frames, DT2, 6)
 }
 
 /// A giant oval, 75° by 48°, dominating the sphere, and a swarm of small bodies in the channel
@@ -209,7 +207,7 @@ pub fn hyperbolic(frames: usize) -> s2::Trajectory {
         half_angles: [75.0, 48.0],
         mass: 6.0,
         placement: toward(0.0, 0.0),
-        rate: [0.3, 0.2, 0.4],
+        rate: s2::Rate::new(0.3, 0.2, 0.4),
         color: 0x38bdf8,
     };
     let half = [[18.0, 4.5], [10.0, 10.0], [15.0, 4.0], [16.0, 5.0]];
@@ -227,18 +225,18 @@ pub fn hyperbolic(frames: usize) -> s2::Trajectory {
             half_angles: half[k],
             mass: mass[k],
             placement: toward(1.57, phi[k]),
-            rate: rate[k],
+            rate: s2::Rate::from_coeffs(rate[k]),
             color: colors[k],
         })
         .collect();
     let mut bodies = ellipses(&[giant], 1536);
     bodies.extend(ellipses(&swarm, 384));
-    s2::simulate(bodies, frames, 0.015, 6)
+    s2::simulate(bodies, frames, DT2, 6)
 }
 
 // --- S³ ------------------------------------------------------------------------------------
 
-use crate::s3::{Bivector, Trivector};
+use crate::s3::{Bivector, Rate, Trivector, along, hit, motion, turning};
 
 /// The rotor carrying the origin to a point, spun by a rotation bivector: the square root of
 /// the ratio of the two unit points.
@@ -268,18 +266,18 @@ pub fn population(rng: &mut Rng, candidates: usize, sizes: (f64, f64)) -> Vec<s3
     let mut hues: Vec<f64> = (0..candidates)
         .map(|k| k as f64 / candidates as f64)
         .collect();
-    rng.shuffle(&mut hues);
+    hues.shuffle(rng);
     (0..candidates)
         .map(|k| {
-            let half: [f64; 3] =
-                core::array::from_fn(|_| 10f64.powf(lo + (hi - lo) * rng.uniform()));
+            let half: [f64; 3] = core::array::from_fn(|_| 10f64.powf(rng.range(lo, hi)));
+            // On `yz`, `zx`, `xy` (turns) and `xw`, `yw`, `zw` (drifts).
             let scale = [0.3, 0.3, 0.3, 0.6, 0.6, 0.6];
             let mut rate: [f64; 6] = core::array::from_fn(|i| rng.normal() * scale[i]);
             let mut order = [0, 1, 2];
             order.sort_by(|a, b| half[*a].total_cmp(&half[*b]));
             rate[order[1]] = if rng.uniform() < 0.5 { -5.0 } else { 5.0 };
-            let place = Trivector::from_coeffs(core::array::from_fn(|_| rng.normal()));
-            let spin = Bivector::new(rng.normal(), rng.normal(), rng.normal(), 0.0, 0.0, 0.0);
+            let place = Trivector::from_coeffs(rng.direction::<4>());
+            let spin = turning([rng.normal(), rng.normal(), rng.normal()]);
             let q = s3::ellipsoid(half);
             let (points, masses) = s3::filled(q, half.iter().product::<f64>() * 200.0, 400, rng);
             s3::body(
@@ -339,20 +337,15 @@ pub struct Scene3 {
     pub light: s3::P,
 }
 
-fn rate(c: [f64; 6]) -> s3::B {
-    Bivector::from_coeffs(c)
-}
-
 /// 28 ellipsoids all over the 3-sphere, seen from the origin. The light is a point 0.8 rad from
 /// the eye, above and behind it, just outside the 120° frustum. Whatever drifts behind the eye
 /// reappears ahead near the antipode.
 pub fn crowd(frames: usize) -> Scene3 {
-    // numga seeds 3; with this generator, seed 2 keeps every body off the eye for 240
-    // frames (a body over the eye fills the view with its dark inside).
-    let mut rng = Rng::new(2);
+    // numga seeds 3; with this generator, seed 9 keeps every body off the eye for the
+    // animation's 240 frames (a body over the eye fills the view with its dark inside).
+    let mut rng = rng(9);
     let bodies = admitted(population(&mut rng, 120, (0.05, 0.5)), 0, 28);
-    let turn = rate([0.0, 0.0, 0.0, -0.34, 0.0, 0.94]).gp(0.8 / 2.0).exp();
-    let light = crate::s3::unit(turn >> s3::origin());
+    let light = motion(along([-0.34, 0.0, 0.94]).gp(0.8)) >> s3::origin();
     finish(bodies, frames, s3::identity(), light)
 }
 
@@ -369,19 +362,18 @@ fn finish(bodies: Vec<s3::Body>, frames: usize, eye: s3::M, light: s3::P) -> Sce
 /// sixty small ellipsoids in the belt. The eye a quarter turn along x, in the thick part, looking
 /// along y where it thins; the light behind the eye.
 pub fn gap(frames: usize) -> Scene3 {
-    // numga seeds 5; with this generator, seed 7 keeps every body off the eye for 240
-    // frames (a body over the eye fills the view with its dark inside).
-    let mut rng = Rng::new(7);
+    // numga's seed 5 also keeps every body off the eye for the animation's 240 frames
+    // with this generator (a body over the eye fills the view with its dark inside).
+    let mut rng = rng(5);
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(60.0).tan(), deg(75.0).tan(), deg(70.0).tan()]);
-    let huge = resting([0.75, 0.7, 0.6], shape, rate([0.0; 6]), 500.0, &mut rng);
+    let huge = resting([0.75, 0.7, 0.6], shape, Rate::zero(), 500.0, &mut rng);
     let mut all = vec![huge];
     all.extend(population(&mut rng, 2000, (0.03, 0.15)));
     let bodies = admitted(all, 1, 60);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = rate([0.0, 0.0, 0.0, quarter * 0.5, 0.0, 0.0]).exp()
-        * rate([0.0, 0.0, -quarter * 0.5, 0.0, 0.0, 0.0]).exp();
-    let light = (eye * rate([0.0, 0.0, 0.0, -0.3, 0.25, 0.2]).gp(0.5).exp()) >> s3::origin();
+    let eye = motion(along([quarter, 0.0, 0.0])) * motion(turning([0.0, 0.0, -quarter]));
+    let light = (eye * motion(along([-0.3, 0.25, 0.2]))) >> s3::origin();
     finish(bodies, frames, eye, light)
 }
 
@@ -389,26 +381,21 @@ pub fn gap(frames: usize) -> Scene3 {
 /// the antipode of its centre; the eye at the ideal point of x, lifted 35° along z and looking
 /// back down at the gap between the tips.
 pub fn needle(frames: usize) -> Scene3 {
-    // numga's seed 7 also keeps every body off the eye for 240 frames with this generator
-    // frames (a body over the eye fills the view with its dark inside).
-    let mut rng = Rng::new(7);
+    // numga seeds 7; with this generator, seed 5 keeps every body off the eye for the
+    // animation's 240 frames (a body over the eye fills the view with its dark inside).
+    let mut rng = rng(5);
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(80.0).tan(), deg(4.0).tan(), deg(3.0).tan()]);
-    let long = resting(
-        [0.9, 0.85, 0.3],
-        shape,
-        rate([2.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-        50.0,
-        &mut rng,
-    );
+    let spin = turning([2.0, 0.0, 0.0]);
+    let long = resting([0.9, 0.85, 0.3], shape, spin, 50.0, &mut rng);
     let mut all = vec![long];
     all.extend(population(&mut rng, 1000, (0.05, 0.3)));
     let bodies = admitted(all, 1, 40);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = rate([0.0, 0.0, 0.0, quarter * 0.5, 0.0, 0.0]).exp()
-        * rate([0.0, 0.0, 0.0, 0.0, 0.0, deg(35.0) * 0.5]).exp()
-        * rate([0.0, -quarter * 0.5, 0.0, 0.0, 0.0, 0.0]).exp();
-    let light = (eye * rate([0.0, 0.0, 0.0, -0.3, 0.2, 0.3]).gp(0.5).exp()) >> s3::origin();
+    let eye = motion(along([quarter, 0.0, 0.0]))
+        * motion(along([0.0, 0.0, deg(35.0)]))
+        * motion(turning([0.0, -quarter, 0.0]));
+    let light = (eye * motion(along([-0.3, 0.2, 0.3]))) >> s3::origin();
     finish(bodies, frames, eye, light)
 }
 
@@ -428,8 +415,9 @@ pub struct Tunnel {
 /// its form, is the complementary solid torus; the crowd lives in the tube. The eye in the wide
 /// section at `+z` looks toward the narrow waist at `-w`; the light halfway to the wall.
 pub fn tunnel(frames: usize) -> Tunnel {
-    // numga seeds 11; with this generator, seed 17 keeps every body off the eye for 240 frames.
-    let mut rng = Rng::new(17);
+    // numga seeds 11; with this generator, seed 3 keeps every body off the eye for the
+    // animation's 240 frames (a body over the eye fills the view with its dark inside).
+    let mut rng = rng(3);
     let deg = f64::to_radians;
     let tube = s3::quadric([
         -1.0,
@@ -437,21 +425,17 @@ pub fn tunnel(frames: usize) -> Tunnel {
         1.0 / deg(40.0).tan().powi(2),
         1.0 / deg(20.0).tan().powi(2),
     ]);
-    let torus = resting([0.55, 0.65, 0.75], tube, rate([0.0; 6]), 500.0, &mut rng);
+    let torus = resting([0.55, 0.65, 0.75], tube, Rate::zero(), 500.0, &mut rng);
     let mut all = vec![torus];
     all.extend(population(&mut rng, 2000, (0.03, 0.1)));
     let bodies = admitted(all, 1, 50);
     let quarter = core::f64::consts::FRAC_PI_2;
-    let eye = rate([0.0, 0.0, 0.0, 0.0, 0.0, quarter * 0.5]).exp()
-        * rate([0.0, quarter * 0.5, 0.0, 0.0, 0.0, 0.0]).exp();
+    let eye = motion(along([0.0, 0.0, quarter])) * motion(turning([0.0, quarter, 0.0]));
     let camera = eye >> s3::origin();
-    // The pixel up and to the side, a quarter turn off the line of sight.
+    // The pixel up and to the side, a quarter turn off the line of sight, and the wall there.
     let side_up = crate::s3::ScreenPoint::new(0.0, 1.0, 1.0).gp(0.5f64.sqrt());
-    let wall = bodies[0].world();
-    let (conic, polar) = crate::s3::project(eye, wall);
-    let depth = crate::s3::reproject(conic, polar, side_up);
-    let ray: s3::P = eye >> side_up.cast::<Trivector>();
-    let wall_hit = (camera.gp(depth) + ray).normalized().into_inner();
+    let (conic, polar) = crate::s3::project(eye, bodies[0].world());
+    let wall_hit = hit(eye, crate::s3::reproject(conic, polar, side_up), side_up);
     let light = (camera + wall_hit).normalized().into_inner();
     Tunnel {
         scene: finish(bodies, frames, eye, light),

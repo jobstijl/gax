@@ -10,9 +10,10 @@
 //! wheel's plane, and the lattice responses turning.
 
 use gax::Unit;
-use gax::{pga3d, vga3d};
+use gax::motions::{Motions, Pga3d};
+use gax::{pga2d, pga3d, vga3d};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Pos3, Rgb, Scene3, backdrop, canvas, caption,
     palette, plot, run,
 };
 use std::sync::OnceLock;
@@ -154,8 +155,8 @@ mod symmetry {
     }
 
     /// One arm's inertia (unit mass), and the flywheel's: the arm's turned by each rotation and
-    /// added. The commutator gives each sample's velocity under the open rigid-motion slot; the
-    /// sample joined with its velocity is its momentum.
+    /// added. Each sample's inertia is `Motions::point_inertia`: the commutator gives its velocity
+    /// under the open rigid-motion slot, and the sample joined with its velocity is its momentum.
     pub fn flywheel_inertia(
         arm: &[P3],
         rotations: &[Unit<pga3d::Motor<(), f64>>],
@@ -163,7 +164,7 @@ mod symmetry {
         let arm_inertia = arm
             .iter()
             .fold(pga3d::Line::zero(), |s: Inertia, p| {
-                s + (*p & p.commutator(pga3d::Line::slot()))
+                s + Pga3d::point_inertia(*p)
             })
             .gp(1.0 / arm.len() as f64);
         // Unlike conductivity's mean, this sum assembles masses: the wheel has mass three.
@@ -308,10 +309,6 @@ fn scenes() -> &'static Scenes {
 /// Seconds per scene.
 const SCENE: f32 = 7.0;
 
-fn f3(v: V) -> [f32; 3] {
-    [v.e1() as f32, v.e2() as f32, v.e3() as f32]
-}
-
 /// A canvas for a panel at `rect`, its backdrop the matching band of the full backdrop, so that
 /// a 3D scene drawn with its own camera can be blitted in place.
 fn panel(c: &Canvas, rect: [usize; 4]) -> Canvas {
@@ -333,7 +330,7 @@ fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Rgb, alpha: f32) 
                 core::f64::consts::TAU * f64::from(u),
                 core::f64::consts::PI * (f64::from(v) - 0.5),
             );
-            f3(f(d))
+            f(d).xyz()
         },
         28,
         14,
@@ -343,10 +340,10 @@ fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Rgb, alpha: f32) 
     );
 }
 
-/// The angle between two vectors in degrees.
+/// The angle between two vectors in degrees: the norm of the logarithm of the rotor from one to
+/// the other, `b a` normalized.
 fn degrees(a: V, b: V) -> f64 {
-    let c = (a | b).s() / (a.norm() * b.norm());
-    c.clamp(-1.0, 1.0).acos().to_degrees()
+    gax_numga_examples::measure::angle(a, b).to_degrees()
 }
 
 fn conduction_scene(c: &mut Canvas, s: f32) {
@@ -379,9 +376,8 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
         sc.axes([0.0; 3], 1.2);
         sphere_surface(&mut sc, |d| k.of(d), palette::sky(), 0.3);
         let flux = k.of(driving);
-        let d3 = f3(driving.gp(4.0));
-        sc.arrow([0.0; 3], d3, 2.0, 9.0, palette::ink());
-        sc.arrow([0.0; 3], f3(flux), 3.0, 11.0, palette::orange());
+        sc.arrow([0.0; 3], driving.gp(4.0), 2.0, 9.0, palette::ink());
+        sc.arrow([0.0; 3], flux, 3.0, 11.0, palette::orange());
         sc.draw(&mut p);
         c.blit(&p, rect[0], rect[1]);
         let cx = (rect[0] + rect[2]) as f32 * 0.5;
@@ -405,15 +401,15 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
             &format!("DEFLECTION {:.1} DEG", degrees(flux, driving)),
             cx,
             bottom as f32 + 22.0,
-            12.0,
+            11.0,
             palette::orange(),
             Align::Center,
         );
     }
     caption(
         c,
-        "SYMMETRY: HEAT FLOW ALLOWED BY A CRYSTAL'S ROTATIONS",
-        "EACH SURFACE IS K OF EVERY UNIT DRIVING FIELD; WHITE: THE FIELD, ORANGE: THE HEAT FLOW (VGA3D)",
+        "SYMMETRY: HEAT FLOW ALLOWED BY CRYSTAL ROTATIONS",
+        "SURFACES: K OF EVERY UNIT FIELD. WHITE: FIELD, ORANGE: HEAT FLOW (VGA3D)",
     );
 }
 
@@ -430,29 +426,30 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         h * 0.06,
     );
     let ax = Axes::equal(left, [0.0, 0.0], 2.4);
-    let (ca, sa) = (angle.cos() as f32, angle.sin() as f32);
-    ax.axline(c, [0.0, 0.0], [ca, sa], 1.0, palette::grid(), 1.0);
-    ax.axline(c, [0.0, 0.0], [1.0, 0.0], 0.8, palette::grid(), 0.5);
+    let hub = pga2d::Point::xy(0.0, 0.0);
+    let probe_dir = polar(1.0, angle) - hub;
+    ax.axline(c, hub, probe_dir, 1.0, palette::grid(), 1.0);
+    ax.axline(c, hub, [1.0, 0.0], 0.8, palette::grid(), 0.5);
     for (k, arm) in sd.arms.iter().enumerate() {
         let colour = if k == 0 {
             palette::orange()
         } else {
             palette::sky()
         };
-        let pts: Vec<[f32; 2]> = arm
+        let pts: Vec<[f64; 2]> = arm
             .iter()
             .map(|p| {
                 let [x, y, _] = p.to_euclidean();
-                [x as f32, y as f32]
+                [x, y]
             })
             .collect();
         ax.scatter(c, &pts, Marker::Dot, 4.0, colour, 0.9);
     }
-    ax.scatter(c, &[[0.0, 0.0]], Marker::Dot, 9.0, palette::ink(), 1.0);
+    ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink(), 1.0);
     ax.line(
         c,
-        [-2.3 * ca, -2.3 * sa],
-        [2.3 * ca, 2.3 * sa],
+        hub - probe_dir.gp(2.3),
+        hub + probe_dir.gp(2.3),
         2.5,
         palette::yellow(),
         1.0,
@@ -482,30 +479,18 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         .iter()
         .chain(&wheel_curve)
         .map(|(_, r)| r.abs())
-        .fold(0.0, f64::max) as f32;
-    let pax = Axes::equal(right, [0.0, 0.0], rmax * 1.15);
+        .fold(0.0, f64::max);
+    let pax = Axes::equal(right, [0.0, 0.0], rmax as f32 * 1.15);
     polar_grid(&pax, c, rmax);
     for (pts, colour) in [
         (&arm_curve, palette::orange()),
         (&wheel_curve, palette::sky()),
     ] {
-        let xy: Vec<[f32; 2]> = pts
-            .iter()
-            .map(|(a, r)| [(r * a.cos()) as f32, (r * a.sin()) as f32])
-            .collect();
+        let xy: Vec<pga2d::Point<(), f64>> = pts.iter().map(|(a, r)| polar(*r, *a)).collect();
         pax.polyline(c, &xy, 1.0, colour, 0.3);
         let upto = ((s * n as f32) as usize).min(n);
         pax.polyline(c, &xy[..=upto], 2.5, colour, 1.0);
-        let r = pts[upto].1 as f32;
-        let a = pts[upto].0 as f32;
-        pax.scatter(
-            c,
-            &[[r * a.cos(), r * a.sin()]],
-            Marker::Dot,
-            8.0,
-            colour,
-            1.0,
-        );
+        pax.scatter(c, &[xy[upto]], Marker::Dot, 8.0, colour, 1.0);
     }
     pax.legend(
         c,
@@ -518,7 +503,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let transverse = moment(&sd.inertia, probe(angle));
     pax.text(
         c,
-        [pax.x[0], pax.y[0] + rmax * 0.05],
+        [pax.x[0], pax.y[0] + rmax as f32 * 0.05],
         &format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}"),
         11.0,
         palette::ink(),
@@ -526,34 +511,28 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     );
     caption(
         c,
-        "SYMMETRY: A THREEFOLD WHEEL HAS AXIALLY SYMMETRIC INERTIA",
-        "ROTATED COPIES OF ONE ARM'S INERTIA ADDED; RADIUS: THE MOMENT ABOUT EACH AXIS IN THE PLANE (PGA3D)",
+        "SYMMETRY: THREE ARMS, AXIALLY SYMMETRIC INERTIA",
+        "ONE ARM TURNED AND ADDED. RADIUS: MOMENT ABOUT EACH AXIS IN PLANE (PGA3D)",
     );
 }
 
+/// The point at radius `r` and angle `a` in the plane: `(r, 0)` turned about the origin.
+fn polar(r: f64, a: f64) -> pga2d::Point<(), f64> {
+    let origin = pga2d::Point::xy(0.0, 0.0);
+    pga2d::Motor::rotation(origin, a) >> pga2d::Point::xy(r, 0.0)
+}
+
 /// Rings and spokes of a polar plot of radius up to `rmax`.
-fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f32) {
-    let step = rmax / 4.0;
+fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
+    let turn = |j: usize, n: usize| core::f64::consts::TAU * j as f64 / n as f64;
     for k in 1..=4 {
-        let r = step * k as f32;
-        let ring: Vec<[f32; 2]> = (0..=96)
-            .map(|j| {
-                let a = core::f32::consts::TAU * j as f32 / 96.0;
-                [r * a.cos(), r * a.sin()]
-            })
-            .collect();
+        let r = rmax * k as f64 / 4.0;
+        let ring: Vec<_> = (0..=96).map(|j| polar(r, turn(j, 96))).collect();
         ax.polyline(c, &ring, 0.8, palette::grid(), 0.8);
     }
     for j in 0..12 {
-        let a = core::f32::consts::TAU * j as f32 / 12.0;
-        ax.line(
-            c,
-            [0.0, 0.0],
-            [rmax * a.cos(), rmax * a.sin()],
-            0.8,
-            palette::grid(),
-            0.5,
-        );
+        let spoke = polar(rmax, turn(j, 12));
+        ax.line(c, [0.0, 0.0], spoke, 0.8, palette::grid(), 0.5);
     }
 }
 
@@ -565,15 +544,9 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
     let azimuth = -1.0 + 1.2 * s;
     let (sites, axial, diagonal) = lattice_samples();
     let titles = [
-        (
-            "TWO SEED BONDS GENERATE",
-            "6 AXIAL AND 12 DIAGONAL NEIGHBOURS",
-        ),
-        ("CONDUCTIVITY: ISOTROPIC", "D.K(D) = 2/3 IN EVERY DIRECTION"),
-        (
-            "STIFFNESS: CUBIC",
-            "C(D,D,D,D): 1/2 ON AXES, 1/3 ON DIAGONALS",
-        ),
+        ("TWO SEED BONDS GENERATE", "6 AXIAL, 12 DIAGONAL BONDS"),
+        ("CONDUCTIVITY: ISOTROPIC", "D.K(D) = 2/3 EVERYWHERE"),
+        ("STIFFNESS: CUBIC", "C: 1/2 ON AXES, 1/3 DIAGONAL"),
     ];
     for (i, (title, sub)) in titles.iter().enumerate() {
         let rect = [i * w / 3, top, (i + 1) * w / 3, bottom];
@@ -589,16 +562,15 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
             Lens::Parallel(half),
         );
         let mut sc = Scene3::new(cam);
-        let e = |q: &P3| q.to_euclidean().map(|v| v as f32);
         match i {
             0 => {
                 for q in &sites {
-                    sc.dot(e(q), Marker::Dot, 6.0, palette::grid());
+                    sc.dot(*q, Marker::Dot, 6.0, palette::grid());
                 }
                 for (shell, colour) in [(&axial, palette::orange()), (&diagonal, palette::sky())] {
                     for q in shell {
-                        sc.seg([0.0; 3], e(q), 2.0, colour, 1.0);
-                        sc.dot(e(q), Marker::Dot, 8.0, colour);
+                        sc.seg([0.0; 3], *q, 2.0, colour, 1.0);
+                        sc.dot(*q, Marker::Dot, 8.0, colour);
                     }
                 }
                 sc.dot([0.0; 3], Marker::Dot, 11.0, palette::ink());
@@ -627,7 +599,7 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
             sub,
             cx,
             bottom as f32 + 18.0,
-            11.0,
+            10.0,
             palette::grid(),
             Align::Center,
         );
@@ -635,7 +607,7 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
     caption(
         c,
         "SYMMETRY: ONE CUBE GROUP, TWO KINDS OF RESPONSE",
-        "THE SAME 24 ROTATIONS MAKE RANK-TWO CONDUCTION ISOTROPIC AND LEAVE RANK-FOUR ELASTICITY CUBIC",
+        "24 CUBE ROTATIONS: RANK-2 CONDUCTION ISOTROPIC, RANK-4 ELASTICITY CUBIC",
     );
 }
 
@@ -689,6 +661,11 @@ mod tests {
             );
             assert!(c.mean()[0] > 0.0);
         }
+    }
+
+    #[test]
+    fn a_frame_draws() {
+        gax_numga_examples::app::assert_draws(super::draw, 0.5);
     }
 
     /// Averaging over a group keeps the trace (every term is a rotated copy) and makes the

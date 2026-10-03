@@ -14,7 +14,7 @@
 //! crystals.
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Marker, Rgb, Scene3, backdrop, caption, palette, plot, run,
 };
 
 mod shg {
@@ -220,27 +220,32 @@ mod shg {
         (depths, amplitude)
     }
 
-    /// A field's components across the beam on the observer's screen.
-    pub fn screen(f: B) -> [f64; 2] {
-        [(f | horizontal()).s(), (f | vertical()).s()]
+    /// Where a field reaches on the observer's screen across the beam: its horizontal and
+    /// vertical components, drawn from the screen's centre.
+    pub fn screen(f: B) -> gax::pga2d::Point<(), f64> {
+        gax::pga2d::Point::xy((f | horizontal()).s(), (f | vertical()).s())
     }
 
-    /// A bond plane's direction in space, `t · b`.
-    pub fn direction(b: B) -> [f64; 3] {
+    /// An electric plane's direction in space, `t · b`, as a vector of space.
+    pub fn direction(b: B) -> gax::vga3d::Vector<(), f64> {
         let v = t() | b;
-        [v.e1(), v.e2(), v.e3()]
+        gax::vga3d::Vector::new(v.e1(), v.e2(), v.e3())
     }
 }
 
 use shg::*;
 
+/// A spot on the screen across the beam.
+type Spot = gax::pga2d::Point<(), f64>;
+
+/// The screen's centre, where the beam passes.
+fn centre() -> Spot {
+    Spot::xy(0.0, 0.0)
+}
+
 const SECONDS: f32 = 9.0;
 /// Pump directions sampled around the beam.
 const HEADINGS: usize = 241;
-
-fn xy(p: [f64; 2]) -> [f32; 2] {
-    [p[0] as f32, p[1] as f32]
-}
 
 /// Precomputed scenes that do not change while the crystal turns.
 struct Still {
@@ -260,20 +265,6 @@ fn still() -> &'static Still {
     })
 }
 
-/// A camera whose view centre lands on pixel `centre` with `scale` pixels per unit (the
-/// projection centres on half the camera's size).
-fn camera(centre: [f32; 2], scale: f32, azimuth: f32, elevation: f32) -> Camera {
-    Camera::orbit(
-        (2.0 * centre[0]) as usize,
-        (2.0 * centre[1]) as usize,
-        [0.0, 0.0, 0.0],
-        10.0,
-        azimuth,
-        elevation,
-        Lens::Parallel(centre[1] / scale),
-    )
-}
-
 fn title(c: &mut Canvas, rect: [f32; 4], s: &str) {
     c.text(
         s,
@@ -287,30 +278,16 @@ fn title(c: &mut Canvas, rect: [f32; 4], s: &str) {
 
 /// The crystal's bonds in space, the beam along the face diagonal and the screen's axes.
 fn draw_bonds(c: &mut Canvas, rect: [f32; 4], bonds: &[B; 4], spin: f32) {
-    let centre = [(rect[0] + rect[2]) * 0.5, (rect[1] + rect[3]) * 0.5 + 8.0];
-    let cam = camera(centre, (rect[3] - rect[1]) * 0.32, -0.98 + spin, 0.40);
+    let view = [rect[0], rect[1] + 16.0, rect[2], rect[3]];
+    let cam = Camera::parallel(view, (rect[3] - rect[1]) * 0.32, -0.98 + spin, 0.40);
     let mut sc = Scene3::new(cam);
-    let h = core::f32::consts::FRAC_1_SQRT_2;
-    sc.seg(
-        [-1.4 * h, -1.4 * h, 0.0],
-        [1.4 * h, 1.4 * h, 0.0],
-        1.0,
-        palette::grid(),
-        1.0,
-    );
-    sc.arrow(
-        [1.0 * h, 1.0 * h, 0.0],
-        [0.5 * h, 0.5 * h, 0.0],
-        1.5,
-        8.0,
-        palette::yellow(),
-    );
-    sc.arrow([0.0; 3], [-h, h, 0.0], 1.0, 6.0, palette::grid());
-    sc.arrow([0.0; 3], [0.0, 0.0, 1.0], 1.0, 6.0, palette::grid());
-    let tips: Vec<[f32; 3]> = bonds
-        .iter()
-        .map(|b| direction(*b).map(|v| v as f32))
-        .collect();
+    let beam = direction(longitudinal());
+    sc.seg(beam * -1.4, beam * 1.4, 1.0, palette::grid(), 1.0);
+    sc.arrow(beam, beam * 0.5, 1.5, 8.0, palette::yellow());
+    for axis in [horizontal(), vertical()] {
+        sc.arrow([0.0; 3], direction(axis), 1.0, 6.0, palette::grid());
+    }
+    let tips = bonds.map(direction);
     for (i, a) in tips.iter().enumerate() {
         sc.seg([0.0; 3], *a, 2.5, palette::ink(), 0.8);
         for b in &tips[i + 1..] {
@@ -333,69 +310,50 @@ fn draw_bonds(c: &mut Canvas, rect: [f32; 4], bonds: &[B; 4], spin: f32) {
 
 /// The screen: pump directions all around and the doubled polarization each drives.
 fn draw_polarization(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
-    let ax = Axes::equal(
-        gax_numga_examples::plot::inset(rect, 34.0, 30.0, 10.0, 30.0),
-        [0.0, 0.0],
-        1.15,
-    );
+    let ax = Axes::equal(plot::inset(rect, 34.0, 30.0, 10.0, 30.0), [0.0, 0.0], 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
     ax.line(c, [-1.15, 0.0], [1.15, 0.0], 1.0, palette::grid(), 0.6);
     ax.line(c, [0.0, -1.15], [0.0, 1.15], 1.0, palette::grid(), 0.6);
-    let circle: Vec<[f32; 2]> = pumps.iter().map(|p| xy(screen(*p))).collect();
+    let circle: Vec<Spot> = pumps.iter().map(|p| screen(*p)).collect();
     ax.polyline(c, &circle, 1.0, palette::sky(), 0.35);
-    let curve: Vec<[f32; 2]> = harmonic.iter().map(|p| xy(screen(*p))).collect();
+    let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
     ax.polyline(c, &curve, 2.0, palette::orange(), 0.8);
-    ax.arrow(c, [0.0, 0.0], circle[0], 2.0, 8.0, palette::sky());
-    ax.arrow(c, [0.0, 0.0], curve[0], 2.0, 8.0, palette::orange());
+    ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::sky());
+    ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::orange());
 }
 
 /// A polar plot of the power over the pump's direction. (numga uses matplotlib's polar
-/// axes; this draws the rings, the spokes and the curve itself.)
+/// axes; this draws the rings, the spokes and the curve itself.) The pumps go once around the
+/// beam at unit strength, so scaled they draw the rings, and every eighth of the way a spoke.
 fn draw_power(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
     let intensity: Vec<f64> = harmonic.iter().map(|h| h.dot(*h).s()).collect();
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
-    let ax = Axes::equal(
-        gax_numga_examples::plot::inset(rect, 10.0, 30.0, 10.0, 30.0),
-        [0.0, 0.0],
-        1.0,
-    );
+    let ax = Axes::equal(plot::inset(rect, 10.0, 30.0, 10.0, 30.0), [0.0, 0.0], 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
-    let ring = |r: f32| -> Vec<[f32; 2]> {
-        (0..=72)
-            .map(|k| {
-                let a = core::f32::consts::TAU * k as f32 / 72.0;
-                [r * a.cos(), r * a.sin()]
-            })
-            .collect()
-    };
     for k in 1..=4 {
-        ax.polyline(c, &ring(k as f32 / 4.0), 1.0, palette::grid(), 0.8);
+        let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
+        ax.polyline(c, &ring, 1.0, palette::grid(), 0.8);
     }
-    for k in 0..8 {
-        let a = core::f32::consts::TAU * k as f32 / 8.0;
-        ax.line(c, [0.0, 0.0], [a.cos(), a.sin()], 1.0, palette::grid(), 0.8);
-        let label = format!("{}", 45 * k);
+    let below = gax::pga2d::Motor::translation(0.0, -0.04);
+    for (k, p) in pumps.iter().step_by(pumps.len() / 8).take(8).enumerate() {
+        ax.line(c, centre(), screen(*p), 1.0, palette::grid(), 0.8);
         ax.text(
             c,
-            [1.1 * a.cos(), 1.1 * a.sin() - 0.04],
-            &label,
+            below >> screen(p.gp(1.1)),
+            &format!("{}", 45 * k),
             9.0,
             palette::grid(),
             Align::Center,
         );
     }
-    let pts: Vec<[f32; 2]> = pumps
+    let pts: Vec<Spot> = pumps
         .iter()
         .zip(&intensity)
-        .map(|(p, i)| {
-            let [a, b] = screen(*p);
-            let r = i / top;
-            [(r * a) as f32, (r * b) as f32]
-        })
+        .map(|(p, i)| screen(p.gp(i / top)))
         .collect();
     // The shared fill tests every edge at 16 samples per pixel, so the shading takes every
     // fourth point of the curve.
-    let coarse: Vec<[f32; 2]> = pts.iter().step_by(4).copied().collect();
+    let coarse: Vec<Spot> = pts.iter().step_by(4).copied().collect();
     ax.fill(c, &coarse, palette::orange(), 0.12);
     ax.polyline(c, &pts, 2.0, palette::orange(), 1.0);
     ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::sky(), 1.0);
@@ -411,21 +369,17 @@ fn draw_power(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
 
 fn draw_waveform(c: &mut Canvas, rect: [f32; 4], at: f32) {
     let (phase, pump, harmonic) = &still().waveform;
-    let cycles: Vec<f32> = phase
-        .iter()
-        .map(|p| (p / core::f64::consts::TAU) as f32)
-        .collect();
     let ax = Axes::new(
-        gax_numga_examples::plot::inset(rect, 34.0, 30.0, 10.0, 34.0),
+        plot::inset(rect, 34.0, 30.0, 10.0, 34.0),
         [0.0, 2.0],
         [-1.2, 1.2],
     );
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
-    let series = |v: &[B], pick: B| -> Vec<[f32; 2]> {
-        cycles
+    let series = |v: &[B], pick: B| -> Vec<[f64; 2]> {
+        phase
             .iter()
             .zip(v)
-            .map(|(x, f)| [*x, (*f | pick).s() as f32])
+            .map(|(p, f)| [p / core::f64::consts::TAU, (*f | pick).s()])
             .collect()
     };
     let a = series(pump, horizontal());
@@ -441,30 +395,25 @@ fn draw_waveform(c: &mut Canvas, rect: [f32; 4], at: f32) {
 
 fn draw_mixing(c: &mut Canvas, rect: [f32; 4], at: f32) {
     let (pumps, probes, generated) = &still().mixing;
-    let ax = Axes::equal(
-        gax_numga_examples::plot::inset(rect, 30.0, 30.0, 10.0, 34.0),
-        [0.0, 0.0],
-        0.5,
-    );
+    let ax = Axes::equal(plot::inset(rect, 30.0, 30.0, 10.0, 34.0), [0.0, 0.0], 0.5);
     ax.frame(c, "PUMP AT 45: MIXING", "HORIZONTAL", "");
-    let pump = xy(screen(pumps[1]));
     ax.arrow(
         c,
-        [0.0, 0.0],
-        [0.45 * pump[0], 0.45 * pump[1]],
+        centre(),
+        screen(pumps[1].gp(0.45)),
         3.0,
         8.0,
         palette::grid(),
     );
-    let circle: Vec<[f32; 2]> = probes.iter().map(|p| xy(screen(*p))).collect();
-    let image: Vec<[f32; 2]> = generated[1].iter().map(|p| xy(screen(*p))).collect();
-    let faint: Vec<[f32; 2]> = generated[0].iter().map(|p| xy(screen(*p))).collect();
+    let on_screen = |fields: &[B]| -> Vec<Spot> { fields.iter().map(|p| screen(*p)).collect() };
+    let circle = on_screen(probes);
+    let image = on_screen(&generated[1]);
     ax.dashed(c, &circle, 1.5, 6.0, palette::sky(), 1.0);
-    ax.polyline(c, &faint, 1.0, palette::orange(), 0.3);
+    ax.polyline(c, &on_screen(&generated[0]), 1.0, palette::orange(), 0.3);
     ax.polyline(c, &image, 2.0, palette::orange(), 1.0);
     let k = ((at * (circle.len() - 1) as f32) as usize).min(circle.len() - 1);
-    ax.arrow(c, [0.0, 0.0], circle[k], 1.5, 6.0, palette::sky());
-    ax.arrow(c, [0.0, 0.0], image[k], 1.5, 6.0, palette::orange());
+    ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::sky());
+    ax.arrow(c, centre(), image[k], 1.5, 6.0, palette::orange());
 }
 
 const CASES: [&str; 3] = ["MATCHED", "MISMATCHED", "FLIPPED"];
@@ -477,35 +426,30 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
     let (depths, amplitude) = &still().growth;
     let n = ((at * depths.len() as f32) as usize).clamp(1, depths.len());
     let ax = Axes::equal(
-        gax_numga_examples::plot::inset(phasor, 30.0, 30.0, 10.0, 34.0),
+        plot::inset(phasor, 30.0, 30.0, 10.0, 34.0),
         [0.45, 0.2],
         0.62,
     );
     ax.frame(c, "ACCUMULATED FIELD", "IN PHASE", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<[f32; 2]> = path[..n]
+        let pts: Vec<[f64; 2]> = path[..n]
             .iter()
-            .map(|a| {
-                [
-                    (a[0] | vertical()).s() as f32,
-                    (a[1] | vertical()).s() as f32,
-                ]
-            })
+            .map(|a| [(a[0] | vertical()).s(), (a[1] | vertical()).s()])
             .collect();
         ax.polyline(c, &pts, 2.0, case_colour(k), 1.0);
         ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0, case_colour(k), 1.0);
     }
     let ax = Axes::new(
-        gax_numga_examples::plot::inset(power_rect, 34.0, 30.0, 10.0, 34.0),
+        plot::inset(power_rect, 34.0, 30.0, 10.0, 34.0),
         [0.0, 1.0],
         [0.0, 1.05],
     );
     ax.frame(c, "GROWTH", "DEPTH", "");
     for (k, path) in amplitude.iter().enumerate() {
-        let pts: Vec<[f32; 2]> = depths
+        let pts: Vec<[f64; 2]> = depths
             .iter()
             .zip(path)
-            .map(|(d, a)| [*d as f32, power(*a) as f32])
+            .map(|(d, a)| [*d, power(*a)])
             .collect();
         ax.polyline(c, &pts, 1.0, case_colour(k), 0.3);
         ax.polyline(c, &pts[..n], 2.0, case_colour(k), 1.0);
@@ -556,37 +500,26 @@ fn main() {
 mod tests {
     use super::shg::*;
 
-    struct Rng(u64);
-    impl Rng {
-        fn unit(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-        }
-        fn bivector(&mut self) -> B {
-            B::new(
-                self.unit(),
-                self.unit(),
-                self.unit(),
-                self.unit(),
-                self.unit(),
-                self.unit(),
-            )
-        }
+    use gax::ApproxEq;
+    use gax_numga_examples::rng::{Draw, Rng, rng};
+
+    /// A field with coefficients uniform in `[-1, 1)`.
+    fn bivector(r: &mut Rng) -> B {
+        B::from_coeffs(core::array::from_fn(|_| r.range(-1.0, 1.0)))
     }
 
     fn near(a: B, b: B, tol: f64) -> bool {
-        a.c.iter().zip(b.c).all(|(p, q)| (p - q).abs() <= tol)
+        a.max_abs_diff(&b) <= tol
     }
 
     #[test]
     fn response_has_the_tetrahedral_component_law_bound_at_once_or_one_slot_at_a_time() {
         let crystal = response(&bonds());
-        let mut rng = Rng(814);
+        let mut rng = rng(814);
+        let mut unit = || rng.range(-1.0, 1.0);
         for _ in 0..19 {
-            let a = [rng.unit(), rng.unit(), rng.unit()];
-            let b = [rng.unit(), rng.unit(), rng.unit()];
+            let a = [unit(), unit(), unit()];
+            let b = [unit(), unit(), unit()];
             let first = field(a[0], a[1], a[2], 0.0, 0.0, 0.0);
             let second = field(b[0], b[1], b[2], 0.0, 0.0, 0.0);
             // The six permutations of three distinct axes share one unit coefficient.
@@ -602,8 +535,8 @@ mod tests {
             let partial: Linear = crystal.of(first);
             assert!(near(partial.of(second), expected, 1e-12));
             // Magnetic parts do not drive the electric-dipole response.
-            let m1 = field(0.0, 0.0, 0.0, rng.unit(), rng.unit(), rng.unit());
-            let m2 = field(0.0, 0.0, 0.0, rng.unit(), rng.unit(), rng.unit());
+            let m1 = field(0.0, 0.0, 0.0, unit(), unit(), unit());
+            let m2 = field(0.0, 0.0, 0.0, unit(), unit(), unit());
             assert!(near(
                 crystal.of(first + m1).of(second + m2),
                 expected,
@@ -615,14 +548,14 @@ mod tests {
     #[test]
     fn the_response_turns_with_the_crystal_and_reverses_with_its_bonds() {
         let crystal = response(&bonds());
-        let mut rng = Rng(177);
+        let mut rng = rng(177);
         let rotation = B::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.37).exp()
             * B::new(0.0, 0.0, 0.0, 0.23, 0.0, 0.0).exp();
         let turned = turned(crystal, rotation);
         let rebuilt = response(&bonds().map(|b| rotation >> b));
         let reversed = response(&bonds().map(|b| -b));
         for _ in 0..23 {
-            let (f, p) = (rng.bivector(), rng.bivector());
+            let (f, p) = (bivector(&mut rng), bivector(&mut rng));
             assert!(near(
                 turned.of(rotation >> f).of(rotation >> p),
                 rotation >> crystal.of(f).of(p),

@@ -9,7 +9,8 @@
 //! with an off-centre angled spring that couples them. Springs are orange when stretched and
 //! blue when compressed (the linear change in length).
 
-use gax::pga2d::{Line, Point, Scalar};
+use gax::motions::{Motions, Pga2d};
+use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, canvas, caption, palette, plot, run,
 };
@@ -54,10 +55,10 @@ mod modes {
     /// A uniform 2 by 1 plate of mass 1 on the first `springs` springs of stiffness 6. The first
     /// two hang vertically; the third is angled and off-centre.
     pub fn suspension(springs: usize) -> Suspension {
-        let xy = |v: &[[f64; 2]]| v.iter().map(|p| Point::xy(p[0], p[1])).collect::<Vec<P>>();
-        let body = xy(&[[0.0, 0.5], [2.0, 0.5], [2.0, 1.5], [0.0, 1.5]]);
-        let attachments = xy(&[[0.2, 1.5], [1.8, 1.5], [2.0, 1.0]][..springs]);
-        let anchors = xy(&[[0.2, 2.55], [1.8, 2.55], [2.9, 1.85]][..springs]);
+        let points = |v: &[[f64; 2]]| v.iter().map(|p| Point::xy(p[0], p[1])).collect::<Vec<P>>();
+        let body = points(&[[0.0, 0.5], [2.0, 0.5], [2.0, 1.5], [0.0, 1.5]]);
+        let attachments = points(&[[0.2, 1.5], [1.8, 1.5], [2.0, 1.0]][..springs]);
+        let anchors = points(&[[0.2, 2.55], [1.8, 2.55], [2.9, 1.85]][..springs]);
         // Tensor-product two-point Gauss quadrature on the uniform plate: the corners pulled
         // towards the centre by `1 / sqrt(3)`.
         let center = body.iter().fold(Point::zero(), |s: P, p| s + *p).gp(0.25);
@@ -99,13 +100,14 @@ mod modes {
     }
 
     /// The inertia from lumped masses: each point's velocity under an open twist is its
-    /// commutator with it, and the point joined with its velocity is its momentum.
+    /// commutator with it, and the point joined with its velocity is its momentum
+    /// (`Motions::point_inertia`, per unit mass).
     pub fn body_inertia(points: &[P], masses: &[f64]) -> Response {
         points
             .iter()
             .zip(masses)
             .fold(Line::zero(), |sum: Response, (p, m)| {
-                sum + (*p & p.commutator(Point::slot())).gp(*m)
+                sum + Pga2d::point_inertia(*p).gp(*m)
             })
     }
 
@@ -159,53 +161,39 @@ fn seconds() -> f32 {
     (2.0 / slowest) as f32
 }
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
+/// A direction turned a quarter turn counterclockwise, scaled to unit length.
+fn across(d: P) -> P {
+    let quarter = Motor::rotation(Point::xy(0.0, 0.0), core::f64::consts::FRAC_PI_2);
+    (quarter >> d).gp(1.0 / d.ideal_norm())
 }
 
-fn ideal(p: P) -> [f32; 2] {
-    [p.e20() as f32, p.e01() as f32]
-}
-
-/// A coil with straight leads between two points.
-fn spring_path(a: [f32; 2], b: [f32; 2]) -> Vec<[f32; 2]> {
-    let axis = [b[0] - a[0], b[1] - a[1]];
-    let len = (axis[0] * axis[0] + axis[1] * axis[1]).sqrt();
-    let normal = [-axis[1] / len, axis[0] / len];
+/// A coil with straight leads from `a` to `b`: points along the axis, offset across it.
+fn spring_path(a: P, b: P) -> Vec<P> {
+    let axis = b - a;
+    let side = across(axis);
     let turns = 15;
     let mut along = vec![(0.0, 0.0), (0.16, 0.0)];
     for k in 0..turns {
-        let s = 0.20 + 0.60 * k as f32 / (turns - 1) as f32;
+        let s = 0.20 + 0.60 * k as f64 / (turns - 1) as f64;
         along.push((s, if k % 2 == 0 { 0.048 } else { -0.048 }));
     }
     along.extend([(0.84, 0.0), (1.0, 0.0)]);
     along
         .iter()
-        .map(|(s, q)| {
-            [
-                a[0] + s * axis[0] + q * normal[0],
-                a[1] + s * axis[1] + q * normal[1],
-            ]
-        })
+        .map(|&(s, q)| a + axis.gp(s) + side.gp(q))
         .collect()
 }
 
 /// A wall at the anchor, across the spring, hatched on the far side.
-fn support(ax: &Axes, c: &mut Canvas, anchor: [f32; 2], attachment: [f32; 2]) {
-    let d = [anchor[0] - attachment[0], anchor[1] - attachment[1]];
-    let n = (d[0] * d[0] + d[1] * d[1]).sqrt();
-    let dir = [d[0] / n, d[1] / n];
-    let tan = [-dir[1], dir[0]];
-    let at = |s: f32| [anchor[0] + s * tan[0], anchor[1] + s * tan[1]];
+fn support(ax: &Axes, c: &mut Canvas, anchor: P, attachment: P) {
+    let out = anchor - attachment;
+    let out = out.gp(1.0 / out.ideal_norm());
+    let side = across(out);
+    let at = |s: f64| anchor + side.gp(s);
     ax.line(c, at(-0.14), at(0.14), 2.0, palette::grid(), 1.0);
     for k in 0..5 {
-        let s = at(-0.12 + 0.06 * k as f32);
-        let e = [
-            s[0] + 0.075 * (dir[0] + tan[0]),
-            s[1] + 0.075 * (dir[1] + tan[1]),
-        ];
-        ax.line(c, s, e, 1.0, palette::grid(), 1.0);
+        let s = at(-0.12 + 0.06 * k as f64);
+        ax.line(c, s, s + (out + side).gp(0.075), 1.0, palette::grid(), 1.0);
     }
 }
 
@@ -223,47 +211,42 @@ fn spring_colour(extension: f64) -> Rgb {
 fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f64, title: &str) {
     let ax = Axes::equal(rect, [1.35, 1.5], 1.4);
     let s = &case.system;
-    let reference: Vec<[f32; 2]> = s.body.iter().map(|p| xy(*p)).collect();
     // The mode's shape, enlarged so that the largest corner moves 0.2.
     let largest = case.body_offsets[mode]
         .iter()
         .map(|o| o.ideal_norm())
         .fold(0.0, f64::max);
     let k = 0.2 / largest * phase;
-    let moved = |p: P, o: P| xy(p + o.gp(k));
-    let body: Vec<[f32; 2]> = s
+    let moved = |p: P, o: P| p + o.gp(k);
+    let body: Vec<P> = s
         .body
         .iter()
         .zip(&case.body_offsets[mode])
         .map(|(p, o)| moved(*p, *o))
         .collect();
-    let mut closed = reference.clone();
-    closed.push(reference[0]);
-    ax.dashed(c, &closed, 1.2, 4.0, palette::grid(), 1.0);
+    let closed = |pts: &[P]| [pts, &pts[..1]].concat();
+    ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::grid(), 1.0);
     ax.fill(c, &body, canvas::scale(palette::blue(), 0.8), 0.55);
-    let mut outline = body.clone();
-    outline.push(body[0]);
-    ax.polyline(c, &outline, 2.0, palette::sky(), 1.0);
+    ax.polyline(c, &closed(&body), 2.0, palette::sky(), 1.0);
     for (j, (anchor, attachment)) in s.anchors.iter().zip(&s.attachments).enumerate() {
-        let a = xy(*anchor);
         let b = moved(*attachment, case.attachment_offsets[mode][j]);
-        support(&ax, c, a, xy(*attachment));
+        support(&ax, c, *anchor, *attachment);
         let colour = spring_colour(case.extensions[mode][j] * k);
-        ax.polyline(c, &spring_path(a, b), 2.0, colour, 1.0);
+        ax.polyline(c, &spring_path(*anchor, b), 2.0, colour, 1.0);
         ax.scatter(c, &[b], Marker::Dot, 7.0, palette::ink(), 1.0);
     }
-    // The mode's centre of rotation (a translation has none in view: its weight is zero).
+    // The mode's centre of rotation. A translation's is at infinity (its weight is zero), so an
+    // arrow from the plate's centre shows the direction it slides in instead.
     let m = case.modes[mode];
     if m.e12().abs() > 1e-9 {
-        ax.scatter(c, &[xy(m)], Marker::Cross, 9.0, palette::yellow(), 0.9);
+        ax.scatter(c, &[m], Marker::Cross, 9.0, palette::yellow(), 0.9);
     } else {
-        let d = ideal(m);
-        let n = (d[0] * d[0] + d[1] * d[1]).sqrt();
-        let centre = [1.0, 1.0];
+        let centre = Point::xy(1.0, 1.0);
+        let slide = centre.commutator(m);
         ax.arrow(
             c,
             centre,
-            [centre[0] + 0.4 * d[0] / n, centre[1] + 0.4 * d[1] / n],
+            centre + slide.gp(0.4 / slide.ideal_norm()),
             1.5,
             7.0,
             palette::yellow(),
@@ -312,7 +295,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "NORMAL MODES OF A PLATE ON SPRINGS",
-        "STIFFNESS AND INERTIA AS MAPS FROM TWISTS TO FORQUES; MODES BY THE GENERALIZED EIGENPROBLEM (PGA2D)",
+        "STIFFNESS, INERTIA: TWISTS TO FORQUES. MODES: EIGENPAIRS OF BOTH (PGA2D)",
     );
 }
 
@@ -347,11 +330,8 @@ mod tests {
         let (stiffness, extension) = spring_stiffness(&lines(&s), &s.spring_constants);
         let q: P = Point::new(0.3, -0.4, 0.25);
         let h = 1e-4;
-        let dist = |a: P, b: P| {
-            let [x, y] = a.to_euclidean();
-            let [u, v] = b.to_euclidean();
-            (x - u).hypot(y - v)
-        };
+        // The distance between two (unit) points: the norm of their join.
+        let dist = |a: P, b: P| (a & b).norm();
         let plus = q.gp(-h / 2.0).exp();
         let minus = q.gp(h / 2.0).exp();
         let mut actual = 0.0;

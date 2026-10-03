@@ -134,7 +134,7 @@ mod collision {
         pub fn second(&self, offset: f64) -> Quadric {
             let n = self.normal;
             moved(
-                motor(n.e1() * offset, n.e2() * offset, 0.0) * self.touch,
+                Motor::translation(n.e1() * offset, n.e2() * offset) * self.touch,
                 self.shape,
             )
         }
@@ -158,40 +158,29 @@ mod collision {
 
 use collision::*;
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
-/// The outline of an ellipse: its contact points over the tangent normals.
-fn outline(q: Quadric) -> Vec<[f32; 2]> {
+/// The outline of an ellipse: its contact points over the tangent normals, the line `x = 0`
+/// turned about the origin.
+fn outline(q: Quadric) -> Vec<P> {
     (0..150)
         .map(|k| {
-            let t = core::f64::consts::TAU * k as f64 / 150.0;
-            xy(q.of(tangent_line(q, Line::new(t.cos(), t.sin(), 0.0))))
+            let turn = Motor::rotation(origin(), core::f64::consts::TAU * k as f64 / 150.0);
+            q.of(tangent_line(q, turn >> Line::new(1.0, 0.0, 0.0)))
         })
         .collect()
 }
 
-/// An infinite line, through its foot from the origin along its direction.
+/// An infinite line, drawn through its point nearest the origin (its meet with the
+/// perpendicular from the origin) along its direction (its meet with the line at infinity).
 fn draw_line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Rgb, alpha: f32) {
-    let (a, b, d) = (l.e1(), l.e2(), l.e0());
-    let foot = [-a * d / (a * a + b * b), -b * d / (a * a + b * b)];
-    ax.axline(
-        c,
-        [foot[0] as f32, foot[1] as f32],
-        [-b as f32, a as f32],
-        width,
-        color,
-        alpha,
-    );
+    let foot = l ^ (l | origin());
+    ax.axline(c, foot, l ^ infinity(), width, color, alpha);
 }
 
 fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Rgb) {
     let pts = outline(q);
     ax.fill(c, &pts, color, 0.35);
     ax.polyline(c, &[pts.clone(), vec![pts[0]]].concat(), 2.2, color, 1.0);
-    ax.scatter(c, &[xy(q.of(infinity()))], Marker::Dot, 6.0, color, 1.0);
+    ax.scatter(c, &[q.of(infinity())], Marker::Dot, 6.0, color, 1.0);
 }
 
 /// The offset of the second ellipse at time `t`: from 0.8 apart to 0.6 inside and back.
@@ -223,7 +212,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The ellipses, on the left.
     let ax = Axes::equal(
-        plot::inset([0.0, 40.0, w * 0.58, h], 20.0, 30.0, 10.0, 20.0),
+        plot::inset([0.0, 64.0, w * 0.58, h], 20.0, 30.0, 10.0, 20.0),
         [-0.4, 0.0],
         3.0,
     );
@@ -261,14 +250,14 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::purple()
     };
     draw_line(&ax, c, mid, 2.0, mid_colour, 1.0);
-    let (p1, p2) = (xy(q1.of(first)), xy(q2.of(second)));
+    let (p1, p2) = (q1.of(first), q2.of(second));
     ax.dashed(c, &[p1, p2], 1.5, 4.0, palette::ink(), 1.0);
     ax.scatter(c, &[p1, p2], Marker::Dot, 7.0, palette::ink(), 1.0);
     if top.abs() < 0.08 {
         // Near contact: the blend's null line and the contact point.
         let (_, line, point) = contact(q1, q2);
         draw_line(&ax, c, line, 2.2, palette::red(), 1.0);
-        ax.scatter(c, &[xy(point)], Marker::Star, 13.0, palette::yellow(), 1.0);
+        ax.scatter(c, &[point], Marker::Star, 13.0, palette::yellow(), 1.0);
     }
 
     // The cubic of the current pose, against the three reference poses.
@@ -347,6 +336,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::collision::*;
+    use gax::ApproxEq;
     use gax::pga2d::{Line, Point};
 
     fn placed() -> Quadric {
@@ -356,7 +346,7 @@ mod tests {
     fn normals() -> Vec<L> {
         [0.0f64, 45.0, 90.0, 135.0, 210.0, 315.0]
             .iter()
-            .map(|d| Line::new(d.to_radians().cos(), d.to_radians().sin(), 0.0))
+            .map(|d| motor(0.0, 0.0, d.to_radians()) >> Line::new(1.0, 0.0, 0.0))
             .collect()
     }
 
@@ -387,9 +377,7 @@ mod tests {
         let q = placed();
         for n in normals() {
             let (a, b) = (tangent_line(q.gp(-2.5), n), tangent_line(q, n));
-            for (x, y) in a.c.iter().zip(b.c) {
-                assert!((x - y).abs() < 1e-12);
-            }
+            assert!(a.max_abs_diff(&b) < 1e-12);
         }
     }
 
@@ -434,8 +422,9 @@ mod tests {
         let (_, line, point) = contact(s.q1, q2[1]);
         assert!((line & s.q1.of(line)).s().abs() < 1e-6);
         let other = q2[1].of(line).normalized().into_inner();
+        // The two contact points are one: their join vanishes.
         let join = other & point;
-        assert!(join.c.iter().map(|x| x * x).sum::<f64>().sqrt() < 1e-5);
+        assert!(join.max_abs_diff(&Line::zero()) < 1e-5);
         // numga's contact point.
         let [x, y] = point.to_euclidean();
         assert!((x - 0.623064025936332).abs() < 1e-6 && (y - 0.821205844662909).abs() < 1e-6);
@@ -453,8 +442,8 @@ mod tests {
         assert!(side(c1) * side(c2) > 0.0);
         let at_infinity: Vec<f64> = (0..36)
             .map(|k| {
-                let a = core::f64::consts::PI * k as f64 / 36.0;
-                side(Point::direction(a.cos(), a.sin()))
+                let turn = motor(0.0, 0.0, core::f64::consts::PI * k as f64 / 36.0);
+                side(turn >> Point::direction(1.0, 0.0))
             })
             .collect();
         assert!(at_infinity.iter().any(|v| *v > 0.0) && at_infinity.iter().any(|v| *v < 0.0));

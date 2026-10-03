@@ -21,7 +21,7 @@
 //! condition drawn as a curve of its own lies on the conic, and the join of the three crossings
 //! stays at round-off over the whole turn.
 
-use gax::pga2d::{Line, Point, Scalar};
+use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
 };
@@ -85,20 +85,27 @@ mod pascal {
             & ((third & fourth) ^ (open & first))
     }
 
-    /// A point at unit weight.
-    pub fn point(x: f64, y: f64) -> P {
-        Point::xy(x, y)
+    /// The origin.
+    pub fn origin() -> P {
+        Point::xy(0.0, 0.0)
     }
 
     /// The point at infinity in the direction at an angle: the direction along x turned about
     /// the origin.
     pub fn heading(angle: f64) -> P {
-        gax::pga2d::Motor::rotation(point(0.0, 0.0), angle) >> Point::direction(1.0, 0.0)
+        Motor::rotation(origin(), angle) >> Point::direction(1.0, 0.0)
     }
 
-    /// Points at the given angles on an ellipse, off the origin.
+    /// The point at an angle on an ellipse off the origin: the point of the unit circle at the
+    /// angle, stretched by 1.6 along x and moved to (0.3, -0.1).
     pub fn ellipse_point(angle: f64) -> P {
-        point(1.6 * angle.cos() + 0.3, angle.sin() - 0.1)
+        let stretch: Point<(Point,), f64> = Point::from_images([
+            Point::new(1.6, 0.0, 0.0),
+            Point::new(0.0, 1.0, 0.0),
+            Point::new(0.0, 0.0, 1.0),
+        ]);
+        let on_circle = Motor::rotation(origin(), angle) >> Point::xy(1.0, 0.0);
+        Motor::translation(0.3, -0.1) >> stretch.of(on_circle)
     }
 
     /// The five fixed points.
@@ -113,7 +120,7 @@ mod pascal {
         let five = five();
         let shape = conic(five);
         let sixth = second_crossing(shape, five[0], heading(angle));
-        let sixth = sixth.gp(1.0 / sixth.e12());
+        let sixth = sixth.unitized();
         let hexagon = [five[0], five[1], five[2], five[3], five[4], sixth];
         (shape, hexagon, crossings(&hexagon))
     }
@@ -144,18 +151,12 @@ fn pairs(i: usize) -> Rgb {
     [palette::sky(), palette::green(), palette::purple()][i % 3]
 }
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
-/// A line drawn across the axes.
+/// A line drawn across the axes: through its point nearest the origin (where the
+/// perpendicular through the origin meets it), along its point at infinity.
 fn across(ax: &Axes, c: &mut Canvas, l: L, width: f32, colour: Rgb, alpha: f32) {
-    let (a, b, d) = (l.e1(), l.e2(), l.e0());
-    let n2 = a * a + b * b;
-    // The point of the line nearest the origin, and its direction.
-    let foot = [(-a * d / n2) as f32, (-b * d / n2) as f32];
-    ax.axline(c, foot, [-b as f32, a as f32], width, colour, alpha);
+    let foot = (l | origin()) ^ l;
+    let along = l ^ Line::new(0.0, 0.0, 1.0);
+    ax.axline(c, foot, along, width, colour, alpha);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -170,19 +171,18 @@ fn draw(c: &mut Canvas, t: f32) {
         [1.0, 1.5],
         4.0,
     );
-    let corners: Vec<[f32; 2]> = hexagon.iter().map(|p| xy(*p)).collect();
-    ax.fill(c, &corners, palette::grid(), 0.35);
+    ax.fill(c, &hexagon, palette::grid(), 0.35);
     for i in 0..6 {
         across(&ax, c, hexagon[i] & hexagon[NEXT[i]], 1.0, pairs(i), 0.55);
     }
-    let conic_level = |x: f32, y: f32| on(shape, point(f64::from(x), f64::from(y))) as f32;
+    let conic_level = |x: f32, y: f32| on(shape, Point::xy(f64::from(x), f64::from(y))) as f32;
     ax.contour(c, conic_level, 240, 0.0, 2.0, palette::ink());
     across(&ax, c, crossing[0] & crossing[2], 2.4, palette::red(), 1.0);
-    ax.scatter(c, &corners[..5], Marker::Dot, 7.0, palette::ink(), 1.0);
-    ax.scatter(c, &corners[5..], Marker::Dot, 11.0, palette::orange(), 1.0);
+    ax.scatter(c, &hexagon[..5], Marker::Dot, 7.0, palette::ink(), 1.0);
+    ax.scatter(c, &hexagon[5..], Marker::Dot, 11.0, palette::orange(), 1.0);
     for (i, p) in crossing.iter().enumerate() {
-        ax.scatter(c, &[xy(*p)], Marker::Dot, 11.0, palette::red(), 1.0);
-        ax.scatter(c, &[xy(*p)], Marker::Dot, 7.0, pairs(i), 1.0);
+        ax.scatter(c, &[*p], Marker::Dot, 11.0, palette::red(), 1.0);
+        ax.scatter(c, &[*p], Marker::Dot, 7.0, pairs(i), 1.0);
     }
 
     // Pascal's condition as a curve of its own: the form on the sixth point, twice.
@@ -198,7 +198,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ax2.contour(
         c,
         |x, y| {
-            let p = point(f64::from(x), f64::from(y));
+            let p = Point::xy(f64::from(x), f64::from(y));
             form.of(p).of(p).s() as f32
         },
         160,
@@ -206,8 +206,7 @@ fn draw(c: &mut Canvas, t: f32) {
         1.6,
         palette::yellow(),
     );
-    let fixed: Vec<[f32; 2]> = five.iter().map(|p| xy(*p)).collect();
-    ax2.scatter(c, &fixed, Marker::Dot, 7.0, palette::ink(), 1.0);
+    ax2.scatter(c, &five, Marker::Dot, 7.0, palette::ink(), 1.0);
     ax2.text(
         c,
         [ax2.x[0] + 0.05, ax2.y[1] - 0.2],
@@ -257,6 +256,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::pascal::*;
+    use gax::pga2d::Point;
+    use gax_numga_examples::rng::{Draw, rng};
 
     /// numga's scenario checks: the conic passes through the five points and every sixth; the
     /// three crossings lie on one line; Pascal's condition on the sixth point is the conic up
@@ -278,24 +279,14 @@ mod tests {
             assert!(collinearity(&crossing).abs() < 1e-12);
         }
         // Pascal's condition against the conic on probe points: one ratio. numga's probes are
-        // normal samples; these come from a small xorshift (numga's stream cannot be
-        // reproduced), and the ratio does not depend on them.
+        // normal samples, as these are (numga's stream cannot be reproduced, and the ratio does
+        // not depend on the draw).
         let shape = conic(five);
         let form = pascal(five);
-        let mut state = 0x9e37_79b9_7f4a_7c15u64;
-        let mut normal = || {
-            let mut u = || {
-                state ^= state << 13;
-                state ^= state >> 7;
-                state ^= state << 17;
-                (state >> 11) as f64 / (1u64 << 53) as f64
-            };
-            let (a, b) = (u().max(1e-300), u());
-            (-2.0 * a.ln()).sqrt() * (core::f64::consts::TAU * b).cos()
-        };
+        let mut r = rng(7);
         let ratios: Vec<f64> = (0..8)
             .map(|_| {
-                let p = point(normal(), normal());
+                let p = Point::xy(r.normal(), r.normal());
                 form.of(p).of(p).s() / on(shape, p)
             })
             .collect();

@@ -3,6 +3,7 @@
 //! lines, images and legends in data coordinates.
 
 use crate::canvas::{Canvas, Px, Rgb};
+use crate::coords::{Dir2, Pos2};
 use crate::font::Align;
 use crate::{contour, palette};
 use gax::pga2d::{Motor, Point};
@@ -131,7 +132,8 @@ impl Axes {
     }
 
     /// The pixel of data point `p`.
-    pub fn px(&self, p: [f32; 2]) -> Px {
+    pub fn px(&self, p: impl Pos2) -> Px {
+        let p = p.xy();
         let tx = Self::t(p[0], self.x, self.log_x);
         let ty = Self::t(p[1], self.y, self.log_y);
         [
@@ -255,19 +257,22 @@ impl Axes {
     pub fn line(
         &self,
         c: &mut Canvas,
-        a: [f32; 2],
-        b: [f32; 2],
+        a: impl Pos2,
+        b: impl Pos2,
         width: f32,
         color: Rgb,
         alpha: f32,
     ) {
+        let a = a.xy();
+        let b = b.xy();
         self.clip(c);
         c.line(self.px(a), self.px(b), width, color, alpha);
         c.unclip();
     }
 
     /// A polyline through data points; non-finite points break it.
-    pub fn polyline(&self, c: &mut Canvas, pts: &[[f32; 2]], width: f32, color: Rgb, alpha: f32) {
+    pub fn polyline(&self, c: &mut Canvas, pts: &[impl Pos2], width: f32, color: Rgb, alpha: f32) {
+        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
         self.clip(c);
         for w in pts.windows(2) {
             if w[0].iter().chain(&w[1]).all(|v| v.is_finite()) {
@@ -281,12 +286,13 @@ impl Axes {
     pub fn dashed(
         &self,
         c: &mut Canvas,
-        pts: &[[f32; 2]],
+        pts: &[impl Pos2],
         width: f32,
         dash: f32,
         color: Rgb,
         alpha: f32,
     ) {
+        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
         self.clip(c);
         let mut along = 0.0f32;
         for w in pts.windows(2) {
@@ -317,14 +323,15 @@ impl Axes {
     pub fn scatter(
         &self,
         c: &mut Canvas,
-        pts: &[[f32; 2]],
+        pts: &[impl Pos2],
         marker: Marker,
         size: f32,
         color: Rgb,
         alpha: f32,
     ) {
+        let pts: Vec<[f32; 2]> = pts.iter().map(|p| p.xy()).collect();
         self.clip(c);
-        for &p in pts {
+        for p in pts {
             if p.iter().all(|v| v.is_finite()) {
                 mark(c, self.px(p), marker, size, color, alpha);
             }
@@ -336,12 +343,14 @@ impl Axes {
     pub fn arrow(
         &self,
         c: &mut Canvas,
-        from: [f32; 2],
-        to: [f32; 2],
+        from: impl Pos2,
+        to: impl Pos2,
         width: f32,
         head: f32,
         color: Rgb,
     ) {
+        let from = from.xy();
+        let to = to.xy();
         self.clip(c);
         arrow(c, self.px(from), self.px(to), width, head, color, 1.0);
         c.unclip();
@@ -351,12 +360,14 @@ impl Axes {
     pub fn axline(
         &self,
         c: &mut Canvas,
-        p: [f32; 2],
-        d: [f32; 2],
+        p: impl Pos2,
+        d: impl Dir2,
         width: f32,
         color: Rgb,
         alpha: f32,
     ) {
+        let p = p.xy();
+        let d = d.dxy();
         let big = 4.0 * ((self.x[1] - self.x[0]).abs() + (self.y[1] - self.y[0]).abs());
         let d = Point::direction(d[0], d[1]);
         let reach = d.gp(big / d.ideal_norm().max(1e-30));
@@ -372,7 +383,8 @@ impl Axes {
     }
 
     /// A filled polygon in data coordinates.
-    pub fn fill(&self, c: &mut Canvas, poly: &[[f32; 2]], color: Rgb, alpha: f32) {
+    pub fn fill(&self, c: &mut Canvas, poly: &[impl Pos2], color: Rgb, alpha: f32) {
+        let poly: Vec<[f32; 2]> = poly.iter().map(|p| p.xy()).collect();
         self.clip(c);
         let px: Vec<Px> = poly.iter().map(|&p| self.px(p)).collect();
         c.fill(&px, color, alpha);
@@ -380,7 +392,16 @@ impl Axes {
     }
 
     /// Text at a data point.
-    pub fn text(&self, c: &mut Canvas, at: [f32; 2], s: &str, size: f32, color: Rgb, align: Align) {
+    pub fn text(
+        &self,
+        c: &mut Canvas,
+        at: impl Pos2,
+        s: &str,
+        size: f32,
+        color: Rgb,
+        align: Align,
+    ) {
+        let at = at.xy();
         let [x, y] = self.px(at);
         c.text(s, x, y, size, color, align);
     }
@@ -531,4 +552,28 @@ pub fn arrow(c: &mut Canvas, a: Px, b: Px, width: f32, head: f32, color: Rgb, al
         color,
         alpha,
     );
+}
+
+/// The 2σ ellipse of a planar Gaussian about `centre`, from its variances and principal axes
+/// (unit directions, as `eigh` gives them), as `n + 1` points around it: the unit circle turned
+/// by rotations and stretched by `2√variance` along each axis (a sum of dyads).
+pub fn ellipse(
+    centre: Point<(), f64>,
+    variances: [f64; 2],
+    axes: [gax::vga2d::Vector<(), f64>; 2],
+    n: usize,
+) -> Vec<Point<(), f64>> {
+    use gax::pga2d::Line;
+    let mut stretch = Point::<(Point,), f64>::zero();
+    for (a, v) in axes.iter().zip(variances) {
+        let along = Point::direction(a.c[0], a.c[1]);
+        stretch += along.gp(2.0 * gax::Real::sqrt(v.max(0.0))) * (Line::from(*a) & Point::slot());
+    }
+    let (origin, east) = (Point::xy(0.0, 0.0), Point::direction(1.0, 0.0));
+    (0..=n)
+        .map(|k| {
+            let turn = Motor::rotation(origin, core::f64::consts::TAU * k as f64 / n as f64);
+            centre + stretch.of(turn >> east)
+        })
+        .collect()
 }

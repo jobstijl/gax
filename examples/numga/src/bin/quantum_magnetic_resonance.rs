@@ -1,7 +1,7 @@
 //! numga's `quantum/magnetic_resonance`: a spin in a magnetic field, driven by a radio-frequency
-//! field and relaxing, in the Pauli algebra of space. The state of a spin (or of an ensemble) is
-//! `(1 + r) / 2` for its Bloch vector `r`: a scalar plus a vector, its own reverse. The
-//! pseudoscalar `I` squares to -1 and commutes with everything.
+//! field and relaxing, in the Pauli algebra of space (VGA3D). The state of a spin (or of an
+//! ensemble) is `(1 + r) / 2` for its Bloch vector `r`: a scalar plus a vector, its own reverse,
+//! VGA3D's `Paravector`. The pseudoscalar `I` squares to -1 and commutes with everything.
 //!
 //! The state changes by a linear map, the generator. In the frame that turns with the drive the
 //! Hamiltonian is half the detuning along z plus half the drive along x, and the state turns by
@@ -19,37 +19,26 @@
 //! Below: spins nutating into their steady states, the absorption lines under weak and strong
 //! drive, and the echo against the free decay as composed maps.
 
-use gax_numga_examples::canvas::mix;
+use gax::vga3d::{Bivector, Vector};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, colormap, palette,
-    run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, backdrop, caption, colormap, palette, run,
 };
 use std::sync::OnceLock;
 
-gax::algebra! {
-    algebra pauli "Euclidean space R(3,0) with the kinds a spin needs: the Pauli algebra.";
-    basis e1 = 1, e2 = 1, e3 = 1;
-    kind Scalar = [1];
-    kind Vector = [e1, e2, e3];
-    kind Bivector = [e23, e31, e12];
-    kind Pseudoscalar = [e123];
-    versor Rotor = [1, e23, e31, e12];
-    kind State = [1, e1, e2, e3];
-    kind Process = [e1, e2, e3, e23, e31, e12];
-    kind Multivector = [1, e1, e2, e3, e23, e31, e12, e123];
-}
-
 mod resonance {
-    use super::pauli::*;
     use gax::Unit;
+    use gax::vga3d::{Multivector, Paravector, Pseudoscalar, Rotor, Scalar, Vector};
+    use gax_numga_examples::rng::{Draw, rng};
 
     /// A spin's state, `(1 + r) / 2`: a scalar plus a vector.
-    pub type St = State<(), f64>;
+    pub type St = Paravector<(), f64>;
     /// A rate of change of states, and an evolution over a stretch of time: maps on states.
-    pub type Rates = State<(State,), f64>;
-    pub type Evolution = State<(State,), f64>;
-    /// A relaxation process, a vector plus a bivector.
-    pub type Pr = Process<(), f64>;
+    pub type Rates = Paravector<(Paravector,), f64>;
+    pub type Evolution = Paravector<(Paravector,), f64>;
+    /// A relaxation process, a vector plus a bivector (VGA3D declares no kind of just these
+    /// grades, so it is a multivector).
+    pub type Pr = Multivector<(), f64>;
 
     /// The relaxation times, in microseconds: typical of an electron spin in a solid.
     pub const T1: f64 = 10.0;
@@ -66,12 +55,17 @@ mod resonance {
         Pseudoscalar::new(1.0)
     }
     pub fn one() -> St {
-        State::new(1.0, 0.0, 0.0, 0.0)
+        Paravector::new(1.0, 0.0, 0.0, 0.0)
+    }
+
+    /// The open state.
+    fn open() -> Rates {
+        Paravector::slot()
     }
 
     /// The state with Bloch vector `r`.
     pub fn state(r: Vector<(), f64>) -> St {
-        (one() + r.cast::<State>()) * 0.5
+        (one() + r.cast::<Paravector>()) * 0.5
     }
 
     /// All spins along the field.
@@ -87,7 +81,7 @@ mod resonance {
     /// `x` times the state of a spin against the field: turns that part of the state over onto the
     /// field.
     pub fn raise() -> Pr {
-        (x() * state(-z())).cast::<Process>()
+        x() * state(-z())
     }
 
     /// The change of a state `rho` due to a relaxation `process`:
@@ -95,9 +89,9 @@ mod resonance {
     /// state by a vector plus a bivector is a state again (it keeps the state its own reverse), so
     /// its other grades are dropped.
     pub fn relaxation(process: Pr) -> Rates {
-        let sandwich = (process * State::slot() * process.reverse()).cast::<State>();
-        let back = (process.reverse() * process).cast::<State>();
-        sandwich - back.anticommutator(State::slot()).cast::<State>()
+        let sandwich = (process * open() * process.reverse()).cast::<Paravector>();
+        let back = (process.reverse() * process).cast::<Paravector>();
+        sandwich - back.anticommutator(open()).cast::<Paravector>()
     }
 
     /// The rate of change of a state in the frame that turns with the drive: turning about the axis
@@ -105,8 +99,8 @@ mod resonance {
     /// at `1 / t2 - 1 / (2 t1)`, so that the transverse part decays at `1 / t2`.
     pub fn generator(detuning: f64, drive: f64, t1: f64, t2: f64) -> Rates {
         let hamiltonian = (z() * detuning + x() * drive) * 0.5;
-        let turning = (i() * hamiltonian.commutator(State::slot())).cast::<State>() * -2.0;
-        let dephasing = z().cast::<Process>();
+        let turning = (i() * hamiltonian.commutator(open())).cast::<Paravector>() * -2.0;
+        let dephasing = z().cast::<Multivector>();
         let relaxing = relaxation(raise()) * (1.0 / t1)
             + relaxation(dephasing) * (0.5 * (1.0 / t2 - 1.0 / (2.0 * t1)));
         turning + relaxing
@@ -116,9 +110,7 @@ mod resonance {
     /// adding the scalar part as a dyad on one pins it: the sum sends a state to its scalar part
     /// plus its change, and solving that against one half gives the steady state.
     pub fn steady(rates: Rates) -> St {
-        let scalar_part = Scalar::new(1.0)
-            .scalar_product(State::slot())
-            .cast::<State>();
+        let scalar_part = Scalar::new(1.0).scalar_product(open()).cast::<Paravector>();
         (rates + scalar_part).solve(one() * 0.5)
     }
 
@@ -126,7 +118,7 @@ mod resonance {
     /// order, its powers by composition.
     pub fn evolution(rates: Rates, dt: f64) -> Evolution {
         let small = rates * dt;
-        let mut term = State::slot();
+        let mut term = open();
         let mut total = term;
         for order in 1..=4 {
             term = small.of(term) / f64::from(order);
@@ -151,12 +143,18 @@ mod resonance {
         (i() * x() * (-angle / 2.0)).exp()
     }
 
+    /// The pulse as a map on states. Its sandwich keeps a state a state; gax types a rotor's
+    /// sandwich of a scalar plus a vector as a multivector, so the empty grades are dropped.
+    pub fn pulsed(angle: f64) -> Evolution {
+        (pulse(angle) >> open()).cast::<Paravector>()
+    }
+
     /// The states through a spin echo: tipped onto -y, left for `before` steps, turned half a turn
     /// about x, and left for `after` steps.
     pub fn echo(each_step: Evolution, rho: St, before: usize, after: usize) -> Vec<St> {
         let half_pi = core::f64::consts::FRAC_PI_2;
-        let (mut states, rho) = evolve(each_step, pulse(half_pi) >> rho, before);
-        let (rest, _) = evolve(each_step, pulse(2.0 * half_pi) >> rho, after);
+        let (mut states, rho) = evolve(each_step, pulsed(half_pi).of(rho), before);
+        let (rest, _) = evolve(each_step, pulsed(2.0 * half_pi).of(rho), after);
         states.extend(rest);
         states
     }
@@ -172,22 +170,11 @@ mod resonance {
         out
     }
 
-    /// Normal deviates from a small xorshift generator (numga's NumPy streams cannot be
-    /// reproduced; the checks on them hold for any scattered detunings).
+    /// Normal deviates of the given spread (numga's NumPy streams cannot be reproduced; the
+    /// checks on them hold for any scattered detunings).
     pub fn normals(seed: u64, n: usize, spread: f64) -> Vec<f64> {
-        let mut s = 0x9e37_79b9_7f4a_7c15u64 ^ (seed.wrapping_add(1)).wrapping_mul(0x2545_f491);
-        let mut unit = move || {
-            s ^= s << 13;
-            s ^= s >> 7;
-            s ^= s << 17;
-            (s >> 11) as f64 / (1u64 << 53) as f64
-        };
-        (0..n)
-            .map(|_| {
-                let (u, v) = (unit().max(1e-300), unit());
-                spread * (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-            })
-            .collect()
+        let mut r = rng(seed);
+        (0..n).map(|_| spread * r.normal()).collect()
     }
 
     /// Spins switched on to a steady drive at the given detunings, from equilibrium: their states
@@ -272,8 +259,7 @@ mod resonance {
     ) -> (Vec<f64>, Vec<St>, Vec<St>) {
         let detunings = normals(seed, spins, spread);
         let half_pi = core::f64::consts::FRAC_PI_2;
-        let tip = pulse(half_pi) >> State::slot();
-        let turn = pulse(2.0 * half_pi) >> State::slot();
+        let (tip, turn) = (pulsed(half_pi), pulsed(2.0 * half_pi));
         let mut echo = vec![Evolution::zero(); count];
         let mut decay = vec![Evolution::zero(); count];
         for d in &detunings {
@@ -293,20 +279,20 @@ mod resonance {
         (times, echoed, faded)
     }
 
-    /// The length of a state's transverse Bloch vector: what a pick-up coil sees of it.
+    /// The length of a state's transverse Bloch vector, what a pick-up coil sees of it: the
+    /// area its Bloch vector spans with the field's direction.
     pub fn transverse(rho: St) -> f64 {
-        let r = bloch(rho);
-        r.e1().hypot(r.e2())
+        (bloch(rho) ^ z()).norm()
     }
 
-    /// The mean transverse Bloch vector of an ensemble, its length.
+    /// The state of the whole ensemble: the mean of its spins' states.
+    pub fn mean(ensemble: &[St]) -> St {
+        ensemble.iter().fold(St::zero(), |acc, rho| acc + *rho) / ensemble.len() as f64
+    }
+
+    /// The ensemble's mean transverse Bloch vector, its length.
     pub fn signal(ensemble: &[St]) -> f64 {
-        let n = ensemble.len() as f64;
-        let (sx, sy) = ensemble.iter().fold((0.0, 0.0), |(a, b), rho| {
-            let r = bloch(*rho);
-            (a + r.e1(), b + r.e2())
-        });
-        (sx / n).hypot(sy / n)
+        transverse(mean(ensemble))
     }
 }
 
@@ -356,25 +342,9 @@ fn data() -> &'static Data {
     })
 }
 
-fn b3(rho: St) -> [f32; 3] {
-    let r = bloch(rho);
-    [r.e1() as f32, r.e2() as f32, r.e3() as f32]
-}
-
-/// A 3D panel: the scene drawn on its own canvas over the matching stretch of the backdrop, and
-/// copied into `rect`.
-fn panel3(c: &mut Canvas, rect: [usize; 4], cam: Camera, fill: impl FnOnce(&mut Scene3)) {
-    let [x0, y0, x1, y1] = rect;
-    let mut sub = Canvas::new(x1 - x0, y1 - y0);
-    let rows = (c.height.max(2) - 1) as f32;
-    sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / rows),
-        mix(palette::top(), palette::bottom(), (y1 - 1) as f32 / rows),
-    );
-    let mut scene = Scene3::new(cam);
-    fill(&mut scene);
-    scene.draw(&mut sub);
-    c.blit(&sub, x0, y0);
+/// A Bloch vector seen from above the field: its `x` and `y`.
+fn from_above(r: Vector<(), f64>) -> [f64; 2] {
+    [r.e1(), r.e2()]
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -392,10 +362,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let now = index as f32 * dt;
     let top_rect = [wf * 0.02, hf * 0.15, wf * 0.34, hf * 0.58];
     let ax = Axes::equal(top_rect, [0.0, 0.0], 1.12);
-    let circle: Vec<[f32; 2]> = (0..=96)
+    // The unit circle: x turned about the field.
+    let circle: Vec<[f64; 2]> = (0..=96)
         .map(|k| {
-            let a = core::f32::consts::TAU * k as f32 / 96.0;
-            [a.cos(), a.sin()]
+            let a = core::f64::consts::TAU * k as f64 / 96.0;
+            from_above((Bivector::new(0.0, 0.0, 1.0) * (-a / 2.0)).exp() >> x())
         })
         .collect();
     ax.polyline(c, &circle, 1.0, palette::grid(), 1.0);
@@ -404,18 +375,12 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));
     for k in order {
-        let r = b3(d.ensemble[index][k]);
+        let r = from_above(bloch(d.ensemble[index][k]));
         let tone = colormap::coolwarm(0.5 + d.detunings[k] as f32 / 8.0);
-        ax.scatter(c, &[[r[0], r[1]]], Marker::Dot, 3.5, tone, 0.9);
+        ax.scatter(c, &[r], Marker::Dot, 3.5, tone, 0.9);
     }
-    let mean: [f32; 2] = {
-        let n = d.ensemble[index].len() as f32;
-        d.ensemble[index].iter().fold([0.0, 0.0], |acc, rho| {
-            let r = b3(*rho);
-            [acc[0] + r[0] / n, acc[1] + r[1] / n]
-        })
-    };
-    ax.arrow(c, [0.0, 0.0], mean, 2.5, 9.0, palette::yellow());
+    let signal = from_above(bloch(mean(&d.ensemble[index])));
+    ax.arrow(c, [0.0, 0.0], signal, 2.5, 9.0, palette::yellow());
     let stage = if now < 0.3 {
         "TIPPED ONTO -Y"
     } else if now < DELAY as f32 - 0.05 {
@@ -430,10 +395,18 @@ fn draw(c: &mut Canvas, t: f32) {
         "FANNING OUT AGAIN"
     };
     c.text(
-        &format!("SPINS FROM ABOVE, T = {now:.2} US: {stage}"),
+        "SPINS FROM ABOVE",
         (top_rect[0] + top_rect[2]) * 0.5,
         top_rect[1] - 6.0,
-        small * 1.1,
+        small * 0.9,
+        palette::ink(),
+        Align::Center,
+    );
+    c.text(
+        &format!("T = {now:.2} US: {stage}"),
+        (top_rect[0] + top_rect[2]) * 0.5,
+        top_rect[3] + small * 1.2,
+        small * 0.9,
         palette::ink(),
         Align::Center,
     );
@@ -480,11 +453,11 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 
     // Spins switched on to a steady drive, nutating into their steady states.
-    let row = (hf * 0.64) as usize;
-    let ball = [0, row, (wf * 0.3) as usize, h];
+    let row = hf * 0.64;
+    let ball = [0.0, row, wf * 0.3, hf];
     let cam = Camera::orbit(
-        ball[2] - ball[0],
-        ball[3] - ball[1],
+        (ball[2] - ball[0]) as usize,
+        (ball[3] - ball[1]) as usize,
         [0.0; 3],
         4.4,
         (-50.0f32).to_radians() + 0.3 * phase,
@@ -501,17 +474,20 @@ fn draw(c: &mut Canvas, t: f32) {
             s.seg(a.map(|v| -v), a, 1.0, palette::grid(), 1.0);
         }
         for (j, colour) in colours.iter().enumerate() {
-            let path: Vec<[f32; 3]> = d.nutation[..shown].iter().map(|row| b3(row[j])).collect();
+            let path: Vec<_> = d.nutation[..shown]
+                .iter()
+                .map(|row| bloch(row[j]))
+                .collect();
             s.polyline(&path, 1.2, *colour, 0.9);
-            s.dot(b3(d.settled[j]), Marker::Ring, 7.0, *colour);
+            s.dot(bloch(d.settled[j]), Marker::Ring, 7.0, *colour);
             s.dot(*path.last().expect("a state"), Marker::Dot, 6.0, *colour);
         }
     });
     c.text(
-        "NUTATION INTO THE STEADY STATE",
+        "NUTATION TO THE STEADY STATE",
         wf * 0.15,
-        row as f32 + 4.0,
-        small * 1.1,
+        row + 4.0,
+        small * 0.9,
         palette::ink(),
         Align::Center,
     );
@@ -525,11 +501,11 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.frame(c, "ABSORPTION PER UNIT DRIVE", "DETUNING (RAD/US)", "");
     let mut legend = Vec::new();
     for (j, drive) in DRIVES.iter().enumerate() {
-        let pts: Vec<[f32; 2]> = d
+        let pts: Vec<[f64; 2]> = d
             .line_detunings
             .iter()
             .zip(&d.lines)
-            .map(|(det, row)| [*det as f32, (-bloch(row[j]).e2() / drive) as f32])
+            .map(|(det, row)| [*det, -bloch(row[j]).e2() / drive])
             .collect();
         ax.polyline(c, &pts, 1.5, colours[j], 1.0);
         legend.push((format!("DRIVE {drive}"), colours[j]));
@@ -556,11 +532,11 @@ fn draw(c: &mut Canvas, t: f32) {
         .collect();
     ax.dashed(c, &fine, 1.0, 5.0, palette::grid(), 1.0);
     for (states, colour) in [(&d.echoed, palette::sky()), (&d.faded, palette::red())] {
-        let pts: Vec<[f32; 2]> = d
+        let pts: Vec<[f64; 2]> = d
             .decay_times
             .iter()
             .zip(states)
-            .map(|(s, rho)| [*s as f32, transverse(*rho) as f32])
+            .map(|(s, rho)| [*s, transverse(*rho)])
             .collect();
         ax.polyline(c, &pts, 1.5, colour, 1.0);
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 1.0);
@@ -576,7 +552,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "MAGNETIC RESONANCE: A SPIN ECHO",
-        "BLOCH AND LINDBLAD AS MAPS ON STATES (1 + R)/2; T1 10 US, T2 4 US",
+        "BLOCH AND LINDBLAD AS MAPS ON STATES (1 + R)/2, T1 10 US, T2 4 US",
     );
 }
 
@@ -589,11 +565,12 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::pauli::*;
     use super::resonance::*;
+    use gax::ApproxEq;
+    use gax::vga3d::{Multivector, Paravector, Vector};
 
     fn close(a: St, b: St, tol: f64) -> bool {
-        a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() <= tol)
+        a.max_abs_diff(&b) <= tol
     }
 
     /// The generator is the Bloch equations: the Bloch vector changes by `w x r` less the
@@ -603,47 +580,31 @@ mod tests {
     fn the_generator_is_the_bloch_equations() {
         let (detuning, drive, t1, t2) = (0.7, 1.3, 5.0, 2.0);
         let rates = generator(detuning, drive, t1, t2);
-        let r = [0.4, -0.2, 0.6];
-        let change = bloch(rates.of(state(Vector::new(r[0], r[1], r[2]))));
-        let w = [drive, 0.0, detuning];
-        let cross = [
-            w[1] * r[2] - w[2] * r[1],
-            w[2] * r[0] - w[0] * r[2],
-            w[0] * r[1] - w[1] * r[0],
-        ];
-        let want = [
-            cross[0] - r[0] / t2,
-            cross[1] - r[1] / t2,
-            cross[2] - (r[2] - 1.0) / t1,
-        ];
-        for (got, want) in change.c.iter().zip(want) {
-            assert!((got - want).abs() < 1e-12, "{change:?} vs {want:?}");
-        }
+        let r = Vector::new(0.4, -0.2, 0.6);
+        let change = bloch(rates.of(state(r)));
+        let w = Vector::new(drive, 0.0, detuning);
+        // The cross product `w × r`, the vector at right angles to the plane `w ^ r`.
+        let cross = -(i() * (w ^ r));
+        let relaxing = Vector::new(r.e1() / t2, r.e2() / t2, (r.e3() - 1.0) / t1);
+        let want = cross - relaxing;
+        assert!(change.max_abs_diff(&want) < 1e-12, "{change:?} vs {want:?}");
     }
 
     /// The parts the generator drops by casting are zero: the sandwich of a state by a process,
     /// `~L L` and the commutator term all stay states.
     #[test]
     fn relaxation_keeps_states_their_own_reverse() {
-        for p in [raise(), z().cast::<Process>()] {
-            let s = State::new(0.5, 0.1, -0.3, 0.2);
+        let states = |m: Multivector<(), f64>| m.cast::<Paravector>().cast::<Multivector>();
+        for p in [raise(), z().cast::<Multivector>()] {
+            let s = Paravector::new(0.5, 0.1, -0.3, 0.2);
             let full = p * s * p.reverse();
-            assert!(
-                (full - full.cast::<State>().cast::<Multivector>())
-                    .c
-                    .iter()
-                    .all(|v| v.abs() < 1e-15)
-            );
+            assert!(full.max_abs_diff(&states(full)) < 1e-15);
             let back = p.reverse() * p;
-            assert!(
-                (back - back.cast::<State>().cast::<Multivector>())
-                    .c
-                    .iter()
-                    .all(|v| v.abs() < 1e-15)
-            );
+            assert!(back.max_abs_diff(&states(back)) < 1e-15);
         }
-        let lossless = (x() * state(-z())).cast::<Multivector>() - raise().cast::<Multivector>();
-        assert!(lossless.c.iter().all(|v| v.abs() < 1e-15));
+        // The raising process is a vector plus a bivector.
+        let r = raise();
+        assert!(r.grade::<0>().s() == 0.0 && r.grade::<3>().e123() == 0.0);
     }
 
     /// numga's `nutation` check: after several T1 the driven spins have reached the steady

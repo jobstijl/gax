@@ -15,18 +15,10 @@ use s3::*;
 mod walk {
     use super::s3::*;
 
-    /// The four ellipsoids, their colours, the light and the field of view.
-    pub struct Walk {
-        pub surfaces: Vec<Quadric>,
-        pub colors: Vec<[f64; 3]>,
-        pub light: Point,
-        pub fov: f64,
-    }
-
-    /// Four copies of one ellipsoid, angular half-widths 0.2, 0.28 and 0.15, carried to
-    /// increasing angular distances along `+x`, offset sideways and up so they don't overlap, and
-    /// turned a little about the line of sight.
-    pub fn walk() -> Walk {
+    /// The scene from an eye: four copies of one ellipsoid, angular half-widths 0.2, 0.28 and
+    /// 0.15, carried to increasing angular distances along `+x`, offset sideways and up so they
+    /// don't overlap, and turned a little about the line of sight.
+    pub fn walk(eye: Motor) -> View {
         let shape = ellipsoid([0.2f64.tan(), 0.28f64.tan(), 0.15f64.tan()]);
         let distances = [0.7, 1.4, 2.1, 2.6];
         let sideways = [-0.4, 0.4, -0.4, 0.4];
@@ -41,7 +33,8 @@ mod walk {
                 moved_dual(placed, shape).inverse()
             })
             .collect();
-        Walk {
+        View {
+            eye,
             surfaces,
             colors: vec![
                 [0.9, 0.3, 0.3],
@@ -66,17 +59,10 @@ const SECONDS: f32 = 8.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let scene = walk();
     // Toward the bodies and back: the eye's distance along the geodesic from 0 to 1.2.
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let s = 0.6 - 0.6 * phase.cos();
-    let view = View {
-        eye: eye(s),
-        surfaces: scene.surfaces.clone(),
-        colors: scene.colors.clone(),
-        light: scene.light,
-        fov: scene.fov,
-    };
+    let view = walk(eye(s));
     let tracer = view.tracer();
     let (w, h) = (c.width as f64, c.height as f64);
     let background = canvas::srgb(0.02, 0.02, 0.02);
@@ -89,7 +75,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "ELLIPSOIDS ON THE 3-SPHERE",
-        &format!("FOUR EQUAL BODIES AT 0.7, 1.4, 2.1, 2.6 RAD; THE EYE AT {s:.2} RAD"),
+        &format!("EQUAL BODIES AT 0.7, 1.4, 2.1, 2.6 RAD, EYE AT {s:.2}"),
     );
 }
 
@@ -111,8 +97,8 @@ mod tests {
     /// hits lie on their surfaces.
     #[test]
     fn outlines_and_depths_agree_with_the_rays() {
-        let scene = walk();
         let identity = eye(0.0);
+        let scene = walk(identity);
         let o = origin();
         let (rows, cols) = (90, 120);
         for (body, surface) in scene.surfaces.iter().enumerate() {
@@ -156,8 +142,8 @@ mod tests {
     /// 1.4 rad: the great circles from the eye reconverge on its antipode.
     #[test]
     fn the_farthest_body_looms_larger() {
-        let scene = walk();
         let identity = eye(0.0);
+        let scene = walk(identity);
         let count = |surface: Quadric| {
             let cone = outline(identity, surface);
             let mut n = 0;

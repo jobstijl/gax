@@ -10,8 +10,8 @@
 //! bivectors that meet all four: the combinations of two of them. Along the pencil the Klein
 //! form is a quadratic with two zeros, so two bivectors of the pencil are lines, the two
 //! transversals. For real lines they are either both real or a complex-conjugate pair; the
-//! transversals here have complex coefficients (a local complex type serves as gax's
-//! coefficient), so that the pair is there in every case.
+//! transversals here have complex coefficients (`gax::Complex` as the coefficient type), so
+//! that the pair is there in every case.
 //!
 //! In space the same count reads differently. The lines that meet three of the four sweep out a
 //! ruled quadric, here a hyperboloid; the fourth line crosses it at two points, and through each
@@ -24,113 +24,25 @@
 //! lines meeting all four, but not drawn in real space. On the right, the discriminant of the
 //! Klein form along the pencil changes sign as they do.
 
+use gax::Complex;
 use gax::pga3d::{Line, Motor, Plane, Point};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
 };
 
-/// Complex numbers, as gax coefficients: the products, meets and joins of the transversals.
-mod complex {
-    use core::ops::{Add, Div, Mul, Neg, Sub};
-
-    /// A complex number.
-    #[derive(Clone, Copy, Debug, PartialEq, Default)]
-    pub struct C64 {
-        pub re: f64,
-        pub im: f64,
-    }
-
-    impl C64 {
-        pub const fn new(re: f64, im: f64) -> C64 {
-            C64 { re, im }
-        }
-        pub fn abs(self) -> f64 {
-            self.re.hypot(self.im)
-        }
-        /// The principal square root.
-        pub fn sqrt(self) -> C64 {
-            let r = self.abs();
-            let re = ((r + self.re) * 0.5).max(0.0).sqrt();
-            let im = ((r - self.re) * 0.5).max(0.0).sqrt();
-            C64::new(re, if self.im < 0.0 { -im } else { im })
-        }
-    }
-
-    impl From<f64> for C64 {
-        fn from(re: f64) -> C64 {
-            C64::new(re, 0.0)
-        }
-    }
-
-    impl Add for C64 {
-        type Output = C64;
-        fn add(self, o: C64) -> C64 {
-            C64::new(self.re + o.re, self.im + o.im)
-        }
-    }
-
-    impl Sub for C64 {
-        type Output = C64;
-        fn sub(self, o: C64) -> C64 {
-            C64::new(self.re - o.re, self.im - o.im)
-        }
-    }
-
-    impl Mul for C64 {
-        type Output = C64;
-        fn mul(self, o: C64) -> C64 {
-            C64::new(
-                self.re * o.re - self.im * o.im,
-                self.re * o.im + self.im * o.re,
-            )
-        }
-    }
-
-    impl Div for C64 {
-        type Output = C64;
-        fn div(self, o: C64) -> C64 {
-            let d = o.re * o.re + o.im * o.im;
-            C64::new(
-                (self.re * o.re + self.im * o.im) / d,
-                (self.im * o.re - self.re * o.im) / d,
-            )
-        }
-    }
-
-    impl Neg for C64 {
-        type Output = C64;
-        fn neg(self) -> C64 {
-            C64::new(-self.re, -self.im)
-        }
-    }
-
-    impl gax::Coef for C64 {
-        fn zero() -> C64 {
-            C64::new(0.0, 0.0)
-        }
-        fn one() -> C64 {
-            C64::new(1.0, 0.0)
-        }
-        fn from_i64(i: i64) -> C64 {
-            C64::new(i as f64, 0.0)
-        }
-        fn from_f64(f: f64) -> C64 {
-            C64::new(f, 0.0)
-        }
-    }
-}
-
 mod klein {
-    use super::complex::C64;
     use super::*;
     use gax::pga3d::Pseudoscalar;
+
+    /// A complex number.
+    pub type C = Complex<f64>;
 
     pub type L = Line<(), f64>;
     pub type P = Point<(), f64>;
     /// A line with complex coefficients.
-    pub type CL = Line<(), C64>;
+    pub type CL = Line<(), C>;
     /// A point with complex coefficients.
-    pub type CP = Point<(), C64>;
+    pub type CP = Point<(), C>;
     /// A quadric: a map from points to planes, zero on its points.
     pub type Quadric = Plane<(Point,), f64>;
 
@@ -155,17 +67,12 @@ mod klein {
         Plane::new(0.0, 0.0, 0.0, 1.0)
     }
 
-    /// A real value with complex coefficients.
-    pub fn complexify<const N: usize>(c: [f64; N]) -> [C64; N] {
-        c.map(C64::from)
-    }
-
     /// The two roots of the quadratic `a + 2 b t + c t²` along the combinations of two ends, as
     /// the weights of the ends, one root per sign: `first (sign root - b) + second a`, with
     /// `root² = b² - a c`.
-    pub fn roots(a: f64, b: f64, c: f64) -> [[C64; 2]; 2] {
-        let root = C64::from(b * b - a * c).sqrt();
-        [1.0, -1.0].map(|sign| [C64::new(sign * root.re - b, sign * root.im), C64::from(a)])
+    pub fn roots(a: f64, b: f64, c: f64) -> [[C; 2]; 2] {
+        let root = C::real(b * b - a * c).sqrt();
+        [1.0, -1.0].map(|sign| [root.scale(sign) - C::real(b), C::real(a)])
     }
 
     /// The pencil of bivectors that meet all four lines: each line weighted by the Klein form
@@ -196,8 +103,7 @@ mod klein {
     /// coefficients: unit norm, as numga normalizes complex bivectors.
     pub fn normalized(l: CL) -> CL {
         let [a, b, c] = [l.c[0], l.c[1], l.c[2]];
-        let norm = (a * a + b * b + c * c).sqrt();
-        CL::from_coeffs(l.c.map(|v| v / norm))
+        l.gp((a * a + b * b + c * c).sqrt().recip())
     }
 
     /// The two lines that meet all four lines, at unit norm: the two zeros of the Klein form
@@ -209,15 +115,8 @@ mod klein {
             pairing(first, second),
             pairing(second, second),
         );
-        let (f, s) = (
-            CL::from_coeffs(complexify(first.c)),
-            CL::from_coeffs(complexify(second.c)),
-        );
-        weights.map(|[u, v]| {
-            normalized(CL::from_coeffs(core::array::from_fn(|i| {
-                f.c[i] * u + s.c[i] * v
-            })))
-        })
+        let (f, s) = (first.map_coefs(C::real), second.map_coefs(C::real));
+        weights.map(|[u, v]| normalized(f.gp(u) + s.gp(v)))
     }
 
     /// The quadric swept by the lines that meet three lines, as a map from points to planes.
@@ -231,18 +130,16 @@ mod klein {
     /// The two points where a line crosses a quadric, at unit weight.
     pub fn crossings(surface: Quadric, line: L) -> [CP; 2] {
         // The line's point nearest the origin and its point at infinity span it.
-        let first = (origin() | line) ^ line;
-        let second = line ^ infinity();
+        let (first, second) = frame(line);
         // The quadric's map need not be symmetric: the cross term is the mean of both orders.
         let at = |x: P, y: P| (surface.of(x) & y).s();
         let cross = (at(first, second) + at(second, first)) / 2.0;
-        let (f, s) = (complexify(first.c), complexify(second.c));
+        let (f, s) = (first.map_coefs(C::real), second.map_coefs(C::real));
         roots(at(first, first), cross, at(second, second)).map(|[u, v]| {
-            let p: [C64; 4] = core::array::from_fn(|i| f[i] * u + s[i] * v);
+            let p = f.gp(u) + s.gp(v);
             // At unit weight: the weight is the pairing with the plane at infinity.
-            let weight =
-                (Plane::<(), C64>::from_coeffs(complexify(infinity().c)) & CP::from_coeffs(p)).s();
-            CP::from_coeffs(p.map(|v| v / weight))
+            let weight = (infinity().map_coefs(C::real) & p).s();
+            p.gp(weight.recip())
         })
     }
 
@@ -253,11 +150,10 @@ mod klein {
     }
 
     /// The point of a line nearest the origin, at unit weight, and its unit direction (its
-    /// point at infinity), for a line at unit norm.
+    /// point at infinity).
     pub fn frame(line: L) -> (P, P) {
         let unit = line.normalized().into_inner();
-        let nearest = (origin() | unit) ^ unit;
-        (nearest.gp(1.0 / nearest.e123()), unit ^ infinity())
+        (((origin() | unit) ^ unit).unitized(), unit ^ infinity())
     }
 
     /// Points spread over a whole line, its point at infinity included: the nearest point
@@ -328,19 +224,19 @@ mod klein {
     }
 
     /// Whether a complex value is real up to round-off, by its coefficients.
-    pub fn real(c: &[C64]) -> bool {
+    pub fn real(c: &[C]) -> bool {
         let big = c.iter().fold(0.0f64, |m, v| m.max(v.abs()));
         c.iter().all(|v| v.im.abs() <= 1e-6 * big)
     }
 
     /// A complex line's real part.
     pub fn real_line(l: CL) -> L {
-        Line::from_coeffs(l.c.map(|v| v.re))
+        l.map_coefs(|v| v.re)
     }
 
     /// A complex point's real part.
     pub fn real_point(p: CP) -> P {
-        Point::from_coeffs(p.c.map(|v| v.re))
+        p.map_coefs(|v| v.re)
     }
 }
 
@@ -350,18 +246,16 @@ const SECONDS: f32 = 9.6;
 /// Lines are drawn inside this ball.
 const RADIUS: f64 = 3.0;
 
-/// The two ends of a line's chord of the ball, or `None` when the line misses it.
-fn chord(line: L) -> Option<[[f32; 3]; 2]> {
+/// The two ends of a line's chord of the ball, or `None` when the line misses it: from the
+/// line's point nearest the centre, half the chord each way along it.
+fn chord(line: L) -> Option<[P; 2]> {
     let (nearest, heading) = frame(line);
-    let n = nearest.to_euclidean();
-    let d = [heading.e032(), heading.e013(), heading.e021()];
-    let len = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    let half = (RADIUS * RADIUS - (n[0] * n[0] + n[1] * n[1] + n[2] * n[2])).sqrt();
-    if half.is_nan() {
+    let off_centre = (origin() & nearest).norm_squared();
+    if off_centre > RADIUS * RADIUS {
         return None;
     }
-    let end = |s: f64| core::array::from_fn(|i| (n[i] + s * half * d[i] / len) as f32);
-    Some([end(-1.0), end(1.0)])
+    let half = (RADIUS * RADIUS - off_centre).sqrt() / heading.ideal_norm();
+    Some([-half, half].map(|s| nearest + heading.gp(s)))
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -403,13 +297,7 @@ fn draw(c: &mut Canvas, t: f32) {
             segment(real_line(*l), 2.8, palette::red(), 1.0);
         }
         for p in &s.crossing {
-            let [x, y, z] = real_point(*p).to_euclidean();
-            scene3.dot(
-                [x as f32, y as f32, z as f32],
-                Marker::Dot,
-                10.0,
-                palette::red(),
-            );
+            scene3.dot(real_point(*p), Marker::Dot, 10.0, palette::red());
         }
     }
     scene3.draw(c);
@@ -431,25 +319,25 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 
     // The discriminant along the pencil over the swing.
-    let curve: Vec<[f32; 2]> = (0..=120)
+    let curve: Vec<[f64; 2]> = (0..=120)
         .map(|k| {
             let p = k as f64 / 120.0;
             let [a, b, c] = three();
-            [p as f32, discriminant(&[a, b, c, steep(offset(p))]) as f32]
+            [p, discriminant(&[a, b, c, steep(offset(p))])]
         })
         .collect();
     let (lo, hi) = curve
         .iter()
-        .fold((0.0f32, 0.0f32), |(lo, hi), p| (lo.min(p[1]), hi.max(p[1])));
+        .fold((0.0f64, 0.0f64), |(lo, hi), p| (lo.min(p[1]), hi.max(p[1])));
     let ax = Axes::new(
         plot::inset([w * 0.62, 0.0, w, h], 50.0, h * 0.2, 20.0, h * 0.28),
         [0.0, 1.0],
-        [lo * 1.15, hi * 1.15],
+        [lo as f32 * 1.15, hi as f32 * 1.15],
     );
     ax.frame(c, "DISCRIMINANT ALONG THE PENCIL", "PHASE OF THE SWING", "");
     ax.line(c, [0.0, 0.0], [1.0, 0.0], 1.0, palette::grid(), 1.0);
     ax.polyline(c, &curve, 1.6, palette::sky(), 1.0);
-    let now = [phase as f32, discriminant(&s.lines) as f32];
+    let now = [phase, discriminant(&s.lines)];
     ax.scatter(
         c,
         &[now],
@@ -492,27 +380,14 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::complex::C64;
     use super::klein::*;
 
-    /// The pairing of a quadric with a point, both made complex.
-    fn on(surface: Quadric, p: CP) -> gax::pga3d::Plane<(), C64> {
-        let s =
-            gax::pga3d::Plane::<(gax::pga3d::Point,), C64>::from_coeffs(surface.c.map(complexify));
-        s.of(p)
-    }
-
-    /// A real scalar of a complex value: unused imaginary parts are checked by callers.
-    fn scalar(s: gax::pga3d::Scalar<(), C64>) -> C64 {
-        s.s()
-    }
-
-    fn small(c: &[C64], tol: f64) -> bool {
+    fn small(c: &[C], tol: f64) -> bool {
         c.iter().all(|v| v.abs() <= tol)
     }
 
     fn complex_line(l: L) -> CL {
-        CL::from_coeffs(complexify(l.c))
+        l.map_coefs(C::real)
     }
 
     /// numga's scenario checks: the transversals are lines and meet all four lines; the
@@ -533,7 +408,10 @@ mod tests {
         }
         for p in &s.crossing {
             assert!(small(&(*p & complex_line(s.lines[3])).c, 1e-10));
-            assert!(small(&[scalar(on(surface, *p) & *p)], 1e-10));
+            assert!(small(
+                &[(surface.map_coefs(C::real).of(*p) & *p).s()],
+                1e-10
+            ));
             let off = s
                 .across
                 .iter()
@@ -561,10 +439,7 @@ mod tests {
         let waist = scene(three(), steep(0.0), 12);
         assert!(outside.across.iter().all(|l| real(&l.c)));
         assert!(waist.across.iter().all(|l| !real(&l.c)));
-        let (a, b) = (
-            waist.across[0].c.map(|v| C64::new(v.re, -v.im)),
-            waist.across[1].c,
-        );
+        let (a, b) = (waist.across[0].c.map(C::conj), waist.across[1].c);
         for i in 0..6 {
             for j in 0..6 {
                 assert!((a[i] * b[j] - a[j] * b[i]).abs() < 1e-12);

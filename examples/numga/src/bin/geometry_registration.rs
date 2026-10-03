@@ -8,14 +8,13 @@
 //! motor. Both reach the least-squares pose. The animation flies the source cloud along each
 //! estimated motion onto the target, with each point tied to its correspondent.
 //!
-//! The motor metric is singular on the translation part, and numga solves the pencil with a
-//! general (non-symmetric) eigensolver that sends those modes to infinity. gax has the symmetric
-//! definite solver only, so the pencil is turned round: the finite modes of `(A, B)`, `B`
-//! semidefinite and `A + σB` definite, are the modes of `B.eigh_with(A + σB)` with eigenvalue
-//! `μ = 1 / (λ + σ)`, and the infinite ones have `μ = 0`. The least `λ` is the greatest `μ`.
+//! The motor metric is singular on the translation part; numga's general eigensolver sends
+//! those modes to infinity, and so does gax's `eigh_semidefinite`, which lists the finite
+//! modes first.
 
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
+use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
 };
@@ -26,8 +25,6 @@ mod registration {
     pub type P = Point<(), f64>;
     pub type M = Unit<Motor<(), f64>>;
     pub type MotorForm = Scalar<(Motor, Motor), f64>;
-
-    pub use gax_numga_examples::rng::Rng;
 
     /// The motor's own metric: the scalar part of `M ~M`, the squares of the rotor part.
     pub fn motor_metric() -> MotorForm {
@@ -54,19 +51,11 @@ mod registration {
             })
     }
 
-    /// The mean of a form's diagonal: its scale.
-    pub fn scale(form: MotorForm) -> f64 {
-        form.as_map().trace() / 8.0
-    }
-
     /// Fit a motor by the one-sided residual: the least finite mode of the misfit against the
-    /// motor metric, found as the greatest mode of the turned-round pencil, then normalized.
+    /// motor metric, normalized.
     pub fn fit_motor(source: &[P], target: &[P]) -> M {
-        let a = misfit(source, target);
-        let b = motor_metric();
-        let sigma = scale(a) / scale(b);
-        let (_, modes) = b.eigh_with(a + b.gp(sigma));
-        modes[7].normalized()
+        let (_, modes) = misfit(source, target).eigh_semidefinite(motor_metric());
+        modes[0].normalized()
     }
 
     /// The rotor that maximizes the alignment of corresponding vectors (planes through the
@@ -97,14 +86,13 @@ mod registration {
     }
 
     /// The centered fit: the rotor aligning the centered clouds, then the translation carrying
-    /// the rotated source centroid onto the target's (the square root of their ratio).
+    /// the rotated source centroid onto the target's.
     pub fn fit_motor_alignment(source: &[P], target: &[P]) -> M {
         let (sm, tm) = (mean(source), mean(target));
         let sv: Vec<_> = source.iter().map(|p| vector(*p, sm)).collect();
         let tv: Vec<_> = target.iter().map(|p| vector(*p, tm)).collect();
         let rotation = fit_rotor(&sv, &tv);
-        let translation = (tm / (rotation >> sm)).sqrt();
-        translation.widen::<Motor<(), f64>>() * rotation.widen::<Motor<(), f64>>()
+        Motor::between(rotation >> sm, tm) * rotation.widen::<Motor<(), f64>>()
     }
 
     /// A cloud stretched along x.
@@ -137,36 +125,28 @@ mod registration {
 
     /// The same seeded, noisy correspondences for both fits.
     pub fn correspondences() -> (Vec<P>, Vec<P>) {
-        let mut rng = Rng(0x5eed_0001);
+        let mut rng = rng(0x5eed_0001);
         let source = cloud(60, &mut rng);
         let moved: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         let target = jitter(&moved, 0.02, &mut rng);
         (source, target)
     }
 
-    /// The squared distances summed between two clouds.
+    /// The squared distances summed between two clouds: two unit points differ by a
+    /// direction, whose ideal norm is their distance.
     pub fn cartesian(a: &[P], b: &[P]) -> f64 {
         a.iter()
             .zip(b)
-            .map(|(p, q)| {
-                let (p, q) = (p.to_euclidean(), q.to_euclidean());
-                (0..3).map(|i| (p[i] - q[i]).powi(2)).sum::<f64>()
-            })
+            .map(|(p, q)| (p.unitized() - q.unitized()).ideal_norm_squared())
             .sum()
     }
 }
 
 use registration::*;
 
-fn xyz(p: P) -> [f32; 3] {
-    let [x, y, z] = p.to_euclidean();
-    [x as f32, y as f32, z as f32]
-}
-
 fn panel(c: &mut Canvas, source: &[P], target: &[P], estimate: M, s: f64, az: f32, title: &str) {
     backdrop(c);
-    let (sm, tm) = (xyz(mean(source)), xyz(mean(target)));
-    let centre = [0, 1, 2].map(|i| 0.5 * (sm[i] + tm[i]));
+    let centre = (mean(source) + mean(target)).gp(0.5);
     let cam = Camera::orbit(
         c.width,
         c.height,
@@ -182,10 +162,10 @@ fn panel(c: &mut Canvas, source: &[P], target: &[P], estimate: M, s: f64, az: f3
     let along = Motor::interpolate(identity, estimate, s);
     let moving: Vec<P> = source.iter().map(|p| along >> *p).collect();
     for ((p, q), m) in source.iter().zip(target).zip(&moving) {
-        scene.dot(xyz(*p), Marker::Dot, 4.0, palette::grid());
-        scene.dot(xyz(*q), Marker::Cross, 7.0, palette::sky());
-        scene.seg(xyz(*m), xyz(*q), 0.8, palette::red(), 0.45);
-        scene.dot(xyz(*m), Marker::Dot, 5.0, palette::red());
+        scene.dot(*p, Marker::Dot, 4.0, palette::grid());
+        scene.dot(*q, Marker::Cross, 7.0, palette::sky());
+        scene.seg(*m, *q, 0.8, palette::red(), 0.45);
+        scene.dot(*m, Marker::Dot, 5.0, palette::red());
     }
     scene.draw(c);
     let size = (c.height as f32 / 32.0).clamp(8.0, 13.0);
@@ -244,36 +224,31 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::registration::*;
+    use gax::ApproxEq;
     use gax::pga3d::Motor;
+    use gax_numga_examples::rng::rng;
 
     fn close(a: &[P], b: &[P], tol: f64) -> bool {
-        a.iter().zip(b).all(|(p, q)| {
-            let (p, q) = (p.to_euclidean(), q.to_euclidean());
-            (0..3).all(|i| (p[i] - q[i]).abs() <= tol)
-        })
+        a.iter().zip(b).all(|(p, q)| p.approx_eq(q, tol))
     }
 
     /// The residual is linear in the motor, vanishes at the truth, and its misfit is a
     /// symmetric form on motors (8 x 8).
     #[test]
     fn correspondence_residual_is_linear_in_the_motor() {
-        let source = cloud(20, &mut Rng(1));
+        let source = cloud(20, &mut rng(1));
         let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         for (s, t) in source.iter().zip(&target) {
             let r = residual(*s, *t).of(truth().into_inner());
-            assert!(r.c.iter().all(|v| v.abs() < 1e-8), "{r:?}");
+            assert!(r.max_abs_diff(&gax::pga3d::Flector::zero()) < 1e-8, "{r:?}");
         }
         let m = misfit(&source, &target);
-        for i in 0..8 {
-            for j in 0..8 {
-                assert!((m.c[0][i][j] - m.c[0][j][i]).abs() < 1e-12);
-            }
-        }
+        assert!(m.approx_eq(&m.swap(), 1e-12));
     }
 
     #[test]
     fn exact_correspondences_recover_the_motor() {
-        let source = cloud(30, &mut Rng(2));
+        let source = cloud(30, &mut rng(2));
         let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         let estimate = fit_motor(&source, &target);
         let moved: Vec<P> = source.iter().map(|p| estimate >> *p).collect();
@@ -284,14 +259,14 @@ mod tests {
     /// numga's; the bound is numga's).
     #[test]
     fn noisy_correspondences_recover_the_pose_within_noise() {
-        let mut rng = Rng(3);
-        let source = cloud(200, &mut rng);
+        let mut draws = rng(3);
+        let source = cloud(200, &mut draws);
         let moved: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
-        let target = jitter(&moved, 0.05, &mut rng);
+        let target = jitter(&moved, 0.05, &mut draws);
         let estimate = fit_motor(&source, &target);
         let error: f64 = source
             .iter()
-            .map(|p| cartesian(&[estimate >> *p], &[truth() >> *p]).sqrt())
+            .map(|p| ((estimate >> *p) & (truth() >> *p)).norm())
             .sum::<f64>()
             / 200.0;
         assert!(error < 0.01, "{error}");
@@ -299,19 +274,17 @@ mod tests {
 
     #[test]
     fn estimate_is_a_trusted_unit_motor() {
-        let source = cloud(30, &mut Rng(5));
+        let source = cloud(30, &mut rng(5));
         let target: Vec<P> = source.iter().map(|p| truth() >> *p).collect();
         let estimate = fit_motor(&source, &target).into_inner();
         let one = estimate * estimate.reverse();
         let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0).into_inner();
-        for (a, b) in one.c.iter().zip(identity.c) {
-            assert!((a - b).abs() < 1e-12);
-        }
+        assert!(one.approx_eq(&identity, 1e-12));
     }
 
     #[test]
     fn translation_is_recovered_by_the_same_fit() {
-        let source = cloud(100, &mut Rng(6));
+        let source = cloud(100, &mut rng(6));
         let shift = gax::pga3d::Line::new(0.0, 0.0, 0.0, -0.75, 0.25, -1.0).exp();
         let target: Vec<P> = source.iter().map(|p| shift >> *p).collect();
         let estimate = fit_motor(&source, &target);

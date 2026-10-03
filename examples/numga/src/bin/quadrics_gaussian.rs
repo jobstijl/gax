@@ -19,7 +19,7 @@ mod gaussian {
     /// A polarity: points to lines.
     pub type Polarity = Line<(Point,), f64>;
 
-    pub use gax_numga_examples::rng::Rng;
+    use gax_numga_examples::rng::{Draw, rng};
 
     /// The fit: the precision, and the 1σ polarity.
     pub struct Fit {
@@ -61,24 +61,28 @@ mod gaussian {
         }
     }
 
-    /// A stretched cloud of `n` points with the given standard deviations, before placement.
-    pub fn cloud(seed: u64, n: usize, sd: [f64; 2]) -> Vec<[f64; 2]> {
-        // Xorshift's state must not be zero.
-        let mut rng = Rng(seed.max(1));
+    /// A cloud of `n` points about the origin, with the given standard deviations along x and
+    /// y.
+    pub fn cloud(seed: u64, n: usize, sd: [f64; 2]) -> Vec<P> {
+        let mut rng = rng(seed);
         (0..n)
-            .map(|_| [rng.normal() * sd[0], rng.normal() * sd[1]])
+            .map(|_| Point::xy(rng.normal() * sd[0], rng.normal() * sd[1]))
             .collect()
     }
 
-    /// The cloud at phase `t` (radians): turned, slid around a small loop and breathing in
-    /// its aspect, moved as a batch by one motor.
-    pub fn placed(base: &[[f64; 2]], t: f64) -> Vec<P> {
+    /// The cloud at phase `t` (radians): breathing in its aspect, turned and slid around a
+    /// small loop. The stretch and the motor compose into one map, applied to every point.
+    pub fn placed(base: &[P], t: f64) -> Vec<P> {
         let stretch = 1.0 + 0.35 * (2.0 * t).sin();
+        let stretch: Point<(Point,), f64> = Point::from_images([
+            Point::new(stretch, 0.0, 0.0),
+            Point::new(0.0, 1.0 / stretch, 0.0),
+            Point::new(0.0, 0.0, 1.0),
+        ]);
         let placement = Motor::translation(0.6 + 0.8 * t.cos(), -0.4 + 0.6 * t.sin())
             * Motor::rotation(Point::xy(0.0, 0.0), 0.6 + t);
-        base.iter()
-            .map(|&[x, y]| placement >> Point::xy(x * stretch, y / stretch))
-            .collect()
+        let map = (placement >> Point::slot()).of(stretch);
+        base.iter().map(|p| map.of(*p)).collect()
     }
 }
 
@@ -105,7 +109,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let points = placed(&base, phase);
     let fit = fit(&points);
 
-    let rect = plot::inset([0.0, 0.0, w * 0.86, h], 60.0, 64.0, 10.0, 40.0);
+    let rect = plot::inset([0.0, 0.0, w * 0.86, h], 60.0, 76.0, 10.0, 40.0);
     // Equal scales: the data box widened to the rectangle's aspect.
     let ax = {
         let (rw, rh) = (rect[2] - rect[0], rect[3] - rect[1]);
@@ -116,14 +120,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let d = fit.density(Point::xy(f64::from(x), f64::from(y))) as f32;
         Some(shade(d))
     });
-    let xy: Vec<[f32; 2]> = points
-        .iter()
-        .map(|p| {
-            let [x, y] = p.to_euclidean();
-            [x as f32, y as f32]
-        })
-        .collect();
-    ax.scatter(c, &xy, Marker::Dot, 3.5, srgb(0.15, 0.21, 0.29), 0.8);
+    ax.scatter(c, &points, Marker::Dot, 3.5, srgb(0.15, 0.21, 0.29), 0.8);
     ax.contour(
         c,
         |x, y| fit.level(Point::xy(f64::from(x), f64::from(y))) as f32,
@@ -141,7 +138,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ],
     );
     // A colour bar for the density.
-    let bar = [w * 0.89, 64.0, w * 0.91, h - 40.0];
+    let bar = [w * 0.89, 76.0, w * 0.91, h - 40.0];
     let steps = 64;
     for i in 0..steps {
         let (a, b) = (i as f32 / steps as f32, (i + 1) as f32 / steps as f32);
@@ -179,7 +176,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::gaussian::*;
-    use gax::pga2d::Point;
+    use gax::pga2d::{Motor, Point};
 
     /// The scenario's check: on unit-weight points the level is the squared distance less one
     /// and the density `exp(-d² / 2)`, so the 1σ conic is the contour at `exp(-1/2)`.
@@ -202,12 +199,14 @@ mod tests {
     /// distance (from the biased covariance) less one.
     #[test]
     fn density_peaks_at_the_mean_and_level_matches_the_covariance() {
-        let xy: Vec<[f64; 2]> = cloud(1, 500, [2.0, 0.5])
+        let shift = Motor::translation(1.0, -1.0);
+        let points: Vec<P> = cloud(1, 500, [2.0, 0.5])
             .into_iter()
-            .map(|[x, y]| [x + 1.0, y - 1.0])
+            .map(|p| shift >> p)
             .collect();
-        let points: Vec<P> = xy.iter().map(|&[x, y]| Point::xy(x, y)).collect();
         let fit = fit(&points);
+        // The moments by hand, from the coordinates.
+        let xy: Vec<[f64; 2]> = points.iter().map(|p| p.to_euclidean()).collect();
         let n = xy.len() as f64;
         let mean = [0, 1].map(|k| xy.iter().map(|p| p[k]).sum::<f64>() / n);
         let peak = fit.density(Point::xy(mean[0], mean[1]));

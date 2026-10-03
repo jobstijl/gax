@@ -12,9 +12,11 @@
 //! heading sweeps the cube face of each crystal in turn, its three group velocities tracing the
 //! wave surfaces.
 
-use gax::vga3d::{Scalar, Vector};
+use gax::pga2d;
+use gax::vga3d::{Bivector, Scalar, Vector};
+use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, colormap, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, colormap, f32s, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -106,43 +108,28 @@ mod crystal {
         velocity
     }
 
-    /// A small xorshift generator and Box-Muller normals: numga's NumPy stream cannot be
-    /// reproduced, and nothing here depends on it beyond spreading headings evenly.
-    pub struct Rng(u64);
-    impl Rng {
-        pub fn new(seed: u64) -> Rng {
-            Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
-        }
-        pub fn uniform(&mut self) -> f64 {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            (self.0 >> 11) as f64 / (1u64 << 53) as f64
-        }
-        pub fn normal(&mut self) -> f64 {
-            let u = self.uniform().max(1e-300);
-            let v = self.uniform();
-            (-2.0 * u.ln()).sqrt() * (core::f64::consts::TAU * v).cos()
-        }
-        /// A heading uniform on the sphere: a normalized Gaussian vector.
-        pub fn heading(&mut self) -> V {
-            let v: V = Vector::new(self.normal(), self.normal(), self.normal());
-            v.normalized().into_inner()
-        }
+    /// `count` headings spread uniformly over the sphere.
+    pub fn headings(count: usize, seed: u64) -> Vec<V> {
+        let mut r = rng(seed);
+        (0..count)
+            .map(|_| Vector::from_coeffs(r.direction()))
+            .collect()
     }
 
     /// Where each wave's energy meets the cube face one unit along `z`, for `count` headings
-    /// spread over the sphere: per material and wave, the points of the rays that go up.
+    /// spread over the sphere: per material and wave, the points of the rays that go up. A
+    /// direction read as homogeneous coordinates `(x, y, z)` of the plane is the point where its
+    /// ray meets `z = 1`.
     pub fn focusing(count: usize, seed: u64) -> [[Vec<[f32; 2]>; 3]; 3] {
         let crystals = crystals();
-        let mut rng = Rng::new(seed);
-        let headings: Vec<V> = (0..count).map(|_| rng.heading()).collect();
+        let headings = headings(count, seed);
         core::array::from_fn(|m| {
             let mut out: [Vec<[f32; 2]>; 3] = Default::default();
             for h in &headings {
                 for (w, v) in group_velocities(&crystals[m], m, *h).iter().enumerate() {
                     if v.e3() > 0.0 {
-                        out[w].push([(v.e1() / v.e3()) as f32, (v.e2() / v.e3()) as f32]);
+                        let hit = pga2d::Point::new(v.e1(), v.e2(), v.e3());
+                        out[w].push(f32s(hit.to_euclidean()));
                     }
                 }
             }
@@ -152,7 +139,7 @@ mod crystal {
 
     /// The heading at `angle` in the cube face `z = 0`: `x` turned by the angle.
     pub fn face_heading(angle: f64) -> V {
-        let r = gax::vga3d::Bivector::<(), f64>::new(0.0, 0.0, -angle / 2.0).exp();
+        let r = Bivector::<(), f64>::new(0.0, 0.0, -angle / 2.0).exp();
         r >> Vector::new(1.0, 0.0, 0.0)
     }
 
@@ -229,6 +216,11 @@ fn histogram(pts: &[[f32; 2]]) -> Vec<u32> {
     h
 }
 
+/// A vector in the cube face `z = 0`, as plotted: its `x` and `y`.
+fn face(v: V) -> [f64; 2] {
+    [v.e1(), v.e2()]
+}
+
 fn mode_colour(w: usize) -> Rgb {
     [palette::red(), palette::sky(), palette::purple()][w]
 }
@@ -243,7 +235,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The focusing images: a growing share of the headings, faster at first.
     let share = u.sqrt().max(0.02);
     let top = h * 0.17;
-    let left = w * 0.11;
+    let left = w * 0.13;
     let size = ((h - top - h * 0.03) / 3.0).min((w * 0.56 - left) / 3.0);
     for (m, name) in NAMES.iter().enumerate() {
         for (wv, mode) in MODES.iter().enumerate() {
@@ -326,10 +318,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let ax = Axes::equal(rect, [0.0, 0.0], reach * 1.12);
     ax.frame(c, NAMES[current], "KM/S ALONG (100)", "");
     for wv in 0..3 {
-        let pts: Vec<[f32; 2]> = fronts
-            .iter()
-            .map(|v| [v[wv].e1() as f32, v[wv].e2() as f32])
-            .collect();
+        let pts: Vec<[f64; 2]> = fronts.iter().map(|v| face(v[wv])).collect();
         ax.scatter(c, &pts, Marker::Dot, 1.6, mode_colour(wv), 0.8);
     }
     let s = (u * 3.0).fract();
@@ -338,41 +327,33 @@ fn draw(c: &mut Canvas, t: f32) {
     let crystals = crystals();
     let (values, _) = waves(&crystals[current], heading);
     let group = d.fronts[current][((s * FRONT as f32) as usize).min(FRONT - 1)];
-    let hx = [heading.e1() as f32, heading.e2() as f32];
     ax.line(
         c,
         [0.0, 0.0],
-        [hx[0] * reach * 1.1, hx[1] * reach * 1.1],
+        face(heading.gp(f64::from(reach) * 1.1)),
         1.0,
         palette::ink(),
         0.6,
     );
     for wv in 0..3 {
         // The phase velocity lies along the heading; the energy goes along the group velocity.
-        let phase = (values[wv] / DENSITY[current]).sqrt() as f32;
+        let phase = (values[wv] / DENSITY[current]).sqrt();
         ax.scatter(
             c,
-            &[[hx[0] * phase, hx[1] * phase]],
+            &[face(heading.gp(phase))],
             Marker::Ring,
             8.0,
             mode_colour(wv),
             1.0,
         );
-        ax.arrow(
-            c,
-            [0.0, 0.0],
-            [group[wv].e1() as f32, group[wv].e2() as f32],
-            2.0,
-            9.0,
-            mode_colour(wv),
-        );
+        ax.arrow(c, [0.0, 0.0], face(group[wv]), 2.0, 9.0, mode_colour(wv));
     }
     let legend: Vec<(&str, Rgb)> = MODES.iter().copied().zip((0..3).map(mode_colour)).collect();
     ax.legend(c, &legend);
     caption(
         c,
         "CRYSTAL WAVES: PHONON FOCUSING IN CUBIC CRYSTALS",
-        "ENERGY OF EVENLY SPREAD HEADINGS ON A CUBE FACE; RIGHT: GROUP VELOCITIES (ARROWS) AND PHASE (RINGS) (VGA3D)",
+        "LEFT: ENERGY ON A CUBE FACE. RIGHT: GROUP VELOCITY, PHASE (RINGS) (VGA3D)",
     );
 }
 
@@ -404,20 +385,18 @@ mod tests {
 
     /// In fused silica every wave carries its energy along its heading and the two shear waves
     /// share one speed; in silicon the shear energy swings away from the heading. (numga draws
-    /// 64 headings from NumPy's stream; these come from a local generator.)
+    /// 64 headings from NumPy's stream; these come from `rand`'s.)
     #[test]
     fn energy_follows_the_wave_only_when_isotropic() {
         let crystals = crystals();
-        let mut rng = Rng::new(1);
-        let headings: Vec<V> = (0..64).map(|_| rng.heading()).collect();
+        let headings = headings(64, 1);
         let mut swing = [0.0f64; 3];
         for (m, crystal) in crystals.iter().enumerate() {
             for h in &headings {
                 let (values, polarization) = waves(crystal, *h);
                 let velocity = energy_flow(crystal, *h, &polarization, DENSITY[m]);
                 for v in velocity {
-                    let along = (v | *h).s() / v.norm();
-                    swing[m] = swing[m].max(along.clamp(-1.0, 1.0).acos());
+                    swing[m] = swing[m].max(gax_numga_examples::measure::angle(*h, v));
                 }
                 if m == 0 {
                     assert!((values[0] - values[1]).abs() <= 1e-8 * values[1]);
@@ -431,9 +410,7 @@ mod tests {
     #[test]
     fn scenario_checks() {
         let crystals = crystals();
-        let mut rng = Rng::new(0);
-        for _ in 0..200 {
-            let h = rng.heading();
+        for h in headings(200, 0) {
             for (m, crystal) in crystals.iter().enumerate() {
                 let (values, polarization) = waves(crystal, h);
                 let velocity = energy_flow(crystal, h, &polarization, DENSITY[m]);
@@ -445,6 +422,17 @@ mod tests {
         }
         let fronts = wave_fronts(64);
         assert!(fronts.iter().all(|f| f.len() == 64));
+    }
+
+    /// The angle between headings in the cube face is the angle that turned them apart.
+    #[test]
+    fn angles_between_vectors() {
+        for a in [0.0, 0.4, 1.9, 3.1] {
+            let b = 0.25;
+            let angle =
+                gax_numga_examples::measure::angle(face_heading(b), face_heading(a + b).gp(2.5));
+            assert!((angle - a).abs() < 1e-12, "{a} {angle}");
+        }
     }
 
     #[test]

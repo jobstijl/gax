@@ -11,14 +11,16 @@
 
 use gax::vga3d::{Bivector, Vector};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, canvas, caption, colormap,
+    Align, Anim, Camera, Canvas, Lens, Marker, Pos3, Scene3, backdrop, canvas, caption, colormap,
     contour, palette, run,
 };
 
 mod conic {
     use super::*;
 
-    /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`.
+    /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`, the poles of the
+    /// planes x, y and z. It is the dual of the vector of its coordinates, which `undual`
+    /// recovers.
     pub type P = Bivector<(), f64>;
     /// A plane through the origin: a great circle.
     pub type Plane = Vector<(), f64>;
@@ -35,17 +37,6 @@ mod conic {
             Vector::new(0.0, 1.0, 0.0),
             Vector::new(0.0, 0.0, 1.0),
         ]
-    }
-
-    /// The point at coordinates `(x, y, z)`, on the basis points `e23`, `e31` and `e12`, the
-    /// poles of the planes x, y and z.
-    pub fn point([x, y, z]: [f64; 3]) -> P {
-        Bivector::new(x, y, z)
-    }
-
-    /// The coordinates of a point.
-    pub fn xyz(p: P) -> [f64; 3] {
-        p.c
     }
 
     /// The polarity with the given eigenvalues on the basis planes: each plane paired with an
@@ -78,13 +69,20 @@ mod conic {
     pub fn cone(eigenvalues: [f64; 3], radius: f64, t: f64) -> P {
         let (x0, y0) = semi_axes(eigenvalues);
         let (x, y) = (x0 * t.cos(), y0 * t.sin());
-        point([x, y, (1.0 - x * x - y * y).sqrt()]).gp(radius)
+        Bivector::new(x, y, (1.0 - x * x - y * y).sqrt()).gp(radius)
     }
 
-    /// The great-circle arc from `start` to `end`, at fraction `t` of its length.
+    /// The turn from unit point `start` to unit point `end`, as the logarithm of the rotor
+    /// `end / start`: that rotor turns `start` through twice their angle, so the logarithm's norm
+    /// is the angle and half of it the turn.
+    fn turn(start: P, end: P) -> Bivector<(), f64> {
+        (end / start).normalized().log()
+    }
+
+    /// The great-circle arc from `start` to `end`, at fraction `t` of its length: a fraction of
+    /// the turn between them.
     pub fn geodesic(start: P, end: P, t: f64) -> P {
-        let angle = (-(start | end).s()).clamp(-1.0, 1.0).acos();
-        (start.gp(((1.0 - t) * angle).sin()) + end.gp((t * angle).sin())).gp(1.0 / angle.sin())
+        turn(start, end).gp(t / 2.0).exp() >> start
     }
 
     /// The great circle of a plane, swept from a point on it by the rotation about the plane's
@@ -93,9 +91,9 @@ mod conic {
         plane.dual().gp(angle / 2.0).exp() >> through
     }
 
-    /// The spherical distance between unit points.
+    /// The spherical distance between unit points: the angle of the turn between them.
     pub fn distance(a: P, b: P) -> f64 {
-        (-(a | b).s()).clamp(-1.0, 1.0).acos()
+        turn(a, b).norm()
     }
 
     /// The conic in the world: its forms, its points, its foci and its tangent great circles.
@@ -133,7 +131,8 @@ mod conic {
                     )
             })
             .collect();
-        let foci = [1.0, -1.0].map(|s| rotor >> point([0.0, s * theta_c.sin(), theta_c.cos()]));
+        let foci =
+            [1.0, -1.0].map(|s| rotor >> Bivector::new(0.0, s * theta_c.sin(), theta_c.cos()));
         // The polar plane of a point of the oval is its tangent great circle.
         let tangents = curve
             .iter()
@@ -167,10 +166,6 @@ mod conic {
 
 use conic::*;
 
-fn f3(p: P) -> [f32; 3] {
-    xyz(p).map(|v| v as f32)
-}
-
 const SECONDS: f32 = 12.0;
 
 /// A panel's own canvas, with the backdrop the whole canvas has there.
@@ -198,14 +193,18 @@ fn draw(c: &mut Canvas, t: f32) {
     let k = ((t / SECONDS * 2.0).fract() * 199.0) as usize;
     let sample = conic.curve[k];
     let gold = canvas::srgb(1.0, 0.8, 0.1);
-    let oval: Vec<[f32; 3]> = conic.curve.iter().map(|p| f3(*p)).collect();
-    // The potential over the sphere, for its colours and its level lines.
-    let pot = |u: f32, v: f32| {
-        conic.potential(sphere(
+    // Drawn at their coordinates: the vectors whose duals they are.
+    let oval: Vec<Vector<(), f64>> = conic.curve.iter().map(|p| p.undual()).collect();
+    // The sphere over the unit square of longitude and polar angle, and the potential over it,
+    // for its colours and its level lines.
+    let grid = |u: f32, v: f32| {
+        sphere(
             f64::from(u) * std::f64::consts::TAU,
             f64::from(v) * std::f64::consts::PI,
-        ))
+        )
     };
+    let pot = |u: f32, v: f32| conic.potential(grid(u, v));
+    let on_sphere = |u: f32, v: f32| grid(u, v).undual();
     let (mut lo, mut hi) = (f64::MAX, f64::MIN);
     for i in 0..=60 {
         for j in 0..=30 {
@@ -213,12 +212,6 @@ fn draw(c: &mut Canvas, t: f32) {
             (lo, hi) = (lo.min(v), hi.max(v));
         }
     }
-    let on_sphere = |u: f32, v: f32| {
-        f3(sphere(
-            f64::from(u) * std::f64::consts::TAU,
-            f64::from(v) * std::f64::consts::PI,
-        ))
-    };
     for (i, title) in titles.iter().enumerate() {
         let rect = [i * w / 3, top, (i + 1) * w / 3, h];
         let mut p = panel(c, rect);
@@ -237,7 +230,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 // The potential on the sphere, the oval, its antipodal loop, the foci, and the
                 // geodesics from the running point to both foci.
                 s.surface(
-                    on_sphere,
+                    |u, v| on_sphere(u, v).xyz(),
                     36,
                     18,
                     |u, v| colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32),
@@ -245,16 +238,16 @@ fn draw(c: &mut Canvas, t: f32) {
                     None,
                 );
                 s.polyline(&oval, 3.0, gold, 1.0);
-                let anti: Vec<[f32; 3]> = oval.iter().map(|p| p.map(|v| -v)).collect();
+                let anti: Vec<Vector<(), f64>> = oval.iter().map(|p| -*p).collect();
                 s.polyline(&anti, 1.5, gold, 0.6);
                 for (f, colour) in conic.foci.iter().zip([palette::green(), palette::sky()]) {
-                    s.dot(f3(*f), Marker::Dot, 9.0, palette::red());
-                    let arc: Vec<[f32; 3]> = (0..=30)
-                        .map(|j| f3(geodesic(*f, sample, j as f64 / 30.0)))
+                    s.dot(f.undual(), Marker::Dot, 9.0, palette::red());
+                    let arc: Vec<Vector<(), f64>> = (0..=30)
+                        .map(|j| geodesic(*f, sample, j as f64 / 30.0).undual())
                         .collect();
                     s.polyline(&arc, 2.2, colour, 1.0);
                 }
-                s.dot(f3(sample), Marker::Ring, 11.0, palette::ink());
+                s.dot(sample.undual(), Marker::Ring, 11.0, palette::ink());
             }
             1 => {
                 // The envelope: sixteen tangent great circles, the running one bright with its
@@ -264,37 +257,38 @@ fn draw(c: &mut Canvas, t: f32) {
                 for j in 0..16 {
                     let idx = j * 199 / 15;
                     let colour = colormap::inferno(0.2 + 0.7 * j as f32 / 15.0);
-                    let circle: Vec<[f32; 3]> = (0..=90)
+                    let circle: Vec<Vector<(), f64>> = (0..=90)
                         .map(|a| {
-                            f3(great_circle(
+                            great_circle(
                                 conic.tangents[idx],
                                 conic.curve[idx],
                                 tau as f64 * a as f64 / 90.0,
-                            ))
+                            )
+                            .undual()
                         })
                         .collect();
                     s.polyline(&circle, 1.0, colour, 0.45);
                 }
-                let circle: Vec<[f32; 3]> = (0..=90)
+                let circle: Vec<Vector<(), f64>> = (0..=90)
                     .map(|a| {
-                        f3(great_circle(
-                            conic.tangents[k],
-                            sample,
-                            tau as f64 * a as f64 / 90.0,
-                        ))
+                        great_circle(conic.tangents[k], sample, tau as f64 * a as f64 / 90.0)
+                            .undual()
                     })
                     .collect();
                 s.polyline(&circle, 2.4, palette::ink(), 1.0);
-                let normal = conic.tangents[k].c.map(|v| v as f32 * 0.4);
-                s.arrow(f3(sample), normal, 1.6, 7.0, palette::ink());
+                // The tangent plane's normal: the plane itself, a vector.
+                s.arrow(
+                    sample.undual(),
+                    conic.tangents[k].gp(0.4),
+                    1.6,
+                    7.0,
+                    palette::ink(),
+                );
                 // The dual conic: the normals of the planes with `π ∨ Q(π) = 0`, a level line
-                // of the dual form over the sphere of unit normals.
+                // of the dual form over the sphere of unit normals (each the plane whose pole is
+                // that point of the sphere).
                 let dual = |u: f32, v: f32| {
-                    let n = xyz(sphere(
-                        f64::from(u) * std::f64::consts::TAU,
-                        f64::from(v) * std::f64::consts::PI,
-                    ));
-                    let plane = Vector::new(n[0], n[1], n[2]);
+                    let plane = on_sphere(u, v);
                     (plane & conic.q.of(plane)).s() as f32
                 };
                 for [a, b] in contour::of_fn(dual, [0.0, 1.0], [0.0, 1.0], 120, 0.0) {
@@ -306,7 +300,7 @@ fn draw(c: &mut Canvas, t: f32) {
                         1.0,
                     );
                 }
-                s.dot(f3(sample), Marker::Ring, 11.0, palette::ink());
+                s.dot(sample.undual(), Marker::Ring, 11.0, palette::ink());
             }
             _ => {
                 // The cone through the oval, and the polhodes: level lines of the potential.
@@ -316,7 +310,9 @@ fn draw(c: &mut Canvas, t: f32) {
                 s.surface(
                     |u, v| {
                         let r = 0.1 + 1.15 * f64::from(u);
-                        f3(rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU))
+                        (rotor >> cone(ev, r, f64::from(v) * std::f64::consts::TAU))
+                            .undual()
+                            .xyz()
                     },
                     12,
                     40,
@@ -350,7 +346,8 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         }
         s.draw(&mut p);
-        let size = (h as f32 / 42.0).clamp(8.0, 13.0);
+        // Sized to fit the panel's width.
+        let size = (p.width as f32 / 35.0).clamp(7.0, 13.0);
         p.text(title, size, size * 1.6, size, palette::ink(), Align::Left);
         c.blit(&p, rect[0], rect[1]);
     }
@@ -359,7 +356,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         "SPHERICAL QUADRICS: A CONE CUT BY THE SPHERE",
         &format!(
-            "CL(3): P V C(P) = 0.  D1 + D2 = {d:.4} = 2 THETA_A = {:.4}.  SIN-PRODUCT = {:.4}",
+            "P V C(P) = 0: D1 + D2 = {d:.4}, 2 THETA_A = {:.4}, SIN PRODUCT {:.4}",
             2.0 * conic.theta_a,
             conic.dual_product(conic.tangents[k])
         ),
@@ -376,7 +373,15 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::conic::*;
-    use gax::vga3d::Bivector;
+    use gax::vga3d::{Bivector, Vector};
+
+    /// A point of the sphere is the dual of the vector of its coordinates.
+    #[test]
+    fn points_are_duals_of_their_coordinates() {
+        let p = Bivector::new(0.36, 0.48, 0.8);
+        assert_eq!(p.undual(), Vector::new(0.36, 0.48, 0.8));
+        assert_eq!(Vector::new(0.36, 0.48, 0.8).dual(), p);
+    }
 
     /// The polarity maps each basis point to its polar basis plane, scaled by its eigenvalue.
     #[test]
@@ -387,7 +392,7 @@ mod tests {
             let mut e = [0.0; 3];
             e[i] = 1.0;
             for (j, plane) in planes().iter().enumerate() {
-                let g = (c.of(point(e)) | *plane).s();
+                let g = (c.of(Bivector::<(), f64>::from_coeffs(e)) | *plane).s();
                 let want = if i == j { eigenvalues[i] } else { 0.0 };
                 assert!((g - want).abs() < 1e-14);
             }
@@ -396,7 +401,7 @@ mod tests {
 
     #[test]
     fn geodesics_and_great_circles_stay_on_the_sphere() {
-        let (a, b) = (point([1.0, 0.0, 0.0]), point([0.0, 0.6, 0.8]));
+        let (a, b) = (Bivector::new(1.0, 0.0, 0.0), Bivector::new(0.0, 0.6, 0.8));
         for k in 0..7 {
             let p = geodesic(a, b, k as f64 / 6.0);
             assert!((-(p | p).s() - 1.0).abs() < 1e-12);
@@ -413,7 +418,7 @@ mod tests {
     #[test]
     fn the_sphere_grid_is_spherical_coordinates() {
         for (phi, theta) in [(0.3, 0.7), (2.0, 1.2), (4.0, 2.9)] {
-            let [x, y, z] = xyz(sphere(phi, theta));
+            let [x, y, z] = sphere(phi, theta).undual().c;
             let want = [
                 theta.sin() * phi.cos(),
                 theta.sin() * phi.sin(),
@@ -448,7 +453,7 @@ mod tests {
             [-0.242143096584461, -0.308517190674206, 0.919882527190074],
         ];
         for (f, want) in conic.foci.iter().zip(numga) {
-            for (a, b) in xyz(*f).iter().zip(want) {
+            for (a, b) in f.undual().c.iter().zip(want) {
                 assert!((a - b).abs() < 1e-10);
             }
         }
@@ -456,7 +461,9 @@ mod tests {
         // is good to a few 1e-12, so these compare to 1e-10.)
         let moved = conic.rotor >> Bivector::new(0.0, 0.0, 1.0);
         for (a, b) in
-            xyz(moved)
+            moved
+                .undual()
+                .c
                 .iter()
                 .zip([0.072898937662932, 0.283286671487454, 0.956260637399548])
         {

@@ -12,8 +12,9 @@
 //! settled one (dashed). The gusts hit the side much harder than the bow; turning spreads them
 //! over every direction.
 
-use gax::Unit;
 use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax::{Unit, vga2d};
+use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{Align, Anim, Axes, Canvas, backdrop, caption, palette, plot, run};
 use std::sync::OnceLock;
 
@@ -156,36 +157,16 @@ mod station {
         readout & covariance.of(readout)
     }
 
-    /// The 2σ ellipse of the position's readings, as a ring of points about the set point: the
-    /// spread's eigenpairs in the coefficient basis, the ones that read a position (the offset
-    /// `e0` reads none).
-    pub fn ellipse(spread: Spread, n: usize) -> Vec<[f64; 2]> {
-        let (values, modes) = spread.eigh();
-        let axes: Vec<([f64; 2], f64)> = modes
-            .iter()
-            .zip(values)
-            .filter(|(m, _)| m.e1().hypot(m.e2()) > 0.5)
-            .map(|(m, v)| {
-                let k = m.e1().hypot(m.e2());
-                ([m.e1() / k, m.e2() / k], 2.0 * v.max(0.0).sqrt())
-            })
-            .collect();
-        (0..=n)
-            .map(|i| {
-                let a = core::f64::consts::TAU * i as f64 / n as f64;
-                let (c, s) = (a.cos(), a.sin());
-                let mut p = [0.0, 0.0];
-                for (k, (normal, r)) in axes.iter().enumerate() {
-                    let w = if k == 0 { c } else { s } * r;
-                    p[0] += normal[0] * w;
-                    p[1] += normal[1] * w;
-                }
-                p
-            })
-            .collect()
+    /// The 2σ ellipse of the position's readings, as a ring of `n` points about the set point.
+    /// The offset of a readout line reads no position, so the spread is read on the lines
+    /// through the origin (VGA2D's vectors), where the line metric is the Euclidean one; its
+    /// eigenpairs are the ellipse's axes. The ring is the unit circle, turned out step by step,
+    /// through the map that stretches each axis to twice its deviation: a sum of dyads.
+    pub fn ellipse(spread: Spread, n: usize) -> Vec<Point<(), f64>> {
+        let through: Line<(vga2d::Vector,), f64> = Line::from(vga2d::Vector::slot());
+        let (variances, axes) = spread.of(through).at::<1>().of(through).eigh();
+        gax_numga_examples::plot::ellipse(origin(), variances, axes, n)
     }
-
-    pub use gax_numga_examples::rng::Rng;
 
     /// A run: snapshots of the bodies' errors and of the predicted covariance every few steps,
     /// and the settled covariance.
@@ -214,7 +195,7 @@ mod station {
     ) -> Diffusion {
         let (dynamics, noise) = (drift(rate, RELAXATION), covariance(kicks));
         let limit = settled(dynamics, noise);
-        let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1);
+        let mut rng = rng(seed);
         let mut errors = vec![Point::zero(); bodies];
         let mut predicted = Point::zero();
         let (mut snapshots, mut covariances) = (Vec::new(), Vec::new());
@@ -247,18 +228,6 @@ mod station {
             .fold(Point::zero(), |a, b| a + b);
         sum.gp(1.0 / errors.len() as f64)
     }
-
-    /// The largest coefficient of a covariance.
-    #[cfg(test)]
-    pub fn max_abs(c: Covariance) -> f64 {
-        c.c.iter().flatten().fold(0.0f64, |m, v| m.max(v.abs()))
-    }
-
-    /// The largest coefficient difference of two covariances.
-    #[cfg(test)]
-    pub fn max_diff(a: Covariance, b: Covariance) -> f64 {
-        max_abs(a - b)
-    }
 }
 
 use station::*;
@@ -281,10 +250,6 @@ fn runs() -> &'static [(String, Diffusion); 2] {
     })
 }
 
-fn f32s(p: [f64; 2]) -> [f32; 2] {
-    [p[0] as f32, p[1] as f32]
-}
-
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (w, h) = (c.width as f32, c.height as f32);
@@ -292,14 +257,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let frames = runs[0].1.errors.len();
     let index = ((t / (DT as f32 * EVERY as f32)) as usize).min(frames - 1);
     let seconds = index as f32 * DT as f32 * EVERY as f32;
-    let top = (h / 30.0).clamp(10.0, 22.0) * 3.8;
+    let top = (h / 30.0).clamp(10.0, 22.0) * 5.2;
     for (k, (name, run)) in runs.iter().enumerate() {
         let rect = plot::inset(
             [k as f32 * w / 2.0, top, (k + 1) as f32 * w / 2.0, h],
             w * 0.06,
             h * 0.05,
             w * 0.02,
-            h * 0.09,
+            h * 0.13,
         );
         let ax = Axes::equal(rect, [0.0, 0.0], EXTENT);
         ax.frame(
@@ -313,24 +278,11 @@ fn draw(c: &mut Canvas, t: f32) {
         let ahead = Point::xy(0.08 * f64::from(EXTENT), 0.0);
         for error in &run.errors[index] {
             let pose = pose(*error);
-            let here = (pose >> origin()).to_euclidean();
-            let tip = (pose >> ahead).to_euclidean();
-            let d = [(tip[0] - here[0]) * 0.5, (tip[1] - here[1]) * 0.5];
-            ax.line(
-                c,
-                f32s([here[0] - d[0], here[1] - d[1]]),
-                f32s([here[0] + d[0], here[1] + d[1]]),
-                1.0,
-                palette::sky(),
-                0.35,
-            );
+            let here = pose >> origin();
+            let half = ((pose >> ahead) - here).gp(0.5);
+            ax.line(c, here - half, here + half, 1.0, palette::sky(), 0.35);
         }
-        let ring = |cov: Covariance| -> Vec<[f32; 2]> {
-            ellipse(position_spread(cov), 96)
-                .into_iter()
-                .map(f32s)
-                .collect()
-        };
+        let ring = |cov: Covariance| ellipse(position_spread(cov), 96);
         ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::red(), 1.0);
         ax.polyline(
             c,
@@ -354,12 +306,12 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "POSE DIFFUSION: A STATION-KEEPING VESSEL",
-        "COVARIANCE AS A MAP FROM LINES TO TWISTS (PGA2D); DASHED: THE SETTLED ONE",
+        "COVARIANCE AS A MAP FROM LINES TO TWISTS (PGA2D). DASHED: THE SETTLED ONE",
     );
     c.text(
-        "GUSTS MOSTLY SIDEWAYS; TURNING SPREADS THEM",
+        "GUSTS MOSTLY SIDEWAYS, TURNING SPREADS THEM",
         w - 12.0,
-        h - 10.0,
+        h - 8.0,
         11.0,
         palette::grid(),
         Align::Right,
@@ -373,6 +325,18 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::station::*;
+    use gax::ApproxEq;
+    use gax::pga2d::Line;
+
+    /// The largest coefficient of a covariance.
+    fn max_abs(c: Covariance) -> f64 {
+        c.max_abs_diff(&Covariance::zero())
+    }
+
+    /// The largest coefficient difference of two covariances.
+    fn max_diff(a: Covariance, b: Covariance) -> f64 {
+        a.max_abs_diff(&b)
+    }
 
     /// The settled covariance zeroes the growth, in every scene.
     #[test]
@@ -415,6 +379,28 @@ mod tests {
         }
     }
 
+    /// The ellipse reaches across each line through the set point as far as twice the
+    /// deviation of the position's reading by that line (its support function).
+    #[test]
+    fn the_ellipse_is_two_sigma_along_every_line() {
+        for (_, rate) in rates() {
+            let spread = position_spread(settled(drift(rate, RELAXATION), covariance(kicks())));
+            let ring = ellipse(spread, 720);
+            for k in 0..12 {
+                let turn = gax::pga2d::Motor::rotation(origin(), 0.5 * k as f64);
+                let line = turn >> Line::new(1.0, 0.0, 0.0);
+                let reach = ring
+                    .iter()
+                    .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));
+                let sigma = spread.of(line).of(line).s().sqrt();
+                assert!(
+                    (reach - 2.0 * sigma).abs() < 1e-4 * sigma,
+                    "{reach} {sigma}"
+                );
+            }
+        }
+    }
+
     /// Still, the vessel wanders mostly sideways: the ellipse is longer along y than along x.
     /// Turning, it spreads more evenly.
     #[test]
@@ -424,8 +410,9 @@ mod tests {
             let ring = ellipse(position_spread(limit), 64);
             let (mut x, mut y) = (0.0f64, 0.0f64);
             for p in ring {
-                x = x.max(p[0].abs());
-                y = y.max(p[1].abs());
+                let [px, py] = p.to_euclidean();
+                x = x.max(px.abs());
+                y = y.max(py.abs());
             }
             y / x
         };

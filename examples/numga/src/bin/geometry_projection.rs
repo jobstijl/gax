@@ -15,8 +15,8 @@ use gax_numga_examples::{
 };
 
 mod projection {
-    use gax::Unit;
     use gax::pga3d::{Line, Motor, Plane, Point, Pseudoscalar};
+    use gax::{Unit, pga2d};
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
@@ -28,6 +28,8 @@ mod projection {
     pub type LineCamera = Line<(Line,), f64>;
     /// The bilinear form on two cameras' image points that vanishes on corresponding pairs.
     pub type Correspondence = Pseudoscalar<(Point, Point), f64>;
+    /// A rig's screen coordinates: points of space as points of the plane.
+    pub type Screen = pga2d::Point<(Point,), f64>;
 
     /// Which corner pairs of [`cube`] are joined by an edge.
     pub const CUBE_EDGES: [[usize; 2]; 12] = [
@@ -45,19 +47,19 @@ mod projection {
         [3, 7],
     ];
 
-    /// The finite point `(x, y, z)`.
-    pub fn point(c: [f64; 3]) -> P {
-        Point::xyz(c[0], c[1], c[2])
-    }
-
-    /// The ideal point in direction `(x, y, z)`.
-    pub fn direction(c: [f64; 3]) -> P {
-        Point::direction(c[0], c[1], c[2])
-    }
-
     /// The origin.
     pub fn origin() -> P {
-        point([0.0; 3])
+        Point::xyz(0.0, 0.0, 0.0)
+    }
+
+    /// The rig's screen `z = 1`, ahead of its centre at the origin.
+    pub fn screen() -> Pl {
+        Plane::from_normal([0.0, 0.0, 1.0], 1.0)
+    }
+
+    /// The ground `z = 0`.
+    pub fn ground() -> Pl {
+        Plane::from_normal([0.0, 0.0, 1.0], 0.0)
     }
 
     /// `n` points round the unit circle in the `xy` plane, centred on the origin: `(1, 0, 0)`
@@ -66,7 +68,7 @@ mod projection {
         (0..n)
             .map(|k| {
                 let t = core::f64::consts::TAU * k as f64 / n as f64;
-                Motor::rotation_about(0.0, 0.0, 1.0, t) >> point([1.0, 0.0, 0.0])
+                Motor::rotation_about(0.0, 0.0, 1.0, t) >> Point::xyz(1.0, 0.0, 0.0)
             })
             .collect()
     }
@@ -82,7 +84,7 @@ mod projection {
                     -size / 2.0
                 }
             };
-            point([s(2), s(1), s(0)])
+            Point::xyz(s(2), s(1), s(0))
         })
     }
 
@@ -153,17 +155,24 @@ mod projection {
         }
     }
 
-    /// A rig's screen coordinates of an image point: pulled back into the rig's frame.
-    pub fn screen_coordinates(rig: M, image: P) -> [f64; 2] {
-        let [x, y, _] = (rig << image).to_euclidean();
-        [x, y]
+    /// A rig's screen coordinates, one map: pull a point back into the rig's frame, then drop
+    /// its `z` (the screen's points have `z = 1`).
+    pub fn screen_map(rig: M) -> Screen {
+        let drop_z = Screen::from_images([
+            pga2d::Point::new(1.0, 0.0, 0.0),
+            pga2d::Point::new(0.0, 1.0, 0.0),
+            pga2d::Point::new(0.0, 0.0, 0.0),
+            pga2d::Point::new(0.0, 0.0, 1.0),
+        ]);
+        drop_z.of(rig << Point::slot())
     }
 
-    /// A line on a rig's screen clipped at `x = ±half_width`: the screen coordinates of its
-    /// meets with the two planes.
-    pub fn screen_line(rig: M, line: L, half_width: f64) -> [[f64; 2]; 2] {
+    /// A line on a rig's screen clipped at `x = ±half_width`: the screen points of its meets
+    /// with the two planes.
+    pub fn screen_line(rig: M, line: L, half_width: f64) -> [pga2d::Point<(), f64>; 2] {
+        let on_screen = screen_map(rig);
         [-half_width, half_width]
-            .map(|x| screen_coordinates(rig, line ^ (rig >> Plane::new(1.0, 0.0, 0.0, -x))))
+            .map(|x| on_screen.of(line ^ (rig >> Plane::from_normal([1.0, 0.0, 0.0], x))))
     }
 
     /// The scene at phase `t` (radians): at 0 it is numga's figure.
@@ -180,16 +189,14 @@ mod projection {
 
     pub fn scene(t: f64) -> Scene {
         let body = cube(1.0).map(|p| Motor::translation(0.0, 0.0, 1.5) >> p);
-        let ground = Plane::new(0.0, 0.0, 1.0, 0.0);
-        let sun = direction([-1.0, 0.6, -2.5]);
+        let sun = Point::direction(-1.0, 0.6, -2.5);
         // The light's path: the unit circle carried to (0, -1, 4), 64 lights along it; the
         // light moves round it, starting at numga's (1, -1, 4).
         let lift = Motor::translation(0.0, -1.0, 4.0);
         let path: Vec<P> = circle(64).into_iter().map(|p| lift >> p).collect();
-        let light = lift >> (Motor::rotation_about(0.0, 0.0, 1.0, t) >> point([1.0, 0.0, 0.0]));
+        let light = (lift * Motor::rotation_about(0.0, 0.0, 1.0, t)) >> Point::xyz(1.0, 0.0, 0.0);
         // Two copies of the rig, 0.6 either side of the origin along x and turned 0.12 rad
         // about y so that they converge, looking along +z at the screen z = 1.
-        let screen = Plane::new(0.0, 0.0, 1.0, -1.0);
         let rig_1 = Motor::translation(-0.6, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.12);
         let rig_2 = Motor::translation(0.6, 0.0, 0.0) * Motor::rotation_about(0.0, 1.0, 0.0, -0.12);
         // The subject, 5 ahead, turning about its vertical (the screen's y) and nodding.
@@ -197,8 +204,8 @@ mod projection {
             * Motor::rotation_about(0.0, 1.0, 0.0, t)
             * Motor::rotation_about(1.0, 0.0, 0.0, 0.25 * t.sin());
         let subject = cube(1.6).map(|p| pose >> p);
-        let cast = shadows(&body, ground, light, sun, body[7], &path);
-        let views = stereo(&subject, origin(), screen, rig_1, rig_2);
+        let cast = shadows(&body, ground(), light, sun, body[7], &path);
+        let views = stereo(&subject, origin(), screen(), rig_1, rig_2);
         Scene {
             body,
             light,
@@ -232,10 +239,6 @@ fn rose() -> Rgb {
     srgb(0.96, 0.25, 0.37)
 }
 
-fn f3(p: P) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
 /// The shadow scene in 3D: the body, both lights, both shadows and the corner's trail.
 fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     let turn = 0.25 * (core::f32::consts::TAU * t / SECONDS).sin();
@@ -255,46 +258,37 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
         s.seg([g, -3.0, 0.0], [g, 3.0, 0.0], 1.0, line, 0.7);
         s.seg([-3.0, g, 0.0], [3.0, g, 0.0], 1.0, line, 0.7);
     }
-    let body = sc.body.map(f3);
-    let spot = sc.cast.spot.map(f3);
-    let sun = sc.cast.sun.map(f3);
+    let (body, spot) = (&sc.body, &sc.cast.spot);
+    let sun = sc.cast.sun.map(|p| p.unitized());
     for [a, b] in CUBE_EDGES {
         s.seg(body[a], body[b], 2.0, sky(), 1.0);
         s.seg(spot[a], spot[b], 1.5, amber(), 1.0);
-        // The sun's shadow, dashed.
+        // The sun's shadow, dashed: the points a share of the way along each edge.
+        let at = |w: f64| sun[a] + (sun[b] - sun[a]).gp(w);
         for k in 0..6 {
-            let (u, v) = (k as f32 / 6.0, (k as f32 + 0.55) / 6.0);
-            let at = |w: f32| core::array::from_fn(|i| sun[a][i] + (sun[b][i] - sun[a][i]) * w);
-            s.seg(at(u), at(v), 1.5, violet(), 1.0);
+            let u = f64::from(k) / 6.0;
+            s.seg(at(u), at(u + 0.55 / 6.0), 1.5, violet(), 1.0);
         }
     }
     // The corner's shadow as the light moves round its path: the reopened slot, bound to every
     // light of the path at once.
-    let mut trail: Vec<[f32; 3]> = sc.cast.trail.iter().map(|p| f3(*p)).collect();
+    let mut trail = sc.cast.trail.clone();
     trail.push(trail[0]);
     for (k, w) in trail.windows(2).enumerate() {
         if k % 2 == 0 {
             s.seg(w[0], w[1], 1.2, amber(), 0.8);
         }
     }
-    let light = f3(sc.light);
-    let path: Vec<[f32; 3]> = sc
-        .path
-        .iter()
-        .chain(&sc.path[..1])
-        .map(|p| f3(*p))
-        .collect();
+    let path: Vec<P> = sc.path.iter().chain(&sc.path[..1]).copied().collect();
     s.polyline(&path, 1.0, mix(amber(), palette::bottom(), 0.5), 0.8);
     // The ray from the light through the corner to its shadow.
-    s.seg(light, spot[7], 1.0, amber(), 0.5);
-    s.dot(light, Marker::Dot, 11.0, amber());
+    s.seg(sc.light, spot[7], 1.0, amber(), 0.5);
+    s.dot(sc.light, Marker::Dot, 11.0, amber());
     s.dot(spot[7], Marker::Dot, 6.0, amber());
-    // The sun's direction, an arrow at (-2, 2, 4).
-    let d = sc.sun.c;
-    let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
+    // The sun's direction, a unit arrow at (-2, 2, 4).
     s.arrow(
-        [-2.0, 2.0, 4.0],
-        [d[0] / n, d[1] / n, d[2] / n].map(|v| v as f32),
+        gax::pga3d::Point::xyz(-2.0, 2.0, 4.0),
+        sc.sun.gp(1.0 / sc.sun.ideal_norm()),
         2.0,
         9.0,
         violet(),
@@ -314,20 +308,20 @@ fn screen_panel(
 ) {
     let half = 0.5;
     let ax = Axes::equal(rect, [0.0, 0.0], half as f32);
-    let xy = |p: P| screen_coordinates(rig, p).map(|v| v as f32);
+    let on_screen = screen_map(rig);
+    let image = image.map(|p| on_screen.of(p));
     ax.clip(c);
     if let Some(lines) = lines {
         for l in lines {
-            let [a, b] = screen_line(rig, *l, half).map(|p| p.map(|v| v as f32));
+            let [a, b] = screen_line(rig, *l, half);
             ax.line(c, a, b, 1.0, rose(), 0.8);
         }
     }
     for [a, b] in CUBE_EDGES {
-        ax.line(c, xy(image[a]), xy(image[b]), 2.0, sky(), 1.0);
+        ax.line(c, image[a], image[b], 2.0, sky(), 1.0);
     }
     if lines.is_some() {
-        let pts: Vec<[f32; 2]> = image.iter().map(|p| xy(*p)).collect();
-        ax.scatter(c, &pts, Marker::Dot, 6.0, rose(), 1.0);
+        ax.scatter(c, &image, Marker::Dot, 6.0, rose(), 1.0);
     }
     c.unclip();
     ax.frame(c, title, "", "");
@@ -388,12 +382,12 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     // Off the screen, to the left: where camera 2 sees camera 1's centre, and the form on the
     // matched pairs.
-    let [ex, _] = screen_coordinates(sc.rig_2, v.epipole_2);
+    let [ex, _] = screen_map(sc.rig_2).of(v.epipole_2).to_euclidean();
     let worst = v
         .image_1
         .iter()
         .zip(&v.image_2)
-        .map(|(a, b)| v.correspondence.of(*a).of(*b).c[0].abs())
+        .map(|(a, b)| v.correspondence.of(*a).of(*b).e0123().abs())
         .fold(0.0, f64::max);
     for (k, text) in [
         format!("EPIPOLE OF CAMERA 2 AT X = {ex:.2}"),
@@ -425,14 +419,24 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::projection::*;
+    use gax::motions::Linear;
     use gax::pga3d::{Line, Motor, Plane, Point};
+    use gax::{ApproxEq, pga2d};
 
-    fn screen() -> Pl {
-        Plane::new(0.0, 0.0, 1.0, -1.0)
+    /// Whether two points are one, whatever their weights.
+    fn same(a: P, b: P, tol: f64) -> bool {
+        a.unitized().max_abs_diff(&b.unitized()) <= tol
     }
 
-    fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
-        a.iter().zip(b).all(|(x, y)| (x - y).abs() <= tol)
+    /// Whether a value or a map vanishes.
+    fn vanishes<X: Linear<f64>>(x: X, tol: f64) -> bool {
+        x.max_abs_diff(&X::zero()) <= tol
+    }
+
+    /// Whether a rig sees a point at the screen coordinates `want`.
+    fn seen_at(rig: M, p: P, want: [f64; 2], tol: f64) -> bool {
+        let at = screen_map(rig).of(p).unitized();
+        at.max_abs_diff(&pga2d::Point::xy(want[0], want[1])) <= tol
     }
 
     /// A pinhole at the origin with screen `z = 1` images `(x, y, z)` to `(x/z, y/z, 1)`.
@@ -440,11 +444,11 @@ mod tests {
     fn pinhole_image_is_perspective_division() {
         let camera: Camera = (origin() & Point::slot()) ^ screen();
         for (p, want) in [
-            ([1.0, 2.0, 4.0], [0.25, 0.5, 1.0]),
-            ([-3.0, 0.5, 2.0], [-1.5, 0.25, 1.0]),
-            ([0.2, -0.4, 0.5], [0.4, -0.8, 1.0]),
+            (Point::xyz(1.0, 2.0, 4.0), Point::xyz(0.25, 0.5, 1.0)),
+            (Point::xyz(-3.0, 0.5, 2.0), Point::xyz(-1.5, 0.25, 1.0)),
+            (Point::xyz(0.2, -0.4, 0.5), Point::xyz(0.4, -0.8, 1.0)),
         ] {
-            assert!(close(&camera.of(point(p)).to_euclidean(), &want, 1e-14));
+            assert!(same(camera.of(p), want, 1e-14));
         }
     }
 
@@ -452,23 +456,19 @@ mod tests {
     /// idempotent: a rank-three projection.
     #[test]
     fn camera_is_a_rank_three_projection() {
-        let centre = point([0.3, -0.2, -1.0]);
+        let centre = Point::xyz(0.3, -0.2, -1.0);
         let camera = camera(centre, screen());
-        let (_, sigma, _) = camera.svd();
+        let sigma = camera.svdvals();
         assert_eq!(sigma.iter().filter(|s| **s > 1e-9 * sigma[0]).count(), 3);
-        assert!(camera.of(centre).c.iter().all(|v| v.abs() < 1e-14));
-        for p in [[0.7, 0.1, 1.0], [-2.0, 3.0, 1.0]] {
-            assert!(close(&camera.of(point(p)).to_euclidean(), &p, 1e-14));
+        assert!(vanishes(camera.of(centre), 1e-14));
+        for p in [Point::xyz(0.7, 0.1, 1.0), Point::xyz(-2.0, 3.0, 1.0)] {
+            assert!(same(camera.of(p), p, 1e-14));
         }
-        // Twice is once, up to scale.
+        // Twice is once, up to scale (read off the weight of one image).
         let twice = camera.of(camera);
-        let (a, b): (Vec<f64>, Vec<f64>) = (
-            twice.c.iter().flatten().copied().collect(),
-            camera.c.iter().flatten().copied().collect(),
-        );
-        let support: Vec<usize> = (0..16).filter(|&i| b[i].abs() > 1e-9).collect();
-        let scale = support.iter().map(|&i| a[i] / b[i]).sum::<f64>() / support.len() as f64;
-        assert!(a.iter().zip(&b).all(|(x, y)| (x - y * scale).abs() < 1e-14));
+        let x = Point::xyz(1.0, 2.0, 4.0);
+        let scale = twice.of(x).e123() / camera.of(x).e123();
+        assert!(twice.approx_eq(&camera.gp(scale), 1e-14));
     }
 
     /// Binding the centre and the screen of the open ternary projector gives the camera.
@@ -476,55 +476,39 @@ mod tests {
     fn ternary_projector_binds_to_camera() {
         let projector: Point<(Point, Point, Plane), f64> =
             (Point::slot() & Point::slot()) ^ Plane::slot();
-        let centre = point([0.3, -0.2, -1.0]);
-        let world = point([1.0, 2.0, 4.0]);
+        let centre = Point::xyz(0.3, -0.2, -1.0);
+        let world = Point::xyz(1.0, 2.0, 4.0);
         let camera = camera(centre, screen());
         let bound: Camera = projector.of(centre).at::<1>().of(screen());
-        let (a, b): (Vec<f64>, Vec<f64>) = (
-            bound.c.iter().flatten().copied().collect(),
-            camera.c.iter().flatten().copied().collect(),
-        );
-        assert!(close(&a, &b, 1e-14));
+        assert!(bound.approx_eq(&camera, 1e-14));
         let all_three = projector.of(centre).of(world).of(screen());
-        assert!(close(&all_three.c, &camera.of(world).c, 1e-14));
+        assert!(all_three.approx_eq(&camera.of(world), 1e-14));
     }
 
     /// A centre at infinity projects along a fixed direction: the shadows of a distant sun.
     #[test]
     fn ideal_centre_is_orthographic() {
-        let ground = Plane::new(0.0, 0.0, 1.0, 0.0);
-        let down = camera(direction([0.0, 0.0, -1.0]), ground);
-        assert!(close(
-            &down.of(point([1.0, 2.0, 4.0])).to_euclidean(),
-            &[1.0, 2.0, 0.0],
-            1e-14
-        ));
-        assert!(close(
-            &down.of(point([-3.0, 0.5, 2.0])).to_euclidean(),
-            &[-3.0, 0.5, 0.0],
-            1e-14
-        ));
-        let slanted = camera(direction([1.0, 0.0, -1.0]), ground);
-        assert!(close(
-            &slanted.of(point([0.0, 0.0, 2.0])).to_euclidean(),
-            &[2.0, 0.0, 0.0],
-            1e-14
-        ));
+        let down = camera(Point::direction(0.0, 0.0, -1.0), ground());
+        for (p, want) in [
+            (Point::xyz(1.0, 2.0, 4.0), Point::xyz(1.0, 2.0, 0.0)),
+            (Point::xyz(-3.0, 0.5, 2.0), Point::xyz(-3.0, 0.5, 0.0)),
+        ] {
+            assert!(same(down.of(p), want, 1e-14));
+        }
+        let slanted = camera(Point::direction(1.0, 0.0, -1.0), ground());
+        let p = slanted.of(Point::xyz(0.0, 0.0, 2.0));
+        assert!(same(p, Point::xyz(2.0, 0.0, 0.0), 1e-14));
     }
 
     /// One camera per centre (numga binds a batch at once).
     #[test]
     fn batched_centres_give_batched_cameras() {
-        let world = point([1.0, 2.0, 4.0]);
+        let world = Point::xyz(1.0, 2.0, 4.0);
         for (c, want) in [
-            ([-0.5, 0.0, 0.0], [-0.125, 0.5, 1.0]),
-            ([0.5, 0.0, 0.0], [0.625, 0.5, 1.0]),
+            (Point::xyz(-0.5, 0.0, 0.0), Point::xyz(-0.125, 0.5, 1.0)),
+            (Point::xyz(0.5, 0.0, 0.0), Point::xyz(0.625, 0.5, 1.0)),
         ] {
-            assert!(close(
-                &camera(point(c), screen()).of(world).to_euclidean(),
-                &want,
-                1e-14
-            ));
+            assert!(same(camera(c, screen()).of(world), want, 1e-14));
         }
     }
 
@@ -535,94 +519,75 @@ mod tests {
     fn bivector_exponentials_translate_and_rotate() {
         // numga's `xw 0.5 - yw + zw 0.25`, with `xw = e1 e0 = -e01`.
         let b = Line::new(0.0, 0.0, 0.0, -0.5, 1.0, -0.25);
-        let moved = b.exp() >> point([1.0, 2.0, 3.0]);
-        assert!(close(&moved.to_euclidean(), &[2.0, 0.0, 3.5], 1e-14));
-        let y_axis = (origin() & direction([0.0, 1.0, 0.0]))
+        let moved = b.exp() >> Point::xyz(1.0, 2.0, 3.0);
+        assert!(same(moved, Point::xyz(2.0, 0.0, 3.5), 1e-14));
+        let y_axis = (origin() & Point::direction(0.0, 1.0, 0.0))
             .normalized()
             .into_inner();
-        let turned = y_axis.gp(-core::f64::consts::FRAC_PI_4).exp() >> point([1.0, 0.0, 0.0]);
-        assert!(close(&turned.to_euclidean(), &[0.0, 0.0, -1.0], 1e-8));
+        let turned = y_axis.gp(-core::f64::consts::FRAC_PI_4).exp() >> Point::xyz(1.0, 0.0, 0.0);
+        assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-8));
         let rotation = Motor::rotation(y_axis, core::f64::consts::FRAC_PI_2);
-        assert!(close(
-            &(rotation >> point([1.0, 0.0, 0.0])).to_euclidean(),
-            &[0.0, 0.0, -1.0],
-            1e-15
-        ));
+        let turned = rotation >> Point::xyz(1.0, 0.0, 0.0);
+        assert!(same(turned, Point::xyz(0.0, 0.0, -1.0), 1e-15));
     }
 
     /// Moving the camera map by a motor equals building it from the moved centre and screen.
     #[test]
     fn moving_the_rig_equals_moving_centre_and_screen() {
-        let y_axis = origin() & direction([0.0, 1.0, 0.0]);
-        let motor = Motor::translation(0.4, -0.3, 2.0) * Motor::rotation(y_axis, 0.7);
+        let motor = Motor::translation(0.4, -0.3, 2.0) * Motor::rotation_about(0.0, 1.0, 0.0, 0.7);
         let camera = camera(origin(), screen());
         let moved = motor >> camera.of(motor << Point::slot());
         let rebuilt = ((motor >> origin()) & Point::slot()) ^ (motor >> screen());
-        let (a, b): (Vec<f64>, Vec<f64>) = (
-            moved.c.iter().flatten().copied().collect(),
-            rebuilt.c.iter().flatten().copied().collect(),
-        );
-        assert!(close(&a, &b, 1e-14), "{a:?} {b:?}");
-        let world = point([1.0, 2.0, 4.0]);
-        let local = camera.of(motor << world).to_euclidean();
-        assert!(close(
-            &screen_coordinates(motor, moved.of(world)),
-            &local[..2],
-            1e-14
-        ));
+        assert!(moved.approx_eq(&rebuilt, 1e-14), "{moved:?} {rebuilt:?}");
+        let world = Point::xyz(1.0, 2.0, 4.0);
+        let [x, y, _] = camera.of(motor << world).to_euclidean();
+        assert!(seen_at(motor, moved.of(world), [x, y], 1e-14));
     }
 
     /// The image of the line through two points is the line through their images.
     #[test]
     fn line_camera_commutes_with_join() {
-        let centre = point([0.3, -0.2, -1.0]);
+        let centre = Point::xyz(0.3, -0.2, -1.0);
         let camera = camera(centre, screen());
         let line_camera: LineCamera = (centre & Line::slot()) ^ screen();
-        let (a, b) = (point([1.0, 0.0, 2.0]), point([0.0, 1.0, 3.0]));
+        let (a, b) = (Point::xyz(1.0, 0.0, 2.0), Point::xyz(0.0, 1.0, 3.0));
         let imaged_join = line_camera.of(a & b);
         let joined_images = camera.of(a) & camera.of(b);
-        let k = (0..6)
-            .find(|&i| joined_images.c[i].abs() > 1e-9)
-            .expect("a nonzero coefficient");
-        let scale = imaged_join.c[k] / joined_images.c[k];
-        assert!(close(
-            &imaged_join.c,
-            &joined_images.c.map(|v| v * scale),
-            1e-14
-        ));
+        // The same line up to scale: the ratio of their norms, with the sign of their inner product
+        // negated (a line squares to minus its squared norm).
+        let scale =
+            -imaged_join.norm() / joined_images.norm() * (imaged_join | joined_images).s().signum();
+        assert!(imaged_join.approx_eq(&joined_images.gp(scale), 1e-14));
     }
 
     /// Corresponding image points annihilate the fundamental form, which has rank 2; the
     /// epipole spans its kernel, and the epipolar lines pass through the matches and the epipole.
     #[test]
     fn fundamental_form_and_epipolar_geometry() {
-        let (centre_1, centre_2) = (point([-0.6, 0.0, 0.0]), point([0.6, 0.1, -0.2]));
+        let (centre_1, centre_2) = (Point::xyz(-0.6, 0.0, 0.0), Point::xyz(0.6, 0.1, -0.2));
         let (camera_1, camera_2) = (camera(centre_1, screen()), camera(centre_2, screen()));
         let form: Correspondence = (centre_1 & Point::slot()) ^ (centre_2 & Point::slot());
-        // The form's matrix, read as a map for its singular values.
-        let (_, sigma, _) = Camera::from_coeffs(form.c[0]).svd();
+        // The form, read as a map for its singular values.
+        let sigma = form.dual().as_map().svdvals();
         assert_eq!(sigma.iter().filter(|s| **s > 1e-9 * sigma[0]).count(), 2);
-        let world = [[1.0, 2.0, 4.0], [-3.0, 0.5, 2.0], [0.2, -0.4, 3.0]].map(point);
+        let world = [
+            Point::xyz(1.0, 2.0, 4.0),
+            Point::xyz(-3.0, 0.5, 2.0),
+            Point::xyz(0.2, -0.4, 3.0),
+        ];
         let image_1 = world.map(|p| camera_1.of(p));
         let image_2 = world.map(|p| camera_2.of(p));
         for (a, b) in image_1.iter().zip(&image_2) {
-            assert!(form.of(*a).of(*b).c[0].abs() < 1e-13);
+            assert!(vanishes(form.of(*a).of(*b), 1e-13));
         }
-        assert!(form.of(image_1[0]).of(image_2[2]).c[0].abs() > 1e-3);
+        assert!(!vanishes(form.of(image_1[0]).of(image_2[2]), 1e-3));
         let epipole_2 = camera_2.of(centre_1);
-        assert!(
-            form.at::<1>()
-                .of(epipole_2)
-                .c
-                .iter()
-                .flatten()
-                .all(|v| v.abs() < 1e-14)
-        );
+        assert!(vanishes(form.at::<1>().of(epipole_2), 1e-14));
         let line_camera_2: LineCamera = (centre_2 & Line::slot()) ^ screen();
         for (i1, i2) in image_1.iter().zip(&image_2) {
             let line = line_camera_2.of(centre_1 & *i1);
-            assert!((line & *i2).c.iter().all(|v| v.abs() < 1e-12));
-            assert!((line & epipole_2).c.iter().all(|v| v.abs() < 1e-13));
+            assert!(vanishes(line & *i2, 1e-12));
+            assert!(vanishes(line & epipole_2, 1e-13));
         }
     }
 
@@ -630,11 +595,10 @@ mod tests {
     #[test]
     fn shadow_trail_agrees_with_the_body_shadow() {
         let body = cube(1.0);
-        let ground = Plane::new(0.0, 0.0, 1.0, 0.0);
-        let light = point([1.0, -1.0, 4.0]);
-        let sun = direction([-1.0, 0.6, -2.5]);
-        let cast = shadows(&body, ground, light, sun, body[7], &[light]);
-        assert!(close(&cast.trail[0].c, &cast.spot[7].c, 1e-14));
+        let light = Point::xyz(1.0, -1.0, 4.0);
+        let sun = Point::direction(-1.0, 0.6, -2.5);
+        let cast = shadows(&body, ground(), light, sun, body[7], &[light]);
+        assert!(cast.trail[0].approx_eq(&cast.spot[7], 1e-14));
     }
 
     /// Corresponding images annihilate the form, and the epipolar lines meet their points; at
@@ -645,19 +609,11 @@ mod tests {
             let sc = scene(core::f64::consts::TAU * k as f64 / 8.0);
             let v = &sc.views;
             for (a, b) in v.image_1.iter().zip(&v.image_2) {
-                assert!(v.correspondence.of(*a).of(*b).c[0].abs() < 1e-12);
+                assert!(vanishes(v.correspondence.of(*a).of(*b), 1e-12));
             }
-            assert!(
-                v.correspondence
-                    .at::<1>()
-                    .of(v.epipole_2)
-                    .c
-                    .iter()
-                    .flatten()
-                    .all(|x| x.abs() < 1e-12)
-            );
+            assert!(vanishes(v.correspondence.at::<1>().of(v.epipole_2), 1e-12));
             for (l, p) in v.epipolar_lines_2.iter().zip(&v.image_2) {
-                assert!((*l & *p).c.iter().all(|x| x.abs() < 1e-12));
+                assert!(vanishes(*l & *p, 1e-12));
             }
         }
     }
@@ -666,27 +622,11 @@ mod tests {
     #[test]
     fn the_scenario_agrees_with_numga() {
         let sc = scene(0.0);
-        assert!(close(&sc.body[7].to_euclidean(), &[0.5, 0.5, 2.0], 1e-14));
-        assert!(close(
-            &sc.cast.spot[7].to_euclidean(),
-            &[0.0, 2.0, 0.0],
-            1e-14
-        ));
-        assert!(close(
-            &sc.cast.sun[7].to_euclidean(),
-            &[-0.3, 0.98, 0.0],
-            1e-14
-        ));
-        assert!(close(
-            &sc.cast.trail[0].to_euclidean(),
-            &[0.0, 2.0, 0.0],
-            1e-14
-        ));
-        assert!(close(
-            &sc.cast.trail[16].to_euclidean(),
-            &[1.0, 1.0, 0.0],
-            1e-12
-        ));
+        assert!(same(sc.body[7], Point::xyz(0.5, 0.5, 2.0), 1e-14));
+        assert!(same(sc.cast.spot[7], Point::xyz(0.0, 2.0, 0.0), 1e-14));
+        assert!(same(sc.cast.sun[7], Point::xyz(-0.3, 0.98, 0.0), 1e-14));
+        assert!(same(sc.cast.trail[0], Point::xyz(0.0, 2.0, 0.0), 1e-14));
+        assert!(same(sc.cast.trail[16], Point::xyz(1.0, 1.0, 0.0), 1e-12));
         let v = &sc.views;
         let want_1 = [
             [-0.169169736004, -0.192963870163],
@@ -699,25 +639,19 @@ mod tests {
             [-0.204533171375, 0.184442574942],
         ];
         for k in 0..3 {
-            assert!(close(
-                &screen_coordinates(sc.rig_1, v.image_1[k]),
-                &want_1[k],
-                1e-11
-            ));
-            assert!(close(
-                &screen_coordinates(sc.rig_2, v.image_2[k]),
-                &want_2[k],
-                1e-11
-            ));
+            assert!(seen_at(sc.rig_1, v.image_1[k], want_1[k], 1e-11));
+            assert!(seen_at(sc.rig_2, v.image_2[k], want_2[k], 1e-11));
         }
-        assert!(close(
-            &screen_coordinates(sc.rig_2, v.epipole_2),
-            &[-8.293294880597, 0.0],
+        assert!(seen_at(
+            sc.rig_2,
+            v.epipole_2,
+            [-8.293294880597, 0.0],
             1e-10
         ));
-        assert!(close(
-            &(sc.rig_1 >> point([0.0, 0.0, 1.0])).to_euclidean(),
-            &[-0.480287792711, 0.0, 0.992808635854],
+        let screen_centre = Point::xyz(-0.480287792711, 0.0, 0.992808635854);
+        assert!(same(
+            sc.rig_1 >> Point::xyz(0.0, 0.0, 1.0),
+            screen_centre,
             1e-11
         ));
     }
@@ -727,9 +661,7 @@ mod tests {
     fn the_corner_shadow_runs_along_the_trail() {
         for k in 0..64 {
             let sc = scene(core::f64::consts::TAU * k as f64 / 64.0);
-            let [x, y, _] = sc.cast.spot[7].to_euclidean();
-            let [tx, ty, _] = sc.cast.trail[k].to_euclidean();
-            assert!((x - tx).abs() < 1e-12 && (y - ty).abs() < 1e-12);
+            assert!(same(sc.cast.spot[7], sc.cast.trail[k], 1e-12));
         }
     }
 

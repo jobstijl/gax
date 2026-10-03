@@ -16,7 +16,7 @@ use std::sync::OnceLock;
 
 use gax_numga_examples::canvas::{mix, srgb};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, contour, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Pos2, Rgb, backdrop, caption, contour, palette, plot, run,
 };
 
 mod lensing {
@@ -30,6 +30,11 @@ mod lensing {
     /// A direction from its `x` and `y` components.
     pub fn v(x: f64, y: f64) -> V {
         Vector::new(x, y)
+    }
+
+    /// The direction at a point of a drawing.
+    pub fn at(x: f32, y: f32) -> V {
+        v(f64::from(x), f64::from(y))
     }
 
     /// The source direction each observed direction reaches.
@@ -52,7 +57,8 @@ mod lensing {
             })
     }
 
-    /// The ratio the local map carries areas by: its outermorphism on the pseudoscalar.
+    /// The ratio the local map carries areas by: its outermorphism on the pseudoscalar (its
+    /// determinant).
     pub fn area(local: LocalMap) -> f64 {
         local
             .outermorphism::<Pseudoscalar>()
@@ -156,7 +162,7 @@ fn starlight(t: f64) -> Rgb {
 /// sources, and a sky grid with the source direction each pixel reaches (for the magnification).
 struct Scene {
     critical: Vec<[[f32; 2]; 2]>,
-    caustic: Vec<[[f32; 2]; 2]>,
+    caustic: Vec<[[f64; 2]; 2]>,
     tissot: Vec<(V, Vec<V>, f64)>,
     grid: (Vec<V>, Vec<V>),
 }
@@ -164,15 +170,12 @@ struct Scene {
 fn scene() -> &'static Scene {
     static SCENE: OnceLock<Scene> = OnceLock::new();
     SCENE.get_or_init(|| {
-        let ratio = |x: f32, y: f32| area(binary_local(v(f64::from(x), f64::from(y)))) as f32;
+        let ratio = |x: f32, y: f32| area(binary_local(at(x, y))) as f32;
         let critical = contour::of_fn(ratio, [-1.9, 1.9], [-1.9, 1.9], 380, 0.0);
-        let to_source = |p: [f32; 2]| {
-            let s = binary(v(f64::from(p[0]), f64::from(p[1])));
-            [s.e1() as f32, s.e2() as f32]
-        };
+        // The lens carries the critical curve to the caustic.
         let caustic = critical
             .iter()
-            .map(|[a, b]| [to_source(*a), to_source(*b)])
+            .map(|seg| seg.map(|[x, y]| binary(at(x, y)).c))
             .collect();
         let (directions, reached, _) = lens(400);
         Scene {
@@ -201,14 +204,10 @@ fn square(rect: [f32; 4]) -> Axes {
     )
 }
 
-fn segments(ax: &Axes, c: &mut Canvas, segs: &[[[f32; 2]; 2]], width: f32, colour: Rgb) {
+fn segments(ax: &Axes, c: &mut Canvas, segs: &[[impl Pos2; 2]], width: f32, colour: Rgb) {
     for [a, b] in segs {
         ax.line(c, *a, *b, width, colour, 1.0);
     }
-}
-
-fn xy(p: V) -> [f32; 2] {
-    [p.e1() as f32, p.e2() as f32]
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -217,7 +216,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (w, h) = (c.width as f32, c.height as f32);
     let critical_colour = srgb(0.333, 0.796, 0.827);
     let caustic_colour = srgb(1.0, 0.53, 0.447);
-    let masses: Vec<[f32; 2]> = positions().into_iter().map(xy).collect();
+    let masses = positions().map(|p| p.c);
     let centre = source_at(t);
     let size = (h / 34.0).clamp(7.0, 15.0);
     let (top, bottom) = (h * 0.17, h - size * 3.2);
@@ -246,11 +245,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The source plane: the source unlensed, with the caustic.
     let ax = panel(0);
     ax.image(c, 1, |x, y| {
-        Some(starlight(brightness(
-            v(f64::from(x), f64::from(y)),
-            centre,
-            WIDTH,
-        )))
+        Some(starlight(brightness(at(x, y), centre, WIDTH)))
     });
     segments(&ax, c, &s.caustic, 1.3, caustic_colour);
     ax.frame(c, "SOURCE", "", "");
@@ -259,8 +254,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The sky: each pixel shows the source's brightness where its sightline arrives.
     let ax = panel(1);
     ax.image(c, 2, |x, y| {
-        let reached = binary(v(f64::from(x), f64::from(y)));
-        Some(starlight(brightness(reached, centre, WIDTH)))
+        Some(starlight(brightness(binary(at(x, y)), centre, WIDTH)))
     });
     segments(&ax, c, &s.critical, 1.1, critical_colour);
     ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid(), 1.0);
@@ -280,7 +274,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let preserved = palette::sky();
     let reversed = srgb(0.79, 0.41, 0.28);
     for (_, outline, ratio) in &s.tissot {
-        let pts: Vec<[f32; 2]> = outline.iter().map(|p| xy(*p)).collect();
+        let pts: Vec<[f64; 2]> = outline.iter().map(|p| p.c).collect();
         let colour = if *ratio >= 0.0 { preserved } else { reversed };
         ax.fill(c, &pts, colour, 0.35);
         ax.polyline(c, &pts, 1.0, colour, 0.9);
@@ -307,10 +301,11 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::lensing::*;
+    use gax::ApproxEq;
     use gax::vga2d::{Pseudoscalar, Vector};
 
     fn close_v(a: V, b: V, tol: f64) -> bool {
-        (a.e1() - b.e1()).abs() <= tol && (a.e2() - b.e2()).abs() <= tol
+        a.max_abs_diff(&b) <= tol
     }
 
     /// One point mass: both images reach the source; the radial stretch is `1 + 1/r²` and the
@@ -321,7 +316,7 @@ mod tests {
         let (centre, one) = ([v(0.0, 0.0)], [1.0]);
         let source = v(0.3, 0.2);
         let radius = source.norm();
-        let direction = source * (1.0 / radius);
+        let direction = source.normalized().into_inner();
         let root = (radius * radius + 4.0).sqrt();
         let image_radii = [(radius + root) / 2.0, (radius - root) / 2.0];
         let mut magnification = 0.0;
@@ -424,6 +419,7 @@ mod tests {
             let local = binary_local(*d);
             assert!((local.trace() - 2.0).abs() < 1e-11);
             assert_eq!(areas[i], area(local));
+            assert!((areas[i] - local.det()).abs() <= 1e-12 * areas[i].abs().max(1.0));
             let (row, col) = (i / resolution, i % resolution);
             if row % 97 == 0 && col % 97 == 0 {
                 let step = v(1e-6, 0.0);

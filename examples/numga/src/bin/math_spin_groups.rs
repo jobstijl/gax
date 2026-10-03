@@ -34,6 +34,7 @@
 //! along a rotation turning xy twice while zw turns three times (trefoil knots), seen through
 //! the stereographic projection.
 
+use gax::ApproxEq;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption, colormap,
     palette, run,
@@ -160,26 +161,17 @@ gax::algebra! {
     kind Odd = [e1, e2, e3, et, es, er, e123, e12t, e12s, e12r, e13t, e13s, e13r, e1ts, e1tr, e1sr, e23t, e23s, e23r, e2ts, e2tr, e2sr, e3ts, e3tr, e3sr, etsr, e123ts, e123tr, e123sr, e12tsr, e13tsr, e23tsr];
 }
 
-/// Eigenvalues as `(re, im)` pairs.
-mod eig {
-    /// A complex number `(re, im)`.
-    pub type C = (f64, f64);
-
-    /// gax's eigenvalues of a map (`map.eigvals()`) as pairs.
-    pub fn pairs(values: impl AsRef<[gax::Complex<f64>]>) -> Vec<C> {
-        values.as_ref().iter().map(|z| (z.re, z.im)).collect()
-    }
+/// The coefficients of basis element `i` of a kind with `N` of them.
+fn basis<const N: usize>(i: usize) -> [f64; N] {
+    core::array::from_fn(|j| if j == i { 1.0 } else { 0.0 })
 }
 
 /// The groups: one function per question, run on each signature's algebra by a macro, since a
 /// function generic over the algebra would have to restate every product in its bounds.
 mod spin {
-    use super::eig::{self, C};
     use super::*;
-
-    /// A small xorshift stream of standard normal numbers (numga's generator cannot be
-    /// reproduced; the checks hold for any sample).
-    pub use gax_numga_examples::rng::Rng;
+    use gax::Complex;
+    use gax_numga_examples::rng::{Draw, rng};
 
     /// One signature: its numbers, and the maps they come from.
     #[derive(Clone, Debug)]
@@ -193,17 +185,17 @@ mod spin {
         /// The invariant form over the inner product, on a random bivector.
         pub factor: f64,
         /// The eigenvalues of the involution on the bivectors.
-        pub signs: Vec<C>,
+        pub signs: Vec<Complex<f64>>,
         /// The square of the pseudoscalar.
         pub square: f64,
         /// In even dimensions, the eigenvalues of the pseudoscalar acting on the spinors.
-        pub action: Option<Vec<C>>,
+        pub action: Option<Vec<Complex<f64>>>,
     }
 
     impl Row {
         /// The involution's fixed planes (rotations) and negated planes (boosts).
         pub fn counts(&self) -> (usize, usize) {
-            let plus = self.signs.iter().filter(|s| s.0 > 0.0).count();
+            let plus = self.signs.iter().filter(|s| s.re > 0.0).count();
             (plus, self.signs.len() - plus)
         }
 
@@ -211,7 +203,7 @@ mod spin {
         pub fn spinors(&self) -> &'static str {
             match &self.action {
                 None => "ONE PIECE",
-                Some(values) if values.iter().all(|v| v.1.abs() < 1e-9) => "TWO HALVES",
+                Some(values) if values.iter().all(|v| v.im.abs() < 1e-9) => "TWO HALVES",
                 Some(_) => "COMPLEX",
             }
         }
@@ -219,12 +211,9 @@ mod spin {
 
     /// Basis vector `i` of an algebra.
     macro_rules! axis {
-        ($m:ident, $i:expr) => {{
-            let i: usize = $i;
-            $m::Vector::<(), f64>::from_coeffs(core::array::from_fn(
-                |j| if j == i { 1.0 } else { 0.0 },
-            ))
-        }};
+        ($m:ident, $i:expr) => {
+            $m::Vector::<(), f64>::from_coeffs(basis($i))
+        };
     }
 
     /// The product of basis vectors `0..k` of an algebra, as an even and an odd part (one of
@@ -260,9 +249,7 @@ mod spin {
             use $m::Bivector;
             let (even, odd) = blade_product!($m, $p);
             Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
-                let b = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|i| {
-                    if i == j { 1.0 } else { 0.0 }
-                }));
+                let b = Bivector::<(), f64>::from_coeffs(basis(j));
                 ((even * b) * even.reverse()).cast::<Bivector>()
                     + ((odd * b) * odd.reverse()).cast::<Bivector>()
             }))
@@ -278,10 +265,7 @@ mod spin {
             use $m::Even;
             let (pseudoscalar, _) = blade_product!($m, $n);
             Even::<(Even,), f64>::from_images(core::array::from_fn(|j| {
-                pseudoscalar
-                    * Even::<(), f64>::from_coeffs(core::array::from_fn(|i| {
-                        if i == j { 1.0 } else { 0.0 }
-                    }))
+                pseudoscalar * Even::<(), f64>::from_coeffs(basis(j))
             }))
         }};
     }
@@ -297,16 +281,14 @@ mod spin {
             // commutator with the other bivector open. (The form with both bivectors open, the
             // double commutator with three open slots traced, takes too long to compile in
             // six dimensions.)
-            let basis: Vec<Bivector<(), f64>> = (0..n * (n - 1) / 2)
-                .map(|i| {
-                    Bivector::from_coeffs(core::array::from_fn(|j| if j == i { 1.0 } else { 0.0 }))
-                })
+            let planes: Vec<Bivector<(), f64>> = (0..n * (n - 1) / 2)
+                .map(|i| Bivector::from_coeffs(basis(i)))
                 .collect();
-            let ad: Vec<Bivector<(Bivector,), f64>> = basis
+            let ad: Vec<Bivector<(Bivector,), f64>> = planes
                 .iter()
                 .map(|a| {
                     Bivector::<(Bivector,), f64>::from_images(core::array::from_fn(|j| {
-                        a.commutator(basis[j])
+                        a.commutator(planes[j])
                     }))
                 })
                 .collect();
@@ -314,11 +296,11 @@ mod spin {
                 .iter()
                 .map(|a| ad.iter().map(|b| a.of(*b).trace()).collect())
                 .collect();
-            let inner: Vec<Vec<f64>> = basis
+            let inner: Vec<Vec<f64>> = planes
                 .iter()
-                .map(|a| basis.iter().map(|b| (*a | *b).s()).collect())
+                .map(|a| planes.iter().map(|b| (*a | *b).s()).collect())
                 .collect();
-            let sample: Vec<f64> = (0..basis.len()).map(|_| $rng.normal()).collect();
+            let sample: Vec<f64> = (0..planes.len()).map(|_| $rng.normal()).collect();
             let pair = |m: &Vec<Vec<f64>>| -> f64 {
                 (0..sample.len())
                     .map(|i| {
@@ -335,10 +317,10 @@ mod spin {
                 .flatten()
                 .zip(inner.iter().flatten())
                 .all(|(f, i)| *f == scale * *i);
-            let signs = eig::pairs(involution!($m, $p).eigvals());
+            let signs = involution!($m, $p).eigvals().to_vec();
             let (even, odd) = blade_product!($m, n);
             let square = (even * even).s() + (odd * odd).s();
-            let action = (n % 2 == 0).then(|| eig::pairs(action!($m, n).eigvals()));
+            let action = (n % 2 == 0).then(|| action!($m, n).eigvals().to_vec());
             Row {
                 p: $p,
                 q: $q,
@@ -354,7 +336,7 @@ mod spin {
 
     /// The signatures, in numga's order.
     pub fn zoo(seed: u64) -> Vec<Row> {
-        let mut rng = Rng::new(seed);
+        let mut rng = rng(seed);
         vec![
             row!(cl30, 3, 0, rng),
             row!(cl21, 2, 1, rng),
@@ -385,6 +367,8 @@ mod spin {
         pub type B = Bivector<(), f64>;
         pub type V = Vector<(), f64>;
         pub type E = Even<(), f64>;
+        /// A point of the space the three-sphere is projected into.
+        pub type Space = gax::vga3d::Vector<(), f64>;
 
         /// The bivector with one plane: `e_ij` by its basis indices.
         pub fn plane(i: usize, j: usize) -> B {
@@ -394,7 +378,7 @@ mod spin {
 
         /// The basis vector `e_i`.
         pub fn axis(i: usize) -> V {
-            V::from_coeffs(core::array::from_fn(|j| if j == i { 1.0 } else { 0.0 }))
+            V::from_coeffs(basis(i))
         }
 
         /// The pseudoscalar, as an even multivector.
@@ -432,18 +416,18 @@ mod spin {
         }
 
         /// A unit vector of the four directions, projected from `-e4` into the space of the
-        /// first three: `(v - e4 (v | e4)) / (1 + v | e4)`.
-        pub fn stereographic(v: V) -> [f64; 3] {
+        /// first three: `(v - e4 (v | e4)) / (1 + v | e4)`, as a vector of VGA3D.
+        pub fn stereographic(v: V) -> Space {
             let w = axis(3);
             let h = (v | w).s();
             let s = (v - w.gp(h)).gp(1.0 / (1.0 + h));
-            [s.c[0], s.c[1], s.c[2]]
+            Space::new(s.c[0], s.c[1], s.c[2])
         }
 
         /// A random rotor of the four Euclidean directions and its two isoclinic factors, with
         /// the halves of its generator.
         pub fn split(seed: u64) -> (E, E, E, B, B) {
-            let mut rng = Rng::new(seed);
+            let mut rng = rng(seed);
             let generator = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
             let (along, against) = isoclinic(generator);
             (
@@ -460,9 +444,9 @@ mod spin {
         /// zw turns three times (the two flows combined at different rates,
         /// `5 against - along`), from one start at each height; all projected into space.
         pub struct Flows {
-            pub left: Vec<Vec<[f64; 3]>>,
-            pub right: Vec<Vec<[f64; 3]>>,
-            pub knotted: Vec<Vec<[f64; 3]>>,
+            pub left: Vec<Vec<Space>>,
+            pub right: Vec<Vec<Space>>,
+            pub knotted: Vec<Vec<Space>>,
             /// Height and azimuth index of each orbit of the flows.
             pub index: Vec<(usize, usize)>,
             pub along: B,
@@ -479,7 +463,7 @@ mod spin {
                     axis(0),
                 )
             };
-            let orbit = |generator: B, s: V| -> Vec<[f64; 3]> {
+            let orbit = |generator: B, s: V| -> Vec<Space> {
                 // One full turn of every plane: the sandwich turns by twice the rotor's angle.
                 (0..=count)
                     .map(|k| {
@@ -510,27 +494,6 @@ mod spin {
             flows
         }
 
-        /// Gauss's linking number of two closed polygons in the space of x y z: the volume each
-        /// pair of segments spans with the line between them, over the cube of its length,
-        /// summed and divided by four pi. The volume is the trivector's scalar product with the
-        /// reverse of the unit volume `e123`.
-        pub fn linking(first: &[[f64; 3]], second: &[[f64; 3]]) -> f64 {
-            let v = |p: [f64; 3]| V::from_coeffs([p[0], p[1], p[2], 0.0]);
-            let volume = blade_product!(cl40, 3).1.reverse();
-            let mut sum = 0.0;
-            for a in first.windows(2) {
-                for b in second.windows(2) {
-                    let (a0, a1, b0, b1) = (v(a[0]), v(a[1]), v(b[0]), v(b[1]));
-                    let separation = (a1 + a0 - b1 - b0).gp(0.5);
-                    let trivolume = (separation ^ (a1 - a0) ^ (b1 - b0))
-                        .scalar_product(volume)
-                        .s();
-                    sum += trivolume / separation.norm().powi(3);
-                }
-            }
-            sum / (4.0 * core::f64::consts::PI)
-        }
-
         /// The flows of the animation, computed once.
         pub fn cached() -> &'static Flows {
             static FLOWS: OnceLock<Flows> = OnceLock::new();
@@ -554,11 +517,6 @@ fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) 
     )
 }
 
-fn f32s(p: [f64; 3]) -> [f32; 3] {
-    p.map(|v| v as f32)
-}
-
-/// The table of signatures, as text.
 /// The checks of the four-dimensional scenes, live: the isoclinic split of a random rotor, the
 /// combined rotation as the two flows, and the linking of two orbits of each flow.
 struct Checks {
@@ -572,13 +530,13 @@ fn checks() -> &'static Checks {
     static CHECKS: OnceLock<Checks> = OnceLock::new();
     CHECKS.get_or_init(|| {
         use four::*;
-        let max_abs = |c: &[f64]| c.iter().fold(0.0f64, |m, v| m.max(v.abs()));
         let (rotor, left, right, _, _) = split(1);
         // The spread of the turning angles of each factor's eigenvalues.
         let angles = [left, right].map(|factor| {
-            let a: Vec<f64> = eig::pairs(turn_map(factor).eigvals())
+            let a: Vec<f64> = turn_map(factor)
+                .eigvals()
                 .iter()
-                .map(|(re, im)| im.atan2(*re).abs())
+                .map(|z| z.arg().abs())
                 .collect();
             let lo = a.iter().copied().fold(f64::INFINITY, f64::min);
             let hi = a.iter().copied().fold(0.0, f64::max);
@@ -588,12 +546,12 @@ fn checks() -> &'static Checks {
         let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
         let last = f.left.len() - 12 + 4;
         Checks {
-            split: max_abs(&(left * right - rotor).c),
+            split: (left * right).max_abs_diff(&rotor),
             angles,
-            combined: max_abs(&(combined - (f.against.gp(5.0) - f.along)).c),
+            combined: combined.max_abs_diff(&(f.against.gp(5.0) - f.along)),
             links: [
-                linking(&f.left[0], &f.left[last]),
-                linking(&f.right[0], &f.right[last]),
+                gax_numga_examples::measure::linking(&f.left[0], &f.left[last]),
+                gax_numga_examples::measure::linking(&f.right[0], &f.right[last]),
             ],
         }
     })
@@ -644,9 +602,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let extent = families
         .iter()
         .flat_map(|f| f.iter().flatten())
-        .fold(0.0f64, |m, p| {
-            m.max(p[0].abs()).max(p[1].abs()).max(p[2].abs())
-        });
+        .flat_map(|p| p.c)
+        .fold(0.0f64, |m, x| m.max(x.abs()));
     let length = flows.left[0].len() - 1;
     let step = ((phase * length as f32) as usize).min(length - 1);
     let titles = [
@@ -675,13 +632,12 @@ fn draw(c: &mut Canvas, t: f32) {
         for (o, orbit) in family.iter().enumerate() {
             let (height, azimuth) = if knots { (o, 0) } else { flows.index[o] };
             let colour = orbit_colour(height, 3, azimuth, 12);
-            let pts: Vec<[f32; 3]> = orbit.iter().map(|p| f32s(*p)).collect();
-            scene.polyline(&pts, if knots { 1.2 } else { 0.6 }, colour, 0.8);
+            scene.polyline(orbit, if knots { 1.2 } else { 0.6 }, colour, 0.8);
             // The points carried along: one per orbit, six riding along each knot.
             let riders = if knots { 6 } else { 1 };
             for r in 0..riders {
                 let at = (step + r * length / riders) % length;
-                scene.dot(f32s(orbit[at]), Marker::Dot, 7.0, colour);
+                scene.dot(orbit[at], Marker::Dot, 7.0, colour);
             }
         }
         scene.draw(&mut panel);
@@ -745,10 +701,7 @@ fn main() {
 mod tests {
     use super::spin::four::*;
     use super::*;
-
-    fn max_abs(c: &[f64]) -> f64 {
-        c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
-    }
+    use gax::Complex;
 
     /// numga's first test: in the signature (3, 1) the involution fixes the planes of rotations
     /// and negates the planes of boosts, and the pseudoscalar acts on the spinors as the complex
@@ -760,10 +713,10 @@ mod tests {
         // e12 is a rotation, e1t a boost (the third blade in the layout).
         let xy: Bivector<(), f64> = Bivector::from_coeffs([1.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         let xt: Bivector<(), f64> = Bivector::from_coeffs([0.0, 0.0, 1.0, 0.0, 0.0, 0.0]);
-        assert!(max_abs(&(involution.of(xy) - xy).c) < 1e-12);
-        assert!(max_abs(&(involution.of(xt) + xt).c) < 1e-12);
-        for v in eig::pairs(action!(cl31, 4).eigvals()) {
-            assert!((v.1.abs() - 1.0).abs() < 1e-12, "{v:?}");
+        assert!(involution.of(xy).max_abs_diff(&xy) < 1e-12);
+        assert!(involution.of(xt).max_abs_diff(&-xt) < 1e-12);
+        for v in action!(cl31, 4).eigvals() {
+            assert!((v.im.abs() - 1.0).abs() < 1e-12, "{v:?}");
         }
     }
 
@@ -785,9 +738,8 @@ mod tests {
             );
             assert_eq!(row.counts(), ((p * p - p) / 2 + (q * q - q) / 2, p * q));
             if let Some(values) = &row.action {
-                for (re, im) in values {
-                    let (sq_re, sq_im) = (re * re - im * im, 2.0 * re * im);
-                    assert!((sq_re - row.square).abs() < 1e-12 && sq_im.abs() < 1e-12);
+                for v in values {
+                    assert!((*v * *v - Complex::real(row.square)).abs() < 1e-12, "{v:?}");
                 }
             }
         }
@@ -801,12 +753,13 @@ mod tests {
     #[test]
     fn a_rotor_splits_into_isoclinic_factors() {
         let (rotor, left, right, along, against) = split(1);
-        assert!(max_abs(&along.commutator(against).c) < 1e-12);
-        assert!(max_abs(&(left * right - rotor).c) < 1e-8);
+        assert!(along.commutator(against).max_abs_diff(&B::zero()) < 1e-12);
+        assert!((left * right).max_abs_diff(&rotor) < 1e-8);
         for factor in [left, right] {
-            let angles: Vec<f64> = eig::pairs(turn_map(factor).eigvals())
+            let angles: Vec<f64> = turn_map(factor)
+                .eigvals()
                 .iter()
-                .map(|(re, im)| im.atan2(*re).abs())
+                .map(|z| z.arg().abs())
                 .collect();
             for a in &angles {
                 assert!((a - angles[0]).abs() < 1e-9, "{angles:?}");
@@ -822,14 +775,13 @@ mod tests {
         let azimuths = 6;
         let f = flows(azimuths, &[0.3, 0.9], 120);
         let combined = plane(0, 1).gp(2.0) + plane(2, 3).gp(3.0);
-        assert!(max_abs(&(combined - (f.against.gp(5.0) - f.along)).c) < 1e-12);
+        assert!(combined.max_abs_diff(&(f.against.gp(5.0) - f.along)) < 1e-12);
         for orbit in f.left.iter().chain(&f.knotted) {
-            let (a, b) = (orbit[0], orbit[orbit.len() - 1]);
-            assert!(max_abs(&[a[0] - b[0], a[1] - b[1], a[2] - b[2]]) < 1e-5);
+            assert!(orbit[0].max_abs_diff(&orbit[orbit.len() - 1]) < 1e-5);
         }
         let last = f.left.len() - azimuths + azimuths / 3;
-        let forward = linking(&f.left[0], &f.left[last]);
-        let backward = linking(&f.right[0], &f.right[last]);
+        let forward = gax_numga_examples::measure::linking(&f.left[0], &f.left[last]);
+        let backward = gax_numga_examples::measure::linking(&f.right[0], &f.right[last]);
         assert!((forward.abs() - 1.0).abs() < 1e-2, "{forward}");
         assert!((backward.abs() - 1.0).abs() < 1e-2, "{backward}");
         assert!(forward.signum() == -backward.signum());

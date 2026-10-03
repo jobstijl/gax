@@ -13,7 +13,9 @@
 //! triangulated house settling onto the true one, seen from a camera circling the scene.
 
 use gax::Unit;
+use gax::pga2d;
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
+use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, colormap,
     palette, plot, run,
@@ -34,7 +36,7 @@ mod epipolar {
 
     /// The screen `z = 1`.
     pub fn screen() -> Plane<(), f64> {
-        Plane::new(0.0, 0.0, 1.0, -1.0)
+        Plane::from_normal([0.0, 0.0, 1.0], 1.0)
     }
 
     /// The pinhole camera, a projective map on points: the join with the centre, then the meet
@@ -43,45 +45,52 @@ mod epipolar {
         (origin() & Point::slot()) ^ screen()
     }
 
-    /// numga's PGA3D twists by blade name, as gax `Line` coefficients
-    /// `[e23, e31, e12, e01, e02, e03]`: `zx = e31`, and `xw, yw, zw = -e01, -e02, -e03`.
-    pub fn twist(zx: f64, xw: f64, yw: f64, zw: f64) -> L {
-        Line::new(0.0, zx, 0.0, -xw, -yw, -zw)
+    /// The sensor's coordinates: the points of the screen as points of the plane, `z` dropped.
+    pub fn sensor() -> pga2d::Point<(Point,), f64> {
+        pga2d::Point::from_images([
+            pga2d::Point::new(1.0, 0.0, 0.0),
+            pga2d::Point::new(0.0, 1.0, 0.0),
+            pga2d::Point::new(0.0, 0.0, 0.0),
+            pga2d::Point::new(0.0, 0.0, 1.0),
+        ])
     }
 
     /// World landmarks: the corners of a wireframe house and a grid of ground markers.
     pub fn house_landmarks() -> Vec<P> {
         let mut v = vec![
-            [-0.5, -0.4, 3.0],
-            [0.5, -0.4, 3.0],
-            [0.5, 0.4, 3.0],
-            [-0.5, 0.4, 3.0],
-            [-0.5, -0.4, 4.0],
-            [0.5, -0.4, 4.0],
-            [0.5, 0.4, 4.0],
-            [-0.5, 0.4, 4.0],
+            Point::xyz(-0.5, -0.4, 3.0),
+            Point::xyz(0.5, -0.4, 3.0),
+            Point::xyz(0.5, 0.4, 3.0),
+            Point::xyz(-0.5, 0.4, 3.0),
+            Point::xyz(-0.5, -0.4, 4.0),
+            Point::xyz(0.5, -0.4, 4.0),
+            Point::xyz(0.5, 0.4, 4.0),
+            Point::xyz(-0.5, 0.4, 4.0),
             // The roof ridge and apex points.
-            [0.0, -0.4, 4.6],
-            [0.0, 0.4, 4.6],
-            [-0.25, 0.0, 4.3],
-            [0.25, 0.0, 4.3],
+            Point::xyz(0.0, -0.4, 4.6),
+            Point::xyz(0.0, 0.4, 4.6),
+            Point::xyz(-0.25, 0.0, 4.3),
+            Point::xyz(0.25, 0.0, 4.3),
         ];
         // Ground markers on a 4 x 3 grid.
         for j in 0..3 {
             for i in 0..4 {
-                v.push([-0.8 + 1.6 * i as f64 / 3.0, -0.6 + 0.6 * j as f64, 2.5]);
+                v.push(Point::xyz(
+                    -0.8 + 1.6 * f64::from(i) / 3.0,
+                    -0.6 + 0.6 * f64::from(j),
+                    2.5,
+                ));
             }
         }
-        v.into_iter().map(|[x, y, z]| Point::xyz(x, y, z)).collect()
+        v
     }
 
-    /// The second camera's true pose: turned 14 degrees about `y`, moved along
-    /// `(0.65, 0.08, 0.18)`; and the translation alone, the starting guess.
+    /// The second camera's true pose: turned 14 degrees about `y` towards the house, moved
+    /// along `(0.65, 0.08, 0.18)`; and the translation alone, the starting guess.
     pub fn true_motors() -> (M, M) {
-        let theta = 14f64.to_radians();
-        let rotation = twist(theta * 0.5, 0.0, 0.0, 0.0).exp();
-        let translation = twist(0.0, 0.65, 0.08, 0.18).gp(0.5).exp();
-        ((translation * rotation).normalized(), translation)
+        let rotation = Motor::rotation_about(0.0, 1.0, 0.0, -14f64.to_radians());
+        let translation = Motor::translation(0.65, 0.08, 0.18);
+        (translation * rotation, translation)
     }
 
     /// The image of each point on the screen, at unit weight.
@@ -120,16 +129,10 @@ mod epipolar {
 
     /// The world points implied by the rays at a motor. `ray & Point` is the plane through a
     /// ray and an unknown point, and its square, by the metric, the point's squared distance
-    /// from the ray; the two quadrics summed are least at the reconstructed point.
-    ///
-    /// numga takes the least finite mode of the generalized eigenproblem against the point
-    /// metric, which measures only the weight. gax's `eigh_with` needs a positive definite
-    /// metric, so the same point comes from a pairing solve instead: the sum plus the gauge
-    /// dyad on the weight, solved against the weight's own form, is stationary at the least
-    /// point of unit weight (its Lagrange condition), and is regular even when the rays meet.
+    /// from the ray; the two quadrics summed are least at the reconstructed point: the least
+    /// finite mode against the point weight, which does not measure directions, as in numga.
     pub fn triangulate(rays_1: &[L], rays_2: &[L], motor: M) -> Vec<P> {
-        let w: Plane<(), f64> = Plane::new(0.0, 0.0, 0.0, 1.0);
-        let weight = w & Point::slot();
+        let weight = Plane::new(0.0, 0.0, 0.0, 1.0) & Point::slot();
         rays_1
             .iter()
             .zip(rays_2)
@@ -138,9 +141,8 @@ mod epipolar {
                 let b = (motor >> *r2) & Point::slot();
                 // The metric square of each plane form (`a | a`, written as a method call: clippy's
                 // `eq_op` rejects an operator with equal operands).
-                let quadric = a.dot(a) + b.dot(b) + weight * weight;
-                let p: P = quadric.solve(weight);
-                p.unitized()
+                let (_, modes) = (a.dot(a) + b.dot(b)).eigh_semidefinite(weight * weight);
+                modes[0].unitized()
             })
             .collect()
     }
@@ -162,15 +164,10 @@ mod epipolar {
         rays_1.iter().map(|r| line_camera.of(motor << *r)).collect()
     }
 
-    /// The screen points of a screen line at `x = -half` and `x = half`.
-    pub fn ends(line: L, half: f64) -> [[f64; 2]; 2] {
-        [-half, half].map(|x| {
-            let [px, py, _] = (line ^ Plane::new(1.0, 0.0, 0.0, -x)).to_euclidean();
-            [px, py]
-        })
+    /// The points of a screen line at `x = -half` and `x = half`.
+    pub fn ends(line: L, half: f64) -> [P; 2] {
+        [-half, half].map(|x| line ^ Plane::from_normal([1.0, 0.0, 0.0], x))
     }
-
-    pub use gax_numga_examples::rng::Rng;
 
     /// The scene, its noisy images and the recovery.
     pub struct Scene {
@@ -195,7 +192,7 @@ mod epipolar {
         let image_1 = image(&landmarks);
         let moved: Vec<P> = landmarks.iter().map(|p| true_motor << *p).collect();
         let image_2 = image(&moved);
-        let mut rng = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ 0x2545_F491_4F6C_DD1D);
+        let mut rng = rng(seed);
         let mut jitter = |ps: &[P]| -> Vec<P> {
             ps.iter()
                 .map(|p| *p + Point::direction(noise * rng.normal(), noise * rng.normal(), 0.0))
@@ -220,8 +217,8 @@ mod epipolar {
     /// The smallest cosine between the true and recovered images of the coordinate planes.
     pub fn turned(est: M, truth: M) -> f64 {
         [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-            .map(|[a, b, c]| {
-                let plane = Plane::new(a, b, c, 0.0);
+            .map(|n| {
+                let plane = Plane::from_normal(n, 0.0);
                 let x = (est >> plane).normalized().into_inner();
                 let y = (truth >> plane).normalized().into_inner();
                 (x | y).s()
@@ -241,6 +238,11 @@ mod epipolar {
         -(a.normalized().into_inner() | b.normalized().into_inner()).s()
     }
 
+    /// A unit point scaled about camera 1 by `scale`.
+    pub fn scaled(p: P, scale: f64) -> P {
+        origin() + (p - origin()).gp(scale)
+    }
+
     /// The RMS distance of the reconstruction from the landmarks, scaled about camera 1 to the
     /// true baseline. The difference of two unit points is a direction; its length is its ideal
     /// norm.
@@ -250,10 +252,7 @@ mod epipolar {
         let sum: f64 = points
             .iter()
             .zip(&scene.landmarks)
-            .map(|(p, l)| {
-                let d = (p.gp(scale) + origin().gp(1.0 - scale)) - *l;
-                d.ideal_norm().powi(2)
-            })
+            .map(|(p, l)| (scaled(*p, scale) - *l).ideal_norm_squared())
             .sum();
         (sum / points.len() as f64).sqrt()
     }
@@ -267,8 +266,8 @@ const SHOWN: usize = 5;
 const HOLD: f32 = 3.5;
 
 /// The scenario's noise and seed. numga's checks (half a degree, two degrees, 10 cm) hold for
-/// its stream at seed 42 but not for every stream: over seeds of this generator the rotation
-/// error ranges from 0.05 to 1.5 degrees. Seed 4 is one that meets numga's checks; the test
+/// its stream at seed 42 but not for every stream: over seeds the rotation error ranges from
+/// 0.1 to 2 degrees. Seed 4 is one that meets numga's checks; the test
 /// `the_checks_hold_loosely_for_any_seed` bounds the spread over many seeds.
 const NOISE: f64 = 0.0015;
 const SEED: u64 = 4;
@@ -278,19 +277,10 @@ fn scene() -> &'static Scene {
     SCENE.get_or_init(|| epipolar(NOISE, SEED))
 }
 
-fn f3(p: P) -> [f32; 3] {
-    p.to_euclidean().map(|v| v as f32)
-}
-
-fn f2(p: P) -> [f32; 2] {
-    let [x, y, _] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
 /// A camera's wireframe: its centre, sensor rectangle and optical axis, moved by its pose.
 fn frustum(s: &mut Scene3, pose: M, size: f64, color: Rgb, width: f32) {
     let (w, h) = (0.5 * size, 0.38 * size);
-    let at = |x: f64, y: f64, z: f64| f3(pose >> Point::xyz(x, y, z));
+    let at = |x: f64, y: f64, z: f64| pose >> Point::xyz(x, y, z);
     let corners = [
         at(-w, -h, size),
         at(w, -h, size),
@@ -308,26 +298,27 @@ fn frustum(s: &mut Scene3, pose: M, size: f64, color: Rgb, width: f32) {
 
 /// A camera's sensor: the true projections and the measured keypoints, and optionally the
 /// epipolar lines.
-fn sensor(c: &mut Canvas, rect: [f32; 4], title: &str, truth: &[P], measured: &[P], lines: &[L]) {
+fn sensor_panel(
+    c: &mut Canvas,
+    rect: [f32; 4],
+    title: &str,
+    truth: &[P],
+    measured: &[P],
+    lines: &[L],
+) {
     let ax = Axes::new(rect, [-0.6, 0.6], [-0.45, 0.45]);
     ax.frame(c, title, "SENSOR U", "SENSOR V");
+    let on_sensor = sensor();
     let n = measured.len();
     let colour = |i: usize| colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
     for (i, l) in lines.iter().enumerate() {
-        let [a, b] = ends(*l, 0.7);
-        ax.line(
-            c,
-            [a[0] as f32, a[1] as f32],
-            [b[0] as f32, b[1] as f32],
-            1.0,
-            colour(i),
-            0.45,
-        );
+        let [a, b] = ends(*l, 0.7).map(|p| on_sensor.of(p));
+        ax.line(c, a, b, 1.0, colour(i), 0.45);
     }
-    let pts: Vec<[f32; 2]> = truth.iter().map(|p| f2(*p)).collect();
+    let pts: Vec<pga2d::Point<(), f64>> = truth.iter().map(|p| on_sensor.of(*p)).collect();
     ax.scatter(c, &pts, Marker::Ring, 7.0, palette::grid(), 1.0);
     for (i, p) in measured.iter().enumerate() {
-        ax.scatter(c, &[f2(*p)], Marker::Dot, 5.0, colour(i), 1.0);
+        ax.scatter(c, &[on_sensor.of(*p)], Marker::Dot, 5.0, colour(i), 1.0);
     }
 }
 
@@ -345,7 +336,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The sensors, left.
     let top = 70.0;
     let panel = (h - top) / 2.0;
-    sensor(
+    sensor_panel(
         c,
         plot::inset([0.0, top, w * 0.36, top + panel], 46.0, 18.0, 10.0, 30.0),
         "CAMERA 1",
@@ -353,7 +344,7 @@ fn draw(c: &mut Canvas, t: f32) {
         &s.noisy_1,
         &[],
     );
-    sensor(
+    sensor_panel(
         c,
         plot::inset([0.0, top + panel, w * 0.36, h], 46.0, 18.0, 10.0, 30.0),
         "CAMERA 2, EPIPOLAR LINES",
@@ -383,28 +374,32 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut scene = Scene3::new(cam);
     let points = triangulate(&s.rays_1, &s.rays_2, motor);
     let n = points.len();
+    let centre_2 = motor >> origin();
     for (i, (p, l)) in points.iter().zip(&s.landmarks).enumerate() {
         let colour = colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
-        scene.dot(f3(*l), Marker::Ring, 10.0, palette::grid());
-        scene.dot(f3(*p), Marker::Star, 12.0, colour);
+        scene.dot(*l, Marker::Ring, 10.0, palette::grid());
+        scene.dot(*p, Marker::Star, 12.0, colour);
         if i % 5 == 0 {
-            scene.seg(f3(origin()), f3(*p), 0.8, palette::sky(), 0.4);
-            scene.seg(f3(motor >> origin()), f3(*p), 0.8, palette::green(), 0.4);
+            scene.seg(origin(), *p, 0.8, palette::sky(), 0.4);
+            scene.seg(centre_2, *p, 0.8, palette::green(), 0.4);
         }
     }
-    let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0);
-    frustum(&mut scene, identity, 0.4, palette::sky(), 1.6);
+    frustum(
+        &mut scene,
+        Motor::translation(0.0, 0.0, 0.0),
+        0.4,
+        palette::sky(),
+        1.6,
+    );
     frustum(&mut scene, s.true_motor, 0.4, palette::grid(), 1.2);
     frustum(&mut scene, motor, 0.4, palette::green(), 1.8);
     scene.draw(&mut sub);
+    let degrees = |cosine: f64| cosine.min(1.0).acos().to_degrees();
     sub.text(
         &format!(
             "STEP {step}: ROTATION OFF {:.2} DEG, BASELINE OFF {:.2} DEG, RMS {:.3} M",
-            (turned(motor, s.true_motor).min(1.0)).acos().to_degrees(),
-            baseline_cosine(motor, s.true_motor)
-                .min(1.0)
-                .acos()
-                .to_degrees(),
+            degrees(turned(motor, s.true_motor)),
+            degrees(baseline_cosine(motor, s.true_motor)),
             rms_error(s, motor)
         ),
         10.0,
@@ -438,6 +433,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::epipolar::*;
+    use gax::ApproxEq;
+    use gax::pga3d::Line;
 
     /// Without noise, the relative pose and the world points are recovered exactly, up to the
     /// baseline's scale.
@@ -446,19 +443,33 @@ mod tests {
         let s = epipolar(0.0, 1);
         let est = *s.motors.last().expect("a motor");
         assert!((turned(est, s.true_motor) - 1.0).abs() < 1e-6);
-        let c_true = (s.true_motor >> origin()).to_euclidean();
-        let c_est = (est >> origin()).to_euclidean();
-        let norm = |v: [f64; 3]| (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-        let scale = norm(c_true) / norm(c_est);
-        for (a, b) in c_est.iter().zip(c_true) {
-            assert!((a * scale - b).abs() < 1e-4, "{c_est:?} {c_true:?}");
-        }
+        let c_true = s.true_motor >> origin();
+        let c_est = est >> origin();
+        let scale = (c_true - origin()).ideal_norm() / (c_est - origin()).ideal_norm();
+        let d = scaled(c_est, scale).max_abs_diff(&c_true);
+        assert!(d < 1e-4, "{c_est:?} {c_true:?}");
         let points = triangulate(&s.rays_1, &s.rays_2, est);
         for (p, l) in points.iter().zip(&s.landmarks) {
-            for (a, b) in p.to_euclidean().iter().zip(l.to_euclidean()) {
-                assert!((a * scale - b).abs() < 1e-2);
-            }
+            assert!(scaled(*p, scale).max_abs_diff(l) < 1e-2);
         }
+    }
+
+    /// The true pose is numga's: a turn by 14 degrees as numga's twist `zx` and the translation
+    /// `(0.65, 0.08, 0.18)` as its twists `xw`, `yw`, `zw` (gax `Line` coefficients
+    /// `[e23, e31, e12, e01, e02, e03]`, `zx = e31`, `xw = -e01`).
+    #[test]
+    fn the_true_pose_is_numgas() {
+        let theta = 14f64.to_radians();
+        let rotation = Line::new(0.0, theta * 0.5, 0.0, 0.0, 0.0, 0.0).exp();
+        let translation = Line::new(0.0, 0.0, 0.0, -0.65, -0.08, -0.18).gp(0.5).exp();
+        let (truth, start) = true_motors();
+        let numga = (translation * rotation).into_inner();
+        assert!(truth.into_inner().approx_eq(&numga, 1e-15));
+        assert!(
+            start
+                .into_inner()
+                .approx_eq(&translation.into_inner(), 1e-15)
+        );
     }
 
     /// The scenario's checks: the noise limits the recovery to half a degree of rotation, two

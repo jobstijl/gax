@@ -9,6 +9,12 @@ use gax::pga2d::Point;
 /// A colour in linear light, each channel in `[0, 1]`.
 pub type Rgb = [f32; 3];
 
+/// A colour from a hex code `0xRRGGBB` in sRGB.
+pub fn hex(c: u32) -> Rgb {
+    let b = |s: u32| ((c >> s) & 0xff) as f32 / 255.0;
+    srgb(b(16), b(8), b(0))
+}
+
 /// A colour from sRGB components in `[0, 1]` (as colour pickers give them).
 pub fn srgb(r: f32, g: f32, b: f32) -> Rgb {
     let lin = |c: f32| {

@@ -60,6 +60,7 @@ gax::algebra! {
 
 mod decomposition {
     use super::{p6, r6};
+    use gax_numga_examples::rng::{Draw, rng};
     use r6::{Bivector, Even, Pseudoscalar, Quadvector, Scalar, ScalarQuadvector, Vector};
 
     pub type B = Bivector<(), f64>;
@@ -205,10 +206,6 @@ mod decomposition {
         roots
     }
 
-    /// A small xorshift stream of standard normal numbers (numga's generator cannot be
-    /// reproduced).
-    pub use gax_numga_examples::rng::Rng;
-
     /// The example: a random bivector and unit start, the planes by both ways, the times of
     /// one turn of the slowest plane, and a random motion of the projective algebra.
     pub struct Example {
@@ -222,10 +219,9 @@ mod decomposition {
     }
 
     pub fn example(seed: u64) -> Example {
-        let mut rng = Rng::new(seed);
+        let mut rng = rng(seed);
         let bivector = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
-        let start = V::from_coeffs(core::array::from_fn(|_| rng.normal()));
-        let start = start.gp(1.0 / start.norm());
+        let start = V::from_coeffs(rng.direction());
         let (squares, parts) = from_spectrum(bivector);
         let wedge = from_wedge_powers(bivector);
         let slowest = squares.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -244,6 +240,13 @@ mod decomposition {
 }
 
 use decomposition::*;
+use gax::ApproxEq;
+use gax::motions::Linear;
+
+/// The largest coefficient of a value: its difference from zero.
+fn size<X: Linear<f64> + ApproxEq>(x: X) -> f64 {
+    x.max_abs_diff(&X::zero())
+}
 
 const SECONDS: f32 = 12.0;
 const SEED: u64 = 0;
@@ -255,7 +258,7 @@ fn plane_colour(k: usize) -> Rgb {
 
 /// The orbit at the sample times, and its projections into each plane as 2D coordinates: along
 /// the direction of the first projected point, and a quarter turn on from it.
-fn tracks(ex: &Example) -> (Vec<V>, [Vec<[f32; 2]>; 3]) {
+fn tracks(ex: &Example) -> (Vec<V>, [Vec<[f64; 2]>; 3]) {
     let points: Vec<V> = (0..SAMPLES)
         .map(|k| {
             let time = ex.period * k as f64 / (SAMPLES - 1) as f64;
@@ -264,14 +267,13 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<[f32; 2]>; 3]) {
         .collect();
     let first = projected(points[0], ex.parts);
     let flat = core::array::from_fn(|k| {
-        let across = first[k].gp(1.0 / first[k].norm());
-        let along = across | ex.parts[k];
-        let along = along.gp(1.0 / along.norm());
+        let across = first[k].normalized().into_inner();
+        let along = (across | ex.parts[k]).normalized().into_inner();
         points
             .iter()
             .map(|p| {
                 let q = projected(*p, ex.parts)[k];
-                [(q | across).s() as f32, (q | along).s() as f32]
+                [(q | across).s(), (q | along).s()]
             })
             .collect()
     });
@@ -290,17 +292,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = Camera::orbit(
         wide,
         c.height,
-        [0.0; 3],
+        [0.0f32; 3],
         6.5,
         -0.9 + core::f32::consts::TAU * t / SECONDS,
         0.45,
         Lens::Perspective(0.42),
     );
     let mut scene = Scene3::new(cam);
-    let path: Vec<[f32; 3]> = points
-        .iter()
-        .map(|p| [p.c[0] as f32, p.c[1] as f32, p.c[2] as f32])
-        .collect();
+    let path: Vec<[f64; 3]> = points.iter().map(|p| [p.c[0], p.c[1], p.c[2]]).collect();
     scene.polyline(&path, 0.8, palette::grid(), 0.9);
     scene.polyline(&path[..=index], 1.6, palette::purple(), 1.0);
     scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
@@ -324,10 +323,10 @@ fn draw(c: &mut Canvas, t: f32) {
             4.0,
             4.0,
         );
-        let extent = track
+        let extent = (track
             .iter()
-            .fold(0.0f32, |m, p| m.max(p[0].abs()).max(p[1].abs()))
-            * 1.2;
+            .fold(0.0f64, |m, p| m.max(p[0].abs()).max(p[1].abs()))
+            * 1.2) as f32;
         let ax = Axes::equal(rect, [0.0, 0.0], extent);
         ax.polyline(c, track, 0.9, palette::grid(), 1.0);
         ax.polyline(c, &track[..=index], 1.8, plane_colour(k), 1.0);
@@ -359,23 +358,19 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The checks, live: both ways agree, the rotors make up the exponential, and the motion of
     // the projective algebra is three placed planes.
-    let max_abs = |c: &[f64]| c.iter().fold(0.0f64, |m, v| m.max(v.abs()));
     let ways = (0..3)
-        .map(|k| max_abs(&(ex.wedge.1[k] - ex.parts[k]).c))
+        .map(|k| ex.wedge.1[k].max_abs_diff(&ex.parts[k]))
         .fold(0.0, f64::max);
     let exp = ex.bivector.gp(0.5).exp().into_inner();
-    let product = max_abs(&(rotor(ex.squares, ex.parts, 1.0) - exp).c);
+    let product = rotor(ex.squares, ex.parts, 1.0).max_abs_diff(&exp);
     let (planes, leftover) = placed(ex.motion);
-    let simple = planes
-        .iter()
-        .map(|p| max_abs(&p.wedge(*p).c))
-        .fold(0.0, f64::max);
+    let simple = planes.iter().map(|p| size(p.wedge(*p))).fold(0.0, f64::max);
     let lines = [
         format!("WEDGE POWERS AGAINST SPECTRUM: {ways:.0E}"),
         format!("PRODUCT OF PLANE ROTORS AGAINST EXP(B/2): {product:.0E}"),
         format!(
             "R(6,0,1) MOTION LESS ITS THREE PLACED PLANES: {:.0E}",
-            max_abs(&leftover.c)
+            size(leftover)
         ),
         format!("PLACED PLANES SIMPLE, P ^ P: {simple:.0E}"),
     ];
@@ -406,11 +401,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::decomposition::*;
-    use super::{p6, r6};
-
-    fn max_abs(c: &[f64]) -> f64 {
-        c.iter().fold(0.0f64, |m, v| m.max(v.abs()))
-    }
+    use super::{p6, r6, size};
+    use gax::ApproxEq;
 
     /// numga's checks in `main`, on the test's seed: the planes sum to the bivector, commute,
     /// and each squares to a scalar; the two ways give the same squares and the same planes.
@@ -421,17 +413,14 @@ mod tests {
         let ex = example(1);
         let (squares, parts) = (ex.squares, ex.parts);
         let sum = parts[0] + parts[1] + parts[2];
-        assert!(
-            max_abs(&(sum - ex.bivector).c) < 1e-11,
-            "{:?}",
-            sum - ex.bivector
-        );
+        assert!(sum.max_abs_diff(&ex.bivector) < 1e-11, "{sum:?}");
         for a in &parts {
             for b in &parts {
-                assert!(max_abs(&a.commutator(*b).c) < 1e-11);
+                assert!(size(a.commutator(*b)) < 1e-11);
             }
+            // A single plane squares to a scalar.
             let square = *a * *a;
-            assert!(max_abs(&square.c[1..]) < 1e-10);
+            assert!(square.max_abs_diff(&square.grade::<0>().cast::<r6::Even>()) < 1e-10);
         }
         let (wedge_squares, wedge_parts) = ex.wedge;
         for k in 0..3 {
@@ -439,10 +428,10 @@ mod tests {
                 (wedge_squares[k] - squares[k]).abs() < 1e-11,
                 "{wedge_squares:?} {squares:?}"
             );
-            assert!(max_abs(&(wedge_parts[k] - parts[k]).c) < 1e-11);
+            assert!(wedge_parts[k].max_abs_diff(&parts[k]) < 1e-11);
         }
         let exp = ex.bivector.gp(0.5).exp().into_inner();
-        assert!(max_abs(&(rotor(squares, parts, 1.0) - exp).c) < 1e-6);
+        assert!(rotor(squares, parts, 1.0).max_abs_diff(&exp) < 1e-6);
         let first = projected(ex.start, parts);
         for k in 0..60 {
             let time = ex.period * k as f64 / 59.0;
@@ -460,9 +449,9 @@ mod tests {
         let b = example(2).bivector;
         let value = (b ^ b).gp(0.5).cast::<r6::ScalarQuadvector>()
             + r6::Scalar::<(), f64>::from_coeffs([0.7]).cast::<r6::ScalarQuadvector>();
-        let one = value * inverse(value);
-        assert!((one.s() - 1.0).abs() < 1e-12);
-        assert!(max_abs(&one.c[1..]) < 1e-12);
+        let one = (value * inverse(value)).cast::<r6::ScalarQuadvector>();
+        let unit = r6::Scalar::<(), f64>::from_coeffs([1.0]).cast::<r6::ScalarQuadvector>();
+        assert!(one.max_abs_diff(&unit) < 1e-12);
     }
 
     /// numga's checks on the motion: the placed planes are simple and commute with one
@@ -472,13 +461,12 @@ mod tests {
         let ex = example(1);
         let (planes, leftover) = placed(ex.motion);
         for a in &planes {
-            let b = *a;
-            assert!(max_abs(&(*a ^ b).c) < 1e-11, "{:?}", *a ^ b);
+            assert!(size(a.wedge(*a)) < 1e-11, "{:?}", a.wedge(*a));
             for c in &planes {
-                assert!(max_abs(&a.commutator(*c).c) < 1e-11);
+                assert!(size(a.commutator(*c)) < 1e-11);
             }
         }
-        assert!(max_abs(&leftover.c) < 1e-10, "{leftover:?}");
+        assert!(size(leftover) < 1e-10, "{leftover:?}");
         let _: p6::Bivector<(), f64> = leftover;
     }
 

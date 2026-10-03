@@ -17,6 +17,7 @@
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
 use gax_numga_examples::canvas::mix;
+use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{Anim, Axes, Canvas, Marker, backdrop, caption, palette, plot, run};
 
 mod kalman {
@@ -26,8 +27,6 @@ mod kalman {
     pub type M = Unit<Motor<(), f64>>;
     /// A covariance: each readout line to the twist correlated with it.
     pub type Covariance = Point<(Line,), f64>;
-
-    pub use gax_numga_examples::rng::Rng;
 
     /// One state of the filter: after a prediction step, or after an update at a reading.
     #[derive(Clone, Copy, Debug)]
@@ -101,18 +100,25 @@ mod kalman {
     /// The estimated position and its principal variances and axes (unit vectors), ascending.
     /// The offset of a readout line has no variance, so the form is read on the lines through
     /// the origin (VGA2D's vectors), where the line metric is the Euclidean one.
-    pub fn position_ellipse(estimate: M, sigma: Covariance) -> (P, [f64; 2], [[f64; 2]; 2]) {
+    pub fn position_ellipse(
+        estimate: M,
+        sigma: Covariance,
+    ) -> (P, [f64; 2], [vga2d::Vector<(), f64>; 2]) {
         let through: Line<(vga2d::Vector,), f64> = Line::from(vga2d::Vector::slot());
         let form = position_form(estimate, sigma)
             .of(through)
             .at::<1>()
             .of(through);
         let (variances, axes) = form.eigh();
-        (
-            estimate >> origin(),
-            variances,
-            axes.map(|a| [a.e1(), a.e2()]),
-        )
+        (estimate >> origin(), variances, axes)
+    }
+
+    /// The 2σ position ellipse of a state, as a ring of `n` points: the unit circle, turned out
+    /// step by step, through the map that stretches each axis to twice its deviation (a sum of
+    /// dyads), about the estimate.
+    pub fn ellipse(state: &State, n: usize) -> Vec<P> {
+        let (centre, variances, axes) = position_ellipse(state.estimate, state.sigma);
+        gax_numga_examples::plot::ellipse(centre, variances, axes, n)
     }
 
     /// Body-frame noise: isotropic translation, and rotation about the body origin.
@@ -190,10 +196,13 @@ mod kalman {
         }
     }
 
+    /// The seed of the scene's noise.
+    pub const SEED: u64 = 1;
+
     /// Drive at 1 m/s along the body's x axis while the turn rate wanders, so that the path
-    /// meanders; read the pose every 25 steps.
-    pub fn tracking() -> Tracking {
-        let mut rng = Rng(0x0ca1_3a02);
+    /// meanders; read the pose every 25 steps. The noise is drawn from `seed`.
+    pub fn tracking(seed: u64) -> Tracking {
+        let mut rng = rng(seed);
         let increments: Vec<Vec<P>> = (0..READINGS)
             .map(|r| {
                 (0..STEPS_PER_READING)
@@ -240,77 +249,50 @@ mod kalman {
 
 use kalman::*;
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
-/// The 2σ ellipse of a state.
-fn ellipse(state: &State) -> Vec<[f32; 2]> {
-    let (centre, values, axes) = position_ellipse(state.estimate, state.sigma);
-    let c = xy(centre);
-    (0..=40)
-        .map(|k| {
-            let a = core::f64::consts::TAU * k as f64 / 40.0;
-            let (u, v) = (
-                2.0 * values[0].max(0.0).sqrt() * a.cos(),
-                2.0 * values[1].max(0.0).sqrt() * a.sin(),
-            );
-            [
-                c[0] + (u * axes[0][0] + v * axes[1][0]) as f32,
-                c[1] + (u * axes[0][1] + v * axes[1][1]) as f32,
-            ]
-        })
-        .collect()
-}
-
 const SECONDS: f32 = 12.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (w, h) = (c.width as f32, c.height as f32);
-    let scene = tracking();
+    let scene = tracking(SEED);
     let n = scene.truth.len();
     // The cursor runs over the drive in the first 85% of the loop, then holds.
     let shown = (((t / SECONDS) / 0.85).min(1.0) * n as f32).ceil().max(1.0) as usize;
-    let path = |ms: &[M]| -> Vec<[f32; 2]> { ms.iter().map(|m| xy(*m >> origin())).collect() };
+    let path = |ms: &[M]| -> Vec<P> { ms.iter().map(|m| *m >> origin()).collect() };
     let (truth, dead) = (path(&scene.truth), path(&scene.dead));
-    let filtered: Vec<[f32; 2]> = scene
+    let filtered: Vec<P> = scene
         .states
         .iter()
-        .map(|s| xy(s.estimate >> origin()))
+        .map(|s| s.estimate >> origin())
         .collect();
     // The axes hold every path at every time.
     let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
     for p in truth.iter().chain(&dead).chain(&filtered) {
-        for i in 0..2 {
-            lo[i] = lo[i].min(p[i]);
-            hi[i] = hi[i].max(p[i]);
+        for (i, v) in p.to_euclidean().into_iter().enumerate() {
+            lo[i] = lo[i].min(v as f32);
+            hi[i] = hi[i].max(v as f32);
         }
     }
-    let left = plot::inset([0.0, 0.0, w * 0.58, h], 50.0, 80.0, 16.0, 46.0);
+    let left = plot::inset([0.0, 0.0, w * 0.58, h], 50.0, 104.0, 16.0, 46.0);
     let half = ((hi[1] - lo[1]) * 0.5)
         .max((hi[0] - lo[0]) * 0.5 * (left[3] - left[1]) / (left[2] - left[0]))
         * 1.12;
     let ax = Axes::equal(left, [(lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5], half);
-    ax.frame(c, "PATHS, WITH THE 2 SIGMA POSITION ELLIPSE", "X", "Y");
+    ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "X", "Y");
     // The states up to the cursor: a prediction per step, plus an update at each reading.
     let readings_seen = shown / STEPS_PER_READING;
     let states_seen = shown + readings_seen;
     for s in scene.states[..states_seen].iter().filter(|s| s.updated) {
-        ax.polyline(c, &ellipse(s), 1.0, palette::sky(), 0.6);
+        ax.polyline(c, &ellipse(s, 40), 1.0, palette::sky(), 0.6);
     }
     ax.polyline(c, &dead[..shown], 1.3, palette::red(), 0.9);
     ax.polyline(c, &truth[..shown], 2.0, palette::ink(), 1.0);
     ax.polyline(c, &filtered[..states_seen], 1.3, palette::sky(), 1.0);
-    let measured: Vec<[f32; 2]> = scene.measurements[..readings_seen]
-        .iter()
-        .map(|m| xy(*m >> origin()))
-        .collect();
+    let measured = path(&scene.measurements[..readings_seen]);
     ax.scatter(c, &measured, Marker::Cross, 8.0, palette::green(), 0.8);
     // The live ellipse at the cursor.
     let now = &scene.states[states_seen - 1];
-    ax.polyline(c, &ellipse(now), 2.0, palette::yellow(), 1.0);
+    ax.polyline(c, &ellipse(now, 40), 2.0, palette::yellow(), 1.0);
     ax.scatter(
         c,
         &[filtered[states_seen - 1]],
@@ -339,9 +321,9 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|k| (k * STEPS_PER_READING) as f32 * DT as f32)
         .collect();
     let top = dead_err.iter().fold(0.0f64, |m, v| m.max(*v)) as f32 * 1.1;
-    let right = plot::inset([w * 0.58, 0.0, w, h], 50.0, 80.0, 16.0, 46.0);
+    let right = plot::inset([w * 0.58, 0.0, w, h], 50.0, 104.0, 16.0, 46.0);
     let ex = Axes::new(right, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
-    ex.frame(c, "POSITION ERROR AT THE READINGS", "TIME", "ERROR");
+    ex.frame(c, "ERROR AT THE READINGS", "TIME", "ERROR");
     let series = |v: &[f64]| -> Vec<[f32; 2]> {
         times
             .iter()
@@ -384,7 +366,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     caption(
         c,
-        "KALMAN FILTER ON MOTORS: THE COVARIANCE IS A MAP, LINE TO TWIST",
+        "KALMAN FILTER ON MOTORS: COVARIANCE, LINE TO TWIST",
         "PREDICT BY CONJUGATING THE MAP, UPDATE BY ITS INVERSE (PGA2D)",
     );
 }
@@ -396,20 +378,27 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::kalman::*;
+    use gax::ApproxEq;
     use gax::pga2d::Line;
 
     /// numga's test: sparse noisy pose readings keep the filtered path far closer to the truth
-    /// than the dead-reckoned one.
+    /// than the dead-reckoned one, and closer than the readings themselves. Pooled over a
+    /// number of draws, as the dead reckoning's drift varies much from one draw to the next.
     #[test]
-    fn filter_beats_dead_reckoning() {
-        let (dead, filtered) = tracking().errors();
-        let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len() as f64;
-        assert!(
-            mean(&filtered) < 0.25 * mean(&dead),
-            "{} vs {}",
-            mean(&filtered),
-            mean(&dead)
-        );
+    fn filter_beats_dead_reckoning_and_the_readings() {
+        let (mut dead, mut filtered, mut read) = (0.0, 0.0, 0.0);
+        for seed in 0..16 {
+            let scene = tracking(seed);
+            let (d, f) = scene.errors();
+            dead += d.iter().sum::<f64>();
+            filtered += f.iter().sum::<f64>();
+            for (k, m) in scene.measurements.iter().enumerate() {
+                let truth = scene.truth[(k + 1) * STEPS_PER_READING - 1] >> origin();
+                read += (truth & (*m >> origin())).norm();
+            }
+        }
+        assert!(filtered < 0.25 * dead, "{filtered} vs {dead}");
+        assert!(filtered < read, "{filtered} vs {read}");
     }
 
     /// The covariance is symmetric as a form on readouts, and stays so through prediction and
@@ -417,20 +406,41 @@ mod tests {
     /// may be read on the lines through the origin.
     #[test]
     fn covariances_stay_symmetric_and_offsets_carry_no_variance() {
-        let scene = tracking();
+        let scene = tracking(SEED);
         for s in &scene.states {
             let form = Line::slot() & s.sigma;
-            for i in 0..3 {
-                for j in 0..3 {
-                    let (a, b) = (form.c[0][i][j], form.c[0][j][i]);
-                    assert!((a - b).abs() < 1e-9 * (1.0 + a.abs()), "{form:?}");
-                }
-            }
+            assert!(form.approx_eq(&form.swap(), 1e-9), "{form:?}");
             let offset = Line::new(0.0, 0.0, 1.0);
-            let p = position_form(s.estimate, s.sigma);
-            assert!(p.of(offset).c[0].iter().all(|v| v.abs() < 1e-12));
+            let p = position_form(s.estimate, s.sigma).of(offset);
+            assert!(p.max_abs_diff(&gax::pga2d::Scalar::zero()) < 1e-12);
             let (_, values, _) = position_ellipse(s.estimate, s.sigma);
             assert!(values[0] >= -1e-12 && values[0] <= values[1]);
+        }
+    }
+
+    /// The drawn ellipse reaches across each line through the estimate as far as twice the
+    /// deviation of the position's reading by that line (its support function).
+    #[test]
+    fn the_ellipse_is_two_sigma_along_every_line() {
+        let scene = tracking(SEED);
+        for s in scene.states.iter().step_by(37) {
+            let ring = ellipse(s, 720);
+            let here = s.estimate >> origin();
+            let form = position_form(s.estimate, s.sigma);
+            for k in 0..12 {
+                let turn = gax::pga2d::Motor::rotation(here, 0.5 * k as f64);
+                // A unit line through the estimate, and the same direction through the origin
+                // (the form reads no offset).
+                let line = turn >> (here & (here + gax::pga2d::Point::direction(0.0, 1.0)));
+                let reach = ring
+                    .iter()
+                    .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));
+                let sigma = form.of(line).of(line).s().sqrt();
+                assert!(
+                    (reach - 2.0 * sigma).abs() < 1e-4 * sigma,
+                    "{reach} {sigma}"
+                );
+            }
         }
     }
 

@@ -3,8 +3,8 @@
 //! with pose `exp(-error / 2)`; the thrusters' total force and torque is a forque (a line).
 //! Strong drag makes a push a velocity, so one step adds the mobility of the push to the error.
 //! A cost is a scalar with two open twist slots, and filling both with maps pulls it back through
-//! them: `value(dynamics, actuation)` is the future cost seen from the present error and push,
-//! with no transposes. The Riccati recursion pulls the future cost back one step at a time and
+//! them: `value.of_both(dynamics, actuation)` is the future cost seen from the present error and
+//! push, with no transposes. The Riccati recursion pulls the future cost back one step at a time and
 //! minimizes over the push; its solve returns a feedback map from twists to forques. The
 //! animation docks the vessel with a cheap and an expensive effort, the thrusters' commands as
 //! arrows, and the level set of the remaining cost (heading zero) shrinking to the dock as the
@@ -13,7 +13,7 @@
 use gax::Unit;
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, backdrop, canvas, caption, f32s, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -33,15 +33,6 @@ mod riccati {
     /// `Forque <- Twist`.
     pub type Feedback = Line<(Point,), f64>;
 
-    /// A two-slot form pulled back through a map in each slot: numga's `form(a, b)`. gax's `of`
-    /// fills the first slot only, so the second is brought to the front, filled, and the slots
-    /// put back in order. (Values fill both slots with `form.of(a).of(b)`.)
-    macro_rules! pull {
-        ($form:expr, $a:expr, $b:expr) => {
-            $form.of($a).at::<1>().of($b).swap()
-        };
-    }
-
     /// The cost still to pay and the feedback, one more step back from `value` each time.
     pub fn riccati(
         mut value: StateCost,
@@ -54,13 +45,13 @@ mod riccati {
         (0..steps)
             .map(|_| {
                 // A push costs effort now and moves the error whose cost is paid next.
-                let control_cost: EffortCost = effort_cost + pull!(value, actuation, actuation);
+                let control_cost: EffortCost = effort_cost + value.of_both(actuation, actuation);
                 // The push that cancels the cost's derivative, for every error at once.
-                let cross: Scalar<(Point, Line), f64> = pull!(value, dynamics, actuation);
+                let cross: Scalar<(Point, Line), f64> = value.of_both(dynamics, actuation);
                 let feedback: Feedback = -control_cost.solve(cross);
                 // The error's cost now, and its future cost through the step that feedback takes.
                 let closed: Dynamics = dynamics + actuation.of(feedback);
-                value = state_cost + pull!(value, dynamics, closed);
+                value = state_cost + value.of_both(dynamics, closed);
                 (value, feedback)
             })
             .collect()
@@ -144,16 +135,18 @@ mod riccati {
         core::array::from_fn(|i| core::array::from_fn(|j| p[i] & a[j]))
     }
 
-    /// The model: the thrusters' resistance (a forque to the twist of least weighted effort),
-    /// the state cost, the effort cost of each case, the dynamics and the actuation.
-    #[allow(clippy::type_complexity)]
-    pub fn model() -> (
-        Point<(Line,), f64>,
-        StateCost,
-        [EffortCost; 2],
-        Dynamics,
-        Actuation,
-    ) {
+    /// The vessel and its costs.
+    pub struct Model {
+        /// The thrusters' resistance: a forque to the twist of least weighted effort.
+        pub resistance: Point<(Line,), f64>,
+        pub state_cost: StateCost,
+        /// The effort cost of each case.
+        pub effort_cost: [EffortCost; 2],
+        pub dynamics: Dynamics,
+        pub actuation: Actuation,
+    }
+
+    pub fn model() -> Model {
         let thrusters = thrusters();
         let authority = thrusters
             .iter()
@@ -185,9 +178,13 @@ mod riccati {
                 s + (*l * (*l & Point::slot())).gp(w)
             });
         // Without a push the vessel stays put.
-        let dynamics = Point::slot();
-        let actuation = drag.inverse().gp(DT);
-        (resistance, state_cost, effort_cost, dynamics, actuation)
+        Model {
+            resistance,
+            state_cost,
+            effort_cost,
+            dynamics: Point::slot(),
+            actuation: drag.inverse().gp(DT),
+        }
     }
 
     /// One case's docking: the costs for one through `STEPS` remaining actions, the policy in
@@ -200,7 +197,13 @@ mod riccati {
     }
 
     pub fn docking() -> [Docking; 2] {
-        let (resistance, state_cost, effort_cost, dynamics, actuation) = model();
+        let Model {
+            resistance,
+            state_cost,
+            effort_cost,
+            dynamics,
+            actuation,
+        } = model();
         let thrusters = thrusters();
         effort_cost.map(|effort| {
             // From the deadline back, where whatever error is left is priced LANDING times
@@ -257,22 +260,17 @@ fn cases() -> &'static [Docking; 2] {
 const STEP: f32 = 0.08;
 const HOLD: f32 = 1.4;
 
-fn xy(p: P) -> [f32; 2] {
-    let [x, y] = p.to_euclidean();
-    [x as f32, y as f32]
-}
-
 /// The corners of a box around every hull position of both approaches and the dock.
-fn limits() -> ([f32; 2], [f32; 2]) {
-    static L: OnceLock<([f32; 2], [f32; 2])> = OnceLock::new();
+fn limits() -> ([f64; 2], [f64; 2]) {
+    static L: OnceLock<([f64; 2], [f64; 2])> = OnceLock::new();
     *L.get_or_init(|| {
-        let mut lo = [f32::MAX; 2];
-        let mut hi = [f32::MIN; 2];
+        let mut lo = [f64::MAX; 2];
+        let mut hi = [f64::MIN; 2];
         let hull = hull();
         for case in cases() {
             for e in &case.errors {
                 for p in &hull {
-                    let q = xy(pose(*e) >> *p);
+                    let q = (pose(*e) >> *p).to_euclidean();
                     for i in 0..2 {
                         lo[i] = lo[i].min(q[i]);
                         hi[i] = hi[i].max(q[i]);
@@ -292,13 +290,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let k = (s.floor() as usize).min(STEPS - 1);
     let frac = f64::from(s - k as f32);
     let hull = hull();
-    let target: Vec<[f32; 2]> = hull.iter().map(|p| xy(*p)).collect();
-    let mut closed_target = target.clone();
-    closed_target.push(target[0]);
+    let closed = |pts: &[P]| [pts, &pts[..1]].concat();
+    let [x, y] = axes();
+    let horizon = x & y;
     let labels = ["LOWER EFFORT PENALTY", "HIGHER EFFORT PENALTY"];
     let (mounts, directions) = (mounts(), directions());
     // Shared limits: a square around every pose of both approaches and the dock.
     let (lo, hi) = limits();
+    let (lo, hi) = (f32s(lo), f32s(hi));
     for (i, (case, label)) in cases().iter().zip(labels).enumerate() {
         let rect = plot::inset(
             [w * i as f32 / 2.0, 0.0, w * (i + 1) as f32 / 2.0, h],
@@ -329,12 +328,8 @@ fn draw(c: &mut Canvas, t: f32) {
             1.5,
             palette::green(),
         );
-        ax.dashed(c, &closed_target, 1.2, 5.0, palette::grid(), 1.0);
-        let path: Vec<[f32; 2]> = case
-            .errors
-            .iter()
-            .map(|e| xy(pose(*e) >> centre()))
-            .collect();
+        ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::grid(), 1.0);
+        let path: Vec<P> = case.errors.iter().map(|e| pose(*e) >> centre()).collect();
         ax.polyline(c, &path, 1.0, palette::sky(), 0.35);
         // The pose between steps: along the screw from one to the next.
         let m = Motor::interpolate(
@@ -342,19 +337,17 @@ fn draw(c: &mut Canvas, t: f32) {
             pose(case.errors[(k + 1).min(STEPS)]),
             if s >= STEPS as f32 { 1.0 } else { frac },
         );
-        let body: Vec<[f32; 2]> = hull.iter().map(|p| xy(m >> *p)).collect();
+        let body: Vec<P> = hull.iter().map(|p| m >> *p).collect();
         ax.fill(c, &body, canvas::scale(palette::blue(), 0.9), 0.5);
-        let mut outline = body.clone();
-        outline.push(body[0]);
-        ax.polyline(c, &outline, 1.6, palette::sky(), 1.0);
-        // The total push the feedback asks for, a forque: its line of action.
+        ax.polyline(c, &closed(&body), 1.6, palette::sky(), 1.0);
+        // The total push the feedback asks for, a forque: its line of action, through the foot
+        // of the perpendicular from the dock (the meet of the forque with the perpendicular),
+        // along its point at infinity (its meet with the horizon).
         if s < STEPS as f32 {
             let f = case.feedbacks[k].of(case.errors[k]);
-            let (a, b, c0) = (f.e1(), f.e2(), f.e0());
-            let n2 = a * a + b * b;
-            if n2 > 1e-12 {
-                let foot = [(-c0 * a / n2) as f32, (-c0 * b / n2) as f32];
-                ax.axline(c, foot, [-b as f32, a as f32], 1.0, palette::orange(), 0.35);
+            if f.norm() > 1e-6 {
+                let foot = (f | centre()) ^ f;
+                ax.axline(c, foot, f ^ horizon, 1.0, palette::orange(), 0.35);
             }
         }
         // The thrusters' commands: a signed command reverses its ideal direction before the
@@ -367,10 +360,8 @@ fn draw(c: &mut Canvas, t: f32) {
         for j in 0..3 {
             let base = m >> mounts[j];
             let force = m >> directions[j].gp(command[j] * 0.04);
-            let a = xy(base);
-            let b = [a[0] + force.e20() as f32, a[1] + force.e01() as f32];
-            ax.scatter(c, &[a], Marker::Square, 6.0, palette::ink(), 1.0);
-            ax.arrow(c, a, b, 2.0, 8.0, palette::orange());
+            ax.scatter(c, &[base], Marker::Square, 6.0, palette::ink(), 1.0);
+            ax.arrow(c, base, base + force, 2.0, 8.0, palette::orange());
         }
         ax.text(
             c,
@@ -392,7 +383,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "RICCATI: DOCKING WITH COSTS AS QUADRATIC FORMS",
-        "FEEDBACK FROM TWISTS TO FORQUES BY THE BACKWARD RECURSION; ARROWS: THRUSTER COMMANDS (PGA2D)",
+        "FEEDBACK FROM TWISTS TO FORQUES, SOLVED BACKWARDS. ARROWS: THRUST (PGA2D)",
     );
 }
 
@@ -406,234 +397,78 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::riccati::*;
+    use gax::ApproxEq;
     use gax::pga2d::{Line, Point, Scalar};
 
-    type Mat = Vec<Vec<f64>>;
-
-    fn zeros(r: usize, c: usize) -> Mat {
-        vec![vec![0.0; c]; r]
-    }
-    fn eye(n: usize) -> Mat {
-        let mut m = zeros(n, n);
-        for (i, row) in m.iter_mut().enumerate() {
-            row[i] = 1.0;
-        }
-        m
-    }
-    fn mul(a: &Mat, b: &Mat) -> Mat {
-        let mut m = zeros(a.len(), b[0].len());
-        for i in 0..a.len() {
-            for k in 0..b.len() {
-                for j in 0..b[0].len() {
-                    m[i][j] += a[i][k] * b[k][j];
-                }
-            }
-        }
-        m
-    }
-    fn tr(a: &Mat) -> Mat {
-        (0..a[0].len())
-            .map(|j| a.iter().map(|r| r[j]).collect())
-            .collect()
-    }
-    fn add(a: &Mat, b: &Mat) -> Mat {
-        a.iter()
-            .zip(b)
-            .map(|(x, y)| x.iter().zip(y).map(|(u, v)| u + v).collect())
-            .collect()
-    }
-    /// Solve `a x = b` by Gaussian elimination with partial pivoting.
-    fn solve(a: &Mat, b: &Mat) -> Mat {
-        let n = a.len();
-        let mut m: Mat = a
-            .iter()
-            .zip(b)
-            .map(|(r, s)| [r.clone(), s.clone()].concat())
-            .collect();
-        for col in 0..n {
-            let p = (col..n)
-                .max_by(|&i, &j| m[i][col].abs().total_cmp(&m[j][col].abs()))
-                .unwrap_or(col);
-            m.swap(col, p);
-            for r in 0..n {
-                if r != col {
-                    let f = m[r][col] / m[col][col];
-                    let pivot = m[col].clone();
-                    for (x, y) in m[r].iter_mut().zip(pivot) {
-                        *x -= f * y;
-                    }
-                }
-            }
-        }
-        m.iter()
-            .enumerate()
-            .map(|(i, r)| r[n..].iter().map(|v| v / r[i]).collect())
-            .collect()
-    }
-
-    /// Minimize over every control at once, independently of the Riccati recursion: the optimal
-    /// controls per step (`[steps][controls][dimension]`, for each unit initial error) and the
-    /// optimal cost's matrix.
-    fn condensed_control(
-        dynamics: &Mat,
-        actuation: &Mat,
-        state_cost: &Mat,
-        effort_cost: &Mat,
-        terminal: &Mat,
-        steps: usize,
-    ) -> (Vec<Mat>, Mat) {
-        let (dim, controls) = (actuation.len(), actuation[0].len());
-        let mut initial_map = eye(dim);
-        let mut control_map = zeros(dim, steps * controls);
-        let mut hessian = zeros(steps * controls, steps * controls);
-        for s in 0..steps {
-            for i in 0..controls {
-                for j in 0..controls {
-                    hessian[s * controls + i][s * controls + j] = effort_cost[i][j];
-                }
-            }
-        }
-        let mut cross = zeros(steps * controls, dim);
-        let mut initial_cost = zeros(dim, dim);
-        for step in 0..steps {
-            hessian = add(
-                &hessian,
-                &mul(&tr(&control_map), &mul(state_cost, &control_map)),
-            );
-            cross = add(
-                &cross,
-                &mul(&tr(&control_map), &mul(state_cost, &initial_map)),
-            );
-            initial_cost = add(
-                &initial_cost,
-                &mul(&tr(&initial_map), &mul(state_cost, &initial_map)),
-            );
-            initial_map = mul(dynamics, &initial_map);
-            control_map = mul(dynamics, &control_map);
-            for r in 0..dim {
-                for c in 0..controls {
-                    control_map[r][step * controls + c] += actuation[r][c];
-                }
-            }
-        }
-        hessian = add(
-            &hessian,
-            &mul(&tr(&control_map), &mul(terminal, &control_map)),
-        );
-        cross = add(
-            &cross,
-            &mul(&tr(&control_map), &mul(terminal, &initial_map)),
-        );
-        initial_cost = add(
-            &initial_cost,
-            &mul(&tr(&initial_map), &mul(terminal, &initial_map)),
-        );
-        let optimum: Mat = solve(&hessian, &cross)
-            .into_iter()
-            .map(|r| r.into_iter().map(|v| -v).collect())
-            .collect();
-        let value = add(&initial_cost, &mul(&tr(&cross), &optimum));
-        let actions = (0..steps)
-            .map(|s| optimum[s * controls..(s + 1) * controls].to_vec())
-            .collect();
-        (actions, value)
-    }
-
-    fn arr3(m: &Mat) -> [[f64; 3]; 3] {
-        core::array::from_fn(|i| core::array::from_fn(|j| m[i][j]))
-    }
-
-    /// The recursion matches a single dense optimization over every control, with general
-    /// dynamics and actuation. A map's coefficients are rows of outputs (`c[o][i]`), a form's
-    /// its matrix on coefficients.
+    /// The recursion's policy is the best over the whole horizon, with general dynamics and
+    /// actuation. The total cost is convex in the pushes (the effort cost is positive definite),
+    /// so it is least where its derivative with respect to every push vanishes. That derivative
+    /// is the effort form of the push plus the costate pulled back through the actuation, where
+    /// the costate (the derivative of the cost still to come with respect to the error) is
+    /// carried back step by step through the dynamics. And what the rollout pays is what the
+    /// recursion's value predicts. Forms here are matrices on coefficients, and maps rows of
+    /// outputs (`c[o][i]`).
     #[test]
-    fn riccati_matches_a_single_dense_optimization() {
+    fn riccati_policy_is_optimal_over_the_horizon() {
         let steps = 9;
         let dynamics = [
-            vec![
-                vec![1.03, 0.14, -0.04],
-                vec![0.0, 0.96, 0.12],
-                vec![0.03, 0.0, 1.01],
-            ],
-            vec![
-                vec![0.93, -0.18, 0.05],
-                vec![0.09, 1.04, -0.02],
-                vec![0.0, 0.07, 0.91],
-            ],
+            [[1.03, 0.14, -0.04], [0.0, 0.96, 0.12], [0.03, 0.0, 1.01]],
+            [[0.93, -0.18, 0.05], [0.09, 1.04, -0.02], [0.0, 0.07, 0.91]],
         ];
         let actuation = [
-            vec![
-                vec![0.22, 0.05, 0.0],
-                vec![-0.03, 0.19, 0.04],
-                vec![0.01, 0.02, 0.16],
-            ],
-            vec![
-                vec![0.17, -0.03, 0.02],
-                vec![0.04, 0.23, 0.0],
-                vec![0.01, -0.04, 0.18],
-            ],
+            [[0.22, 0.05, 0.0], [-0.03, 0.19, 0.04], [0.01, 0.02, 0.16]],
+            [[0.17, -0.03, 0.02], [0.04, 0.23, 0.0], [0.01, -0.04, 0.18]],
         ];
         let state_cost = [
-            vec![
-                vec![2.0, 0.3, -0.2],
-                vec![0.3, 1.4, 0.1],
-                vec![-0.2, 0.1, 0.9],
-            ],
-            vec![
-                vec![1.1, -0.1, 0.2],
-                vec![-0.1, 2.3, -0.3],
-                vec![0.2, -0.3, 1.7],
-            ],
+            [[2.0, 0.3, -0.2], [0.3, 1.4, 0.1], [-0.2, 0.1, 0.9]],
+            [[1.1, -0.1, 0.2], [-0.1, 2.3, -0.3], [0.2, -0.3, 1.7]],
         ];
         let effort_cost = [
-            vec![
-                vec![0.8, 0.1, 0.0],
-                vec![0.1, 0.6, -0.1],
-                vec![0.0, -0.1, 0.5],
-            ],
-            vec![
-                vec![0.5, -0.05, 0.1],
-                vec![-0.05, 0.7, 0.0],
-                vec![0.1, 0.0, 1.0],
-            ],
+            [[0.8, 0.1, 0.0], [0.1, 0.6, -0.1], [0.0, -0.1, 0.5]],
+            [[0.5, -0.05, 0.1], [-0.05, 0.7, 0.0], [0.1, 0.0, 1.0]],
         ];
         for case in 0..2 {
-            let terminal: Mat = state_cost[case]
-                .iter()
-                .map(|r| r.iter().map(|v| 3.0 * v).collect())
-                .collect();
-            let d: Dynamics = Point::from_coeffs(arr3(&dynamics[case]));
-            let a: Actuation = Point::from_coeffs(arr3(&actuation[case]));
-            let q: StateCost = Scalar::from_coeffs([arr3(&state_cost[case])]);
-            let r: EffortCost = Scalar::from_coeffs([arr3(&effort_cost[case])]);
-            let qf: StateCost = Scalar::from_coeffs([arr3(&terminal)]);
+            let d: Dynamics = Point::from_coeffs(dynamics[case]);
+            let a: Actuation = Point::from_coeffs(actuation[case]);
+            let q: StateCost = Scalar::from_coeffs([state_cost[case]]);
+            let r: EffortCost = Scalar::from_coeffs([effort_cost[case]]);
+            let terminal = q.gp(3.0);
             let (values, mut gains): (Vec<_>, Vec<_>) =
-                riccati(qf, d, a, q, r, steps).into_iter().unzip();
+                riccati(terminal, d, a, q, r, steps).into_iter().unzip();
             gains.reverse();
-            let (actions, value) = condensed_control(
-                &dynamics[case],
-                &actuation[case],
-                &state_cost[case],
-                &effort_cost[case],
-                &terminal,
-                steps,
-            );
-            let last = values[steps - 1].c[0];
-            for i in 0..3 {
-                for j in 0..3 {
-                    assert!((last[i][j] - value[i][j]).abs() < 1e-10);
-                }
-            }
-            // Three unit initial errors test the policy on the whole state space.
-            for e in 0..3 {
-                let mut initial = [0.0; 3];
-                initial[e] = 1.0;
-                let errors = rollout(Point::from_coeffs(initial), d, a, &gains);
-                for (s, (g, x)) in gains.iter().zip(&errors).enumerate() {
-                    let push = g.of(*x);
-                    for (p, row) in push.c.iter().zip(&actions[s]) {
-                        assert!((p - row[e]).abs() < 1e-10);
-                    }
+            // Six initial errors fix the value's quadratic form; each tests the whole policy.
+            let starts: [P; 6] = [
+                Point::new(1.0, 0.0, 0.0),
+                Point::new(0.0, 1.0, 0.0),
+                Point::new(0.0, 0.0, 1.0),
+                Point::new(1.0, 1.0, 0.0),
+                Point::new(0.0, 1.0, 1.0),
+                Point::new(1.0, 0.0, 1.0),
+            ];
+            for start in starts {
+                let errors = rollout(start, d, a, &gains);
+                let pushes: Vec<L> = gains.iter().zip(&errors).map(|(g, x)| g.of(*x)).collect();
+                let paid = pushes
+                    .iter()
+                    .zip(&errors)
+                    .map(|(u, x)| q.fill(*x).s() + r.fill(*u).s())
+                    .sum::<f64>()
+                    + terminal.fill(errors[steps]).s();
+                let predicted = values[steps - 1].fill(start).s();
+                assert!(
+                    (paid - predicted).abs() < 1e-10 * predicted,
+                    "{paid} {predicted}"
+                );
+                // Half the derivatives of the cost (the forms are symmetric).
+                let mut costate: Scalar<(Point,), f64> = terminal.of(errors[steps]);
+                for step in (0..steps).rev() {
+                    let gradient: Scalar<(Line,), f64> = r.of(pushes[step]) + costate.of(a);
+                    let size = r.of(pushes[step]).max_abs_diff(&Scalar::zero());
+                    assert!(
+                        gradient.max_abs_diff(&Scalar::zero()) < 1e-10 * size.max(1.0),
+                        "{case} {step} {gradient:?}"
+                    );
+                    costate = q.of(errors[step]) + costate.of(d);
                 }
             }
         }
@@ -699,9 +534,7 @@ mod tests {
                     .zip(d.commands[s])
                     .fold(Line::zero(), |sum: L, (t, c)| sum + t.gp(c));
                 let requested = d.feedbacks[s].of(d.errors[s]);
-                for (a, b) in supplied.c.iter().zip(requested.c) {
-                    assert!((a - b).abs() < 1e-10);
-                }
+                assert!(supplied.max_abs_diff(&requested) < 1e-10);
             }
         }
         for trial in [Point::new(0.2, -0.3, 0.15), Point::new(-0.1, 0.25, -0.12)] {
