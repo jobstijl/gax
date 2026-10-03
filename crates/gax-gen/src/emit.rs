@@ -1002,6 +1002,41 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
 "
         );
 
+        // Both slots of a two-slot extensor filled with maps.
+        let _ = write!(
+            self.out,
+            r"impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `{name} <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {{
+        gx::OfBoth::of_both(self, p, q)
+    }}
+}}
+
+"
+        );
+
+        // A form as a map, for the scalar kind.
+        if k.layout.blades == [(0, 1)] {
+            let _ = write!(
+                self.out,
+                r"impl<A: Kind, B: Kind, T: Coef> {name}<(A, B), T> {{
+    /// This form `{name} <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
+    /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
+    #[inline]
+    pub fn as_map(self) -> <A as Kind>::Mv<(B,), T> {{
+        gx::FormAsMap::as_map(self)
+    }}
+}}
+
+"
+            );
+        }
+
         // Methods of maps and forms (see `gax_core::extensor`).
         let _ = write!(
             self.out,
@@ -1022,6 +1057,26 @@ impl<S: Slots, T: Coef> {name}<S, T> {{
         Self: SquareMap<Coef = T, Kind = {name}, Input = A>,
     {{
         SquareMap::det(self)
+    }}
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {{
+        gx::SingularValues::svdvals(self)
+    }}
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>, <A as Kind>::Arr<{name}<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = {name}>,
+    {{
+        gx::SingularValues::svd_thin(self)
     }}
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -1134,6 +1189,18 @@ impl<A: Kind, T: Real> {name}<(A, A), T> {{
         Self: Form<Coef = T, Kind = {name}, Slot = A>,
     {{
         Form::eigh_with(self, metric)
+    }}
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+∞`, last) for the directions it does not measure (see
+    /// [`Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as Kind>::Arr<T>, <A as Kind>::Arr<<A as Kind>::Mv<(), T>>)
+    where
+        Self: Form<Coef = T, Kind = {name}, Slot = A>,
+    {{
+        Form::eigh_semidefinite(self, metric)
     }}
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).

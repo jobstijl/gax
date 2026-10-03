@@ -374,6 +374,27 @@ impl<A: gx::Kind, T: gx::Coef> Scalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Scalar <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
+    /// This form `Scalar <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
+    /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
+    #[inline]
+    pub fn as_map(self) -> <A as gx::Kind>::Mv<(B,), T> {
+        gx::FormAsMap::as_map(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -391,6 +412,26 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Scalar<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Scalar>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -503,6 +544,18 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -1175,6 +1228,18 @@ impl<A: gx::Kind, T: gx::Coef> Vector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Vector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Vector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
     /// The inverse map, `A <- Vector`.
     #[inline]
@@ -1192,6 +1257,26 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Vector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Vector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -1304,6 +1389,18 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Vector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Vector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -2051,6 +2148,18 @@ impl<A: gx::Kind, T: gx::Coef> Twist<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Twist<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Twist <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
     /// The inverse map, `A <- Twist`.
     #[inline]
@@ -2068,6 +2177,26 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Twist<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Twist>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -2180,6 +2309,18 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -3033,6 +3174,18 @@ impl<A: gx::Kind, T: gx::Coef> Bivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Bivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Bivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
     /// The inverse map, `A <- Bivector`.
     #[inline]
@@ -3050,6 +3203,26 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Bivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Bivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -3162,6 +3335,18 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Bivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Bivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -4358,6 +4543,18 @@ impl<A: gx::Kind, T: gx::Coef> Trivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Trivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Trivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
@@ -4375,6 +4572,26 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Trivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Trivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -4487,6 +4704,18 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Trivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Trivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -5229,6 +5458,18 @@ impl<A: gx::Kind, T: gx::Coef> Quadvector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Quadvector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Quadvector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Quadvector<(A,), T> {
     /// The inverse map, `A <- Quadvector`.
     #[inline]
@@ -5246,6 +5487,26 @@ impl<A: gx::Kind, T: gx::Real> Quadvector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Quadvector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quadvector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quadvector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -5358,6 +5619,18 @@ impl<A: gx::Kind, T: gx::Real> Quadvector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Quadvector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Quadvector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -6037,6 +6310,18 @@ impl<A: gx::Kind, T: gx::Coef> Quintvector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Quintvector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Quintvector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Quintvector<(A,), T> {
     /// The inverse map, `A <- Quintvector`.
     #[inline]
@@ -6054,6 +6339,26 @@ impl<A: gx::Kind, T: gx::Real> Quintvector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Quintvector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quintvector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quintvector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -6166,6 +6471,18 @@ impl<A: gx::Kind, T: gx::Real> Quintvector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Quintvector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Quintvector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -6859,6 +7176,18 @@ impl<A: gx::Kind, T: gx::Coef> Pseudoscalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Pseudoscalar<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Pseudoscalar <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
     /// The inverse map, `A <- Pseudoscalar`.
     #[inline]
@@ -6876,6 +7205,26 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Pseudoscalar<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Pseudoscalar>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -6988,6 +7337,18 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -7705,6 +8066,18 @@ impl<A: gx::Kind, T: gx::Coef> Motor<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Motor<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Motor <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
     /// The inverse map, `A <- Motor`.
     #[inline]
@@ -7722,6 +8095,26 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Motor<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Motor>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -7834,6 +8227,18 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -8718,6 +9123,18 @@ impl<A: gx::Kind, T: gx::Coef> Even<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Even<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Even <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
     /// The inverse map, `A <- Even`.
     #[inline]
@@ -8735,6 +9152,26 @@ impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Even<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Even>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -8847,6 +9284,18 @@ impl<A: gx::Kind, T: gx::Real> Even<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Even, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Even, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -9967,6 +10416,18 @@ impl<A: gx::Kind, T: gx::Coef> Odd<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Odd<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Odd <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
     /// The inverse map, `A <- Odd`.
     #[inline]
@@ -9984,6 +10445,26 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Odd<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Odd>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -10096,6 +10577,18 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Odd, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Odd, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -11160,6 +11653,18 @@ impl<A: gx::Kind, T: gx::Coef> Multivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Multivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
@@ -11177,6 +11682,26 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Multivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Multivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -11289,6 +11814,18 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -12330,319 +12867,4 @@ impl gx::SubKind<Multivector> for Twist {}
 impl gx::GradePart<2> for Twist {
     type Out = Twist;
     const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl gx::Cast<Twist> for Bivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (10, 6, false), (11, 7, false), (12, 8, false), (13, 9, false)];
-}
-
-impl gx::Cast<Bivector> for Bivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false)];
-}
-
-impl gx::SubKind<Bivector> for Bivector {}
-
-impl gx::Cast<Motor> for Bivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (10, 7, false), (11, 8, false), (12, 9, false), (13, 10, false)];
-}
-
-impl gx::Cast<Even> for Bivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 7, false), (7, 8, false), (8, 9, false), (9, 10, false), (10, 11, false), (11, 12, false), (12, 13, false), (13, 14, false), (14, 15, false)];
-}
-
-impl gx::SubKind<Even> for Bivector {}
-
-impl gx::Cast<Multivector> for Bivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 7, false), (1, 8, false), (2, 9, false), (3, 10, false), (4, 11, false), (5, 12, false), (6, 13, false), (7, 14, false), (8, 15, false), (9, 16, false), (10, 17, false), (11, 18, false), (12, 19, false), (13, 20, false), (14, 21, false)];
-}
-
-impl gx::SubKind<Multivector> for Bivector {}
-
-impl gx::GradePart<2> for Bivector {
-    type Out = Bivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false)];
-}
-
-impl gx::Cast<Trivector> for Trivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false)];
-}
-
-impl gx::SubKind<Trivector> for Trivector {}
-
-impl gx::Cast<Odd> for Trivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 6, false), (1, 7, false), (2, 8, false), (3, 9, false), (4, 10, false), (5, 11, false), (6, 12, false), (7, 13, false), (8, 14, false), (9, 15, false), (10, 16, false), (11, 17, false), (12, 18, false), (13, 19, false), (14, 20, false), (15, 21, false), (16, 22, false), (17, 23, false), (18, 24, false), (19, 25, false)];
-}
-
-impl gx::SubKind<Odd> for Trivector {}
-
-impl gx::Cast<Multivector> for Trivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 22, false), (1, 23, false), (2, 24, false), (3, 25, false), (4, 26, false), (5, 27, false), (6, 28, false), (7, 29, false), (8, 30, false), (9, 31, false), (10, 32, false), (11, 33, false), (12, 34, false), (13, 35, false), (14, 36, false), (15, 37, false), (16, 38, false), (17, 39, false), (18, 40, false), (19, 41, false)];
-}
-
-impl gx::SubKind<Multivector> for Trivector {}
-
-impl gx::GradePart<3> for Trivector {
-    type Out = Trivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false)];
-}
-
-impl gx::Cast<Quadvector> for Quadvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false)];
-}
-
-impl gx::SubKind<Quadvector> for Quadvector {}
-
-impl gx::Cast<Motor> for Quadvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 15, false), (5, 11, false), (6, 12, false), (7, 13, false), (8, 14, false)];
-}
-
-impl gx::Cast<Even> for Quadvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 16, false), (1, 17, false), (2, 18, false), (3, 19, false), (4, 20, false), (5, 21, false), (6, 22, false), (7, 23, false), (8, 24, false), (9, 25, false), (10, 26, false), (11, 27, false), (12, 28, false), (13, 29, false), (14, 30, false)];
-}
-
-impl gx::SubKind<Even> for Quadvector {}
-
-impl gx::Cast<Multivector> for Quadvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 42, false), (1, 43, false), (2, 44, false), (3, 45, false), (4, 46, false), (5, 47, false), (6, 48, false), (7, 49, false), (8, 50, false), (9, 51, false), (10, 52, false), (11, 53, false), (12, 54, false), (13, 55, false), (14, 56, false)];
-}
-
-impl gx::SubKind<Multivector> for Quadvector {}
-
-impl gx::GradePart<4> for Quadvector {
-    type Out = Quadvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false)];
-}
-
-impl gx::Cast<Quintvector> for Quintvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::SubKind<Quintvector> for Quintvector {}
-
-impl gx::Cast<Odd> for Quintvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 26, false), (1, 27, false), (2, 28, false), (3, 29, false), (4, 30, false), (5, 31, false)];
-}
-
-impl gx::SubKind<Odd> for Quintvector {}
-
-impl gx::Cast<Multivector> for Quintvector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 57, false), (1, 58, false), (2, 59, false), (3, 60, false), (4, 61, false), (5, 62, false)];
-}
-
-impl gx::SubKind<Multivector> for Quintvector {}
-
-impl gx::GradePart<5> for Quintvector {
-    type Out = Quintvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::Cast<Pseudoscalar> for Pseudoscalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::SubKind<Pseudoscalar> for Pseudoscalar {}
-
-impl gx::Cast<Even> for Pseudoscalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 31, false)];
-}
-
-impl gx::SubKind<Even> for Pseudoscalar {}
-
-impl gx::Cast<Multivector> for Pseudoscalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 63, false)];
-}
-
-impl gx::SubKind<Multivector> for Pseudoscalar {}
-
-impl gx::GradePart<6> for Pseudoscalar {
-    type Out = Pseudoscalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::Cast<Scalar> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::Cast<Twist> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
-}
-
-impl gx::Cast<Bivector> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 10, false), (8, 11, false), (9, 12, false), (10, 13, false)];
-}
-
-impl gx::Cast<Quadvector> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 0, false)];
-}
-
-impl gx::Cast<Motor> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false)];
-}
-
-impl gx::SubKind<Motor> for Motor {}
-
-impl gx::Cast<Even> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 11, false), (8, 12, false), (9, 13, false), (10, 14, false), (11, 21, false), (12, 22, false), (13, 23, false), (14, 24, false), (15, 16, false)];
-}
-
-impl gx::SubKind<Even> for Motor {}
-
-impl gx::Cast<Multivector> for Motor {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 7, false), (2, 8, false), (3, 9, false), (4, 10, false), (5, 11, false), (6, 12, false), (7, 17, false), (8, 18, false), (9, 19, false), (10, 20, false), (11, 47, false), (12, 48, false), (13, 49, false), (14, 50, false), (15, 42, false)];
-}
-
-impl gx::SubKind<Multivector> for Motor {}
-
-impl gx::GradePart<0> for Motor {
-    type Out = Scalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::GradePart<2> for Motor {
-    type Out = Twist;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false)];
-}
-
-impl gx::GradePart<4> for Motor {
-    type Out = Quadvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 0, false)];
-}
-
-impl gx::Cast<Scalar> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::Cast<Twist> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (11, 6, false), (12, 7, false), (13, 8, false), (14, 9, false)];
-}
-
-impl gx::Cast<Bivector> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false), (11, 10, false), (12, 11, false), (13, 12, false), (14, 13, false), (15, 14, false)];
-}
-
-impl gx::Cast<Quadvector> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false), (26, 10, false), (27, 11, false), (28, 12, false), (29, 13, false), (30, 14, false)];
-}
-
-impl gx::Cast<Pseudoscalar> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
-}
-
-impl gx::Cast<Motor> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (11, 7, false), (12, 8, false), (13, 9, false), (14, 10, false), (16, 15, false), (21, 11, false), (22, 12, false), (23, 13, false), (24, 14, false)];
-}
-
-impl gx::Cast<Even> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false), (20, 20, false), (21, 21, false), (22, 22, false), (23, 23, false), (24, 24, false), (25, 25, false), (26, 26, false), (27, 27, false), (28, 28, false), (29, 29, false), (30, 30, false), (31, 31, false)];
-}
-
-impl gx::SubKind<Even> for Even {}
-
-impl gx::Cast<Multivector> for Even {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 7, false), (2, 8, false), (3, 9, false), (4, 10, false), (5, 11, false), (6, 12, false), (7, 13, false), (8, 14, false), (9, 15, false), (10, 16, false), (11, 17, false), (12, 18, false), (13, 19, false), (14, 20, false), (15, 21, false), (16, 42, false), (17, 43, false), (18, 44, false), (19, 45, false), (20, 46, false), (21, 47, false), (22, 48, false), (23, 49, false), (24, 50, false), (25, 51, false), (26, 52, false), (27, 53, false), (28, 54, false), (29, 55, false), (30, 56, false), (31, 63, false)];
-}
-
-impl gx::SubKind<Multivector> for Even {}
-
-impl gx::GradePart<0> for Even {
-    type Out = Scalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::GradePart<2> for Even {
-    type Out = Bivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (7, 6, false), (8, 7, false), (9, 8, false), (10, 9, false), (11, 10, false), (12, 11, false), (13, 12, false), (14, 13, false), (15, 14, false)];
-}
-
-impl gx::GradePart<4> for Even {
-    type Out = Quadvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(16, 0, false), (17, 1, false), (18, 2, false), (19, 3, false), (20, 4, false), (21, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false), (26, 10, false), (27, 11, false), (28, 12, false), (29, 13, false), (30, 14, false)];
-}
-
-impl gx::GradePart<6> for Even {
-    type Out = Pseudoscalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(31, 0, false)];
-}
-
-impl gx::Cast<Vector> for Odd {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::Cast<Trivector> for Odd {
-    const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false), (16, 10, false), (17, 11, false), (18, 12, false), (19, 13, false), (20, 14, false), (21, 15, false), (22, 16, false), (23, 17, false), (24, 18, false), (25, 19, false)];
-}
-
-impl gx::Cast<Quintvector> for Odd {
-    const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false), (31, 5, false)];
-}
-
-impl gx::Cast<Odd> for Odd {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false), (10, 10, false), (11, 11, false), (12, 12, false), (13, 13, false), (14, 14, false), (15, 15, false), (16, 16, false), (17, 17, false), (18, 18, false), (19, 19, false), (20, 20, false), (21, 21, false), (22, 22, false), (23, 23, false), (24, 24, false), (25, 25, false), (26, 26, false), (27, 27, false), (28, 28, false), (29, 29, false), (30, 30, false), (31, 31, false)];
-}
-
-impl gx::SubKind<Odd> for Odd {}
-
-impl gx::Cast<Multivector> for Odd {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 22, false), (7, 23, false), (8, 24, false), (9, 25, false), (10, 26, false), (11, 27, false), (12, 28, false), (13, 29, false), (14, 30, false), (15, 31, false), (16, 32, false), (17, 33, false), (18, 34, false), (19, 35, false), (20, 36, false), (21, 37, false), (22, 38, false), (23, 39, false), (24, 40, false), (25, 41, false), (26, 57, false), (27, 58, false), (28, 59, false), (29, 60, false), (30, 61, false), (31, 62, false)];
-}
-
-impl gx::SubKind<Multivector> for Odd {}
-
-impl gx::GradePart<1> for Odd {
-    type Out = Vector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::GradePart<3> for Odd {
-    type Out = Trivector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(6, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false), (16, 10, false), (17, 11, false), (18, 12, false), (19, 13, false), (20, 14, false), (21, 15, false), (22, 16, false), (23, 17, false), (24, 18, false), (25, 19, false)];
-}
-
-impl gx::GradePart<5> for Odd {
-    type Out = Quintvector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(26, 0, false), (27, 1, false), (28, 2, false), (29, 3, false), (30, 4, false), (31, 5, false)];
-}
-
-impl gx::Cast<Scalar> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::Cast<Vector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false)];
-}
-
-impl gx::Cast<Twist> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false), (8, 1, false), (9, 2, false), (10, 3, false), (11, 4, false), (12, 5, false), (17, 6, false), (18, 7, false), (19, 8, false), (20, 9, false)];
-}
-
-impl gx::Cast<Bivector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(7, 0, false), (8, 1, false), (9, 2, false), (10, 3, false), (11, 4, false), (12, 5, false), (13, 6, false), (14, 7, false), (15, 8, false), (16, 9, false), (17, 10, false), (18, 11, false), (19, 12, false), (20, 13, false), (21, 14, false)];
-}
-
-impl gx::Cast<Trivector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(22, 0, false), (23, 1, false), (24, 2, false), (25, 3, false), (26, 4, false), (27, 5, false), (28, 6, false), (29, 7, false), (30, 8, false), (31, 9, false), (32, 10, false), (33, 11, false), (34, 12, false), (35, 13, false), (36, 14, false), (37, 15, false), (38, 16, false), (39, 17, false), (40, 18, false), (41, 19, false)];
-}
-
-impl gx::Cast<Quadvector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(42, 0, false), (43, 1, false), (44, 2, false), (45, 3, false), (46, 4, false), (47, 5, false), (48, 6, false), (49, 7, false), (50, 8, false), (51, 9, false), (52, 10, false), (53, 11, false), (54, 12, false), (55, 13, false), (56, 14, false)];
-}
-
-impl gx::Cast<Quintvector> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(57, 0, false), (58, 1, false), (59, 2, false), (60, 3, false), (61, 4, false), (62, 5, false)];
-}
-
-impl gx::Cast<Pseudoscalar> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(63, 0, false)];
-}
-
-impl gx::Cast<Motor> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (17, 7, false), (18, 8, false), (19, 9, false), (20, 10, false), (42, 15, false), (47, 11, false), (48, 12, false), (49, 13, false), (50, 14, false)];
-}
-
-impl gx::Cast<Even> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (7, 1, false), (8, 2, false), (9, 3, false), (10, 4, false), (11, 5, false), (12, 6, false), (13, 7, false), (14, 8, false), (15, 9, false), (16, 10, false), (17, 11, false), (18, 12, false), (19, 13, false), (20, 14, false), (21, 15, false), (42, 16, false), (43, 17, false), (44, 18, false), (45, 19, false), (46, 20, false), (47, 21, false), (48, 22, false), (49, 23, false), (50, 24, false), (51, 25, false), (52, 26, false), (53, 27, false), (54, 28, false), (55, 29, false), (56, 30, false), (63, 31, false)];
-}
-
-impl gx::Cast<Odd> for Multivector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(1, 0, false), (2, 1, false), (3, 2, false), (4, 3, false), (5, 4, false), (6, 5, false), (22, 6, false), (23, 7, false), (24, 8, false), (25, 9, false), (26, 10, false), (27, 11, false), (28, 12, false), (29, 13, false), (30, 14, false), (31, 15, false), (32, 16, false), (33, 17, false), (34, 18, false), (35, 19, false), (36, 20, false), (37, 21, false), (38, 22, false), (39, 23, false), (40, 24, false), (41, 25, false), (57, 26, false), (58, 27, false), (59, 28, false), (60, 29, false), (61, 30, false), (62, 31, false)];
 }

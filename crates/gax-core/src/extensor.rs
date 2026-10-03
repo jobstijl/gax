@@ -288,6 +288,22 @@ pub trait Form: Extensor<Coef: Real> {
         <Self::Slot as Kind>::Arr<Self::Coef>,
         <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
     );
+
+    /// [`eigh_with`](Self::eigh_with) against a metric that is only positive *semi*definite
+    /// (PGA's point weight, a norm blind to translations): the directions the metric does not
+    /// measure have infinite eigenvalues, listed last as `+∞`; the finite ones come first,
+    /// ascending, with eigenvectors normalized to `metric(x, x) = 1`. Solved exactly as
+    /// `metric(x, ·) = μ (self + σ metric)(x, ·)`, `λ = 1/μ − σ` (infinite modes get `μ = 0`),
+    /// which needs `self` positive definite on the metric's null space (numga's `eig` against
+    /// the default metric, in fitting, registration and triangulation).
+    #[allow(clippy::type_complexity)]
+    fn eigh_semidefinite(
+        self,
+        metric: Self,
+    ) -> (
+        <Self::Slot as Kind>::Arr<Self::Coef>,
+        <Self::Slot as Kind>::Arr<<Self::Slot as Kind>::Mv<(), Self::Coef>>,
+    );
 }
 
 impl<M, A> Form for M
@@ -307,6 +323,52 @@ where
             A::arr_from_fn(|k| vals[k]),
             A::arr_from_fn(|k| value_from::<A, M::Coef>(|i| xs[k][i])),
         )
+    }
+
+    fn eigh_semidefinite(self, metric: M) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
+        type T<M> = <M as Extensor>::Coef;
+        let a = symmetrize(&self.coeffs().as_ref()[0]);
+        let b = symmetrize(&metric.coeffs().as_ref()[0]);
+        let n = <A::Arr<A::Arr<T<M>>> as SquareArr<T<M>>>::N;
+        // A shift that makes `a + σ b` comparable in scale with `b`: the ratio of their traces.
+        let (mut ta, mut tb) = (T::<M>::zero(), T::<M>::zero());
+        for i in 0..n {
+            ta = ta + a[i][i].abs();
+            tb = tb + b[i][i].abs();
+        }
+        let sigma = if T::<M>::all_lt(T::<M>::zero(), tb) {
+            ta / tb
+        } else {
+            T::<M>::one()
+        };
+        let shifted: A::Arr<A::Arr<T<M>>> = matrix_from(|i, j| a[i][j] + sigma * b[i][j]);
+        // `b x = μ (a + σ b) x`, μ ascending: λ = 1/μ − σ descends; finite λ have μ > 0.
+        let (mus, xs) = linalg::eigh_generalized(&b, &shifted, sweeps(n));
+        let tiny = T::<M>::epsilon() * T::<M>::from_i64(64);
+        let mut largest = T::<M>::zero();
+        for k in 0..n {
+            largest = largest.max(mus[k].abs());
+        }
+        let lambda = |k: usize| {
+            if T::<M>::all_lt(tiny * largest, mus[k]) {
+                mus[k].recip() - sigma
+            } else {
+                T::<M>::from_f64(f64::INFINITY)
+            }
+        };
+        // Ascending λ: the order of descending μ. Eigenvectors rescaled to b(x, x) = 1 where
+        // finite (`eigh_generalized` normalizes them to (a + σ b)(x, x) = 1, so b(x, x) = μ).
+        let vals = A::arr_from_fn(|r| lambda(n - 1 - r));
+        let vecs = A::arr_from_fn(|r| {
+            let k = n - 1 - r;
+            let scale = if T::<M>::all_lt(tiny * largest, mus[k]) {
+                mus[k].sqrt().recip()
+            } else {
+                T::<M>::one()
+            };
+            value_from::<A, T<M>>(|i| xs[k][i] * scale)
+        });
+        (vals, vecs)
     }
 
     fn eigh(self) -> (A::Arr<M::Coef>, A::Arr<A::Mv<(), M::Coef>>) {
@@ -556,6 +618,216 @@ where
 
     fn pinv_with(self, rcond: M::Coef) -> Self::Output {
         pinv_of(&self, Some(rcond))
+    }
+}
+
+/// The singular value decomposition of a map `K <- (H,)` of any shape, by one-sided Jacobi
+/// (the factorization [`PseudoInverse`] uses). One singular value per input blade (`H::N` of
+/// them, descending; a wide map has at least `H::N − K::N` zeros), with the coefficients' norms
+/// as in `numpy.linalg.svd`.
+///
+/// ```
+/// use gax::pga3d::{Line, Point};
+/// // Points to the lines joining them to `q`: rank 3, and `q` spans the null space.
+/// let q = Point::<(), f64>::xyz(0.0, 0.0, 1.0);
+/// let through_q: Line<(Point,), f64> = q & Point::slot();
+/// let (sigma, right, _) = through_q.svd_thin();
+/// assert!(sigma[3].abs() < 1e-12 && sigma[2] > 1e-6);
+/// let null = right[3];
+/// assert!(null.c.iter().zip(q.c).all(|(a, b)| (a.abs() - b.abs() / 2f64.sqrt()).abs() < 1e-12));
+/// ```
+pub trait SingularValues: Extensor<Coef: Real> {
+    /// The input kind.
+    type Input: Kind;
+    /// The singular values, descending.
+    fn svdvals(self) -> <Self::Input as Kind>::Arr<Self::Coef>;
+    /// The singular values (descending), the right singular vectors (unit values of the input
+    /// kind; those of zero singular values span the null space), and the left ones (unit values
+    /// of the output kind, zero where the singular value is): `self.of(v[i]) = σ[i] u[i]`.
+    #[allow(clippy::type_complexity)]
+    fn svd_thin(
+        self,
+    ) -> (
+        <Self::Input as Kind>::Arr<Self::Coef>,
+        <Self::Input as Kind>::Arr<<Self::Input as Kind>::Mv<(), Self::Coef>>,
+        <Self::Input as Kind>::Arr<<Self::Kind as Kind>::Mv<(), Self::Coef>>,
+    );
+}
+
+impl<M, H> SingularValues for M
+where
+    M: Extensor<Slots = (H,), Coef: Real>,
+    H: Kind,
+    Sq<H, M::Coef>: SquareArr<M::Coef>,
+{
+    type Input = H;
+
+    fn svdvals(self) -> H::Arr<M::Coef> {
+        self.svd_thin().0
+    }
+
+    fn svd_thin(
+        self,
+    ) -> (
+        H::Arr<M::Coef>,
+        H::Arr<H::Mv<(), M::Coef>>,
+        H::Arr<<M::Kind as Kind>::Mv<(), M::Coef>>,
+    ) {
+        type T<M> = <M as Extensor>::Coef;
+        type Cols<M, H> = <H as Kind>::Arr<Col<<M as Extensor>::Kind, (), T<M>>>;
+        let rows = self.coeffs().as_ref();
+        let cols: H::Arr<Col<M::Kind, (), T<M>>> = H::arr_from_fn(|h| {
+            Col(<M::Kind as Kind>::arr_from_fn(|k| {
+                <(H,) as Slots>::get_flat(&rows[k], h)
+            }))
+        });
+        let n = H::N;
+        let (w, v): (Cols<M, H>, Sq<H, T<M>>) = linalg::orthogonalize(&cols, sweeps(n));
+        let wc = w.as_ref();
+        let sigma: alloc_free::Order<H, T<M>> = alloc_free::Order::by(|i| wc[i].dot(&wc[i]).sqrt());
+        let s = H::arr_from_fn(|r| sigma.value(r));
+        let right = H::arr_from_fn(|r| {
+            let i = sigma.index(r);
+            value_from::<H, T<M>>(|h| v[i][h])
+        });
+        let left = H::arr_from_fn(|r| {
+            let i = sigma.index(r);
+            let len = sigma.value(r);
+            let tiny = T::<M>::from_f64(1e-300);
+            let inv = T::<M>::select_lt(len, tiny, T::<M>::zero(), len.max(tiny).recip());
+            value_from::<M::Kind, T<M>>(|k| wc[i].0.as_ref()[k] * inv)
+        });
+        (s, right, left)
+    }
+}
+
+/// A sort order computed without allocating: the indices of `H::N` values, descending.
+mod alloc_free {
+    use crate::coef::Real;
+    use crate::kind::Kind;
+
+    /// The values and their order.
+    pub struct Order<H: Kind, T: Real> {
+        values: H::Arr<T>,
+        order: H::Arr<usize>,
+    }
+
+    impl<H: Kind, T: Real> Order<H, T> {
+        /// The values `f(i)`, ordered descending (NaN last).
+        pub fn by(f: impl Fn(usize) -> T) -> Self {
+            let values = H::arr_from_fn(&f);
+            let mut order = H::arr_from_fn(|i| i);
+            let o = order.as_mut();
+            let v = values.as_ref();
+            for i in 1..o.len() {
+                let mut j = i;
+                while j > 0 && T::all_lt(v[o[j - 1]], v[o[j]]) {
+                    o.swap(j - 1, j);
+                    j -= 1;
+                }
+            }
+            Order { values, order }
+        }
+
+        /// The index of the `r`-th largest.
+        pub fn index(&self, r: usize) -> usize {
+            self.order.as_ref()[r]
+        }
+
+        /// The `r`-th largest value.
+        pub fn value(&self, r: usize) -> T {
+            self.values.as_ref()[self.order.as_ref()[r]]
+        }
+    }
+}
+
+/// Both slots of a two-slot extensor `M <- (A, B)` filled with maps at once: with
+/// `p: A <- (X,)` and `q: B <- (Y,)`, the extensor `M <- (X, Y)` (numga's `form(p, q)`: a form
+/// pulled back through two maps, as in a Riccati step's `value(dynamics, actuation)`).
+///
+/// ```
+/// use gax::pga2d::{Line, Point, Scalar};
+/// let cost: Scalar<(Point, Point), f64> = Point::slot() | Point::slot();
+/// let a = Point::<(Line,), f64>::from_coeffs([[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]]);
+/// let pulled: Scalar<(Line, Line), f64> = cost.of_both(a, a);
+/// let l = Line::<(), f64>::new(0.5, 1.0, -1.0);
+/// assert!((pulled.of(l).of(l).s() - cost.of(a.of(l)).of(a.of(l)).s()).abs() < 1e-12);
+/// ```
+pub trait OfBoth<P, Q>: Extensor {
+    /// `M <- (X, Y)`.
+    type Output: Extensor<Coef = Self::Coef>;
+    /// Fill the first slot with `p` and the second with `q`.
+    fn of_both(self, p: P, q: Q) -> Self::Output;
+}
+
+impl<M, A, B, P, Q, X, Y> OfBoth<P, Q> for M
+where
+    M: Extensor<Slots = (A, B)>,
+    A: Kind,
+    B: Kind,
+    X: Kind,
+    Y: Kind,
+    P: Extensor<Kind = A, Slots = (X,), Coef = M::Coef>,
+    Q: Extensor<Kind = B, Slots = (Y,), Coef = M::Coef>,
+{
+    type Output = <M::Kind as Kind>::Mv<(X, Y), M::Coef>;
+
+    fn of_both(self, p: P, q: Q) -> Self::Output {
+        let (m, pc, qc) = (
+            self.coeffs().as_ref(),
+            p.coeffs().as_ref(),
+            q.coeffs().as_ref(),
+        );
+        let c = <M::Kind as Kind>::arr_from_fn(|k| {
+            <(X, Y) as Slots>::from_flat(
+                &mut |f| {
+                    let (x, y) = (f / Y::N, f % Y::N);
+                    let mut sum = M::Coef::zero();
+                    for (a, pa) in pc.iter().enumerate() {
+                        let pa = <(X,) as Slots>::get_flat(pa, x);
+                        for (b, qb) in qc.iter().enumerate() {
+                            let mab = <(A, B) as Slots>::get_flat(&m[k], a * B::N + b);
+                            sum = sum + mab * pa * <(Y,) as Slots>::get_flat(qb, y);
+                        }
+                    }
+                    sum
+                },
+                0,
+            )
+        });
+        <Self::Output as Extensor>::from_coeffs(c)
+    }
+}
+
+/// A form (a scalar-valued map with two slots, `Scalar<(A, B)>`) as the map `A <- (B,)` with
+/// the same coefficients, for the methods of maps: `svd`, `pinv`, `svdvals`, rank. Only for
+/// output kinds of one coefficient.
+pub trait FormAsMap: Extensor {
+    /// The map.
+    type Map: Extensor<Coef = Self::Coef>;
+    /// The map with the form's coefficients.
+    fn as_map(self) -> Self::Map;
+}
+
+impl<M, A, B> FormAsMap for M
+where
+    M: Extensor<Slots = (A, B)>,
+    A: Kind,
+    B: Kind,
+{
+    type Map = A::Mv<(B,), M::Coef>;
+
+    fn as_map(self) -> Self::Map {
+        const {
+            assert!(
+                <M::Kind as Kind>::N == 1,
+                "as_map is for forms (scalar-valued)"
+            );
+        };
+        let c = &self.coeffs().as_ref()[0];
+        <Self::Map as Extensor>::from_coeffs(A::arr_from_fn(|a| {
+            <(B,) as Slots>::from_flat(&mut |b| <(A, B) as Slots>::get_flat(c, a * B::N + b), 0)
+        }))
     }
 }
 

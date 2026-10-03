@@ -60,7 +60,8 @@ pub use cast::{Cast, GradePart, SubKind};
 pub use coef::{Coef, Elem, Real};
 pub use complex::Complex;
 pub use extensor::{
-    Endomorphism, Form, LeastSquares, Pairing, PseudoInverse, SquareMap, TraceFirst,
+    Endomorphism, Form, FormAsMap, LeastSquares, OfBoth, Pairing, PseudoInverse, SingularValues,
+    SquareMap, TraceFirst,
 };
 pub use fill::{False, FillList, KindEq, SplitLast, True};
 pub use gpu::GpuMat;

@@ -152,7 +152,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Extra kinds in the standard algebras as `part`s (kinds never chosen as a result type, so no existing type changes): PGA ideal points (`Direction`), VGA3D `Paravector`, STA `Phasor`; `exp` of any kind spanning 1 and one blade with a constant square (the STA pseudoscalar's lands in `Phasor`)
 - [ ] An algebra trait (associated kinds `Point`, `Line`, `Motor`, …) for code written once over PGA2D and PGA3D or VGA2D–5D; the ports used macros
 - [ ] Grade-preserving sandwiches of certified versors in 5D and up (`m >> x` widens to the odd or full kind), and `normalized` for 5D even versors
-- [ ] Binding several slots of a form with maps at once (`value(dynamics, actuation)` is `.of(a).at::<1>().of(b).swap()` now); `lstsq` over several leading slots; `pinv` and `svd` on forms and non-square maps; a semidefinite generalized `eigh`
+- [x] `of_both` (both slots filled with maps), `svdvals` and `svd_thin` for maps of any shape, `as_map` for forms, `eigh_semidefinite` (generalized eigenproblems against a semidefinite metric, infinite modes last)
+- [ ] `lstsq` over several leading slots (pose diffusion's two-slot Lyapunov unknown; inertia's two-slot recovery)
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D
 
 ## Decisions for the project owner

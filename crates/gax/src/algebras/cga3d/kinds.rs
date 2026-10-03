@@ -374,6 +374,27 @@ impl<A: gx::Kind, T: gx::Coef> Scalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Scalar <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Scalar<(A, B), T> {
+    /// This form `Scalar <- (A, B)` as the map `A <- (B,)` with the same coefficients, for the
+    /// methods of maps (`svd_thin`, `pinv`, `svdvals`, `det`).
+    #[inline]
+    pub fn as_map(self) -> <A as gx::Kind>::Mv<(B,), T> {
+        gx::FormAsMap::as_map(self)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
     /// The inverse map, `A <- Scalar`.
     #[inline]
@@ -391,6 +412,26 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Scalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Scalar<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Scalar>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -503,6 +544,18 @@ impl<A: gx::Kind, T: gx::Real> Scalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Scalar, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -1169,6 +1222,18 @@ impl<A: gx::Kind, T: gx::Coef> Vector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Vector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Vector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
     /// The inverse map, `A <- Vector`.
     #[inline]
@@ -1186,6 +1251,26 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Vector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Vector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Vector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -1298,6 +1383,18 @@ impl<A: gx::Kind, T: gx::Real> Vector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Vector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Vector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -2001,6 +2098,18 @@ impl<A: gx::Kind, T: gx::Coef> Twist<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Twist<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Twist <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
     /// The inverse map, `A <- Twist`.
     #[inline]
@@ -2018,6 +2127,26 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Twist, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Twist<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Twist>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -2130,6 +2259,18 @@ impl<A: gx::Kind, T: gx::Real> Twist<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Twist, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -2941,6 +3082,18 @@ impl<A: gx::Kind, T: gx::Coef> Bivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Bivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Bivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
     /// The inverse map, `A <- Bivector`.
     #[inline]
@@ -2958,6 +3111,26 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Bivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Bivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Bivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -3070,6 +3243,18 @@ impl<A: gx::Kind, T: gx::Real> Bivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Bivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Bivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -3966,6 +4151,18 @@ impl<A: gx::Kind, T: gx::Coef> Trivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Trivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Trivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
     /// The inverse map, `A <- Trivector`.
     #[inline]
@@ -3983,6 +4180,26 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Trivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Trivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Trivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -4095,6 +4312,18 @@ impl<A: gx::Kind, T: gx::Real> Trivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Trivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Trivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -4757,6 +4986,18 @@ impl<A: gx::Kind, T: gx::Coef> Quadvector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Quadvector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Quadvector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Quadvector<(A,), T> {
     /// The inverse map, `A <- Quadvector`.
     #[inline]
@@ -4774,6 +5015,26 @@ impl<A: gx::Kind, T: gx::Real> Quadvector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Quadvector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Quadvector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Quadvector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -4886,6 +5147,18 @@ impl<A: gx::Kind, T: gx::Real> Quadvector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Quadvector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Quadvector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -5566,6 +5839,18 @@ impl<A: gx::Kind, T: gx::Coef> Pseudoscalar<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Pseudoscalar<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Pseudoscalar <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
     /// The inverse map, `A <- Pseudoscalar`.
     #[inline]
@@ -5583,6 +5868,26 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Pseudoscalar, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Pseudoscalar<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Pseudoscalar>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -5695,6 +6000,18 @@ impl<A: gx::Kind, T: gx::Real> Pseudoscalar<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Pseudoscalar, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -6366,6 +6683,18 @@ impl<A: gx::Kind, T: gx::Coef> Motor<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Motor<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Motor <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
     /// The inverse map, `A <- Motor`.
     #[inline]
@@ -6383,6 +6712,26 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Motor, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Motor<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Motor>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -6495,6 +6844,18 @@ impl<A: gx::Kind, T: gx::Real> Motor<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Motor, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -7391,6 +7752,18 @@ impl<A: gx::Kind, T: gx::Coef> Even<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Even<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Even <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
     /// The inverse map, `A <- Even`.
     #[inline]
@@ -7408,6 +7781,26 @@ impl<A: gx::Kind, T: gx::Real> Even<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Even, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Even<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Even>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -7520,6 +7913,18 @@ impl<A: gx::Kind, T: gx::Real> Even<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Even, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Even, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -8336,6 +8741,18 @@ impl<A: gx::Kind, T: gx::Coef> Odd<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Odd<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Odd <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
     /// The inverse map, `A <- Odd`.
     #[inline]
@@ -8353,6 +8770,26 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Odd, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Odd<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Odd>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -8465,6 +8902,18 @@ impl<A: gx::Kind, T: gx::Real> Odd<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Odd, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Odd, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).
@@ -9303,6 +9752,18 @@ impl<A: gx::Kind, T: gx::Coef> Multivector<(A,), T> {
     }
 }
 
+impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
+    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
+    /// `Multivector <- (X, Y)` (see [`gx::OfBoth`]).
+    #[inline]
+    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
+    where
+        Self: gx::OfBoth<P, Q>,
+    {
+        gx::OfBoth::of_both(self, p, q)
+    }
+}
+
 impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
     /// The inverse map, `A <- Multivector`.
     #[inline]
@@ -9320,6 +9781,26 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
         Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
     {
         gx::SquareMap::det(self)
+    }
+
+    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
+    #[inline]
+    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
+    where
+        Self: gx::SingularValues<Coef = T, Input = A>,
+    {
+        gx::SingularValues::svdvals(self)
+    }
+
+    /// The singular values, right and left singular vectors of a map of any shape (see
+    /// [`gx::SingularValues::svd_thin`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Multivector<(), T>>)
+    where
+        Self: gx::SingularValues<Coef = T, Input = A, Kind = Multivector>,
+    {
+        gx::SingularValues::svd_thin(self)
     }
 
     /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
@@ -9432,6 +9913,18 @@ impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
         Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
     {
         gx::Form::eigh_with(self, metric)
+    }
+
+    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
+    /// eigenvalues (`+â`, last) for the directions it does not measure (see
+    /// [`gx::Form::eigh_semidefinite`]).
+    #[inline]
+    #[allow(clippy::type_complexity)]
+    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
+    where
+        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
+    {
+        gx::Form::eigh_semidefinite(self, metric)
     }
 
     /// Symmetric eigenproblem in the coefficient basis (identity metric).

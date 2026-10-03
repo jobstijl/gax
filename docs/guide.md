@@ -210,6 +210,18 @@ Maps between kinds of the same size have `inverse`, `det`, `solve`, `svd` and, f
 to itself, `trace`. A map between kinds of different sizes has no `inverse`, and the compiler says
 so. Right-hand sides keep their slots: solving against a map returns a map.
 
+Maps of any shape have their singular values: `svdvals` (descending) and `svd_thin`, which adds
+the right singular vectors (values of the input kind; those of zero singular values span the
+null space) and the left ones. A form `Scalar<(A, B)>` is the map `A <- (B,)` with the same
+coefficients through `as_map`, for `svd_thin`, `pinv` or `det`. `of_both(p, q)` fills both
+slots of a two-slot map with maps at once (`M <- (A, B)` with `p: A <- (X,)`, `q: B <- (Y,)` gives
+`M <- (X, Y)`): a cost form pulled back through a step's dynamics and actuation.
+
+`eigh_with` needs a positive definite metric. Against one that is only semidefinite, such as
+PGA's point weight (which does not see ideal points), `eigh_semidefinite` lists the finite
+eigenvalues first and the directions the metric cannot measure as `+∞`: fitting a point to
+samples is the smallest finite mode of the misfit against the weight.
+
 Maps from a kind to itself also have eigenvalues. `eigh` takes the coefficient matrix as
 symmetric (numga's `eigh` on a map: right for maps self-adjoint under the coefficient inner
 product, such as stretches of Euclidean vectors); `eigvals` and `eig` take it as it is, so the
