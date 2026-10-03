@@ -9,20 +9,22 @@ mod law_suite;
 use gax::{Coef, Extensor, Kind, NewtonStep, Unit};
 use law_suite::{Sym, T, fresh, reset};
 
-/// For any `m` whose norm `n = m ~m` is a Study number (it commutes with `m`), the step
-/// `r = m (3 − n) / 2` has `r ~r = n (3 − n)² / 4` exactly. With `n = 1 + e` that is
-/// `1 − ¾ e² + ¼ e³` (a scalar identity, valid for Study numbers too), so one step turns an
-/// error `e` into `O(e²)`.
+/// For any `m` with a norm `n = m ~m` whose powers are self-reverse (a Study number, or a
+/// scalar plus a 4-vector in 5D), the step `r = (3 − n) m / 2` has `r ~r = n (3 − n)² / 4`
+/// exactly, whether or not `n` commutes with `m` (it does not for odd `m` in 4D, where the
+/// pseudoscalar anticommutes with `m`). With `n = 1 + e` that is `1 − ¾ e² + ¼ e³`, so one step
+/// turns an error `e` into `O(e²)`.
 fn newton_identity<M, N>()
 where
     M: Extensor<Slots = (), Coef = Sym>
         + gax::Reverse<Output = M>
         + core::ops::Mul<Output = N>
-        + core::ops::Mul<N, Output = M>
-        + NewtonStep,
+        + NewtonStep
+        + Copy,
     N: Extensor<Slots = (), Coef = Sym>
         + core::ops::Mul<Output = N>
         + core::ops::Sub<Output = N>
+        + core::ops::Mul<M, Output = M>
         + Copy,
     N: gax::Gp<Sym, Output = N>,
 {
@@ -38,8 +40,8 @@ where
     }));
     let q = (three - n).gp(Sym::from_f64(0.5));
     let r = m.newton_step();
-    let mq = m * q;
-    law_suite::law(r == mq, "the step is m (3 − n) / 2");
+    let qm = q * m;
+    law_suite::law(r == qm, "the step is (3 − n) m / 2");
     law_suite::law(r * r.reverse() == n * q * q, "r ~r = n (3 − n)² / 4");
 }
 
@@ -48,6 +50,71 @@ fn one_newton_step_squares_the_error() {
     newton_identity::<gax::pga3d::Motor<(), T>, gax::pga3d::Motor<(), T>>();
     newton_identity::<gax::pga2d::Motor<(), T>, gax::pga2d::Motor<(), T>>();
     newton_identity::<gax::vga3d::Rotor<(), T>, gax::vga3d::Rotor<(), T>>();
+    // Odd: the pseudoscalar part of the norm anticommutes with the flector.
+    newton_identity::<gax::pga3d::Flector<(), T>, gax::pga3d::Motor<(), T>>();
+}
+
+/// In 5D the norm of an even or odd element is a scalar plus a 4-vector, which commutes with
+/// neither; one step still squares the error, and `normalized` lands on `u ~u = 1`.
+#[cfg(all(feature = "cga3d", feature = "stap"))]
+#[test]
+fn five_d_steps_converge_quadratically() {
+    let mut s: u64 = 0x5eed_0001;
+    let mut next = move || {
+        s ^= s << 13;
+        s ^= s >> 7;
+        s ^= s << 17;
+        (s >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
+    };
+    // The largest deviation of `m ~m` from 1 (the scalar is the first coefficient).
+    macro_rules! err {
+        ($m:expr) => {{
+            let n = $m * $m.reverse();
+            n.c.iter()
+                .enumerate()
+                .map(|(i, c)| if i == 0 { (c - 1.0f64).abs() } else { c.abs() })
+                .fold(0.0f64, f64::max)
+        }};
+    }
+    macro_rules! check {
+        ($unit:expr, $m:ident) => {
+            for _ in 0..20 {
+                let u = $unit;
+                assert!(err!(u) < 1e-12, "a unit: {}", err!(u));
+                let d = $m::<(), f64>::from_coeffs(core::array::from_fn(|_| next()));
+                // Scaled and pushed off the versors: normalized lands back on u ~u = 1.
+                let x = u.gp(1.7) + d.gp(1e-2);
+                let y = x.normalized().into_inner();
+                assert!(err!(y) < 1e-12, "normalized: {}", err!(y));
+                // Drift: one Newton step squares the error.
+                let m = u + d.gp(1e-3);
+                let (e0, e1) = (err!(m), err!(m.newton_step()));
+                assert!(e1 < 4.0 * e0 * e0 + 1e-14, "one step: {e0} -> {e1}");
+            }
+        };
+    }
+    {
+        use gax::cga3d::{Bivector, Even, Odd, Vector};
+        macro_rules! biv {
+            () => {
+                Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| 0.7 * next()))
+            };
+        }
+        check!(biv!().exp().into_inner(), Even);
+        let e1 = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0, 0.0);
+        check!(biv!().exp().into_inner() * e1, Odd);
+    }
+    {
+        use gax::stap::{Bivector, Motor, Odd, Vector};
+        macro_rules! biv {
+            () => {
+                Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| 0.7 * next()))
+            };
+        }
+        check!(biv!().exp().into_inner(), Motor);
+        let e1 = Vector::<(), f64>::new(0.0, 1.0, 0.0, 0.0, 0.0);
+        check!(biv!().exp().into_inner() * e1, Odd);
+    }
 }
 
 #[test]

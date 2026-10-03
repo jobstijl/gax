@@ -773,7 +773,7 @@ impl<T: gx::Real> Scalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -1622,7 +1622,7 @@ impl<T: gx::Real> Vector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -2466,7 +2466,7 @@ impl<T: gx::Real> Twist<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Twist<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -3425,7 +3425,7 @@ impl<T: gx::Real> Bivector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Bivector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -4313,7 +4313,7 @@ impl<T: gx::Real> Trivector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Trivector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -5124,7 +5124,7 @@ impl<T: gx::Real> Pseudoscalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -5965,7 +5965,7 @@ impl<T: gx::Real> Motor<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -6988,7 +6988,7 @@ impl<T: gx::Real> Even<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Even<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -8072,7 +8072,7 @@ impl<T: gx::Real> Odd<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -8084,64 +8084,63 @@ impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
         let t5 = t4 - t2;
         let t6 = t3 + T::from_i64(3);
         let t7 = t5 - t6;
+        let t8 = x[2] * x[3];
         let t9 = x[4] * x[5];
-        let t10 = x[2].mul_add(x[3], t9);
+        let t10 = t8 + t9;
         let t12 = t2.mul_add(T::from_ratio(1, 2), t10);
         let t13 = x[0] * x[7];
         let t14 = x[1] * x[6];
         let t15 = t13 - t14;
         let t16 = x[2] * x[5];
-        let t18 = (-x[3]).mul_add(x[4], t16);
+        let t17 = x[3] * x[4];
+        let t18 = t16 - t17;
         let t19 = t13 + t18;
-        let t21 = (-t14).mul_add(T::from_ratio(1, 2), t19);
-        let t22 = t18 - t14;
-        let t24 = t22.mul_add(T::from_i64(2), t13);
-        let t25 = t0 - t3;
-        let t26 = t25 - T::from_i64(3);
-        let t28 = x[4] * x[4];
-        let t29 = x[2].mul_add(x[2], t28);
-        let t31 = x[5] * x[5];
-        let t32 = x[3].mul_add(x[3], t31);
+        let t21 = (-t14).mul_add(T::from_ratio(3, 2), t19);
+        let t22 = t15 + t16;
+        let t24 = (-t17).mul_add(T::from_i64(2), t22);
+        let t25 = t18 - t14;
+        let t27 = t25.mul_add(T::from_ratio(2, 3), t13);
+        let t28 = t15 - t17;
+        let t30 = t28.mul_add(T::from_ratio(1, 2), t16);
+        let t31 = t0 - t3;
+        let t32 = t31 - T::from_i64(3);
         let t34 = (-t12).mul_add(T::from_i64(2), t1);
-        let t36 = x[0] * t34;
-        let t39 = x[1] * x[2];
-        let t41 = x[1] * x[4];
-        let t42 = x[5] * t41;
-        let t43 = x[1] * t26;
-        let t45 = x[2] * t7;
-        let t46 = x[3] * t29;
-        let t49 = x[3] * t7;
-        let t50 = x[5] * t15;
-        let t52 = x[4] * t7;
-        let t53 = x[5] * t29;
-        let t55 = x[4] * t32;
-        let t56 = x[5] * t7;
-        let t58 = x[6] * t12;
-        let t59 = x[6] * t26;
-        let t61 = x[7] * t3;
-        let t63 = x[0].mul_add(t0, t36);
-        let t64 = x[7].mul_add(t24, t63);
-        let t66 = x[0] * T::from_ratio(3, 2);
-        let t67 = (-t64).mul_add(T::from_ratio(1, 2), t66);
-        let t68 = x[3].mul_add(t39, t42);
-        let t69 = x[6].mul_add(t21, t68);
-        let t70 = x[1].mul_add(t1, t43);
-        let t72 = (-t70).mul_add(T::from_ratio(1, 2), t69);
-        let t73 = (-x[4]).mul_add(t15, t46);
-        let t75 = (-t45).mul_add(T::from_ratio(1, 2), t73);
-        let t76 = x[2].mul_add(t32, t50);
-        let t78 = (-t49).mul_add(T::from_ratio(1, 2), t76);
-        let t79 = x[2].mul_add(t15, t53);
-        let t81 = (-t52).mul_add(T::from_ratio(1, 2), t79);
-        let t82 = (-x[3]).mul_add(t15, t55);
-        let t84 = (-t56).mul_add(T::from_ratio(1, 2), t82);
-        let t85 = (-x[1]).mul_add(t21, t58);
-        let t87 = (-t59).mul_add(T::from_ratio(1, 2), t85);
-        let t88 = x[0].mul_add(t24, t61);
-        let t89 = (-x[7]).mul_add(t34, t88);
-        let t91 = x[7] * T::from_ratio(3, 2);
-        let t92 = t89.mul_add(T::from_ratio(1, 2), t91);
-        Odd::from_coeffs([t67, t72, t75, t78, t81, t84, t87, t92])
+        let t35 = t7 * T::from_ratio(1, 2);
+        let t36 = t8 - t35;
+        let t37 = t9 - t35;
+        let t39 = x[0] * t34;
+        let t42 = x[1] * x[2];
+        let t44 = x[1] * x[4];
+        let t45 = x[5] * t44;
+        let t46 = x[1] * t32;
+        let t49 = x[4] * t30;
+        let t50 = x[3] * t36;
+        let t53 = x[4] * t37;
+        let t54 = x[3] * t30;
+        let t57 = x[6] * t12;
+        let t58 = x[6] * t32;
+        let t60 = x[7] * t3;
+        let t62 = x[0].mul_add(t0, t39);
+        let t64 = x[7].mul_add(t27, x[0]);
+        let t65 = t64 * T::from_ratio(3, 2);
+        let t66 = (-t62).mul_add(T::from_ratio(1, 2), t65);
+        let t67 = x[3].mul_add(t42, t45);
+        let t68 = (-x[6]).mul_add(t21, t67);
+        let t69 = x[1].mul_add(t1, t46);
+        let t71 = (-t69).mul_add(T::from_ratio(1, 2), t68);
+        let t72 = t49 * T::from_i64(2);
+        let t73 = x[2].mul_add(t36, t72);
+        let t74 = (-x[5]).mul_add(t24, t50);
+        let t75 = (-x[2]).mul_add(t24, t53);
+        let t76 = t54 * T::from_i64(2);
+        let t77 = x[5].mul_add(t37, t76);
+        let t78 = x[1].mul_add(t21, t57);
+        let t80 = (-t58).mul_add(T::from_ratio(1, 2), t78);
+        let t81 = (-x[7]).mul_add(t34, t60);
+        let t83 = (-x[0]).mul_add(t27, x[7]);
+        let t84 = t83 * T::from_ratio(3, 2);
+        let t85 = t81.mul_add(T::from_ratio(1, 2), t84);
+        Odd::from_coeffs([t66, t71, t73, t74, t75, t77, t80, t85])
     }
 
     #[inline(always)]

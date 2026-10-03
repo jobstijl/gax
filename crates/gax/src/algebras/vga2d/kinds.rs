@@ -773,7 +773,7 @@ impl<T: gx::Real> Scalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -1595,7 +1595,7 @@ impl<T: gx::Real> Vector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -2413,7 +2413,7 @@ impl<T: gx::Real> Pseudoscalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -3254,7 +3254,7 @@ impl<T: gx::Real> Rotor<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Rotor<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;

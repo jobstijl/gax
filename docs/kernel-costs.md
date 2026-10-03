@@ -144,7 +144,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Even` `>>` `Scalar` | 64 mul, 46 add | 58 mul, 46 add |
 | `Unit<Even>` `>>` `Scalar` | 14 mul, 11 add | 13 mul, 11 add |
 | `Even` `>>` `Vector` | 156 mul, 162 add | 145 mul, 138 add |
-| `Unit<Even>` `>>` `Vector` | 150 mul, 146 add | 139 mul, 122 add |
+| `Unit<Even>` `>>` `Vector` | 130 mul, 127 add | 120 mul, 107 add |
 | `Even` `>>` `Twist` | 204 mul, 227 add | 185 mul, 177 add |
 | `Unit<Even>` `>>` `Twist` | 206 mul, 204 add | 180 mul, 154 add |
 | `Even` `>>` `Bivector` | 283 mul, 364 add | 257 mul, 274 add |
@@ -152,7 +152,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Even` `>>` `Trivector` | 283 mul, 364 add | 257 mul, 274 add |
 | `Unit<Even>` `>>` `Trivector` | 285 mul, 341 add | 255 mul, 251 add |
 | `Even` `>>` `Quadvector` | 156 mul, 162 add | 145 mul, 138 add |
-| `Unit<Even>` `>>` `Quadvector` | 150 mul, 146 add | 139 mul, 122 add |
+| `Unit<Even>` `>>` `Quadvector` | 130 mul, 127 add | 120 mul, 107 add |
 | `Even` `>>` `Pseudoscalar` | 64 mul, 46 add | 58 mul, 46 add |
 | `Unit<Even>` `>>` `Pseudoscalar` | 14 mul, 11 add | 13 mul, 11 add |
 | `Even` `>>` `Motor` | 225 mul, 252 add | 198 mul, 196 add |
@@ -166,7 +166,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Odd` `>>` `Scalar` | 64 mul, 46 add | 58 mul, 46 add |
 | `Unit<Odd>` `>>` `Scalar` | 14 mul, 11 add | 13 mul, 11 add |
 | `Odd` `>>` `Vector` | 156 mul, 158 add | 145 mul, 134 add |
-| `Unit<Odd>` `>>` `Vector` | 150 mul, 146 add | 139 mul, 122 add |
+| `Unit<Odd>` `>>` `Vector` | 130 mul, 127 add | 120 mul, 107 add |
 | `Odd` `>>` `Twist` | 203 mul, 223 add | 184 mul, 173 add |
 | `Unit<Odd>` `>>` `Twist` | 205 mul, 204 add | 179 mul, 154 add |
 | `Odd` `>>` `Bivector` | 286 mul, 352 add | 260 mul, 262 add |
@@ -174,7 +174,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Odd` `>>` `Trivector` | 286 mul, 352 add | 260 mul, 262 add |
 | `Unit<Odd>` `>>` `Trivector` | 288 mul, 337 add | 258 mul, 247 add |
 | `Odd` `>>` `Quadvector` | 156 mul, 158 add | 145 mul, 134 add |
-| `Unit<Odd>` `>>` `Quadvector` | 150 mul, 146 add | 139 mul, 122 add |
+| `Unit<Odd>` `>>` `Quadvector` | 130 mul, 127 add | 120 mul, 107 add |
 | `Odd` `>>` `Pseudoscalar` | 64 mul, 46 add | 58 mul, 46 add |
 | `Unit<Odd>` `>>` `Pseudoscalar` | 14 mul, 11 add | 13 mul, 11 add |
 | `Odd` `>>` `Motor` | 223 mul, 244 add | 196 mul, 188 add |
@@ -217,17 +217,17 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Motor` `>>` `Scalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Motor>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Motor` `>>` `Vector` | 162 mul, 146 add | 143 mul, 122 add |
-| `Unit<Motor>` `>>` `Vector` | 106 mul, 83 add | 118 mul, 99 add |
+| `Unit<Motor>` `>>` `Vector` | 100 mul, 79 add | 93 mul, 82 add |
 | `Motor` `>>` `Twist` | 186 mul, 232 add | 151 mul, 166 add |
 | `Unit<Motor>` `>>` `Twist` | 187 mul, 208 add | 142 mul, 142 add |
 | `Motor` `>>` `Bivector` | 298 mul, 434 add | 236 mul, 304 add |
-| `Unit<Motor>` `>>` `Bivector` | 298 mul, 400 add | 230 mul, 271 add |
+| `Unit<Motor>` `>>` `Bivector` | 293 mul, 393 add | 226 mul, 267 add |
 | `Motor` `>>` `Trivector` | 398 mul, 496 add | 229 mul, 280 add |
 | `Unit<Motor>` `>>` `Trivector` | 407 mul, 472 add | 224 mul, 256 add |
 | `Motor` `>>` `Quadvector` | 298 mul, 434 add | 236 mul, 304 add |
-| `Unit<Motor>` `>>` `Quadvector` | 298 mul, 400 add | 230 mul, 271 add |
+| `Unit<Motor>` `>>` `Quadvector` | 293 mul, 393 add | 226 mul, 267 add |
 | `Motor` `>>` `Quintvector` | 162 mul, 146 add | 143 mul, 122 add |
-| `Unit<Motor>` `>>` `Quintvector` | 106 mul, 83 add | 118 mul, 99 add |
+| `Unit<Motor>` `>>` `Quintvector` | 100 mul, 79 add | 93 mul, 82 add |
 | `Motor` `>>` `Pseudoscalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Motor>` `>>` `Pseudoscalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Motor` `>>` `Motor` | 220 mul, 264 add | 160 mul, 176 add |
@@ -607,7 +607,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Motor` `>>` `Scalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Motor>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Motor` `>>` `Vector` | 136 mul, 105 add | 121 mul, 102 add |
-| `Unit<Motor>` `>>` `Vector` | 85 mul, 63 add | 100 mul, 83 add |
+| `Unit<Motor>` `>>` `Vector` | 74 mul, 55 add | 80 mul, 71 add |
 | `Motor` `>>` `Bivector` | 186 mul, 232 add | 151 mul, 166 add |
 | `Unit<Motor>` `>>` `Bivector` | 187 mul, 208 add | 142 mul, 142 add |
 | `Motor` `>>` `Trivector` | 186 mul, 232 add | 151 mul, 166 add |
@@ -625,7 +625,7 @@ shows up here, in review. See [performance.md](performance.md) for timings.
 | `Odd` `>>` `Scalar` | 55 mul, 38 add | 49 mul, 38 add |
 | `Unit<Odd>` `>>` `Scalar` | 9 mul, 7 add | 8 mul, 7 add |
 | `Odd` `>>` `Vector` | 143 mul, 107 add | 121 mul, 102 add |
-| `Unit<Odd>` `>>` `Vector` | 100 mul, 67 add | 100 mul, 83 add |
+| `Unit<Odd>` `>>` `Vector` | 74 mul, 55 add | 80 mul, 71 add |
 | `Odd` `>>` `Bivector` | 186 mul, 238 add | 151 mul, 172 add |
 | `Unit<Odd>` `>>` `Bivector` | 187 mul, 214 add | 142 mul, 148 add |
 | `Odd` `>>` `Trivector` | 186 mul, 238 add | 151 mul, 172 add |

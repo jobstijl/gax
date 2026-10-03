@@ -151,7 +151,8 @@ Status of the work plan. `[x]` done, `[~]` in progress, `[ ]` open.
 - [x] Open-slot products of large kinds compiled very slowly (a 6D signature's sandwich and product maps over 15 minutes, 12 GB for twelve): above 4096 terms times slot entries they run as the value product per pair of slot entries (`slots::by_entries`, ADR-034); a CSTA probe 128 s to 4 s
 - [x] Extra kinds in the standard algebras as `part`s (kinds never chosen as a result type, so no existing type changes): PGA ideal points (`Direction`), VGA3D `Paravector`, STA `Phasor`; `exp` of any kind spanning 1 and one blade with a constant square (the STA pseudoscalar's lands in `Phasor`)
 - [ ] An algebra trait (associated kinds `Point`, `Line`, `Motor`, …) for code written once over PGA2D and PGA3D or VGA2D–5D; the ports used macros
-- [ ] Grade-preserving sandwiches of certified versors in 5D and up (`m >> x` widens to the odd or full kind), and `normalized` for 5D even versors
+- [x] Grade-preserving sandwiches of certified versors in 5D and up (`Unit<Even> >> Vector` is a `Vector` in CGA3D, STAP and CSTA; `tests/unit_versors.rs`)
+- [x] `normalized`, closed-form `inverse` and `renormalize_fast` for 5D even and odd versors (`x ~x` a scalar plus a 4-vector); the Newton step moved to the left, where odd kinds in 4D need it
 - [x] `of_both` (both slots filled with maps), `svdvals` and `svd_thin` for maps of any shape, `as_map` for forms, `eigh_semidefinite` (generalized eigenproblems against a semidefinite metric, infinite modes last)
 - [ ] `lstsq` over several leading slots (pose diffusion's two-slot Lyapunov unknown; inertia's two-slot recovery)
 - [ ] Not planned: batch axes with reductions (Rust's slices and the SIMD lanes take their place), product algebras, algebras beyond 9D

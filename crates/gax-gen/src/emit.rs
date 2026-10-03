@@ -552,6 +552,20 @@ fn sandwich_math(
         *p = cse::reduce_by_relations(p, &relations);
     }
     reduced.retain(|_, p| !p.is_zero());
+    // A unit versor's sandwich keeps the passenger's grades, as the plain sandwiches assume
+    // (ADR-020, ADR-034). The reduction above finds most other parts zero; some vanish only on the
+    // relations' variety, not in their ideal: in 5D the pseudoscalar part of an even versor's
+    // sandwich of a vector is in the radical of `u ~u = 1`, never in the ideal itself, and a
+    // 5D `Unit<Even> >> Vector` was typed `Odd`. Every even element of a 5D algebra with
+    // `u ~u = 1` is a versor (the Lipschitz group, Lounesto), and `tests/unit_versors.rs`
+    // checks it on elements projected onto the relations rather than built as versors. From 6D
+    // on that fails (`cos θ + I sin θ` turns vectors into grade 5), so there only kinds without
+    // the pseudoscalar qualify, each one checked by that test (CSTA's motor).
+    let full = (1u32 << alg.dim()) - 1;
+    if unit && (alg.dim() <= 5 || vk.layout.position(full).is_none()) {
+        let grades = xk.layout.grades();
+        reduced.retain(|m, _| grades.contains(&m.count_ones()));
+    }
     let support = symbolic::support(&reduced);
     if support.is_empty() {
         return None;

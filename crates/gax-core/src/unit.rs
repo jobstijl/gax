@@ -77,7 +77,7 @@ impl<M> Unit<M> {
 /// vector to a bivector `B` with `B ~B = -1`.
 pub trait Widen<N> {}
 
-/// One Newton step towards the unit condition, `x (3 − x ~x) / 2` (implemented by the
+/// One Newton step towards the unit condition, `(3 − x ~x) x / 2` (implemented by the
 /// generated algebras for the kinds whose norm is a Study number). For `x ~x = 1 + e` the result
 /// is off by `O(e²)`, with no square root. See [`Unit::renormalize_fast`].
 ///
@@ -91,7 +91,7 @@ pub trait Widen<N> {}
 /// assert!((fixed.norm_squared() - 1.0).abs() < 1e-5);
 /// ```
 pub trait NewtonStep {
-    /// `x (3 − x ~x) / 2`.
+    /// `(3 − x ~x) x / 2`.
     fn newton_step(self) -> Self;
     /// Called when a `Unit` is renormalized; forwards to
     /// [`Coef::note_renormalize`](crate::Coef::note_renormalize).
@@ -101,7 +101,7 @@ pub trait NewtonStep {
 
 impl<M: NewtonStep> Unit<M> {
     /// Pull a drifted unit versor back towards `x ~x = 1` with one Newton step,
-    /// `x (3 − x ~x) / 2`: an error `e` in the norm becomes `O(e²)`, for a few multiplications and
+    /// `(3 − x ~x) x / 2`: an error `e` in the norm becomes `O(e²)`, for a few multiplications and
     /// no square root. `normalized()` is the exact path.
     ///
     /// A policy that keeps the certificate honest: call it after every integration step, or

@@ -773,7 +773,7 @@ impl<T: gx::Real> Scalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -1639,7 +1639,7 @@ impl<T: gx::Real> Vector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -2485,67 +2485,246 @@ impl<T: gx::Real> Bivector<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Motor` (no closed form
-    /// for `Bivector` here): the inverse as a polynomial of degree 3 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 3 products in `Motor`), on the part of `x` free of the null direction(s), then a finite series for the
-    /// nilpotent rest (1 term(s)), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Motor<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Motor::<(), T>::zero();
-        x.c[1] = self.c[0] * scale;
-        x.c[2] = self.c[1] * scale;
-        x.c[3] = self.c[2] * scale;
-        x.c[4] = self.c[3] * scale;
-        x.c[5] = self.c[4] * scale;
-        x.c[6] = self.c[5] * scale;
-        x.c[7] = self.c[6] * scale;
-        x.c[8] = self.c[7] * scale;
-        x.c[9] = self.c[8] * scale;
-        x.c[10] = self.c[9] * scale;
-        // The body `a` (no null direction) and the nilpotent rest `n = x â a`.
-        let mut a = x;
-        a.c[1] = T::zero(); a.c[2] = T::zero(); a.c[3] = T::zero(); a.c[4] = T::zero(); a.c[11] = T::zero(); a.c[12] = T::zero(); a.c[13] = T::zero(); a.c[14] = T::zero();
-        let n = x - a;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(4);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..4i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(4, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // xâ»Â¹ = Î£â (âaâ»Â¹ n)áµ aâ»Â¹, k = 0..=1: (aâ»Â¹ n)^2 = 0, every term holding a null
-        // direction twice.
-        let m = -(y * n);
-        let mut term = y;
-        for _ in 0..1 {
-            term = m * term;
-            y = y + term;
-        }
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (118 mul, 72 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Bivector<(), T> {
+        let x = self.c;
+        let t0 = x[4] * x[4];
+        let t1 = x[5] * x[5];
+        let t2 = x[6] * x[6];
+        let t3 = x[7] * x[7];
+        let t4 = x[8] * x[8];
+        let t5 = x[9] * x[9];
+        let t6 = x[4] * x[7];
+        let t7 = x[5] * x[8];
+        let t8 = x[6] * x[9];
+        let t11 = t0 * t2;
+        let t16 = t6 * t8;
+        let t17 = t1 * t1;
+        let t18 = t1 * t2;
+        let t19 = t1 * t3;
+        let t24 = t2 * t3;
+        let t26 = t2 * t5;
+        let t29 = t3 * t5;
+        let t30 = t4 * t4;
+        let t31 = t4 * t5;
+        let t33 = t0.mul_add(t0, t17);
+        let t34 = t2.mul_add(t2, t33);
+        let t35 = t3.mul_add(t3, t30);
+        let t36 = t5.mul_add(t5, t35);
+        let t37 = t34 + t36;
+        let t38 = t0.mul_add(t1, t11);
+        let t39 = t0.mul_add(t3, t18);
+        let t40 = t38 + t39;
+        let t41 = t1.mul_add(t4, t26);
+        let t42 = t3.mul_add(t4, t29);
+        let t43 = t41 + t42;
+        let t44 = t40 + t43;
+        let t45 = (-t0).mul_add(t4, t31);
+        let t46 = t0.mul_add(t5, t19);
+        let t47 = t45 - t46;
+        let t48 = t1.mul_add(t5, t24);
+        let t49 = t2.mul_add(t4, t48);
+        let t50 = t47 - t49;
+        let t51 = t44 + t50;
+        let t53 = t6.mul_add(t7, t16);
+        let t54 = t7.mul_add(t8, t53);
+        let t56 = t51.mul_add(T::from_i64(2), t37);
+        let t57 = t54.mul_add(T::from_i64(8), t56);
+        let t58 = t57.recip();
+        let t59 = t0 * t58;
+        let t60 = t1 * t58;
+        let t61 = t2 * t58;
+        let t62 = t59 + t60;
+        let t63 = t61 + t62;
+        let t64 = t3 * t58;
+        let t65 = t4 * t58;
+        let t66 = t5 * t58;
+        let t67 = t64 + t65;
+        let t68 = t66 + t67;
+        let t69 = t59 - t60;
+        let t70 = t64 - t65;
+        let t71 = t61 + t66;
+        let t72 = t6 * t58;
+        let t73 = t7 * t58;
+        let t74 = t8 * t58;
+        let t75 = t72 + t73;
+        let t77 = t74.mul_add(T::from_ratio(1, 2), t75);
+        let t78 = x[4] * x[5];
+        let t80 = x[7] * x[8];
+        let t81 = t58 * t80;
+        let t82 = t58.mul_add(t78, t81);
+        let t83 = x[4] * x[6];
+        let t85 = x[7] * x[9];
+        let t86 = t58 * t85;
+        let t87 = t58.mul_add(t83, t86);
+        let t88 = t72 + t74;
+        let t89 = x[4] * x[8];
+        let t90 = t58 * t89;
+        let t91 = x[5] * x[7];
+        let t93 = (-t58).mul_add(t91, t90);
+        let t94 = x[4] * x[9];
+        let t95 = t58 * t94;
+        let t96 = x[6] * x[7];
+        let t98 = (-t58).mul_add(t96, t95);
+        let t99 = x[5] * x[6];
+        let t101 = x[8] * x[9];
+        let t102 = t58 * t101;
+        let t103 = t58.mul_add(t99, t102);
+        let t104 = t73 + t74;
+        let t105 = x[5] * x[9];
+        let t106 = t58 * t105;
+        let t107 = x[6] * x[8];
+        let t109 = (-t58).mul_add(t107, t106);
+        let t110 = t61 - t68;
+        let t111 = t66 - t63;
+        let t112 = t69 + t70;
+        let t114 = x[0] * t112;
+        let t116 = x[2] * t87;
+        let t120 = x[1] * t112;
+        let t121 = x[2] * t103;
+        let t124 = x[1] * t103;
+        let t125 = x[2] * t71;
+        let t131 = x[2] * t93;
+        let t133 = x[3] * t68;
+        let t135 = x[4] * t111;
+        let t136 = x[7] * t104;
+        let t138 = x[5] * t111;
+        let t139 = x[8] * t88;
+        let t141 = x[6] * t67;
+        let t142 = x[9] * t77;
+        let t143 = x[4] * t104;
+        let t144 = x[7] * t69;
+        let t146 = x[5] * t88;
+        let t148 = x[8] * t110;
+        let t149 = x[6] * t77;
+        let t150 = x[9] * t68;
+        let t152 = (-x[0]).mul_add(t71, t114);
+        let t153 = x[1].mul_add(t82, t116);
+        let t154 = (-x[3]).mul_add(t109, t153);
+        let t156 = t154.mul_add(T::from_i64(2), t152);
+        let t157 = x[1].mul_add(t71, t120);
+        let t158 = x[0].mul_add(t82, t121);
+        let t159 = x[3].mul_add(t98, t158);
+        let t161 = t159.mul_add(T::from_i64(2), -t157);
+        let t162 = (-x[2]).mul_add(t62, t125);
+        let t163 = (-x[2]).mul_add(t67, t162);
+        let t164 = x[0].mul_add(t87, t124);
+        let t165 = (-x[3]).mul_add(t93, t164);
+        let t167 = t165.mul_add(T::from_i64(2), t163);
+        let t168 = x[3].mul_add(t63, t133);
+        let t169 = x[0].mul_add(t109, t131);
+        let t170 = (-x[1]).mul_add(t98, t169);
+        let t172 = t170.mul_add(T::from_i64(2), t168);
+        let t173 = (-x[4]).mul_add(t70, t135);
+        let t175 = (-t136).mul_add(T::from_i64(2), t173);
+        let t176 = x[5].mul_add(t70, t138);
+        let t178 = (-t139).mul_add(T::from_i64(2), t176);
+        let t179 = (-x[6]).mul_add(t63, t141);
+        let t181 = (-t142).mul_add(T::from_i64(2), t179);
+        let t182 = (-x[7]).mul_add(t110, t144);
+        let t184 = t143.mul_add(T::from_i64(2), t182);
+        let t185 = x[8].mul_add(t69, t148);
+        let t187 = t146.mul_add(T::from_i64(2), -t185);
+        let t188 = (-x[9]).mul_add(t62, t150);
+        let t190 = t149.mul_add(T::from_i64(2), t188);
+        Bivector::from_coeffs([t156, t161, t167, t172, t175, t178, t181, t184, t187, t190])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[4] * x[7];
+        let p1 = x[5] * x[8];
+        let p2 = x[6] * x[9];
+        let p4 = x[5] * x[5];
+        let p7 = x[8] * x[8];
+        let p11 = p0 * p2;
+        let p12 = p1 * p1;
+        let p15 = x[4].mul_add(x[4], p4);
+        let p16 = x[6].mul_add(x[6], p15);
+        let p17 = x[7].mul_add(x[7], p7);
+        let p18 = x[9].mul_add(x[9], p17);
+        let p19 = p16 - p18;
+        let p20 = p0.mul_add(p0, p12);
+        let p21 = p2.mul_add(p2, p20);
+        let p23 = p0.mul_add(p1, p11);
+        let p24 = p1.mul_add(p2, p23);
+        let p25 = p24 * T::from_i64(8);
+        let p26 = p21.mul_add(T::from_i64(4), p25);
+        let p27 = -p26;
+        let [s0, s1] = gx::study::rsqrt_q(p19, p27);
+        let t0 = x[4] * x[7];
+        let t2 = x[5] * x[8];
+        let t3 = s1 * t2;
+        let t4 = x[6] * x[9];
+        let t6 = s1.mul_add(t0, t3);
+        let t7 = s1.mul_add(t4, t6);
+        let t8 = x[0] * x[4];
+        let t10 = x[1] * x[5];
+        let t11 = s1 * t10;
+        let t12 = x[2] * x[6];
+        let t14 = s1.mul_add(t8, t11);
+        let t15 = s1.mul_add(t12, t14);
+        let t16 = x[0] * x[8];
+        let t17 = s1 * t16;
+        let t18 = x[1] * x[7];
+        let t20 = x[3] * x[6];
+        let t22 = (-s1).mul_add(t18, t17);
+        let t23 = (-s1).mul_add(t20, t22);
+        let t24 = x[0] * x[9];
+        let t26 = x[2] * x[7];
+        let t28 = x[3] * x[5];
+        let t29 = s1 * t28;
+        let t30 = s1.mul_add(t24, t29);
+        let t31 = (-s1).mul_add(t26, t30);
+        let t32 = x[1] * x[9];
+        let t33 = s1 * t32;
+        let t34 = x[2] * x[8];
+        let t36 = x[3] * x[4];
+        let t38 = (-s1).mul_add(t34, t33);
+        let t39 = (-s1).mul_add(t36, t38);
+        let t41 = x[4] * t15;
+        let t46 = x[7] * t23;
+        let t50 = x[7] * t31;
+        let t54 = x[5] * t31;
+        let t56 = x[4] * s0;
+        let t57 = x[7] * t7;
+        let t58 = x[5] * s0;
+        let t59 = x[8] * t7;
+        let t60 = x[6] * s0;
+        let t61 = x[9] * t7;
+        let t62 = x[4] * t7;
+        let t64 = x[5] * t7;
+        let t66 = x[6] * t7;
+        let t68 = (-x[8]).mul_add(t23, t41);
+        let t69 = (-x[9]).mul_add(t31, t68);
+        let t70 = t69 * T::from_i64(2);
+        let t71 = x[0].mul_add(s0, t70);
+        let t72 = x[5].mul_add(t15, t46);
+        let t73 = (-x[9]).mul_add(t39, t72);
+        let t74 = t73 * T::from_i64(2);
+        let t75 = x[1].mul_add(s0, t74);
+        let t76 = x[6].mul_add(t15, t50);
+        let t77 = x[8].mul_add(t39, t76);
+        let t78 = t77 * T::from_i64(2);
+        let t79 = x[2].mul_add(s0, t78);
+        let t80 = (-x[4]).mul_add(t39, t54);
+        let t81 = (-x[6]).mul_add(t23, t80);
+        let t82 = t81 * T::from_i64(2);
+        let t83 = x[3].mul_add(s0, t82);
+        let t85 = (-t57).mul_add(T::from_i64(2), t56);
+        let t87 = (-t59).mul_add(T::from_i64(2), t58);
+        let t89 = (-t61).mul_add(T::from_i64(2), t60);
+        let t90 = t62 * T::from_i64(2);
+        let t91 = x[7].mul_add(s0, t90);
+        let t92 = t64 * T::from_i64(2);
+        let t93 = x[8].mul_add(s0, t92);
+        let t94 = t66 * T::from_i64(2);
+        let t95 = x[9].mul_add(s0, t94);
+        gx::Unit::new_unchecked(Bivector::from_coeffs([t71, t75, t79, t83, t85, t87, t89, t91, t93, t95]))
     }
 
     /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B`, with `BÂ² = Î» + Q` and `QÂ² = q` a scalar.
@@ -2673,6 +2852,118 @@ impl<T: gx::Real> Bivector<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Bivector<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[4] * x[4];
+        let t1 = x[5] * x[5];
+        let t2 = x[6] * x[6];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        let t5 = x[7] * x[7];
+        let t6 = x[8] * x[8];
+        let t7 = x[9] * x[9];
+        let t8 = t5 + t6;
+        let t9 = t7 + t8;
+        let t11 = t2.mul_add(T::from_i64(3), t3);
+        let t12 = t0 + t2;
+        let t14 = t1.mul_add(T::from_i64(3), t12);
+        let t15 = t1 + t2;
+        let t17 = t15.mul_add(T::from_ratio(1, 3), t0);
+        let t18 = t5 + T::from_i64(1);
+        let t20 = t6.mul_add(T::from_ratio(1, 3), t18);
+        let t21 = t6 + T::from_i64(1);
+        let t23 = t5.mul_add(T::from_ratio(1, 3), t21);
+        let t25 = x[7] * x[8];
+        let t26 = x[4].mul_add(x[5], t25);
+        let t28 = x[7] * x[9];
+        let t29 = x[4].mul_add(x[6], t28);
+        let t30 = x[4] * x[7];
+        let t31 = x[5] * x[8];
+        let t32 = t30 + t31;
+        let t33 = x[6] * x[9];
+        let t34 = t30 + t33;
+        let t35 = x[4] * x[8];
+        let t37 = (-x[5]).mul_add(x[7], t35);
+        let t38 = x[4] * x[9];
+        let t40 = (-x[6]).mul_add(x[7], t38);
+        let t42 = x[8] * x[9];
+        let t43 = x[5].mul_add(x[6], t42);
+        let t44 = t31 + t33;
+        let t45 = x[5] * x[9];
+        let t47 = (-x[6]).mul_add(x[8], t45);
+        let t48 = t7 - t4;
+        let t50 = t9.mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t53 = x[0] * t23;
+        let t56 = x[3] * t47;
+        let t59 = x[1] * t14;
+        let t60 = x[1] * t20;
+        let t61 = x[2] * t43;
+        let t65 = x[2] * t7;
+        let t68 = x[3] * t37;
+        let t70 = x[1] * t40;
+        let t73 = x[3] * t50;
+        let t74 = x[4] * t20;
+        let t75 = x[4] * t48;
+        let t77 = x[5] * t23;
+        let t78 = x[5] * t48;
+        let t82 = x[6] * t8;
+        let t86 = x[7] * t50;
+        let t88 = x[8] * t14;
+        let t89 = x[8] * t50;
+        let t91 = x[9] * t11;
+        let t92 = x[9] * t50;
+        let t93 = (-x[1]).mul_add(t26, t56);
+        let t94 = (-x[2]).mul_add(t29, t93);
+        let t95 = x[0].mul_add(t7, t53);
+        let t96 = (-x[0]).mul_add(t17, t95);
+        let t98 = t96.mul_add(T::from_ratio(3, 2), t94);
+        let t99 = x[0].mul_add(t26, t61);
+        let t100 = x[3].mul_add(t40, t99);
+        let t102 = x[1].mul_add(t7, t60);
+        let t104 = t102.mul_add(T::from_ratio(3, 2), -t100);
+        let t105 = (-t59).mul_add(T::from_ratio(1, 2), t104);
+        let t106 = (-x[0]).mul_add(t29, t68);
+        let t107 = (-x[1]).mul_add(t43, t106);
+        let t108 = (-x[2]).mul_add(t11, t65);
+        let t110 = x[2].mul_add(t8, x[2]);
+        let t112 = t108.mul_add(T::from_ratio(1, 2), t107);
+        let t113 = t110.mul_add(T::from_ratio(3, 2), t112);
+        let t114 = (-x[0]).mul_add(t47, t70);
+        let t115 = (-x[2]).mul_add(t37, t114);
+        let t116 = (-x[3]).mul_add(t4, t73);
+        let t118 = t116.mul_add(T::from_ratio(3, 2), t115);
+        let t119 = t75 * T::from_ratio(1, 2);
+        let t121 = x[7].mul_add(t44, t119);
+        let t122 = t74.mul_add(T::from_ratio(3, 2), t121);
+        let t123 = t78 * T::from_ratio(1, 2);
+        let t125 = x[8].mul_add(t34, t123);
+        let t126 = t77.mul_add(T::from_ratio(3, 2), t125);
+        let t127 = (-x[6]).mul_add(t4, t82);
+        let t128 = t127 * T::from_ratio(1, 2);
+        let t129 = x[6].mul_add(t7, x[6]);
+        let t131 = x[9].mul_add(t32, t128);
+        let t132 = t129.mul_add(T::from_ratio(3, 2), t131);
+        let t133 = (-x[7]).mul_add(t17, t86);
+        let t134 = t133 * T::from_ratio(3, 2);
+        let t135 = (-x[4]).mul_add(t44, t134);
+        let t137 = t89 * T::from_ratio(3, 2);
+        let t138 = (-x[5]).mul_add(t34, t137);
+        let t139 = (-t88).mul_add(T::from_ratio(1, 2), t138);
+        let t141 = t92 * T::from_ratio(3, 2);
+        let t142 = (-x[6]).mul_add(t32, t141);
+        let t143 = (-t91).mul_add(T::from_ratio(1, 2), t142);
+        Bivector::from_coeffs([t98, t105, t113, t118, t122, t126, t132, t135, t139, t143])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
+}
+
 impl<T: gx::Real> gx::Exp for Bivector<(), T> {
     type Output = gx::Unit<Motor<(), T>>;
     #[inline(always)]
@@ -2682,7 +2973,7 @@ impl<T: gx::Real> gx::Exp for Bivector<(), T> {
 }
 
 impl<T: gx::Real> gx::Inverse for Bivector<(), T> {
-    type Output = Motor<(), T>;
+    type Output = Bivector<(), T>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -2697,6 +2988,13 @@ impl<T: gx::Real> gx::Norm for Bivector<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Bivector<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -3489,73 +3787,268 @@ impl<T: gx::Real> Trivector<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Multivector` (no closed form
-    /// for `Trivector` here): the inverse as a polynomial of degree 3 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 3 products in `Multivector`), on the part of `x` free of the null direction(s), then a finite series for the
-    /// nilpotent rest (1 term(s)), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Multivector<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Multivector::<(), T>::zero();
-        x.c[16] = self.c[0] * scale;
-        x.c[17] = self.c[1] * scale;
-        x.c[18] = self.c[2] * scale;
-        x.c[19] = self.c[3] * scale;
-        x.c[20] = self.c[4] * scale;
-        x.c[21] = self.c[5] * scale;
-        x.c[22] = self.c[6] * scale;
-        x.c[23] = self.c[7] * scale;
-        x.c[24] = self.c[8] * scale;
-        x.c[25] = self.c[9] * scale;
-        // The body `a` (no null direction) and the nilpotent rest `n = x â a`.
-        let mut a = x;
-        a.c[1] = T::zero(); a.c[6] = T::zero(); a.c[7] = T::zero(); a.c[8] = T::zero(); a.c[9] = T::zero(); a.c[16] = T::zero(); a.c[17] = T::zero(); a.c[18] = T::zero(); a.c[19] = T::zero(); a.c[20] = T::zero(); a.c[21] = T::zero(); a.c[26] = T::zero(); a.c[27] = T::zero(); a.c[28] = T::zero(); a.c[29] = T::zero(); a.c[31] = T::zero();
-        let n = x - a;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(4);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..4i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(4, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // xâ»Â¹ = Î£â (âaâ»Â¹ n)áµ aâ»Â¹, k = 0..=1: (aâ»Â¹ n)^2 = 0, every term holding a null
-        // direction twice.
-        let m = -(y * n);
-        let mut term = y;
-        for _ in 0..1 {
-            term = m * term;
-            y = y + term;
-        }
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (68 mul, 43 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Trivector<(), T> {
+        let x = self.c;
+        let t0 = x[6] * x[6];
+        let t1 = x[7] * x[7];
+        let t2 = x[8] * x[8];
+        let t3 = x[9] * x[9];
+        let t6 = t0 * t2;
+        let t8 = t1 * t1;
+        let t10 = t1 * t3;
+        let t13 = t3 * t3;
+        let t14 = t0.mul_add(t0, t8);
+        let t15 = t2.mul_add(t2, t13);
+        let t16 = t14 + t15;
+        let t17 = t1.mul_add(t2, t10);
+        let t18 = t2.mul_add(t3, t17);
+        let t19 = t0.mul_add(t1, t6);
+        let t20 = t0.mul_add(t3, t19);
+        let t21 = t18 - t20;
+        let t23 = t21.mul_add(T::from_i64(2), t16);
+        let t24 = t23.recip();
+        let t25 = t0 * t24;
+        let t26 = t1 * t24;
+        let t27 = t2 * t24;
+        let t28 = t3 * t24;
+        let t29 = t25 - t26;
+        let t30 = t27 + t28;
+        let t31 = t29 - t30;
+        let t32 = t25 + t26;
+        let t33 = t27 - t28;
+        let t34 = t25 + t27;
+        let t35 = t28 - t26;
+        let t36 = t34 + t35;
+        let t37 = t32 - t33;
+        let t38 = t32 + t33;
+        let t39 = x[6] * t24;
+        let t40 = x[7] * t24;
+        let t41 = x[7] * t39;
+        let t42 = x[8] * x[9];
+        let t43 = x[8] * t39;
+        let t44 = x[8] * t40;
+        let t45 = x[9] * t39;
+        let t46 = x[9] * t40;
+        let t47 = t24 * t42;
+        let t50 = x[2] * t46;
+        let t51 = x[4] * t45;
+        let t55 = x[2] * t47;
+        let t57 = x[5] * t41;
+        let t59 = x[1] * t47;
+        let t61 = x[3] * t43;
+        let t63 = x[1] * t45;
+        let t67 = x[5] * t46;
+        let t69 = x[2] * t41;
+        let t72 = x[5] * t47;
+        let t73 = x[0] * t43;
+        let t76 = x[4] * t47;
+        let t78 = x[6] * t31;
+        let t79 = x[7] * t31;
+        let t80 = x[8] * t31;
+        let t81 = x[9] * t31;
+        let t82 = x[1].mul_add(t44, t50);
+        let t83 = (-x[5]).mul_add(t43, t51);
+        let t84 = t82 + t83;
+        let t85 = t84 * T::from_i64(2);
+        let t86 = (-x[0]).mul_add(t36, t85);
+        let t87 = x[0].mul_add(t44, t55);
+        let t88 = (-x[3]).mul_add(t45, t57);
+        let t89 = t87 + t88;
+        let t90 = t89 * T::from_i64(2);
+        let t91 = (-x[1]).mul_add(t37, t90);
+        let t92 = x[0].mul_add(t46, t59);
+        let t93 = (-x[4]).mul_add(t41, t61);
+        let t94 = t92 + t93;
+        let t95 = t94 * T::from_i64(2);
+        let t96 = (-x[2]).mul_add(t38, t95);
+        let t97 = (-x[2]).mul_add(t43, t63);
+        let t98 = x[4].mul_add(t44, t67);
+        let t99 = t97 - t98;
+        let t100 = t99 * T::from_i64(2);
+        let t101 = x[3].mul_add(t36, t100);
+        let t102 = (-x[0]).mul_add(t45, t69);
+        let t103 = x[3].mul_add(t44, t72);
+        let t104 = t102 - t103;
+        let t105 = t104 * T::from_i64(2);
+        let t106 = x[4].mul_add(t37, t105);
+        let t107 = (-x[1]).mul_add(t41, t73);
+        let t108 = x[3].mul_add(t46, t76);
+        let t109 = t107 - t108;
+        let t110 = t109 * T::from_i64(2);
+        let t111 = x[5].mul_add(t38, t110);
+        let t112 = -t78;
+        let t113 = -t79;
+        let t114 = -t80;
+        let t115 = -t81;
+        Trivector::from_coeffs([t86, t91, t96, t101, t106, t111, t112, t113, t114, t115])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[6] * x[6];
+        let p3 = x[9] * x[9];
+        let p4 = (-x[7]).mul_add(x[7], p0);
+        let p5 = x[8].mul_add(x[8], p3);
+        let p6 = p4 - p5;
+        let [s0, s1] = gx::study::rsqrt_q(p6, T::from_i64(0));
+        let t0 = x[0] * x[8];
+        let t2 = x[1] * x[7];
+        let t4 = x[5] * x[6];
+        let t5 = s1 * t4;
+        let t6 = s1.mul_add(t0, t5);
+        let t7 = (-s1).mul_add(t2, t6);
+        let t8 = x[0] * x[9];
+        let t9 = s1 * t8;
+        let t10 = x[2] * x[7];
+        let t12 = x[4] * x[6];
+        let t14 = (-s1).mul_add(t10, t9);
+        let t15 = (-s1).mul_add(t12, t14);
+        let t16 = x[1] * x[9];
+        let t18 = x[2] * x[8];
+        let t20 = x[3] * x[6];
+        let t21 = s1 * t20;
+        let t22 = s1.mul_add(t16, t21);
+        let t23 = (-s1).mul_add(t18, t22);
+        let t24 = x[3] * x[7];
+        let t26 = x[4] * x[8];
+        let t27 = s1 * t26;
+        let t28 = x[5] * x[9];
+        let t30 = s1.mul_add(t24, t27);
+        let t31 = s1.mul_add(t28, t30);
+        let t32 = x[0] * s0;
+        let t34 = x[9] * t15;
+        let t36 = x[7] * t7;
+        let t40 = x[8] * t23;
+        let t42 = x[6] * t23;
+        let t44 = x[4] * s0;
+        let t46 = x[8] * t31;
+        let t48 = x[6] * t7;
+        let t50 = x[6] * s0;
+        let t51 = x[7] * s0;
+        let t52 = x[8] * s0;
+        let t53 = x[9] * s0;
+        let t54 = x[8].mul_add(t7, t34);
+        let t56 = (-t54).mul_add(T::from_i64(2), t32);
+        let t57 = (-x[9]).mul_add(t23, t36);
+        let t58 = t57 * T::from_i64(2);
+        let t59 = x[1].mul_add(s0, t58);
+        let t60 = x[7].mul_add(t15, t40);
+        let t61 = t60 * T::from_i64(2);
+        let t62 = x[2].mul_add(s0, t61);
+        let t63 = (-x[7]).mul_add(t31, t42);
+        let t64 = t63 * T::from_i64(2);
+        let t65 = x[3].mul_add(s0, t64);
+        let t66 = x[6].mul_add(t15, t46);
+        let t68 = (-t66).mul_add(T::from_i64(2), t44);
+        let t69 = (-x[9]).mul_add(t31, t48);
+        let t70 = t69 * T::from_i64(2);
+        let t71 = x[5].mul_add(s0, t70);
+        gx::Unit::new_unchecked(Trivector::from_coeffs([t56, t59, t62, t65, t68, t71, t50, t51, t52, t53]))
     }
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Trivector<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[6] * x[6];
+        let t1 = x[7] * x[7];
+        let t2 = x[8] * x[8];
+        let t3 = x[9] * x[9];
+        let t4 = t0 - t1;
+        let t5 = t2 + t3;
+        let t6 = t4 - t5;
+        let t7 = T::from_i64(1) - t0;
+        let t9 = t1.mul_add(T::from_ratio(1, 3), t7);
+        let t10 = t1 + T::from_i64(1);
+        let t12 = (-t0).mul_add(T::from_ratio(1, 3), t10);
+        let t14 = t3.mul_add(T::from_ratio(1, 3), t2);
+        let t16 = t3.mul_add(T::from_i64(3), t2);
+        let t18 = (-t6).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t19 = x[6] * x[7];
+        let t20 = x[6] * x[8];
+        let t21 = x[6] * x[9];
+        let t22 = x[7] * x[8];
+        let t23 = x[7] * x[9];
+        let t24 = x[8] * x[9];
+        let t25 = x[0] * t4;
+        let t29 = x[4] * t21;
+        let t30 = x[5] * t20;
+        let t32 = x[1] * t12;
+        let t33 = x[1] * t16;
+        let t35 = x[3] * t21;
+        let t36 = x[5] * t19;
+        let t40 = x[2] * t14;
+        let t41 = x[3] * t20;
+        let t42 = x[4] * t19;
+        let t46 = x[3] * t5;
+        let t47 = x[4] * t22;
+        let t48 = x[5] * t23;
+        let t51 = x[3] * t22;
+        let t53 = x[4] * t14;
+        let t54 = x[5] * t24;
+        let t57 = x[3] * t23;
+        let t58 = x[4] * t24;
+        let t59 = x[5] * t9;
+        let t60 = x[5] * t16;
+        let t61 = x[6] * t18;
+        let t62 = x[7] * t18;
+        let t63 = x[8] * t18;
+        let t64 = x[9] * t18;
+        let t65 = (-x[1]).mul_add(t22, t30);
+        let t66 = x[2].mul_add(t23, t29);
+        let t67 = t65 - t66;
+        let t69 = x[0].mul_add(t5, x[0]);
+        let t71 = t69.mul_add(T::from_ratio(3, 2), t67);
+        let t72 = (-t25).mul_add(T::from_ratio(1, 2), t71);
+        let t73 = (-x[0]).mul_add(t22, t35);
+        let t74 = x[2].mul_add(t24, t36);
+        let t75 = t73 - t74;
+        let t78 = t33.mul_add(T::from_ratio(1, 2), t75);
+        let t79 = t32.mul_add(T::from_ratio(3, 2), t78);
+        let t80 = (-x[0]).mul_add(t23, t42);
+        let t81 = x[1].mul_add(t24, t41);
+        let t82 = t80 - t81;
+        let t83 = x[2].mul_add(t12, t40);
+        let t85 = t83.mul_add(T::from_ratio(3, 2), t82);
+        let t86 = x[2].mul_add(t20, t47);
+        let t87 = (-x[1]).mul_add(t21, t48);
+        let t88 = t86 + t87;
+        let t90 = (-x[3]).mul_add(t4, x[3]);
+        let t92 = t46.mul_add(T::from_ratio(1, 2), t88);
+        let t93 = t90.mul_add(T::from_ratio(3, 2), t92);
+        let t94 = x[0].mul_add(t21, t51);
+        let t95 = (-x[2]).mul_add(t19, t54);
+        let t96 = t94 + t95;
+        let t97 = x[4].mul_add(t9, t53);
+        let t99 = t97.mul_add(T::from_ratio(3, 2), t96);
+        let t100 = x[1].mul_add(t19, t57);
+        let t101 = (-x[0]).mul_add(t20, t58);
+        let t102 = t100 + t101;
+        let t105 = t60.mul_add(T::from_ratio(1, 2), t102);
+        let t106 = t59.mul_add(T::from_ratio(3, 2), t105);
+        let t107 = t61 * T::from_ratio(3, 2);
+        let t108 = t62 * T::from_ratio(3, 2);
+        let t109 = t63 * T::from_ratio(3, 2);
+        let t110 = t64 * T::from_ratio(3, 2);
+        Trivector::from_coeffs([t72, t79, t85, t93, t99, t106, t107, t108, t109, t110])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
+}
+
 impl<T: gx::Real> gx::Inverse for Trivector<(), T> {
-    type Output = Multivector<(), T>;
+    type Output = Trivector<(), T>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -3570,6 +4063,13 @@ impl<T: gx::Real> gx::Norm for Trivector<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Trivector<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -4369,7 +4869,7 @@ impl<T: gx::Real> Quadvector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Quadvector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -5967,75 +6467,790 @@ impl<T: gx::Real> Motor<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Motor` (no closed form
-    /// for `Motor` here): the inverse as a polynomial of degree 3 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 3 products in `Motor`), on the part of `x` free of the null direction(s), then a finite series for the
-    /// nilpotent rest (1 term(s)), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Motor<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Motor::<(), T>::zero();
-        x.c[0] = self.c[0] * scale;
-        x.c[1] = self.c[1] * scale;
-        x.c[2] = self.c[2] * scale;
-        x.c[3] = self.c[3] * scale;
-        x.c[4] = self.c[4] * scale;
-        x.c[5] = self.c[5] * scale;
-        x.c[6] = self.c[6] * scale;
-        x.c[7] = self.c[7] * scale;
-        x.c[8] = self.c[8] * scale;
-        x.c[9] = self.c[9] * scale;
-        x.c[10] = self.c[10] * scale;
-        x.c[11] = self.c[11] * scale;
-        x.c[12] = self.c[12] * scale;
-        x.c[13] = self.c[13] * scale;
-        x.c[14] = self.c[14] * scale;
-        x.c[15] = self.c[15] * scale;
-        // The body `a` (no null direction) and the nilpotent rest `n = x â a`.
-        let mut a = x;
-        a.c[1] = T::zero(); a.c[2] = T::zero(); a.c[3] = T::zero(); a.c[4] = T::zero(); a.c[11] = T::zero(); a.c[12] = T::zero(); a.c[13] = T::zero(); a.c[14] = T::zero();
-        let n = x - a;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(4);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..4i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(4, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // xâ»Â¹ = Î£â (âaâ»Â¹ n)áµ aâ»Â¹, k = 0..=1: (aâ»Â¹ n)^2 = 0, every term holding a null
-        // direction twice.
-        let m = -(y * n);
-        let mut term = y;
-        for _ in 0..1 {
-            term = m * term;
-            y = y + term;
-        }
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (220 mul, 166 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Motor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[5] * x[5];
+        let t2 = x[6] * x[6];
+        let t3 = x[7] * x[7];
+        let t4 = x[8] * x[8];
+        let t5 = x[9] * x[9];
+        let t6 = x[10] * x[10];
+        let t7 = x[15] * x[15];
+        let t8 = x[0] * x[15];
+        let t9 = x[5] * x[8];
+        let t10 = x[6] * x[9];
+        let t11 = x[7] * x[10];
+        let t14 = t0 * t2;
+        let t17 = t0 * t5;
+        let t19 = t0 * t7;
+        let t21 = t8 * t10;
+        let t23 = t1 * t1;
+        let t25 = t1 * t3;
+        let t27 = t1 * t5;
+        let t31 = t9 * t11;
+        let t34 = t2 * t4;
+        let t35 = t2 * t5;
+        let t37 = t2 * t7;
+        let t39 = t3 * t3;
+        let t41 = t3 * t5;
+        let t45 = t4 * t5;
+        let t47 = t4 * t7;
+        let t48 = t5 * t5;
+        let t52 = t6 * t7;
+        let t53 = t7 * t7;
+        let t54 = t0.mul_add(t0, t23);
+        let t55 = t2.mul_add(t2, t39);
+        let t56 = t54 + t55;
+        let t57 = t4.mul_add(t4, t48);
+        let t58 = t6.mul_add(t6, t53);
+        let t59 = t57 + t58;
+        let t60 = t56 + t59;
+        let t61 = t0.mul_add(t1, t14);
+        let t62 = t0.mul_add(t3, t19);
+        let t63 = t61 + t62;
+        let t64 = t1.mul_add(t2, t25);
+        let t65 = t1.mul_add(t4, t64);
+        let t66 = t63 + t65;
+        let t67 = t2.mul_add(t3, t35);
+        let t68 = t3.mul_add(t6, t45);
+        let t69 = t67 + t68;
+        let t70 = t4.mul_add(t6, t47);
+        let t71 = t5.mul_add(t6, t70);
+        let t72 = t69 + t71;
+        let t73 = t66 + t72;
+        let t74 = t5.mul_add(t7, t52);
+        let t75 = t0.mul_add(t4, t17);
+        let t76 = t74 - t75;
+        let t77 = t0.mul_add(t6, t27);
+        let t78 = t1.mul_add(t6, t77);
+        let t79 = t76 - t78;
+        let t80 = t1.mul_add(t7, t34);
+        let t81 = t2.mul_add(t6, t37);
+        let t82 = t80 + t81;
+        let t83 = t3.mul_add(t4, t41);
+        let t84 = t3.mul_add(t7, t83);
+        let t85 = t82 + t84;
+        let t86 = t79 - t85;
+        let t87 = t73 + t86;
+        let t89 = t8.mul_add(t9, t21);
+        let t90 = t8.mul_add(t11, t89);
+        let t91 = t9.mul_add(t10, t31);
+        let t92 = t10.mul_add(t11, t91);
+        let t93 = t90 + t92;
+        let t95 = t87.mul_add(T::from_i64(2), t60);
+        let t96 = t93.mul_add(T::from_i64(8), t95);
+        let t97 = t96.recip();
+        let t98 = t0 * t97;
+        let t99 = t1 * t97;
+        let t100 = t2 * t97;
+        let t101 = t3 * t97;
+        let t102 = t4 * t97;
+        let t103 = t5 * t97;
+        let t104 = t6 * t97;
+        let t105 = t7 * t97;
+        let t106 = t98 + t105;
+        let t107 = t99 + t100;
+        let t108 = t106 - t107;
+        let t109 = t101 + t102;
+        let t110 = t103 + t104;
+        let t111 = t109 + t110;
+        let t112 = t108 - t111;
+        let t113 = t98 + t100;
+        let t114 = t101 + t103;
+        let t115 = t113 + t114;
+        let t116 = t104 + t105;
+        let t117 = t99 + t102;
+        let t118 = t116 - t117;
+        let t119 = t115 + t118;
+        let t120 = t98 + t99;
+        let t121 = t109 + t120;
+        let t122 = t100 + t103;
+        let t123 = t116 - t122;
+        let t124 = t121 + t123;
+        let t125 = t100 + t102;
+        let t126 = t120 + t125;
+        let t127 = t103 + t105;
+        let t128 = t101 + t104;
+        let t129 = t127 - t128;
+        let t130 = t126 + t129;
+        let t131 = x[0] * x[5];
+        let t133 = x[8] * x[15];
+        let t134 = t97 * t133;
+        let t135 = t97.mul_add(t131, t134);
+        let t136 = x[0] * x[6];
+        let t138 = x[9] * x[15];
+        let t139 = t97 * t138;
+        let t140 = t97.mul_add(t136, t139);
+        let t141 = x[0] * x[7];
+        let t143 = x[10] * x[15];
+        let t144 = t97 * t143;
+        let t145 = t97.mul_add(t141, t144);
+        let t146 = x[0] * x[8];
+        let t147 = t97 * t146;
+        let t148 = x[5] * x[15];
+        let t150 = (-t97).mul_add(t148, t147);
+        let t151 = x[0] * x[9];
+        let t152 = t97 * t151;
+        let t153 = x[6] * x[15];
+        let t155 = (-t97).mul_add(t153, t152);
+        let t156 = x[0] * x[10];
+        let t157 = t97 * t156;
+        let t158 = x[7] * x[15];
+        let t160 = (-t97).mul_add(t158, t157);
+        let t161 = t8 * t97;
+        let t162 = t9 * t97;
+        let t163 = t161 + t162;
+        let t164 = x[5] * x[6];
+        let t166 = x[8] * x[9];
+        let t167 = t97 * t166;
+        let t168 = t97.mul_add(t164, t167);
+        let t169 = x[5] * x[7];
+        let t171 = x[8] * x[10];
+        let t172 = t97 * t171;
+        let t173 = t97.mul_add(t169, t172);
+        let t174 = x[5] * x[9];
+        let t175 = t97 * t174;
+        let t176 = x[6] * x[8];
+        let t178 = (-t97).mul_add(t176, t175);
+        let t179 = x[5] * x[10];
+        let t180 = t97 * t179;
+        let t181 = x[7] * x[8];
+        let t183 = (-t97).mul_add(t181, t180);
+        let t184 = x[6] * x[7];
+        let t186 = x[9] * x[10];
+        let t187 = t97 * t186;
+        let t188 = t97.mul_add(t184, t187);
+        let t189 = t10 * t97;
+        let t190 = t11 * t97;
+        let t191 = t189 + t190;
+        let t192 = x[6] * x[10];
+        let t193 = t97 * t192;
+        let t194 = x[7] * x[9];
+        let t196 = (-t97).mul_add(t194, t193);
+        let t197 = t161 + t191;
+        let t199 = t162.mul_add(T::from_ratio(1, 2), t197);
+        let t200 = t101 + t113;
+        let t201 = t105 + t110;
+        let t202 = t200 - t201;
+        let t203 = t163 + t189;
+        let t205 = t190.mul_add(T::from_ratio(1, 2), t203);
+        let t206 = t100 + t120;
+        let t207 = t102 + t103;
+        let t208 = t105 + t207;
+        let t209 = t206 - t208;
+        let t210 = t162 + t191;
+        let t212 = t210.mul_add(T::from_i64(2), t161);
+        let t213 = t101 + t107;
+        let t214 = t104 + t207;
+        let t215 = t213 - t214;
+        let t216 = t163 + t190;
+        let t218 = t216.mul_add(T::from_i64(2), t189);
+        let t219 = t101 + t120;
+        let t220 = t102 + t104;
+        let t221 = t105 + t220;
+        let t222 = t219 - t221;
+        let t223 = x[0] * t0;
+        let t225 = x[0] * t215;
+        let t229 = x[3] * t173;
+        let t231 = x[12] * t160;
+        let t236 = x[3] * t188;
+        let t238 = x[11] * t160;
+        let t242 = x[2] * t188;
+        let t245 = x[11] * t155;
+        let t250 = x[3] * t178;
+        let t254 = x[13] * t145;
+        let t255 = x[5] * t1;
+        let t257 = x[5] * t202;
+        let t258 = x[8] * t199;
+        let t259 = x[6] * t2;
+        let t261 = x[6] * t222;
+        let t263 = x[7] * t3;
+        let t265 = x[7] * t209;
+        let t266 = x[10] * t205;
+        let t267 = x[5] * t199;
+        let t268 = x[8] * t4;
+        let t269 = t97 * t268;
+        let t272 = x[9] * t5;
+        let t273 = t97 * t272;
+        let t275 = x[7] * t205;
+        let t276 = x[10] * t6;
+        let t277 = t97 * t276;
+        let t283 = x[12] * t168;
+        let t285 = x[14] * t196;
+        let t288 = x[4] * t140;
+        let t289 = x[11] * t168;
+        let t296 = x[11] * t173;
+        let t299 = x[14] * t178;
+        let t301 = x[2] * t140;
+        let t304 = x[12] * t183;
+        let t308 = x[15] * t7;
+        let t310 = x[15] * t215;
+        let t311 = t97.mul_add(t223, t225);
+        let t312 = x[15].mul_add(t212, t311);
+        let t313 = x[2].mul_add(t168, t229);
+        let t314 = x[13].mul_add(t155, t313);
+        let t315 = x[4].mul_add(t196, t231);
+        let t316 = x[14].mul_add(t135, t315);
+        let t317 = t314 - t316;
+        let t318 = t317 * T::from_i64(2);
+        let t319 = (-x[1]).mul_add(t119, t318);
+        let t320 = x[1].mul_add(t168, t236);
+        let t321 = x[4].mul_add(t183, t320);
+        let t322 = (-x[13]).mul_add(t150, t238);
+        let t323 = (-x[14]).mul_add(t140, t322);
+        let t324 = t321 + t323;
+        let t325 = t324 * T::from_i64(2);
+        let t326 = (-x[2]).mul_add(t124, t325);
+        let t327 = x[1].mul_add(t173, t242);
+        let t328 = x[12].mul_add(t150, t327);
+        let t329 = x[4].mul_add(t178, t245);
+        let t330 = x[14].mul_add(t145, t329);
+        let t331 = t328 - t330;
+        let t332 = t331 * T::from_i64(2);
+        let t333 = (-x[3]).mul_add(t130, t332);
+        let t334 = x[1].mul_add(t196, t250);
+        let t335 = x[11].mul_add(t135, t334);
+        let t336 = x[12].mul_add(t140, t254);
+        let t337 = (-x[2]).mul_add(t183, t336);
+        let t338 = t335 + t337;
+        let t339 = t338 * T::from_i64(2);
+        let t340 = (-x[4]).mul_add(t112, t339);
+        let t341 = t97.mul_add(t255, t257);
+        let t343 = t258.mul_add(T::from_i64(2), t341);
+        let t344 = -t343;
+        let t345 = t97.mul_add(t259, t261);
+        let t346 = x[9].mul_add(t218, t345);
+        let t347 = -t346;
+        let t348 = t97.mul_add(t263, t265);
+        let t350 = t266.mul_add(T::from_i64(2), t348);
+        let t351 = -t350;
+        let t352 = (-x[8]).mul_add(t202, t269);
+        let t354 = t267.mul_add(T::from_i64(2), t352);
+        let t355 = x[6].mul_add(t218, t273);
+        let t356 = (-x[9]).mul_add(t222, t355);
+        let t357 = (-x[10]).mul_add(t209, t277);
+        let t359 = t275.mul_add(T::from_i64(2), t357);
+        let t360 = x[2].mul_add(t160, t283);
+        let t361 = x[13].mul_add(t173, t360);
+        let t362 = (-x[3]).mul_add(t155, t285);
+        let t363 = (-x[4]).mul_add(t135, t362);
+        let t364 = t361 + t363;
+        let t365 = t364 * T::from_i64(2);
+        let t366 = (-x[11]).mul_add(t119, t365);
+        let t367 = x[3].mul_add(t150, t289);
+        let t368 = x[13].mul_add(t188, t367);
+        let t369 = x[1].mul_add(t160, t288);
+        let t370 = x[14].mul_add(t183, t369);
+        let t371 = t368 - t370;
+        let t372 = t371 * T::from_i64(2);
+        let t373 = (-x[12]).mul_add(t124, t372);
+        let t374 = x[1].mul_add(t155, t296);
+        let t375 = x[12].mul_add(t188, t374);
+        let t376 = (-x[2]).mul_add(t150, t299);
+        let t377 = (-x[4]).mul_add(t145, t376);
+        let t378 = t375 + t377;
+        let t379 = t378 * T::from_i64(2);
+        let t380 = (-x[13]).mul_add(t130, t379);
+        let t381 = x[1].mul_add(t135, t301);
+        let t382 = x[3].mul_add(t145, t381);
+        let t383 = (-x[11]).mul_add(t196, t304);
+        let t384 = (-x[13]).mul_add(t178, t383);
+        let t385 = t382 + t384;
+        let t386 = t385 * T::from_i64(2);
+        let t387 = (-x[14]).mul_add(t112, t386);
+        let t388 = (-x[0]).mul_add(t212, t310);
+        let t389 = (-t97).mul_add(t308, t388);
+        Motor::from_coeffs([t312, t319, t326, t333, t340, t344, t347, t351, t354, t356, t359, t366, t373, t380, t387, t389])
     }
 
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[15];
+        let p1 = x[5] * x[8];
+        let p2 = x[6] * x[9];
+        let p3 = x[7] * x[10];
+        let p5 = x[5] * x[5];
+        let p7 = x[7] * x[7];
+        let p9 = x[9] * x[9];
+        let p11 = x[15] * x[15];
+        let p14 = p0 * p2;
+        let p16 = p1 * p1;
+        let p18 = p1 * p3;
+        let p21 = p3 * p3;
+        let p22 = x[0].mul_add(x[0], p5);
+        let p23 = x[6].mul_add(x[6], p7);
+        let p24 = p22 + p23;
+        let p25 = x[8].mul_add(x[8], p9);
+        let p26 = x[10].mul_add(x[10], p11);
+        let p27 = p25 + p26;
+        let p28 = p24 - p27;
+        let p29 = p0.mul_add(p0, p16);
+        let p30 = p2.mul_add(p2, p21);
+        let p31 = p29 + p30;
+        let p33 = p0.mul_add(p1, p14);
+        let p34 = p0.mul_add(p3, p33);
+        let p35 = p1.mul_add(p2, p18);
+        let p36 = p2.mul_add(p3, p35);
+        let p37 = p34 + p36;
+        let p38 = p37 * T::from_i64(8);
+        let p39 = p31.mul_add(T::from_i64(4), p38);
+        let p40 = -p39;
+        let [s0, s1] = gx::study::rsqrt_q(p28, p40);
+        let t0 = x[0] * x[15];
+        let t2 = x[5] * x[8];
+        let t3 = s1 * t2;
+        let t4 = x[6] * x[9];
+        let t6 = x[7] * x[10];
+        let t7 = s1 * t6;
+        let t8 = s1.mul_add(t0, t3);
+        let t9 = s1.mul_add(t4, t7);
+        let t10 = t8 + t9;
+        let t11 = x[0] * x[11];
+        let t13 = x[2] * x[10];
+        let t15 = x[3] * x[9];
+        let t16 = s1 * t15;
+        let t17 = x[4] * x[5];
+        let t18 = s1 * t17;
+        let t19 = s1.mul_add(t11, t16);
+        let t20 = (-s1).mul_add(t13, t18);
+        let t21 = t19 + t20;
+        let t22 = x[0] * x[12];
+        let t24 = x[1] * x[10];
+        let t25 = s1 * t24;
+        let t26 = x[3] * x[8];
+        let t28 = x[4] * x[6];
+        let t29 = s1 * t28;
+        let t30 = s1.mul_add(t22, t25);
+        let t31 = (-s1).mul_add(t26, t29);
+        let t32 = t30 + t31;
+        let t33 = x[0] * x[13];
+        let t35 = x[1] * x[9];
+        let t37 = x[2] * x[8];
+        let t38 = s1 * t37;
+        let t39 = x[4] * x[7];
+        let t40 = s1 * t39;
+        let t41 = s1.mul_add(t33, t38);
+        let t42 = (-s1).mul_add(t35, t40);
+        let t43 = t41 + t42;
+        let t44 = x[0] * x[14];
+        let t45 = s1 * t44;
+        let t46 = x[1] * x[5];
+        let t48 = x[2] * x[6];
+        let t50 = x[3] * x[7];
+        let t51 = s1 * t50;
+        let t52 = (-s1).mul_add(t46, t45);
+        let t53 = s1.mul_add(t48, t51);
+        let t54 = t52 - t53;
+        let t55 = x[1] * x[15];
+        let t57 = x[6] * x[13];
+        let t58 = s1 * t57;
+        let t59 = x[7] * x[12];
+        let t61 = x[8] * x[14];
+        let t62 = s1 * t61;
+        let t63 = s1.mul_add(t55, t58);
+        let t64 = (-s1).mul_add(t59, t62);
+        let t65 = t63 + t64;
+        let t66 = x[2] * x[15];
+        let t68 = x[5] * x[13];
+        let t70 = x[7] * x[11];
+        let t71 = s1 * t70;
+        let t72 = x[9] * x[14];
+        let t73 = s1 * t72;
+        let t74 = s1.mul_add(t66, t71);
+        let t75 = (-s1).mul_add(t68, t73);
+        let t76 = t74 + t75;
+        let t77 = x[3] * x[15];
+        let t79 = x[5] * x[12];
+        let t80 = s1 * t79;
+        let t81 = x[6] * x[11];
+        let t83 = x[10] * x[14];
+        let t84 = s1 * t83;
+        let t85 = s1.mul_add(t77, t80);
+        let t86 = (-s1).mul_add(t81, t84);
+        let t87 = t85 + t86;
+        let t88 = x[4] * x[15];
+        let t89 = s1 * t88;
+        let t90 = x[8] * x[11];
+        let t92 = x[9] * x[12];
+        let t94 = x[10] * x[13];
+        let t95 = s1 * t94;
+        let t96 = (-s1).mul_add(t90, t89);
+        let t97 = s1.mul_add(t92, t95);
+        let t98 = t96 - t97;
+        let t99 = x[0] * s0;
+        let t100 = x[15] * t10;
+        let t103 = x[9] * t43;
+        let t105 = x[15] * t65;
+        let t109 = x[10] * t21;
+        let t110 = x[15] * t76;
+        let t113 = x[8] * t32;
+        let t115 = x[15] * t87;
+        let t118 = x[6] * t32;
+        let t119 = x[7] * t43;
+        let t121 = x[5] * s0;
+        let t122 = x[8] * t10;
+        let t123 = x[6] * s0;
+        let t124 = x[9] * t10;
+        let t125 = x[7] * s0;
+        let t126 = x[10] * t10;
+        let t127 = x[5] * t10;
+        let t129 = x[6] * t10;
+        let t131 = x[7] * t10;
+        let t135 = x[7] * t76;
+        let t136 = x[8] * t98;
+        let t139 = x[5] * t87;
+        let t141 = x[9] * t98;
+        let t145 = x[6] * t65;
+        let t146 = x[10] * t98;
+        let t148 = x[0] * t54;
+        let t151 = x[10] * t87;
+        let t153 = x[0] * t10;
+        let t156 = (-t100).mul_add(T::from_i64(2), t99);
+        let t157 = (-x[5]).mul_add(t54, t103);
+        let t158 = x[10].mul_add(t32, t105);
+        let t159 = t157 - t158;
+        let t160 = t159 * T::from_i64(2);
+        let t161 = x[1].mul_add(s0, t160);
+        let t162 = (-x[6]).mul_add(t54, t109);
+        let t163 = x[8].mul_add(t43, t110);
+        let t164 = t162 - t163;
+        let t165 = t164 * T::from_i64(2);
+        let t166 = x[2].mul_add(s0, t165);
+        let t167 = (-x[7]).mul_add(t54, t113);
+        let t168 = x[9].mul_add(t21, t115);
+        let t169 = t167 - t168;
+        let t170 = t169 * T::from_i64(2);
+        let t171 = x[3].mul_add(s0, t170);
+        let t172 = x[5].mul_add(t21, t118);
+        let t173 = (-x[15]).mul_add(t98, t119);
+        let t174 = t172 + t173;
+        let t175 = t174 * T::from_i64(2);
+        let t176 = x[4].mul_add(s0, t175);
+        let t178 = (-t122).mul_add(T::from_i64(2), t121);
+        let t180 = (-t124).mul_add(T::from_i64(2), t123);
+        let t182 = (-t126).mul_add(T::from_i64(2), t125);
+        let t183 = t127 * T::from_i64(2);
+        let t184 = x[8].mul_add(s0, t183);
+        let t185 = t129 * T::from_i64(2);
+        let t186 = x[9].mul_add(s0, t185);
+        let t187 = t131 * T::from_i64(2);
+        let t188 = x[10].mul_add(s0, t187);
+        let t189 = x[0].mul_add(t21, t135);
+        let t190 = (-x[6]).mul_add(t87, t136);
+        let t191 = t189 + t190;
+        let t192 = t191 * T::from_i64(2);
+        let t193 = x[11].mul_add(s0, t192);
+        let t194 = x[0].mul_add(t32, t139);
+        let t195 = (-x[7]).mul_add(t65, t141);
+        let t196 = t194 + t195;
+        let t197 = t196 * T::from_i64(2);
+        let t198 = x[12].mul_add(s0, t197);
+        let t199 = x[0].mul_add(t43, t145);
+        let t200 = (-x[5]).mul_add(t76, t146);
+        let t201 = t199 + t200;
+        let t202 = t201 * T::from_i64(2);
+        let t203 = x[13].mul_add(s0, t202);
+        let t204 = (-x[8]).mul_add(t65, t148);
+        let t205 = x[9].mul_add(t76, t151);
+        let t206 = t204 - t205;
+        let t207 = t206 * T::from_i64(2);
+        let t208 = x[14].mul_add(s0, t207);
+        let t209 = t153 * T::from_i64(2);
+        let t210 = x[15].mul_add(s0, t209);
+        gx::Unit::new_unchecked(Motor::from_coeffs([t156, t161, t166, t171, t176, t178, t180, t182, t184, t186, t188, t193, t198, t203, t208, t210]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline(always)]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Motor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[8] * x[15];
+        let t2 = x[0].mul_add(x[5], t1);
+        let t4 = x[9] * x[15];
+        let t5 = x[0].mul_add(x[6], t4);
+        let t7 = x[10] * x[15];
+        let t8 = x[0].mul_add(x[7], t7);
+        let t9 = x[0] * x[8];
+        let t11 = (-x[5]).mul_add(x[15], t9);
+        let t12 = x[0] * x[9];
+        let t14 = (-x[6]).mul_add(x[15], t12);
+        let t15 = x[0] * x[10];
+        let t17 = (-x[7]).mul_add(x[15], t15);
+        let t18 = x[0] * x[15];
+        let t19 = x[5] * x[8];
+        let t20 = t18 + t19;
+        let t22 = x[8] * x[9];
+        let t23 = x[5].mul_add(x[6], t22);
+        let t25 = x[8] * x[10];
+        let t26 = x[5].mul_add(x[7], t25);
+        let t27 = x[5] * x[9];
+        let t29 = (-x[6]).mul_add(x[8], t27);
+        let t30 = x[5] * x[10];
+        let t32 = (-x[7]).mul_add(x[8], t30);
+        let t34 = x[9] * x[10];
+        let t35 = x[6].mul_add(x[7], t34);
+        let t36 = x[6] * x[9];
+        let t37 = x[7] * x[10];
+        let t38 = t36 + t37;
+        let t39 = x[6] * x[10];
+        let t41 = (-x[7]).mul_add(x[9], t39);
+        let t42 = t18 + t38;
+        let t44 = t19.mul_add(T::from_ratio(3, 2), t42);
+        let t45 = x[0] * x[0];
+        let t46 = x[6] * x[6];
+        let t47 = x[7] * x[7];
+        let t48 = x[9] * x[9];
+        let t49 = x[10] * x[10];
+        let t50 = x[15] * x[15];
+        let t51 = t45 + t46;
+        let t52 = t47 - t48;
+        let t53 = t51 + t52;
+        let t54 = t49 + t50;
+        let t55 = t54 + T::from_i64(3);
+        let t56 = t53 - t55;
+        let t57 = t20 + t36;
+        let t59 = t37.mul_add(T::from_ratio(3, 2), t57);
+        let t60 = x[5] * x[5];
+        let t61 = x[8] * x[8];
+        let t62 = t60 - t48;
+        let t63 = t51 + t62;
+        let t64 = t50 + t61;
+        let t65 = t64 + T::from_i64(3);
+        let t66 = t63 - t65;
+        let t67 = t19 + t38;
+        let t69 = t67.mul_add(T::from_ratio(2, 3), t18);
+        let t70 = t20 + t37;
+        let t72 = t70.mul_add(T::from_ratio(2, 3), t36);
+        let t73 = t45 + t47;
+        let t74 = t60 - t49;
+        let t75 = t73 + t74;
+        let t76 = t75 - t65;
+        let t79 = x[0] * t46;
+        let t82 = x[0] * t48;
+        let t83 = x[0] * t49;
+        let t88 = x[1] * t47;
+        let t89 = x[1] * t61;
+        let t92 = x[1] * t50;
+        let t94 = x[3] * t26;
+        let t96 = x[12] * t17;
+        let t103 = x[2] * t47;
+        let t105 = x[2] * t48;
+        let t107 = x[2] * t50;
+        let t109 = x[4] * t32;
+        let t112 = x[14] * t5;
+        let t115 = x[2] * t35;
+        let t117 = x[3] * t46;
+        let t121 = x[3] * t49;
+        let t122 = x[3] * t50;
+        let t124 = x[11] * t14;
+        let t129 = x[2] * t32;
+        let t133 = x[4] * t47;
+        let t135 = x[4] * t48;
+        let t136 = x[4] * t49;
+        let t139 = x[12] * t5;
+        let t142 = x[5] * t56;
+        let t143 = x[8] * t44;
+        let t145 = x[6] * t76;
+        let t146 = x[9] * t72;
+        let t148 = x[7] * t66;
+        let t149 = x[10] * t59;
+        let t151 = x[8] * t61;
+        let t153 = x[6] * t72;
+        let t154 = x[9] * t48;
+        let t157 = x[10] * t49;
+        let t165 = x[11] * t47;
+        let t168 = x[11] * t49;
+        let t169 = x[11] * t50;
+        let t170 = x[12] * t23;
+        let t172 = x[14] * t41;
+        let t176 = x[4] * t5;
+        let t179 = x[12] * t47;
+        let t182 = x[12] * t49;
+        let t183 = x[11] * t23;
+        let t184 = x[12] * t50;
+        let t192 = x[13] * t46;
+        let t195 = x[13] * t48;
+        let t197 = x[11] * t26;
+        let t199 = x[13] * t50;
+        let t200 = x[14] * t29;
+        let t203 = x[2] * t5;
+        let t207 = x[14] * t47;
+        let t210 = x[14] * t49;
+        let t212 = x[12] * t32;
+        let t214 = x[14] * t50;
+        let t217 = x[15] * t46;
+        let t220 = x[15] * t48;
+        let t222 = x[15] * t50;
+        let t223 = x[0].mul_add(t61, t82);
+        let t224 = (-x[0]).mul_add(t45, t83);
+        let t225 = t223 + t224;
+        let t226 = x[0].mul_add(t60, t79);
+        let t227 = x[0].mul_add(t47, t226);
+        let t228 = t225 - t227;
+        let t230 = x[15].mul_add(t69, x[0]);
+        let t231 = t230 * T::from_ratio(3, 2);
+        let t232 = t228.mul_add(T::from_ratio(1, 2), t231);
+        let t233 = x[4].mul_add(t41, t96);
+        let t234 = x[14].mul_add(t2, t233);
+        let t235 = x[2].mul_add(t23, t94);
+        let t236 = x[13].mul_add(t14, t235);
+        let t237 = t234 - t236;
+        let t238 = (-x[1]).mul_add(t45, t89);
+        let t239 = x[1].mul_add(t46, t88);
+        let t240 = t238 - t239;
+        let t242 = x[1].mul_add(t48, x[1]);
+        let t243 = x[1].mul_add(t49, t242);
+        let t244 = (-x[1]).mul_add(t60, t92);
+        let t245 = t243 + t244;
+        let t247 = t240.mul_add(T::from_ratio(1, 2), t237);
+        let t248 = t245.mul_add(T::from_ratio(3, 2), t247);
+        let t249 = x[13].mul_add(t11, t112);
+        let t250 = (-x[1]).mul_add(t23, t249);
+        let t251 = x[3].mul_add(t35, t109);
+        let t252 = x[11].mul_add(t17, t251);
+        let t253 = t250 - t252;
+        let t254 = (-x[2]).mul_add(t45, t105);
+        let t255 = x[2].mul_add(t60, t103);
+        let t256 = t254 - t255;
+        let t258 = x[2].mul_add(t61, x[2]);
+        let t259 = x[2].mul_add(t49, t258);
+        let t260 = (-x[2]).mul_add(t46, t107);
+        let t261 = t259 + t260;
+        let t263 = t256.mul_add(T::from_ratio(1, 2), t253);
+        let t264 = t261.mul_add(T::from_ratio(3, 2), t263);
+        let t265 = x[4].mul_add(t29, t124);
+        let t266 = x[14].mul_add(t8, t265);
+        let t267 = x[1].mul_add(t26, t115);
+        let t268 = x[12].mul_add(t11, t267);
+        let t269 = t266 - t268;
+        let t270 = (-x[3]).mul_add(t45, t121);
+        let t271 = x[3].mul_add(t60, t117);
+        let t272 = t270 - t271;
+        let t274 = x[3].mul_add(t61, x[3]);
+        let t275 = x[3].mul_add(t48, t274);
+        let t276 = (-x[3]).mul_add(t47, t122);
+        let t277 = t275 + t276;
+        let t279 = t272.mul_add(T::from_ratio(1, 2), t269);
+        let t280 = t277.mul_add(T::from_ratio(3, 2), t279);
+        let t281 = (-x[1]).mul_add(t41, t129);
+        let t282 = (-x[3]).mul_add(t29, t281);
+        let t283 = x[11].mul_add(t2, t139);
+        let t284 = x[13].mul_add(t8, t283);
+        let t285 = t282 - t284;
+        let t286 = x[4].mul_add(t61, t135);
+        let t287 = (-x[4]).mul_add(t45, t136);
+        let t288 = t286 + t287;
+        let t290 = x[4].mul_add(t50, x[4]);
+        let t291 = (-x[4]).mul_add(t60, t290);
+        let t292 = x[4].mul_add(t46, t133);
+        let t293 = t291 - t292;
+        let t295 = t288.mul_add(T::from_ratio(1, 2), t285);
+        let t296 = t293.mul_add(T::from_ratio(3, 2), t295);
+        let t297 = x[5].mul_add(t60, t142);
+        let t299 = (-t297).mul_add(T::from_ratio(1, 2), t143);
+        let t300 = x[6].mul_add(t46, t145);
+        let t302 = t146 * T::from_ratio(3, 2);
+        let t303 = (-t300).mul_add(T::from_ratio(1, 2), t302);
+        let t304 = x[7].mul_add(t47, t148);
+        let t306 = (-t304).mul_add(T::from_ratio(1, 2), t149);
+        let t307 = (-x[8]).mul_add(t56, t151);
+        let t308 = t307 * T::from_ratio(1, 2);
+        let t309 = (-x[5]).mul_add(t44, t308);
+        let t310 = (-x[9]).mul_add(t76, t154);
+        let t311 = t310 * T::from_ratio(1, 2);
+        let t313 = (-t153).mul_add(T::from_ratio(3, 2), t311);
+        let t314 = (-x[10]).mul_add(t66, t157);
+        let t315 = t314 * T::from_ratio(1, 2);
+        let t316 = (-x[7]).mul_add(t59, t315);
+        let t317 = x[2].mul_add(t17, t170);
+        let t318 = x[13].mul_add(t26, t317);
+        let t319 = (-x[3]).mul_add(t14, t172);
+        let t320 = (-x[4]).mul_add(t2, t319);
+        let t321 = t318 + t320;
+        let t322 = x[11].mul_add(t48, t168);
+        let t323 = (-x[11]).mul_add(t60, t169);
+        let t324 = t322 + t323;
+        let t326 = x[11].mul_add(t61, x[11]);
+        let t327 = (-x[11]).mul_add(t45, t326);
+        let t328 = x[11].mul_add(t46, t165);
+        let t329 = t327 - t328;
+        let t331 = t324.mul_add(T::from_ratio(1, 2), t321);
+        let t332 = t329.mul_add(T::from_ratio(3, 2), t331);
+        let t333 = x[3].mul_add(t11, t183);
+        let t334 = x[13].mul_add(t35, t333);
+        let t335 = x[1].mul_add(t17, t176);
+        let t336 = x[14].mul_add(t32, t335);
+        let t337 = t334 - t336;
+        let t338 = x[12].mul_add(t61, t182);
+        let t339 = (-x[12]).mul_add(t46, t184);
+        let t340 = t338 + t339;
+        let t342 = x[12].mul_add(t48, x[12]);
+        let t343 = (-x[12]).mul_add(t45, t342);
+        let t344 = x[12].mul_add(t60, t179);
+        let t345 = t343 - t344;
+        let t347 = t340.mul_add(T::from_ratio(1, 2), t337);
+        let t348 = t345.mul_add(T::from_ratio(3, 2), t347);
+        let t349 = x[1].mul_add(t14, t197);
+        let t350 = x[12].mul_add(t35, t349);
+        let t351 = (-x[2]).mul_add(t11, t200);
+        let t352 = (-x[4]).mul_add(t8, t351);
+        let t353 = t350 + t352;
+        let t354 = x[13].mul_add(t61, t195);
+        let t355 = (-x[13]).mul_add(t47, t199);
+        let t356 = t354 + t355;
+        let t358 = x[13].mul_add(t49, x[13]);
+        let t359 = (-x[13]).mul_add(t45, t358);
+        let t360 = x[13].mul_add(t60, t192);
+        let t361 = t359 - t360;
+        let t363 = t356.mul_add(T::from_ratio(1, 2), t353);
+        let t364 = t361.mul_add(T::from_ratio(3, 2), t363);
+        let t365 = x[1].mul_add(t2, t203);
+        let t366 = x[3].mul_add(t8, t365);
+        let t367 = (-x[11]).mul_add(t41, t212);
+        let t368 = (-x[13]).mul_add(t29, t367);
+        let t369 = t366 + t368;
+        let t370 = (-x[14]).mul_add(t60, t214);
+        let t371 = x[14].mul_add(t46, t207);
+        let t372 = t370 - t371;
+        let t374 = x[14].mul_add(t61, x[14]);
+        let t375 = x[14].mul_add(t48, t374);
+        let t376 = (-x[14]).mul_add(t45, t210);
+        let t377 = t375 + t376;
+        let t379 = t372.mul_add(T::from_ratio(1, 2), t369);
+        let t380 = t377.mul_add(T::from_ratio(3, 2), t379);
+        let t381 = x[15].mul_add(t61, t220);
+        let t382 = x[15].mul_add(t49, t222);
+        let t383 = t381 + t382;
+        let t384 = x[15].mul_add(t60, t217);
+        let t385 = x[15].mul_add(t47, t384);
+        let t386 = t383 - t385;
+        let t388 = (-x[0]).mul_add(t69, x[15]);
+        let t389 = t388 * T::from_ratio(3, 2);
+        let t390 = t386.mul_add(T::from_ratio(1, 2), t389);
+        Motor::from_coeffs([t232, t248, t264, t280, t296, t299, t303, t306, t309, t313, t316, t332, t348, t364, t380, t390])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 impl<T: gx::Real> gx::Log<Bivector<(), T>> for gx::Unit<Motor<(), T>> {
@@ -6106,6 +7321,21 @@ impl<T: gx::Real> gx::Norm for Motor<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Motor<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Motor<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
     }
 }
 
@@ -6940,79 +8170,783 @@ impl<T: gx::Real> Odd<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Multivector` (no closed form
-    /// for `Odd` here): the inverse as a polynomial of degree 3 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 3 products in `Multivector`), on the part of `x` free of the null direction(s), then a finite series for the
-    /// nilpotent rest (1 term(s)), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Multivector<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Multivector::<(), T>::zero();
-        x.c[1] = self.c[0] * scale;
-        x.c[2] = self.c[1] * scale;
-        x.c[3] = self.c[2] * scale;
-        x.c[4] = self.c[3] * scale;
-        x.c[5] = self.c[4] * scale;
-        x.c[16] = self.c[5] * scale;
-        x.c[17] = self.c[6] * scale;
-        x.c[18] = self.c[7] * scale;
-        x.c[19] = self.c[8] * scale;
-        x.c[20] = self.c[9] * scale;
-        x.c[21] = self.c[10] * scale;
-        x.c[22] = self.c[11] * scale;
-        x.c[23] = self.c[12] * scale;
-        x.c[24] = self.c[13] * scale;
-        x.c[25] = self.c[14] * scale;
-        x.c[31] = self.c[15] * scale;
-        // The body `a` (no null direction) and the nilpotent rest `n = x â a`.
-        let mut a = x;
-        a.c[1] = T::zero(); a.c[6] = T::zero(); a.c[7] = T::zero(); a.c[8] = T::zero(); a.c[9] = T::zero(); a.c[16] = T::zero(); a.c[17] = T::zero(); a.c[18] = T::zero(); a.c[19] = T::zero(); a.c[20] = T::zero(); a.c[21] = T::zero(); a.c[26] = T::zero(); a.c[27] = T::zero(); a.c[28] = T::zero(); a.c[29] = T::zero(); a.c[31] = T::zero();
-        let n = x - a;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(4);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..4i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(4, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // xâ»Â¹ = Î£â (âaâ»Â¹ n)áµ aâ»Â¹, k = 0..=1: (aâ»Â¹ n)^2 = 0, every term holding a null
-        // direction twice.
-        let m = -(y * n);
-        let mut term = y;
-        for _ in 0..1 {
-            term = m * term;
-            y = y + term;
-        }
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (220 mul, 164 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Odd<(), T> {
+        let x = self.c;
+        let t0 = x[1] * x[1];
+        let t1 = x[2] * x[2];
+        let t2 = x[3] * x[3];
+        let t3 = x[4] * x[4];
+        let t4 = x[11] * x[11];
+        let t5 = x[12] * x[12];
+        let t6 = x[13] * x[13];
+        let t7 = x[14] * x[14];
+        let t8 = x[1] * x[12];
+        let t9 = x[2] * x[13];
+        let t10 = x[3] * x[14];
+        let t11 = x[4] * x[11];
+        let t14 = t0 * t2;
+        let t17 = t0 * t5;
+        let t18 = t0 * t6;
+        let t21 = t8 * t10;
+        let t23 = t1 * t1;
+        let t25 = t1 * t3;
+        let t26 = t1 * t4;
+        let t31 = t9 * t11;
+        let t33 = t2 * t3;
+        let t36 = t2 * t6;
+        let t37 = t2 * t7;
+        let t39 = t3 * t3;
+        let t41 = t3 * t5;
+        let t43 = t3 * t7;
+        let t46 = t4 * t6;
+        let t48 = t5 * t5;
+        let t52 = t6 * t7;
+        let t53 = t7 * t7;
+        let t54 = t0.mul_add(t0, t23);
+        let t55 = t2.mul_add(t2, t39);
+        let t56 = t54 + t55;
+        let t57 = t4.mul_add(t4, t48);
+        let t58 = t6.mul_add(t6, t53);
+        let t59 = t57 + t58;
+        let t60 = t56 + t59;
+        let t61 = t0.mul_add(t1, t14);
+        let t62 = t0.mul_add(t4, t17);
+        let t63 = t61 + t62;
+        let t64 = t1.mul_add(t2, t26);
+        let t65 = t1.mul_add(t6, t64);
+        let t66 = t63 + t65;
+        let t67 = t2.mul_add(t4, t37);
+        let t68 = t3.mul_add(t4, t41);
+        let t69 = t67 + t68;
+        let t70 = t3.mul_add(t6, t43);
+        let t71 = t5.mul_add(t6, t70);
+        let t72 = t69 + t71;
+        let t73 = t66 + t72;
+        let t74 = t5.mul_add(t7, t52);
+        let t75 = t0.mul_add(t3, t18);
+        let t76 = t74 - t75;
+        let t77 = t0.mul_add(t7, t25);
+        let t78 = t1.mul_add(t5, t77);
+        let t79 = t76 - t78;
+        let t80 = t1.mul_add(t7, t33);
+        let t81 = t2.mul_add(t5, t36);
+        let t82 = t80 + t81;
+        let t83 = t4.mul_add(t5, t46);
+        let t84 = t4.mul_add(t7, t83);
+        let t85 = t82 + t84;
+        let t86 = t79 - t85;
+        let t87 = t73 + t86;
+        let t89 = t8.mul_add(t9, t21);
+        let t90 = t9.mul_add(t10, t89);
+        let t91 = t8.mul_add(t11, t31);
+        let t92 = t10.mul_add(t11, t91);
+        let t93 = t90 - t92;
+        let t95 = t87.mul_add(T::from_i64(2), t60);
+        let t96 = t93.mul_add(T::from_i64(8), t95);
+        let t97 = t96.recip();
+        let t98 = t0 * t97;
+        let t99 = t1 * t97;
+        let t100 = t2 * t97;
+        let t101 = t3 * t97;
+        let t102 = t4 * t97;
+        let t103 = t5 * t97;
+        let t104 = t6 * t97;
+        let t105 = t7 * t97;
+        let t106 = t98 + t103;
+        let t107 = t99 + t100;
+        let t108 = t106 - t107;
+        let t109 = t101 + t102;
+        let t110 = t104 + t105;
+        let t111 = t109 + t110;
+        let t112 = t108 - t111;
+        let t113 = t98 + t100;
+        let t114 = t109 + t113;
+        let t115 = t103 + t105;
+        let t116 = t99 + t104;
+        let t117 = t115 - t116;
+        let t118 = t114 + t117;
+        let t119 = t98 + t99;
+        let t120 = t109 + t119;
+        let t121 = t103 + t104;
+        let t122 = t100 + t105;
+        let t123 = t121 - t122;
+        let t124 = t120 + t123;
+        let t125 = t100 + t103;
+        let t126 = t119 + t125;
+        let t127 = t110 - t109;
+        let t128 = t126 + t127;
+        let t129 = x[1] * x[2];
+        let t131 = x[12] * x[13];
+        let t132 = t97 * t131;
+        let t133 = t97.mul_add(t129, t132);
+        let t134 = x[1] * x[3];
+        let t136 = x[12] * x[14];
+        let t137 = t97 * t136;
+        let t138 = t97.mul_add(t134, t137);
+        let t139 = x[1] * x[4];
+        let t141 = x[11] * x[12];
+        let t142 = t97 * t141;
+        let t143 = t97.mul_add(t139, t142);
+        let t144 = x[1] * x[11];
+        let t145 = t97 * t144;
+        let t146 = x[4] * x[12];
+        let t148 = (-t97).mul_add(t146, t145);
+        let t149 = t8 * t97;
+        let t150 = t9 * t97;
+        let t151 = t149 + t150;
+        let t152 = x[1] * x[13];
+        let t153 = t97 * t152;
+        let t154 = x[2] * x[12];
+        let t156 = (-t97).mul_add(t154, t153);
+        let t157 = x[1] * x[14];
+        let t158 = t97 * t157;
+        let t159 = x[3] * x[12];
+        let t161 = (-t97).mul_add(t159, t158);
+        let t162 = x[2] * x[3];
+        let t164 = x[13] * x[14];
+        let t165 = t97 * t164;
+        let t166 = t97.mul_add(t162, t165);
+        let t167 = x[2] * x[4];
+        let t169 = x[11] * x[13];
+        let t170 = t97 * t169;
+        let t171 = t97.mul_add(t167, t170);
+        let t172 = x[2] * x[11];
+        let t173 = t97 * t172;
+        let t174 = x[4] * x[13];
+        let t176 = (-t97).mul_add(t174, t173);
+        let t177 = x[2] * x[14];
+        let t178 = t97 * t177;
+        let t179 = x[3] * x[13];
+        let t181 = (-t97).mul_add(t179, t178);
+        let t182 = x[3] * x[4];
+        let t184 = x[11] * x[14];
+        let t185 = t97 * t184;
+        let t186 = t97.mul_add(t182, t185);
+        let t187 = x[3] * x[11];
+        let t188 = t97 * t187;
+        let t189 = x[4] * x[14];
+        let t191 = (-t97).mul_add(t189, t188);
+        let t192 = t10 * t97;
+        let t193 = t11 * t97;
+        let t194 = t192 - t193;
+        let t195 = t149 + t194;
+        let t197 = t150.mul_add(T::from_ratio(1, 2), t195);
+        let t198 = t102 + t113;
+        let t199 = t101 + t103;
+        let t200 = t105 + t199;
+        let t201 = t198 - t200;
+        let t202 = t151 + t192;
+        let t204 = (-t193).mul_add(T::from_ratio(1, 2), t202);
+        let t205 = t100 + t119;
+        let t206 = t105 + t121;
+        let t207 = t205 - t206;
+        let t208 = t150 + t194;
+        let t210 = t208.mul_add(T::from_i64(2), t149);
+        let t211 = t102 + t107;
+        let t212 = t101 + t104;
+        let t213 = t105 + t212;
+        let t214 = t211 - t213;
+        let t215 = t151 - t193;
+        let t217 = t215.mul_add(T::from_i64(2), t192);
+        let t218 = t102 + t119;
+        let t219 = t104 + t199;
+        let t220 = t218 - t219;
+        let t223 = x[6] * t176;
+        let t227 = x[10] * t156;
+        let t228 = x[1] * t0;
+        let t230 = x[1] * t214;
+        let t232 = x[2] * t1;
+        let t234 = x[2] * t201;
+        let t235 = x[13] * t197;
+        let t236 = x[3] * t2;
+        let t238 = x[3] * t220;
+        let t240 = x[4] * t3;
+        let t242 = x[4] * t207;
+        let t243 = x[11] * t204;
+        let t247 = x[7] * t138;
+        let t249 = x[10] * t171;
+        let t254 = x[7] * t166;
+        let t257 = x[15] * t161;
+        let t260 = x[6] * t166;
+        let t263 = x[9] * t143;
+        let t266 = x[6] * t186;
+        let t270 = x[10] * t138;
+        let t274 = x[7] * t143;
+        let t277 = x[10] * t166;
+        let t280 = x[5] * t171;
+        let t283 = x[9] * t166;
+        let t286 = x[4] * t204;
+        let t287 = x[11] * t4;
+        let t289 = x[11] * t207;
+        let t291 = x[12] * t5;
+        let t292 = t97 * t291;
+        let t294 = x[2] * t197;
+        let t295 = x[13] * t6;
+        let t296 = t97 * t295;
+        let t299 = x[14] * t7;
+        let t300 = t97 * t299;
+        let t305 = x[8] * t148;
+        let t307 = x[10] * t191;
+        let t309 = x[5].mul_add(t148, t223);
+        let t310 = x[7].mul_add(t191, t309);
+        let t311 = x[8].mul_add(t181, t227);
+        let t312 = (-x[9]).mul_add(t161, t311);
+        let t313 = t310 + t312;
+        let t314 = t313 * T::from_i64(2);
+        let t315 = x[0].mul_add(t128, t314);
+        let t316 = t97.mul_add(t228, t230);
+        let t317 = x[12].mul_add(t210, t316);
+        let t318 = t97.mul_add(t232, t234);
+        let t320 = t235.mul_add(T::from_i64(2), t318);
+        let t321 = t97.mul_add(t236, t238);
+        let t322 = x[14].mul_add(t217, t321);
+        let t323 = (-t97).mul_add(t240, t242);
+        let t325 = t243.mul_add(T::from_i64(2), t323);
+        let t326 = x[6].mul_add(t133, t247);
+        let t327 = x[9].mul_add(t186, t326);
+        let t328 = x[0].mul_add(t148, t249);
+        let t329 = x[15].mul_add(t181, t328);
+        let t330 = t327 - t329;
+        let t331 = t330 * T::from_i64(2);
+        let t332 = x[5].mul_add(t112, t331);
+        let t333 = x[5].mul_add(t133, t254);
+        let t334 = x[10].mul_add(t143, t333);
+        let t335 = (-x[0]).mul_add(t176, t257);
+        let t336 = (-x[8]).mul_add(t186, t335);
+        let t337 = t334 + t336;
+        let t338 = t337 * T::from_i64(2);
+        let t339 = (-x[6]).mul_add(t118, t338);
+        let t340 = x[5].mul_add(t138, t260);
+        let t341 = x[8].mul_add(t171, t340);
+        let t342 = x[0].mul_add(t191, t263);
+        let t343 = x[15].mul_add(t156, t342);
+        let t344 = t341 - t343;
+        let t345 = t344 * T::from_i64(2);
+        let t346 = (-x[7]).mul_add(t124, t345);
+        let t347 = x[0].mul_add(t181, t266);
+        let t348 = (-x[7]).mul_add(t171, t347);
+        let t349 = x[9].mul_add(t133, t270);
+        let t350 = x[15].mul_add(t148, t349);
+        let t351 = t348 - t350;
+        let t352 = t351 * T::from_i64(2);
+        let t353 = (-x[8]).mul_add(t112, t352);
+        let t354 = (-x[0]).mul_add(t161, t274);
+        let t355 = (-x[5]).mul_add(t186, t354);
+        let t356 = x[8].mul_add(t133, t277);
+        let t357 = x[15].mul_add(t176, t356);
+        let t358 = t355 - t357;
+        let t359 = t358 * T::from_i64(2);
+        let t360 = x[9].mul_add(t118, t359);
+        let t361 = x[0].mul_add(t156, t280);
+        let t362 = (-x[6]).mul_add(t143, t361);
+        let t363 = x[8].mul_add(t138, t283);
+        let t364 = x[15].mul_add(t191, t363);
+        let t365 = t362 - t364;
+        let t366 = t365 * T::from_i64(2);
+        let t367 = x[10].mul_add(t124, t366);
+        let t368 = t97.mul_add(t287, t289);
+        let t370 = t286.mul_add(T::from_i64(2), -t368);
+        let t371 = x[1].mul_add(t210, t292);
+        let t372 = (-x[12]).mul_add(t214, t371);
+        let t373 = (-x[13]).mul_add(t201, t296);
+        let t375 = t294.mul_add(T::from_i64(2), t373);
+        let t376 = x[3].mul_add(t217, t300);
+        let t377 = (-x[14]).mul_add(t220, t376);
+        let t378 = x[6].mul_add(t161, t305);
+        let t379 = x[9].mul_add(t176, t378);
+        let t380 = (-x[5]).mul_add(t181, t307);
+        let t381 = (-x[7]).mul_add(t156, t380);
+        let t382 = t379 + t381;
+        let t383 = t382 * T::from_i64(2);
+        let t384 = (-x[15]).mul_add(t128, t383);
+        Odd::from_coeffs([t315, t317, t320, t322, t325, t332, t339, t346, t353, t360, t367, t370, t372, t375, t377, t384])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[1] * x[12];
+        let p1 = x[2] * x[13];
+        let p2 = x[3] * x[14];
+        let p3 = x[4] * x[11];
+        let p5 = x[2] * x[2];
+        let p8 = x[11] * x[11];
+        let p9 = x[12] * x[12];
+        let p11 = x[14] * x[14];
+        let p14 = p0 * p2;
+        let p16 = p1 * p1;
+        let p18 = p1 * p3;
+        let p21 = p3 * p3;
+        let p22 = x[1].mul_add(x[1], p5);
+        let p23 = x[3].mul_add(x[3], p8);
+        let p24 = p22 + p23;
+        let p25 = x[4].mul_add(x[4], p9);
+        let p26 = x[13].mul_add(x[13], p11);
+        let p27 = p25 + p26;
+        let p28 = p24 - p27;
+        let p29 = p0.mul_add(p0, p16);
+        let p30 = p2.mul_add(p2, p21);
+        let p31 = p29 + p30;
+        let p33 = p0.mul_add(p3, p18);
+        let p34 = p2.mul_add(p3, p33);
+        let p35 = p0.mul_add(p1, p14);
+        let p36 = p1.mul_add(p2, p35);
+        let p37 = p34 - p36;
+        let p38 = p37 * T::from_i64(8);
+        let p39 = (-p31).mul_add(T::from_i64(4), p38);
+        let [s0, s1] = gx::study::rsqrt_q(p28, p39);
+        let t0 = x[1] * x[12];
+        let t2 = x[2] * x[13];
+        let t3 = s1 * t2;
+        let t4 = x[3] * x[14];
+        let t5 = s1 * t4;
+        let t6 = x[4] * x[11];
+        let t8 = s1.mul_add(t0, t3);
+        let t9 = (-s1).mul_add(t6, t5);
+        let t10 = t8 + t9;
+        let t11 = x[0] * x[11];
+        let t12 = s1 * t11;
+        let t13 = x[1] * x[5];
+        let t15 = x[2] * x[6];
+        let t17 = x[3] * x[7];
+        let t18 = s1 * t17;
+        let t19 = (-s1).mul_add(t13, t12);
+        let t20 = s1.mul_add(t15, t18);
+        let t21 = t19 - t20;
+        let t22 = x[0] * x[12];
+        let t24 = x[2] * x[10];
+        let t26 = x[3] * x[9];
+        let t27 = s1 * t26;
+        let t28 = x[4] * x[5];
+        let t29 = s1 * t28;
+        let t30 = s1.mul_add(t22, t27);
+        let t31 = s1.mul_add(t24, t29);
+        let t32 = t30 - t31;
+        let t33 = x[0] * x[13];
+        let t35 = x[1] * x[10];
+        let t36 = s1 * t35;
+        let t37 = x[3] * x[8];
+        let t39 = x[4] * x[6];
+        let t40 = s1 * t39;
+        let t41 = s1.mul_add(t33, t36);
+        let t42 = s1.mul_add(t37, t40);
+        let t43 = t41 - t42;
+        let t44 = x[0] * x[14];
+        let t46 = x[1] * x[9];
+        let t48 = x[2] * x[8];
+        let t49 = s1 * t48;
+        let t50 = x[4] * x[7];
+        let t51 = s1 * t50;
+        let t52 = s1.mul_add(t44, t49);
+        let t53 = s1.mul_add(t46, t51);
+        let t54 = t52 - t53;
+        let t55 = x[1] * x[15];
+        let t57 = x[6] * x[14];
+        let t59 = x[7] * x[13];
+        let t60 = s1 * t59;
+        let t61 = x[8] * x[11];
+        let t62 = s1 * t61;
+        let t63 = s1.mul_add(t55, t60);
+        let t64 = s1.mul_add(t57, t62);
+        let t65 = t63 - t64;
+        let t66 = x[2] * x[15];
+        let t68 = x[5] * x[14];
+        let t69 = s1 * t68;
+        let t70 = x[7] * x[12];
+        let t72 = x[9] * x[11];
+        let t73 = s1 * t72;
+        let t74 = s1.mul_add(t66, t69);
+        let t75 = s1.mul_add(t70, t73);
+        let t76 = t74 - t75;
+        let t77 = x[3] * x[15];
+        let t79 = x[5] * x[13];
+        let t81 = x[6] * x[12];
+        let t82 = s1 * t81;
+        let t83 = x[10] * x[11];
+        let t84 = s1 * t83;
+        let t85 = s1.mul_add(t77, t82);
+        let t86 = s1.mul_add(t79, t84);
+        let t87 = t85 - t86;
+        let t88 = x[4] * x[15];
+        let t89 = s1 * t88;
+        let t90 = x[8] * x[12];
+        let t92 = x[9] * x[13];
+        let t94 = x[10] * x[14];
+        let t95 = s1 * t94;
+        let t96 = (-s1).mul_add(t90, t89);
+        let t97 = s1.mul_add(t92, t95);
+        let t98 = t96 - t97;
+        let t100 = x[11] * t21;
+        let t103 = x[14] * t54;
+        let t104 = x[1] * s0;
+        let t105 = x[12] * t10;
+        let t106 = x[2] * s0;
+        let t107 = x[13] * t10;
+        let t108 = x[3] * s0;
+        let t109 = x[14] * t10;
+        let t110 = x[4] * s0;
+        let t111 = x[11] * t10;
+        let t115 = x[13] * t87;
+        let t116 = x[14] * t76;
+        let t120 = x[12] * t87;
+        let t121 = x[14] * t65;
+        let t125 = x[12] * t76;
+        let t126 = x[13] * t65;
+        let t130 = x[11] * t65;
+        let t131 = x[12] * t98;
+        let t135 = x[11] * t76;
+        let t136 = x[13] * t98;
+        let t140 = x[11] * t87;
+        let t141 = x[14] * t98;
+        let t142 = x[4] * t10;
+        let t144 = x[1] * t10;
+        let t146 = x[2] * t10;
+        let t148 = x[3] * t10;
+        let t151 = x[2] * t76;
+        let t152 = x[3] * t87;
+        let t155 = (-x[12]).mul_add(t32, t100);
+        let t156 = x[13].mul_add(t43, t103);
+        let t157 = t155 - t156;
+        let t158 = t157 * T::from_i64(2);
+        let t159 = x[0].mul_add(s0, t158);
+        let t161 = (-t105).mul_add(T::from_i64(2), t104);
+        let t163 = (-t107).mul_add(T::from_i64(2), t106);
+        let t165 = (-t109).mul_add(T::from_i64(2), t108);
+        let t167 = (-t111).mul_add(T::from_i64(2), t110);
+        let t168 = x[4].mul_add(t32, t115);
+        let t169 = x[1].mul_add(t21, t116);
+        let t170 = t168 - t169;
+        let t171 = t170 * T::from_i64(2);
+        let t172 = x[5].mul_add(s0, t171);
+        let t173 = x[4].mul_add(t43, t121);
+        let t174 = x[2].mul_add(t21, t120);
+        let t175 = t173 - t174;
+        let t176 = t175 * T::from_i64(2);
+        let t177 = x[6].mul_add(s0, t176);
+        let t178 = x[4].mul_add(t54, t125);
+        let t179 = x[3].mul_add(t21, t126);
+        let t180 = t178 - t179;
+        let t181 = t180 * T::from_i64(2);
+        let t182 = x[7].mul_add(s0, t181);
+        let t183 = x[2].mul_add(t54, t131);
+        let t184 = x[3].mul_add(t43, t130);
+        let t185 = t183 - t184;
+        let t186 = t185 * T::from_i64(2);
+        let t187 = x[8].mul_add(s0, t186);
+        let t188 = x[3].mul_add(t32, t136);
+        let t189 = x[1].mul_add(t54, t135);
+        let t190 = t188 - t189;
+        let t191 = t190 * T::from_i64(2);
+        let t192 = x[9].mul_add(s0, t191);
+        let t193 = x[1].mul_add(t43, t141);
+        let t194 = x[2].mul_add(t32, t140);
+        let t195 = t193 - t194;
+        let t196 = t195 * T::from_i64(2);
+        let t197 = x[10].mul_add(s0, t196);
+        let t198 = t142 * T::from_i64(2);
+        let t199 = x[11].mul_add(s0, t198);
+        let t200 = t144 * T::from_i64(2);
+        let t201 = x[12].mul_add(s0, t200);
+        let t202 = t146 * T::from_i64(2);
+        let t203 = x[13].mul_add(s0, t202);
+        let t204 = t148 * T::from_i64(2);
+        let t205 = x[14].mul_add(s0, t204);
+        let t206 = x[1].mul_add(t65, t151);
+        let t207 = (-x[4]).mul_add(t98, t152);
+        let t208 = t206 + t207;
+        let t209 = t208 * T::from_i64(2);
+        let t210 = x[15].mul_add(s0, t209);
+        gx::Unit::new_unchecked(Odd::from_coeffs([t159, t161, t163, t165, t167, t172, t177, t182, t187, t192, t197, t199, t201, t203, t205, t210]))
     }
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Odd<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[12] * x[13];
+        let t2 = x[1].mul_add(x[2], t1);
+        let t4 = x[12] * x[14];
+        let t5 = x[1].mul_add(x[3], t4);
+        let t7 = x[11] * x[12];
+        let t8 = x[1].mul_add(x[4], t7);
+        let t9 = x[1] * x[11];
+        let t11 = (-x[4]).mul_add(x[12], t9);
+        let t12 = x[1] * x[12];
+        let t13 = x[2] * x[13];
+        let t14 = t12 + t13;
+        let t15 = x[1] * x[13];
+        let t17 = (-x[2]).mul_add(x[12], t15);
+        let t18 = x[1] * x[14];
+        let t20 = (-x[3]).mul_add(x[12], t18);
+        let t22 = x[13] * x[14];
+        let t23 = x[2].mul_add(x[3], t22);
+        let t25 = x[11] * x[13];
+        let t26 = x[2].mul_add(x[4], t25);
+        let t27 = x[2] * x[11];
+        let t29 = (-x[4]).mul_add(x[13], t27);
+        let t30 = x[2] * x[14];
+        let t32 = (-x[3]).mul_add(x[13], t30);
+        let t34 = x[11] * x[14];
+        let t35 = x[3].mul_add(x[4], t34);
+        let t36 = x[3] * x[11];
+        let t38 = (-x[4]).mul_add(x[14], t36);
+        let t39 = x[3] * x[14];
+        let t40 = x[4] * x[11];
+        let t41 = t39 - t40;
+        let t42 = t12 + t41;
+        let t44 = t13.mul_add(T::from_ratio(3, 2), t42);
+        let t45 = x[1] * x[1];
+        let t46 = x[3] * x[3];
+        let t47 = x[4] * x[4];
+        let t48 = x[11] * x[11];
+        let t49 = x[12] * x[12];
+        let t50 = x[14] * x[14];
+        let t51 = t45 + t46;
+        let t52 = t48 - t47;
+        let t53 = t51 + t52;
+        let t54 = t49 + t50;
+        let t55 = t54 + T::from_i64(3);
+        let t56 = t53 - t55;
+        let t57 = t14 + t39;
+        let t59 = (-t40).mul_add(T::from_ratio(3, 2), t57);
+        let t60 = x[2] * x[2];
+        let t61 = x[13] * x[13];
+        let t62 = t60 - t49;
+        let t63 = t51 + t62;
+        let t64 = t50 + t61;
+        let t65 = t64 + T::from_i64(3);
+        let t66 = t63 - t65;
+        let t67 = t13 + t41;
+        let t69 = t67.mul_add(T::from_ratio(2, 3), t12);
+        let t70 = t14 - t40;
+        let t72 = t70.mul_add(T::from_ratio(2, 3), t39);
+        let t73 = t45 + t48;
+        let t74 = t60 - t47;
+        let t75 = t73 + t74;
+        let t76 = t49 + t61;
+        let t77 = t76 + T::from_i64(3);
+        let t78 = t75 - t77;
+        let t81 = x[0] * t46;
+        let t82 = x[0] * t47;
+        let t86 = x[0] * t50;
+        let t88 = x[6] * t29;
+        let t92 = x[10] * t17;
+        let t95 = x[1] * t46;
+        let t98 = x[1] * t61;
+        let t99 = x[1] * t50;
+        let t102 = x[2] * t56;
+        let t103 = x[13] * t44;
+        let t105 = x[3] * t78;
+        let t106 = x[14] * t72;
+        let t107 = x[4] * t47;
+        let t115 = x[5] * t48;
+        let t116 = x[5] * t49;
+        let t118 = x[5] * t50;
+        let t120 = x[7] * t5;
+        let t122 = x[10] * t26;
+        let t130 = x[6] * t48;
+        let t132 = x[6] * t61;
+        let t133 = x[6] * t50;
+        let t135 = x[8] * t35;
+        let t136 = x[10] * t8;
+        let t144 = x[6] * t23;
+        let t145 = x[7] * t48;
+        let t147 = x[7] * t61;
+        let t148 = x[7] * t50;
+        let t150 = x[9] * t8;
+        let t159 = x[8] * t48;
+        let t161 = x[8] * t61;
+        let t162 = x[8] * t50;
+        let t163 = x[9] * t2;
+        let t165 = x[15] * t11;
+        let t171 = x[5] * t35;
+        let t174 = x[9] * t48;
+        let t175 = x[9] * t49;
+        let t177 = x[9] * t50;
+        let t179 = x[15] * t29;
+        let t187 = x[8] * t5;
+        let t189 = x[10] * t48;
+        let t190 = x[10] * t49;
+        let t191 = x[10] * t61;
+        let t193 = x[15] * t38;
+        let t196 = x[11] * t66;
+        let t199 = x[12] * t46;
+        let t202 = x[12] * t49;
+        let t204 = x[12] * t50;
+        let t206 = x[13] * t61;
+        let t208 = x[3] * t72;
+        let t209 = x[14] * t50;
+        let t213 = x[15] * t46;
+        let t218 = x[8] * t11;
+        let t220 = x[10] * t38;
+        let t223 = x[15] * t61;
+        let t224 = x[15] * t50;
+        let t225 = x[5].mul_add(t11, t88);
+        let t226 = x[7].mul_add(t38, t225);
+        let t227 = x[8].mul_add(t32, t92);
+        let t228 = (-x[9]).mul_add(t20, t227);
+        let t229 = t226 + t228;
+        let t230 = (-x[0]).mul_add(t45, t82);
+        let t231 = x[0].mul_add(t60, t81);
+        let t232 = t230 - t231;
+        let t234 = x[0].mul_add(t49, x[0]);
+        let t235 = x[0].mul_add(t61, t234);
+        let t236 = (-x[0]).mul_add(t48, t86);
+        let t237 = t235 + t236;
+        let t239 = t232.mul_add(T::from_ratio(1, 2), t229);
+        let t240 = t237.mul_add(T::from_ratio(3, 2), t239);
+        let t241 = x[1].mul_add(t47, t98);
+        let t242 = (-x[1]).mul_add(t45, t99);
+        let t243 = t241 + t242;
+        let t244 = x[1].mul_add(t60, t95);
+        let t245 = x[1].mul_add(t48, t244);
+        let t246 = t243 - t245;
+        let t248 = x[12].mul_add(t69, x[1]);
+        let t249 = t248 * T::from_ratio(3, 2);
+        let t250 = t246.mul_add(T::from_ratio(1, 2), t249);
+        let t251 = x[2].mul_add(t60, t102);
+        let t253 = (-t251).mul_add(T::from_ratio(1, 2), t103);
+        let t254 = x[3].mul_add(t46, t105);
+        let t256 = t106 * T::from_ratio(3, 2);
+        let t257 = (-t254).mul_add(T::from_ratio(1, 2), t256);
+        let t258 = (-x[4]).mul_add(t66, t107);
+        let t259 = t258 * T::from_ratio(1, 2);
+        let t260 = x[11].mul_add(t59, t259);
+        let t261 = x[0].mul_add(t11, t122);
+        let t262 = x[15].mul_add(t32, t261);
+        let t263 = x[6].mul_add(t2, t120);
+        let t264 = x[9].mul_add(t35, t263);
+        let t265 = t262 - t264;
+        let t266 = (-x[5]).mul_add(t60, t116);
+        let t267 = x[5].mul_add(t46, t115);
+        let t268 = t266 - t267;
+        let t270 = x[5].mul_add(t47, x[5]);
+        let t271 = x[5].mul_add(t61, t270);
+        let t272 = (-x[5]).mul_add(t45, t118);
+        let t273 = t271 + t272;
+        let t275 = t268.mul_add(T::from_ratio(1, 2), t265);
+        let t276 = t273.mul_add(T::from_ratio(3, 2), t275);
+        let t277 = x[0].mul_add(t29, t135);
+        let t278 = (-x[5]).mul_add(t2, t277);
+        let t279 = x[7].mul_add(t23, t136);
+        let t280 = x[15].mul_add(t20, t279);
+        let t281 = t278 - t280;
+        let t282 = (-x[6]).mul_add(t45, t132);
+        let t283 = x[6].mul_add(t46, t130);
+        let t284 = t282 - t283;
+        let t286 = x[6].mul_add(t47, x[6]);
+        let t287 = x[6].mul_add(t49, t286);
+        let t288 = (-x[6]).mul_add(t60, t133);
+        let t289 = t287 + t288;
+        let t291 = t284.mul_add(T::from_ratio(1, 2), t281);
+        let t292 = t289.mul_add(T::from_ratio(3, 2), t291);
+        let t293 = x[0].mul_add(t38, t150);
+        let t294 = x[15].mul_add(t17, t293);
+        let t295 = x[5].mul_add(t5, t144);
+        let t296 = x[8].mul_add(t26, t295);
+        let t297 = t294 - t296;
+        let t298 = (-x[7]).mul_add(t45, t148);
+        let t299 = x[7].mul_add(t60, t145);
+        let t300 = t298 - t299;
+        let t302 = x[7].mul_add(t47, x[7]);
+        let t303 = x[7].mul_add(t49, t302);
+        let t304 = (-x[7]).mul_add(t46, t147);
+        let t305 = t303 + t304;
+        let t307 = t300.mul_add(T::from_ratio(1, 2), t297);
+        let t308 = t305.mul_add(T::from_ratio(3, 2), t307);
+        let t309 = x[7].mul_add(t26, t163);
+        let t310 = x[10].mul_add(t5, t309);
+        let t311 = (-x[0]).mul_add(t32, t165);
+        let t312 = (-x[6]).mul_add(t35, t311);
+        let t313 = t310 + t312;
+        let t314 = x[8].mul_add(t47, t161);
+        let t315 = (-x[8]).mul_add(t45, t162);
+        let t316 = t314 + t315;
+        let t318 = x[8].mul_add(t49, x[8]);
+        let t319 = (-x[8]).mul_add(t60, t318);
+        let t320 = x[8].mul_add(t46, t159);
+        let t321 = t319 - t320;
+        let t323 = t316.mul_add(T::from_ratio(1, 2), t313);
+        let t324 = t321.mul_add(T::from_ratio(3, 2), t323);
+        let t325 = x[0].mul_add(t20, t171);
+        let t326 = x[8].mul_add(t2, t325);
+        let t327 = x[10].mul_add(t23, t179);
+        let t328 = (-x[7]).mul_add(t8, t327);
+        let t329 = t326 + t328;
+        let t330 = x[9].mul_add(t47, t175);
+        let t331 = (-x[9]).mul_add(t60, t177);
+        let t332 = t330 + t331;
+        let t334 = x[9].mul_add(t61, x[9]);
+        let t335 = (-x[9]).mul_add(t45, t334);
+        let t336 = x[9].mul_add(t46, t174);
+        let t337 = t335 - t336;
+        let t339 = t332.mul_add(T::from_ratio(1, 2), t329);
+        let t340 = t337.mul_add(T::from_ratio(3, 2), t339);
+        let t341 = x[6].mul_add(t8, t187);
+        let t342 = x[9].mul_add(t23, t341);
+        let t343 = (-x[0]).mul_add(t17, t193);
+        let t344 = (-x[5]).mul_add(t26, t343);
+        let t345 = t342 + t344;
+        let t346 = x[10].mul_add(t47, t190);
+        let t347 = (-x[10]).mul_add(t46, t191);
+        let t348 = t346 + t347;
+        let t350 = x[10].mul_add(t50, x[10]);
+        let t351 = (-x[10]).mul_add(t45, t350);
+        let t352 = x[10].mul_add(t60, t189);
+        let t353 = t351 - t352;
+        let t355 = t348.mul_add(T::from_ratio(1, 2), t345);
+        let t356 = t353.mul_add(T::from_ratio(3, 2), t355);
+        let t357 = x[11].mul_add(t48, t196);
+        let t358 = t357 * T::from_ratio(1, 2);
+        let t359 = x[4].mul_add(t59, t358);
+        let t360 = -t359;
+        let t361 = x[12].mul_add(t47, t202);
+        let t362 = x[12].mul_add(t61, t204);
+        let t363 = t361 + t362;
+        let t364 = x[12].mul_add(t60, t199);
+        let t365 = x[12].mul_add(t48, t364);
+        let t366 = t363 - t365;
+        let t368 = (-x[1]).mul_add(t69, x[12]);
+        let t369 = t368 * T::from_ratio(3, 2);
+        let t370 = t366.mul_add(T::from_ratio(1, 2), t369);
+        let t371 = (-x[13]).mul_add(t56, t206);
+        let t372 = t371 * T::from_ratio(1, 2);
+        let t373 = (-x[2]).mul_add(t44, t372);
+        let t374 = (-x[14]).mul_add(t78, t209);
+        let t375 = t374 * T::from_ratio(1, 2);
+        let t377 = (-t208).mul_add(T::from_ratio(3, 2), t375);
+        let t378 = x[6].mul_add(t20, t218);
+        let t379 = x[9].mul_add(t29, t378);
+        let t380 = (-x[5]).mul_add(t32, t220);
+        let t381 = (-x[7]).mul_add(t17, t380);
+        let t382 = t379 + t381;
+        let t383 = x[15].mul_add(t49, t223);
+        let t384 = (-x[15]).mul_add(t48, t224);
+        let t385 = t383 + t384;
+        let t387 = x[15].mul_add(t47, x[15]);
+        let t388 = (-x[15]).mul_add(t45, t387);
+        let t389 = x[15].mul_add(t60, t213);
+        let t390 = t388 - t389;
+        let t392 = t385.mul_add(T::from_ratio(1, 2), t382);
+        let t393 = t390.mul_add(T::from_ratio(3, 2), t392);
+        Odd::from_coeffs([t240, t250, t253, t257, t260, t276, t292, t308, t324, t340, t356, t360, t370, t373, t377, t393])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
+}
+
 impl<T: gx::Real> gx::Inverse for Odd<(), T> {
-    type Output = Multivector<(), T>;
+    type Output = Odd<(), T>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -7027,6 +8961,13 @@ impl<T: gx::Real> gx::Norm for Odd<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Odd<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 

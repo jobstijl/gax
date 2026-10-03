@@ -73,10 +73,13 @@ The kernel costs are in [performance.md](performance.md). `Unit<Motor> >> Point`
 
 **Renormalization.**
 
-* **`Unit::renormalize_fast()`** is one Newton step, `u (3 − u ~u) / 2`, with no square root.
+* **`Unit::renormalize_fast()`** is one Newton step, `(3 − u ~u) u / 2`, with no square root.
   * The identity `r ~r = n (3 − n)² / 4`, with `n = u ~u`, is proved on symbolic coefficients,
     so an error `e` in `n` becomes `¾ e²`. It holds for Study numbers too (the pseudoscalar part
-    of a PGA motor's norm).
+    of a PGA motor's norm), and for a 5D norm's 4-vector part.
+  * The factor goes on the left. `n` need not commute with `u`: the pseudoscalar anticommutes
+    with an odd element in 4D, and on the right (`u (3 − n) / 2`, as before 2026-10) a drifted
+    PGA3D flector's error doubled instead of squaring.
   * `tests/numerics_renormalize.rs` checks it and measures quadratic convergence.
 * **`Unit::mul_renormalized`** multiplies and renormalizes in one call. Over 100 000 products it
   keeps `u ~u − 1` below `10⁻¹³`.

@@ -1838,7 +1838,7 @@ fn scalar_normalized(x: Scalar) -> Scalar {
     return Scalar(vec4<f32>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn scalar_renormalize_fast(x: Scalar) -> Scalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -1868,7 +1868,7 @@ fn plane_normalized(x: Plane) -> Plane {
     return Plane(vec4<f32>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn plane_renormalize_fast(x: Plane) -> Plane {
     let t1 = x.c0.y * x.c0.y;
     let t3 = fma(x.c0.x, x.c0.x, t1);
@@ -1918,7 +1918,7 @@ fn line_normalized(x: Line) -> Line {
     return Line(vec4<f32>(t0, t1, t2, t9), vec4<f32>(t10, t11, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn line_renormalize_fast(x: Line) -> Line {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.y * x.c0.y;
@@ -2007,7 +2007,7 @@ fn point_normalized(x: Point) -> Point {
     return Point(vec4<f32>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn point_renormalize_fast(x: Point) -> Point {
     let t0 = x.c0.w * x.c0.w;
     let t2 = fma(-t0, (1.0 / 3.0), 1.0);
@@ -2047,7 +2047,7 @@ fn rotor_normalized(x: Rotor) -> Rotor {
     return Rotor(vec4<f32>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn rotor_renormalize_fast(x: Rotor) -> Rotor {
     let t1 = x.c0.y * x.c0.y;
     let t3 = x.c0.w * x.c0.w;
@@ -2098,7 +2098,7 @@ fn translator_normalized(x: Translator) -> Translator {
     return Translator(vec4<f32>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn translator_renormalize_fast(x: Translator) -> Translator {
     let t0 = x.c0.x * x.c0.x;
     let t1 = t0 - 3.0;
@@ -2169,7 +2169,7 @@ fn motor_normalized(x: Motor) -> Motor {
     return Motor(vec4<f32>(t0, t1, t2, t3), vec4<f32>(t12, t13, t14, t15));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn motor_renormalize_fast(x: Motor) -> Motor {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.y * x.c0.y;
@@ -2293,7 +2293,7 @@ fn flector_normalized(x: Flector) -> Flector {
     return Flector(vec4<f32>(t0, t1, t2, t12), vec4<f32>(t13, t14, t15, t11));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn flector_renormalize_fast(x: Flector) -> Flector {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.y * x.c0.y;
@@ -2304,44 +2304,54 @@ fn flector_renormalize_fast(x: Flector) -> Flector {
     let t6 = t4 + t5;
     let t7 = t4 - 3.0;
     let t8 = t5 - 3.0;
-    let t9 = t0 - t1;
-    let t11 = x.c0.y * x.c1.y;
-    let t12 = fma(x.c0.x, x.c1.x, t11);
-    let t13 = t2 - t3;
-    let t15 = x.c0.w * x.c1.w;
-    let t16 = fma(x.c0.z, x.c1.z, t15);
-    let t18 = fma(-t6, (1.0 / 3.0), 1.0);
-    let t19 = x.c0.x * x.c0.y;
-    let t20 = x.c0.z * x.c1.w;
-    let t21 = x.c0.x * t18;
-    let t22 = x.c0.y * t18;
-    let t23 = x.c0.z * t18;
-    let t26 = x.c0.w * t13;
-    let t27 = x.c1.w * t12;
-    let t29 = x.c0.x * t16;
-    let t31 = x.c1.x * t9;
-    let t33 = x.c0.y * t16;
-    let t35 = x.c1.y * t9;
-    let t37 = x.c0.z * t12;
-    let t39 = x.c1.z * t13;
-    let t40 = x.c1.w * t18;
-    let t41 = t21 * (3.0 / 2.0);
-    let t42 = t22 * (3.0 / 2.0);
-    let t43 = t23 * (3.0 / 2.0);
-    let t44 = fma(x.c1.z, t20, t27);
-    let t45 = fma(x.c0.w, t7, t26);
-    let t47 = fma(-t45, (1.0 / 2.0), t44);
-    let t48 = fma(x.c1.y, t19, t29);
-    let t49 = fma(-x.c1.x, t8, t31);
-    let t51 = fma(t49, (1.0 / 2.0), t48);
-    let t52 = fma(x.c1.x, t19, t33);
-    let t53 = fma(x.c1.y, t8, t35);
-    let t55 = fma(-t53, (1.0 / 2.0), t52);
-    let t56 = fma(x.c0.w, t20, t37);
-    let t57 = fma(-x.c1.z, t7, t39);
-    let t59 = fma(t57, (1.0 / 2.0), t56);
-    let t60 = t40 * (3.0 / 2.0);
-    return Flector(vec4<f32>(t41, t42, t43, t47), vec4<f32>(t51, t55, t59, t60));
+    let t10 = x.c0.y * x.c1.y;
+    let t11 = fma(x.c0.x, x.c1.x, t10);
+    let t13 = x.c0.w * x.c1.w;
+    let t14 = fma(x.c0.z, x.c1.z, t13);
+    let t16 = fma(-t6, (1.0 / 3.0), 1.0);
+    let t17 = x.c0.x * x.c0.y;
+    let t18 = x.c0.z * x.c1.w;
+    let t19 = x.c0.x * t16;
+    let t20 = x.c0.y * t16;
+    let t21 = x.c0.z * t16;
+    let t24 = x.c0.w * t3;
+    let t25 = x.c0.w * t7;
+    let t26 = x.c1.w * t11;
+    let t27 = x.c1.x * t0;
+    let t29 = x.c0.x * t14;
+    let t31 = x.c1.x * t8;
+    let t34 = x.c1.y * t1;
+    let t35 = x.c0.y * t14;
+    let t36 = x.c1.y * t8;
+    let t37 = x.c1.z * t2;
+    let t39 = x.c0.z * t11;
+    let t41 = x.c1.z * t7;
+    let t42 = x.c1.w * t16;
+    let t43 = t19 * (3.0 / 2.0);
+    let t44 = t20 * (3.0 / 2.0);
+    let t45 = t21 * (3.0 / 2.0);
+    let t46 = fma(x.c1.z, t18, t26);
+    let t47 = fma(x.c0.w, t2, t25);
+    let t50 = fma(t47, (1.0 / 2.0), t46);
+    let t51 = fma(t24, (3.0 / 2.0), t50);
+    let t52 = -t51;
+    let t53 = fma(x.c1.y, t17, t29);
+    let t54 = fma(x.c1.x, t1, t31);
+    let t57 = fma(t54, (1.0 / 2.0), t53);
+    let t58 = fma(t27, (3.0 / 2.0), t57);
+    let t59 = -t58;
+    let t60 = fma(x.c1.x, t17, t35);
+    let t61 = fma(x.c1.y, t0, t36);
+    let t64 = fma(t61, (1.0 / 2.0), t60);
+    let t65 = fma(t34, (3.0 / 2.0), t64);
+    let t66 = -t65;
+    let t67 = fma(x.c0.w, t18, t39);
+    let t68 = fma(x.c1.z, t3, t41);
+    let t71 = fma(t68, (1.0 / 2.0), t67);
+    let t72 = fma(t37, (3.0 / 2.0), t71);
+    let t73 = -t72;
+    let t74 = t42 * (3.0 / 2.0);
+    return Flector(vec4<f32>(t43, t44, t45, t52), vec4<f32>(t59, t66, t73, t74));
 }
 
 // The squared norm: the scalar part of `x ~x`.

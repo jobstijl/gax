@@ -1256,6 +1256,7 @@ fn value_methods() {
     common::inverse::<Vector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Vector<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Twist<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Twist<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::exp_log::<Twist<(), f64>, Motor<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
     common::inverse::<Bivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::exp_log::<Bivector<(), f64>, Even<(), f64>>(&o, &mut rng, |b| b.exp(), |r| r.log());
@@ -1266,6 +1267,8 @@ fn value_methods() {
     common::inverse::<Pseudoscalar<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::normalized::<Pseudoscalar<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
     common::inverse::<Motor<(), f64>, _>(&o, &mut rng, |x| x.inverse());
+    common::normalized::<Motor<(), f64>>(&o, &mut rng, |x| x.normalized().into_inner());
+    common::sqrt::<Motor<(), f64>>(&o, &mut rng, |r| r.sqrt().into_inner(), |r| r.into_inner() * r.into_inner());
     common::inverse::<Even<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Odd<(), f64>, _>(&o, &mut rng, |x| x.inverse());
     common::inverse::<Multivector<(), f64>, _>(&o, &mut rng, |x| x.inverse());

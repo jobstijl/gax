@@ -698,7 +698,7 @@ fn scalar_normalized(x: Scalar) -> Scalar {
     return Scalar(vec4<f16>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn scalar_renormalize_fast(x: Scalar) -> Scalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -725,7 +725,7 @@ fn line_normalized(x: Line) -> Line {
     return Line(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn line_renormalize_fast(x: Line) -> Line {
     let t1 = x.c0.y * x.c0.y;
     let t2 = fma(x.c0.x, x.c0.x, t1);
@@ -755,7 +755,7 @@ fn point_normalized(x: Point) -> Point {
     return Point(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn point_renormalize_fast(x: Point) -> Point {
     let t0 = x.c0.z * x.c0.z;
     let t2 = fma(-t0, (1.0 / 3.0), 1.0);
@@ -812,7 +812,7 @@ fn rotor_normalized(x: Rotor) -> Rotor {
     return Rotor(vec4<f16>(t0, t1, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn rotor_renormalize_fast(x: Rotor) -> Rotor {
     let t1 = x.c0.y * x.c0.y;
     let t2 = fma(x.c0.x, x.c0.x, t1);
@@ -852,7 +852,7 @@ fn translator_normalized(x: Translator) -> Translator {
     return Translator(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn translator_renormalize_fast(x: Translator) -> Translator {
     let t0 = x.c0.x * x.c0.x;
     let t1 = t0 - 3.0;
@@ -897,7 +897,7 @@ fn motor_normalized(x: Motor) -> Motor {
     return Motor(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn motor_renormalize_fast(x: Motor) -> Motor {
     let t1 = x.c0.y * x.c0.y;
     let t2 = fma(x.c0.x, x.c0.x, t1);
@@ -945,7 +945,7 @@ fn flector_normalized(x: Flector) -> Flector {
     return Flector(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn flector_renormalize_fast(x: Flector) -> Flector {
     let t1 = x.c0.y * x.c0.y;
     let t2 = fma(x.c0.x, x.c0.x, t1);

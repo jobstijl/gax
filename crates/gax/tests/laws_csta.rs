@@ -446,11 +446,9 @@ law_suite::law_suite! {
         (Multivector, 6, Pseudoscalar),
     ],
     inverses: [
-        (Twist, Motor),
         (Bivector, Even),
         (Trivector, Multivector),
         (Quadvector, Even),
-        (Motor, Motor),
         (Even, Even),
         (Odd, Multivector),
         (Multivector, Multivector),

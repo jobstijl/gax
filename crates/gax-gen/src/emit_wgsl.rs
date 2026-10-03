@@ -1163,6 +1163,15 @@ fn study_rsqrt_abs(a: f32) -> f32 {
 }
 "
         .into(),
+        StudyFn::RsqrtQ => "// `(a + X)^(-1/2)` with `X² = q`, as `[r0, r1]` (gax_core::study::rsqrt_q).
+fn study_rsqrt_q(a: f32, q: f32) -> vec2<f32> {
+    let sign = select(1.0, -1.0, a < 0.0);
+    let d = sqrt(a * a - q);
+    let c = sqrt((abs(a) + d) * 0.5);
+    return vec2<f32>(c / d, -sign / (2.0 * c * d));
+}
+"
+        .into(),
     }
 }
 

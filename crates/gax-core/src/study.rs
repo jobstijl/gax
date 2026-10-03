@@ -476,6 +476,28 @@ pub fn rsqrt<T: Real>(isq: i8, a: T, b: T) -> [T; 2] {
     [r0, r1]
 }
 
+/// `(a + X)^(-1/2)` with `X² = q` (any direction `X`, as in [`study_q`]), as `[r0, r1]`; for
+/// `a < 0`, `(−a − X)^(-1/2)`. In closed form, exact for small `q`: with `d = √(a² − q)` and
+/// `c = √((|a| + d)/2)`, `√(|a| ± X) = c ± X/(2c)`, whose inverse is `(c ∓ X/(2c)) / d`. Not
+/// finite where `a + X` has eigenvalues of both signs (`q ≥ a²`).
+///
+/// ```
+/// use gax_core::study::rsqrt_q;
+/// // (5 + X)^(-1/2) with X² = 16: the eigenvalues 9 and 1 give 1/3 and 1, so
+/// // r0 = (1/3 + 1)/2 and r1 = (1/3 − 1)/(2·4).
+/// let [r0, r1] = rsqrt_q(5.0f64, 16.0);
+/// assert!((r0 - 2.0 / 3.0).abs() < 1e-15 && (r1 + 1.0 / 12.0).abs() < 1e-15);
+/// ```
+#[inline(always)]
+pub fn rsqrt_q<T: Real>(a: T, q: T) -> [T; 2] {
+    let one = T::one();
+    let sign = T::select_lt(a, T::zero(), -one, one);
+    let d = (a * a - q).sqrt();
+    let c = ((a.abs() + d) * T::from_f64(0.5)).sqrt();
+    let cd = c * d;
+    [c / d, -sign / (cd + cd)]
+}
+
 /// A function of a Study number `a + X` whose non-scalar part squares to the scalar `q`
 /// (`X² = q`), as `(f0, f1)` with `f(a + X) = f0 + f1 X`.
 ///

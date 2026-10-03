@@ -8,7 +8,8 @@
 
 use crate as gx;
 
-include!("cga3d/kinds.rs");
+include!("cga3d/kinds_1.rs");
+include!("cga3d/kinds_2.rs");
 include!("cga3d/products_gp.rs");
 include!("cga3d/products_wedge.rs");
 include!("cga3d/products_vee.rs");

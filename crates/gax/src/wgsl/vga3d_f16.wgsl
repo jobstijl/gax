@@ -351,7 +351,7 @@ fn scalar_normalized(x: Scalar) -> Scalar {
     return Scalar(vec4<f16>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn scalar_renormalize_fast(x: Scalar) -> Scalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -380,7 +380,7 @@ fn vector_normalized(x: Vector) -> Vector {
     return Vector(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn vector_renormalize_fast(x: Vector) -> Vector {
     let t1 = x.c0.y * x.c0.y;
     let t3 = fma(x.c0.x, x.c0.x, t1);
@@ -415,7 +415,7 @@ fn bivector_normalized(x: Bivector) -> Bivector {
     return Bivector(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn bivector_renormalize_fast(x: Bivector) -> Bivector {
     let t1 = x.c0.y * x.c0.y;
     let t3 = fma(x.c0.x, x.c0.x, t1);
@@ -461,7 +461,7 @@ fn pseudoscalar_normalized(x: Pseudoscalar) -> Pseudoscalar {
     return Pseudoscalar(vec4<f16>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn pseudoscalar_renormalize_fast(x: Pseudoscalar) -> Pseudoscalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -505,7 +505,7 @@ fn rotor_normalized(x: Rotor) -> Rotor {
     return Rotor(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn rotor_renormalize_fast(x: Rotor) -> Rotor {
     let t1 = x.c0.y * x.c0.y;
     let t3 = x.c0.w * x.c0.w;
@@ -564,7 +564,7 @@ fn odd_normalized(x: Odd) -> Odd {
     return Odd(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn odd_renormalize_fast(x: Odd) -> Odd {
     let t1 = x.c0.y * x.c0.y;
     let t3 = x.c0.w * x.c0.w;

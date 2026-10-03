@@ -99,6 +99,8 @@ pub enum StudyFn {
     Rsqrt(i8),
     /// `s0 = 1 / sqrt(|a|)`.
     RsqrtAbs,
+    /// `[s0, s1] = rsqrt_q(a, q)`: `(a + X)^(-1/2)` with `X² = q`, 5D algebras.
+    RsqrtQ,
     /// `[c0, c1, s0, s1] = exp_coeffs(isq, lambda, mu)`: the general Study exponential
     /// (boosts, and rotations with `I² = ±1`).
     Exp(i8),
@@ -131,6 +133,7 @@ impl StudyFn {
             StudyFn::Rsqrt(1) => "study_rsqrt_split",
             StudyFn::Rsqrt(_) => "study_rsqrt_complex",
             StudyFn::RsqrtAbs => "study_rsqrt_abs",
+            StudyFn::RsqrtQ => "study_rsqrt_q",
             StudyFn::Exp(0) => "study_exp_nil",
             StudyFn::Exp(1) => "study_exp_split",
             StudyFn::Exp(_) => "study_exp_complex",
@@ -420,6 +423,7 @@ impl Kernel {
                         StudyFn::RsqrtNil => study::rsqrt_nil(x[0], x[1]).to_vec(),
                         StudyFn::Rsqrt(isq) => study::rsqrt(*isq, x[0], x[1]).to_vec(),
                         StudyFn::RsqrtAbs => vec![1.0 / x[0].abs().sqrt()],
+                        StudyFn::RsqrtQ => study::rsqrt_q(x[0], x[1]).to_vec(),
                         StudyFn::Exp(isq) => study::exp_coeffs(*isq, x[0], x[1]).to_vec(),
                         StudyFn::Log(isq) => {
                             study::log_coeffs(*isq, (x[0], x[1]), (x[2], x[3])).to_vec()

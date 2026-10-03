@@ -252,6 +252,18 @@ pub fn value_methods(spec: &AlgebraSpec, k: &KindSpec) -> (String, ValueMethods)
         meta.inverse = emit_inverse(spec, k, &rev, &norm, &study, &mut body);
         meta.normalized = emit_normalized(spec, k, &x, &norm, &study, &mut body, &mut meta.kernels);
         emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
+    } else if let Some((q, qq)) = general_four(alg, &norm)
+        && !n0.is_zero()
+    {
+        // 5D: x ~x = a + X with X a 4-vector, X² = q a scalar.
+        let conj = symbolic::add(
+            &scalar_mv(n0.clone()),
+            &scale_mv(&q, &Poly::constant(-Rational::ONE)),
+        );
+        meta.inverse = emit_inverse_by(spec, k, &rev, &conj, &(&(&n0 * &n0) - &qq), &mut body);
+        meta.normalized =
+            emit_normalized_q(spec, k, &x, &n0, &q, &qq, &mut body, &mut meta.kernels);
+        emit_newton_step(spec, k, &x, &norm, &mut traits, &mut meta.kernels);
     }
     // Every other kind: the inverse as a polynomial in x (Shirokov), in its product closure.
     if meta.inverse.is_none() && !k.layout.blades.is_empty() {
@@ -441,8 +453,6 @@ fn emit_inverse(
     study: &Study,
     body: &mut String,
 ) -> Option<String> {
-    let alg = &spec.algebra;
-    let nv = k.layout.len() as Var;
     let n0 = coef(norm, 0);
     let nb = study.blade.map_or_else(Poly::zero, |b| coef(norm, b));
     // (a + bB)⁻¹ = (a - bB) / (a² - isq b²)
@@ -450,9 +460,24 @@ fn emit_inverse(
     if let Some(b) = study.blade {
         conj = symbolic::add(&conj, &blade_mv(b, -&nb));
     }
-    let num = symbolic::binop(alg, BinOp::Gp, rev, &conj);
-    let out_kind = spec.kind_for_support(&symbolic::support(&num))?.clone();
     let d = &(&n0 * &n0) - &(&nb * &nb).scale(Rational::int(i128::from(study.isq)));
+    emit_inverse_by(spec, k, rev, &conj, &d, body)
+}
+
+/// `~x (x ~x)⁻¹ = ~x conj / d`, with `conj` the conjugate of the norm and `d = (x ~x) conj` a
+/// scalar polynomial.
+fn emit_inverse_by(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    rev: &SymMv,
+    conj: &SymMv,
+    d: &Poly,
+    body: &mut String,
+) -> Option<String> {
+    let alg = &spec.algebra;
+    let nv = k.layout.len() as Var;
+    let num = symbolic::binop(alg, BinOp::Gp, rev, conj);
+    let out_kind = spec.kind_for_support(&symbolic::support(&num))?.clone();
     let r = nv;
     let coeffs: Vec<Poly> = symbolic::to_coeffs(&out_kind.layout, &num)
         .expect("fits")
@@ -464,7 +489,7 @@ fn emit_inverse(
         op: StageOp::Call(Func::Recip),
         args: vec![d.clone()],
     }];
-    let relations = vec![&(&d * &Poly::var(r)) - &Poly::constant(Rational::ONE)];
+    let relations = vec![&(d * &Poly::var(r)) - &Poly::constant(Rational::ONE)];
     let (prog, _) = cse::compile_staged_best(&coeffs, &stages, &relations);
     let xvar = |v: Var| format!("x[{v}]");
     let mut lets = String::new();
@@ -747,7 +772,86 @@ fn emit_normalized(
     true
 }
 
-/// `NewtonStep`: `x (3 − x ~x) / 2`, one Newton step towards `x ~x = 1` without a square root.
+/// `normalized` where `x ~x = a + X` with `X` a 4-vector and `X² = q` a scalar (5D):
+/// `(a + X)^(-1/2) x = (s0 + s1 X) x`, the factor on the left (`X` need not commute with `x`),
+/// with `[s0, s1] = rsqrt_q(a, q)`. De Keninck and Dorst, *Normalization, square roots, and the
+/// exponential and logarithmic maps in geometric algebras of less than 6D* (2022).
+#[allow(clippy::too_many_arguments)]
+fn emit_normalized_q(
+    spec: &AlgebraSpec,
+    k: &KindSpec,
+    x: &SymMv,
+    n0: &Poly,
+    q: &SymMv,
+    qq: &Poly,
+    body: &mut String,
+    kernels: &mut Vec<Kernel>,
+) -> bool {
+    let alg = &spec.algebra;
+    let nv = k.layout.len() as Var;
+    let (s0, s1) = (nv, nv + 1);
+    let left = symbolic::add(&scalar_mv(Poly::var(s0)), &scale_mv(q, &Poly::var(s1)));
+    let out = symbolic::binop(alg, BinOp::Gp, &left, x);
+    let Some(coeffs) = symbolic::to_coeffs(&k.layout, &out) else {
+        return false;
+    };
+    let pre = cse::compile_best(&[n0.clone(), qq.clone()], &BTreeSet::new(), &[]);
+    let prog = cse::compile_best(&coeffs, &BTreeSet::new(), &[]);
+    let xvar = |v: Var| format!("x[{v}]");
+    let names = move |v: Var| match v {
+        v if v < nv => format!("x[{v}]"),
+        v if v == s0 => "s0".into(),
+        _ => "s1".into(),
+    };
+    let mut post_vars = arg_vars(nv as usize);
+    post_vars.push((s0, Source::Local("s0".into())));
+    post_vars.push((s1, Source::Local("s1".into())));
+    kernels.extend(value_kernel(
+        k,
+        &format!("{}_normalized", snake(&k.name)),
+        "Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1`.",
+        Ty::Kind(k.name.clone()),
+        vec![
+            Step::Lets {
+                prog: pre.clone(),
+                prefix: "p".into(),
+                vars: arg_vars(nv as usize),
+            },
+            Step::Study {
+                func: StudyFn::RsqrtQ,
+                args: vec![(0, 0), (0, 1)],
+                outs: vec!["s0".to_string(), "s1".to_string()],
+            },
+            Step::Lets {
+                prog: prog.clone(),
+                prefix: "t".into(),
+                vars: post_vars,
+            },
+        ],
+    ));
+    let mut lets = String::new();
+    pre.emit_lets(&xvar, "p", &mut lets);
+    let (a, b) = (
+        render(&pre.outputs[0], &xvar, "p"),
+        render(&pre.outputs[1], &xvar, "p"),
+    );
+    let _ = writeln!(lets, "        let [s0, s1] = gx::study::rsqrt_q({a}, {b});");
+    prog.emit_lets(&names, "t", &mut lets);
+    let outs: Vec<String> = prog
+        .outputs
+        .iter()
+        .map(|o| render(o, &names, "t"))
+        .collect();
+    let name = &k.name;
+    let _ = write!(
+        body,
+        "    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector\n    /// whose square is a scalar, so that `x ~x = 1` (`−1` when `a` is negative).\n    #[inline(always)]\n    pub fn normalized(self) -> gx::Unit<Self> {{\n        let x = self.c;\n{lets}        gx::Unit::new_unchecked({name}::from_coeffs([{}]))\n    }}\n\n",
+        outs.join(", ")
+    );
+    true
+}
+
+/// `NewtonStep`: `(3 − x ~x) x / 2`, one Newton step towards `x ~x = 1` without a square root.
 /// For `x ~x = 1 + e` it leaves an error of order `e²`.
 fn emit_newton_step(
     spec: &AlgebraSpec,
@@ -763,7 +867,10 @@ fn emit_newton_step(
         &scalar_mv(Poly::constant(Rational::new(3, 2))),
         &norm.iter().map(|(m, p)| (*m, p.scale(-half))).collect(),
     );
-    let out = symbolic::binop(alg, BinOp::Gp, x, &q);
+    // On the left: `r ~r = q n q = n q²` whether or not `n` commutes with `x` (an odd `x` in
+    // 4D anticommutes with the pseudoscalar, and a 5D norm's 4-vector part commutes with
+    // nothing in particular), while `x q` gives `r ~r = x q² ~x`.
+    let out = symbolic::binop(alg, BinOp::Gp, &q, x);
     let Some(coeffs) = symbolic::to_coeffs(&k.layout, &out) else {
         return;
     };
@@ -771,7 +878,7 @@ fn emit_newton_step(
     kernels.extend(value_kernel(
         k,
         &format!("{}_renormalize_fast", snake(&k.name)),
-        "One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.",
+        "One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.",
         Ty::Kind(k.name.clone()),
         vec![Step::Lets {
             prog: prog.clone(),
@@ -786,7 +893,7 @@ fn emit_newton_step(
     let name = &k.name;
     let _ = write!(
         traits,
-        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `x (3 − x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
+        "impl<T: gx::Coef> gx::NewtonStep for {name}<(), T> {{\n    /// `(3 − x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.\n    #[inline(always)]\n    fn newton_step(self) -> Self {{\n        let x = self.c;\n{lets}        {name}::from_coeffs([{}])\n    }}\n\n    #[inline(always)]\n    fn note_renormalize() {{\n        T::note_renormalize();\n    }}\n}}\n\n",
         outs.join(", ")
     );
 }

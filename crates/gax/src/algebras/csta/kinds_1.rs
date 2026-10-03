@@ -773,7 +773,7 @@ impl<T: gx::Real> Scalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Scalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -1661,7 +1661,7 @@ impl<T: gx::Real> Vector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Vector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -2511,55 +2511,246 @@ impl<T: gx::Real> Twist<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Motor` (no closed form
-    /// for `Twist` here): the inverse as a polynomial of degree 7 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 7 products in `Motor`), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Motor<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Motor::<(), T>::zero();
-        x.c[1] = self.c[0] * scale;
-        x.c[2] = self.c[1] * scale;
-        x.c[3] = self.c[2] * scale;
-        x.c[4] = self.c[3] * scale;
-        x.c[5] = self.c[4] * scale;
-        x.c[6] = self.c[5] * scale;
-        x.c[7] = self.c[6] * scale;
-        x.c[8] = self.c[7] * scale;
-        x.c[9] = self.c[8] * scale;
-        x.c[10] = self.c[9] * scale;
-        let a = x;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(8);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..8i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(8, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (118 mul, 72 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Twist<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = x[4] * x[4];
+        let t5 = x[5] * x[5];
+        let t6 = x[0] * x[3];
+        let t7 = x[1] * x[4];
+        let t8 = x[2] * x[5];
+        let t11 = t0 * t2;
+        let t16 = t6 * t8;
+        let t17 = t1 * t1;
+        let t18 = t1 * t2;
+        let t19 = t1 * t3;
+        let t24 = t2 * t3;
+        let t26 = t2 * t5;
+        let t29 = t3 * t5;
+        let t30 = t4 * t4;
+        let t31 = t4 * t5;
+        let t33 = t0.mul_add(t0, t17);
+        let t34 = t2.mul_add(t2, t33);
+        let t35 = t3.mul_add(t3, t30);
+        let t36 = t5.mul_add(t5, t35);
+        let t37 = t34 + t36;
+        let t38 = t0.mul_add(t1, t11);
+        let t39 = t0.mul_add(t3, t18);
+        let t40 = t38 + t39;
+        let t41 = t1.mul_add(t4, t26);
+        let t42 = t3.mul_add(t4, t29);
+        let t43 = t41 + t42;
+        let t44 = t40 + t43;
+        let t45 = (-t0).mul_add(t4, t31);
+        let t46 = t0.mul_add(t5, t19);
+        let t47 = t45 - t46;
+        let t48 = t1.mul_add(t5, t24);
+        let t49 = t2.mul_add(t4, t48);
+        let t50 = t47 - t49;
+        let t51 = t44 + t50;
+        let t53 = t6.mul_add(t7, t16);
+        let t54 = t7.mul_add(t8, t53);
+        let t56 = t51.mul_add(T::from_i64(2), t37);
+        let t57 = t54.mul_add(T::from_i64(8), t56);
+        let t58 = t57.recip();
+        let t59 = t0 * t58;
+        let t60 = t1 * t58;
+        let t61 = t2 * t58;
+        let t62 = t59 + t60;
+        let t63 = t61 + t62;
+        let t64 = t3 * t58;
+        let t65 = t4 * t58;
+        let t66 = t5 * t58;
+        let t67 = t64 + t65;
+        let t68 = t66 + t67;
+        let t69 = t59 - t60;
+        let t70 = t64 - t65;
+        let t71 = t61 + t66;
+        let t72 = t6 * t58;
+        let t73 = t7 * t58;
+        let t74 = t8 * t58;
+        let t75 = t72 + t73;
+        let t77 = t74.mul_add(T::from_ratio(1, 2), t75);
+        let t78 = x[0] * x[1];
+        let t80 = x[3] * x[4];
+        let t81 = t58 * t80;
+        let t82 = t58.mul_add(t78, t81);
+        let t83 = x[0] * x[2];
+        let t85 = x[3] * x[5];
+        let t86 = t58 * t85;
+        let t87 = t58.mul_add(t83, t86);
+        let t88 = t72 + t74;
+        let t89 = x[0] * x[4];
+        let t90 = t58 * t89;
+        let t91 = x[1] * x[3];
+        let t93 = (-t58).mul_add(t91, t90);
+        let t94 = x[0] * x[5];
+        let t95 = t58 * t94;
+        let t96 = x[2] * x[3];
+        let t98 = (-t58).mul_add(t96, t95);
+        let t99 = x[1] * x[2];
+        let t101 = x[4] * x[5];
+        let t102 = t58 * t101;
+        let t103 = t58.mul_add(t99, t102);
+        let t104 = t73 + t74;
+        let t105 = x[1] * x[5];
+        let t106 = t58 * t105;
+        let t107 = x[2] * x[4];
+        let t109 = (-t58).mul_add(t107, t106);
+        let t110 = t61 - t68;
+        let t111 = t66 - t63;
+        let t112 = t69 + t70;
+        let t114 = x[0] * t111;
+        let t115 = x[3] * t104;
+        let t117 = x[1] * t111;
+        let t118 = x[4] * t88;
+        let t120 = x[2] * t67;
+        let t121 = x[5] * t77;
+        let t122 = x[0] * t104;
+        let t123 = x[3] * t69;
+        let t125 = x[1] * t88;
+        let t127 = x[4] * t110;
+        let t128 = x[2] * t77;
+        let t129 = x[5] * t68;
+        let t132 = x[6] * t112;
+        let t134 = x[8] * t87;
+        let t138 = x[7] * t112;
+        let t139 = x[8] * t103;
+        let t142 = x[7] * t103;
+        let t143 = x[8] * t71;
+        let t149 = x[8] * t93;
+        let t151 = x[9] * t68;
+        let t152 = (-x[0]).mul_add(t70, t114);
+        let t154 = (-t115).mul_add(T::from_i64(2), t152);
+        let t155 = x[1].mul_add(t70, t117);
+        let t157 = (-t118).mul_add(T::from_i64(2), t155);
+        let t158 = (-x[2]).mul_add(t63, t120);
+        let t160 = (-t121).mul_add(T::from_i64(2), t158);
+        let t161 = (-x[3]).mul_add(t110, t123);
+        let t163 = t122.mul_add(T::from_i64(2), t161);
+        let t164 = x[4].mul_add(t69, t127);
+        let t166 = t125.mul_add(T::from_i64(2), -t164);
+        let t167 = (-x[5]).mul_add(t62, t129);
+        let t169 = t128.mul_add(T::from_i64(2), t167);
+        let t170 = (-x[6]).mul_add(t71, t132);
+        let t171 = x[7].mul_add(t82, t134);
+        let t172 = (-x[9]).mul_add(t109, t171);
+        let t174 = t172.mul_add(T::from_i64(2), t170);
+        let t175 = x[7].mul_add(t71, t138);
+        let t176 = x[6].mul_add(t82, t139);
+        let t177 = x[9].mul_add(t98, t176);
+        let t179 = t177.mul_add(T::from_i64(2), -t175);
+        let t180 = (-x[8]).mul_add(t62, t143);
+        let t181 = (-x[8]).mul_add(t67, t180);
+        let t182 = x[6].mul_add(t87, t142);
+        let t183 = (-x[9]).mul_add(t93, t182);
+        let t185 = t183.mul_add(T::from_i64(2), t181);
+        let t186 = x[9].mul_add(t63, t151);
+        let t187 = x[6].mul_add(t109, t149);
+        let t188 = (-x[7]).mul_add(t98, t187);
+        let t190 = t188.mul_add(T::from_i64(2), t186);
+        Twist::from_coeffs([t154, t157, t160, t163, t166, t169, t174, t179, t185, t190])
+    }
+
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[3];
+        let p1 = x[1] * x[4];
+        let p2 = x[2] * x[5];
+        let p4 = x[1] * x[1];
+        let p7 = x[4] * x[4];
+        let p11 = p0 * p2;
+        let p12 = p1 * p1;
+        let p15 = x[0].mul_add(x[0], p4);
+        let p16 = x[2].mul_add(x[2], p15);
+        let p17 = x[3].mul_add(x[3], p7);
+        let p18 = x[5].mul_add(x[5], p17);
+        let p19 = p16 - p18;
+        let p20 = p0.mul_add(p0, p12);
+        let p21 = p2.mul_add(p2, p20);
+        let p23 = p0.mul_add(p1, p11);
+        let p24 = p1.mul_add(p2, p23);
+        let p25 = p24 * T::from_i64(8);
+        let p26 = p21.mul_add(T::from_i64(4), p25);
+        let p27 = -p26;
+        let [s0, s1] = gx::study::rsqrt_q(p19, p27);
+        let t0 = x[0] * x[3];
+        let t2 = x[1] * x[4];
+        let t3 = s1 * t2;
+        let t4 = x[2] * x[5];
+        let t6 = s1.mul_add(t0, t3);
+        let t7 = s1.mul_add(t4, t6);
+        let t8 = x[0] * x[6];
+        let t10 = x[1] * x[7];
+        let t11 = s1 * t10;
+        let t12 = x[2] * x[8];
+        let t14 = s1.mul_add(t8, t11);
+        let t15 = s1.mul_add(t12, t14);
+        let t16 = x[0] * x[9];
+        let t18 = x[4] * x[8];
+        let t19 = s1 * t18;
+        let t20 = x[5] * x[7];
+        let t22 = s1.mul_add(t16, t19);
+        let t23 = (-s1).mul_add(t20, t22);
+        let t24 = x[1] * x[9];
+        let t26 = x[3] * x[8];
+        let t28 = x[5] * x[6];
+        let t29 = s1 * t28;
+        let t30 = s1.mul_add(t24, t29);
+        let t31 = (-s1).mul_add(t26, t30);
+        let t32 = x[2] * x[9];
+        let t34 = x[3] * x[7];
+        let t35 = s1 * t34;
+        let t36 = x[4] * x[6];
+        let t38 = s1.mul_add(t32, t35);
+        let t39 = (-s1).mul_add(t36, t38);
+        let t40 = x[0] * s0;
+        let t41 = x[3] * t7;
+        let t42 = x[1] * s0;
+        let t43 = x[4] * t7;
+        let t44 = x[2] * s0;
+        let t45 = x[5] * t7;
+        let t46 = x[0] * t7;
+        let t48 = x[1] * t7;
+        let t50 = x[2] * t7;
+        let t53 = x[4] * t39;
+        let t58 = x[5] * t23;
+        let t61 = x[3] * t31;
+        let t65 = x[1] * t31;
+        let t69 = (-t41).mul_add(T::from_i64(2), t40);
+        let t71 = (-t43).mul_add(T::from_i64(2), t42);
+        let t73 = (-t45).mul_add(T::from_i64(2), t44);
+        let t74 = t46 * T::from_i64(2);
+        let t75 = x[3].mul_add(s0, t74);
+        let t76 = t48 * T::from_i64(2);
+        let t77 = x[4].mul_add(s0, t76);
+        let t78 = t50 * T::from_i64(2);
+        let t79 = x[5].mul_add(s0, t78);
+        let t80 = x[0].mul_add(t15, t53);
+        let t81 = (-x[5]).mul_add(t31, t80);
+        let t82 = t81 * T::from_i64(2);
+        let t83 = x[6].mul_add(s0, t82);
+        let t84 = x[1].mul_add(t15, t58);
+        let t85 = (-x[3]).mul_add(t39, t84);
+        let t86 = t85 * T::from_i64(2);
+        let t87 = x[7].mul_add(s0, t86);
+        let t88 = x[2].mul_add(t15, t61);
+        let t89 = (-x[4]).mul_add(t23, t88);
+        let t90 = t89 * T::from_i64(2);
+        let t91 = x[8].mul_add(s0, t90);
+        let t92 = x[0].mul_add(t23, t65);
+        let t93 = x[2].mul_add(t39, t92);
+        let t94 = t93 * T::from_i64(2);
+        let t95 = x[9].mul_add(s0, t94);
+        gx::Unit::new_unchecked(Twist::from_coeffs([t69, t71, t73, t75, t77, t79, t83, t87, t91, t95]))
     }
 
     /// The exponential, a unit versor: `exp(B) = C(BÂ²) + S(BÂ²) B`, with `BÂ² = Î» + Q` and `QÂ² = q` a scalar.
@@ -2689,6 +2880,122 @@ impl<T: gx::Real> Twist<(), T> {
 
 }
 
+impl<T: gx::Coef> gx::NewtonStep for Twist<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = t0 + t1;
+        let t4 = t2 + t3;
+        let t5 = x[3] * x[3];
+        let t6 = x[4] * x[4];
+        let t7 = x[5] * x[5];
+        let t8 = t5 + t6;
+        let t9 = t7 + t8;
+        let t10 = t3 - T::from_i64(3);
+        let t12 = t2.mul_add(T::from_i64(3), t10);
+        let t13 = t0 + t2;
+        let t14 = t13 - T::from_i64(3);
+        let t16 = t1.mul_add(T::from_i64(3), t14);
+        let t17 = t0 - T::from_i64(1);
+        let t18 = t1 + t2;
+        let t20 = t18.mul_add(T::from_ratio(1, 3), t17);
+        let t22 = x[3] * x[4];
+        let t23 = x[0].mul_add(x[1], t22);
+        let t25 = x[3] * x[5];
+        let t26 = x[0].mul_add(x[2], t25);
+        let t27 = x[0] * x[3];
+        let t28 = x[1] * x[4];
+        let t29 = t27 + t28;
+        let t30 = x[2] * x[5];
+        let t31 = t27 + t30;
+        let t32 = x[0] * x[4];
+        let t34 = (-x[1]).mul_add(x[3], t32);
+        let t35 = x[0] * x[5];
+        let t37 = (-x[2]).mul_add(x[3], t35);
+        let t39 = x[4] * x[5];
+        let t40 = x[1].mul_add(x[2], t39);
+        let t41 = t28 + t30;
+        let t42 = x[1] * x[5];
+        let t44 = (-x[2]).mul_add(x[4], t42);
+        let t45 = t5 + t7;
+        let t46 = t6 + t7;
+        let t48 = (-t4).mul_add(T::from_ratio(1, 3), T::from_i64(1));
+        let t50 = x[0] * t46;
+        let t51 = x[0] * t48;
+        let t54 = x[1] * t45;
+        let t55 = x[1] * t48;
+        let t58 = x[2] * t8;
+        let t59 = x[2] * t48;
+        let t62 = x[3] * t9;
+        let t63 = x[3] * t20;
+        let t65 = x[4] * t9;
+        let t68 = x[5] * t9;
+        let t70 = x[6] * t5;
+        let t72 = x[6] * t46;
+        let t75 = x[9] * t44;
+        let t76 = x[7] * t6;
+        let t79 = x[7] * t45;
+        let t80 = x[8] * t40;
+        let t82 = x[8] * t7;
+        let t86 = x[8] * t8;
+        let t87 = x[9] * t34;
+        let t89 = x[7] * t37;
+        let t92 = x[9] * t9;
+        let t93 = t50 * T::from_ratio(1, 2);
+        let t94 = x[0].mul_add(t5, t51);
+        let t96 = x[3].mul_add(t41, t93);
+        let t97 = t94.mul_add(T::from_ratio(3, 2), t96);
+        let t98 = t54 * T::from_ratio(1, 2);
+        let t99 = x[1].mul_add(t6, t55);
+        let t101 = x[4].mul_add(t31, t98);
+        let t102 = t99.mul_add(T::from_ratio(3, 2), t101);
+        let t103 = t58 * T::from_ratio(1, 2);
+        let t104 = x[2].mul_add(t7, t59);
+        let t106 = x[5].mul_add(t29, t103);
+        let t107 = t104.mul_add(T::from_ratio(3, 2), t106);
+        let t108 = t62 * T::from_ratio(1, 2);
+        let t110 = (-x[0]).mul_add(t41, t108);
+        let t111 = (-t63).mul_add(T::from_ratio(3, 2), t110);
+        let t112 = (-x[4]).mul_add(t16, t65);
+        let t113 = t112 * T::from_ratio(1, 2);
+        let t114 = (-x[1]).mul_add(t31, t113);
+        let t115 = (-x[5]).mul_add(t12, t68);
+        let t116 = t115 * T::from_ratio(1, 2);
+        let t117 = (-x[2]).mul_add(t29, t116);
+        let t118 = (-x[7]).mul_add(t23, t75);
+        let t119 = (-x[8]).mul_add(t26, t118);
+        let t121 = (-x[6]).mul_add(t20, t72);
+        let t123 = t70.mul_add(T::from_ratio(1, 2), t119);
+        let t124 = t121.mul_add(T::from_ratio(3, 2), t123);
+        let t125 = x[6].mul_add(t23, t80);
+        let t126 = x[9].mul_add(t37, t125);
+        let t127 = (-x[7]).mul_add(t16, t76);
+        let t129 = t79 * T::from_ratio(3, 2);
+        let t130 = t127.mul_add(T::from_ratio(1, 2), t129);
+        let t131 = t130 - t126;
+        let t132 = (-x[6]).mul_add(t26, t87);
+        let t133 = (-x[7]).mul_add(t40, t132);
+        let t134 = (-x[8]).mul_add(t12, t82);
+        let t137 = t134.mul_add(T::from_ratio(1, 2), t133);
+        let t138 = t86.mul_add(T::from_ratio(3, 2), t137);
+        let t139 = (-x[6]).mul_add(t44, t89);
+        let t140 = (-x[8]).mul_add(t34, t139);
+        let t142 = (-x[9]).mul_add(t4, x[9]);
+        let t144 = t92.mul_add(T::from_ratio(1, 2), t140);
+        let t145 = t142.mul_add(T::from_ratio(3, 2), t144);
+        Twist::from_coeffs([t97, t102, t107, t111, t114, t117, t124, t131, t138, t145])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
+}
+
 impl<T: gx::Real> gx::Exp for Twist<(), T> {
     type Output = gx::Unit<Motor<(), T>>;
     #[inline(always)]
@@ -2698,7 +3005,7 @@ impl<T: gx::Real> gx::Exp for Twist<(), T> {
 }
 
 impl<T: gx::Real> gx::Inverse for Twist<(), T> {
-    type Output = Motor<(), T>;
+    type Output = Twist<(), T>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)
@@ -2713,6 +3020,13 @@ impl<T: gx::Real> gx::Norm for Twist<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Twist<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
     }
 }
 
@@ -6743,7 +7057,7 @@ impl<T: gx::Real> Quintvector<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Quintvector<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -7559,7 +7873,7 @@ impl<T: gx::Real> Pseudoscalar<(), T> {
 }
 
 impl<T: gx::Coef> gx::NewtonStep for Pseudoscalar<(), T> {
-    /// `x (3 â x ~x) / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
     #[inline(always)]
     fn newton_step(self) -> Self {
         let x = self.c;
@@ -8433,63 +8747,790 @@ impl<T: gx::Real> Motor<(), T> {
         self.norm_squared().abs().sqrt()
     }
 
-    /// The inverse under the geometric product, by Shirokov's method in `Motor` (no closed form
-    /// for `Motor` here): the inverse as a polynomial of degree 7 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 7 products in `Motor`), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Motor<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Motor::<(), T>::zero();
-        x.c[0] = self.c[0] * scale;
-        x.c[1] = self.c[1] * scale;
-        x.c[2] = self.c[2] * scale;
-        x.c[3] = self.c[3] * scale;
-        x.c[4] = self.c[4] * scale;
-        x.c[5] = self.c[5] * scale;
-        x.c[6] = self.c[6] * scale;
-        x.c[7] = self.c[7] * scale;
-        x.c[8] = self.c[8] * scale;
-        x.c[9] = self.c[9] * scale;
-        x.c[10] = self.c[10] * scale;
-        x.c[11] = self.c[11] * scale;
-        x.c[12] = self.c[12] * scale;
-        x.c[13] = self.c[13] * scale;
-        x.c[14] = self.c[14] * scale;
-        x.c[15] = self.c[15] * scale;
-        let a = x;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(8);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..8i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(8, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
+    /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (220 mul, 166 add, 1 div).
+    #[inline(always)]
+    pub fn inverse(self) -> Motor<(), T> {
+        let x = self.c;
+        let t0 = x[0] * x[0];
+        let t1 = x[1] * x[1];
+        let t2 = x[2] * x[2];
+        let t3 = x[3] * x[3];
+        let t4 = x[4] * x[4];
+        let t5 = x[5] * x[5];
+        let t6 = x[6] * x[6];
+        let t7 = x[15] * x[15];
+        let t8 = x[0] * x[15];
+        let t9 = x[1] * x[4];
+        let t10 = x[2] * x[5];
+        let t11 = x[3] * x[6];
+        let t14 = t0 * t2;
+        let t17 = t0 * t5;
+        let t19 = t0 * t7;
+        let t21 = t8 * t10;
+        let t23 = t1 * t1;
+        let t25 = t1 * t3;
+        let t27 = t1 * t5;
+        let t31 = t9 * t11;
+        let t34 = t2 * t4;
+        let t35 = t2 * t5;
+        let t37 = t2 * t7;
+        let t39 = t3 * t3;
+        let t41 = t3 * t5;
+        let t45 = t4 * t5;
+        let t47 = t4 * t7;
+        let t48 = t5 * t5;
+        let t52 = t6 * t7;
+        let t53 = t7 * t7;
+        let t54 = t0.mul_add(t0, t23);
+        let t55 = t2.mul_add(t2, t39);
+        let t56 = t54 + t55;
+        let t57 = t4.mul_add(t4, t48);
+        let t58 = t6.mul_add(t6, t53);
+        let t59 = t57 + t58;
+        let t60 = t56 + t59;
+        let t61 = t0.mul_add(t1, t14);
+        let t62 = t0.mul_add(t3, t19);
+        let t63 = t61 + t62;
+        let t64 = t1.mul_add(t2, t25);
+        let t65 = t1.mul_add(t4, t64);
+        let t66 = t63 + t65;
+        let t67 = t2.mul_add(t3, t35);
+        let t68 = t3.mul_add(t6, t45);
+        let t69 = t67 + t68;
+        let t70 = t4.mul_add(t6, t47);
+        let t71 = t5.mul_add(t6, t70);
+        let t72 = t69 + t71;
+        let t73 = t66 + t72;
+        let t74 = t5.mul_add(t7, t52);
+        let t75 = t0.mul_add(t4, t17);
+        let t76 = t74 - t75;
+        let t77 = t0.mul_add(t6, t27);
+        let t78 = t1.mul_add(t6, t77);
+        let t79 = t76 - t78;
+        let t80 = t1.mul_add(t7, t34);
+        let t81 = t2.mul_add(t6, t37);
+        let t82 = t80 + t81;
+        let t83 = t3.mul_add(t4, t41);
+        let t84 = t3.mul_add(t7, t83);
+        let t85 = t82 + t84;
+        let t86 = t79 - t85;
+        let t87 = t73 + t86;
+        let t89 = t8.mul_add(t9, t21);
+        let t90 = t8.mul_add(t11, t89);
+        let t91 = t9.mul_add(t10, t31);
+        let t92 = t10.mul_add(t11, t91);
+        let t93 = t90 + t92;
+        let t95 = t87.mul_add(T::from_i64(2), t60);
+        let t96 = t93.mul_add(T::from_i64(8), t95);
+        let t97 = t96.recip();
+        let t98 = t0 * t97;
+        let t99 = t1 * t97;
+        let t100 = t2 * t97;
+        let t101 = t3 * t97;
+        let t102 = t4 * t97;
+        let t103 = t5 * t97;
+        let t104 = t6 * t97;
+        let t105 = t7 * t97;
+        let t106 = t98 + t105;
+        let t107 = t99 + t100;
+        let t108 = t106 - t107;
+        let t109 = t101 + t102;
+        let t110 = t103 + t104;
+        let t111 = t109 + t110;
+        let t112 = t108 - t111;
+        let t113 = t98 + t100;
+        let t114 = t101 + t103;
+        let t115 = t113 + t114;
+        let t116 = t104 + t105;
+        let t117 = t99 + t102;
+        let t118 = t116 - t117;
+        let t119 = t115 + t118;
+        let t120 = t98 + t99;
+        let t121 = t109 + t120;
+        let t122 = t100 + t103;
+        let t123 = t116 - t122;
+        let t124 = t121 + t123;
+        let t125 = t100 + t102;
+        let t126 = t120 + t125;
+        let t127 = t103 + t105;
+        let t128 = t101 + t104;
+        let t129 = t127 - t128;
+        let t130 = t126 + t129;
+        let t131 = x[0] * x[1];
+        let t133 = x[4] * x[15];
+        let t134 = t97 * t133;
+        let t135 = t97.mul_add(t131, t134);
+        let t136 = x[0] * x[2];
+        let t138 = x[5] * x[15];
+        let t139 = t97 * t138;
+        let t140 = t97.mul_add(t136, t139);
+        let t141 = x[0] * x[3];
+        let t143 = x[6] * x[15];
+        let t144 = t97 * t143;
+        let t145 = t97.mul_add(t141, t144);
+        let t146 = x[0] * x[4];
+        let t147 = t97 * t146;
+        let t148 = x[1] * x[15];
+        let t150 = (-t97).mul_add(t148, t147);
+        let t151 = x[0] * x[5];
+        let t152 = t97 * t151;
+        let t153 = x[2] * x[15];
+        let t155 = (-t97).mul_add(t153, t152);
+        let t156 = x[0] * x[6];
+        let t157 = t97 * t156;
+        let t158 = x[3] * x[15];
+        let t160 = (-t97).mul_add(t158, t157);
+        let t161 = t8 * t97;
+        let t162 = t9 * t97;
+        let t163 = t161 + t162;
+        let t164 = x[1] * x[2];
+        let t166 = x[4] * x[5];
+        let t167 = t97 * t166;
+        let t168 = t97.mul_add(t164, t167);
+        let t169 = x[1] * x[3];
+        let t171 = x[4] * x[6];
+        let t172 = t97 * t171;
+        let t173 = t97.mul_add(t169, t172);
+        let t174 = x[1] * x[5];
+        let t175 = t97 * t174;
+        let t176 = x[2] * x[4];
+        let t178 = (-t97).mul_add(t176, t175);
+        let t179 = x[1] * x[6];
+        let t180 = t97 * t179;
+        let t181 = x[3] * x[4];
+        let t183 = (-t97).mul_add(t181, t180);
+        let t184 = x[2] * x[3];
+        let t186 = x[5] * x[6];
+        let t187 = t97 * t186;
+        let t188 = t97.mul_add(t184, t187);
+        let t189 = t10 * t97;
+        let t190 = t11 * t97;
+        let t191 = t189 + t190;
+        let t192 = x[2] * x[6];
+        let t193 = t97 * t192;
+        let t194 = x[3] * x[5];
+        let t196 = (-t97).mul_add(t194, t193);
+        let t197 = t161 + t191;
+        let t199 = t162.mul_add(T::from_ratio(1, 2), t197);
+        let t200 = t101 + t113;
+        let t201 = t105 + t110;
+        let t202 = t200 - t201;
+        let t203 = t163 + t189;
+        let t205 = t190.mul_add(T::from_ratio(1, 2), t203);
+        let t206 = t100 + t120;
+        let t207 = t102 + t103;
+        let t208 = t105 + t207;
+        let t209 = t206 - t208;
+        let t210 = t162 + t191;
+        let t212 = t210.mul_add(T::from_i64(2), t161);
+        let t213 = t101 + t107;
+        let t214 = t104 + t207;
+        let t215 = t213 - t214;
+        let t216 = t163 + t190;
+        let t218 = t216.mul_add(T::from_i64(2), t189);
+        let t219 = t101 + t120;
+        let t220 = t102 + t104;
+        let t221 = t105 + t220;
+        let t222 = t219 - t221;
+        let t223 = x[0] * t0;
+        let t225 = x[0] * t215;
+        let t227 = x[1] * t1;
+        let t229 = x[1] * t202;
+        let t230 = x[4] * t199;
+        let t231 = x[2] * t2;
+        let t233 = x[2] * t222;
+        let t235 = x[3] * t3;
+        let t237 = x[3] * t209;
+        let t238 = x[6] * t205;
+        let t239 = x[1] * t199;
+        let t240 = x[4] * t4;
+        let t241 = t97 * t240;
+        let t244 = x[5] * t5;
+        let t245 = t97 * t244;
+        let t247 = x[3] * t205;
+        let t248 = x[6] * t6;
+        let t249 = t97 * t248;
+        let t253 = x[9] * t173;
+        let t256 = x[13] * t155;
+        let t260 = x[9] * t188;
+        let t263 = x[13] * t150;
+        let t266 = x[8] * t188;
+        let t270 = x[12] * t150;
+        let t274 = x[9] * t178;
+        let t277 = x[12] * t140;
+        let t281 = x[10] * t135;
+        let t284 = x[13] * t173;
+        let t288 = x[10] * t140;
+        let t292 = x[14] * t183;
+        let t295 = x[10] * t145;
+        let t297 = x[12] * t188;
+        let t301 = x[8] * t140;
+        let t305 = x[13] * t178;
+        let t308 = x[15] * t7;
+        let t310 = x[15] * t215;
+        let t311 = t97.mul_add(t223, t225);
+        let t312 = x[15].mul_add(t212, t311);
+        let t313 = t97.mul_add(t227, t229);
+        let t315 = t230.mul_add(T::from_i64(2), t313);
+        let t316 = -t315;
+        let t317 = t97.mul_add(t231, t233);
+        let t318 = x[5].mul_add(t218, t317);
+        let t319 = -t318;
+        let t320 = t97.mul_add(t235, t237);
+        let t322 = t238.mul_add(T::from_i64(2), t320);
+        let t323 = -t322;
+        let t324 = (-x[4]).mul_add(t202, t241);
+        let t326 = t239.mul_add(T::from_i64(2), t324);
+        let t327 = x[2].mul_add(t218, t245);
+        let t328 = (-x[5]).mul_add(t222, t327);
+        let t329 = (-x[6]).mul_add(t209, t249);
+        let t331 = t247.mul_add(T::from_i64(2), t329);
+        let t332 = x[8].mul_add(t168, t253);
+        let t333 = x[12].mul_add(t160, t332);
+        let t334 = x[10].mul_add(t196, t256);
+        let t335 = x[14].mul_add(t135, t334);
+        let t336 = t333 - t335;
+        let t337 = t336 * T::from_i64(2);
+        let t338 = (-x[7]).mul_add(t119, t337);
+        let t339 = x[7].mul_add(t168, t260);
+        let t340 = x[10].mul_add(t183, t339);
+        let t341 = (-x[11]).mul_add(t160, t263);
+        let t342 = (-x[14]).mul_add(t140, t341);
+        let t343 = t340 + t342;
+        let t344 = t343 * T::from_i64(2);
+        let t345 = (-x[8]).mul_add(t124, t344);
+        let t346 = x[7].mul_add(t173, t266);
+        let t347 = x[11].mul_add(t155, t346);
+        let t348 = x[10].mul_add(t178, t270);
+        let t349 = x[14].mul_add(t145, t348);
+        let t350 = t347 - t349;
+        let t351 = t350 * T::from_i64(2);
+        let t352 = (-x[9]).mul_add(t130, t351);
+        let t353 = x[7].mul_add(t196, t274);
+        let t354 = (-x[8]).mul_add(t183, t353);
+        let t355 = x[11].mul_add(t135, t277);
+        let t356 = x[13].mul_add(t145, t355);
+        let t357 = t354 - t356;
+        let t358 = t357 * T::from_i64(2);
+        let t359 = (-x[10]).mul_add(t112, t358);
+        let t360 = x[9].mul_add(t155, t281);
+        let t361 = x[12].mul_add(t168, t360);
+        let t362 = (-x[8]).mul_add(t160, t284);
+        let t363 = (-x[14]).mul_add(t196, t362);
+        let t364 = t361 + t363;
+        let t365 = t364 * T::from_i64(2);
+        let t366 = (-x[11]).mul_add(t119, t365);
+        let t367 = x[7].mul_add(t160, t288);
+        let t368 = x[11].mul_add(t168, t367);
+        let t369 = x[13].mul_add(t188, t292);
+        let t370 = (-x[9]).mul_add(t150, t369);
+        let t371 = t368 + t370;
+        let t372 = t371 * T::from_i64(2);
+        let t373 = (-x[12]).mul_add(t124, t372);
+        let t374 = x[8].mul_add(t150, t295);
+        let t375 = x[11].mul_add(t173, t374);
+        let t376 = (-x[7]).mul_add(t155, t297);
+        let t377 = (-x[14]).mul_add(t178, t376);
+        let t378 = t375 + t377;
+        let t379 = t378 * T::from_i64(2);
+        let t380 = (-x[13]).mul_add(t130, t379);
+        let t381 = x[7].mul_add(t135, t301);
+        let t382 = x[9].mul_add(t145, t381);
+        let t383 = x[11].mul_add(t196, t305);
+        let t384 = (-x[12]).mul_add(t183, t383);
+        let t385 = t382 + t384;
+        let t386 = t385 * T::from_i64(2);
+        let t387 = (-x[14]).mul_add(t112, t386);
+        let t388 = (-x[0]).mul_add(t212, t310);
+        let t389 = (-t97).mul_add(t308, t388);
+        Motor::from_coeffs([t312, t316, t319, t323, t326, t328, t331, t338, t345, t352, t359, t366, t373, t380, t387, t389])
     }
 
+    /// Scaled to a unit versor, `(x ~x)^(-1/2) x` with `x ~x = a + X` a scalar and a 4-vector
+    /// whose square is a scalar, so that `x ~x = 1` (`â1` when `a` is negative).
+    #[inline(always)]
+    pub fn normalized(self) -> gx::Unit<Self> {
+        let x = self.c;
+        let p0 = x[0] * x[15];
+        let p1 = x[1] * x[4];
+        let p2 = x[2] * x[5];
+        let p3 = x[3] * x[6];
+        let p5 = x[1] * x[1];
+        let p7 = x[3] * x[3];
+        let p9 = x[5] * x[5];
+        let p11 = x[15] * x[15];
+        let p14 = p0 * p2;
+        let p16 = p1 * p1;
+        let p18 = p1 * p3;
+        let p21 = p3 * p3;
+        let p22 = x[0].mul_add(x[0], p5);
+        let p23 = x[2].mul_add(x[2], p7);
+        let p24 = p22 + p23;
+        let p25 = x[4].mul_add(x[4], p9);
+        let p26 = x[6].mul_add(x[6], p11);
+        let p27 = p25 + p26;
+        let p28 = p24 - p27;
+        let p29 = p0.mul_add(p0, p16);
+        let p30 = p2.mul_add(p2, p21);
+        let p31 = p29 + p30;
+        let p33 = p0.mul_add(p1, p14);
+        let p34 = p0.mul_add(p3, p33);
+        let p35 = p1.mul_add(p2, p18);
+        let p36 = p2.mul_add(p3, p35);
+        let p37 = p34 + p36;
+        let p38 = p37 * T::from_i64(8);
+        let p39 = p31.mul_add(T::from_i64(4), p38);
+        let p40 = -p39;
+        let [s0, s1] = gx::study::rsqrt_q(p28, p40);
+        let t0 = x[0] * x[15];
+        let t2 = x[1] * x[4];
+        let t3 = s1 * t2;
+        let t4 = x[2] * x[5];
+        let t6 = x[3] * x[6];
+        let t7 = s1 * t6;
+        let t8 = s1.mul_add(t0, t3);
+        let t9 = s1.mul_add(t4, t7);
+        let t10 = t8 + t9;
+        let t11 = x[0] * x[11];
+        let t13 = x[1] * x[10];
+        let t15 = x[5] * x[9];
+        let t16 = s1 * t15;
+        let t17 = x[6] * x[8];
+        let t18 = s1 * t17;
+        let t19 = s1.mul_add(t11, t18);
+        let t20 = s1.mul_add(t13, t16);
+        let t21 = t19 - t20;
+        let t22 = x[0] * x[12];
+        let t24 = x[2] * x[10];
+        let t26 = x[4] * x[9];
+        let t27 = s1 * t26;
+        let t28 = x[6] * x[7];
+        let t29 = s1 * t28;
+        let t30 = s1.mul_add(t22, t27);
+        let t31 = s1.mul_add(t24, t29);
+        let t32 = t30 - t31;
+        let t33 = x[0] * x[13];
+        let t35 = x[3] * x[10];
+        let t37 = x[4] * x[8];
+        let t38 = s1 * t37;
+        let t39 = x[5] * x[7];
+        let t40 = s1 * t39;
+        let t41 = s1.mul_add(t33, t40);
+        let t42 = s1.mul_add(t35, t38);
+        let t43 = t41 - t42;
+        let t44 = x[0] * x[14];
+        let t45 = s1 * t44;
+        let t46 = x[1] * x[7];
+        let t48 = x[2] * x[8];
+        let t50 = x[3] * x[9];
+        let t51 = s1 * t50;
+        let t52 = (-s1).mul_add(t46, t45);
+        let t53 = s1.mul_add(t48, t51);
+        let t54 = t52 - t53;
+        let t55 = x[1] * x[12];
+        let t56 = s1 * t55;
+        let t57 = x[2] * x[11];
+        let t59 = x[6] * x[14];
+        let t61 = x[9] * x[15];
+        let t62 = s1 * t61;
+        let t63 = (-s1).mul_add(t57, t56);
+        let t64 = s1.mul_add(t59, t62);
+        let t65 = t63 - t64;
+        let t66 = x[1] * x[13];
+        let t68 = x[3] * x[11];
+        let t70 = x[5] * x[14];
+        let t71 = s1 * t70;
+        let t72 = x[8] * x[15];
+        let t73 = s1 * t72;
+        let t74 = s1.mul_add(t66, t71);
+        let t75 = (-s1).mul_add(t68, t73);
+        let t76 = t74 + t75;
+        let t77 = x[2] * x[13];
+        let t78 = s1 * t77;
+        let t79 = x[3] * x[12];
+        let t81 = x[4] * x[14];
+        let t83 = x[7] * x[15];
+        let t84 = s1 * t83;
+        let t85 = (-s1).mul_add(t79, t78);
+        let t86 = s1.mul_add(t81, t84);
+        let t87 = t85 - t86;
+        let t88 = x[4] * x[11];
+        let t90 = x[5] * x[12];
+        let t91 = s1 * t90;
+        let t92 = x[6] * x[13];
+        let t94 = x[10] * x[15];
+        let t95 = s1 * t94;
+        let t96 = s1.mul_add(t88, t91);
+        let t97 = s1.mul_add(t92, t95);
+        let t98 = t96 + t97;
+        let t99 = x[0] * s0;
+        let t100 = x[15] * t10;
+        let t101 = x[1] * s0;
+        let t102 = x[4] * t10;
+        let t103 = x[2] * s0;
+        let t104 = x[5] * t10;
+        let t105 = x[3] * s0;
+        let t106 = x[6] * t10;
+        let t107 = x[1] * t10;
+        let t109 = x[2] * t10;
+        let t111 = x[3] * t10;
+        let t114 = x[5] * t43;
+        let t117 = x[15] * t87;
+        let t119 = x[4] * t43;
+        let t122 = x[15] * t76;
+        let t124 = x[4] * t32;
+        let t127 = x[15] * t65;
+        let t129 = x[2] * t32;
+        let t131 = x[10] * s0;
+        let t132 = x[15] * t98;
+        let t133 = x[0] * t21;
+        let t136 = x[4] * t98;
+        let t139 = x[1] * t65;
+        let t141 = x[5] * t98;
+        let t144 = x[1] * t76;
+        let t145 = x[2] * t87;
+        let t149 = x[4] * t87;
+        let t151 = x[6] * t65;
+        let t153 = x[0] * t10;
+        let t156 = (-t100).mul_add(T::from_i64(2), t99);
+        let t158 = (-t102).mul_add(T::from_i64(2), t101);
+        let t160 = (-t104).mul_add(T::from_i64(2), t103);
+        let t162 = (-t106).mul_add(T::from_i64(2), t105);
+        let t163 = t107 * T::from_i64(2);
+        let t164 = x[4].mul_add(s0, t163);
+        let t165 = t109 * T::from_i64(2);
+        let t166 = x[5].mul_add(s0, t165);
+        let t167 = t111 * T::from_i64(2);
+        let t168 = x[6].mul_add(s0, t167);
+        let t169 = x[6].mul_add(t32, t117);
+        let t170 = x[1].mul_add(t54, t114);
+        let t171 = t169 - t170;
+        let t172 = t171 * T::from_i64(2);
+        let t173 = x[7].mul_add(s0, t172);
+        let t174 = (-x[2]).mul_add(t54, t119);
+        let t175 = x[6].mul_add(t21, t122);
+        let t176 = t174 - t175;
+        let t177 = t176 * T::from_i64(2);
+        let t178 = x[8].mul_add(s0, t177);
+        let t179 = x[5].mul_add(t21, t127);
+        let t180 = x[3].mul_add(t54, t124);
+        let t181 = t179 - t180;
+        let t182 = t181 * T::from_i64(2);
+        let t183 = x[9].mul_add(s0, t182);
+        let t184 = x[1].mul_add(t21, t129);
+        let t185 = x[3].mul_add(t43, t132);
+        let t186 = t184 + t185;
+        let t188 = (-t186).mul_add(T::from_i64(2), t131);
+        let t189 = (-x[2]).mul_add(t65, t133);
+        let t190 = x[3].mul_add(t76, t136);
+        let t191 = t189 - t190;
+        let t192 = t191 * T::from_i64(2);
+        let t193 = x[11].mul_add(s0, t192);
+        let t194 = x[0].mul_add(t32, t139);
+        let t195 = x[3].mul_add(t87, t141);
+        let t196 = t194 - t195;
+        let t197 = t196 * T::from_i64(2);
+        let t198 = x[12].mul_add(s0, t197);
+        let t199 = x[0].mul_add(t43, t144);
+        let t200 = (-x[6]).mul_add(t98, t145);
+        let t201 = t199 + t200;
+        let t202 = t201 * T::from_i64(2);
+        let t203 = x[13].mul_add(s0, t202);
+        let t204 = x[0].mul_add(t54, t149);
+        let t205 = (-x[5]).mul_add(t76, t151);
+        let t206 = t204 + t205;
+        let t207 = t206 * T::from_i64(2);
+        let t208 = x[14].mul_add(s0, t207);
+        let t209 = t153 * T::from_i64(2);
+        let t210 = x[15].mul_add(s0, t209);
+        gx::Unit::new_unchecked(Motor::from_coeffs([t156, t158, t160, t162, t164, t166, t168, t173, t178, t183, t188, t193, t198, t203, t208, t210]))
+    }
+
+    /// The principal square root of a unit versor, `normalize(1 + R)` (not defined for `R = -1`).
+    #[inline(always)]
+    pub fn sqrt(self) -> gx::Unit<Self> {
+        let mut c = self.c;
+        c[0] = c[0] + T::one();
+        Motor::from_coeffs(c).normalized()
+    }
+
+}
+
+impl<T: gx::Coef> gx::NewtonStep for Motor<(), T> {
+    /// `(3 â x ~x) x / 2`: one Newton step towards `x ~x = 1`, without a square root.
+    #[inline(always)]
+    fn newton_step(self) -> Self {
+        let x = self.c;
+        let t1 = x[4] * x[15];
+        let t2 = x[0].mul_add(x[1], t1);
+        let t4 = x[5] * x[15];
+        let t5 = x[0].mul_add(x[2], t4);
+        let t7 = x[6] * x[15];
+        let t8 = x[0].mul_add(x[3], t7);
+        let t9 = x[0] * x[4];
+        let t11 = (-x[1]).mul_add(x[15], t9);
+        let t12 = x[0] * x[5];
+        let t14 = (-x[2]).mul_add(x[15], t12);
+        let t15 = x[0] * x[6];
+        let t17 = (-x[3]).mul_add(x[15], t15);
+        let t18 = x[0] * x[15];
+        let t19 = x[1] * x[4];
+        let t20 = t18 + t19;
+        let t22 = x[4] * x[5];
+        let t23 = x[1].mul_add(x[2], t22);
+        let t25 = x[4] * x[6];
+        let t26 = x[1].mul_add(x[3], t25);
+        let t27 = x[1] * x[5];
+        let t29 = (-x[2]).mul_add(x[4], t27);
+        let t30 = x[1] * x[6];
+        let t32 = (-x[3]).mul_add(x[4], t30);
+        let t34 = x[5] * x[6];
+        let t35 = x[2].mul_add(x[3], t34);
+        let t36 = x[2] * x[5];
+        let t37 = x[3] * x[6];
+        let t38 = t36 + t37;
+        let t39 = x[2] * x[6];
+        let t41 = (-x[3]).mul_add(x[5], t39);
+        let t42 = t18 + t38;
+        let t44 = t19.mul_add(T::from_ratio(3, 2), t42);
+        let t45 = x[0] * x[0];
+        let t46 = x[2] * x[2];
+        let t47 = x[3] * x[3];
+        let t48 = x[5] * x[5];
+        let t49 = x[6] * x[6];
+        let t50 = x[15] * x[15];
+        let t51 = t45 + t46;
+        let t52 = t47 - t48;
+        let t53 = t51 + t52;
+        let t54 = t49 + t50;
+        let t55 = t54 + T::from_i64(3);
+        let t56 = t53 - t55;
+        let t57 = t20 + t36;
+        let t59 = t37.mul_add(T::from_ratio(3, 2), t57);
+        let t60 = x[1] * x[1];
+        let t61 = x[4] * x[4];
+        let t62 = t60 - t48;
+        let t63 = t51 + t62;
+        let t64 = t50 + t61;
+        let t65 = t64 + T::from_i64(3);
+        let t66 = t63 - t65;
+        let t67 = t19 + t38;
+        let t69 = t67.mul_add(T::from_ratio(2, 3), t18);
+        let t70 = t20 + t37;
+        let t72 = t70.mul_add(T::from_ratio(2, 3), t36);
+        let t73 = t45 + t47;
+        let t74 = t60 - t49;
+        let t75 = t73 + t74;
+        let t76 = t75 - t65;
+        let t79 = x[0] * t46;
+        let t82 = x[0] * t48;
+        let t83 = x[0] * t49;
+        let t86 = x[1] * t56;
+        let t87 = x[4] * t44;
+        let t89 = x[2] * t76;
+        let t90 = x[5] * t72;
+        let t92 = x[3] * t66;
+        let t93 = x[6] * t59;
+        let t95 = x[4] * t61;
+        let t97 = x[2] * t72;
+        let t98 = x[5] * t48;
+        let t101 = x[6] * t49;
+        let t106 = x[7] * t47;
+        let t107 = x[7] * t61;
+        let t110 = x[7] * t50;
+        let t112 = x[9] * t26;
+        let t115 = x[13] * t14;
+        let t120 = x[8] * t47;
+        let t122 = x[8] * t48;
+        let t125 = x[8] * t50;
+        let t127 = x[10] * t32;
+        let t130 = x[14] * t5;
+        let t133 = x[9] * t46;
+        let t137 = x[9] * t49;
+        let t139 = x[8] * t35;
+        let t140 = x[9] * t50;
+        let t143 = x[12] * t11;
+        let t148 = x[10] * t47;
+        let t150 = x[10] * t48;
+        let t151 = x[10] * t49;
+        let t156 = x[11] * t2;
+        let t158 = x[13] * t8;
+        let t162 = x[11] * t47;
+        let t165 = x[11] * t49;
+        let t168 = x[10] * t2;
+        let t169 = x[11] * t50;
+        let t171 = x[13] * t26;
+        let t176 = x[12] * t47;
+        let t179 = x[12] * t49;
+        let t182 = x[10] * t5;
+        let t184 = x[12] * t50;
+        let t186 = x[14] * t32;
+        let t189 = x[13] * t46;
+        let t192 = x[13] * t48;
+        let t196 = x[10] * t8;
+        let t198 = x[12] * t35;
+        let t199 = x[13] * t50;
+        let t204 = x[14] * t47;
+        let t207 = x[14] * t49;
+        let t209 = x[8] * t5;
+        let t213 = x[13] * t29;
+        let t214 = x[14] * t50;
+        let t217 = x[15] * t46;
+        let t220 = x[15] * t48;
+        let t222 = x[15] * t50;
+        let t223 = x[0].mul_add(t61, t82);
+        let t224 = (-x[0]).mul_add(t45, t83);
+        let t225 = t223 + t224;
+        let t226 = x[0].mul_add(t60, t79);
+        let t227 = x[0].mul_add(t47, t226);
+        let t228 = t225 - t227;
+        let t230 = x[15].mul_add(t69, x[0]);
+        let t231 = t230 * T::from_ratio(3, 2);
+        let t232 = t228.mul_add(T::from_ratio(1, 2), t231);
+        let t233 = x[1].mul_add(t60, t86);
+        let t235 = (-t233).mul_add(T::from_ratio(1, 2), t87);
+        let t236 = x[2].mul_add(t46, t89);
+        let t238 = t90 * T::from_ratio(3, 2);
+        let t239 = (-t236).mul_add(T::from_ratio(1, 2), t238);
+        let t240 = x[3].mul_add(t47, t92);
+        let t242 = (-t240).mul_add(T::from_ratio(1, 2), t93);
+        let t243 = (-x[4]).mul_add(t56, t95);
+        let t244 = t243 * T::from_ratio(1, 2);
+        let t245 = (-x[1]).mul_add(t44, t244);
+        let t246 = (-x[5]).mul_add(t76, t98);
+        let t247 = t246 * T::from_ratio(1, 2);
+        let t249 = (-t97).mul_add(T::from_ratio(3, 2), t247);
+        let t250 = (-x[6]).mul_add(t66, t101);
+        let t251 = t250 * T::from_ratio(1, 2);
+        let t252 = (-x[3]).mul_add(t59, t251);
+        let t253 = x[10].mul_add(t41, t115);
+        let t254 = x[14].mul_add(t2, t253);
+        let t255 = x[8].mul_add(t23, t112);
+        let t256 = x[12].mul_add(t17, t255);
+        let t257 = t254 - t256;
+        let t258 = (-x[7]).mul_add(t45, t107);
+        let t259 = x[7].mul_add(t46, t106);
+        let t260 = t258 - t259;
+        let t262 = x[7].mul_add(t48, x[7]);
+        let t263 = x[7].mul_add(t49, t262);
+        let t264 = (-x[7]).mul_add(t60, t110);
+        let t265 = t263 + t264;
+        let t267 = t260.mul_add(T::from_ratio(1, 2), t257);
+        let t268 = t265.mul_add(T::from_ratio(3, 2), t267);
+        let t269 = x[11].mul_add(t17, t130);
+        let t270 = (-x[7]).mul_add(t23, t269);
+        let t271 = x[9].mul_add(t35, t127);
+        let t272 = x[13].mul_add(t11, t271);
+        let t273 = t270 - t272;
+        let t274 = (-x[8]).mul_add(t45, t122);
+        let t275 = x[8].mul_add(t60, t120);
+        let t276 = t274 - t275;
+        let t278 = x[8].mul_add(t61, x[8]);
+        let t279 = x[8].mul_add(t49, t278);
+        let t280 = (-x[8]).mul_add(t46, t125);
+        let t281 = t279 + t280;
+        let t283 = t276.mul_add(T::from_ratio(1, 2), t273);
+        let t284 = t281.mul_add(T::from_ratio(3, 2), t283);
+        let t285 = x[10].mul_add(t29, t143);
+        let t286 = x[14].mul_add(t8, t285);
+        let t287 = x[7].mul_add(t26, t139);
+        let t288 = x[11].mul_add(t14, t287);
+        let t289 = t286 - t288;
+        let t290 = (-x[9]).mul_add(t45, t137);
+        let t291 = x[9].mul_add(t60, t133);
+        let t292 = t290 - t291;
+        let t294 = x[9].mul_add(t61, x[9]);
+        let t295 = x[9].mul_add(t48, t294);
+        let t296 = (-x[9]).mul_add(t47, t140);
+        let t297 = t295 + t296;
+        let t299 = t292.mul_add(T::from_ratio(1, 2), t289);
+        let t300 = t297.mul_add(T::from_ratio(3, 2), t299);
+        let t301 = x[8].mul_add(t32, t156);
+        let t302 = x[12].mul_add(t5, t301);
+        let t303 = (-x[7]).mul_add(t41, t158);
+        let t304 = (-x[9]).mul_add(t29, t303);
+        let t305 = t302 + t304;
+        let t306 = x[10].mul_add(t61, t150);
+        let t307 = (-x[10]).mul_add(t45, t151);
+        let t308 = t306 + t307;
+        let t310 = x[10].mul_add(t50, x[10]);
+        let t311 = (-x[10]).mul_add(t60, t310);
+        let t312 = x[10].mul_add(t46, t148);
+        let t313 = t311 - t312;
+        let t315 = t308.mul_add(T::from_ratio(1, 2), t305);
+        let t316 = t313.mul_add(T::from_ratio(3, 2), t315);
+        let t317 = x[9].mul_add(t14, t168);
+        let t318 = x[12].mul_add(t23, t317);
+        let t319 = (-x[8]).mul_add(t17, t171);
+        let t320 = (-x[14]).mul_add(t41, t319);
+        let t321 = t318 + t320;
+        let t322 = x[11].mul_add(t48, t165);
+        let t323 = (-x[11]).mul_add(t60, t169);
+        let t324 = t322 + t323;
+        let t326 = x[11].mul_add(t61, x[11]);
+        let t327 = (-x[11]).mul_add(t45, t326);
+        let t328 = x[11].mul_add(t46, t162);
+        let t329 = t327 - t328;
+        let t331 = t324.mul_add(T::from_ratio(1, 2), t321);
+        let t332 = t329.mul_add(T::from_ratio(3, 2), t331);
+        let t333 = x[7].mul_add(t17, t182);
+        let t334 = x[11].mul_add(t23, t333);
+        let t335 = x[13].mul_add(t35, t186);
+        let t336 = (-x[9]).mul_add(t11, t335);
+        let t337 = t334 + t336;
+        let t338 = x[12].mul_add(t61, t179);
+        let t339 = (-x[12]).mul_add(t46, t184);
+        let t340 = t338 + t339;
+        let t342 = x[12].mul_add(t48, x[12]);
+        let t343 = (-x[12]).mul_add(t45, t342);
+        let t344 = x[12].mul_add(t60, t176);
+        let t345 = t343 - t344;
+        let t347 = t340.mul_add(T::from_ratio(1, 2), t337);
+        let t348 = t345.mul_add(T::from_ratio(3, 2), t347);
+        let t349 = x[8].mul_add(t11, t196);
+        let t350 = x[11].mul_add(t26, t349);
+        let t351 = (-x[7]).mul_add(t14, t198);
+        let t352 = (-x[14]).mul_add(t29, t351);
+        let t353 = t350 + t352;
+        let t354 = x[13].mul_add(t61, t192);
+        let t355 = (-x[13]).mul_add(t47, t199);
+        let t356 = t354 + t355;
+        let t358 = x[13].mul_add(t49, x[13]);
+        let t359 = (-x[13]).mul_add(t45, t358);
+        let t360 = x[13].mul_add(t60, t189);
+        let t361 = t359 - t360;
+        let t363 = t356.mul_add(T::from_ratio(1, 2), t353);
+        let t364 = t361.mul_add(T::from_ratio(3, 2), t363);
+        let t365 = x[7].mul_add(t2, t209);
+        let t366 = x[9].mul_add(t8, t365);
+        let t367 = x[11].mul_add(t41, t213);
+        let t368 = (-x[12]).mul_add(t32, t367);
+        let t369 = t366 + t368;
+        let t370 = (-x[14]).mul_add(t60, t214);
+        let t371 = x[14].mul_add(t46, t204);
+        let t372 = t370 - t371;
+        let t374 = x[14].mul_add(t61, x[14]);
+        let t375 = x[14].mul_add(t48, t374);
+        let t376 = (-x[14]).mul_add(t45, t207);
+        let t377 = t375 + t376;
+        let t379 = t372.mul_add(T::from_ratio(1, 2), t369);
+        let t380 = t377.mul_add(T::from_ratio(3, 2), t379);
+        let t381 = x[15].mul_add(t61, t220);
+        let t382 = x[15].mul_add(t49, t222);
+        let t383 = t381 + t382;
+        let t384 = x[15].mul_add(t60, t217);
+        let t385 = x[15].mul_add(t47, t384);
+        let t386 = t383 - t385;
+        let t388 = (-x[0]).mul_add(t69, x[15]);
+        let t389 = t388 * T::from_ratio(3, 2);
+        let t390 = t386.mul_add(T::from_ratio(1, 2), t389);
+        Motor::from_coeffs([t232, t235, t239, t242, t245, t249, t252, t268, t284, t300, t316, t332, t348, t364, t380, t390])
+    }
+
+    #[inline(always)]
+    fn note_renormalize() {
+        T::note_renormalize();
+    }
 }
 
 impl<T: gx::Real> gx::Log<Twist<(), T>> for gx::Unit<Motor<(), T>> {
@@ -8560,6 +9601,21 @@ impl<T: gx::Real> gx::Norm for Motor<(), T> {
     #[inline(always)]
     fn norm(self) -> T {
         Self::norm(self)
+    }
+}
+
+impl<T: gx::Real> gx::Normalize for Motor<(), T> {
+    #[inline(always)]
+    fn normalized(self) -> gx::Unit<Self> {
+        Self::normalized(self)
+    }
+}
+
+impl<T: gx::Real> gx::Sqrt for Motor<(), T> {
+    type Output = gx::Unit<Self>;
+    #[inline(always)]
+    fn sqrt(self) -> Self::Output {
+        Self::sqrt(self)
     }
 }
 
@@ -11229,1642 +12285,4 @@ impl<S: gx::Slots, T: gx::Coef> Multivector<S, T> {
     {
         gx::Gp::gp(gx::Reverse::reverse(self), Pseudoscalar::new(T::one()))
     }
-}
-
-impl<T: gx::Coef> Multivector<(), T> {
-    /// A value from its coefficients, in blade order.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(s: T, e1: T, e2: T, e3: T, e4: T, eo: T, ei: T, e23: T, e31: T, e12: T, e41: T, e42: T, e43: T, e1o: T, e2o: T, e3o: T, e4o: T, e1i: T, e2i: T, e3i: T, e4i: T, eoi: T, e234: T, e314: T, e124: T, e123: T, e23o: T, e31o: T, e12o: T, e41o: T, e42o: T, e43o: T, e23i: T, e31i: T, e12i: T, e41i: T, e42i: T, e43i: T, e1oi: T, e2oi: T, e3oi: T, e4oi: T, e1234: T, e234o: T, e314o: T, e124o: T, e123o: T, e234i: T, e314i: T, e124i: T, e123i: T, e23oi: T, e31oi: T, e12oi: T, e41oi: T, e42oi: T, e43oi: T, e234oi: T, e314oi: T, e124oi: T, e123oi: T, e1234o: T, e1234i: T, e1234oi: T) -> Self {
-        Multivector { c: [s, e1, e2, e3, e4, eo, ei, e23, e31, e12, e41, e42, e43, e1o, e2o, e3o, e4o, e1i, e2i, e3i, e4i, eoi, e234, e314, e124, e123, e23o, e31o, e12o, e41o, e42o, e43o, e23i, e31i, e12i, e41i, e42i, e43i, e1oi, e2oi, e3oi, e4oi, e1234, e234o, e314o, e124o, e123o, e234i, e314i, e124i, e123i, e23oi, e31oi, e12oi, e41oi, e42oi, e43oi, e234oi, e314oi, e124oi, e123oi, e1234o, e1234i, e1234oi] }
-    }
-
-    /// gx::Prepare this versor's action on kind `X` for applying it to many objects (see
-    /// [`gx::Prepared`]).
-    #[inline(always)]
-    pub fn prepare<X>(self) -> <Self as gx::Prepare<X>>::Output
-    where
-        Self: gx::Prepare<X>,
-    {
-        gx::Prepare::prepare(self)
-    }
-
-    /// The identity map on `Multivector`: a `Multivector` with one open `Multivector` slot.
-    #[inline(always)]
-    pub fn slot() -> Multivector<(Multivector,), T> {
-        Multivector { c: core::array::from_fn(|i| core::array::from_fn(|j| if i == j { T::one() } else { T::zero() })) }
-    }
-
-    /// Coefficient of `1`.
-    #[inline(always)]
-    pub fn s(&self) -> T {
-        self.c[0]
-    }
-
-    /// Coefficient of `e1`.
-    #[inline(always)]
-    pub fn e1(&self) -> T {
-        self.c[1]
-    }
-
-    /// Coefficient of `e2`.
-    #[inline(always)]
-    pub fn e2(&self) -> T {
-        self.c[2]
-    }
-
-    /// Coefficient of `e3`.
-    #[inline(always)]
-    pub fn e3(&self) -> T {
-        self.c[3]
-    }
-
-    /// Coefficient of `e4`.
-    #[inline(always)]
-    pub fn e4(&self) -> T {
-        self.c[4]
-    }
-
-    /// Coefficient of `eo`.
-    #[inline(always)]
-    pub fn eo(&self) -> T {
-        self.c[5]
-    }
-
-    /// Coefficient of `ei`.
-    #[inline(always)]
-    pub fn ei(&self) -> T {
-        self.c[6]
-    }
-
-    /// Coefficient of `e23`.
-    #[inline(always)]
-    pub fn e23(&self) -> T {
-        self.c[7]
-    }
-
-    /// Coefficient of `e31`.
-    #[inline(always)]
-    pub fn e31(&self) -> T {
-        self.c[8]
-    }
-
-    /// Coefficient of `e12`.
-    #[inline(always)]
-    pub fn e12(&self) -> T {
-        self.c[9]
-    }
-
-    /// Coefficient of `e41`.
-    #[inline(always)]
-    pub fn e41(&self) -> T {
-        self.c[10]
-    }
-
-    /// Coefficient of `e42`.
-    #[inline(always)]
-    pub fn e42(&self) -> T {
-        self.c[11]
-    }
-
-    /// Coefficient of `e43`.
-    #[inline(always)]
-    pub fn e43(&self) -> T {
-        self.c[12]
-    }
-
-    /// Coefficient of `e1o`.
-    #[inline(always)]
-    pub fn e1o(&self) -> T {
-        self.c[13]
-    }
-
-    /// Coefficient of `e2o`.
-    #[inline(always)]
-    pub fn e2o(&self) -> T {
-        self.c[14]
-    }
-
-    /// Coefficient of `e3o`.
-    #[inline(always)]
-    pub fn e3o(&self) -> T {
-        self.c[15]
-    }
-
-    /// Coefficient of `e4o`.
-    #[inline(always)]
-    pub fn e4o(&self) -> T {
-        self.c[16]
-    }
-
-    /// Coefficient of `e1i`.
-    #[inline(always)]
-    pub fn e1i(&self) -> T {
-        self.c[17]
-    }
-
-    /// Coefficient of `e2i`.
-    #[inline(always)]
-    pub fn e2i(&self) -> T {
-        self.c[18]
-    }
-
-    /// Coefficient of `e3i`.
-    #[inline(always)]
-    pub fn e3i(&self) -> T {
-        self.c[19]
-    }
-
-    /// Coefficient of `e4i`.
-    #[inline(always)]
-    pub fn e4i(&self) -> T {
-        self.c[20]
-    }
-
-    /// Coefficient of `eoi`.
-    #[inline(always)]
-    pub fn eoi(&self) -> T {
-        self.c[21]
-    }
-
-    /// Coefficient of `e234`.
-    #[inline(always)]
-    pub fn e234(&self) -> T {
-        self.c[22]
-    }
-
-    /// Coefficient of `e314`.
-    #[inline(always)]
-    pub fn e314(&self) -> T {
-        self.c[23]
-    }
-
-    /// Coefficient of `e124`.
-    #[inline(always)]
-    pub fn e124(&self) -> T {
-        self.c[24]
-    }
-
-    /// Coefficient of `e123`.
-    #[inline(always)]
-    pub fn e123(&self) -> T {
-        self.c[25]
-    }
-
-    /// Coefficient of `e23o`.
-    #[inline(always)]
-    pub fn e23o(&self) -> T {
-        self.c[26]
-    }
-
-    /// Coefficient of `e31o`.
-    #[inline(always)]
-    pub fn e31o(&self) -> T {
-        self.c[27]
-    }
-
-    /// Coefficient of `e12o`.
-    #[inline(always)]
-    pub fn e12o(&self) -> T {
-        self.c[28]
-    }
-
-    /// Coefficient of `e41o`.
-    #[inline(always)]
-    pub fn e41o(&self) -> T {
-        self.c[29]
-    }
-
-    /// Coefficient of `e42o`.
-    #[inline(always)]
-    pub fn e42o(&self) -> T {
-        self.c[30]
-    }
-
-    /// Coefficient of `e43o`.
-    #[inline(always)]
-    pub fn e43o(&self) -> T {
-        self.c[31]
-    }
-
-    /// Coefficient of `e23i`.
-    #[inline(always)]
-    pub fn e23i(&self) -> T {
-        self.c[32]
-    }
-
-    /// Coefficient of `e31i`.
-    #[inline(always)]
-    pub fn e31i(&self) -> T {
-        self.c[33]
-    }
-
-    /// Coefficient of `e12i`.
-    #[inline(always)]
-    pub fn e12i(&self) -> T {
-        self.c[34]
-    }
-
-    /// Coefficient of `e41i`.
-    #[inline(always)]
-    pub fn e41i(&self) -> T {
-        self.c[35]
-    }
-
-    /// Coefficient of `e42i`.
-    #[inline(always)]
-    pub fn e42i(&self) -> T {
-        self.c[36]
-    }
-
-    /// Coefficient of `e43i`.
-    #[inline(always)]
-    pub fn e43i(&self) -> T {
-        self.c[37]
-    }
-
-    /// Coefficient of `e1oi`.
-    #[inline(always)]
-    pub fn e1oi(&self) -> T {
-        self.c[38]
-    }
-
-    /// Coefficient of `e2oi`.
-    #[inline(always)]
-    pub fn e2oi(&self) -> T {
-        self.c[39]
-    }
-
-    /// Coefficient of `e3oi`.
-    #[inline(always)]
-    pub fn e3oi(&self) -> T {
-        self.c[40]
-    }
-
-    /// Coefficient of `e4oi`.
-    #[inline(always)]
-    pub fn e4oi(&self) -> T {
-        self.c[41]
-    }
-
-    /// Coefficient of `e1234`.
-    #[inline(always)]
-    pub fn e1234(&self) -> T {
-        self.c[42]
-    }
-
-    /// Coefficient of `e234o`.
-    #[inline(always)]
-    pub fn e234o(&self) -> T {
-        self.c[43]
-    }
-
-    /// Coefficient of `e314o`.
-    #[inline(always)]
-    pub fn e314o(&self) -> T {
-        self.c[44]
-    }
-
-    /// Coefficient of `e124o`.
-    #[inline(always)]
-    pub fn e124o(&self) -> T {
-        self.c[45]
-    }
-
-    /// Coefficient of `e123o`.
-    #[inline(always)]
-    pub fn e123o(&self) -> T {
-        self.c[46]
-    }
-
-    /// Coefficient of `e234i`.
-    #[inline(always)]
-    pub fn e234i(&self) -> T {
-        self.c[47]
-    }
-
-    /// Coefficient of `e314i`.
-    #[inline(always)]
-    pub fn e314i(&self) -> T {
-        self.c[48]
-    }
-
-    /// Coefficient of `e124i`.
-    #[inline(always)]
-    pub fn e124i(&self) -> T {
-        self.c[49]
-    }
-
-    /// Coefficient of `e123i`.
-    #[inline(always)]
-    pub fn e123i(&self) -> T {
-        self.c[50]
-    }
-
-    /// Coefficient of `e23oi`.
-    #[inline(always)]
-    pub fn e23oi(&self) -> T {
-        self.c[51]
-    }
-
-    /// Coefficient of `e31oi`.
-    #[inline(always)]
-    pub fn e31oi(&self) -> T {
-        self.c[52]
-    }
-
-    /// Coefficient of `e12oi`.
-    #[inline(always)]
-    pub fn e12oi(&self) -> T {
-        self.c[53]
-    }
-
-    /// Coefficient of `e41oi`.
-    #[inline(always)]
-    pub fn e41oi(&self) -> T {
-        self.c[54]
-    }
-
-    /// Coefficient of `e42oi`.
-    #[inline(always)]
-    pub fn e42oi(&self) -> T {
-        self.c[55]
-    }
-
-    /// Coefficient of `e43oi`.
-    #[inline(always)]
-    pub fn e43oi(&self) -> T {
-        self.c[56]
-    }
-
-    /// Coefficient of `e234oi`.
-    #[inline(always)]
-    pub fn e234oi(&self) -> T {
-        self.c[57]
-    }
-
-    /// Coefficient of `e314oi`.
-    #[inline(always)]
-    pub fn e314oi(&self) -> T {
-        self.c[58]
-    }
-
-    /// Coefficient of `e124oi`.
-    #[inline(always)]
-    pub fn e124oi(&self) -> T {
-        self.c[59]
-    }
-
-    /// Coefficient of `e123oi`.
-    #[inline(always)]
-    pub fn e123oi(&self) -> T {
-        self.c[60]
-    }
-
-    /// Coefficient of `e1234o`.
-    #[inline(always)]
-    pub fn e1234o(&self) -> T {
-        self.c[61]
-    }
-
-    /// Coefficient of `e1234i`.
-    #[inline(always)]
-    pub fn e1234i(&self) -> T {
-        self.c[62]
-    }
-
-    /// Coefficient of `e1234oi`.
-    #[inline(always)]
-    pub fn e1234oi(&self) -> T {
-        self.c[63]
-    }
-}
-
-impl<A: gx::Kind, T: gx::Coef> Multivector<(A,), T> {
-    /// The linear map that sends each basis blade of `A`, in `A`'s layout order, to the given
-    /// `Multivector`. `A` may be a kind of another algebra (a projection from PGA3D points to PGA2D
-    /// points is a `pga2d::Point<(pga3d::Point,)>`). The coefficients of a map are stored
-    /// output first: `from_coeffs` takes rows, `c[o][i]` the coefficient `o` of the image of
-    /// the input blade `i`.
-    #[inline]
-    pub fn from_images(images: A::Arr<Multivector<(), T>>) -> Self {
-        let images = images.as_ref();
-        Multivector { c: core::array::from_fn(|o| A::arr_from_fn(|i| images[i].c[o])) }
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
-    /// Fill the first slot with the map `p: A <- (X,)` and the second with `q: B <- (Y,)`:
-    /// `Multivector <- (X, Y)` (see [`gx::OfBoth`]).
-    #[inline]
-    pub fn of_both<P, Q>(self, p: P, q: Q) -> <Self as gx::OfBoth<P, Q>>::Output
-    where
-        Self: gx::OfBoth<P, Q>,
-    {
-        gx::OfBoth::of_both(self, p, q)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real> Multivector<(A,), T> {
-    /// The inverse map, `A <- Multivector`.
-    #[inline]
-    pub fn inverse(self) -> <Self as gx::SquareMap>::Inverse
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::inverse(self)
-    }
-
-    /// The determinant of the map's coefficient matrix.
-    #[inline]
-    pub fn det(self) -> T
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::det(self)
-    }
-
-    /// The singular values, descending, of a map of any shape (see [`gx::SingularValues`]).
-    #[inline]
-    pub fn svdvals(self) -> <A as gx::Kind>::Arr<T>
-    where
-        Self: gx::SingularValues<Coef = T, Input = A>,
-    {
-        gx::SingularValues::svdvals(self)
-    }
-
-    /// The singular values, right and left singular vectors of a map of any shape (see
-    /// [`gx::SingularValues::svd_thin`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd_thin(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>, <A as gx::Kind>::Arr<Multivector<(), T>>)
-    where
-        Self: gx::SingularValues<Coef = T, Input = A, Kind = Multivector>,
-    {
-        gx::SingularValues::svd_thin(self)
-    }
-
-    /// The eigenvalues (ascending) and eigenvectors of the coefficient matrix taken as
-    /// symmetric (see [`gx::SquareMap::eigh`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<Multivector as gx::Kind>::Arr<T>, <Multivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::eigh(self)
-    }
-
-    /// The eigenvalues, complex in general, sorted (see [`gx::SquareMap::eigvals`]).
-    #[inline]
-    pub fn eigvals(self) -> <Multivector as gx::Kind>::Arr<gx::Complex<T>>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::eigvals(self)
-    }
-
-    /// The eigenvalues and an eigenvector of each, a complex `A` (see [`gx::SquareMap::eig`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eig(self) -> (<Multivector as gx::Kind>::Arr<gx::Complex<T>>, <Multivector as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), gx::Complex<T>>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::eig(self)
-    }
-
-    /// Solve `self.of(x) == rhs` for `x`; a right-hand side with slots keeps them.
-    #[inline]
-    pub fn solve<X>(self, rhs: X) -> <A as gx::Kind>::Mv<X::Slots, T>
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-        X: gx::Extensor<Kind = Multivector, Coef = T>,
-    {
-        gx::SquareMap::solve(self, rhs)
-    }
-
-    /// Singular value decomposition: `(u, sigma, v)` with `self.of(v[i]) == sigma[i] * u[i]`.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn svd(self) -> (<Multivector as gx::Kind>::Arr<Multivector<(), T>>, <Multivector as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::SquareMap<Coef = T, Kind = Multivector, Input = A>,
-    {
-        gx::SquareMap::svd(self)
-    }
-
-    /// The MooreâPenrose pseudo-inverse, `A <- Multivector`, of a map of any shape: it sends `b` to
-    /// the least-norm least-squares solution of `self.of(x) â b`.
-    #[inline]
-    pub fn pinv(self) -> A::Mv<(Multivector,), T>
-    where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector,), T>>,
-    {
-        gx::PseudoInverse::pinv(self)
-    }
-
-    /// [`Self::pinv`] with singular values below `rcond` times the largest treated as zero.
-    #[inline]
-    pub fn pinv_with(self, rcond: T) -> A::Mv<(Multivector,), T>
-    where
-        Self: gx::PseudoInverse<Coef = T, Output = A::Mv<(Multivector,), T>>,
-    {
-        gx::PseudoInverse::pinv_with(self, rcond)
-    }
-
-    /// The trace of a map from `Multivector` to itself.
-    #[inline]
-    pub fn trace(self) -> T
-    where
-        Self: gx::Endomorphism<Coef = T, Kind = Multivector, Input = Multivector>,
-    {
-        gx::Endomorphism::trace(self)
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Coef> Multivector<(A, B), T> {
-    /// Exchange the two slots.
-    #[inline]
-    pub fn swap(self) -> Multivector<(B, A), T> {
-        self.at::<1>()
-    }
-}
-
-impl<A: gx::Kind, B: gx::Kind, T: gx::Real> Multivector<(A, B), T> {
-    /// Solve `self(x, Â·) == rhs(l, Â·)` for `x`; leading slots of `rhs` become slots of `x`.
-    #[inline]
-    pub fn solve<R>(self, rhs: R) -> <A as gx::Kind>::Mv<<R::Slots as gx::SplitLast>::Init, T>
-    where
-        Self: gx::Pairing<Coef = T, Kind = Multivector, First = A, Second = B>,
-        R: gx::Extensor<Kind = Multivector, Coef = T>,
-        R::Slots: gx::SplitLast<Last = B>,
-    {
-        gx::Pairing::solve(self, rhs)
-    }
-}
-
-impl<A: gx::Kind, T: gx::Real> Multivector<(A, A), T> {
-    /// Generalized symmetric eigenproblem against a positive definite metric form. Returns the
-    /// eigenvalues (ascending) and the eigenvectors, as values of the slot kind.
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_with(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
-    {
-        gx::Form::eigh_with(self, metric)
-    }
-
-    /// [`eigh_with`](Self::eigh_with) against a positive semidefinite metric: infinite
-    /// eigenvalues (`+â`, last) for the directions it does not measure (see
-    /// [`gx::Form::eigh_semidefinite`]).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh_semidefinite(self, metric: Self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
-    {
-        gx::Form::eigh_semidefinite(self, metric)
-    }
-
-    /// Symmetric eigenproblem in the coefficient basis (identity metric).
-    #[inline]
-    #[allow(clippy::type_complexity)]
-    pub fn eigh(self) -> (<A as gx::Kind>::Arr<T>, <A as gx::Kind>::Arr<<A as gx::Kind>::Mv<(), T>>)
-    where
-        Self: gx::Form<Coef = T, Kind = Multivector, Slot = A>,
-    {
-        gx::Form::eigh(self)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::ops::Add for Multivector<S, T> {
-    type Output = Self;
-    #[inline(always)]
-    fn add(self, rhs: Self) -> Self {
-        Multivector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) + gx::SlotArr::<S, T>(rhs.c[i])).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::ops::Sub for Multivector<S, T> {
-    type Output = Self;
-    #[inline(always)]
-    fn sub(self, rhs: Self) -> Self {
-        Multivector { c: core::array::from_fn(|i| (gx::SlotArr::<S, T>(self.c[i]) - gx::SlotArr::<S, T>(rhs.c[i])).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::iter::Sum for Multivector<S, T> {
-    /// The sum of values or of maps; zero for none.
-    #[inline]
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Self::zero(), |a, b| a + b)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::ops::AddAssign for Multivector<S, T> {
-    #[inline(always)]
-    fn add_assign(&mut self, rhs: Self) {
-        *self = *self + rhs;
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::ops::SubAssign for Multivector<S, T> {
-    #[inline(always)]
-    fn sub_assign(&mut self, rhs: Self) {
-        *self = *self - rhs;
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> core::ops::Neg for Multivector<S, T> {
-    type Output = Self;
-    #[inline(always)]
-    fn neg(self) -> Self {
-        Multivector { c: self.c.map(|x| (-gx::SlotArr::<S, T>(x)).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef> gx::Gp<T> for Multivector<S, T> {
-    type Output = Self;
-    #[inline(always)]
-    fn gp(self, rhs: T) -> Self {
-        Multivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(rhs).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Real> gx::DivBy<T> for Multivector<S, T> {
-    type Output = Self;
-    #[inline(always)]
-    fn div_by(self, rhs: T) -> Self {
-        let r = rhs.recip();
-        Multivector { c: self.c.map(|x| gx::SlotArr::<S, T>(x).scale(r).0) }
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::Div<R> for Multivector<S, T>
-where
-    Self: gx::DivBy<R>,
-{
-    type Output = <Self as gx::DivBy<R>>::Output;
-    #[inline(always)]
-    fn div(self, rhs: R) -> Self::Output {
-        gx::DivBy::div_by(self, rhs)
-    }
-}
-
-impl<S: gx::Slots> core::ops::Mul<Multivector<S, f32>> for f32 {
-    type Output = Multivector<S, f32>;
-    #[inline(always)]
-    fn mul(self, rhs: Multivector<S, f32>) -> Multivector<S, f32> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots> core::ops::Mul<Multivector<S, f64>> for f64 {
-    type Output = Multivector<S, f64>;
-    #[inline(always)]
-    fn mul(self, rhs: Multivector<S, f64>) -> Multivector<S, f64> {
-        rhs.gp(self)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::Mul<R> for Multivector<S, T>
-where
-    Self: gx::Gp<R>,
-{
-    type Output = <Self as gx::Gp<R>>::Output;
-    #[inline(always)]
-    fn mul(self, rhs: R) -> Self::Output {
-        gx::Gp::gp(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitXor<R> for Multivector<S, T>
-where
-    Self: gx::Wedge<R>,
-{
-    type Output = <Self as gx::Wedge<R>>::Output;
-    #[inline(always)]
-    fn bitxor(self, rhs: R) -> Self::Output {
-        gx::Wedge::wedge(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitAnd<R> for Multivector<S, T>
-where
-    Self: gx::Vee<R>,
-{
-    type Output = <Self as gx::Vee<R>>::Output;
-    #[inline(always)]
-    fn bitand(self, rhs: R) -> Self::Output {
-        gx::Vee::vee(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::BitOr<R> for Multivector<S, T>
-where
-    Self: gx::Dot<R>,
-{
-    type Output = <Self as gx::Dot<R>>::Output;
-    #[inline(always)]
-    fn bitor(self, rhs: R) -> Self::Output {
-        gx::Dot::dot(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shr<R> for Multivector<S, T>
-where
-    Self: gx::Transform<R>,
-{
-    type Output = <Self as gx::Transform<R>>::Output;
-    #[inline(always)]
-    fn shr(self, rhs: R) -> Self::Output {
-        gx::Transform::transform(self, rhs)
-    }
-}
-
-impl<S: gx::Slots, T: gx::Coef, R> core::ops::Shl<R> for Multivector<S, T>
-where
-    Self: gx::TransformInv<R>,
-{
-    type Output = <Self as gx::TransformInv<R>>::Output;
-    #[inline(always)]
-    fn shl(self, rhs: R) -> Self::Output {
-        gx::TransformInv::transform_inv(self, rhs)
-    }
-}
-
-impl<T: gx::Real> Multivector<(), T> {
-    /// The squared norm: the scalar part of `x ~x`.
-    #[inline(always)]
-    pub fn norm_squared(self) -> T {
-        let x = self.c;
-        let t1 = x[1] * x[1];
-        let t3 = x[3] * x[3];
-        let t7 = x[8] * x[8];
-        let t9 = x[10] * x[10];
-        let t11 = x[12] * x[12];
-        let t12 = x[13] * x[17];
-        let t14 = x[15] * x[19];
-        let t17 = x[22] * x[22];
-        let t19 = x[24] * x[24];
-        let t20 = x[25] * x[25];
-        let t22 = x[27] * x[33];
-        let t24 = x[29] * x[35];
-        let t26 = x[31] * x[37];
-        let t28 = x[39] * x[39];
-        let t31 = x[42] * x[42];
-        let t33 = x[44] * x[48];
-        let t35 = x[46] * x[50];
-        let t37 = x[52] * x[52];
-        let t39 = x[54] * x[54];
-        let t41 = x[56] * x[56];
-        let t43 = x[58] * x[58];
-        let t45 = x[60] * x[60];
-        let t46 = x[61] * x[62];
-        let t47 = x[63] * x[63];
-        let t48 = x[0].mul_add(x[0], t1);
-        let t49 = x[2].mul_add(x[2], t3);
-        let t50 = t48 + t49;
-        let t51 = x[7].mul_add(x[7], t7);
-        let t52 = x[9].mul_add(x[9], t20);
-        let t53 = t51 + t52;
-        let t54 = t50 + t53;
-        let t55 = x[41].mul_add(x[41], t39);
-        let t56 = x[55].mul_add(x[55], t41);
-        let t57 = t55 + t56;
-        let t58 = x[57].mul_add(x[57], t43);
-        let t59 = x[59].mul_add(x[59], t47);
-        let t60 = t58 + t59;
-        let t61 = t57 + t60;
-        let t62 = t54 + t61;
-        let t63 = x[4].mul_add(x[4], t9);
-        let t64 = x[11].mul_add(x[11], t11);
-        let t65 = t63 + t64;
-        let t66 = x[21].mul_add(x[21], t17);
-        let t67 = x[23].mul_add(x[23], t19);
-        let t68 = t66 + t67;
-        let t69 = t65 + t68;
-        let t70 = x[38].mul_add(x[38], t28);
-        let t71 = x[40].mul_add(x[40], t31);
-        let t72 = t70 + t71;
-        let t73 = x[51].mul_add(x[51], t37);
-        let t74 = x[53].mul_add(x[53], t45);
-        let t75 = t73 + t74;
-        let t76 = t72 + t75;
-        let t77 = t69 + t76;
-        let t78 = t62 - t77;
-        let t79 = x[16].mul_add(x[20], t24);
-        let t80 = x[30].mul_add(x[36], t26);
-        let t81 = t79 + t80;
-        let t82 = x[43].mul_add(x[47], t33);
-        let t83 = x[45].mul_add(x[49], t46);
-        let t84 = t82 + t83;
-        let t85 = t81 + t84;
-        let t86 = x[5].mul_add(x[6], t12);
-        let t87 = x[14].mul_add(x[18], t14);
-        let t88 = t86 + t87;
-        let t89 = x[26].mul_add(x[32], t22);
-        let t90 = x[28].mul_add(x[34], t35);
-        let t91 = t89 + t90;
-        let t92 = t88 + t91;
-        let t93 = t85 - t92;
-        let t95 = t93.mul_add(T::from_i64(2), t78);
-        t95
-    }
-
-    /// The norm, `sqrt(|norm_squared|)`.
-    #[inline(always)]
-    pub fn norm(self) -> T {
-        self.norm_squared().abs().sqrt()
-    }
-
-    /// The inverse under the geometric product, by Shirokov's method in `Multivector` (no closed form
-    /// for `Multivector` here): the inverse as a polynomial of degree 7 whose coefficients come
-    /// from the scalar parts of powers (the FaddeevâLeVerrier recursion on left multiplication,
-    /// 7 products in `Multivector`), then 1 NewtonâSchulz step(s) (docs/design.md, ADR-037). `x` is scaled to its largest
-    /// coefficient first. Not finite where `x` has no inverse.
-    #[inline]
-    pub fn inverse(self) -> Multivector<(), T>
-    where
-        T: gx::Real,
-    {
-        T::vectorize(#[inline(always)] move || {
-        let mut size = T::zero();
-        for c in self.c {
-            size = size.max(c.abs());
-        }
-        let scale = size.recip();
-        let mut x = Multivector::<(), T>::zero();
-        x.c[0] = self.c[0] * scale;
-        x.c[1] = self.c[1] * scale;
-        x.c[2] = self.c[2] * scale;
-        x.c[3] = self.c[3] * scale;
-        x.c[4] = self.c[4] * scale;
-        x.c[5] = self.c[5] * scale;
-        x.c[6] = self.c[6] * scale;
-        x.c[7] = self.c[7] * scale;
-        x.c[8] = self.c[8] * scale;
-        x.c[9] = self.c[9] * scale;
-        x.c[10] = self.c[10] * scale;
-        x.c[11] = self.c[11] * scale;
-        x.c[12] = self.c[12] * scale;
-        x.c[13] = self.c[13] * scale;
-        x.c[14] = self.c[14] * scale;
-        x.c[15] = self.c[15] * scale;
-        x.c[16] = self.c[16] * scale;
-        x.c[17] = self.c[17] * scale;
-        x.c[18] = self.c[18] * scale;
-        x.c[19] = self.c[19] * scale;
-        x.c[20] = self.c[20] * scale;
-        x.c[21] = self.c[21] * scale;
-        x.c[22] = self.c[22] * scale;
-        x.c[23] = self.c[23] * scale;
-        x.c[24] = self.c[24] * scale;
-        x.c[25] = self.c[25] * scale;
-        x.c[26] = self.c[26] * scale;
-        x.c[27] = self.c[27] * scale;
-        x.c[28] = self.c[28] * scale;
-        x.c[29] = self.c[29] * scale;
-        x.c[30] = self.c[30] * scale;
-        x.c[31] = self.c[31] * scale;
-        x.c[32] = self.c[32] * scale;
-        x.c[33] = self.c[33] * scale;
-        x.c[34] = self.c[34] * scale;
-        x.c[35] = self.c[35] * scale;
-        x.c[36] = self.c[36] * scale;
-        x.c[37] = self.c[37] * scale;
-        x.c[38] = self.c[38] * scale;
-        x.c[39] = self.c[39] * scale;
-        x.c[40] = self.c[40] * scale;
-        x.c[41] = self.c[41] * scale;
-        x.c[42] = self.c[42] * scale;
-        x.c[43] = self.c[43] * scale;
-        x.c[44] = self.c[44] * scale;
-        x.c[45] = self.c[45] * scale;
-        x.c[46] = self.c[46] * scale;
-        x.c[47] = self.c[47] * scale;
-        x.c[48] = self.c[48] * scale;
-        x.c[49] = self.c[49] * scale;
-        x.c[50] = self.c[50] * scale;
-        x.c[51] = self.c[51] * scale;
-        x.c[52] = self.c[52] * scale;
-        x.c[53] = self.c[53] * scale;
-        x.c[54] = self.c[54] * scale;
-        x.c[55] = self.c[55] * scale;
-        x.c[56] = self.c[56] * scale;
-        x.c[57] = self.c[57] * scale;
-        x.c[58] = self.c[58] * scale;
-        x.c[59] = self.c[59] * scale;
-        x.c[60] = self.c[60] * scale;
-        x.c[61] = self.c[61] * scale;
-        x.c[62] = self.c[62] * scale;
-        x.c[63] = self.c[63] * scale;
-        let a = x;
-        // Uâ = a, Câ = (N/k) â¨Uââ©â, Uâââ = a (Uâ â Câ); then aâ»Â¹ = (U_{Nâ1} â C_{Nâ1}) / C_N.
-        let mut prev = a;
-        let c = a.c[0] * T::from_i64(8);
-        prev.c[0] = prev.c[0] - c;
-        for k in 2..8i64 {
-            let u = a * prev;
-            let c = u.c[0] * T::from_ratio(8, k);
-            prev = u;
-            prev.c[0] = prev.c[0] - c;
-        }
-        let det = (a * prev).c[0];
-        let mut y = prev.gp(det.recip());
-        // NewtonâSchulz, y â y (2 â x y), squares the residual: the recursion loses digits as
-        // its degree grows (to 10â»â´ at degree 32), and the step(s) restore them.
-        for _ in 0..1 {
-            let mut t = -(x * y);
-            t.c[0] = t.c[0] + T::from_i64(2);
-            y = y * t;
-        }
-        y.gp(scale)
-        })
-    }
-
-}
-
-impl<T: gx::Real> gx::Inverse for Multivector<(), T> {
-    type Output = Multivector<(), T>;
-    #[inline(always)]
-    fn inverse(self) -> Self::Output {
-        Self::inverse(self)
-    }
-}
-
-impl<T: gx::Real> gx::Norm for Multivector<(), T> {
-    #[inline(always)]
-    fn norm_squared(self) -> T {
-        Self::norm_squared(self)
-    }
-    #[inline(always)]
-    fn norm(self) -> T {
-        Self::norm(self)
-    }
-}
-
-impl gx::KindEq<Scalar> for Scalar {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Vector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Scalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Vector {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Twist> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Vector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Twist {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Bivector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Twist {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Bivector {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Trivector> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Bivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Trivector {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Quadvector> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Trivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Quadvector {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Quintvector> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Quadvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Quintvector {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Pseudoscalar> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Quintvector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Pseudoscalar {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Motor> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Pseudoscalar {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Motor {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Even> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Motor {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Even {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Odd> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Even {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Odd {
-    type Out = gx::True;
-}
-
-impl gx::KindEq<Multivector> for Odd {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Scalar> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Vector> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Twist> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Bivector> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Trivector> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quadvector> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Quintvector> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Pseudoscalar> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Motor> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Even> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Odd> for Multivector {
-    type Out = gx::False;
-}
-
-impl gx::KindEq<Multivector> for Multivector {
-    type Out = gx::True;
-}
-
-impl gx::Cast<Scalar> for Scalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::SubKind<Scalar> for Scalar {}
-
-impl gx::Cast<Motor> for Scalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::SubKind<Motor> for Scalar {}
-
-impl gx::Cast<Even> for Scalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::SubKind<Even> for Scalar {}
-
-impl gx::Cast<Multivector> for Scalar {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::SubKind<Multivector> for Scalar {}
-
-impl gx::GradePart<0> for Scalar {
-    type Out = Scalar;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false)];
-}
-
-impl gx::Cast<Vector> for Vector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::SubKind<Vector> for Vector {}
-
-impl gx::Cast<Odd> for Vector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::SubKind<Odd> for Vector {}
-
-impl gx::Cast<Multivector> for Vector {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false)];
-}
-
-impl gx::SubKind<Multivector> for Vector {}
-
-impl gx::GradePart<1> for Vector {
-    type Out = Vector;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false)];
-}
-
-impl gx::Cast<Twist> for Twist {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
-}
-
-impl gx::SubKind<Twist> for Twist {}
-
-impl gx::Cast<Bivector> for Twist {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 10, false), (7, 11, false), (8, 12, false), (9, 13, false)];
-}
-
-impl gx::SubKind<Bivector> for Twist {}
-
-impl gx::Cast<Motor> for Twist {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 7, false), (7, 8, false), (8, 9, false), (9, 10, false)];
-}
-
-impl gx::SubKind<Motor> for Twist {}
-
-impl gx::Cast<Even> for Twist {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 1, false), (1, 2, false), (2, 3, false), (3, 4, false), (4, 5, false), (5, 6, false), (6, 11, false), (7, 12, false), (8, 13, false), (9, 14, false)];
-}
-
-impl gx::SubKind<Even> for Twist {}
-
-impl gx::Cast<Multivector> for Twist {
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 7, false), (1, 8, false), (2, 9, false), (3, 10, false), (4, 11, false), (5, 12, false), (6, 17, false), (7, 18, false), (8, 19, false), (9, 20, false)];
-}
-
-impl gx::SubKind<Multivector> for Twist {}
-
-impl gx::GradePart<2> for Twist {
-    type Out = Twist;
-    const SHARED: &'static [(usize, usize, bool)] = &[(0, 0, false), (1, 1, false), (2, 2, false), (3, 3, false), (4, 4, false), (5, 5, false), (6, 6, false), (7, 7, false), (8, 8, false), (9, 9, false)];
 }

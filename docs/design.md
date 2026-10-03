@@ -462,6 +462,21 @@ highlight. `gax-regen --check` also reports part files no longer generated.
   * its inverse is its reverse;
   * the product of units is a unit;
   * its sandwiches use kernels simplified with `x ~x = 1`;
+  * its sandwiches keep the passenger's grades: `Unit<Even> >> Vector` is a `Vector` in CGA3D,
+    STAP and CSTA, where the plain sandwich of an even element widens to the odd kind. The
+    terms of other grades vanish only on unit versors, and not by the degree-2 relations
+    `u ~u = 1` alone: in 5D the pseudoscalar part lies in the radical of their ideal, not in the
+    ideal. The generator therefore drops them rather than deriving them. Up to 5D every even
+    element with `u ~u = 1` is a versor (the Lipschitz group equals the even Clifford group,
+    Lounesto), so the rule holds for every value a `Unit` can carry. CSTA's `Motor` is 6D but
+    lies in the even algebra of spacetime and `ei` alone, a degenerate 5D algebra, which rules
+    out the 6D counterexample `cos θ + I sin θ` (its sandwich turns vectors into grade 5);
+    CSTA's full `Even` is not a versor kind. `tests/unit_versors.rs` checks the rule on random
+    elements projected onto `u ~u = 1`;
+  * `normalized()`, `inverse()` and `renormalize_fast()` also where `x ~x` is a scalar plus a
+    4-vector `X` with `X²` scalar (5D even and odd kinds, CSTA's motor and twist):
+    `x⁻¹ = ~x (a − X) / (a² − X²)` and `(a + X)^(-1/2) x` in closed form (De Keninck and Dorst,
+    2022), the factor on the left since `X` does not commute with `x`;
   * tracing adds the condition to the ideal.
 * **Why a wrapper:** kinds stay plain subspaces, and the number of generated pairs does not double.
 * **Drift (amended).** `Unit * Unit` keeps the certificate without renormalizing, as nalgebra and
@@ -480,9 +495,11 @@ highlight. `gax-regen --check` also reports part files no longer generated.
     * in non-projective algebras (VGA), all lengths scale by the same factor.
   * **The cost.** `Unit<Motor> >> Point` (PGA3D) went from 25 to 33 multiplications (the plain
     kernel has 38); over all kernels the multiplications went up 6%.
-  * **Renormalization.** `Unit::renormalize_fast()` is one Newton step, `u (3 − u ~u) / 2`,
+  * **Renormalization.** `Unit::renormalize_fast()` is one Newton step, `(3 − u ~u) u / 2`,
     with no square root. It turns an error `e` in `u ~u` into `O(e²)`: the identity
     `r ~r = n (3 − n)² / 4` is proved on symbolic coefficients, and the convergence measured.
+    The factor is on the left, so the identity holds whether or not `n` commutes with `u` (it
+    does not for odd kinds in 4D, nor in 5D).
     `Unit::mul_renormalized` composes and renormalizes in one call; `normalized()` stays the
     exact path.
     * Suggested policy: renormalize after every integration step, or after every few products.

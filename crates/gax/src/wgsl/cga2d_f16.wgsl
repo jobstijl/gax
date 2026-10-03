@@ -896,7 +896,7 @@ fn scalar_normalized(x: Scalar) -> Scalar {
     return Scalar(vec4<f16>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn scalar_renormalize_fast(x: Scalar) -> Scalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -928,7 +928,7 @@ fn vector_normalized(x: Vector) -> Vector {
     return Vector(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn vector_renormalize_fast(x: Vector) -> Vector {
     let t1 = x.c0.y * x.c0.y;
     let t2 = x.c0.z * x.c0.w;
@@ -962,7 +962,7 @@ fn twist_normalized(x: Twist) -> Twist {
     return Twist(vec4<f16>(t0, t1, t2, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn twist_renormalize_fast(x: Twist) -> Twist {
     let t0 = x.c0.x * x.c0.x;
     let t1 = t0 - 3.0;
@@ -1032,7 +1032,7 @@ fn bivector_normalized(x: Bivector) -> Bivector {
     return Bivector(vec4<f16>(t12, t13, t14, t15), vec4<f16>(t16, t17, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn bivector_renormalize_fast(x: Bivector) -> Bivector {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c1.y * x.c1.y;
@@ -1130,7 +1130,7 @@ fn trivector_normalized(x: Trivector) -> Trivector {
     return Trivector(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn trivector_renormalize_fast(x: Trivector) -> Trivector {
     let t2 = x.c0.w * x.c0.w;
     let t3 = fma(x.c0.z, x.c0.z, t2);
@@ -1164,7 +1164,7 @@ fn pseudoscalar_normalized(x: Pseudoscalar) -> Pseudoscalar {
     return Pseudoscalar(vec4<f16>(t0, 0.0, 0.0, 0.0));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn pseudoscalar_renormalize_fast(x: Pseudoscalar) -> Pseudoscalar {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.x * t0;
@@ -1192,7 +1192,7 @@ fn motor_normalized(x: Motor) -> Motor {
     return Motor(vec4<f16>(t0, t1, t2, t3));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn motor_renormalize_fast(x: Motor) -> Motor {
     let t1 = x.c0.y * x.c0.y;
     let t2 = fma(x.c0.x, x.c0.x, t1);
@@ -1272,7 +1272,7 @@ fn even_normalized(x: Even) -> Even {
     return Even(vec4<f16>(t16, t17, t18, t19), vec4<f16>(t20, t21, t22, t23));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn even_renormalize_fast(x: Even) -> Even {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.y * x.c0.y;
@@ -1421,7 +1421,7 @@ fn odd_normalized(x: Odd) -> Odd {
     return Odd(vec4<f16>(t16, t17, t18, t19), vec4<f16>(t20, t21, t22, t23));
 }
 
-// One Newton step towards `x ~x = 1`, `x (3 - x ~x) / 2`, without a square root.
+// One Newton step towards `x ~x = 1`, `(3 - x ~x) x / 2`, without a square root.
 fn odd_renormalize_fast(x: Odd) -> Odd {
     let t0 = x.c0.x * x.c0.x;
     let t1 = x.c0.y * x.c0.y;
@@ -1431,64 +1431,63 @@ fn odd_renormalize_fast(x: Odd) -> Odd {
     let t5 = t4 - t2;
     let t6 = t3 + 3.0;
     let t7 = t5 - t6;
+    let t8 = x.c0.z * x.c0.w;
     let t9 = x.c1.x * x.c1.y;
-    let t10 = fma(x.c0.z, x.c0.w, t9);
+    let t10 = t8 + t9;
     let t12 = fma(t2, (1.0 / 2.0), t10);
     let t13 = x.c0.x * x.c1.w;
     let t14 = x.c0.y * x.c1.z;
     let t15 = t13 - t14;
     let t16 = x.c0.z * x.c1.y;
-    let t18 = fma(-x.c0.w, x.c1.x, t16);
+    let t17 = x.c0.w * x.c1.x;
+    let t18 = t16 - t17;
     let t19 = t13 + t18;
-    let t21 = fma(-t14, (1.0 / 2.0), t19);
-    let t22 = t18 - t14;
-    let t24 = fma(t22, 2.0, t13);
-    let t25 = t0 - t3;
-    let t26 = t25 - 3.0;
-    let t28 = x.c1.x * x.c1.x;
-    let t29 = fma(x.c0.z, x.c0.z, t28);
-    let t31 = x.c1.y * x.c1.y;
-    let t32 = fma(x.c0.w, x.c0.w, t31);
+    let t21 = fma(-t14, (3.0 / 2.0), t19);
+    let t22 = t15 + t16;
+    let t24 = fma(-t17, 2.0, t22);
+    let t25 = t18 - t14;
+    let t27 = fma(t25, (2.0 / 3.0), t13);
+    let t28 = t15 - t17;
+    let t30 = fma(t28, (1.0 / 2.0), t16);
+    let t31 = t0 - t3;
+    let t32 = t31 - 3.0;
     let t34 = fma(-t12, 2.0, t1);
-    let t36 = x.c0.x * t34;
-    let t39 = x.c0.y * x.c0.z;
-    let t41 = x.c0.y * x.c1.x;
-    let t42 = x.c1.y * t41;
-    let t43 = x.c0.y * t26;
-    let t45 = x.c0.z * t7;
-    let t46 = x.c0.w * t29;
-    let t49 = x.c0.w * t7;
-    let t50 = x.c1.y * t15;
-    let t52 = x.c1.x * t7;
-    let t53 = x.c1.y * t29;
-    let t55 = x.c1.x * t32;
-    let t56 = x.c1.y * t7;
-    let t58 = x.c1.z * t12;
-    let t59 = x.c1.z * t26;
-    let t61 = x.c1.w * t3;
-    let t63 = fma(x.c0.x, t0, t36);
-    let t64 = fma(x.c1.w, t24, t63);
-    let t66 = x.c0.x * (3.0 / 2.0);
-    let t67 = fma(-t64, (1.0 / 2.0), t66);
-    let t68 = fma(x.c0.w, t39, t42);
-    let t69 = fma(x.c1.z, t21, t68);
-    let t70 = fma(x.c0.y, t1, t43);
-    let t72 = fma(-t70, (1.0 / 2.0), t69);
-    let t73 = fma(-x.c1.x, t15, t46);
-    let t75 = fma(-t45, (1.0 / 2.0), t73);
-    let t76 = fma(x.c0.z, t32, t50);
-    let t78 = fma(-t49, (1.0 / 2.0), t76);
-    let t79 = fma(x.c0.z, t15, t53);
-    let t81 = fma(-t52, (1.0 / 2.0), t79);
-    let t82 = fma(-x.c0.w, t15, t55);
-    let t84 = fma(-t56, (1.0 / 2.0), t82);
-    let t85 = fma(-x.c0.y, t21, t58);
-    let t87 = fma(-t59, (1.0 / 2.0), t85);
-    let t88 = fma(x.c0.x, t24, t61);
-    let t89 = fma(-x.c1.w, t34, t88);
-    let t91 = x.c1.w * (3.0 / 2.0);
-    let t92 = fma(t89, (1.0 / 2.0), t91);
-    return Odd(vec4<f16>(t67, t72, t75, t78), vec4<f16>(t81, t84, t87, t92));
+    let t35 = t7 * (1.0 / 2.0);
+    let t36 = t8 - t35;
+    let t37 = t9 - t35;
+    let t39 = x.c0.x * t34;
+    let t42 = x.c0.y * x.c0.z;
+    let t44 = x.c0.y * x.c1.x;
+    let t45 = x.c1.y * t44;
+    let t46 = x.c0.y * t32;
+    let t49 = x.c1.x * t30;
+    let t50 = x.c0.w * t36;
+    let t53 = x.c1.x * t37;
+    let t54 = x.c0.w * t30;
+    let t57 = x.c1.z * t12;
+    let t58 = x.c1.z * t32;
+    let t60 = x.c1.w * t3;
+    let t62 = fma(x.c0.x, t0, t39);
+    let t64 = fma(x.c1.w, t27, x.c0.x);
+    let t65 = t64 * (3.0 / 2.0);
+    let t66 = fma(-t62, (1.0 / 2.0), t65);
+    let t67 = fma(x.c0.w, t42, t45);
+    let t68 = fma(-x.c1.z, t21, t67);
+    let t69 = fma(x.c0.y, t1, t46);
+    let t71 = fma(-t69, (1.0 / 2.0), t68);
+    let t72 = t49 * 2.0;
+    let t73 = fma(x.c0.z, t36, t72);
+    let t74 = fma(-x.c1.y, t24, t50);
+    let t75 = fma(-x.c0.z, t24, t53);
+    let t76 = t54 * 2.0;
+    let t77 = fma(x.c1.y, t37, t76);
+    let t78 = fma(x.c0.y, t21, t57);
+    let t80 = fma(-t58, (1.0 / 2.0), t78);
+    let t81 = fma(-x.c1.w, t34, t60);
+    let t83 = fma(-x.c0.x, t27, x.c1.w);
+    let t84 = t83 * (3.0 / 2.0);
+    let t85 = fma(t81, (1.0 / 2.0), t84);
+    return Odd(vec4<f16>(t66, t71, t73, t74), vec4<f16>(t75, t77, t80, t85));
 }
 
 // The squared norm: the scalar part of `x ~x`.

@@ -301,7 +301,7 @@ impl<S: gx::Slots, T: gx::Coef> gx::DivBy<gx::Unit<Vector<(), T>>> for Multivect
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Scalar<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -309,7 +309,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Scalar<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Vector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -317,7 +317,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Vector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Twist<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -325,7 +325,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Twist<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Bivector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -333,7 +333,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Bivector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Trivector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -341,7 +341,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Trivector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Quadvector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -349,7 +349,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Quadvector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Quintvector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -357,7 +357,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Quintvector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Pseudoscalar<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -365,7 +365,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Pseudoscalar<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Motor<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -373,7 +373,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Motor<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Even<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -381,7 +381,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Even<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Odd<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -389,7 +389,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Odd<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Twist<(), T>> for Multivector<S, T> {
-    type Output = <Self as gx::Gp<Motor<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Twist<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Twist<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
