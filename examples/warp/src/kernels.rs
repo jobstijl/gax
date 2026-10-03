@@ -173,13 +173,16 @@ fn each<T: Real>(l: Light<T>, f: impl Fn(T) -> T) -> Light<T> {
 /// 2.2 gamma.
 pub fn agx<T: Real>(l: Light<T>, saturation: T) -> Light<T> {
     let (min_ev, max_ev) = (T::from_f64(-12.47393), T::from_f64(4.026069));
-    let inset = colour_map::<T>([
+    let inset = colour_map::<f64>([
         [0.842479062253094, 0.0784335999999992, 0.0792237451477643],
         [0.0423282422610123, 0.878468636469772, 0.0791661274605434],
         [0.0423756549057051, 0.0784336, 0.879142973793104],
     ]);
-    // The outset is the inverse of the inset (folded to constants when traced).
-    let outset = inset.inverse();
+    // The outset is the inverse of the inset: both constants, computed in f64.
+    let (inset, outset) = (
+        inset.map_coefs(T::from_f64),
+        inset.inverse().map_coefs(T::from_f64),
+    );
     let log2 = T::from_f64(core::f64::consts::LOG2_E);
     let v = each(inset.of(l), |x| {
         let e = (x.max(T::from_f64(1e-10)).ln() * log2)

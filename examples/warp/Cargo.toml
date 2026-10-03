@@ -44,3 +44,11 @@ opt-level = 3
 
 [profile.release]
 debug = 1
+
+# The build script traces the kernels with gax-gen's symbolic tracer: optimized, it takes
+# seconds; at cargo's default for build scripts (opt-level 0) it looks like a hang.
+[profile.dev.build-override]
+opt-level = 3
+
+[profile.release.build-override]
+opt-level = 3

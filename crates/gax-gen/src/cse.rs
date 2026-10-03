@@ -334,6 +334,10 @@ fn compile_staged_with(
 /// `groebner::groebner_within`): a tenth of a second at most, per strategy.
 const TRACE_BASIS_BUDGET: usize = 1_000_000;
 
+/// Above this many terms (outputs and stage arguments), [`compile_staged_best`] skips the plain
+/// compile.
+const PLAIN_MAX_TERMS: usize = 1200;
+
 /// Compile staged outputs with every strategy and keep the cheapest program that is verified
 /// exact: its outputs equal the given polynomials modulo the relations.
 pub fn compile_staged_best(
@@ -366,8 +370,22 @@ pub fn compile_staged_best(
         &[Reduction::None, Reduction::Greedy, Reduction::NormalForm]
     };
     let check: &[Poly] = basis.as_deref().unwrap_or(&[]);
+    // The plain compile, greedy sharing over the expanded terms, grows like the cube of their
+    // number (0.3 s at 700 terms, 105 s at 3600, warp's tone mapper); above `PLAIN_MAX_TERMS`
+    // only the compile that extracts polynomial kernels first runs (6 s at 3600).
+    let terms: usize = outputs.iter().map(Poly::len).sum::<usize>()
+        + stages
+            .iter()
+            .flat_map(|st| &st.args)
+            .map(Poly::len)
+            .sum::<usize>();
+    let modes: &[bool] = if terms > PLAIN_MAX_TERMS {
+        &[true]
+    } else {
+        &[false, true]
+    };
     for &reduction in reductions {
-        for kernels in [false, true] {
+        for &kernels in modes {
             let clock = std::time::Instant::now();
             let (prog, env) = compile_staged_with(
                 outputs,
