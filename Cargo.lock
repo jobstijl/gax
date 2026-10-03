@@ -350,6 +350,7 @@ dependencies = [
  "gax-macros",
  "naga",
  "proptest",
+ "rand",
  "trybuild",
 ]
 
@@ -362,6 +363,7 @@ dependencies = [
  "geometric_algebra",
  "glam 0.30.10",
  "nalgebra",
+ "rand",
  "ultraviolet",
 ]
 

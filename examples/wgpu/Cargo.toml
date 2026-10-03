@@ -16,6 +16,7 @@ pollster = "1"
 wgpu = "30"
 winit = "0.30"
 
+rand = "0.9"
 [build-dependencies]
 gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "trace", "wgsl"] }
 # Links the shaders against gax's WGSL modules at build time; the program ships plain WGSL.

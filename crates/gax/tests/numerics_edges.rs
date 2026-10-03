@@ -261,13 +261,8 @@ mod csta {
     /// A deterministic direction per family: rotations, boosts, translations, special
     /// conformal (`e·o`), dilations (`eoi`), and all of them.
     fn direction(family: usize, seed: u64) -> Bivector<(), f64> {
-        let mut s = seed | 1;
-        let mut next = || {
-            s ^= s << 13;
-            s ^= s >> 7;
-            s ^= s << 17;
-            (s >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-        };
+        let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(seed | 1);
+        let mut next = || rand::Rng::random_range(&mut rng, -1.0..1.0);
         let blades = <<Bivector<(), f64> as Extensor>::Kind as Kind>::BLADES;
         let keep = |b: &str| match family {
             0 => ["e23", "e31", "e12"].contains(&b),

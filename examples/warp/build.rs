@@ -128,6 +128,7 @@ fn sim_hash() {
         "src/tunnel",
         "src/geom.rs",
         "src/signal.rs",
+        "src/kernels.rs",
         "../../crates/gax/src",
         "../../crates/gax-core/src",
     ] {

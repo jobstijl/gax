@@ -6,7 +6,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::dual::{Dual, derivative, gradient, jacobian};
 use gax::fp::Fp;
@@ -29,7 +29,7 @@ fn line<T: Real>(c: [T; 6]) -> Line<(), T> {
 /// translations, through gax's closed forms.
 #[test]
 fn exp_along_a_line() {
-    let mut rng = Rng(0xd0a1);
+    let mut rng = rng(0xd0a1);
     for k in 0..200 {
         let mut b: [f64; 6] = core::array::from_fn(|_| rng.next_f64());
         if k % 3 == 1 {
@@ -55,7 +55,7 @@ fn exp_along_a_line() {
 /// motor's log agrees with central differences.
 #[test]
 fn log_of_exp() {
-    let mut rng = Rng(0x10_9e);
+    let mut rng = rng(0x10_9e);
     for _ in 0..200 {
         let b: [f64; 6] = core::array::from_fn(|_| 0.5 * rng.next_f64());
         let t0 = 0.3 + 0.5 * rng.next_f64().abs();
@@ -81,7 +81,7 @@ fn gradient_through_motions() {
         let [a, b, c] = (m >> Point::xyz(1.0, 2.0, 0.5)).to_euclidean();
         (a - 0.3).powi(2) + (b + 1.0).powi(2) + c * c
     };
-    let mut rng = Rng(0x9ad);
+    let mut rng = rng(0x9ad);
     for _ in 0..100 {
         let x0: [f64; 3] = core::array::from_fn(|_| rng.next_f64());
         let (v, g) = gradient(
@@ -159,7 +159,7 @@ fn jacobian_of_a_join() {
 /// `−A⁻¹ E A⁻¹ b` at `t = 0`.
 #[test]
 fn derivative_of_a_solve() {
-    let mut rng = Rng(0x501e);
+    let mut rng = rng(0x501e);
     for _ in 0..50 {
         let a: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
         let e: [[f64; 4]; 4] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
@@ -230,7 +230,7 @@ fn product_rule_exactly() {
 #[test]
 fn csta_exp_along_a_bivector() {
     use gax::csta::{Bivector, Even};
-    let mut rng = Rng(0xc57a);
+    let mut rng = rng(0xc57a);
     for k in 0..60 {
         let size = [0.3, 1.0, 2.5][k % 3];
         let b: [f64; 15] = core::array::from_fn(|_| size * rng.next_f64());

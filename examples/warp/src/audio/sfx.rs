@@ -187,7 +187,7 @@ impl Sfx {
             sr,
             tempo: super::music::TEMPO,
             voices: [Voice::default(); 48],
-            noise: Noise(0x1234_5678),
+            noise: Noise::new(0x1234_5678),
             grid: None,
             held: [None; 16],
         }

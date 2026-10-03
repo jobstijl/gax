@@ -6,6 +6,7 @@
 use gax::Unit;
 use gax::batch::BatchTransform;
 use gax::pga2d::{Line, Moments, Motor, Point};
+use rand::Rng as _;
 
 /// The width and height of the world (it wraps around at the edges).
 pub const WORLD: [f32; 2] = [160.0, 100.0];
@@ -209,27 +210,8 @@ pub fn contains(poly: &[Point], inside: Point, p: Point) -> bool {
         })
 }
 
-/// A small xorshift generator (the game needs no crate for randomness).
-#[derive(Clone, Debug)]
-pub struct Rng(u64);
-
-impl Rng {
-    /// A generator from a seed.
-    pub fn new(seed: u64) -> Rng {
-        Rng(seed.max(1))
-    }
-    /// A number in `[0, 1)`.
-    pub fn next(&mut self) -> f32 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 40) as f32 / (1u64 << 24) as f32
-    }
-    /// A number in `[a, b)`.
-    pub fn range(&mut self, a: f32, b: f32) -> f32 {
-        a + (b - a) * self.next()
-    }
-}
+/// The random generator, seeded.
+pub type Rng = rand::rngs::StdRng;
 
 /// An asteroid: a body, a shape, and a size class (3 large, 2 medium, 1 small).
 #[derive(Clone, Debug)]
@@ -248,16 +230,16 @@ impl Asteroid {
         let n = 7 + usize::from(size) * 2;
         let points: Vec<Point> = (0..n)
             .map(|i| {
-                let a = std::f32::consts::TAU * (i as f32 + rng.range(-0.3, 0.3)) / n as f32;
-                let d = r * rng.range(0.75, 1.1);
+                let a = std::f32::consts::TAU * (i as f32 + rng.random_range(-0.3..0.3)) / n as f32;
+                let d = r * rng.random_range(0.75..1.1);
                 Motor::rotation(ORIGIN, a) >> Point::xy(d, 0.0)
             })
             .collect();
-        let mut body = Body::at(x, y, rng.range(0.0, std::f32::consts::TAU));
-        let speed = rng.range(4.0, 14.0) * (4.0 - f32::from(size)) / 2.0;
-        let heading = rng.range(0.0, std::f32::consts::TAU);
+        let mut body = Body::at(x, y, rng.random_range(0.0..std::f32::consts::TAU));
+        let speed = rng.random_range(4.0..14.0) * (4.0 - f32::from(size)) / 2.0;
+        let heading = rng.random_range(0.0..std::f32::consts::TAU);
         body.vel = xy(polar(speed, heading));
-        body.spin = rng.range(-1.2, 1.2);
+        body.spin = rng.random_range(-1.2..1.2);
         Asteroid {
             body,
             shape: Shape::centred(&points).0,
@@ -388,7 +370,7 @@ impl Game {
             shield: INVULNERABLE,
             over: false,
             cooldown: 0.0,
-            rng: Rng::new(seed),
+            rng: <Rng as rand::SeedableRng>::seed_from_u64(seed),
             scratch: [Vec::new(), Vec::new()],
         };
         g.next_wave();
@@ -400,8 +382,8 @@ impl Game {
         for _ in 0..(2 + self.wave).min(9) {
             // Spawn away from the ship.
             let (x, y) = loop {
-                let x = self.rng.range(-WORLD[0] / 2.0, WORLD[0] / 2.0);
-                let y = self.rng.range(-WORLD[1] / 2.0, WORLD[1] / 2.0);
+                let x = self.rng.random_range(-WORLD[0] / 2.0..WORLD[0] / 2.0);
+                let y = self.rng.random_range(-WORLD[1] / 2.0..WORLD[1] / 2.0);
                 if !near([x, y], self.ship.position(), 30.0) {
                     break (x, y);
                 }
@@ -413,12 +395,12 @@ impl Game {
 
     fn explode(&mut self, at: [f32; 2], n: usize, speed: f32) {
         for _ in 0..n {
-            let a = self.rng.range(0.0, std::f32::consts::TAU);
-            let s = self.rng.range(0.2, 1.0) * speed;
+            let a = self.rng.random_range(0.0..std::f32::consts::TAU);
+            let s = self.rng.random_range(0.2..1.0) * speed;
             self.sparks.push(Spark {
                 pos: at,
                 vel: xy(polar(s, a)),
-                life: self.rng.range(0.3, 0.9),
+                life: self.rng.random_range(0.3..0.9),
             });
         }
     }
@@ -640,14 +622,17 @@ mod tests {
     /// of rock and bullet is conserved, and the pieces move apart.
     #[test]
     fn shattering_conserves_area_and_momentum() {
-        let mut rng = Rng::new(3);
+        let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(3);
         for k in 0..50 {
             let mut rock = Asteroid::random(&mut rng, 5.0, -3.0, 3);
             rock.body.spin = 0.7;
             let c = rock.body.position();
             // A bullet through a point near the centre, from below.
-            let hit = [c[0] + rng.range(-2.0, 2.0), c[1] + rng.range(-2.0, 2.0)];
-            let bullet = [rng.range(-20.0, 20.0), 70.0];
+            let hit = [
+                c[0] + rng.random_range(-2.0..2.0),
+                c[1] + rng.random_range(-2.0..2.0),
+            ];
+            let bullet = [rng.random_range(-20.0..20.0), 70.0];
             let pieces = rock.shatter(hit, bullet);
             assert_eq!(pieces.len(), 2, "rock {k}");
             let area: f32 = pieces.iter().map(|p| p.shape.area()).sum();
@@ -694,7 +679,7 @@ mod tests {
     #[test]
     fn an_off_centre_knock_spins_the_rock_the_right_way() {
         // A shot up along x = 2, right of the centre: r x J = 2 J > 0, counterclockwise.
-        let mut rng = Rng::new(3);
+        let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(3);
         let rock = Asteroid::random(&mut rng, 0.0, 0.0, 3);
         let c = rock.body.position();
         let pieces = rock.shatter([c[0] + 2.0, c[1]], [0.0, 50.0]);

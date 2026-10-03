@@ -57,13 +57,9 @@ fn a_boost_has_real_eigenvalues() {
 #[test]
 fn random_maps_satisfy_their_eigenpairs() {
     use gax::pga3d::Line;
-    let mut s = 0x9e37_79b9_7f4a_7c15u64;
-    let mut next = || {
-        s ^= s << 13;
-        s ^= s >> 7;
-        s ^= s << 17;
-        (s >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    };
+    let mut rng =
+        <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(0x9e37_79b9_7f4a_7c15u64);
+    let mut next = || rand::Rng::random_range(&mut rng, -1.0..1.0);
     for _ in 0..200 {
         let m = Line::<(Line,), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| next())

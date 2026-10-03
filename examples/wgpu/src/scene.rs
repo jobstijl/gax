@@ -4,26 +4,13 @@
 
 use crate::gfx::{Gfx, Instance, MAX_PARTICLES, Particle};
 use gax::pga2d::{Motor, Point};
+use rand::Rng as _;
 
 /// The origin of the plane.
 const ORIGIN: Point<(), f32> = Point::new(0.0, 0.0, 1.0);
 
-/// A small xorshift generator (no dependencies).
-pub struct Rng(u64);
-
-impl Rng {
-    /// Seeded.
-    pub fn new(seed: u64) -> Rng {
-        Rng(seed | 1)
-    }
-    /// Uniform in `[lo, hi)`.
-    pub fn range(&mut self, lo: f32, hi: f32) -> f32 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        lo + (hi - lo) * ((self.0 >> 40) as f32 / (1u64 << 24) as f32)
-    }
-}
+/// The random generator, seeded.
+pub type Rng = rand::rngs::StdRng;
 
 /// A rate `B` with `exp(dt B)` moving forward (along the local x axis) at `speed` and turning
 /// at `spin` radians per second: twists add.
@@ -69,17 +56,18 @@ pub const HALF_WIDTH: f32 = 12.0;
 impl Scene {
     /// `ships` ships, and bursts of `burst` particles.
     pub fn new(ships: usize, burst: usize) -> Scene {
-        let mut rng = Rng::new(0x5eed);
+        let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(0x5eed);
         let ships = (0..ships)
             .map(|k| {
                 let hue = k as f32 / ships as f32;
-                let start = (Motor::translation(rng.range(-8.0, 8.0), rng.range(-5.0, 5.0))
-                    * Motor::rotation(ORIGIN, rng.range(0.0, std::f32::consts::TAU)))
-                .into_inner();
+                let start =
+                    (Motor::translation(rng.random_range(-8.0..8.0), rng.random_range(-5.0..5.0))
+                        * Motor::rotation(ORIGIN, rng.random_range(0.0..std::f32::consts::TAU)))
+                    .into_inner();
                 let c = hsv(hue);
                 Ship {
                     motor: start,
-                    rate: rate(rng.range(1.5, 4.0), rng.range(-1.2, 1.2)),
+                    rate: rate(rng.random_range(1.5..4.0), rng.random_range(-1.2..1.2)),
                     color: [c[0], c[1], c[2], 1.0],
                     hue,
                 }
@@ -129,8 +117,7 @@ impl Scene {
         self.until_burst -= dt;
         if self.until_burst <= 0.0 && !self.ships.is_empty() {
             self.until_burst = 0.35;
-            let k =
-                (self.rng.range(0.0, 1.0) * self.ships.len() as f32) as usize % self.ships.len();
+            let k = self.rng.random_range(0..self.ships.len());
             self.spawn(gfx, k);
         }
         gfx.step_particles(enc, dt, self.particles());
@@ -144,15 +131,20 @@ impl Scene {
         let (origin, hue) = (self.ships[ship].motor, self.ships[ship].hue);
         let ps: Vec<Particle> = (0..self.burst)
             .map(|_| {
-                let turn = Motor::rotation(ORIGIN, self.rng.range(0.0, std::f32::consts::TAU))
-                    .into_inner();
+                let turn =
+                    Motor::rotation(ORIGIN, self.rng.random_range(0.0..std::f32::consts::TAU))
+                        .into_inner();
                 Particle {
                     motor: (origin * turn).into(),
-                    rate: rate(self.rng.range(0.5, 6.0), self.rng.range(-6.0, 6.0)).into(),
+                    rate: rate(
+                        self.rng.random_range(0.5..6.0),
+                        self.rng.random_range(-6.0..6.0),
+                    )
+                    .into(),
                     life: [
                         0.0,
-                        self.rng.range(0.6, 2.2),
-                        hue + self.rng.range(-0.08, 0.08),
+                        self.rng.random_range(0.6..2.2),
+                        hue + self.rng.random_range(-0.08..0.08),
                         0.0,
                     ],
                 }

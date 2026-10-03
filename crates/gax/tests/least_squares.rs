@@ -8,7 +8,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::ApproxEq;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
@@ -16,7 +16,7 @@ use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
 /// On a square map of full rank the pseudo-inverse is the inverse, and least squares solves.
 #[test]
 fn square_full_rank_is_the_inverse() {
-    let mut rng = Rng(0x0015_0eab);
+    let mut rng = rng(0x0015_0eab);
     for _ in 0..200 {
         let a = rng.value::<Line<(Line,), f64>>(1.0);
         let b = Line::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
@@ -29,7 +29,7 @@ fn square_full_rank_is_the_inverse() {
 /// for maps on the right (their slots kept): `a.lstsq(a.of(y)) == y`.
 #[test]
 fn tall_full_rank_recovers_values_and_maps() {
-    let mut rng = Rng(0x7a11);
+    let mut rng = rng(0x7a11);
     for _ in 0..200 {
         let a = rng.value::<Line<(Point,), f64>>(1.0);
         let x = Point::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
@@ -45,7 +45,7 @@ fn tall_full_rank_recovers_values_and_maps() {
 #[test]
 #[allow(clippy::needless_range_loop)] // columns of a row-major matrix
 fn normal_equations_and_least_norm() {
-    let mut rng = Rng(0xbead);
+    let mut rng = rng(0xbead);
     for _ in 0..200 {
         // A wide map (lines to points) of rank 3: its last column a combination of the others.
         let mut c: [[f64; 6]; 4] =
@@ -76,7 +76,7 @@ fn normal_equations_and_least_norm() {
 /// along, the same.
 #[test]
 fn several_slots_solve_for_the_first() {
-    let mut rng = Rng(0x5107);
+    let mut rng = rng(0x5107);
     for _ in 0..100 {
         let t = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         let l = Plane::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
@@ -98,7 +98,7 @@ fn several_slots_solve_for_the_first() {
 /// A right-hand side of a smaller kind is its embedding: a rotor against a map into motors.
 #[test]
 fn smaller_kind_on_the_right() {
-    let mut rng = Rng(0xe4b);
+    let mut rng = rng(0xe4b);
     let a = rng.value::<Motor<(Rotor,), f64>>(1.0);
     let r = Rotor::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
     assert_eq!(a.lstsq(r), a.lstsq(r.cast::<Motor>()));
@@ -118,7 +118,7 @@ fn zero_map() {
 /// `f32`, with its own default cutoff: the pseudo-inverse of a well-conditioned tall map.
 #[test]
 fn single_precision() {
-    let mut rng = Rng(0xf32);
+    let mut rng = rng(0xf32);
     for _ in 0..100 {
         let c: [[f64; 4]; 6] = core::array::from_fn(|_| core::array::from_fn(|_| rng.next_f64()));
         let a = Line::<(Point,), f64>::from_coeffs(c);

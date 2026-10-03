@@ -59,13 +59,8 @@ fn one_newton_step_squares_the_error() {
 #[cfg(all(feature = "cga3d", feature = "stap"))]
 #[test]
 fn five_d_steps_converge_quadratically() {
-    let mut s: u64 = 0x5eed_0001;
-    let mut next = move || {
-        s ^= s << 13;
-        s ^= s >> 7;
-        s ^= s << 17;
-        (s >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-    };
+    let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(0x5eed_0001);
+    let mut next = move || rand::Rng::random_range(&mut rng, -1.0..1.0);
     // The largest deviation of `m ~m` from 1 (the scalar is the first coefficient).
     macro_rules! err {
         ($m:expr) => {{

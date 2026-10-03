@@ -1345,7 +1345,8 @@ pub fn grid_spec() -> GridSpec {
 /// The HUD, in HUD units (the screen is 36 units tall, centred).
 fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
     let stats = Stats::of(g);
-    let out = &mut g.hud_lines;
+    // The lines are built apart from the game, which the screens read, then put back.
+    let mut out = std::mem::take(&mut g.hud_lines);
     out.clear();
     let aspect = size[0] as f32 / size[1] as f32;
     let (left, right, top) = (-18.0 * aspect + 2.2, 18.0 * aspect - 2.2, 18.0 - 2.6);
@@ -1355,338 +1356,22 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
     // Menu rows: the selected one bright and pulsing, the others faint.
     let hot = light::fade(hud, 1.1 + 0.2 * signal::wave(g.time * 5.0));
     let faint = light::fade(hud, 0.3);
+    let st = HudStyle {
+        left,
+        right,
+        top,
+        hud,
+        dim,
+        blink,
+        hot,
+        faint,
+    };
     match g.screen {
-        Screen::Title => {
-            scene::text(
-                out,
-                "WARP",
-                0.0,
-                7.0,
-                6.5,
-                light::light(0.55, 0.7, 1.0, 1.7),
-                Align::Center,
-            );
-            scene::text(
-                out,
-                "A NEON SHOOTER ON WARPED SPACE",
-                0.0,
-                3.4,
-                1.0,
-                dim,
-                Align::Center,
-            );
-            menu_items(out, &TITLE_ITEMS, g.sel, -0.8, g.time);
-            let controls = if g.sel == 1 {
-                "MOVE WASD / L-STICK   AIM MOUSE / R-STICK   ROLL Q E / BUMPERS   BOOST SHIFT / RT   BRAKE CTRL / LT"
-            } else {
-                "MOVE WASD / LEFT STICK    AIM + FIRE MOUSE / RIGHT STICK    BOMB SPACE / TRIGGER"
-            };
-            scene::text(out, controls, 0.0, -13.0, 0.7, dim, Align::Center);
-            let best = match (g.best, g.tunnel_best) {
-                (0, 0) => String::new(),
-                (p, 0) => format!("BEST {}", scene::grouped(p)),
-                (0, t) => format!("TUNNEL BEST {}", scene::grouped(t)),
-                (p, t) => format!("BEST {}    TUNNEL {}", scene::grouped(p), scene::grouped(t)),
-            };
-            scene::text(out, &best, 0.0, -15.0, 0.9, dim, Align::Center);
-        }
-        Screen::Settings => {
-            scene::text(out, "SETTINGS", 0.0, 13.0, 3.0, hud, Align::Center);
-            let (lx, rx) = (-15.0, 15.0);
-            let row_y = |row: usize| 8.5 - row as f32 * 1.75;
-            for (row, label) in Settings::ROWS.iter().enumerate() {
-                let y = row_y(row);
-                let on = row == g.sel;
-                let c = if on { hot } else { faint };
-                if on {
-                    scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
-                }
-                scene::text(out, label, lx, y, 1.1, c, Align::Left);
-                match g.settings.value(row) {
-                    Ok(v) => {
-                        let v = if on { format!("< {v} >") } else { v };
-                        scene::text(out, &v, rx, y, 1.1, c, Align::Right);
-                    }
-                    Err(level) => {
-                        // Ten bars, lit up to the level.
-                        for k in 0..10 {
-                            let x = rx - 9.5 * 0.9 + k as f32 * 0.9;
-                            let lit = k < level;
-                            let bc = light::fade(c, if lit { 1.2 } else { 0.25 });
-                            out.push(scene::seg(
-                                scene::pt(x, y + 0.15),
-                                scene::pt(x, y + 0.35 + 0.1 * k as f32),
-                                bc,
-                                [0.09, 0.3, 0.2, 0.0],
-                                sim::body::identity(),
-                            ));
-                        }
-                    }
-                }
-            }
-            let back = Settings::ROWS.len();
-            let y = row_y(back) - 0.5;
-            let c = if g.sel == back { hot } else { faint };
-            if g.sel == back {
-                scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
-            }
-            scene::text(out, "BACK", lx, y, 1.1, c, Align::Left);
-            scene::text(
-                out,
-                "LEFT / RIGHT TO CHANGE    ESC / B TO GO BACK",
-                0.0,
-                -16.2,
-                0.7,
-                dim,
-                Align::Center,
-            );
-        }
-        Screen::Scores => {
-            scene::text(out, "HIGH SCORES", 0.0, 12.0, 3.0, hud, Align::Center);
-            let (table, name) = if g.table == Mode::Plane {
-                (&g.scores, "< PLANE >")
-            } else {
-                (&g.tunnel_scores, "< TUNNEL >")
-            };
-            scene::text(out, name, 0.0, 9.0, 1.2, hot, Align::Center);
-            if table.entries.is_empty() {
-                scene::text(out, "NO RUNS YET", 0.0, 2.0, 1.4, dim, Align::Center);
-            }
-            for (r, e) in table.entries.iter().enumerate() {
-                let y = 6.0 - r as f32 * 1.75;
-                let new = g.highlight == Some(r);
-                let c = if new {
-                    scene::shard()
-                } else if r == g.sel {
-                    hot
-                } else {
-                    faint
-                };
-                if r == g.sel {
-                    scene::text(out, ">", -15.0, y, 1.0, c, Align::Left);
-                }
-                scene::text(out, &format!("{:>2}", r + 1), -13.0, y, 1.0, c, Align::Left);
-                scene::text(out, &e.name, -9.0, y, 1.0, c, Align::Left);
-                scene::text(out, &scene::grouped(e.score), 7.0, y, 1.0, c, Align::Right);
-                scene::text(out, &clock(e.seconds as f32), 14.0, y, 1.0, c, Align::Right);
-            }
-            scene::text(
-                out,
-                "ENTER / A TO WATCH    LEFT / RIGHT FOR THE OTHER GAME    ESC / B TO GO BACK",
-                0.0,
-                -14.5,
-                0.7,
-                dim,
-                Align::Center,
-            );
-        }
+        Screen::Title => hud_title(g, &mut out, st),
+        Screen::Settings => hud_settings(g, &mut out, st),
+        Screen::Scores => hud_scores(g, &mut out, st),
         Screen::Playing | Screen::Paused | Screen::Over | Screen::Initials | Screen::Watch => {
-            let s = &stats;
-            scene::text(
-                out,
-                &scene::grouped(s.score),
-                left,
-                top - 0.2,
-                1.3,
-                hud,
-                Align::Left,
-            );
-            scene::text(
-                out,
-                &format!("X{}", s.mult),
-                left,
-                top - 2.2,
-                0.9,
-                scene::shard(),
-                Align::Left,
-            );
-            if s.chain > 0 {
-                scene::text(
-                    out,
-                    &format!("GATES X{}", s.chain),
-                    left,
-                    top - 5.2,
-                    0.7,
-                    render::tunnel::GATE_LIGHT,
-                    Align::Left,
-                );
-            }
-            if let Some(speed) = s.speed {
-                // The speed bonus: boost for more points; pale gold turning to hot orange (a
-                // perceptual gradient).
-                let c = light::blend(
-                    light::light(1.0, 0.95, 0.55, 1.2),
-                    light::light(1.0, 0.45, 0.15, 2.4),
-                    ((speed - 1.0) / 0.45).clamp(0.0, 1.0),
-                );
-                scene::text(
-                    out,
-                    &format!("SPEED X{speed:.1}"),
-                    left,
-                    top - 3.8,
-                    0.7,
-                    c,
-                    Align::Left,
-                );
-            }
-            // Lives as small ships, bombs as rings.
-            for k in 0..s.lives.saturating_sub(1).min(8) {
-                let m = sim::body::pose_at(
-                    right - 0.5 - k as f32 * 1.4,
-                    top + 0.3,
-                    core::f32::consts::FRAC_PI_2,
-                );
-                scene::draw_ship(out, m, 0.0, g.time, 0.8);
-            }
-            for k in 0..s.bombs.min(8) {
-                let x = right - 0.5 - k as f32 * 1.3;
-                let m = sim::body::pose_at(x, top - 1.9, 0.0);
-                let ring = light::light(0.55, 0.8, 1.0, 2.0);
-                scene::circle(out, 0.45, 12, 0.0, ring, [0.04, 0.2, 0.2, 0.0], m);
-            }
-            if let Phase::Dead(_) = s.phase {
-                scene::text(
-                    out,
-                    "SHIP LOST",
-                    0.0,
-                    1.0,
-                    2.0,
-                    palette::SHIP,
-                    Align::Center,
-                );
-            }
-            if g.screen == Screen::Paused {
-                scene::text(out, "PAUSED", 0.0, 4.0, 3.0, hud, Align::Center);
-                menu_items(out, &PAUSE_ITEMS, g.sel, -0.5, g.time);
-            }
-            if g.screen == Screen::Initials {
-                scene::text(
-                    out,
-                    "A NEW HIGH SCORE",
-                    0.0,
-                    6.0,
-                    2.2,
-                    scene::shard(),
-                    Align::Center,
-                );
-                scene::text(
-                    out,
-                    &scene::grouped(s.score),
-                    0.0,
-                    2.5,
-                    1.6,
-                    hud,
-                    Align::Center,
-                );
-                for k in 0..3 {
-                    let x = (k as f32 - 1.0) * 3.2;
-                    let on = k == g.cursor;
-                    let c = if on { hud } else { dim };
-                    let l = (g.initials[k] as char).to_string();
-                    scene::text(out, &l, x, -2.5, 2.4, c, Align::Center);
-                    if on && blink {
-                        scene::text(out, "_", x, -2.9, 2.4, hud, Align::Center);
-                    }
-                }
-                let msg = if g.cursor >= 3 {
-                    "ENTER TO KEEP"
-                } else {
-                    "TYPE OR UP / DOWN    ENTER TO KEEP"
-                };
-                scene::text(out, msg, 0.0, -6.5, 0.8, dim, Align::Center);
-            }
-            if g.demo {
-                scene::text(out, "DEMO", 0.0, top - 0.2, 1.2, hud, Align::Center);
-                if blink {
-                    scene::text(out, "PRESS ENTER", 0.0, -15.5, 1.0, dim, Align::Center);
-                }
-            } else if g.screen == Screen::Watch
-                && let Some(w) = &g.watch
-            {
-                let t = clock(w.next as f32 * DT);
-                let total = clock(w.replay.seconds());
-                scene::text(
-                    out,
-                    &format!("REPLAY {t} / {total}"),
-                    0.0,
-                    top - 0.2,
-                    0.9,
-                    dim,
-                    Align::Center,
-                );
-                if w.speed > 1 {
-                    scene::text(
-                        out,
-                        &format!("X{} SPEED", w.speed),
-                        0.0,
-                        top - 1.8,
-                        0.7,
-                        dim,
-                        Align::Center,
-                    );
-                }
-                if w.other_build {
-                    scene::text(
-                        out,
-                        "RECORDED ON ANOTHER BUILD",
-                        0.0,
-                        -15.0,
-                        0.7,
-                        dim,
-                        Align::Center,
-                    );
-                }
-                if let Some(end) = &w.end {
-                    scene::text(out, end, 0.0, 2.0, 2.0, hud, Align::Center);
-                    if blink {
-                        scene::text(out, "PRESS ENTER", 0.0, -1.5, 0.9, dim, Align::Center);
-                    }
-                } else {
-                    scene::text(
-                        out,
-                        "LEFT / RIGHT SPEED    ESC TO STOP",
-                        0.0,
-                        -16.5,
-                        0.6,
-                        dim,
-                        Align::Center,
-                    );
-                }
-            }
-            if g.screen == Screen::Over {
-                scene::text(
-                    out,
-                    "GAME OVER",
-                    0.0,
-                    3.0,
-                    3.2,
-                    light::light(1.0, 0.35, 0.5, 3.0),
-                    Align::Center,
-                );
-                scene::text(
-                    out,
-                    &format!("SCORE {}", scene::grouped(s.score)),
-                    0.0,
-                    -0.8,
-                    1.4,
-                    hud,
-                    Align::Center,
-                );
-                if s.score >= g.best && s.score > 0 {
-                    scene::text(
-                        out,
-                        "NEW BEST",
-                        0.0,
-                        -3.2,
-                        1.0,
-                        scene::shard(),
-                        Align::Center,
-                    );
-                }
-                if g.over_timer > 1.5 && blink {
-                    scene::text(out, "PRESS ENTER", 0.0, -6.5, 1.0, dim, Align::Center);
-                }
-            }
+            hud_play(g, &stats, &mut out, st)
         }
     }
     // The HUD is drawn over the finished image (never bloomed): a tight glow keeps its text
@@ -1718,7 +1403,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
         }
         for (i, l) in lines.iter().enumerate() {
             scene::text(
-                out,
+                &mut out,
                 l,
                 left,
                 -16.5 + 1.1 * (lines.len() - 1 - i) as f32,
@@ -1726,6 +1411,384 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
                 dim,
                 Align::Left,
             );
+        }
+    }
+    g.hud_lines = out;
+}
+
+/// The HUD's layout and colours, shared by its screens.
+#[derive(Clone, Copy)]
+struct HudStyle {
+    left: f32,
+    right: f32,
+    top: f32,
+    hud: light::Light,
+    dim: light::Light,
+    blink: bool,
+    hot: light::Light,
+    faint: light::Light,
+}
+
+/// The HUD of the title screen.
+fn hud_title(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
+    let HudStyle { dim, .. } = st;
+    scene::text(
+        out,
+        "WARP",
+        0.0,
+        7.0,
+        6.5,
+        light::light(0.55, 0.7, 1.0, 1.7),
+        Align::Center,
+    );
+    scene::text(
+        out,
+        "A NEON SHOOTER ON WARPED SPACE",
+        0.0,
+        3.4,
+        1.0,
+        dim,
+        Align::Center,
+    );
+    menu_items(out, &TITLE_ITEMS, g.sel, -0.8, g.time);
+    let controls = if g.sel == 1 {
+        "MOVE WASD / L-STICK   AIM MOUSE / R-STICK   ROLL Q E / BUMPERS   BOOST SHIFT / RT   BRAKE CTRL / LT"
+    } else {
+        "MOVE WASD / LEFT STICK    AIM + FIRE MOUSE / RIGHT STICK    BOMB SPACE / TRIGGER"
+    };
+    scene::text(out, controls, 0.0, -13.0, 0.7, dim, Align::Center);
+    let best = match (g.best, g.tunnel_best) {
+        (0, 0) => String::new(),
+        (p, 0) => format!("BEST {}", scene::grouped(p)),
+        (0, t) => format!("TUNNEL BEST {}", scene::grouped(t)),
+        (p, t) => format!("BEST {}    TUNNEL {}", scene::grouped(p), scene::grouped(t)),
+    };
+    scene::text(out, &best, 0.0, -15.0, 0.9, dim, Align::Center);
+}
+
+/// The HUD of the settings screen.
+fn hud_settings(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
+    let HudStyle {
+        hud,
+        dim,
+        hot,
+        faint,
+        ..
+    } = st;
+    scene::text(out, "SETTINGS", 0.0, 13.0, 3.0, hud, Align::Center);
+    let (lx, rx) = (-15.0, 15.0);
+    let row_y = |row: usize| 8.5 - row as f32 * 1.75;
+    for (row, label) in Settings::ROWS.iter().enumerate() {
+        let y = row_y(row);
+        let on = row == g.sel;
+        let c = if on { hot } else { faint };
+        if on {
+            scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+        }
+        scene::text(out, label, lx, y, 1.1, c, Align::Left);
+        match g.settings.value(row) {
+            Ok(v) => {
+                let v = if on { format!("< {v} >") } else { v };
+                scene::text(out, &v, rx, y, 1.1, c, Align::Right);
+            }
+            Err(level) => {
+                // Ten bars, lit up to the level.
+                for k in 0..10 {
+                    let x = rx - 9.5 * 0.9 + k as f32 * 0.9;
+                    let lit = k < level;
+                    let bc = light::fade(c, if lit { 1.2 } else { 0.25 });
+                    out.push(scene::seg(
+                        scene::pt(x, y + 0.15),
+                        scene::pt(x, y + 0.35 + 0.1 * k as f32),
+                        bc,
+                        [0.09, 0.3, 0.2, 0.0],
+                        sim::body::identity(),
+                    ));
+                }
+            }
+        }
+    }
+    let back = Settings::ROWS.len();
+    let y = row_y(back) - 0.5;
+    let c = if g.sel == back { hot } else { faint };
+    if g.sel == back {
+        scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+    }
+    scene::text(out, "BACK", lx, y, 1.1, c, Align::Left);
+    scene::text(
+        out,
+        "LEFT / RIGHT TO CHANGE    ESC / B TO GO BACK",
+        0.0,
+        -16.2,
+        0.7,
+        dim,
+        Align::Center,
+    );
+}
+
+/// The HUD of the high scores.
+fn hud_scores(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
+    let HudStyle {
+        hud,
+        dim,
+        hot,
+        faint,
+        ..
+    } = st;
+    scene::text(out, "HIGH SCORES", 0.0, 12.0, 3.0, hud, Align::Center);
+    let (table, name) = if g.table == Mode::Plane {
+        (&g.scores, "< PLANE >")
+    } else {
+        (&g.tunnel_scores, "< TUNNEL >")
+    };
+    scene::text(out, name, 0.0, 9.0, 1.2, hot, Align::Center);
+    if table.entries.is_empty() {
+        scene::text(out, "NO RUNS YET", 0.0, 2.0, 1.4, dim, Align::Center);
+    }
+    for (r, e) in table.entries.iter().enumerate() {
+        let y = 6.0 - r as f32 * 1.75;
+        let new = g.highlight == Some(r);
+        let c = if new {
+            scene::shard()
+        } else if r == g.sel {
+            hot
+        } else {
+            faint
+        };
+        if r == g.sel {
+            scene::text(out, ">", -15.0, y, 1.0, c, Align::Left);
+        }
+        scene::text(out, &format!("{:>2}", r + 1), -13.0, y, 1.0, c, Align::Left);
+        scene::text(out, &e.name, -9.0, y, 1.0, c, Align::Left);
+        scene::text(out, &scene::grouped(e.score), 7.0, y, 1.0, c, Align::Right);
+        scene::text(out, &clock(e.seconds as f32), 14.0, y, 1.0, c, Align::Right);
+    }
+    scene::text(
+        out,
+        "ENTER / A TO WATCH    LEFT / RIGHT FOR THE OTHER GAME    ESC / B TO GO BACK",
+        0.0,
+        -14.5,
+        0.7,
+        dim,
+        Align::Center,
+    );
+}
+
+/// The HUD of play: the score, lives and bombs, and the pause, game-over and initials overlays.
+fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) {
+    let HudStyle {
+        left,
+        right,
+        top,
+        hud,
+        dim,
+        blink,
+        ..
+    } = st;
+    let s = &stats;
+    scene::text(
+        out,
+        &scene::grouped(s.score),
+        left,
+        top - 0.2,
+        1.3,
+        hud,
+        Align::Left,
+    );
+    scene::text(
+        out,
+        &format!("X{}", s.mult),
+        left,
+        top - 2.2,
+        0.9,
+        scene::shard(),
+        Align::Left,
+    );
+    if s.chain > 0 {
+        scene::text(
+            out,
+            &format!("GATES X{}", s.chain),
+            left,
+            top - 5.2,
+            0.7,
+            render::tunnel::GATE_LIGHT,
+            Align::Left,
+        );
+    }
+    if let Some(speed) = s.speed {
+        // The speed bonus: boost for more points; pale gold turning to hot orange (a
+        // perceptual gradient).
+        let c = light::blend(
+            light::light(1.0, 0.95, 0.55, 1.2),
+            light::light(1.0, 0.45, 0.15, 2.4),
+            ((speed - 1.0) / 0.45).clamp(0.0, 1.0),
+        );
+        scene::text(
+            out,
+            &format!("SPEED X{speed:.1}"),
+            left,
+            top - 3.8,
+            0.7,
+            c,
+            Align::Left,
+        );
+    }
+    // Lives as small ships, bombs as rings.
+    for k in 0..s.lives.saturating_sub(1).min(8) {
+        let m = sim::body::pose_at(
+            right - 0.5 - k as f32 * 1.4,
+            top + 0.3,
+            core::f32::consts::FRAC_PI_2,
+        );
+        scene::draw_ship(out, m, 0.0, g.time, 0.8);
+    }
+    for k in 0..s.bombs.min(8) {
+        let x = right - 0.5 - k as f32 * 1.3;
+        let m = sim::body::pose_at(x, top - 1.9, 0.0);
+        let ring = light::light(0.55, 0.8, 1.0, 2.0);
+        scene::circle(out, 0.45, 12, 0.0, ring, [0.04, 0.2, 0.2, 0.0], m);
+    }
+    if let Phase::Dead(_) = s.phase {
+        scene::text(
+            out,
+            "SHIP LOST",
+            0.0,
+            1.0,
+            2.0,
+            palette::SHIP,
+            Align::Center,
+        );
+    }
+    if g.screen == Screen::Paused {
+        scene::text(out, "PAUSED", 0.0, 4.0, 3.0, hud, Align::Center);
+        menu_items(out, &PAUSE_ITEMS, g.sel, -0.5, g.time);
+    }
+    if g.screen == Screen::Initials {
+        scene::text(
+            out,
+            "A NEW HIGH SCORE",
+            0.0,
+            6.0,
+            2.2,
+            scene::shard(),
+            Align::Center,
+        );
+        scene::text(
+            out,
+            &scene::grouped(s.score),
+            0.0,
+            2.5,
+            1.6,
+            hud,
+            Align::Center,
+        );
+        for k in 0..3 {
+            let x = (k as f32 - 1.0) * 3.2;
+            let on = k == g.cursor;
+            let c = if on { hud } else { dim };
+            let l = (g.initials[k] as char).to_string();
+            scene::text(out, &l, x, -2.5, 2.4, c, Align::Center);
+            if on && blink {
+                scene::text(out, "_", x, -2.9, 2.4, hud, Align::Center);
+            }
+        }
+        let msg = if g.cursor >= 3 {
+            "ENTER TO KEEP"
+        } else {
+            "TYPE OR UP / DOWN    ENTER TO KEEP"
+        };
+        scene::text(out, msg, 0.0, -6.5, 0.8, dim, Align::Center);
+    }
+    if g.demo {
+        scene::text(out, "DEMO", 0.0, top - 0.2, 1.2, hud, Align::Center);
+        if blink {
+            scene::text(out, "PRESS ENTER", 0.0, -15.5, 1.0, dim, Align::Center);
+        }
+    } else if g.screen == Screen::Watch
+        && let Some(w) = &g.watch
+    {
+        let t = clock(w.next as f32 * DT);
+        let total = clock(w.replay.seconds());
+        scene::text(
+            out,
+            &format!("REPLAY {t} / {total}"),
+            0.0,
+            top - 0.2,
+            0.9,
+            dim,
+            Align::Center,
+        );
+        if w.speed > 1 {
+            scene::text(
+                out,
+                &format!("X{} SPEED", w.speed),
+                0.0,
+                top - 1.8,
+                0.7,
+                dim,
+                Align::Center,
+            );
+        }
+        if w.other_build {
+            scene::text(
+                out,
+                "RECORDED ON ANOTHER BUILD",
+                0.0,
+                -15.0,
+                0.7,
+                dim,
+                Align::Center,
+            );
+        }
+        if let Some(end) = &w.end {
+            scene::text(out, end, 0.0, 2.0, 2.0, hud, Align::Center);
+            if blink {
+                scene::text(out, "PRESS ENTER", 0.0, -1.5, 0.9, dim, Align::Center);
+            }
+        } else {
+            scene::text(
+                out,
+                "LEFT / RIGHT SPEED    ESC TO STOP",
+                0.0,
+                -16.5,
+                0.6,
+                dim,
+                Align::Center,
+            );
+        }
+    }
+    if g.screen == Screen::Over {
+        scene::text(
+            out,
+            "GAME OVER",
+            0.0,
+            3.0,
+            3.2,
+            light::light(1.0, 0.35, 0.5, 3.0),
+            Align::Center,
+        );
+        scene::text(
+            out,
+            &format!("SCORE {}", scene::grouped(s.score)),
+            0.0,
+            -0.8,
+            1.4,
+            hud,
+            Align::Center,
+        );
+        if s.score >= g.best && s.score > 0 {
+            scene::text(
+                out,
+                "NEW BEST",
+                0.0,
+                -3.2,
+                1.0,
+                scene::shard(),
+                Align::Center,
+            );
+        }
+        if g.over_timer > 1.5 && blink {
+            scene::text(out, "PRESS ENTER", 0.0, -6.5, 1.0, dim, Align::Center);
         }
     }
 }

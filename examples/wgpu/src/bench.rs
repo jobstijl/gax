@@ -5,6 +5,7 @@ use crate::gfx::{Gfx, Instance, MAX_PARTICLES, MatrixInstance, Particle};
 use crate::scene::{Rng, rate};
 use gax::Unit;
 use gax::pga2d::{Motor, Point};
+use rand::Rng as _;
 use std::time::Instant;
 
 fn per_iter(iters: u32, mut f: impl FnMut()) -> f64 {
@@ -19,12 +20,15 @@ fn per_iter(iters: u32, mut f: impl FnMut()) -> f64 {
 /// Run the benchmarks and print a table.
 pub fn run(gfx: &mut Gfx) {
     let n = 1 << 20;
-    let mut rng = Rng::new(1);
+    let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(1);
     let motors: Vec<Motor<(), f32>> = (0..n)
         .map(|_| {
             // A product of unit motors is a unit motor.
-            (Motor::translation(rng.range(-10.0, 10.0), rng.range(-6.0, 6.0))
-                * Motor::rotation(Point::xy(0.0, 0.0), rng.range(0.0, std::f32::consts::TAU)))
+            (Motor::translation(rng.random_range(-10.0..10.0), rng.random_range(-6.0..6.0))
+                * Motor::rotation(
+                    Point::xy(0.0, 0.0),
+                    rng.random_range(0.0..std::f32::consts::TAU),
+                ))
             .into_inner()
         })
         .collect();
@@ -107,7 +111,7 @@ pub fn run(gfx: &mut Gfx) {
 
     // Particles: 2^20 steps of the traced kernel.
     let rates: Vec<Point<(), f32>> = (0..n)
-        .map(|_| rate(rng.range(0.5, 6.0), rng.range(-6.0, 6.0)))
+        .map(|_| rate(rng.random_range(0.5..6.0), rng.random_range(-6.0..6.0)))
         .collect();
     let dt = [1.0f32 / 60.0];
     let mut out = vec![Motor::<(), f32>::zero(); n];

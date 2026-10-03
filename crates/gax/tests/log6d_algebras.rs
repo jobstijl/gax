@@ -8,7 +8,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, Rng, rng};
 
 gax::algebra! {
     algebra r60 "Euclidean 6D, R(6,0).";
@@ -48,7 +48,7 @@ macro_rules! log6d_checks {
     ($alg:ident, $checks:ident, $planes:expr) => {
         mod $checks {
             use super::$alg::{Bivector, Even};
-            use super::{Rng, close};
+            use super::{Draw, Rng, close, rng};
             use gax::Unit;
 
             fn bivector(rng: &mut Rng, size: f64) -> Bivector<(), f64> {
@@ -58,7 +58,7 @@ macro_rules! log6d_checks {
             /// Small enough that every plane is well below a half turn: `log(exp B) = B`.
             #[test]
             fn log_of_exp_is_the_bivector() {
-                let mut rng = Rng(0x6d_1065);
+                let mut rng = rng(0x6d_1065);
                 for size in [0.01, 0.1, 0.25] {
                     for _ in 0..40 {
                         let b = bivector(&mut rng, size);
@@ -76,7 +76,7 @@ macro_rules! log6d_checks {
             /// the log is a log of `R` and a fixed point of `log ∘ exp`.
             #[test]
             fn exp_of_log_is_the_versor() {
-                let mut rng = Rng(0x6d_e7b0);
+                let mut rng = rng(0x6d_e7b0);
                 let mut checked = 0;
                 for _ in 0..200 {
                     let r = bivector(&mut rng, 0.8).exp();
@@ -177,7 +177,7 @@ macro_rules! log6d_checks {
 
             #[test]
             fn in_f32() {
-                let mut rng = Rng(0x6d_f32f);
+                let mut rng = rng(0x6d_f32f);
                 for _ in 0..50 {
                     let b = bivector(&mut rng, 0.4);
                     let r = b.exp().into_inner();

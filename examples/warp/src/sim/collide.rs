@@ -1,45 +1,25 @@
 //! Collision tests in PGA2D.
 //!
-//! * A bullet's path over a tick is the join of its old and new positions, `a & b`: a line.
-//!   The distance of a centre `c` from it is `|l & c|` for the normalized line, and the hit
-//!   lies within the segment when `a` and `b` are on opposite sides of the perpendicular
-//!   `l | c` through `c` (or when an endpoint is itself within reach).
+//! * A bullet's path over a tick is the segment from its old to its new position; it hits a
+//!   body whose centre is within reach of the segment (`kernels::segment_distance`: joins and
+//!   the perpendiculars at the ends).
 //! * The arena's walls are lines with the inside on their positive side (`wall & p`); a body
 //!   outside bounces by reflection in the wall (`Line::reflect`).
 //! * A facing test (for shielded enemies) is the side of a point against the line through the
 //!   enemy along its heading's normal.
 
-use super::body::{Pose, distance};
+use super::body::Pose;
 use gax::pga2d::{Line, Point};
 
-/// The signed distance of the finite point `p` from the normalized line `l`.
-pub fn signed_distance(l: Line<(), f32>, p: Point<(), f32>) -> f32 {
-    (l & p.normalized().into_inner()).s()
-}
-
-/// Does the segment from `a` to `b` (both finite points) pass within `r` of `c`?
+/// Does the segment from `a` to `b` (both unit points) pass within `r` of `c`? Its distance,
+/// from the kernel the renderer traces (`kernels::segment_distance`).
 pub fn segment_hits_circle(
     a: Point<(), f32>,
     b: Point<(), f32>,
     c: Point<(), f32>,
     r: f32,
 ) -> bool {
-    if distance(a, c) <= r || distance(b, c) <= r {
-        return true;
-    }
-    let path = a & b;
-    let len = path.norm();
-    if len < 1e-6 {
-        return false;
-    }
-    let l = path * (1.0 / len);
-    if signed_distance(l, c).abs() > r {
-        return false;
-    }
-    // The perpendicular to the path through `c` separates `a` from `b` when the closest
-    // approach lies between them.
-    let perp = l | c.normalized().into_inner();
-    (perp & a).s() * (perp & b).s() <= 0.0
+    crate::kernels::segment_distance(a, b, c) <= r
 }
 
 /// The walls of the box `[-hw, hw] x [-hh, hh]`, counterclockwise and normalized: each has

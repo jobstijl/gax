@@ -412,7 +412,7 @@ impl Sound {
             scale: Scale::from_seed(1),
             seed: 1,
             shots: 0,
-            rng: dsp::Noise(0x2468_ace1),
+            rng: dsp::Noise::new(0x2468_ace1),
         }
     }
 

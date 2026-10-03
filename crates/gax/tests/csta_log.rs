@@ -7,7 +7,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::Unit;
 use gax::csta::{Bivector, Even};
@@ -19,7 +19,7 @@ fn close<const N: usize>(a: &[f64; N], b: &[f64; N], tol: f64) -> bool {
 
 #[test]
 fn exp_of_log_is_the_versor() {
-    let mut rng = Rng(0x0c57_a106);
+    let mut rng = rng(0x0c57_a106);
     for size in [0.01, 0.1, 0.3, 0.6] {
         for _ in 0..40 {
             let r: Unit<Even<(), f64>> = rng.value::<Bivector<(), f64>>(size).exp();
@@ -35,7 +35,7 @@ fn exp_of_log_is_the_versor() {
 
 #[test]
 fn log_of_exp_is_the_bivector_on_the_principal_branch() {
-    let mut rng = Rng(0x005e_ed6d);
+    let mut rng = rng(0x005e_ed6d);
     // Small enough that every rotation part is well below a half turn.
     for size in [0.01, 0.1, 0.25] {
         for _ in 0..40 {
@@ -53,7 +53,7 @@ fn log_of_exp_is_the_bivector_on_the_principal_branch() {
 /// rotation.
 #[test]
 fn large_boosts_and_dilations() {
-    let mut rng = Rng(0x0b00_57ed);
+    let mut rng = rng(0x0b00_57ed);
     for size in [1.0, 2.0, 3.0] {
         for _ in 0..20 {
             let mut c = [0.0f64; 15];
@@ -157,7 +157,7 @@ fn past_a_half_turn_and_with_boosts() {
 /// element or found no square root).
 #[test]
 fn every_versor() {
-    let mut rng = Rng(0x00e7_e3ee);
+    let mut rng = rng(0x00e7_e3ee);
     for size in [1.2, 1.6] {
         for _ in 0..400 {
             let r = rng.value::<Bivector<(), f64>>(size).exp();
@@ -178,7 +178,7 @@ fn every_versor() {
 /// log is.
 #[test]
 fn larger_versors() {
-    let mut rng = Rng(0x0006_d106);
+    let mut rng = rng(0x0006_d106);
     let mut checked = 0;
     for _ in 0..400 {
         let r = rng.value::<Bivector<(), f64>>(1.0).exp();
@@ -226,7 +226,7 @@ fn lanes_mix_the_closed_form_and_turning() {
 /// branches meet them).
 #[test]
 fn in_f32() {
-    let mut rng = Rng(0x00f3_2f32);
+    let mut rng = rng(0x00f3_2f32);
     let mut cases: Vec<Bivector<(), f64>> = (0..100)
         .map(|_| rng.value::<Bivector<(), f64>>(0.5))
         .collect();

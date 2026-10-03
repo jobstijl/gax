@@ -10,15 +10,10 @@
 
 use gax::Extensor;
 
-struct Rng(u64);
+struct Rng(rand::rngs::StdRng);
 impl Rng {
     fn value<M: Extensor<Slots = (), Coef = f64>>(&mut self) -> M {
-        M::from_coeffs(<M::Kind as gax::Kind>::arr_from_fn(|_| {
-            self.0 ^= self.0 << 13;
-            self.0 ^= self.0 >> 7;
-            self.0 ^= self.0 << 17;
-            (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
-        }))
+        M::from_coeffs(<M::Kind as gax::Kind>::arr_from_fn(|_| rand::Rng::random_range(&mut self.0, -1.0..1.0)))
     }
 }
 
@@ -182,7 +177,7 @@ fn vga2d_to_vga3d() {
         let rhs = vga3d::Multivector::from(vga3d::Multivector::from(a) * vga3d::Multivector::from(b));
         assert!(close(&vga3d::Multivector::from(vga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -367,7 +362,7 @@ fn vga2d_to_pga2d() {
         let rhs = pga2d::Multivector::from(pga2d::Multivector::from(a) * pga2d::Multivector::from(b));
         assert!(close(&pga2d::Multivector::from(pga2d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -786,7 +781,7 @@ fn vga3d_to_pga3d() {
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -1436,7 +1431,7 @@ fn pga2d_to_pga3d() {
         let rhs = pga3d::Multivector::from(pga3d::Multivector::from(a) * pga3d::Multivector::from(b));
         assert!(close(&pga3d::Multivector::from(pga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -2244,7 +2239,7 @@ fn pga3d_to_stap() {
         let rhs = stap::Multivector::from(stap::Multivector::from(a) * stap::Multivector::from(b));
         assert!(close(&stap::Multivector::from(stap::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x6ff10);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x6ff10));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -2521,7 +2516,7 @@ fn vga2d_to_cga2d() {
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -2940,7 +2935,7 @@ fn vga3d_to_cga3d() {
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -3590,7 +3585,7 @@ fn pga2d_to_cga2d() {
         let rhs = cga2d::Multivector::from(cga2d::Multivector::from(a) * cga2d::Multivector::from(b));
         assert!(close(&cga2d::Multivector::from(cga2d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -4398,7 +4393,7 @@ fn pga3d_to_cga3d() {
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -5125,7 +5120,7 @@ fn cga2d_to_cga3d() {
         let rhs = cga3d::Multivector::from(cga3d::Multivector::from(a) * cga3d::Multivector::from(b));
         assert!(close(&cga3d::Multivector::from(cga3d::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x89829);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x89829));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -5961,7 +5956,7 @@ fn cga3d_to_csta() {
         let rhs = csta::Multivector::from(csta::Multivector::from(a) * csta::Multivector::from(b));
         assert!(close(&csta::Multivector::from(csta::Multivector::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x6ff10);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x6ff10));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);
@@ -6476,7 +6471,7 @@ fn vga3d_to_sta() {
         let rhs = sta::Multivector::from(sta::Even::from(a) * sta::Even::from(b));
         assert!(close(&sta::Multivector::from(sta::Even::from(a * b)), &rhs), "Multivector * Multivector");
     }
-    let mut rng = Rng(0x565f7);
+    let mut rng = Rng(rand::SeedableRng::seed_from_u64(0x565f7));
     for _ in 0..4 {
         p0(&mut rng);
         p1(&mut rng);

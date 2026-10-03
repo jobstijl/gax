@@ -6,7 +6,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::pga3d::{Line, Plane, Point, Scalar};
 
@@ -33,7 +33,7 @@ fn check_pairs<const K: usize, const H: usize>(
 
 #[test]
 fn tall_and_wide_maps() {
-    let mut rng = Rng(0x0057_d5a1);
+    let mut rng = rng(0x0057_d5a1);
     for _ in 0..50 {
         // Tall: points (4) to lines (6).
         let tall = Line::<(Point,), f64>::from_coeffs(core::array::from_fn(|_| {
@@ -112,7 +112,7 @@ fn a_form_as_a_map() {
 #[test]
 fn of_both_is_the_chain() {
     use gax::pga3d::Motor;
-    let mut rng = Rng(0x00b0_7400);
+    let mut rng = rng(0x00b0_7400);
     let form = Scalar::<(Line, Line), f64>::from_coeffs([core::array::from_fn(|_| {
         core::array::from_fn(|_| rng.next_f64())
     })]);
@@ -139,7 +139,7 @@ fn of_both_is_the_chain() {
 /// the centroid; the three directions of the ideal points are infinite.
 #[test]
 fn a_semidefinite_metric_s_finite_modes() {
-    let mut rng = Rng(0x0f17_7e45);
+    let mut rng = rng(0x0f17_7e45);
     let pts: Vec<Point<(), f64>> = (0..40)
         .map(|_| {
             Point::xyz(

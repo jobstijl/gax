@@ -61,6 +61,7 @@ gax-gen = { workspace = true }
 # Validates the generated WGSL modules (tests/wgsl.rs); never a runtime dependency.
 naga = { version = "30", features = ["wgsl-in"] }
 proptest = "1"
+rand = "0.9"
 trybuild = "1"
 
 [lints]

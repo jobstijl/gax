@@ -6,7 +6,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, Rng, rng};
 
 use gax::Unit;
 use gax::csta::{Bivector, Even};
@@ -23,7 +23,7 @@ fn bivector(rng: &mut Rng, rotation: f64, boost: f64) -> Bivector<(), f64> {
 
 #[test]
 fn log_in_f32_matches_f64() {
-    let mut rng = Rng(0x0f32_10c6);
+    let mut rng = rng(0x0f32_10c6);
     let cases = [
         (0.01, 0.0),
         (0.5, 0.0),

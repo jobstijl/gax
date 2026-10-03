@@ -798,73 +798,16 @@ impl World {
                 | Kind::Evader
                 | Kind::Splitter
                 | Kind::Serpent => {
-                    let (speed, turn_rate) = match e.kind {
-                        Kind::Chaser => (6.2, 2.6),
-                        Kind::Mote => (8.5, 4.0),
-                        Kind::Fragment => (8.0, 3.2),
-                        Kind::Evader => (4.6, 3.0),
-                        Kind::Splitter => (3.0, 1.4),
-                        _ => (5.2, 2.0),
-                    };
-                    // Idle (no one to hunt): towards a point of its own.
-                    let target = if hunting {
-                        ship
-                    } else {
-                        at(0.0, 0.0) + heading(e.phase, 1.0) * 15.0
-                    };
-                    let to = target - p;
-                    let have = if e.body.vel.ideal_norm() > 0.1 {
-                        e.body.vel
-                    } else {
-                        to
-                    };
-                    // A serpent winds as it comes.
-                    let wind = if e.kind == Kind::Serpent {
-                        crate::signal::wave(time * 2.6 + e.phase) * 0.9
-                    } else {
-                        0.0
-                    };
-                    // Turn towards the target at a limited rate: part of the rotation between.
-                    let limit = turn_rate * DT;
-                    let d = (turn(have, to) + wind).clamp(-limit, limit);
-                    let ramp = (e.age * 1.5).min(1.0);
-                    let way = with_length(turned(have, d), 1.0);
-                    e.body.vel = way * (speed * ramp);
-                    e.body.spin = match e.kind {
-                        Kind::Chaser => 3.0,
-                        Kind::Splitter => 2.0,
-                        Kind::Evader | Kind::Serpent => 0.0,
-                        _ => 9.0,
-                    };
-                    if matches!(e.kind, Kind::Evader | Kind::Serpent) {
-                        // Face the way it goes.
-                        e.body.spin = turn(e.body.heading(), way) * 10.0;
-                    }
-                    if e.kind == Kind::Evader {
-                        // Sidestep: for each shot coming this way whose line of flight passes
-                        // close, move away from its foot on the line.
-                        let mut dodge = dir(0.0, 0.0);
-                        for &(l, bp, bv) in &shots {
-                            // Ahead of the shot: on the side of the perpendicular through it
-                            // that the shot moves towards.
-                            let across = l | bp;
-                            let ahead = (across & p).s() * (across & bv).s() > 0.0;
-                            if !ahead || distance(p, bp) > 8.0 {
-                                continue;
-                            }
-                            let away = p - foot(l, p);
-                            let off = away.ideal_norm();
-                            if off < 1.8 {
-                                dodge += with_length(away, (1.8 - off) * 9.0);
-                            }
-                        }
-                        let v = e.body.vel + dodge;
-                        e.body.vel = if v.ideal_norm() > 11.0 {
-                            with_length(v, 11.0)
+                    steer(
+                        e,
+                        if hunting {
+                            ship
                         } else {
-                            v
-                        };
-                    }
+                            ORIGIN + heading(e.phase, 15.0)
+                        },
+                        time,
+                        &shots,
+                    );
                 }
                 Kind::Warden => {
                     // Turn slowly to face the ship, and come on behind the shield.
@@ -897,25 +840,8 @@ impl World {
             }
             e.body.vel += e.pull;
             e.body.step(DT);
-            // The body follows: each segment moves towards the spot just behind the one
-            // ahead, by motor interpolation.
-            let k = 1.0 - (-30.0 * DT).exp();
-            let mut ahead = e.body.pose;
-            for seg in &mut e.chain {
-                let target = ahead * gax::pga2d::Motor::translation(-SERPENT_GAP, 0.0);
-                *seg = interpolate(*seg, target, k);
-                ahead = *seg;
-            }
-            // Walls: bounce, by reflection in the wall (the position mirrored back inside, the
-            // velocity and the pull mirrored).
-            for _ in 0..2 {
-                let Some(wall) = outside(e.body.pos(), e.radius) else {
-                    break;
-                };
-                e.body.move_to(wall.reflect(e.body.pos()));
-                e.body.vel = wall.reflect(e.body.vel);
-                e.pull = wall.reflect(e.pull);
-            }
+            follow_chain(e);
+            bounce(e);
         }
         for p in launches {
             for side in [-1.0f32, 1.0] {
@@ -927,7 +853,11 @@ impl World {
                 kind: Kind::Mote,
             });
         }
-        // Singularities eat what falls in.
+        self.feed_singularities();
+    }
+
+    /// Singularities eat what falls in, and burst into motes when overfed.
+    fn feed_singularities(&mut self) {
         let mut eaten: Vec<(usize, usize)> = Vec::new();
         for (wi, w) in self.enemies.iter().enumerate() {
             if w.kind != Kind::Singularity {
@@ -1112,6 +1042,102 @@ impl World {
             self.bombs += 1;
             self.events.push(Event::Extra { life: false });
         }
+    }
+}
+
+/// A hunter turns towards `target` at its limited rate and keeps its speed (a serpent winds as
+/// it comes, an evader sidesteps the shots coming its way).
+fn steer(e: &mut Enemy, target: P, time: f32, shots: &[(Line<(), f32>, P, P)]) {
+    let p = e.body.pos();
+    let (speed, turn_rate) = match e.kind {
+        Kind::Chaser => (6.2, 2.6),
+        Kind::Mote => (8.5, 4.0),
+        Kind::Fragment => (8.0, 3.2),
+        Kind::Evader => (4.6, 3.0),
+        Kind::Splitter => (3.0, 1.4),
+        _ => (5.2, 2.0),
+    };
+    let to = target - p;
+    let have = if e.body.vel.ideal_norm() > 0.1 {
+        e.body.vel
+    } else {
+        to
+    };
+    // A serpent winds as it comes.
+    let wind = if e.kind == Kind::Serpent {
+        crate::signal::wave(time * 2.6 + e.phase) * 0.9
+    } else {
+        0.0
+    };
+    // Turn towards the target at a limited rate: part of the rotation between.
+    let limit = turn_rate * DT;
+    let d = (turn(have, to) + wind).clamp(-limit, limit);
+    let ramp = (e.age * 1.5).min(1.0);
+    let way = with_length(turned(have, d), 1.0);
+    e.body.vel = way * (speed * ramp);
+    e.body.spin = match e.kind {
+        Kind::Chaser => 3.0,
+        Kind::Splitter => 2.0,
+        Kind::Evader | Kind::Serpent => 0.0,
+        _ => 9.0,
+    };
+    if matches!(e.kind, Kind::Evader | Kind::Serpent) {
+        // Face the way it goes.
+        e.body.spin = turn(e.body.heading(), way) * 10.0;
+    }
+    if e.kind == Kind::Evader {
+        let v = e.body.vel + dodge(p, shots);
+        e.body.vel = if v.ideal_norm() > 11.0 {
+            with_length(v, 11.0)
+        } else {
+            v
+        };
+    }
+}
+
+/// An evader's sidestep: for each shot coming its way whose line of flight passes close to `p`,
+/// away from its foot on the line.
+fn dodge(p: P, shots: &[(Line<(), f32>, P, P)]) -> P {
+    let mut dodge = dir(0.0, 0.0);
+    for &(l, bp, bv) in shots {
+        // Ahead of the shot: on the side of the perpendicular through it that the shot moves
+        // towards.
+        let across = l | bp;
+        let ahead = (across & p).s() * (across & bv).s() > 0.0;
+        if !ahead || distance(p, bp) > 8.0 {
+            continue;
+        }
+        let away = p - foot(l, p);
+        let off = away.ideal_norm();
+        if off < 1.8 {
+            dodge += with_length(away, (1.8 - off) * 9.0);
+        }
+    }
+    dodge
+}
+
+/// A serpent's body follows: each segment moves towards the spot just behind the one ahead,
+/// by motor interpolation.
+fn follow_chain(e: &mut Enemy) {
+    let k = 1.0 - (-30.0 * DT).exp();
+    let mut ahead = e.body.pose;
+    for seg in &mut e.chain {
+        let target = ahead * gax::pga2d::Motor::translation(-SERPENT_GAP, 0.0);
+        *seg = interpolate(*seg, target, k);
+        ahead = *seg;
+    }
+}
+
+/// Bounce off the walls, by reflection in the wall: the position mirrored back inside, the
+/// velocity and the pull mirrored.
+fn bounce(e: &mut Enemy) {
+    for _ in 0..2 {
+        let Some(wall) = outside(e.body.pos(), e.radius) else {
+            break;
+        };
+        e.body.move_to(wall.reflect(e.body.pos()));
+        e.body.vel = wall.reflect(e.body.vel);
+        e.pull = wall.reflect(e.pull);
     }
 }
 

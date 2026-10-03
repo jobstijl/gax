@@ -21,6 +21,7 @@ mod scene;
 include!(concat!(env!("OUT_DIR"), "/fused.rs"));
 
 use gfx::Gfx;
+use rand::Rng as _;
 use scene::{HALF_WIDTH, Scene};
 use std::sync::Arc;
 use winit::application::ApplicationHandler;
@@ -79,12 +80,12 @@ fn target(gfx: &Gfx, width: u32, height: u32) -> wgpu::TextureView {
 /// Run the scene headless and compare GPU particles with their CPU twins.
 fn check() {
     // The traced kernel equals the code it was traced from.
-    let mut rng = scene::Rng::new(9);
+    let mut rng = <scene::Rng as rand::SeedableRng>::seed_from_u64(9);
     for _ in 0..1000 {
         let m = gax::pga2d::Motor::<(), f32>::from_coeffs(core::array::from_fn(|_| {
-            rng.range(-1.0, 1.0)
+            rng.random_range(-1.0..1.0)
         }));
-        let r = scene::rate(rng.range(-3.0, 3.0), rng.range(-6.0, 6.0));
+        let r = scene::rate(rng.random_range(-3.0..3.0), rng.random_range(-6.0..6.0));
         let (a, b) = (particle_step(m, r, DT), kernels::particle_step(m, r, DT));
         for (x, y) in a.c.iter().zip(&b.c) {
             assert!(

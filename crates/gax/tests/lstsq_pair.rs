@@ -7,7 +7,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::ApproxEq;
 use gax::pga3d::{Line, Plane, Point};
@@ -23,7 +23,7 @@ fn unit_dyad(i: usize, j: usize) -> Point<(Point,), f64> {
 /// residual is orthogonal to every column, and an exact right-hand side is recovered.
 #[test]
 fn normal_equations() {
-    let mut rng = Rng(0x00a1_2b3c);
+    let mut rng = rng(0x00a1_2b3c);
     for _ in 0..20 {
         let m = Line::<(Point, Point, Plane), f64>::from_coeffs(core::array::from_fn(|_| {
             core::array::from_fn(|_| {
@@ -64,7 +64,7 @@ fn normal_equations() {
 #[test]
 fn least_norm_on_a_kernel() {
     let join: Line<(Point, Point), f64> = Point::slot() & Point::slot();
-    let mut rng = Rng(0x0bad_cafe);
+    let mut rng = rng(0x0bad_cafe);
     for _ in 0..20 {
         let l = Line::<(), f64>::new(
             rng.next_f64(),

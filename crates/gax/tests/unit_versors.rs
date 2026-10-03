@@ -8,7 +8,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 /// Newton's method with minimum-norm steps on `r(u) = 0`, `r` the components of `u ~u − 1`
 /// (Jacobian by central differences, `(J Jᵀ + 10⁻¹⁴) y = r` since the relations' rows can be
@@ -72,7 +72,7 @@ macro_rules! check {
         #[test]
         fn $name() {
             use gax::$alg::{Multivector, $versor, $x};
-            let mut rng = Rng($seed);
+            let mut rng = rng($seed);
             let (mut checked, mut worst) = (0, 0.0f64);
             for _ in 0..60 {
                 let start: [f64; <$versor as gax::Kind>::N] =

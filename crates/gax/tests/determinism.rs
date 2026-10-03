@@ -6,7 +6,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::batch::{self, BatchTransform, Map};
 use gax::pga3d::{Line, Motor, Point};
@@ -39,7 +39,7 @@ impl Map for Pipeline {
 
 #[test]
 fn every_level_gives_the_scalar_bits() {
-    let mut rng = Rng(42);
+    let mut rng = rng(42);
     let n = 37;
     let lines: Vec<Line> = (0..n)
         .map(|_| {
@@ -89,7 +89,7 @@ fn every_level_gives_the_scalar_bits() {
 #[test]
 fn the_feature_computes_as_strict() {
     use gax::strict::Strict;
-    let mut rng = Rng(7);
+    let mut rng = rng(7);
     for _ in 0..50 {
         let b = Line::new(
             rng.next_f32(),

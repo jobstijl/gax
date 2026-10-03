@@ -1,44 +1,28 @@
-//! A small seeded generator (PCG32), so that a run is reproducible from its seed.
+//! A seeded generator, so that a run is reproducible from its seed: `rand_pcg`'s PCG32
+//! (XSH RR), seeded as the PCG reference does (the stream the game had before it used the
+//! crate, so old replays still play).
 
-/// PCG32 (XSH RR).
+use rand::{Rng as _, RngCore};
+use rand_pcg::Pcg32;
+
+/// The simulation's generator.
 #[derive(Clone, Debug)]
-pub struct Rng {
-    state: u64,
-    inc: u64,
-}
+pub struct Rng(Pcg32);
 
 impl Rng {
     /// A generator from a seed.
     pub fn new(seed: u64) -> Rng {
-        let mut r = Rng {
-            state: 0,
-            inc: (seed << 1) | 1,
-        };
-        r.next_u32();
-        r.state = r.state.wrapping_add(seed ^ 0x853c_49e6_748f_ea9b);
-        r.next_u32();
-        r
+        Rng(Pcg32::new(seed ^ 0x853c_49e6_748f_ea9b, seed))
     }
 
-    /// The generator's state (for state hashes).
+    /// A fingerprint of the generator's state, for state hashes: its next draw, from a copy.
     pub fn state(&self) -> u64 {
-        self.state
+        self.0.clone().next_u64()
     }
 
-    /// The next 32 random bits.
-    pub fn next_u32(&mut self) -> u32 {
-        let old = self.state;
-        self.state = old
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(self.inc);
-        let xorshifted = (((old >> 18) ^ old) >> 27) as u32;
-        let rot = (old >> 59) as u32;
-        xorshifted.rotate_right(rot)
-    }
-
-    /// Uniform in `[0, 1)`.
+    /// Uniform in `[0, 1)` (24 bits).
     pub fn unit(&mut self) -> f32 {
-        (self.next_u32() >> 8) as f32 / (1u32 << 24) as f32
+        self.0.random()
     }
 
     /// Uniform in `[lo, hi)`.

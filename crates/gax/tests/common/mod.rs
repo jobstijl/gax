@@ -10,18 +10,16 @@ use gax_gen::algebra::Algebra;
 use gax_gen::spec::AlgebraSpec;
 use gax_gen::table::{BinOp, UnOp, blade_binop, blade_unop};
 
-/// A small deterministic generator (xorshift), so failures reproduce.
-pub struct Rng(u64);
+/// A seeded generator (`rand`'s), so failures reproduce.
+pub struct Rng(rand::rngs::StdRng);
 
 impl Rng {
     pub fn new(seed: u64) -> Rng {
-        Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1)
+        Rng(rand::SeedableRng::seed_from_u64(seed))
     }
+    /// Uniform in `[-1, 1)`.
     pub fn next_f64(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
+        rand::Rng::random_range(&mut self.0, -1.0..1.0)
     }
 }
 
@@ -179,9 +177,13 @@ impl Oracle {
                 .enumerate()
                 .all(|(i, c)| c.abs() < 1e-12 || blades.contains(&(i as u32)))
         };
-        let v: V = random(rng);
-        if let Some(n) = self.normalize(&self.dense(&v)) {
-            return Some(self.from_dense(&n));
+        // Random values first, several of them: in an indefinite metric only some normalize
+        // (a timelike vector of STA is one draw in sixteen from the unit cube).
+        for _ in 0..32 {
+            let v: V = random(rng);
+            if let Some(n) = self.normalize(&self.dense(&v)) {
+                return Some(self.from_dense(&n));
+            }
         }
         for factors in 1..=4 {
             let mut d = vec![0.0; self.alg.blade_count()];

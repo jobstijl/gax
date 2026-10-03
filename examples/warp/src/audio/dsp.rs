@@ -31,24 +31,26 @@ pub fn soft(x: f32) -> f32 {
     x * (27.0 + x * x) / (27.0 + 9.0 * x * x)
 }
 
-/// White noise (xorshift).
-#[derive(Clone, Copy, Debug)]
-pub struct Noise(pub u32);
+/// White noise: `rand`'s small fast generator, seeded.
+#[derive(Clone, Debug)]
+pub struct Noise(rand::rngs::SmallRng);
 
 impl Noise {
+    /// Noise from a seed.
+    pub fn new(seed: u64) -> Noise {
+        Noise(rand::SeedableRng::seed_from_u64(seed))
+    }
+
     /// Uniform in `[-1, 1)`.
     #[inline]
     pub fn next(&mut self) -> f32 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 17;
-        self.0 ^= self.0 << 5;
-        (self.0 >> 8) as f32 / (1u32 << 23) as f32 - 1.0
+        rand::Rng::random_range(&mut self.0, -1.0..1.0)
     }
 
     /// Uniform in `[0, 1)`.
     #[inline]
     pub fn unit(&mut self) -> f32 {
-        0.5 * (self.next() + 1.0)
+        rand::Rng::random(&mut self.0)
     }
 }
 

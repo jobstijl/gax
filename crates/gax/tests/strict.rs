@@ -5,7 +5,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::batch::{self, Map};
 use gax::pga3d::{Line, Point};
@@ -41,7 +41,7 @@ fn bits64(m: &Line<(), Strict<f64>>) -> Vec<u64> {
 
 #[test]
 fn every_level_gives_the_scalar_bits() {
-    let mut rng = Rng(0x57_1c7);
+    let mut rng = rng(0x57_1c7);
     let n = 37;
     let lines: Vec<Line<(), f64>> = (0..n)
         .map(|_| Line::from_coeffs(core::array::from_fn(|_| rng.next_f64())))
@@ -74,7 +74,7 @@ fn every_level_gives_the_scalar_bits() {
 /// multiply-adds and with portable elementary functions.
 #[test]
 fn close_to_plain_floats() {
-    let mut rng = Rng(3);
+    let mut rng = rng(3);
     for _ in 0..100 {
         let b = Line::<(), f32>::from_coeffs(core::array::from_fn(|_| rng.next_f64() as f32));
         let plain = Pipeline.call(b);

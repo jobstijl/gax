@@ -10,7 +10,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::Real;
 use gax::batch::{self, Map};
@@ -97,7 +97,7 @@ impl Map for Projection {
 /// Random maps, and nearly singular ones (the last row a combination of the others plus
 /// `delta` noise, `delta` from 1e-3 down to 1e-12), some with a zero leading entry.
 fn inputs(n: usize) -> Vec<Multivector<(), f64>> {
-    let mut rng = Rng(0x1ee7_c0de);
+    let mut rng = rng(0x1ee7_c0de);
     (0..n)
         .map(|k| {
             let mut a: [f64; 16] = core::array::from_fn(|_| rng.next_f64());
@@ -180,7 +180,7 @@ fn spectra_agree_on_every_level() {
 /// scalar path within rounding.
 #[test]
 fn pseudo_inverse_agrees_on_every_level() {
-    let mut rng = Rng(0x9e17);
+    let mut rng = rng(0x9e17);
     let xs: Vec<Multivector<(), f64>> = (0..101)
         .map(|k| {
             let mut a: [f64; 16] = core::array::from_fn(|_| rng.next_f64());

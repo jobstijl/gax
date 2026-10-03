@@ -30,6 +30,8 @@ bevy_seedling = { version = "=0.8.0", default-features = false, features = ["cpa
 bytemuck = { version = "1.25", features = ["derive"] }
 pollster = "1"
 wgpu = "30"
+rand = { version = "0.9", features = ["small_rng"] }
+rand_pcg = "0.9"
 
 [build-dependencies]
 gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "pga3d", "trace", "wgsl"] }

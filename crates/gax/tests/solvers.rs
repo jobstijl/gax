@@ -6,14 +6,15 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rand::RngCore;
+use rng::{Draw, rng};
 
 #[path = "support/solver_checks.rs"]
 mod solver_checks;
 
 #[test]
 fn random_singular_and_badly_scaled_matrices() {
-    let mut rng = Rng(0xdead_beef_1234);
+    let mut rng = rng(0xdead_beef_1234);
     for k in 0..3000 {
         let mut x: Vec<f64> = (0..83).map(|_| rng.next_f64()).collect();
         match k % 5 {

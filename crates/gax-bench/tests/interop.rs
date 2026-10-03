@@ -5,13 +5,13 @@
 use gax::pga2d;
 use gax::pga3d::{Motor, Point, Rotor};
 
-struct Rng(u64);
+struct Rng(rand::rngs::StdRng);
 impl Rng {
+    fn new(seed: u64) -> Rng {
+        Rng(rand::SeedableRng::seed_from_u64(seed))
+    }
     fn next(&mut self) -> f64 {
-        self.0 ^= self.0 << 13;
-        self.0 ^= self.0 >> 7;
-        self.0 ^= self.0 << 17;
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64 * 2.0 - 1.0
+        rand::Rng::random_range(&mut self.0, -1.0..1.0)
     }
     /// A unit quaternion `[x, y, z, w]` and a translation.
     fn pose(&mut self) -> ([f64; 4], [f64; 3]) {
@@ -30,7 +30,7 @@ fn close(a: &[f64], b: &[f64], tol: f64) -> bool {
 
 #[test]
 fn rotations_and_translations_match_glam() {
-    let mut rng = Rng(0x61a3);
+    let mut rng = Rng::new(0x61a3);
     for _ in 0..200 {
         let (q, t) = rng.pose();
         let m = Motor::<(), f64>::from_rotation_translation(q, t);
@@ -70,7 +70,7 @@ fn rotations_and_translations_match_glam() {
 
 #[test]
 fn isometries_match_nalgebra() {
-    let mut rng = Rng(0x9a1b);
+    let mut rng = Rng::new(0x9a1b);
     for _ in 0..200 {
         let (q, t) = rng.pose();
         let m = Motor::<(), f64>::from_rotation_translation(q, t);
@@ -95,7 +95,7 @@ fn isometries_match_nalgebra() {
 
 #[test]
 fn planar_motions_match_glam() {
-    let mut rng = Rng(0x2d2d);
+    let mut rng = Rng::new(0x2d2d);
     for _ in 0..200 {
         let angle = 3.0 * rng.next();
         let t = glam::DVec2::new(2.0 * rng.next(), 2.0 * rng.next());

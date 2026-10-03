@@ -5,7 +5,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, Rng, rng};
 
 use gax::batch::{self, Batch, BatchTransform, Kernel, Map, SandwichKernel, Soa};
 use gax::{Coef, Extensor, Real, Unit};
@@ -113,7 +113,7 @@ mod pga3d {
 
     #[test]
     fn sandwiches_f32() {
-        let mut rng = Rng(1);
+        let mut rng = rng(1);
         check_sandwich::<Unit<Motor>, Point>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Point");
         check_sandwich::<Unit<Motor>, Line>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Line");
         check_sandwich::<Unit<Motor>, Plane>(&mut rng, unit_motor, 2e-5, "Unit<Motor> >> Plane");
@@ -128,7 +128,7 @@ mod pga3d {
 
     #[test]
     fn sandwiches_f64() {
-        let mut rng = Rng(2);
+        let mut rng = rng(2);
         check_sandwich::<Unit<Motor<(), f64>>, Point<(), f64>>(
             &mut rng,
             unit_motor,
@@ -148,7 +148,7 @@ mod pga3d {
     #[test]
     fn maps_of_slices() {
         use gax::batch::BatchOf;
-        let mut rng = Rng(5);
+        let mut rng = rng(5);
         each_level(|| {
             for &n in LENS {
                 let m = unit_motor::<f32>(&mut rng);
@@ -193,7 +193,7 @@ mod pga3d {
 
     #[test]
     fn exp_and_log_map() {
-        let mut rng = Rng(3);
+        let mut rng = rng(3);
         each_level(|| {
             for &n in LENS {
                 let bs: Vec<Line> = rng.values(n, 1.0);
@@ -217,7 +217,7 @@ mod pga2d {
 
     #[test]
     fn sandwiches() {
-        let mut rng = Rng(4);
+        let mut rng = rng(4);
         let unit = |r: &mut Rng| {
             let m: Motor = r.value(1.0);
             (m + Motor::new(2.0, 0.0, 0.0, 0.0)).normalized()

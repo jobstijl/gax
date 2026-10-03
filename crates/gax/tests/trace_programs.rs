@@ -6,7 +6,8 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rand::RngCore;
+use rng::{Draw, rng};
 
 #[path = "support/random_program.rs"]
 mod random_program;
@@ -17,7 +18,7 @@ use random_program::{OPS, agrees, run};
 
 #[test]
 fn traced_programs_agree_with_the_generic_code() {
-    let mut rng = Rng(0x5eed_1234_abcd);
+    let mut rng = rng(0x5eed_1234_abcd);
     let mut compared = 0;
     for k in 0..24 {
         let len = 1 + (rng.next_u64() % 6) as usize;

@@ -7,7 +7,7 @@
 
 #[path = "support/rng.rs"]
 mod rng;
-use rng::Rng;
+use rng::{Draw, rng};
 
 use gax::csta::{Bivector, Even, Vector};
 
@@ -18,7 +18,7 @@ fn close(a: &[f64], b: &[f64]) -> bool {
 
 #[test]
 fn large_slot_products_match_the_value_products() {
-    let mut rng = Rng(0x0005_1075);
+    let mut rng = rng(0x0005_1075);
     for _ in 0..20 {
         let p = Even::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
         let b = Bivector::<(), f64>::from_coeffs(core::array::from_fn(|_| rng.next_f64()));
