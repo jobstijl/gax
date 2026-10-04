@@ -47,12 +47,6 @@ impl Body {
         self.pose >> ORIGIN
     }
 
-    /// Its position as `[x, y]` (for tests).
-    #[cfg(test)]
-    pub fn xy(&self) -> [f32; 2] {
-        self.pos().to_euclidean()
-    }
-
     /// The direction its local x axis points to.
     pub fn heading(&self) -> Point<(), f32> {
         self.pose >> Point::direction(1.0, 0.0)
@@ -151,8 +145,9 @@ pub fn distance(p: Point<(), f32>, q: Point<(), f32>) -> f32 {
 mod tests {
     use super::*;
 
-    fn close(a: [f32; 2], b: [f32; 2]) -> bool {
-        (a[0] - b[0]).abs() < 1e-4 && (a[1] - b[1]).abs() < 1e-4
+    /// Two points within rounding of each other: their distance is the norm of their join.
+    fn close(a: Point<(), f32>, b: Point<(), f32>) -> bool {
+        distance(a, b) < 1e-4
     }
 
     #[test]
@@ -162,30 +157,29 @@ mod tests {
         for _ in 0..120 {
             b.step(1.0 / 120.0);
         }
-        assert!(close(b.xy(), [4.0, 1.0]), "{:?}", b.xy());
+        assert!(close(b.pos(), Point::xy(4.0, 1.0)), "{:?}", b.pos());
         // Spinning in place: the heading turns, the centre stays.
         let mut s = Body::new(pose_at(1.0, 2.0, 0.0));
         s.spin = core::f32::consts::FRAC_PI_2;
         for _ in 0..120 {
             s.step(1.0 / 120.0);
         }
-        assert!(close(s.xy(), [1.0, 2.0]), "{:?}", s.xy());
+        assert!(close(s.pos(), Point::xy(1.0, 2.0)), "{:?}", s.pos());
+        // Directions: their difference has no length.
         let h = s.heading();
-        assert!(close([h.e20(), h.e01()], [0.0, 1.0]), "{h:?}");
+        assert!(
+            (h - Point::direction(0.0, 1.0)).ideal_norm() < 1e-4,
+            "{h:?}"
+        );
     }
 
     #[test]
     fn interpolation_is_a_screw_between_the_ends() {
         let a = pose_at(0.0, 0.0, 0.0);
         let b = pose_at(2.0, 0.0, 1.0);
-        assert!(close(
-            (interpolate(a, b, 0.0) >> crate::geom::ORIGIN).to_euclidean(),
-            [0.0, 0.0]
-        ));
-        assert!(close(
-            (interpolate(a, b, 1.0) >> crate::geom::ORIGIN).to_euclidean(),
-            [2.0, 0.0]
-        ));
+        let origin = crate::geom::ORIGIN;
+        assert!(close(interpolate(a, b, 0.0) >> origin, origin));
+        assert!(close(interpolate(a, b, 1.0) >> origin, Point::xy(2.0, 0.0)));
         let mid = interpolate(a, b, 0.5);
         assert!(drift(mid) < 1e-5);
     }
