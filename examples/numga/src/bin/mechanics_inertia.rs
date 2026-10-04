@@ -153,7 +153,12 @@ macro_rules! principal_frame {
             let norms: Vec<f64> = source.iter().map(|(_, p)| p.norm()).collect();
             let scale = norms.iter().zip(&weights).map(|(n, w)| n * w).sum::<f64>();
             let live = norms.iter().filter(|n| **n > 1e-9 * norms[0]).count();
-            let size = |x: Motor<(), f64>| x.c.iter().map(|v| v * v).sum::<f64>().sqrt();
+            // Inverse iteration only needs the iterate kept in range: it is scaled by its largest
+            // coefficient, and sizes are compared squared, in the coefficients.
+            let largest = |x: Motor<(), f64>| x.c.iter().fold(0.0, |a: f64, v| a.max(v.abs()));
+            let squared = |x: Motor<(), f64>| x.c.iter().map(|v| v * v).sum::<f64>();
+            // The share of a candidate's size in its scalar part, squared.
+            let scalar_share = |x: Motor<(), f64>| x.c[0] * x.c[0] / squared(x);
             let mut best: Option<Motor<(), f64>> = None;
             for mask in 0..1usize << live {
                 let lam: f64 = (0..live)
@@ -163,11 +168,12 @@ macro_rules! principal_frame {
                 let mut x = Motor::from_coeffs(core::array::from_fn(|k| 1.0 + 0.1 * k as f64));
                 for _ in 0..4 {
                     x = shifted.solve(x);
-                    x = x * (1.0 / size(x));
+                    x = x * (1.0 / largest(x));
                 }
-                let residual = size(t.of(x) - x * lam);
-                if residual < 1e-6 * scale
-                    && best.is_none_or(|b: Motor<(), f64>| x.c[0].abs() > b.c[0].abs())
+                // The residual relative to the iterate's size, below `1e-6 scale`.
+                let residual = squared(t.of(x) - x * lam) / squared(x);
+                if residual < (1e-6 * scale).powi(2)
+                    && best.is_none_or(|b: Motor<(), f64>| scalar_share(x) > scalar_share(b))
                 {
                     best = Some(x);
                 }
@@ -267,6 +273,7 @@ mod simplex {
 
     /// The barycentric weights mapping a uniform simplex to its equivalent lumped masses:
     /// `(1/n + (I - 1/n) sqrt(1 / (1 + n))) / n`, one row per lumped point.
+    #[allow(clippy::disallowed_methods)] // numbers: numga's weights of a simplex's lumped masses
     pub fn weights(n: usize) -> Vec<Vec<f64>> {
         let f = (1.0 / (1.0 + n as f64)).sqrt();
         (0..n)
@@ -281,24 +288,23 @@ mod simplex {
             .collect()
     }
 
-    /// Mass-weighted points from barycentric samples: each row of weights gives the point
-    /// `Σ w c`, of weight (mass) `Σ w`, scaled by `1 / sqrt(Σ w)` so that `p & [p, ·]`, which
-    /// is quadratic in `p`, carries the mass once.
-    pub fn samples(weights: &[Vec<f64>], corners: &[P]) -> Vec<P> {
+    /// Mass points from barycentric samples: each row of weights gives the point `Σ w c`,
+    /// whose weight `Σ w` is its mass; the points unitized, and their masses.
+    pub fn samples(weights: &[Vec<f64>], corners: &[P]) -> (Vec<P>, Vec<f64>) {
         weights
             .iter()
             .map(|row| {
                 let mass: f64 = row.iter().sum();
                 let p: P = row.iter().zip(corners).map(|(w, c)| *c * *w).sum();
-                p / mass.sqrt()
+                (p / mass, mass)
             })
-            .collect()
+            .unzip()
     }
 
     /// The inertia map of barycentric samples of a simplex.
     pub fn inertia(weights: &[Vec<f64>], corners: &[P]) -> Inertia {
-        let points = samples(weights, corners);
-        crate::e3::inertia_of(&points, &vec![1.0; points.len()])
+        let (points, masses) = samples(weights, corners);
+        crate::e3::inertia_of(&points, &masses)
     }
 
     /// The inertia of the uniform simplex of unit mass, by its lumped masses (exact).
@@ -348,6 +354,7 @@ mod simplex {
     }
 
     /// The relative difference of two inertias, by their coefficients.
+    #[allow(clippy::disallowed_methods)] // a relative error, the root of summed squares of coefficients
     pub fn relative(a: Inertia, b: Inertia) -> f64 {
         let d = (a - b).c.iter().flatten().map(|v| v * v).sum::<f64>();
         let n = b.c.iter().flatten().map(|v| v * v).sum::<f64>();
@@ -456,7 +463,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let sc = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = h / 540.0;
+    let u = c.unit();
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(sc.motors.len() - 1);
     let m = sc.motors[k];
     caption(
@@ -475,6 +482,8 @@ fn draw(c: &mut Canvas, t: f32) {
     // The reference order is z, y, x: the source plane k is normal to axis 2 - k. Its second
     // moment is 1 / its eigenvalue, and the equivalent solid ellipsoid has semi-axes
     // sqrt(5 c / m).
+    #[allow(clippy::disallowed_methods)]
+    // a semi-axis from a second moment, as a deviation from a variance
     let semi: [f64; 3] = core::array::from_fn(|axis| (5.0 / (planes[2 - axis].0 * mass)).sqrt());
     // The ellipsoid as a map on points: the unit sphere stretched by the semi-axes along x, y
     // and z, then carried into the recovered frame.

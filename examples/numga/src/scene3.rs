@@ -13,9 +13,11 @@ use gax_colour::Light;
 enum Prim {
     /// A triangle, covering what is behind by its opacity.
     Tri([Point2; 3], Light, f32),
-    /// A segment of the stroke with this id (consecutive segments of one stroke are drawn as
-    /// one shape).
-    Seg([Point2; 2], f32, Light, usize),
+    /// A segment of the stroke with this id, and whether each end is round (an end of the
+    /// stroke) or flat (a joint with the next segment): consecutive segments of one stroke are
+    /// drawn as one shape, and where the sorting draws a stroke in pieces, the pieces' flat ends
+    /// meet without shining twice.
+    Seg([Point2; 2], [bool; 2], f32, Light, usize),
     Dot(Point2, Marker, f32, Light),
     Arrow(Point2, Point2, f32, f32, Light),
 }
@@ -88,11 +90,13 @@ impl Scene3 {
         self.tri(a, c, d, color, opacity);
     }
 
-    /// A segment of stroke `id`.
-    fn segment(&mut self, a: Point3, b: Point3, width: f32, color: Light, id: usize) {
+    /// A segment of stroke `id`, with its ends round or flat.
+    fn segment(&mut self, ab: [Point3; 2], caps: [bool; 2], width: f32, color: Light, id: usize) {
+        let [a, b] = ab;
         if let (Some(pa), Some(pb)) = (self.cam.px(a), self.cam.px(b)) {
             let d = (self.depth(a) + self.depth(b)) * 0.5;
-            self.prims.push((d, Prim::Seg([pa, pb], width, color, id)));
+            self.prims
+                .push((d, Prim::Seg([pa, pb], caps, width, color, id)));
         }
     }
 
@@ -106,10 +110,12 @@ impl Scene3 {
         let id = self.strokes;
         self.strokes += 1;
         let pts: Vec<Point3> = pts.iter().map(|p| p.point3()).collect();
-        for w in pts.windows(2) {
-            if finite(w[0]) && finite(w[1]) {
-                self.segment(w[0], w[1], width, color, id);
-            }
+        let ok = |k: usize| finite(pts[k]) && finite(pts[k + 1]);
+        let n = pts.len().saturating_sub(1);
+        for k in (0..n).filter(|&k| ok(k)) {
+            // Round where the stroke ends (or a non-finite point breaks it), flat at joints.
+            let caps = [k == 0 || !ok(k - 1), k + 1 == n || !ok(k + 1)];
+            self.segment([pts[k], pts[k + 1]], caps, width, color, id);
         }
     }
 
@@ -121,7 +127,7 @@ impl Scene3 {
         for &[a, b] in segs {
             let (a, b) = (a.point3(), b.point3());
             if finite(a) && finite(b) {
-                self.segment(a, b, width, color, id);
+                self.segment([a, b], [true, true], width, color, id);
             }
         }
     }
@@ -224,23 +230,29 @@ impl Scene3 {
     pub fn draw(mut self, c: &mut Canvas) {
         self.prims.sort_by(|a, b| b.0.total_cmp(&a.0));
         let mut run: Vec<[Point2; 2]> = Vec::new();
+        let mut caps: Vec<[bool; 2]> = Vec::new();
         let mut current: Option<(usize, f32, Light)> = None;
-        let flush = |c: &mut Canvas, run: &mut Vec<[Point2; 2]>, s: Option<(usize, f32, Light)>| {
+        let flush = |c: &mut Canvas,
+                     run: &mut Vec<[Point2; 2]>,
+                     caps: &mut Vec<[bool; 2]>,
+                     s: Option<(usize, f32, Light)>| {
             if let Some((_, w, l)) = s {
-                c.stroke(run, w, l);
+                c.stroke_capped(run, caps, w, l);
             }
             run.clear();
+            caps.clear();
         };
         for (_, p) in self.prims {
-            if let Prim::Seg(ab, w, col, id) = p {
+            if let Prim::Seg(ab, cap, w, col, id) = p {
                 if current.is_some_and(|(i, _, _)| i != id) {
-                    flush(c, &mut run, current);
+                    flush(c, &mut run, &mut caps, current);
                 }
                 current = Some((id, w, col));
                 run.push(ab);
+                caps.push(cap);
                 continue;
             }
-            flush(c, &mut run, current.take());
+            flush(c, &mut run, &mut caps, current.take());
             match p {
                 Prim::Tri(t, col, a) => c.fill(&t, col, a),
                 Prim::Dot(q, m, s, col) => mark(c, q, m, s, col),
@@ -248,7 +260,7 @@ impl Scene3 {
                 Prim::Seg(..) => unreachable!(),
             }
         }
-        flush(c, &mut run, current);
+        flush(c, &mut run, &mut caps, current);
     }
 }
 

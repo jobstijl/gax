@@ -11,6 +11,7 @@
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Point};
 
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Point2, Scene3, backdrop, caption, colormap, palette, run,
 };
@@ -166,7 +167,9 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
     // The title a sixth of the way down the middle, and the least radius near the bottom,
     // from red at no radius to green at the full one.
     let screen = c.rect();
-    let size = (screen.height() / 30.0).clamp(8.0, 13.0);
+    // Text scales with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let size = (screen.height() / 30.0).clamp(8.0 * unit, 13.0 * unit);
     let (top, down) = (screen.top_middle(), Point2::direction(0.0, 1.0));
     let title_at = top + down.gp(screen.height() * 0.17);
     c.text(title, title_at, size, palette::ink(), Align::Center);
@@ -184,9 +187,10 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
 
 fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t) / SECONDS * core::f64::consts::TAU;
-    // The twist rises to 150 degrees and returns.
-    let angle = 150f64.to_radians() * 0.5 * (1.0 - phase.cos());
-    let azimuth = 0.9 + 0.25 * (phase as f32).sin();
+    // The twist rises to 150 degrees and returns, as the phasor's reach across goes from 1 to
+    // -1 and back; the view sways with its height.
+    let angle = 150f64.to_radians() * 0.5 * (1.0 - phasor(phase).e20());
+    let azimuth = 0.9 + 0.25 * wave(phase as f32);
     let skins = skinning(angle);
     let w = c.width / 3;
     for (i, (skin, title)) in skins.iter().zip(TITLES).enumerate() {
@@ -229,6 +233,7 @@ mod tests {
     /// `|(1 - w) + w e^{iθ}|`, which is `cos(θ / 2)` halfway: numga prints the minimum radius
     /// against `cos 75°`.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the references it is checked against
     fn matrix_blend_collapses_as_the_formula_says() {
         let theta = 150f64.to_radians();
         let (skin, weights) = cylinder(RINGS, AROUND);

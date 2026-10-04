@@ -18,6 +18,7 @@ use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -210,7 +211,7 @@ mod kalman {
                 (0..STEPS_PER_READING)
                     .map(|s| {
                         let k = (r * STEPS_PER_READING + s) as f64;
-                        let turn = 0.9 * (0.2 * k * DT).sin();
+                        let turn = 0.9 * wave(0.2 * k * DT);
                         // The twist whose half exponential is the step.
                         (Point::translation_twist(1.0, 0.0) + Point::rotation_twist(origin(), turn))
                             .gp(2.0 * DT)
@@ -218,6 +219,8 @@ mod kalman {
                     .collect()
             })
             .collect();
+        // The noise of a step grows with the root of its duration, as a random walk's.
+        #[allow(clippy::disallowed_methods)] // a random walk's deviation, not geometry
         let motion_noise = covariance(0.05 * DT.sqrt(), 0.12 * DT.sqrt());
         let measurement_noise = covariance(0.3, 0.1);
         let initial = Motor::translation(0.0, 0.0);
@@ -259,8 +262,11 @@ fn draw(c: &mut Canvas, t: f32) {
     // A column of the screen by fractions of its width, inset for the frame's labels: the
     // paths on the left, the errors on the right.
     let (w, h) = (screen.width(), screen.height());
-    let column =
-        |x0: f32, x1: f32| Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0, 104.0, 16.0, 46.0);
+    // The insets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let column = |x0: f32, x1: f32| {
+        Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0 * unit, 104.0 * unit, 16.0 * unit, 46.0 * unit)
+    };
     let scene = tracking(SEED);
     let n = scene.truth.len();
     // The cursor runs over the drive in the first 85% of the loop, then holds.
@@ -276,7 +282,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let left = column(0.0, 0.58);
     let every = truth.iter().chain(&dead).chain(&filtered).copied();
     let ax = Axes::fitting(left, every, 1.12);
-    ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "X", "Y");
+    ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "", "");
     // The states up to the cursor: a prediction per step, plus an update at each reading.
     let readings_seen = shown / STEPS_PER_READING;
     let states_seen = shown + readings_seen;
@@ -311,6 +317,8 @@ fn draw(c: &mut Canvas, t: f32) {
     // The errors at the readings so far.
     let (dead_err, filt_err) = scene.errors();
     let updates = scene.updates();
+    // Twice the deviation along the ellipse's major axis, the root of its variance.
+    #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
     let sigma2: Vec<f32> = updates
         .iter()
         .map(|s| 2.0 * position_ellipse(s.estimate, s.sigma).1[1].sqrt() as f32)
@@ -321,7 +329,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let top = dead_err.iter().fold(0.0f64, |m, v| m.max(*v)) as f32 * 1.1;
     let right = column(0.58, 1.0);
     let ex = Axes::new(right, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
-    ex.frame(c, "ERROR AT THE READINGS", "TIME", "ERROR");
+    ex.frame(c, "ERROR AT THE READINGS", "TIME", "");
     // The chart's points: (time, error).
     let series = |v: &[f64]| -> Vec<Point2> {
         times
@@ -426,6 +434,7 @@ mod tests {
                 let reach = ring
                     .iter()
                     .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));
+                #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
                 let sigma = form.of(line).of(line).s().sqrt();
                 assert!(
                     (reach - 2.0 * sigma).abs() < 1e-4 * sigma,

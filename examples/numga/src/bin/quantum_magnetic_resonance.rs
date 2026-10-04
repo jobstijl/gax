@@ -22,6 +22,7 @@
 use gax::vga3d::{Bivector, Vector};
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
     colormap, from_above, palette, reach3, run,
@@ -359,7 +360,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let d = data();
     let screen = c.rect();
     let phase = (t / SECONDS).clamp(0.0, 1.0);
-    let small = (screen.height() / 50.0).clamp(7.0, 11.0);
+    let unit = c.unit();
+    let small = (screen.height() / 50.0).clamp(7.0 * unit, 11.0 * unit);
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
 
     // The ensemble seen from above the field, coloured by detuning.
@@ -388,10 +390,10 @@ fn draw(c: &mut Canvas, t: f32) {
     for k in order {
         let r = from_above(reach3(bloch(d.ensemble[index][k])));
         let tone = colormap::coolwarm(0.5 + d.detunings[k] as f32 / 8.0);
-        ax.scatter(c, &[r], Marker::Dot, 3.5, tone);
+        ax.scatter(c, &[r], Marker::Dot, 3.5 * unit, tone);
     }
     let signal = from_above(reach3(bloch(mean(&d.ensemble[index]))));
-    ax.arrow(c, ORIGIN2, signal, 2.5, 9.0, palette::yellow());
+    ax.arrow(c, ORIGIN2, signal, 2.5, 9.0 * unit, palette::yellow());
     let stage = if now < 0.3 {
         "TIPPED ONTO -Y"
     } else if now < DELAY as f32 - 0.05 {
@@ -405,7 +407,7 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         "FANNING OUT AGAIN"
     };
-    let title = top_rect.top_middle() + up.gp(6.0);
+    let title = top_rect.top_middle() + up.gp(6.0 * unit);
     c.text(
         "SPINS FROM ABOVE",
         title,
@@ -450,7 +452,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .collect();
     ax.polyline(c, &trace, 1.8, palette::sky());
     let head = Point2::xy(now, d.signal[index] as f32);
-    ax.scatter(c, &[head], Marker::Dot, 6.0, palette::sky());
+    ax.scatter(c, &[head], Marker::Dot, 6.0 * unit, palette::sky());
 
     // Spins switched on to a steady drive, nutating into their steady states.
     let ball_rect = screen.part(0.0, 0.64, 0.3, 1.0);
@@ -476,11 +478,21 @@ fn draw(c: &mut Canvas, t: f32) {
                 .map(|row| reach3(bloch(row[j])))
                 .collect();
             s.polyline(&path, 1.2, (*colour).faded(0.9));
-            s.dot(reach3(bloch(d.settled[j])), Marker::Ring, 7.0, *colour);
-            s.dot(*path.last().expect("a state"), Marker::Dot, 6.0, *colour);
+            s.dot(
+                reach3(bloch(d.settled[j])),
+                Marker::Ring,
+                7.0 * unit,
+                *colour,
+            );
+            s.dot(
+                *path.last().expect("a state"),
+                Marker::Dot,
+                6.0 * unit,
+                *colour,
+            );
         }
     });
-    let label = ball_rect.top_middle() + down.gp(4.0);
+    let label = ball_rect.top_middle() + down.gp(4.0 * unit);
     c.text(
         "NUTATION TO THE STEADY STATE",
         label,
@@ -504,7 +516,7 @@ fn draw(c: &mut Canvas, t: f32) {
         legend.push((format!("DRIVE {drive}"), colours[j]));
     }
     // A cursor sweeping the detuning.
-    let sweep = -3.0 + 6.0 * (0.5 - 0.5 * (core::f32::consts::TAU * phase).cos());
+    let sweep = -3.0 + 6.0 * (0.5 - 0.5 * phasor(core::f32::consts::TAU * phase).e20());
     ax.line(
         c,
         Point2::xy(sweep, 0.0),
@@ -538,7 +550,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .map(|(s, rho)| on_plot(*s, transverse(*rho)))
             .collect();
         ax.polyline(c, &pts, 1.5, colour);
-        ax.scatter(c, &pts, Marker::Dot, 4.5, colour);
+        ax.scatter(c, &pts, Marker::Dot, 4.5 * unit, colour);
     }
     if now > 0.02 {
         let cursor = palette::yellow().faded(0.7);

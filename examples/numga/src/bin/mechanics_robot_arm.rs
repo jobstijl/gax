@@ -13,7 +13,7 @@ use gax::pga3d::{Line, Motor, Plane, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, palette, run,
+    caption, palette, run, signal,
 };
 use std::sync::OnceLock;
 
@@ -230,6 +230,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let states = states();
     let n = states.len();
     let s = (t / SECONDS).rem_euclid(1.0) * n as f32;
@@ -241,7 +243,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let target = a.target + (b.target - a.target).gp(frac);
     let (axis, tip_home, _) = arm();
 
-    // The arm in 3D on the left, the camera swinging gently.
+    // The arm in 3D on the left, the camera swinging gently: its azimuth swings with a wave,
+    // once per loop.
     let scene_w = (w * 0.62) as usize;
     let phase = core::f32::consts::TAU * t / SECONDS;
     let cam = Camera::orbit(
@@ -249,7 +252,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c.height,
         Point::xyz(0.6, 0.2, 1.2),
         6.2,
-        -0.87 + 0.35 * phase.sin(),
+        -0.87 + 0.35 * signal::wave(phase),
         0.38,
         Lens::Perspective(0.62),
     );
@@ -312,7 +315,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .flatten()
         .fold((f64::MAX, f64::MIN), |(a, b), v| (a.min(*v), b.max(*v)));
     let ax = Axes::new(rect, [0.0, 1.0], [(lo - 0.2) as f32, (hi + 0.2) as f32]);
-    ax.frame(c, "JOINT ANGLES", "FRACTION OF THE LOOP", "RAD");
+    ax.frame(c, "JOINT ANGLES (RAD)", "FRACTION OF THE LOOP", "");
     let names = ["YAW", "PITCH 1", "PITCH 2"];
     for (k, colour) in colours.iter().enumerate() {
         let pts: Vec<Point2> = all
@@ -331,7 +334,10 @@ fn draw(c: &mut Canvas, t: f32) {
     // The statics at rest, in text.
     let (velocity, torques) = statics();
     let (error, _) = homing();
-    let (first, down) = (Point2::xy(w * 0.6, h * 0.7), Point2::direction(0.0, 20.0));
+    let (first, down) = (
+        Point2::xy(w * 0.6, h * 0.7),
+        Point2::direction(0.0, 20.0 * unit),
+    );
     let lines = [
         "AT REST, FORCE (0,2,-1) AT (1,0,3):".to_string(),
         format!(
@@ -353,7 +359,7 @@ fn draw(c: &mut Canvas, t: f32) {
         } else {
             palette::ink()
         };
-        c.text(l, first + down.gp(k as f32), 10.0, tone, Align::Left);
+        c.text(l, first + down.gp(k as f32), 10.0 * unit, tone, Align::Left);
     }
 }
 
@@ -393,6 +399,7 @@ mod tests {
 
     /// The loop is numga's, `(1 + 0.5 sin s, 1 + 0.5 cos s, 1.2 + 0.3 sin 2s)`.
     #[test]
+    #[allow(clippy::disallowed_methods)] // numga's formula: the reference it is checked against
     fn the_loop_is_numgas() {
         for k in 0..TARGETS {
             let s = core::f64::consts::TAU * k as f64 / TARGETS as f64;

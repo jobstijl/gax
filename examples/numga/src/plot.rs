@@ -224,7 +224,8 @@ impl Axes {
         c.unclip();
         let (ink, dim) = (palette::ink(), palette::grid());
         let r = self.rect;
-        let s = (r.height() / 26.0).clamp(8.0, 14.0);
+        // Small panels get small text, a miniature rather than an overflow.
+        let s = (r.height() / 26.0).clamp(3.0, 14.0);
         c.polyline(
             &[r.lo, r.top_right(), r.hi, r.bottom_left()],
             1.0,
@@ -441,7 +442,7 @@ impl Axes {
 
     /// A legend in the top right corner: a short line of each light and its label.
     pub fn legend(&self, c: &mut Canvas, entries: &[(&str, Light)]) {
-        let s = (self.rect.height() / 30.0).clamp(7.0, 12.0);
+        let s = (self.rect.height() / 30.0).clamp(3.0, 12.0);
         let w = entries
             .iter()
             .map(|(t, _)| font::width(t, s))

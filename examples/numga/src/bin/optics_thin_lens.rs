@@ -10,6 +10,7 @@ use gax::pga2d::{Line, Motor, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    signal::{phasor, wave},
 };
 
 mod optics {
@@ -101,14 +102,13 @@ mod optics {
         let o = origin();
         let motors = [
             // The first lens slides and tilts.
-            Motor::translation(1.0 + 0.3 * t.sin(), 0.0)
-                * Motor::rotation(o, 0.3 * (2.0 * t).sin()),
+            Motor::translation(1.0 + 0.3 * wave(t), 0.0) * Motor::rotation(o, 0.3 * wave(2.0 * t)),
             // The prism and the second lens are fixed.
             Motor::translation(1.9, 0.0),
             Motor::translation(2.2, 0.0),
             // The mirror rocks about its pivot, turned clockwise so that it sends the bundle up.
             Motor::translation(3.2, 0.0)
-                * Motor::rotation(o, -(core::f64::consts::FRAC_PI_4 + 0.1 * t.cos())),
+                * Motor::rotation(o, -(core::f64::consts::FRAC_PI_4 + 0.1 * phasor(t).e20())),
         ];
         let (planes, legs, composed) = trace(&fan, &motors, &elements());
         let back: Vec<L> = fan.iter().map(|r| composed.of(*r)).collect();
@@ -209,11 +209,12 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    let unit = c.unit();
     let phase = f64::from(t) / 4.32 * core::f64::consts::TAU;
     // The train, animated, on the left.
     let left = Rect::new(0.0, 0.0, w * 0.64, h);
     let ax = Axes::equal(
-        left.inset(20.0, 70.0, 10.0, 20.0),
+        left.inset(20.0 * unit, 70.0 * unit, 10.0 * unit, 20.0 * unit),
         Point::xy(1.7, 0.85),
         2.2,
     );
@@ -243,8 +244,8 @@ fn draw(c: &mut Canvas, t: f32) {
     for (s, d) in start.iter().zip(&dir) {
         ax.line(c, *s, *s + d.gp(2.5), 1.3, (palette::series(4)).faded(0.9));
     }
-    ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0));
-    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow());
+    ax.scatter(c, &[subject], Marker::Dot, 9.0 * unit, palette::series(0));
+    ax.scatter(c, &[image], Marker::Star, 13.0 * unit, palette::yellow());
     caption(
         c,
         "THIN LENS: AN OPTICAL TRAIN AS ONE MAP ON LINES",
@@ -253,7 +254,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // One lens and two lenses, still, on the right.
     let bench = lenses();
     // Below the caption, the right side in two halves, one above the other.
-    let right = Rect::new(w * 0.64, 60.0, w, h);
+    let right = Rect::new(w * 0.64, 60.0 * unit, w, h);
     let half = Point2::direction(0.0, right.height() / 2.0);
     for (k, (legs, title)) in [(&bench.one, "ONE LENS"), (&bench.two, "TWO LENSES")]
         .into_iter()
@@ -261,8 +262,10 @@ fn draw(c: &mut Canvas, t: f32) {
     {
         let lo = right.lo + half.gp(k as f32);
         let hi = lo + Point2::direction(right.width(), 0.0) + half;
-        let rect = Rect { lo, hi }.inset(14.0, 24.0, 14.0, 14.0);
-        let ax = Axes::equal(rect, Point::xy(0.4, 0.0), 1.1);
+        let rect = Rect { lo, hi }.inset(14.0 * unit, 24.0 * unit, 14.0 * unit, 14.0 * unit);
+        // Both benches at one scale, from the object to a little past the image.
+        let corners = [Point::xy(-2.0, -0.85), Point::xy(3.2, 0.85)];
+        let ax = Axes::fitting(rect, corners, 1.0);
         for (i, leg) in legs.iter().enumerate() {
             rays(&ax, c, leg, palette::series(i + 1));
         }
@@ -270,13 +273,14 @@ fn draw(c: &mut Canvas, t: f32) {
             plane(&ax, c, *pl, 1.0);
         }
         let mark = if k == 0 { bench.image } else { bench.focus };
-        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow());
+        ax.scatter(c, &[mark], Marker::Star, 11.0 * unit, palette::yellow());
         ax.text(
             c,
             // Just inside the top left corner of the data box.
             ax.at(0.0, 1.0) + Point2::direction(0.1, -0.25),
             title,
-            11.0,
+            // 11 pixels on a 960 x 540 canvas.
+            11.0 * unit,
             palette::ink(),
             Align::Left,
         );

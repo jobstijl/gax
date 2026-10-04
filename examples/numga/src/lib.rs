@@ -16,6 +16,7 @@ pub mod app;
 pub mod canvas;
 pub mod colormap;
 pub mod contour;
+pub mod disc;
 pub mod font;
 pub mod measure;
 pub mod palette;
@@ -23,6 +24,7 @@ pub mod plot;
 pub mod points;
 pub mod rng;
 pub mod scene3;
+pub mod signal;
 pub mod view;
 
 pub use app::{Anim, run};
@@ -41,19 +43,23 @@ pub fn backdrop(c: &mut Canvas) {
     c.backdrop(palette::top(), palette::bottom());
 }
 
-/// A title in the top left corner, and an optional caption under it.
+/// A title in the top left corner, and an optional caption under it. Placed by the canvas's
+/// height (the panels below are laid out by it); the text shrinks to fit the canvas's width.
 pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
-    let s = (c.height as f32 / 30.0).clamp(10.0, 22.0);
+    let s = (c.height as f32 / 30.0).min(22.0);
+    let room = c.width as f32 - 1.6 * s;
+    let fit = |size: f32, text: &str| size.min(room / font::width(text, 1.0).max(1e-6));
+    let ink = palette::ink();
     c.text(
         title,
         Point2::xy(s * 0.8, s * 1.6),
-        s,
-        palette::ink(),
+        fit(s, title),
+        ink,
         Align::Left,
     );
     if !sub.is_empty() {
         let at = Point2::xy(s * 0.8, s * 3.0);
-        c.text(sub, at, s * 0.7, palette::ink().faded(0.45), Align::Left);
+        c.text(sub, at, fit(s * 0.7, sub), ink.faded(0.45), Align::Left);
     }
 }
 

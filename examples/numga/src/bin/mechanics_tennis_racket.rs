@@ -115,21 +115,25 @@ pub fn simulate<G: Lie>(body: &Body<G>, step: Step<G>, dt: f64, steps: usize) ->
     (motors, rates)
 }
 
-/// The relative drift of the world-frame angular momentum, per step and body: the Euclidean
-/// norm of the momentum's coefficients, which in a vector algebra is its magnitude.
+/// The relative drift of the world-frame angular momentum, per step and body: the norm of the
+/// change over the norm of the start (in a vector algebra, the momentum bivector's norm is its
+/// magnitude).
 pub fn momentum_drift<G: Lie>(
     motors: &[Vec<M<G>>],
     rates: &[Vec<R<G>>],
     inertia: Inertia<G>,
-) -> Vec<Vec<f64>> {
+) -> Vec<Vec<f64>>
+where
+    lie::F<G>: gax::Norm,
+{
+    use gax::Norm;
     let world = |k: usize, b: usize| motors[k][b] >> inertia.of(rates[k][b]);
-    let size = |f: lie::F<G>| f.coeffs().as_ref().iter().map(|x| x * x).sum::<f64>();
     (0..motors.len())
         .map(|k| {
             (0..motors[k].len())
                 .map(|b| {
                     let start = world(0, b);
-                    (size(world(k, b) - start) / size(start)).sqrt()
+                    (world(k, b) - start).norm() / start.norm()
                 })
                 .collect()
         })
@@ -149,7 +153,10 @@ pub fn stepper<G: Lie>(name: &str) -> Step<G> {
 }
 
 /// The worst world-momentum drift over all bodies, per step of a run of `runtime`.
-pub fn drift_per_step<G: Lie>(name: &str, dt: f64, runtime: f64) -> Vec<f64> {
+pub fn drift_per_step<G: Lie>(name: &str, dt: f64, runtime: f64) -> Vec<f64>
+where
+    lie::F<G>: gax::Norm,
+{
     let body = racket::<G>(42);
     let steps = (runtime / dt).round() as usize;
     let (m, r) = simulate(&body, stepper::<G>(name), dt, steps);
@@ -160,7 +167,10 @@ pub fn drift_per_step<G: Lie>(name: &str, dt: f64, runtime: f64) -> Vec<f64> {
 }
 
 /// The worst world-momentum drift over all bodies and steps of a run of `runtime`.
-pub fn worst_drift<G: Lie>(name: &str, dt: f64, runtime: f64) -> f64 {
+pub fn worst_drift<G: Lie>(name: &str, dt: f64, runtime: f64) -> f64
+where
+    lie::F<G>: gax::Norm,
+{
     drift_per_step::<G>(name, dt, runtime)
         .into_iter()
         .fold(0.0, |a: f64, b| a.max(b))
@@ -290,7 +300,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let sc = scenes();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = h / 540.0;
+    let u = c.unit();
     let time = f64::from(t.rem_euclid(LOOP) / LOOP) * SPAN;
     let k = ((time / SHOW_DT) as usize).min(sc.rates3.len() - 1);
     caption(
@@ -344,8 +354,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let colours = [palette::orange(), palette::sky(), palette::green()];
     let drifts = Rect::new(w * 0.5, h * 0.55, w, h);
     for (p, curves) in sc.drift.iter().enumerate() {
-        let left = if p == 0 { 40.0 } else { 14.0 } * u;
-        let rect = drifts.column(p, 3).inset(left, 34.0 * u, 8.0 * u, 34.0 * u);
+        // Each plot keeps room on its left for its decade labels, clear of the time labels of
+        // the plot before it.
+        let rect = drifts
+            .column(p, 3)
+            .inset(40.0 * u, 34.0 * u, 12.0 * u, 34.0 * u);
         let ax = Axes::new(rect, [0.0, COMPARE_RUN as f32], [1e-12, 1.0]).log_y();
         ax.frame(c, &format!("{}D DRIFT", p + 3), "TIME", "");
         for (s, (name, curve)) in STEPPERS.iter().zip(curves).enumerate() {

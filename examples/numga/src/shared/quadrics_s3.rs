@@ -31,7 +31,9 @@ gax::algebra! {
 
 pub use cl4::{Bivector, Rotor, ScreenPoint, Trivector, Vector};
 use gax_colour::Light;
+use gax_numga_examples::measure;
 use gax_numga_examples::points::box_map;
+use gax_numga_examples::signal::tangent;
 use gax_numga_examples::{Point2, Rect};
 
 /// A point of S³: a trivector, on numga's `yzw`, `zxw`, `xyw`, `zyx`.
@@ -128,7 +130,7 @@ pub fn ellipsoid(half_widths: [f64; 3]) -> DualQuadric {
 /// A pixel of a pinhole looking along `+x` from the origin with horizontal field of view `fov`:
 /// `u` from -1 (left) to 1 (right), `v` up, both scaled by `tan(fov / 2)`.
 pub fn pixel(fov: f64, u: f64, v: f64) -> Pixel {
-    let k = (fov / 2.0).tan();
+    let k = tangent(fov / 2.0);
     ScreenPoint::new(1.0, k * u, k * v)
 }
 
@@ -158,9 +160,12 @@ pub fn project(eye_frame: Motor, surface: Quadric) -> (ScreenConic, ScreenPolar)
 }
 
 /// The depth of the first hit along a pixel's ray, proportional to the cotangent of the angle:
-/// larger is nearer; NaN is a miss.
+/// larger is nearer; NaN is a miss. The depth `d` solves `(d + polar)² + conic = 0`, the ray's
+/// quadratic: its roots ([`measure::roots`]) lie half their distance either side of `-polar`,
+/// and the first hit is the larger.
 pub fn reproject(conic: ScreenConic, polar: ScreenPolar, pixel: Pixel) -> f64 {
-    -polar.of(pixel).s() + (-conic.of(pixel).of(pixel).s()).sqrt()
+    let conic = conic.of(pixel).of(pixel).s();
+    measure::roots(1.0, 0.0, conic).map_or(f64::NAN, |(_, half)| half - polar.of(pixel).s())
 }
 
 /// The point of S³ reached first along a pixel's ray at a depth, sign and all.
@@ -292,6 +297,7 @@ mod tests {
 
     /// The regressive product and the rotor exponential have numga's signs in this layout.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the references they are checked against
     fn conventions_match_numga() {
         let p = |c: [f64; 4]| Trivector::<(), f64>::from_coeffs(c);
         let x = Vector::<(), f64>::new(1.0, 0.0, 0.0, 0.0);

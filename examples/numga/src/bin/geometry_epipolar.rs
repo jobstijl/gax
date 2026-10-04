@@ -12,11 +12,12 @@
 //! translation onto the true pose, its epipolar lines swinging through the keypoints, and the
 //! triangulated house settling onto the true one, seen from a camera circling the scene.
 
-use gax::Unit;
-use gax::pga2d;
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
+use gax::{Unit, pga2d, vga3d};
 
+use gax_numga_examples::measure::angle;
 use gax_numga_examples::rng::{Draw, rng};
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
     caption, colormap, palette, run,
@@ -215,17 +216,21 @@ mod epipolar {
         }
     }
 
-    /// The smallest cosine between the true and recovered images of the coordinate planes.
-    pub fn turned(est: M, truth: M) -> f64 {
+    /// The Euclidean normal of a plane, as a vector of VGA3D (to measure angles with).
+    fn normal(plane: Plane<(), f64>) -> vga3d::Vector<(), f64> {
+        vga3d::Vector::new(plane.e1(), plane.e2(), plane.e3())
+    }
+
+    /// The largest angle, in radians, between the true and recovered images of the coordinate
+    /// planes: the angle between their normals.
+    pub fn rotation_error(est: M, truth: M) -> f64 {
         [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
             .map(|n| {
                 let plane = Plane::from_normal(n, 0.0);
-                let x = (est >> plane).normalized().into_inner();
-                let y = (truth >> plane).normalized().into_inner();
-                (x | y).s()
+                angle(normal(est >> plane), normal(truth >> plane))
             })
             .into_iter()
-            .fold(f64::MAX, f64::min)
+            .fold(0.0, f64::max)
     }
 
     /// The baseline from camera 1 to camera 2 at a motor, a line.
@@ -233,10 +238,14 @@ mod epipolar {
         origin() & (motor >> origin())
     }
 
-    /// The cosine of the angle between the true and recovered baselines.
-    pub fn baseline_cosine(est: M, truth: M) -> f64 {
-        let (a, b) = (baseline(truth), baseline(est));
-        -(a.normalized().into_inner() | b.normalized().into_inner()).s()
+    /// The angle, in radians, between the true and recovered baselines: between the
+    /// directions from camera 1 to camera 2 (the difference of two unit points).
+    pub fn baseline_error(est: M, truth: M) -> f64 {
+        let towards = |motor: M| {
+            let d = (motor >> origin()).unitized() - origin();
+            vga3d::Vector::new(d.e032(), d.e013(), d.e021())
+        };
+        angle(towards(est), towards(truth))
     }
 
     /// A unit point scaled about camera 1 by `scale`.
@@ -247,6 +256,7 @@ mod epipolar {
     /// The RMS distance of the reconstruction from the landmarks, scaled about camera 1 to the
     /// true baseline. The difference of two unit points is a direction; its length is its ideal
     /// norm.
+    #[allow(clippy::disallowed_methods)] // the root of a mean square, a statistic
     pub fn rms_error(scene: &Scene, motor: M) -> f64 {
         let scale = baseline(scene.true_motor).norm() / baseline(motor).norm();
         let points = triangulate(&scene.rays_1, &scene.rays_2, motor);
@@ -302,7 +312,7 @@ fn frustum(s: &mut Scene3, pose: M, size: f64, color: Light, width: f32) {
 /// epipolar lines.
 fn sensor_panel(c: &mut Canvas, rect: Rect, title: &str, truth: &[P], measured: &[P], lines: &[L]) {
     let ax = Axes::new(rect, [-0.6, 0.6], [-0.45, 0.45]);
-    ax.frame(c, title, "SENSOR U", "SENSOR V");
+    ax.frame(c, title, "SENSOR U", "");
     let on_sensor = sensor();
     let n = measured.len();
     let colour = |i: usize| colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
@@ -321,6 +331,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
     let s = scene();
     // The motor shown: along the Gauss-Newton steps, eased between them.
     let progress = (t / PER_STEP).min(SHOWN as f32);
@@ -330,10 +342,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let motor = Motor::interpolate(s.motors[k], s.motors[k + 1], f);
     let step = progress.round() as usize;
     // The sensors, left.
-    let top = 70.0;
+    let top = 70.0 * unit;
     let panel = (h - top) / 2.0;
-    let sensor_rect =
-        |y0: f32, y1: f32| Rect::new(0.0, y0, w * 0.36, y1).inset(46.0, 18.0, 10.0, 30.0);
+    let sensor_rect = |y0: f32, y1: f32| {
+        Rect::new(0.0, y0, w * 0.36, y1).inset(46.0 * unit, 18.0 * unit, 10.0 * unit, 30.0 * unit)
+    };
     sensor_panel(
         c,
         sensor_rect(top, top + panel),
@@ -351,15 +364,14 @@ fn draw(c: &mut Canvas, t: f32) {
         &epipolar_lines(&s.rays_1, motor),
     );
     // The scene, right, from a camera circling it.
-    let (x0, y0) = ((w * 0.37) as usize, 72usize);
+    let (x0, y0) = ((w * 0.37) as usize, (72.0 * unit) as usize);
     let (pw, ph) = (c.width - x0, c.height - y0);
     let mut sub = Canvas::new(pw, ph);
     sub.backdrop(
         palette::top().mix_light(palette::bottom(), y0 as f32 / h),
         palette::bottom(),
     );
-    let azimuth =
-        -2.2 + 0.5 * (core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD)).sin();
+    let azimuth = -2.2 + 0.5 * wave(core::f32::consts::TAU * t / (PER_STEP * SHOWN as f32 + HOLD));
     let cam = Camera::orbit(
         pw,
         ph,
@@ -392,21 +404,30 @@ fn draw(c: &mut Canvas, t: f32) {
     frustum(&mut scene, s.true_motor, 0.4, palette::grid(), 1.2);
     frustum(&mut scene, motor, 0.4, palette::green(), 1.8);
     scene.draw(&mut sub);
-    let degrees = |cosine: f64| cosine.min(1.0).acos().to_degrees();
-    sub.text(
-        &format!(
-            "STEP {step}: ROTATION OFF {:.2} DEG, BASELINE OFF {:.2} DEG, RMS {:.3} M",
-            degrees(turned(motor, s.true_motor)),
-            degrees(baseline_cosine(motor, s.true_motor)),
+    // The errors of the step, on two lines.
+    for (k, line) in [
+        format!(
+            "STEP {step}: ROTATION OFF {:.2} DEG",
+            rotation_error(motor, s.true_motor).to_degrees()
+        ),
+        format!(
+            "BASELINE OFF {:.2} DEG, RMS {:.3} M",
+            baseline_error(motor, s.true_motor).to_degrees(),
             rms_error(s, motor)
         ),
-        sub.rect().lo + Point2::direction(10.0, 18.0),
-        11.0,
-        palette::ink(),
-        Align::Left,
-    );
+    ]
+    .iter()
+    .enumerate()
+    {
+        let at = sub.rect().lo + Point2::direction(10.0 * unit, (18.0 + 16.0 * k as f32) * unit);
+        sub.text(line, at, 11.0 * unit, palette::ink(), Align::Left);
+    }
     c.blit(&sub, x0, y0);
-    let key = Axes::new(Rect::new(x0 as f32, h - 80.0, w, h), [0.0, 1.0], [0.0, 1.0]);
+    let key = Axes::new(
+        Rect::new(x0 as f32, h - 80.0 * unit, w, h),
+        [0.0, 1.0],
+        [0.0, 1.0],
+    );
     key.legend(
         c,
         &[
@@ -439,7 +460,7 @@ mod tests {
     fn reconstruct_from_noise_free_images() {
         let s = epipolar(0.0, 1);
         let est = *s.motors.last().expect("a motor");
-        assert!((turned(est, s.true_motor) - 1.0).abs() < 1e-6);
+        assert!(rotation_error(est, s.true_motor) < 1e-3);
         let c_true = s.true_motor >> origin();
         let c_est = est >> origin();
         let scale = (c_true - origin()).ideal_norm() / (c_est - origin()).ideal_norm();
@@ -475,8 +496,8 @@ mod tests {
     fn the_scenario_recovers_pose_and_house() {
         let s = super::scene();
         let est = *s.motors.last().expect("a motor");
-        assert!(turned(est, s.true_motor) > 0.5f64.to_radians().cos());
-        assert!(baseline_cosine(est, s.true_motor) > 2f64.to_radians().cos());
+        assert!(rotation_error(est, s.true_motor) < 0.5f64.to_radians());
+        assert!(baseline_error(est, s.true_motor) < 2f64.to_radians());
         assert!(rms_error(s, est) < 0.1, "{}", rms_error(s, est));
         // The epipolar line of each keypoint passes near its match on camera 2's screen: the
         // plane joining a unit line and a unit point has the distance between them as its norm.
@@ -493,10 +514,10 @@ mod tests {
             let s = epipolar(super::NOISE, seed);
             let est = *s.motors.last().expect("a motor");
             assert!(
-                turned(est, s.true_motor) > 2f64.to_radians().cos(),
+                rotation_error(est, s.true_motor) < 2f64.to_radians(),
                 "{seed}"
             );
-            assert!(baseline_cosine(est, s.true_motor) > 3f64.to_radians().cos());
+            assert!(baseline_error(est, s.true_motor) < 3f64.to_radians());
             assert!(rms_error(&s, est) < 0.6, "{seed}");
         }
     }

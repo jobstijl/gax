@@ -21,7 +21,7 @@ use gax::pga2d::Point;
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
-    palette, run,
+    palette, run, signal::phasor,
 };
 
 mod constitutive {
@@ -249,6 +249,7 @@ mod constitutive {
     }
 
     /// The media of the dispersion scan along z, each with its expected speeds.
+    #[allow(clippy::disallowed_methods)] // wave speeds 1/√(εμ): a physical law, not geometry
     pub fn dispersion_media() -> Vec<(&'static str, Medium, Vec<f64>)> {
         let glass = isotropic_medium(EPS_GLASS, MU_GLASS, t());
         let n = (EPS_GLASS * MU_GLASS).sqrt();
@@ -281,6 +282,7 @@ mod constitutive {
     }
 
     /// The crystal's slow and fast waves along z: their speeds and fields.
+    #[allow(clippy::disallowed_methods)] // wave speeds 1/√(εμ): a physical law, not geometry
     pub fn field_modes() -> ([f64; 2], [B; 2]) {
         let speeds = [1.0 / 2.25f64.sqrt(), 1.0 / 1.5f64.sqrt()];
         (
@@ -290,6 +292,7 @@ mod constitutive {
     }
 
     /// Two field modes along z in glass, sharing one speed: the two smallest singular vectors.
+    #[allow(clippy::disallowed_methods)] // wave speeds 1/√(εμ): a physical law, not geometry
     pub fn glass_modes() -> ([f64; 2], [B; 2]) {
         let glass = isotropic_medium(EPS_GLASS, MU_GLASS, t());
         let speed = 1.0 / (EPS_GLASS * MU_GLASS).sqrt();
@@ -381,14 +384,15 @@ fn wave_at(modes: &([f64; 2], [B; 2]), z: f64, tau: f64) -> B {
     let (speeds, fields) = modes;
     speeds.iter().zip(fields).fold(B::zero(), |acc, (v, f)| {
         let (e, _) = arrows(*f);
-        acc + f.gp((z / v - tau).cos() / e.norm())
+        acc + f.gp(phasor(z / v - tau).e20() / e.norm())
     })
 }
 
 /// The wave in 3D, the beam running across the screen: world x along the beam (scaled),
 /// world y and z the field's x and y.
 fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, label: &str) {
-    let view = rect.inset(0.0, 20.0, 0.0, 0.0);
+    let unit = unit(c);
+    let view = rect.inset(0.0, 20.0 * unit, 0.0, 0.0);
     let length = 6.0;
     let cam = Camera::parallel(view, rect.width() * 0.125, -1.1, 0.35);
     c.clip(rect);
@@ -414,19 +418,36 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
         let z = Z_MAX * k as f64 / 20.0;
         let (e, b) = arrows(wave_at(modes, z, tau));
         for (v, col) in [(e, palette::orange()), (b, palette::sky())] {
-            sc.arrow(on_beam(z), across(v), 1.2, 5.0, col);
+            sc.arrow(on_beam(z), across(v), 1.2, 5.0 * unit, col);
         }
     }
     sc.draw(c);
     c.unclip();
+    // 11 pixels on a 960 x 540 canvas, smaller on a small one, and no wider than the panel.
+    let size = (rect.height() / 21.0)
+        .clamp(5.0 * unit, 11.0 * unit)
+        .min(rect.width() / gax_numga_examples::font::width(label, 1.0));
     let top_middle = rect.top_middle();
-    let at = top_middle + Point2::direction(0.0, 14.0);
-    c.text(label, at, 11.0, palette::ink(), Align::Center);
+    let at = top_middle + Point2::direction(0.0, size * 14.0 / 11.0);
+    c.text(label, at, size, palette::ink(), Align::Center);
+}
+
+/// The canvas's height over 540: pixel sizes scale with it.
+fn unit(c: &Canvas) -> f32 {
+    c.unit()
+}
+
+/// How much smaller a plot's own text is drawn than in a plot 240 pixels tall (numga's
+/// canvas), down to half, on a 960 x 540 canvas (`unit` 1), scaled with the canvas.
+fn text_scale(rect: Rect, unit: f32) -> f32 {
+    (rect.height() / 240.0).clamp(0.5 * unit, unit)
 }
 
 fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
     let s = scans();
-    let ax = Axes::new(rect.inset(40.0, 26.0, 10.0, 34.0), [0.05, 1.5], [1e-4, 3.0]).log_y();
+    let unit = unit(c);
+    let inset = rect.inset(40.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let ax = Axes::new(inset, [0.05, 1.5], [1e-4, 3.0]).log_y();
     ax.frame(c, "SMALLEST SINGULAR VALUE", "PHASE SPEED", "");
     let k = s
         .speeds
@@ -446,7 +467,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
             .map(|(v, m)| Point::xy(*v, m.max(1e-4)))
             .collect();
         ax.polyline(c, &pts, if i == 1 { 1.0 } else { 1.5 }, col.faded(0.9));
-        ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0, col);
+        ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0 * unit, col);
     }
     ax.line(
         c,
@@ -467,7 +488,9 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
 fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let (_, fields) = scans().crystal;
     let origin = Point::xy(0.0, 0.0);
-    let ax = Axes::equal(rect.inset(14.0, 26.0, 10.0, 34.0), origin, 1.3);
+    let unit = unit(c);
+    let inset = rect.inset(14.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let ax = Axes::equal(inset, origin, 1.3);
     ax.frame(c, "CRYSTAL MODES", "X", "");
     let faint = palette::grid().faded(0.6);
     ax.line(c, Point::xy(-1.3, 0.0), Point::xy(1.3, 0.0), 1.0, faint);
@@ -479,21 +502,29 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
         let a = e.normalized().into_inner();
         let along = |k: f64| origin + Point::direction(a.e1(), a.e2()).gp(k);
         ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, col.faded(0.7));
-        ax.arrow(c, origin, along(1.0), 2.5, 9.0, col);
-        ax.scatter(c, &[along(tau.cos())], Marker::Dot, 7.0, palette::ink());
+        ax.arrow(c, origin, along(1.0), 2.5, 9.0 * unit, col);
+        ax.scatter(
+            c,
+            &[along(phasor(tau).e20())],
+            Marker::Dot,
+            7.0 * unit,
+            palette::ink(),
+        );
     }
     // The names in the top left corner (the panel is narrower than it is tall).
     let corner = ax.at(0.0, 1.0);
     let slow = corner + Point2::direction(0.1, -0.2);
-    let fast = corner + Point2::direction(0.1, -0.4);
-    ax.text(c, slow, "SLOW", 10.0, palette::red(), Align::Left);
-    ax.text(c, fast, "FAST", 10.0, palette::blue(), Align::Left);
+    let fast = corner + Point2::direction(0.1, -0.45);
+    let size = 10.0 * text_scale(rect, unit);
+    ax.text(c, slow, "SLOW", size, palette::red(), Align::Left);
+    ax.text(c, fast, "FAST", size, palette::blue(), Align::Left);
 }
 
 fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
     let s = scans();
+    let unit = unit(c);
     let ax = Axes::equal(
-        rect.inset(14.0, 26.0, 10.0, 34.0),
+        rect.inset(14.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit),
         Point::xy(0.0, 0.05),
         1.1,
     );
@@ -530,12 +561,12 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
             .iter()
             .map(|v| place(s.angles[i], *v))
             .collect();
-        ax.scatter(c, &hits, Marker::Dot, 7.0, col);
+        ax.scatter(c, &hits, Marker::Dot, 7.0 * unit, col);
         ax.text(
             c,
-            Point::xy(-1.0, -0.75 - 0.13 * m as f64),
+            Point::xy(-1.0, -0.62 - 0.17 * m as f64),
             name,
-            9.0,
+            9.0 * text_scale(rect, unit),
             col,
             Align::Left,
         );
@@ -546,8 +577,11 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
 
 fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
     let s = scans();
+    #[allow(clippy::disallowed_methods)] // the refractive index √(εμ): a physical law
     let n = (EPS_GLASS * MU_GLASS).sqrt();
-    let ax = Axes::new(rect.inset(40.0, 26.0, 10.0, 34.0), [-0.6, 0.6], [0.0, 1.0]);
+    let unit = unit(c);
+    let inset = rect.inset(40.0 * unit, 26.0 * unit, 10.0 * unit, 34.0 * unit);
+    let ax = Axes::new(inset, [-0.6, 0.6], [0.0, 1.0]);
     ax.frame(c, "FRESNEL DRAG", "MEDIUM SPEED", "");
     let fine = linspace(-0.6, 0.6, 121);
     let curve = |f: &dyn Fn(f64) -> f64| -> Vec<Point<(), f64>> {
@@ -568,15 +602,15 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
             .map(|(b, v)| Point::xy(*b, *v))
             .collect()
     };
-    ax.scatter(c, &pts(&s.drag.0), Marker::Dot, 6.0, down);
-    ax.scatter(c, &pts(&s.drag.1), Marker::Square, 6.0, up);
+    ax.scatter(c, &pts(&s.drag.0), Marker::Dot, 6.0 * unit, down);
+    ax.scatter(c, &pts(&s.drag.1), Marker::Square, 6.0 * unit, up);
     let now = [
         Point::xy(beta, add_speeds(1.0 / n, beta)),
         Point::xy(beta, add_speeds(1.0 / n, -beta)),
     ];
     let cursor = palette::ink().faded(0.5);
     ax.line(c, Point::xy(beta, 0.0), Point::xy(beta, 1.0), 1.0, cursor);
-    ax.scatter(c, &now, Marker::Ring, 11.0, palette::ink());
+    ax.scatter(c, &now, Marker::Ring, 11.0 * unit, palette::ink());
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);
 }
 
@@ -587,8 +621,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let at = f64::from((t / SECONDS).rem_euclid(1.0));
     let tau = core::f64::consts::TAU * 2.0 * at;
     let s = scans();
-    // Below the caption, two rows: the waves above, the plots below, by fractions across.
-    let top = h * 0.1;
+    // Below the caption (its subtitle's baseline three caption sizes down), two rows: the
+    // waves above, the plots below, by fractions across.
+    let unit = c.unit();
+    let top = (h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 3.0 + 4.0 * unit;
     let mid = top + (h - top) * 0.5;
     let upper = |x0: f32, x1: f32| Rect::new(w * x0, top, w * x1, mid);
     let lower = |x0: f32, x1: f32| Rect::new(w * x0, mid, w * x1, h);
@@ -606,7 +642,7 @@ fn draw(c: &mut Canvas, t: f32) {
         tau,
         "CRYSTAL: SLOW AND FAST MODES SLIP",
     );
-    let sweep = 0.5 - 0.5 * (core::f64::consts::TAU * at).cos();
+    let sweep = 0.5 - 0.5 * phasor(core::f64::consts::TAU * at).e20();
     draw_dispersion(c, lower(0.0, 0.34), 0.05 + 1.45 * sweep);
     draw_polarizations(c, lower(0.34, 0.5), tau);
     draw_fresnel(c, lower(0.5, 0.75), core::f64::consts::TAU * at);
@@ -666,6 +702,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the speeds 1/√(εμ) it is checked against
     fn isotropic_medium_speed_is_one_over_n() {
         let s = speeds();
         for (eps, mu) in [(2.25, 1.0), (4.0, 1.5)] {
@@ -714,6 +751,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the speeds 1/√(εμ) it is checked against
     fn crystal_is_birefringent_and_reduces_to_glass_when_isotropic() {
         let iso = crystal_medium([2.25; 3], 1.0, t());
         let glass = isotropic_medium(2.25, 1.0, t());
@@ -778,6 +816,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the speeds 1/√(εμ) it is checked against
     fn ferrite_lifts_permeability_through_the_dual_field() {
         let ferrite = ferrite_medium(2.25, [1.0, 0.5, 1.0], t());
         assert!(all_close(
@@ -843,6 +882,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the speeds 1/√(εμ) it is checked against
     fn moving_glass_shows_exact_fresnel_drag() {
         let (eps, mu) = (2.25f64, 1.0);
         let n = (eps * mu).sqrt();
@@ -859,6 +899,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the speeds 1/√(εμ) it is checked against
     fn fresnel_surface_and_drag_scenarios() {
         let angles = linspace(0.0, core::f64::consts::TAU, 12);
         let speeds = linspace(0.4, 1.0, 601);

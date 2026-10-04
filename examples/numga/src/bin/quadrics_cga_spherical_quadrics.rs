@@ -9,6 +9,7 @@
 //! carried by the same flow.
 
 use gax_colour::{Light, light};
+use gax_numga_examples::disc::Disc;
 use gax_numga_examples::{Align, Anim, Canvas, Point2, Rect, backdrop, caption, palette, run};
 
 gax::algebra! {
@@ -24,6 +25,7 @@ gax::algebra! {
 
 mod cga {
     use super::cl31::{Bivector, Trivector, Vector};
+    use gax_numga_examples::signal::phasor;
 
     /// A point of S², or any vector.
     pub type V = Vector<(), f64>;
@@ -88,6 +90,12 @@ mod cga {
         Vector::new(px, py, pz, 1.0)
     }
 
+    /// The height over its centre's plane of a circle of S² of angular radius `r`: its cosine,
+    /// the reach of the unit direction turned by `r`.
+    pub fn height(r: f64) -> f64 {
+        phasor(r).e20()
+    }
+
     /// The dyad `a (b ∨ ·)`: a map from vectors to planes.
     pub fn dyad(a: Plane, b: Plane) -> Quadric {
         (b & Vector::slot()) * a
@@ -112,8 +120,8 @@ mod cga {
 
     /// A donut (torus) about the pole: the band between the circles at `r_core ± r_tube`.
     pub fn spherical_donut(r_core: f64, r_tube: f64) -> Quadric {
-        let c_out = (r_core + r_tube).cos();
-        let c_in = (r_core - r_tube).cos();
+        let c_out = height(r_core + r_tube);
+        let c_in = height(r_core - r_tube);
         let z0 = (c_out + c_in) / 2.0;
         let dz = (c_in - c_out) / 2.0;
         dyad(pz(), pz()) - (dyad(pz(), pw()) + dyad(pw(), pz())).gp(z0)
@@ -154,8 +162,8 @@ mod cga {
 
     /// A crescent bounded by two eccentric circles.
     pub fn spherical_crescent(r_outer: f64, r_inner: f64, offset: f64) -> Quadric {
-        let c_outer = pz() - pw().gp(r_outer.cos());
-        let c_inner = (zx(-offset / 2.0).exp() >> pz()) - pw().gp(r_inner.cos());
+        let c_outer = pz() - pw().gp(height(r_outer));
+        let c_inner = (zx(-offset / 2.0).exp() >> pz()) - pw().gp(height(r_inner));
         sym(c_outer, c_inner)
     }
 
@@ -173,7 +181,7 @@ mod cga {
         let mut q = -dyad(pw(), pw()).gp(bias);
         for degrees in [0.0f64, 120.0, 240.0] {
             let turn = xy(-degrees.to_radians() / 2.0).exp() * zx(-tilt_angle / 2.0).exp();
-            let circle = (turn >> pz()) - pw().gp(radius.cos());
+            let circle = (turn >> pz()) - pw().gp(height(radius));
             q += dyad(circle, circle);
         }
         q
@@ -269,8 +277,8 @@ mod cga {
     /// The 2-blade where two off-centre circles meet, normalized to square to -1: each circle
     /// is the vector of its centre with weight the cosine of its radius.
     pub fn circle_intersection_vortex(center1: V, radius1: f64, center2: V, radius2: f64) -> B {
-        let c1 = center1 + w().gp(radius1.cos());
-        let c2 = center2 + w().gp(radius2.cos());
+        let c1 = center1 + w().gp(height(radius1));
+        let c2 = center2 + w().gp(height(radius2));
         (c1 ^ c2).normalized().into_inner()
     }
 
@@ -303,20 +311,13 @@ fn hemisphere(c: &mut Canvas, centre: Point2, radius: f32, quadrics: &[(Quadric,
         lo: centre - corner,
         hi: centre + corner,
     });
+    // The point of the front hemisphere under each pixel (x right, y up, z towards the viewer).
+    let ball = Disc::new(centre, radius);
     c.shade(2, |q: Point2| {
-        // The pixel's offset from the centre in radii (x right, y up), and the square of its
-        // distance from the centre: the join's norm.
-        let off = q - centre;
-        let (u, v) = (off.e20() / radius, -off.e01() / radius);
+        let p = ball.point(q)?;
+        let p = point(p.c);
+        // The square of the pixel's distance from the centre, in radii: the join's norm.
         let r2 = (q & centre).norm_squared() / (radius * radius);
-        if r2 > 1.0 {
-            return None;
-        }
-        let p = point([
-            f64::from(u),
-            f64::from(v),
-            f64::from(1.0 - r2).max(0.0).sqrt(),
-        ]);
         let hit = quadrics.iter().rev().find(|(q, _)| potential(*q, p) < 0.0);
         Some(match hit {
             Some((_, colour)) => *colour,
@@ -331,6 +332,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let down = Point2::direction(0.0, 1.0);
     let generator = vortex();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
@@ -343,10 +346,14 @@ fn draw(c: &mut Canvas, t: f32) {
         .collect();
     hemisphere(c, Point2::xy(w * 0.26, h * 0.54), big, &trio);
     // Every shape on the right, in a grid of four by three.
-    let grid = Rect::new(w * 0.52, h * 0.13, w - 8.0, h - 4.0);
+    let grid = Rect::new(w * 0.52, h * 0.13, w - 8.0 * unit, h - 4.0 * unit);
     let (cw, ch) = (grid.width() / 4.0, grid.height() / 3.0);
-    let r = (cw.min(ch) * 0.5 - 12.0).max(4.0);
-    let label = (h / 50.0).clamp(7.0, 11.0);
+    let r = (cw.min(ch) * 0.5 - 12.0 * unit).max(4.0 * unit);
+    // The labels fit the cells, the longest name included.
+    let longest = shapes().iter().map(|s| s.0.len()).max().unwrap_or(1) as f32;
+    let label = (h / 50.0)
+        .clamp(7.0 * unit, 11.0 * unit)
+        .min(cw / (longest + 1.0));
     for (k, (name, q, col)) in shapes().into_iter().enumerate() {
         // The middle of the cell, raised by half a label.
         let (i, j) = ((k % 4) as f32, (k / 4) as f32);
@@ -374,6 +381,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::cga::*;
+    use gax_numga_examples::measure::lift;
+    use gax_numga_examples::signal::phasor;
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
@@ -383,7 +392,7 @@ mod tests {
     #[test]
     fn null_cone_pixels() {
         for (u, v) in [(0.0, 0.0), (0.3, -0.5), (-0.9, 0.1), (0.6, 0.79)] {
-            let p = point([u, v, (1.0f64 - u * u - v * v).sqrt()]);
+            let p = point(lift(u, v).expect("inside").c);
             assert!((p | p).s().abs() < 1e-12);
             assert!(close((p | w()).s(), -1.0, 1e-12));
         }
@@ -414,7 +423,8 @@ mod tests {
         let (core, tube) = (40f64.to_radians(), 10f64.to_radians());
         let donut = spherical_donut(core, tube);
         assert!(potential(donut, point([0.0, 0.0, 1.0])) > 0.0);
-        assert!(potential(donut, point([core.sin(), 0.0, core.cos()])) < 0.0);
+        let ring = phasor(core);
+        assert!(potential(donut, point([ring.e01(), 0.0, ring.e20()])) < 0.0);
         assert!(potential(donut, point([1.0, 0.0, 0.0])) > 0.0);
     }
 
@@ -432,7 +442,7 @@ mod tests {
         let g = vortex();
         assert!(close((g * g).s(), -1.0, 1e-12));
         let rotor = g.gp(0.4).exp();
-        let p = point([0.5, 0.5, 0.5f64.sqrt()]);
+        let p = point(lift(0.5, 0.5).expect("inside").c);
         let q = rotor >> p;
         assert!((q | q).s().abs() < 1e-12);
     }
@@ -495,10 +505,9 @@ mod tests {
             for i in 0..60 {
                 for j in 0..60 {
                     let (u, v) = (-1.0 + 2.0 * i as f64 / 59.0, 1.0 - 2.0 * j as f64 / 59.0);
-                    if u * u + v * v > 1.0 {
+                    let Some(p) = lift(u, v).map(|p| point(p.c)) else {
                         continue;
-                    }
-                    let p = point([u, v, (1.0 - u * u - v * v).sqrt()]);
+                    };
                     if quadrics.iter().any(|q| potential(*q, p) < 0.0) {
                         inside += 1;
                     } else {

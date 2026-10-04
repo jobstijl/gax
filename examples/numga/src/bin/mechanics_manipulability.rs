@@ -133,8 +133,8 @@ mod manipulability {
     pub const NEARLY_STRAIGHT: [f64; 4] = [0.35, 0.2, 0.15, 0.1];
 
     /// The arm around a closed loop through joint space at `phase` (radians). Each joint swings
-    /// about a centre, (centre, amplitude, frequency, phase); the elbow stays bent by at least
-    /// half a radian, so the arm never straightens and neither ellipsoid degenerates.
+    /// about a centre with a wave, (centre, amplitude, frequency, phase); the elbow stays bent by
+    /// at least half a radian, so the arm never straightens and neither ellipsoid degenerates.
     pub fn sweep(phase: f64) -> [f64; 4] {
         let swing = [
             (0.35, 0.9, 1.0, 0.0),
@@ -143,7 +143,7 @@ mod manipulability {
             (0.4, 0.8, 2.0, 0.0),
         ];
         swing.map(|(centre, amplitude, frequency, offset)| {
-            centre + amplitude * (frequency * phase + offset).sin()
+            centre + amplitude * gax_numga_examples::signal::wave(frequency * phase + offset)
         })
     }
 }
@@ -156,6 +156,7 @@ mod render {
     use super::scenegraph::{M, P, Pl, axis};
     use gax::pga3d::{Motor, Plane, Point};
     use gax_colour::{Light, light};
+    use gax_numga_examples::measure::roots;
 
     /// A point of the view's screen plane, its offsets from the centre.
     pub type Screen = gax::pga2d::Point<(), f64>;
@@ -246,18 +247,15 @@ mod render {
     }
 
     /// The ray parameter where the ray enters the solid quadric, and the tangent plane there, its
-    /// polar plane. Bound to the ray in both slots the form is a quadratic in the parameter.
+    /// polar plane. Bound to the ray in both slots the form is a quadratic in the parameter,
+    /// whose roots are a pair of points on the ray ([`roots`]).
     pub fn quadric_hit(q: Quadric, origin: P, heading: P) -> Option<(f64, Pl)> {
         let qh = q.of(heading);
         let (a, b) = ((qh & heading).s(), (qh & origin).s());
         let c = (q.of(origin) & origin).s();
-        let disc = b * b - a * c;
-        if disc < 0.0 {
-            return None;
-        }
-        let root = disc.sqrt();
         // The entering root is the smaller one, whichever sign the form has.
-        let t = ((-b - root) / a).min((-b + root) / a);
+        let (middle, radius) = roots(a, b, c)?;
+        let t = middle - radius;
         Some((t, q.of(origin + heading.gp(t))))
     }
 
@@ -442,6 +440,7 @@ mod tests {
             );
             // The velocity ellipsoid reaches, along a direction, as far as a unit force that
             // way loads the joints: the plane normal to it at that distance is tangent.
+            #[allow(clippy::disallowed_methods)] // the length of the joint torques, in joint space
             let reach = squared.sqrt();
             let normal = Plane::orthogonal_to(along);
             let tangent = normal - w().gp((normal & (tip + along.gp(reach))).s());

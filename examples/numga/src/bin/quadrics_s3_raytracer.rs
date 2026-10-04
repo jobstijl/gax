@@ -9,18 +9,20 @@
 #[path = "../shared/quadrics_s3.rs"]
 mod s3;
 
+use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{Anim, Canvas, backdrop, caption, run};
 use s3::*;
 
 mod walk {
     use super::s3::*;
     use gax_colour::Light;
+    use gax_numga_examples::signal::tangent;
 
     /// The scene from an eye: four copies of one ellipsoid, angular half-widths 0.2, 0.28 and
     /// 0.15, carried to increasing angular distances along `+x`, offset sideways and up so they
     /// don't overlap, and turned a little about the line of sight.
     pub fn walk(eye: Motor) -> View {
-        let shape = ellipsoid([0.2f64.tan(), 0.28f64.tan(), 0.15f64.tan()]);
+        let shape = ellipsoid([tangent(0.2), tangent(0.28), tangent(0.15)]);
         let distances = [0.7, 1.4, 2.1, 2.6];
         let sideways = [-0.4, 0.4, -0.4, 0.4];
         let upward = [-0.3, -0.3, 0.3, 0.3];
@@ -68,7 +70,7 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     // Toward the bodies and back: the eye's distance along the geodesic from 0 to 1.2.
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
-    let s = 0.6 - 0.6 * phase.cos();
+    let s = 0.6 - 0.6 * phasor(phase).e20();
     let view = walk(eye(s));
     let tracer = view.tracer();
     // The whole canvas is the picture; where no body is hit the backdrop shows.

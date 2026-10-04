@@ -15,6 +15,7 @@ mod s3;
 mod scenes;
 
 use gax_colour::{Light, light};
+use gax_numga_examples::disc::Disc;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -73,20 +74,13 @@ fn hemisphere(
         lo: centre - corner,
         hi: centre + corner,
     });
+    // The point of the front hemisphere under each pixel (x right, y up, z towards the
+    // viewer), as the pole of its plane: the dual of the vector.
+    let ball = Disc::new(centre, radius);
     c.shade(2, |q: Point2| {
-        // The pixel's offset from the centre in radii (x right, y up), and the square of its
-        // distance from the centre: the join's norm.
-        let off = q - centre;
-        let (u, v) = (off.e20() / radius, -off.e01() / radius);
+        let p = ball.point(q)?.dual();
+        // The square of the pixel's distance from the centre, in radii: the join's norm.
         let r2 = (q & centre).norm_squared() / (radius * radius);
-        if r2 > 1.0 {
-            return None;
-        }
-        let p = gax::vga3d::Bivector::new(
-            f64::from(u),
-            f64::from(v),
-            f64::from(1.0 - r2).max(0.0).sqrt(),
-        );
         let body = surfaces.iter().rposition(|s| (p & s.of(p)).s() < 0.0);
         Some(match body {
             Some(k) => colors[k].faded(BODY),
@@ -158,28 +152,41 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
         "QUADRIC RIGID BODIES ON S2 AND S3",
         "ONE ENGINE: BLENDS OF FORMS FOR CONTACTS, LIE MIDPOINT STEPS",
     );
-    let size = (h / 40.0).clamp(7.0, 12.0);
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
+    let size = 12.0 * unit;
     let top = h * 0.13;
 
     // S²: the hemisphere, and the invariants under it.
-    let radius = (w * 0.2).min((h - top - 110.0) / 2.0).max(4.0);
-    let centre = Point2::xy(w * 0.22, top + 10.0 + radius);
+    // Room under the disc for its name and the invariants, so the plot's ticks have room.
+    let room = 150.0 * unit;
+    let radius = (w * 0.2).min((h - top - room) / 2.0).max(4.0);
+    let centre = Point2::xy(w * 0.22, top + 10.0 * unit + radius);
     hemisphere(c, centre, radius, &show.s2.surfaces[f], &show.s2.colors);
     let name = format!("S2: {}", show.s2_name);
     let label = centre + down.gp(radius + size * 1.4);
     c.text(&name, label, size, palette::ink(), Align::Center);
     let below = centre + down.gp(radius + size * 1.6);
-    let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(34.0, 16.0, 8.0, 20.0);
+    let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(
+        34.0 * unit,
+        16.0 * unit,
+        8.0 * unit,
+        20.0 * unit,
+    );
+    // A plot frame's text is never under 3 pixels: on a small canvas its title stands taller
+    // than the miniature's, so the plot moves down by the difference.
+    let scaled = rect.height() / 26.0;
+    let rect = rect.inset(0.0, (3.0 - scaled).max(0.0) * 1.7, 0.0, 0.0);
     if rect.height() > 10.0 {
         plot_invariants(show, c, rect, f);
     }
 
     // S³: traced from the eye, a 4:3 picture.
-    let width = w - 8.0 - w * 0.46;
+    let width = w - 8.0 * unit - w * 0.46;
     let panel = Rect::new(
         w * 0.46,
         top,
-        w - 8.0,
+        w - 8.0 * unit,
         (top + width * 0.75).min(h - 2.0 * size),
     );
     let trajectory = &show.s3.trajectory;
@@ -203,7 +210,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
         view.surfaces.len(),
         trajectory.impulses
     );
-    let at = panel.bottom_left() + Point2::direction(4.0, size * 1.5);
+    let at = panel.bottom_left() + Point2::direction(4.0 * unit, size * 1.5);
     c.text(&note, at, size, palette::ink(), Align::Left);
 }
 
@@ -229,6 +236,7 @@ fn main() {
 mod tests {
     use super::scenes::{self, s2, s3};
     use gax::vga3d::{Bivector, Vector};
+    use gax_numga_examples::signal::{phasor, tangent};
 
     fn close(a: f64, b: f64, tol: f64) -> bool {
         (a - b).abs() <= tol
@@ -237,12 +245,12 @@ mod tests {
     /// Great circles tangent to an ellipse satisfy `π ∨ Q(π) = 0`.
     #[test]
     fn ellipse_tangency() {
-        let (tx, ty) = (30f64.to_radians().tan(), 15f64.to_radians().tan());
+        let (tx, ty) = (tangent(30f64.to_radians()), tangent(15f64.to_radians()));
         let q = s2::ellipsoid([tx, ty]);
         for phi in [0.0f64, 30.0, 75.0, 120.0, 200.0, 310.0] {
-            let phi = phi.to_radians();
-            let tangent = Vector::new(phi.cos() / tx, phi.sin() / ty, 1.0);
-            assert!((tangent & q.of(tangent)).s().abs() < 1e-12);
+            let turned = phasor(phi.to_radians());
+            let plane = Vector::new(turned.e20() / tx, turned.e01() / ty, 1.0);
+            assert!((plane & q.of(plane)).s().abs() < 1e-12);
         }
     }
 
@@ -250,8 +258,8 @@ mod tests {
     #[test]
     fn overlap_margin_sign() {
         let deg = f64::to_radians;
-        let c1 = s2::ellipsoid([deg(20.0).tan(); 2]).inverse();
-        let c2 = s2::ellipsoid([deg(25.0).tan(); 2]).inverse();
+        let c1 = s2::ellipsoid([tangent(deg(20.0)); 2]).inverse();
+        let c2 = s2::ellipsoid([tangent(deg(25.0)); 2]).inverse();
         // Centres apart, touching at 45° (the sum of the radii), and overlapping. numga's `xz`
         // turn is a `zx` turn the other way.
         let margins: Vec<f64> = [55.0, 45.0, 35.0]

@@ -436,6 +436,8 @@ macro_rules! odometry_core {
 mod plane {
     odometry_core!(pga2d);
     use gax::pga2d::{Line, Point};
+    use gax_numga_examples::measure::roots;
+    use gax_numga_examples::signal::phasor;
 
     /// A point of the plane.
     pub type P = Point<(), f64>;
@@ -461,9 +463,11 @@ mod plane {
         (0..STEPS)
             .map(|k| {
                 let phase = core::f64::consts::TAU * k as f64 / STEPS as f64;
-                let turn =
-                    (1.0 + 0.4 * (2.0 * phase).sin()) * core::f64::consts::TAU / STEPS as f64;
-                let slip = -0.1 * (2.0 * phase).cos();
+                // Twice a lap: the phasor at twice the phase, its height for the turn and its
+                // reach across for the slip.
+                let twice = phasor(2.0 * phase);
+                let turn = (1.0 + 0.4 * twice.e01()) * core::f64::consts::TAU / STEPS as f64;
+                let slip = -0.1 * twice.e20();
                 (Point::translation_twist(0.7, slip) + Point::rotation_twist(origin(), turn)).exp()
             })
             .collect()
@@ -490,7 +494,7 @@ mod plane {
 
     /// The zero level of a quadric as a ring of points: along rays from its centre `here` (unit
     /// directions, turned round) the quadric is a quadratic in the distance, whose positive root
-    /// lies on the ellipse.
+    /// (the centre lies inside, so the roots straddle it) lies on the ellipse.
     pub fn ring(quadric: Quadric, here: P, n: usize) -> Vec<P> {
         let value = |a: P, b: P| (quadric.of(a) & b).s();
         let h = here.unitized();
@@ -499,8 +503,8 @@ mod plane {
             .map(|i| {
                 let angle = core::f64::consts::TAU * i as f64 / n as f64;
                 let d = Motor::rotation(origin(), angle) >> Point::direction(1.0, 0.0);
-                let (a, b) = (value(d, d), value(h, d) + value(d, h));
-                let s = (-b + (b * b - 4.0 * a * c).max(0.0).sqrt()) / (2.0 * a);
+                let (a, b) = (value(d, d), 0.5 * (value(h, d) + value(d, h)));
+                let s = roots(a, b, c).map_or(0.0, |(mid, half)| mid + half);
                 h + d.gp(s)
             })
             .collect()
@@ -511,6 +515,7 @@ mod plane {
 mod space {
     odometry_core!(pga3d);
     use gax::pga3d::{Line, Point};
+    use gax_numga_examples::signal::phasor;
 
     /// The steps of the lap in space.
     pub const STEPS: usize = 6;
@@ -530,12 +535,12 @@ mod space {
             .map(|k| {
                 let phase = core::f64::consts::TAU * k as f64 / STEPS as f64;
                 let turn = core::f64::consts::TAU / STEPS as f64;
-                let spin = Point::direction(0.1 * phase.sin(), -0.1 * phase.cos(), turn);
-                let velocity = Line::translation_twist(
-                    0.7,
-                    -0.1 * (2.0 * phase).cos(),
-                    0.05 * (2.0 * phase).sin(),
-                );
+                // The angular velocity leans 0.1 off the vertical, the lean turned round the
+                // vertical with the phase; the sideways and vertical slips swing twice a lap.
+                let lean = Motor::rotation_about(0.0, 0.0, 1.0, phase);
+                let spin = lean >> Point::direction(0.0, -0.1, turn);
+                let twice = phasor(2.0 * phase);
+                let velocity = Line::translation_twist(0.7, -0.1 * twice.e20(), 0.05 * twice.e01());
                 (velocity + Line::rotation_twist(origin & spin, spin.ideal_norm())).exp()
             })
             .collect()
@@ -593,6 +598,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
     let (lap, space_lap) = runs();
     let (poses, uncertainty, k) =
         between(&lap.iterates, t, gax::pga2d::Motor::interpolate, |c, f| {
@@ -602,9 +609,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let positions =
         |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
     let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
-    let left = Rect::new(0.0, 50.0, w * 0.6, h);
+    let left = Rect::new(0.0, 50.0 * unit, w * 0.6, h);
+    let margin = 10.0 * unit;
     let ax = Axes::fitting(
-        left.inset(10.0, 10.0, 10.0, 10.0),
+        left.inset(margin, margin, margin, margin),
         truth.iter().chain(&dead).copied(),
         1.15,
     );
@@ -637,7 +645,7 @@ fn draw(c: &mut Canvas, t: f32) {
         gax::pga3d::Motor::interpolate,
         |c, f| c.gp(f),
     );
-    let (x0, y0) = ((w * 0.6) as usize, 60usize);
+    let (x0, y0) = ((w * 0.6) as usize, (60.0 * unit) as usize);
     let (pw, ph) = (c.width - x0, c.height - y0);
     let mut sub = Canvas::new(pw, ph);
     sub.backdrop(
@@ -678,8 +686,8 @@ fn draw(c: &mut Canvas, t: f32) {
     scene.draw(&mut sub);
     sub.text(
         "A SHORT LAP IN SPACE (PGA3D)",
-        sub.rect().lo + Point2::direction(8.0, 16.0),
-        11.0,
+        sub.rect().lo + Point2::direction(8.0 * unit, 16.0 * unit),
+        11.0 * unit,
         palette::ink(),
         Align::Left,
     );
@@ -694,15 +702,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // Two lines in the bottom right corner of the plane's side.
     c.text(
         &format!("GRADIENT {gradient:.1e}"),
-        left.hi - Point2::direction(12.0, 32.0),
-        12.0,
+        left.hi - Point2::direction(12.0 * unit, 32.0 * unit),
+        12.0 * unit,
         palette::grid(),
         Align::Right,
     );
     c.text(
         &format!("STEP {} / {ITERATIONS}, DAMPED TO 1/5", k.min(ITERATIONS)),
-        left.hi - Point2::direction(12.0, 14.0),
-        12.0,
+        left.hi - Point2::direction(12.0 * unit, 14.0 * unit),
+        12.0 * unit,
         palette::ink(),
         Align::Right,
     );

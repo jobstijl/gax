@@ -22,7 +22,7 @@ use gax::{sta, vga3d};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Dir3, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
-    backdrop, caption, palette, run,
+    backdrop, caption, palette, run, signal::wave,
 };
 
 mod curvature {
@@ -410,6 +410,7 @@ fn rings() -> &'static Rings {
 /// acceleration arrows.
 fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     let blue = palette::sky();
+    let unit = c.unit();
     let closed = |mut pts: Vec<Point<(), f64>>| {
         pts.push(pts[0]);
         pts
@@ -446,18 +447,31 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
         ax.polyline(c, &trail, 1.6, tracking()[j].faded(0.6));
     }
     for (p, a) in beads.iter().zip(&r.arrows[polarization][k]).step_by(3) {
-        ax.arrow(c, transverse(*p), transverse(*p + *a), 1.4, 6.0, blue);
+        ax.arrow(
+            c,
+            transverse(*p),
+            transverse(*p + *a),
+            1.4,
+            6.0 * unit,
+            blue,
+        );
     }
     // The tracked beads in their own colours, the others blue (lights add, so not both).
     let untracked: Vec<_> = (0..now.len())
         .filter(|i| !tracked.contains(i))
         .map(|i| now[i])
         .collect();
-    ax.scatter(c, &untracked, Marker::Dot, 5.0, blue);
+    ax.scatter(c, &untracked, Marker::Dot, 5.0 * unit, blue);
     for (j, bead) in tracked.iter().enumerate() {
-        ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, tracking()[j].faded(1.5));
+        ax.scatter(
+            c,
+            &[now[*bead]],
+            Marker::Dot,
+            8.0 * unit,
+            tracking()[j].faded(1.5),
+        );
     }
-    ax.scatter(c, &[ORIGIN2], Marker::Dot, 5.0, palette::orange());
+    ax.scatter(c, &[ORIGIN2], Marker::Dot, 5.0 * unit, palette::orange());
 }
 
 /// The curvature-map view of spacetime: `x` across, `z` along and `t` up, as a map to the
@@ -479,6 +493,7 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
     let incoming = observer ^ edge;
     let outgoing = plus.of(incoming);
     let readout = outgoing.commutator(observer);
+    let unit = c.unit();
     let cam = Camera::orbit(
         rect.width() as usize,
         rect.height() as usize,
@@ -493,7 +508,13 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
     let at = |v: V| ORIGIN3 + view.of(v).dir3();
     panel3(c, rect, cam, |s| {
         for axis in [x(), z(), t()] {
-            s.arrow(ORIGIN3, view.of(axis) * 1.05, 1.0, 6.0, palette::grid());
+            s.arrow(
+                ORIGIN3,
+                view.of(axis) * 1.05,
+                1.0,
+                6.0 * unit,
+                palette::grid(),
+            );
         }
         let ribbon = plane_patch(incoming, edge).map(at);
         let image = plane_patch(outgoing, edge).map(at);
@@ -505,9 +526,9 @@ fn curvature_map(c: &mut Canvas, rect: Rect, azimuth: f32) {
             s.quad(a, b, c, d, colour, opacity);
             s.polyline(&[a, b, c, d, a], 1.4, colour);
         }
-        s.arrow(ORIGIN3, view.of(observer), 2.0, 8.0, palette::ink());
-        s.arrow(ORIGIN3, view.of(wave), 2.0, 8.0, palette::yellow());
-        s.arrow(ORIGIN3, view.of(readout), 2.6, 8.0, palette::red());
+        s.arrow(ORIGIN3, view.of(observer), 2.0, 8.0 * unit, palette::ink());
+        s.arrow(ORIGIN3, view.of(wave), 2.0, 8.0 * unit, palette::yellow());
+        s.arrow(ORIGIN3, view.of(readout), 2.6, 8.0 * unit, palette::red());
     });
 }
 
@@ -516,7 +537,8 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let r = rings();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let size = (h / 40.0).clamp(7.0, 13.0);
+    let unit = c.unit();
+    let size = (h / 40.0).clamp(7.0 * unit, 13.0 * unit);
     let phase = (t_now / SECONDS).rem_euclid(1.0);
     let k = ((phase * (r.time.len() - 1) as f32).round() as usize).min(r.time.len() - 1);
     let now = r.time[k];
@@ -525,7 +547,9 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let (top, bottom) = (h * 0.13, h * 0.6);
     let rings_row = Rect::new(0.0, top, w, bottom);
     for (p, title) in ["PLUS", "CROSS", "CIRCULAR"].into_iter().enumerate() {
-        let rect = rings_row.column(p, 3).inset(10.0, 18.0, 10.0, 0.0);
+        let rect = rings_row
+            .column(p, 3)
+            .inset(10.0 * unit, 18.0 * unit, 10.0 * unit, 0.0);
         let ax = Axes::equal(rect, ORIGIN2, r.limit);
         ring(c, &ax, r, p, k);
         c.text(
@@ -541,7 +565,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
     let (row_top, row_bottom) = (bottom + h * 0.06, h - size * 3.0);
     let row = |x0: f32, x1: f32| Rect::new(w * x0, row_top, w * x1, row_bottom);
     let ax = Axes::new(
-        row(0.0, 0.42).inset(50.0, 18.0, 10.0, 0.0),
+        row(0.0, 0.42).inset(50.0 * unit, 18.0 * unit, 10.0 * unit, 0.0),
         [0.0, 6.0],
         [-1.15, 1.15],
     );
@@ -560,7 +584,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
 
     // The curvature map at one event, the view turning; it reaches a little lower.
     let rect = row(0.44, 0.72).inset(0.0, 0.0, 0.0, -size * 2.0);
-    curvature_map(c, rect, -1.2 + 0.6 * (phase * core::f32::consts::TAU).sin());
+    curvature_map(c, rect, -1.2 + 0.6 * wave(phase * core::f32::consts::TAU));
     let names = rect.top_middle() + Point2::direction(0.0, size);
     let left = Point2::direction(-size, 0.0);
     c.text(
@@ -587,8 +611,9 @@ fn draw(c: &mut Canvas, t_now: f32) {
     );
 
     // The Doppler check: tidal amplitude against `exp(-2 rapidity)`.
-    let rect = row(0.74, 1.0).inset(40.0, 18.0, 14.0, 0.0);
-    let ax = Axes::new(rect, [-0.75, 0.75], [0.2, 5.0]).log_y();
+    let rect = row(0.74, 1.0).inset(40.0 * unit, 18.0 * unit, 14.0 * unit, 0.0);
+    // Wide enough in rapidity for ticks every half, which fit the narrow panel.
+    let ax = Axes::new(rect, [-0.9, 0.9], [0.2, 5.0]).log_y();
     let fine: Vec<Point2> = (0..=100)
         .map(|j| {
             let q = -0.7 + 1.4 * j as f32 / 100.0;
@@ -603,7 +628,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
         .zip(&r.doppler.1)
         .map(|(q, a)| Point::xy(*q, *a))
         .collect();
-    ax.scatter(c, &dots, Marker::Dot, 6.0, palette::sky());
+    ax.scatter(c, &dots, Marker::Dot, 6.0 * unit, palette::sky());
     ax.frame(c, "TIDE VS BOOST", "RAPIDITY", "");
 
     caption(
@@ -781,6 +806,7 @@ mod tests {
 
     /// The independent prediction: half the strain applied to the separation, for the three
     /// polarizations, from the packet's envelope and carrier.
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn expected(time: &[f64], reference: &[V]) -> Vec<Vec<Vec<V>>> {
         (0..3)
             .map(|p| {

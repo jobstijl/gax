@@ -32,12 +32,15 @@ gax::algebra! {
 
 use gax_colour::{Light, light};
 use gax_numga_examples::points::box_map;
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{Align, Anim, Canvas, Point2, backdrop, palette, run};
 
 // numga's scenes in full: the tests check every one, the animation shows a selection.
 #[cfg_attr(not(test), allow(dead_code))]
 mod cyclides {
     use super::s3::{Bivector, Direction, Even, Pseudoscalar, Quadvector, Scalar, Vector};
+    use gax_numga_examples::measure;
+    use gax_numga_examples::signal::{phasor, wave};
 
     /// A sphere (or a great sphere, or a point of S³ as a unit vector plus `e`): a vector.
     pub type Sphere = Vector<(), f64>;
@@ -148,15 +151,16 @@ mod cyclides {
     }
 
     /// The points at angle `tube` from the great circle in the xy plane:
-    /// `z² + w² = sin(tube)²`.
+    /// `z² + w² = sin(tube)²`, the sine the height of the direction turned by `tube`.
     pub fn cylinder(tube: f64) -> Quadric {
-        dyad(z()) + dyad(w()) - dyad(e()).gp(tube.sin().powi(2))
+        dyad(z()) + dyad(w()) - dyad(e()).gp(wave(tube).powi(2))
     }
 
     /// The cone with vertex `z`, its axis towards `x` and half-opening `opening`; its geodesics
-    /// from `z` meet again at `-z`, its second vertex.
+    /// from `z` meet again at `-z`, its second vertex. The cosine of the opening is the reach of
+    /// the direction turned by it.
     pub fn cone(opening: f64) -> Quadric {
-        dyad(x()) + (dyad(z()) - dyad(e())).gp(opening.cos().powi(2))
+        dyad(x()) + (dyad(z()) - dyad(e())).gp(phasor(opening).e20().powi(2))
     }
 
     /// The conformal map of S³ that pushes points towards `aim` (a point as a unit vector),
@@ -234,14 +238,19 @@ mod cyclides {
             0 => vec![],
             1 => vec![-a[1] / a[0]],
             2 => {
+                // The roots as a midpoint and a half width ([`measure::roots`]), read in the
+                // stable form: the root farther from zero has no cancellation, and the other is
+                // the product of the roots over it.
                 let (p, q, r) = (a[0], a[1], a[2]);
-                let disc = q * q - 4.0 * p * r;
-                if disc < 0.0 {
+                let Some((middle, half)) = measure::roots(p, q / 2.0, r) else {
                     return vec![];
-                }
-                // The stable form: no cancellation in either root.
-                let s = -0.5 * (q + q.signum() * disc.sqrt());
-                let (r1, r2) = if s == 0.0 { (0.0, 0.0) } else { (s / p, r / s) };
+                };
+                let far = middle + half.copysign(middle);
+                let (r1, r2) = if far == 0.0 {
+                    (0.0, 0.0)
+                } else {
+                    (far, r / p / far)
+                };
                 vec![r1.max(r2), r1.min(r2)]
             }
             _ => {
@@ -292,12 +301,14 @@ mod cyclides {
 
     /// The nearest hit's angle along the great circle, from the ascending coefficients of the
     /// quartic in `u = tan(t/2)`. The reversed polynomial is solved, for `r = 1/u`: a root maps
-    /// to `t = 2 atan2(1, r)` in `(0, 2π)`, decreasing in `r`, so hits past the antipode are
-    /// ordered along the whole circle and the nearest hit is the largest root.
+    /// to twice the turn from `(1, 0)` to the direction `(r, 1)`, `t = 2 atan2(1, r)` in
+    /// `(0, 2π)`, decreasing in `r`, so hits past the antipode are ordered along the whole
+    /// circle and the nearest hit is the largest root.
     pub fn nearest_angle(c: [f64; 5]) -> Option<f64> {
+        let across = gax::vga2d::Vector::new(1.0, 0.0);
         real_roots(&c, false)
             .first()
-            .map(|r| 2.0 * 1.0f64.atan2(*r))
+            .map(|r| 2.0 * measure::turn(across, gax::vga2d::Vector::new(*r, 1.0)))
     }
 
     /// One surface with the forms of its quartic: `form(X, Y) = X ∨ surface(Y)` along
@@ -349,12 +360,15 @@ mod cyclides {
         pub fn hit(&self, rays: &Rays, d: Dir) -> Option<Hit> {
             let t = nearest_angle(self.coefficients(d))?;
             let (l, q) = (rays.linear.of(d), rays.quadratic.fill(d));
-            let at = origin() + l.gp(t.sin()) + q.gp(1.0 - t.cos());
-            let velocity = l.gp(t.cos()) + q.gp(t.sin());
-            // At the hit the polar sphere is the tangent sphere; its length is that of the
-            // surface's gradient.
+            // The direction turned by `t`: its reach is the cosine, its height the sine.
+            let turned = phasor(t);
+            let (cosine, sine) = (turned.e20(), turned.e01());
+            let at = origin() + l.gp(sine) + q.gp(1.0 - cosine);
+            let velocity = l.gp(cosine) + q.gp(sine);
+            // At the hit the polar sphere is the tangent sphere; its length (its norm) is that
+            // of the surface's gradient.
             let polar = self.surface.of(at);
-            let facing = -(polar & velocity).s() / polar.dot(polar).s().abs().sqrt();
+            let facing = -(polar & velocity).s() / polar.norm();
             Some(Hit { angle: t, facing })
         }
     }
@@ -362,7 +376,9 @@ mod cyclides {
     /// The unit direction of a pinhole pixel looking along `-x`: `u` across from -1 to 1, `v`
     /// up, scaled by the aspect.
     pub fn direction(u: f64, v: f64, fov: f64) -> Dir {
-        let k = (fov / 2.0).tan();
+        // The tangent of the half field: the height over the width of the turned direction.
+        let half = phasor(fov / 2.0);
+        let k = half.e01() / half.e20();
         Direction::new(-1.0, u * k, v * k).normalized().into_inner()
     }
 
@@ -631,11 +647,19 @@ mod cyclides {
         vec![(surface, circle), (ring, Biv::zero())]
     }
 
+    /// The angle whose sine is `s`, from 0 to π/2 for `s` from 0 to 1: the angle from the pole
+    /// `z` of the point of the unit sphere over `(s, 0)` of the equator's disk
+    /// ([`measure::lift`]).
+    pub fn arcsine(s: f64) -> f64 {
+        let pole = gax::vga3d::Vector::new(0.0, 0.0, 1.0);
+        measure::angle(pole, measure::lift(s, 0.0).expect("a sine"))
+    }
+
     pub fn linked_tori() -> Vec<Part> {
         // Matching core radii, with a small shift along the tilt axis; matching the shift to
         // `radius sin(tilt)` keeps the initial gap fairly even.
         let (radius, offset) = (1.4f64, 0.45f64);
-        let place = shift(x().gp(offset)) * turn(y() ^ z(), (offset / radius).asin() / 2.0);
+        let place = shift(x().gp(offset)) * turn(y() ^ z(), arcsine(offset / radius) / 2.0);
         vec![
             (moved(place, torus(radius, 0.16)), core_circle(radius)),
             (torus(radius, 0.02), Biv::zero()),
@@ -813,7 +837,7 @@ enum Scene {
 
 /// Eased there and back over `s` in `[0, 1)`: 0, up to 1 and back to 0.
 fn there_and_back(s: f64) -> f64 {
-    0.5 - 0.5 * (core::f64::consts::TAU * s).cos()
+    0.5 - 0.5 * phasor(core::f64::consts::TAU * s).e20()
 }
 
 fn lerp_shot(a: &SpindleShot, b: &SpindleShot, k: f64) -> ([f64; 6], f64, f64, f64) {
@@ -865,7 +889,7 @@ fn shots() -> Vec<Shot> {
                 let (angles, ahead, yaw, pitch) = lerp_shot(
                     &SHOTS[i],
                     &SHOTS[(i + 1) % 3],
-                    0.5 - 0.5 * (core::f64::consts::PI * (k - i as f64)).cos(),
+                    0.5 - 0.5 * phasor(core::f64::consts::PI * (k - i as f64)).e20(),
                 );
                 (vec![spindle_shot(0.0, angles, ahead, yaw, pitch)], FOV)
             }),
@@ -911,7 +935,7 @@ fn flat_at(index: usize, s: f64) -> (Vec<Quadric>, f64) {
     } else {
         // The camera's position turned about the vertical through the target: the offset
         // from the target turned in the chart's xy plane.
-        let swing = 0.35 * (core::f64::consts::TAU * s).sin();
+        let swing = 0.35 * wave(core::f64::consts::TAU * s);
         let (p, t) = (chart_point(scene.position), chart_point(scene.target));
         let turned = t + moved_sphere(turn(x() ^ y(), -swing / 2.0), p - t);
         let position = [0, 1, 2].map(|i| turned.c[i]);
@@ -992,9 +1016,11 @@ fn draw(c: &mut Canvas, t: f32) {
     gax_numga_examples::caption(c, &title, shot.note);
     // The shot's number in the bottom right corner.
     let number = format!("{}/{}", index + 1, list.len());
-    let corner = screen.hi + Point2::direction(-8.0, -8.0);
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
+    let corner = screen.hi + Point2::direction(-8.0, -8.0).gp(unit);
     let dim = palette::ink().mix_light(palette::bottom(), 0.4);
-    c.text(&number, corner, 10.0, dim, Align::Right);
+    c.text(&number, corner, 10.0 * unit, dim, Align::Right);
 }
 
 fn main() {
@@ -1006,6 +1032,7 @@ fn main() {
 mod tests {
     use super::cyclides::*;
     use super::s3::{Direction, Quadvector};
+    use gax_numga_examples::signal::phasor;
 
     fn dir(x: f64, y: f64, z: f64) -> Dir {
         Direction::new(x, y, z)
@@ -1045,10 +1072,11 @@ mod tests {
         let d = dir(0.0, 0.6, 0.8);
         for angle in [0.7f64, 2.5] {
             let exact = (rays.rotation.of(d).gp(angle).exp() >> origin()).cast::<Quadvector>();
+            let turned = phasor(angle);
             let circle = origin()
-                + rays.linear.of(d).gp(angle.sin())
-                + rays.quadratic.fill(d).gp(1.0 - angle.cos());
-            let reach = w() + e().gp(angle.cos());
+                + rays.linear.of(d).gp(turned.e01())
+                + rays.quadratic.fill(d).gp(1.0 - turned.e20());
+            let reach = w() + e().gp(turned.e20());
             assert!((reach & exact).s().abs() < 1e-7);
             assert!((reach & circle).s().abs() < 1e-12);
         }
@@ -1064,11 +1092,14 @@ mod tests {
             assert!((p & (bend - antipode())).s().abs() < 1e-12);
         }
         for angle in [0.7f64, 2.5] {
-            let u = (angle / 2.0).tan();
+            // The half angle's tangent, the height over the width of the half-turned direction.
+            let half = phasor(angle / 2.0);
+            let u = half.e01() / half.e20();
             let parabola = origin() + rays.linear.of(d).gp(2.0 * u) + bend.gp(u * u);
+            let turned = phasor(angle);
             let circle = origin()
-                + rays.linear.of(d).gp(angle.sin())
-                + rays.quadratic.fill(d).gp(1.0 - angle.cos());
+                + rays.linear.of(d).gp(turned.e01())
+                + rays.quadratic.fill(d).gp(1.0 - turned.e20());
             for p in probes() {
                 assert!((p & (parabola.gp(1.0 / (1.0 + u * u)) - circle)).s().abs() < 1e-12);
             }
@@ -1081,7 +1112,8 @@ mod tests {
     #[test]
     fn the_cylinder_polynomial_is_palindromic_and_a_dupin_cyclide_breaks_it() {
         let rays = rays();
-        let aim: Sphere = z().gp(0.7f64.cos()) + x().gp(0.7f64.sin());
+        // The pole z turned 0.7 rad towards x.
+        let aim = moved_sphere(turn(z() ^ x(), -0.35), z());
         let lopsided = moved(dilation(aim, 1.5), cylinder(0.25));
         // numga's `PIXELS[::20000]`.
         let sample: Vec<Dir> = sensor(SHAPE.0, SHAPE.1, FOV)
@@ -1102,6 +1134,15 @@ mod tests {
             })
             .collect();
         assert!(gaps[0] < 1e-12 && gaps[1] > 1e-3, "{gaps:?}");
+    }
+
+    /// The angle from the point pair is the arcsine.
+    #[test]
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
+    fn the_point_pair_reads_the_arcsine() {
+        for s in [0.0, 0.1, 0.45 / 1.4, 0.7, 0.99] {
+            assert!((arcsine(s) - s.asin()).abs() < 1e-14, "{s}");
+        }
     }
 
     #[test]

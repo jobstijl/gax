@@ -25,6 +25,7 @@ use gax::pga3d::{Line, Motor, Point};
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
+    signal,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -339,16 +340,17 @@ fn draw(c: &mut Canvas, t: f32) {
     let (motors, gaps) = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let u = h / 540.0;
+    let u = c.unit();
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(motors.len() - 1);
     caption(
         c,
         "XPBD: A CHAIN OF RIGID LINKS",
         "CONSTRAINTS AS LINES, PROJECTED BY MOTORS (PGA3D)",
     );
-    // The chain, in 3D, from a camera turning slowly about it.
+    // The chain, in 3D, from a camera turning slowly about it: its azimuth swings with a wave,
+    // once per run.
     let left = w * 0.6;
-    let azimuth = -1.25 + 0.25 * (core::f32::consts::TAU * t / SECONDS).sin();
+    let azimuth = -1.25 + 0.25 * signal::wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
         left as usize,
         c.height,
@@ -415,7 +417,7 @@ fn draw(c: &mut Canvas, t: f32) {
         [1e-7, 1e-2],
     )
     .log_y();
-    ax.frame(c, "JOINT GAPS", "TIME (S)", "METRES");
+    ax.frame(c, "JOINT GAPS (METRES)", "TIME (S)", "");
     // The chart's points: (time, gap).
     let at = gax::pga2d::Point::<(), f64>::xy;
     let series = |f: &dyn Fn(&[f64]) -> f64| -> Vec<_> {

@@ -14,6 +14,7 @@
 use gax_colour::Light;
 use gax_numga_examples::colormap;
 use gax_numga_examples::rng::{Draw, Rng, rng};
+use gax_numga_examples::signal::{phasor, tangent};
 use rand::seq::SliceRandom;
 
 /// The engine on S², in `Cl(3)`: points are bivectors, planes vectors, momenta vectors. (One
@@ -66,7 +67,7 @@ pub fn ellipse_mesh(
     n_phi: usize,
     n_r: usize,
 ) -> (Vec<s2::P>, Vec<f64>) {
-    let (tx, ty) = (half_angles[0].tan(), half_angles[1].tan());
+    let (tx, ty) = (tangent(half_angles[0]), tangent(half_angles[1]));
     let (mut points, mut masses) = (Vec::new(), Vec::new());
     for i in 0..=n_phi {
         let phi = core::f64::consts::TAU * i as f64 / n_phi as f64;
@@ -75,7 +76,9 @@ pub fn ellipse_mesh(
         for j in 1..=n_r {
             let r = j as f64 / n_r as f64;
             let w_r = if j == n_r { 0.5 } else { 1.0 };
-            let (x, y) = (tx * r * phi.cos(), ty * r * phi.sin());
+            // The turned direction, stretched onto the ellipse of radius `r`.
+            let turned = phasor(phi);
+            let (x, y) = (tx * r * turned.e20(), ty * r * turned.e01());
             // The sphere's area element in the gnomonic chart, so the point masses approximate
             // a uniform mass over the ellipse. The omitted node at r = 0 has zero area element.
             let area = tx * ty * r / (1.0 + x * x + y * y).powf(1.5);
@@ -113,7 +116,7 @@ pub fn ellipses(specs: &[Ellipse], n_phi: usize) -> Vec<s2::Body> {
             let (points, masses) = ellipse_mesh(half, e.mass, n_phi, 10);
             s2::body(
                 gax_colour::hex(e.color, 1.0),
-                s2::ellipsoid(half.map(f64::tan)),
+                s2::ellipsoid(half.map(tangent)),
                 camera() * e.placement,
                 e.rate,
                 &points,
@@ -349,7 +352,7 @@ pub fn gap(frames: usize) -> Scene3 {
     // with this generator (a body over the eye fills the view with its dark inside).
     let mut rng = rng(5);
     let deg = f64::to_radians;
-    let shape = s3::ellipsoid([deg(60.0).tan(), deg(75.0).tan(), deg(70.0).tan()]);
+    let shape = s3::ellipsoid([60.0, 75.0, 70.0].map(|a| tangent(deg(a))));
     let huge = resting(
         Light::from_srgb(0.75, 0.7, 0.6, 1.0),
         shape,
@@ -375,7 +378,7 @@ pub fn needle(frames: usize) -> Scene3 {
     // animation's 240 frames (a body over the eye fills the view with its dark inside).
     let mut rng = rng(5);
     let deg = f64::to_radians;
-    let shape = s3::ellipsoid([deg(80.0).tan(), deg(4.0).tan(), deg(3.0).tan()]);
+    let shape = s3::ellipsoid([80.0, 4.0, 3.0].map(|a| tangent(deg(a))));
     let spin = turning(TangentPlane::new(2.0, 0.0, 0.0));
     let long = resting(
         Light::from_srgb(0.9, 0.85, 0.3, 1.0),
@@ -418,8 +421,8 @@ pub fn tunnel(frames: usize) -> Tunnel {
     let tube = s3::quadric([
         -1.0,
         -1.0 / (1.5 * 1.5),
-        1.0 / deg(40.0).tan().powi(2),
-        1.0 / deg(20.0).tan().powi(2),
+        1.0 / tangent(deg(40.0)).powi(2),
+        1.0 / tangent(deg(20.0)).powi(2),
     ]);
     let torus = resting(
         Light::from_srgb(0.55, 0.65, 0.75, 1.0),
@@ -435,8 +438,9 @@ pub fn tunnel(frames: usize) -> Tunnel {
     let eye = motion(along(Tangent::new(0.0, 0.0, quarter)))
         * motion(turning(TangentPlane::new(0.0, quarter, 0.0)));
     let camera = eye >> s3::origin();
-    // The pixel up and to the side, a quarter turn off the line of sight, and the wall there.
-    let side_up = crate::s3::ScreenPoint::new(0.0, 1.0, 1.0).gp(0.5f64.sqrt());
+    // The pixel up and to the side, a quarter turn off the line of sight, and the wall there
+    // (the hit does not depend on the pixel's scale).
+    let side_up = crate::s3::ScreenPoint::new(0.0, 1.0, 1.0);
     let (conic, polar) = crate::s3::project(eye, bodies[0].world());
     let wall_hit = hit(eye, crate::s3::reproject(conic, polar, side_up), side_up);
     let light = (camera + wall_hit).normalized().into_inner();

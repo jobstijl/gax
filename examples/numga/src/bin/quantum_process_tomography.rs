@@ -16,6 +16,7 @@
 //! reconstruction never saw, against the exact ones, and the measured probability tables.
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
     backdrop, caption, colormap, palette, reach3, run,
@@ -70,6 +71,7 @@ mod tomography {
     /// A coherent turn in `plane` after independent phase noise and relaxation toward the north
     /// pole: each a sum of sandwiches, composed. The noise's alternatives are not observed:
     /// their output states add, not their amplitudes.
+    #[allow(clippy::disallowed_methods)] // amplitudes are square roots of probabilities, not geometry
     pub fn noisy_gate(angle: f64, phase_flip: f64, loss: f64, plane: Bi) -> Channel {
         // Kept, or flipped in the xy plane; the square roots are amplitudes.
         let keep = one().cast::<Multivector>() * (1.0 - phase_flip).sqrt();
@@ -310,7 +312,7 @@ fn table(
     let cols = cells[0].len() as f32;
     let (cw, ch) = (rect.width() / cols, rect.height() / rows);
     let (right, down) = (Point2::direction(cw, 0.0), Point2::direction(0.0, ch));
-    let size = (ch * 0.32).clamp(6.0, 10.0);
+    let size = (ch * 0.32).min(10.0);
     // Text sits on its baseline: half a text height below a centre.
     let baseline = Point2::direction(0.0, size * 0.5);
     for (i, row) in cells.iter().enumerate() {
@@ -352,12 +354,13 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::green(),
         palette::purple(),
     ];
-    let small = (h / 50.0).clamp(7.0, 11.0);
+    // Text scales with the canvas (a smaller frame is a miniature of the full one).
+    let small = (h / 50.0).min(11.0);
 
     // Each learned channel, applied `uses` times to the sphere of pure states and to the probes,
     // in thirds of a band across the screen.
     let band = Rect::new(0.0, (h * 0.13).floor(), w, (h * 0.66).floor());
-    let azimuth = (-54.0f32).to_radians() + 0.5 * (core::f32::consts::TAU * phase).sin();
+    let azimuth = (-54.0f32).to_radians() + 0.5 * wave(core::f32::consts::TAU * phase);
     for k in 0..3 {
         let map = d.powers[k][uses - 1];
         let image: Vec<Vec<_>> = d
@@ -407,21 +410,22 @@ fn draw(c: &mut Canvas, t: f32) {
                 s.dot(reach3(bloch(map.of(*p))), Marker::Dot, 6.0, pc);
             }
         });
-        let title = rect.top_middle() + down.gp(2.0);
+        // The title a line below the band's top, clear of the caption.
+        let title = rect.top_middle() + down.gp(small * 1.2);
         c.text(LABELS[k], title, small * 1.15, colours[k], Align::Center);
     }
     let note = band.bottom_middle() + up.gp(small * 0.8);
     let text = format!("{uses} USES OF EACH LEARNED CHANNEL");
     c.text(&text, note, small * 1.1, palette::ink(), Align::Center);
     // How many state directions each probe set determines: the singular values of its dyads,
-    // under the band's two bottom corners.
+    // under the band's two bottom corners, a line below the note.
     let corners = [
         (
-            band.bottom_left() + Point2::direction(0.02 * w, small * 0.5),
+            band.bottom_left() + Point2::direction(0.02 * w, small * 1.3),
             Align::Left,
         ),
         (
-            band.hi + Point2::direction(-0.02 * w, small * 0.5),
+            band.hi + Point2::direction(-0.02 * w, small * 1.3),
             Align::Right,
         ),
     ];
@@ -440,7 +444,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let (y0, y1) = (h * 0.76, h * 0.94);
     let side = Point2::direction(y1 - y0, y1 - y0);
     let lo = Point2::xy(quarter * 0.3, y0);
-    let ax = Axes::equal(Rect { lo, hi: lo + side }, Point2::xy(0.27, 0.27), 0.27);
+    // The probabilities reach a half; the axes reach a little further on both sides, so that
+    // their ticks are a fifth apart and their labels clear of one another.
+    let ax = Axes::equal(Rect { lo, hi: lo + side }, Point2::xy(0.27, 0.27), 0.38);
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
     ax.line(c, ORIGIN2, Point2::xy(0.54, 0.54), 1.0, palette::grid());
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
@@ -512,6 +518,7 @@ mod tests {
     /// Dephasing and amplitude damping followed by Rodrigues' rotation about the unit `axis`,
     /// written out with the cross product (the vector at right angles to the plane `axis ^ v`)
     /// rather than a rotor.
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn analytical_bloch(r: Space, angle: f64, phase_flip: f64, loss: f64, axis: Space) -> Space {
         let transverse = (1.0 - 2.0 * phase_flip) * (1.0 - loss).sqrt();
         let v = Vector::new(

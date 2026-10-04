@@ -37,6 +37,7 @@
 use gax::ApproxEq;
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop, caption,
     colormap, palette, run,
@@ -561,15 +562,17 @@ fn checks() -> &'static Checks {
     })
 }
 
+/// The table of algebras' header: its width sets the table's.
+const HEADER: &str = "(P,Q) PLANES ROTATIONS BOOSTS FORM/INNER I*I SPINORS";
+
 /// The table of algebras, its header's baseline starting at `at`, one row under another.
 fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
-    let header = "(P,Q)  PLANES  ROTATIONS  BOOSTS  FORM/INNER  I*I  SPINORS";
-    c.text(header, at, size, palette::ink(), Align::Left);
-    let down = Point2::direction(0.0, size * 1.45);
+    c.text(HEADER, at, size, palette::ink(), Align::Left);
+    let down = Point2::direction(0.0, size * 1.4);
     for (k, row) in table().iter().enumerate() {
         let (rotations, boosts) = row.counts();
         let line = format!(
-            "({},{})  {:>6}  {:>9}  {:>6}  {:>10.1}  {:>+3.0}  {}",
+            "({},{}) {:>6} {:>9} {:>6} {:>10.1} {:>+3.0} {}",
             row.p,
             row.q,
             row.planes,
@@ -596,8 +599,13 @@ fn draw(c: &mut Canvas, t: f32) {
     let (w, h) = (screen.width(), screen.height());
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = t / SECONDS;
-    let size = (h / 52.0).clamp(4.0, 10.0);
-    draw_table(c, Point2::xy(0.43 * w, 0.05 * h), size);
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
+    let size = 8.7 * unit;
+    // The table at the right, under the caption: as wide as its header and the three letters
+    // by which its last column's entries outrun the header's.
+    let table_width = gax_numga_examples::font::width(HEADER, size) + 3.0 * size;
+    draw_table(c, Point2::xy(0.985 * w - table_width, 0.14 * h), size);
 
     let flows = four::cached();
     let families = [&flows.left, &flows.right, &flows.knotted];
@@ -614,7 +622,7 @@ fn draw(c: &mut Canvas, t: f32) {
         "XY TWICE, ZW THREE TIMES",
     ];
     // The three flows side by side below the table.
-    let below = Rect::new(0.0, (0.38 * h).floor(), w, h);
+    let below = Rect::new(0.0, (0.42 * h).floor(), w, h);
     for (k, family) in families.iter().enumerate() {
         let rect = below.column(k, 3);
         let cam = Camera::orbit(
@@ -622,7 +630,7 @@ fn draw(c: &mut Canvas, t: f32) {
             rect.height() as usize,
             ORIGIN3,
             (extent * 4.2) as f32,
-            (-55.0f32).to_radians() + 0.5 * (phase * core::f32::consts::TAU).sin(),
+            (-55.0f32).to_radians() + 0.5 * wave(phase * core::f32::consts::TAU),
             24.0f32.to_radians(),
             Lens::Perspective(0.5),
         );
@@ -643,20 +651,20 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         });
         let top_middle = rect.top_middle();
-        let title = top_middle + down.gp(16.0);
-        c.text(titles[k], title, 11.0, palette::ink(), Align::Center);
+        let title = top_middle + down.gp(16.0 * unit);
+        c.text(titles[k], title, 11.0 * unit, palette::ink(), Align::Center);
         if k < 2 {
             let bottom_middle = rect.bottom_middle();
             let text = format!("LINKING NUMBER {:+.2}", checks().links[k]);
-            let note = bottom_middle + up.gp(12.0);
-            c.text(&text, note, 10.0, palette::grid(), Align::Center);
+            let note = bottom_middle + up.gp(12.0 * unit);
+            c.text(&text, note, 10.0 * unit, palette::grid(), Align::Center);
         }
     }
     let exact = table().iter().all(|row| row.form_is_inner);
     let ch = checks();
     let lines = [
         if exact {
-            "FORM = 2(N-2) INNER PRODUCT, EXACTLY, IN EVERY ROW".to_string()
+            "FORM = 2(N-2) INNER PRODUCT EXACTLY, EVERY ROW".to_string()
         } else {
             "FORM AND INNER PRODUCT DIFFER".to_string()
         },

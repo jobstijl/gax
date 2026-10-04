@@ -62,6 +62,7 @@ gax::algebra! {
 mod decomposition {
     use super::{p6, r6};
     use gax_numga_examples::rng::{Draw, rng};
+    use gax_numga_examples::signal::phasor;
     use r6::{Bivector, Even, Pseudoscalar, Quadvector, Scalar, ScalarQuadvector, Vector};
 
     pub type B = Bivector<(), f64>;
@@ -129,29 +130,27 @@ mod decomposition {
         )
     }
 
-    /// For each time and plane: the cosine of half the plane's angle, and its sine over the
-    /// plane's rate, the square root of minus its square.
-    fn half_turns(squares: [f64; 3], time: f64) -> [(f64, f64); 3] {
-        squares.map(|s| {
-            let rate = (-s).sqrt();
-            let angle = time * rate / 2.0;
-            (angle.cos(), angle.sin() / rate)
-        })
+    /// A plane's rotor over a time, `cos(angle / 2) + part sin(angle / 2) / rate`: the plane's
+    /// rate is its norm, and the cosine and sine are the reach and height of the unit direction
+    /// turned by half its angle.
+    fn plane_rotor(part: B, time: f64) -> E {
+        let rate = part.norm();
+        let half = phasor(time * rate / 2.0);
+        scalar(half.e20()).cast::<Even>() + part.cast::<Even>().gp(half.e01() / rate)
     }
 
-    /// The rotor the bivector generates over a time, as the product of its planes' rotors, each
-    /// `cos(angle / 2) + part sin(angle / 2) / rate`.
-    pub fn rotor(squares: [f64; 3], parts: [B; 3], time: f64) -> E {
-        let turns = half_turns(squares, time);
-        (0..3)
-            .map(|k| scalar(turns[k].0).cast::<Even>() + parts[k].cast::<Even>().gp(turns[k].1))
+    /// The rotor the bivector generates over a time, as the product of its planes' rotors.
+    pub fn rotor(parts: [B; 3], time: f64) -> E {
+        parts
+            .map(|part| plane_rotor(part, time))
+            .into_iter()
             .reduce(|a, b| a * b)
             .expect("three planes")
     }
 
     /// The start turned by the rotation, at a time.
-    pub fn orbit(squares: [f64; 3], parts: [B; 3], start: V, time: f64) -> V {
-        let r = rotor(squares, parts, time);
+    pub fn orbit(parts: [B; 3], start: V, time: f64) -> V {
+        let r = rotor(parts, time);
         (r * start * r.reverse()).cast::<Vector>()
     }
 
@@ -190,6 +189,7 @@ mod decomposition {
 
     /// The roots of the cubic `x³ + c[0] x² + c[1] x + c[2]`, ascending; real here (the squares
     /// of the planes), from Viète's trigonometric form.
+    #[allow(clippy::disallowed_methods)] // Viète's root formula for a cubic, not geometry
     pub fn cubic_roots(c: [f64; 3]) -> [f64; 3] {
         let [a, b, d] = c;
         let p = b - a * a / 3.0;
@@ -212,7 +212,6 @@ mod decomposition {
     pub struct Example {
         pub bivector: B,
         pub start: V,
-        pub squares: [f64; 3],
         pub parts: [B; 3],
         pub wedge: ([f64; 3], [B; 3]),
         pub period: f64,
@@ -223,15 +222,15 @@ mod decomposition {
         let mut rng = rng(seed);
         let bivector = B::from_coeffs(core::array::from_fn(|_| rng.normal()));
         let start = rng.direction::<V>();
-        let (squares, parts) = from_spectrum(bivector);
+        let (_, parts) = from_spectrum(bivector);
         let wedge = from_wedge_powers(bivector);
-        let slowest = squares.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-        let period = core::f64::consts::TAU / (-slowest).sqrt();
+        // The slowest plane's rate: the smallest of the planes' norms.
+        let slowest = parts.iter().map(|p| p.norm()).fold(f64::INFINITY, f64::min);
+        let period = core::f64::consts::TAU / slowest;
         let motion = p6::Bivector::from_coeffs(core::array::from_fn(|_| rng.normal()));
         Example {
             bivector,
             start,
-            squares,
             parts,
             wedge,
             period,
@@ -268,7 +267,7 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
     let points: Vec<V> = (0..SAMPLES)
         .map(|k| {
             let time = ex.period * k as f64 / (SAMPLES - 1) as f64;
-            orbit(ex.squares, ex.parts, ex.start, time)
+            orbit(ex.parts, ex.start, time)
         })
         .collect();
     let first = projected(points[0], ex.parts);
@@ -290,6 +289,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let down = Point2::direction(0.0, 1.0);
     let ex = example(SEED);
     let (points, flat) = tracks(&ex);
@@ -317,7 +318,13 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
     });
     let label = Point2::xy(0.2 * w, 0.88 * h);
-    c.text("X, Y AND Z", label, 12.0, palette::ink(), Align::Center);
+    c.text(
+        "X, Y AND Z",
+        label,
+        12.0 * unit,
+        palette::ink(),
+        Align::Center,
+    );
 
     // Each plane: a circle at the plane's own rate, in a square panel of its own.
     let side = 0.18 * w;
@@ -328,7 +335,7 @@ fn draw(c: &mut Canvas, t: f32) {
             lo,
             hi: lo + Point2::direction(side, side),
         }
-        .inset(4.0, 4.0, 4.0, 4.0);
+        .inset(4.0 * unit, 4.0 * unit, 4.0 * unit, 4.0 * unit);
         // The circle's radius, with a margin.
         let radius = track
             .iter()
@@ -342,14 +349,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let rate = ex.parts[k].norm();
         let name = format!("PLANE {}", k + 1);
         let above = Point2::xy(0.0, extent * 1.15);
-        ax.text(c, above, &name, 12.0, palette::ink(), Align::Center);
+        ax.text(c, above, &name, 12.0 * unit, palette::ink(), Align::Center);
         let tone = (plane_colour(k)).mix_light(palette::ink(), 0.4);
         let below = Point2::xy(0.0, -extent * 1.3);
         ax.text(
             c,
             below,
             &format!("RATE {rate:.2}"),
-            10.0,
+            10.0 * unit,
             tone,
             Align::Center,
         );
@@ -360,7 +367,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|k| ex.wedge.1[k].max_abs_diff(&ex.parts[k]))
         .fold(0.0, f64::max);
     let exp = ex.bivector.gp(0.5).exp().into_inner();
-    let product = rotor(ex.squares, ex.parts, 1.0).max_abs_diff(&exp);
+    let product = rotor(ex.parts, 1.0).max_abs_diff(&exp);
     let (planes, leftover) = placed(ex.motion);
     let simple = planes.iter().map(|p| size(p.wedge(*p))).fold(0.0, f64::max);
     let lines = [
@@ -375,11 +382,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = Point2::xy(0.43 * w, 0.78 * h);
     for (k, line) in lines.iter().enumerate() {
         let at = first + down.gp(k as f32 * 0.04 * h);
-        c.text(line, at, 10.0, palette::grid(), Align::Left);
+        c.text(line, at, 10.0 * unit, palette::grid(), Align::Left);
     }
     caption(
         c,
-        "INVARIANT DECOMPOSITION: A 6D ROTATION IS THREE TURNS",
+        "INVARIANT DECOMPOSITION: THREE TURNS IN 6D",
         "A RANDOM BIVECTOR OF R(6,0,0) SPLIT INTO THREE COMMUTING PLANES",
     );
 }
@@ -404,7 +411,7 @@ mod tests {
     #[test]
     fn the_planes_decompose_the_rotation() {
         let ex = example(1);
-        let (squares, parts) = (ex.squares, ex.parts);
+        let (squares, parts) = from_spectrum(ex.bivector);
         let sum = parts[0] + parts[1] + parts[2];
         assert!(sum.max_abs_diff(&ex.bivector) < 1e-11, "{sum:?}");
         for a in &parts {
@@ -424,11 +431,11 @@ mod tests {
             assert!(wedge_parts[k].max_abs_diff(&parts[k]) < 1e-11);
         }
         let exp = ex.bivector.gp(0.5).exp().into_inner();
-        assert!(rotor(squares, parts, 1.0).max_abs_diff(&exp) < 1e-6);
+        assert!(rotor(parts, 1.0).max_abs_diff(&exp) < 1e-6);
         let first = projected(ex.start, parts);
         for k in 0..60 {
             let time = ex.period * k as f64 / 59.0;
-            let p = orbit(squares, parts, ex.start, time);
+            let p = orbit(parts, ex.start, time);
             assert!(((p | p).s() - 1.0).abs() < 1e-6);
             for (q, q0) in projected(p, parts).iter().zip(&first) {
                 assert!(((*q | *q).s() - (*q0 | *q0).s()).abs() < 1e-6);

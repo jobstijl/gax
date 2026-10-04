@@ -17,7 +17,7 @@ use std::sync::OnceLock;
 use gax_colour::Srgb;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
-    contour, palette, reach2, run,
+    contour, palette, reach2, run, signal::phasor,
 };
 
 mod lensing {
@@ -194,7 +194,7 @@ fn scene() -> &'static Scene {
 /// The source's direction at time `t`: back and forth along a line just above the masses.
 fn source_at(t: f32) -> V {
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
-    v(-0.6 * phase.cos(), 0.12)
+    v(-0.6 * phasor(phase).e20(), 0.12)
 }
 
 /// Axes on the sky in the largest square hanging from the middle of the top of `rect`.
@@ -216,14 +216,16 @@ fn draw(c: &mut Canvas, t: f32) {
     let caustic_colour = Light::from_srgb(1.0, 0.53, 0.447, 1.6);
     let masses = positions().map(reach2);
     let centre = source_at(t);
-    let size = (h / 34.0).clamp(7.0, 15.0);
-    // Three columns between the caption and the notes below the panels.
+    let unit = c.unit();
+    let size = (h / 34.0).clamp(7.0 * unit, 15.0 * unit);
+    // Three columns between the caption and the notes below the panels, each with room on
+    // its left for the tick labels.
     let row = Rect::new(0.0, h * 0.17, w, h - size * 3.2);
-    let panel = |i: usize| square(row.column(i, 3).inset(w * 0.02, 0.0, w * 0.02, 0.0));
-    // A note under a panel, from the middle of its bottom edge.
+    let panel = |i: usize| square(row.column(i, 3).inset(w * 0.04, 0.0, w * 0.005, 0.0));
+    // A note under a panel, from the middle of its bottom edge, below the tick labels.
     let below = |c: &mut Canvas, ax: &Axes, dx: f32, text: &str, colour: Light, align: Align| {
         let bottom_middle = ax.rect.bottom_middle();
-        let at = bottom_middle + Point2::direction(dx, size * 1.8);
+        let at = bottom_middle + Point2::direction(dx, size * 2.6);
         c.text(text, at, size, colour, align);
     };
 
@@ -240,7 +242,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Some(starlight(brightness(binary(at(p)), centre, WIDTH)))
     });
     ax.stroke(c, &s.critical, 1.1, critical_colour);
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid());
+    ax.scatter(c, &masses, Marker::Ring, 10.0 * unit, palette::grid());
     ax.frame(c, "SKY", "", "");
     // The magnification: the light over the whole sky over the source's own.
     let (directions, reached) = &s.grid;
@@ -263,14 +265,20 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.polyline(c, &outline, 1.0, colour.faded(0.9));
     }
     ax.stroke(c, &s.critical, 1.0, palette::grid());
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink().faded(0.8));
-    ax.frame(c, "SMALL ROUND SOURCES, AS SEEN", "", "");
+    ax.scatter(
+        c,
+        &masses,
+        Marker::Ring,
+        10.0 * unit,
+        palette::ink().faded(0.8),
+    );
+    ax.frame(c, "ROUND SOURCES, AS SEEN", "", "");
     below(c, &ax, -size, "KEPT", preserved, Align::Right);
     below(c, &ax, size, "MIRRORED", reversed, Align::Left);
     caption(
         c,
         "GRAVITATIONAL LENSING: ONE STAR, SEVERAL IMAGES",
-        "TWO EQUAL POINT MASSES (VGA2D): CRITICAL CURVE ON THE SKY, CAUSTIC AT THE SOURCE",
+        "TWO EQUAL MASSES (VGA2D): CRITICAL CURVE ON THE SKY, CAUSTIC AT THE SOURCE",
     );
 }
 
@@ -295,6 +303,7 @@ mod tests {
     /// tangential one `1 - 1/r²`; the images have opposite orientations, and their light adds
     /// up to the analytic magnification.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the analytic reference it is checked against
     fn single_lens_images_have_the_analytic_stretches_orientation_and_magnification() {
         let (centre, one) = ([v(0.0, 0.0)], [1.0]);
         let source = v(0.3, 0.2);
@@ -370,6 +379,7 @@ mod tests {
     /// A finite source's light over the sky matches the analytic point-source magnification
     /// integrated over rings of the source.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the analytic reference it is checked against
     fn finite_source_light_integrates_to_the_radial_magnification() {
         let width = 0.15;
         let flux: f64 = sky(2.0, 128)

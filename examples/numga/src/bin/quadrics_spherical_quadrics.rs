@@ -19,6 +19,8 @@ use gax_numga_examples::{
 
 mod conic {
     use super::*;
+    use gax_numga_examples::measure;
+    use gax_numga_examples::signal::phasor;
 
     /// A point of the sphere: the pole of a plane, on `e23`, `e31`, `e12`, the poles of the
     /// planes x, y and z. It is the dual of the vector of its coordinates, which `undual`
@@ -61,17 +63,28 @@ mod conic {
 
     /// The semi-axes of the cone's ellipse: the cone of a diagonal polarity with eigenvalues
     /// `l1 > l2 > 0 > l3` meets the sphere above the ellipse `x²/x0² + y²/y0² = 1` of the
-    /// xy-plane.
+    /// xy-plane. In the plane `y = 0` the cone `l1 x² + l3 z² = 0` meets the circle
+    /// `x² + z² = 1` where `(l1 - l3) x² + l3 = 0`, and `x0` is half the distance between that
+    /// quadratic's roots ([`measure::roots`]); likewise `y0` in the plane `x = 0`.
     fn semi_axes([l1, l2, l3]: [f64; 3]) -> (f64, f64) {
-        ((-l3 / (l1 - l3)).sqrt(), (-l3 / (l2 - l3)).sqrt())
+        let half = |l: f64| measure::roots(l - l3, 0.0, l3).expect("l > 0 > l3").1;
+        (half(l1), half(l2))
+    }
+
+    /// The point of the upper hemisphere over `(x, y)` of the equator's disk
+    /// ([`measure::lift`]).
+    pub fn lift(x: f64, y: f64) -> P {
+        measure::lift(x, y)
+            .expect("inside the equator's disk")
+            .dual()
     }
 
     /// The quadratic cone `P ∨ C(P) = 0` of a diagonal polarity, as the point at `radius` and
-    /// parameter `t`.
+    /// parameter `t`: over the ellipse's point, the turned direction stretched by the semi-axes.
     pub fn cone(eigenvalues: [f64; 3], radius: f64, t: f64) -> P {
         let (x0, y0) = semi_axes(eigenvalues);
-        let (x, y) = (x0 * t.cos(), y0 * t.sin());
-        Bivector::new(x, y, (1.0 - x * x - y * y).sqrt()).gp(radius)
+        let d = phasor(t);
+        lift(x0 * d.e20(), y0 * d.e01()).gp(radius)
     }
 
     /// The turn from unit point `start` to unit point `end`, as the logarithm of the rotor
@@ -121,8 +134,17 @@ mod conic {
         // The semi-axes as arcs, the semi-minor along x and the semi-major along y, and the focal
         // arc along the major axis.
         let (x0, y0) = semi_axes(eigenvalues);
-        let (theta_b, theta_a) = (x0.asin(), y0.asin());
-        let theta_c = (theta_a.cos() / theta_b.cos()).acos();
+        let pole = Vector::new(0.0, 0.0, 1.0);
+        let (minor, major) = (lift(x0, 0.0).undual(), lift(0.0, y0).undual());
+        let theta_a = measure::angle(pole, major);
+        // Spherical Pythagoras: the focal arc's cosine is the ratio of the semi-axes' cosines,
+        // their heights over the equator. The foci are the points of the meridian plane x = 0
+        // at that height.
+        let height = major.e3() / minor.e3();
+        // There the meridian meets the sphere where `y² + height² - 1 = 0`, at the two roots,
+        // the one toward +y first.
+        let (_, y) = measure::roots(1.0, 0.0, height * height - 1.0).expect("a real height");
+        let foci = [y, -y].map(|y| Vector::new(0.0, y, height));
         let curve: Vec<P> = (0..n)
             .map(|k| {
                 rotor
@@ -133,8 +155,7 @@ mod conic {
                     )
             })
             .collect();
-        let foci =
-            [1.0, -1.0].map(|s| rotor >> Bivector::new(0.0, s * theta_c.sin(), theta_c.cos()));
+        let foci = foci.map(|f| rotor >> f.dual());
         // The polar plane of a point of the oval is its tangent great circle.
         let tangents = curve
             .iter()
@@ -185,8 +206,8 @@ fn draw(c: &mut Canvas, t: f32) {
     // The panels, side by side under the caption.
     let panels = screen.inset(0.0, screen.height() * 0.12, 0.0, 0.0);
     let titles = [
-        "POINTS: D(P,F1) + D(P,F2) CONSTANT",
-        "PLANES: ENVELOPE OF GREAT CIRCLES",
+        "POINTS: D1 + D2 CONSTANT",
+        "PLANES: TANGENT GREAT CIRCLES",
         "THE CONE AND THE POLHODES",
     ];
     // The point running along the oval.
@@ -324,7 +345,7 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         });
         // Sized to fit the panel's width, in its top left corner.
-        let size = (rect.width() / 35.0).clamp(7.0, 13.0);
+        let size = (rect.width() / 35.0).min(13.0);
         let corner = rect.lo + Point2::direction(size, size * 1.6);
         c.text(title, corner, size, palette::ink(), Align::Left);
     }
@@ -394,6 +415,7 @@ mod tests {
 
     /// The longitude-latitude grid, built by rotors as numga's, is the usual parametrization.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn the_sphere_grid_is_spherical_coordinates() {
         for (phi, theta) in [(0.3f64, 0.7f64), (2.0, 1.2), (4.0, 2.9)] {
             let want = Vector::new(

@@ -35,6 +35,7 @@ gax::algebra! {
 
 mod impulse {
     use super::spacetime::{Bivector, Vector};
+    use gax_numga_examples::signal::phasor;
 
     pub type V = Vector<(), f64>;
     /// A map on events and directions: an observer change.
@@ -147,10 +148,11 @@ mod impulse {
     /// An underdamped mode that starts at length 0.6 with zero rate and settles to length 1.
     pub fn ringing_length(time: f64, damping_ratio: f64, natural_frequency: f64) -> f64 {
         let damping = damping_ratio * natural_frequency;
+        #[allow(clippy::disallowed_methods)] // the damped frequency: an oscillator's law
         let frequency = natural_frequency * (1.0 - damping_ratio * damping_ratio).sqrt();
-        1.0 - 0.4
-            * (-damping * time).exp()
-            * ((frequency * time).cos() + damping / frequency * (frequency * time).sin())
+        // The oscillation's phase, as a turned unit direction.
+        let turn = phasor(frequency * time);
+        1.0 - 0.4 * (-damping * time).exp() * (turn.e20() + damping / frequency * turn.e01())
     }
 
     // --- the scenes -------------------------------------------------------------------
@@ -306,6 +308,7 @@ mod impulse {
             .map(|(t, l)| [event(*t, centre - 0.5 * l), event(*t, centre + 0.5 * l)])
             .collect();
         let relaxed_ends = [event(0.0, centre - 0.5), event(0.0, centre + 0.5)];
+        #[allow(clippy::disallowed_methods)] // the damped frequency: an oscillator's law
         let first_peak = core::f64::consts::PI
             / (natural_frequency * (1.0 - damping_ratio * damping_ratio).sqrt());
         let k = (1..ring_times.len())
@@ -441,7 +444,8 @@ fn fit(rect: Rect, xr: [f32; 2], yr: [f32; 2]) -> Axes {
 /// A panel title above the axes, shrunk to fit their width.
 fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Light) {
     let r = ax.rect;
-    let size = (12.0f32).min((r.width() + 30.0) / font::width(text, 1.0));
+    let unit = c.unit();
+    let size = (12.0 * unit).min(r.width() / font::width(text, 1.0));
     let top_middle = r.top_middle();
     let at = top_middle - Point2::direction(0.0, size * 1.1);
     c.text(text, at, size, colour, Align::Center);
@@ -483,6 +487,8 @@ struct Diagram<'a> {
     /// The present, an observer time.
     tau: f64,
     size: f32,
+    /// The canvas's height over 540: pixel sizes scale with it.
+    unit: f32,
     c: &'a mut Canvas,
 }
 
@@ -495,7 +501,8 @@ impl Diagram<'_> {
         reveal: f32,
     ) -> Diagram<'a> {
         let ax = fit(rect, xr, yr);
-        let size = (ax.rect.width() / 26.0).clamp(7.0, 11.0);
+        let unit = c.unit();
+        let size = (ax.rect.width() / 26.0).clamp(7.0 * unit, 11.0 * unit);
         // The present rises from the bottom of the diagram to its top.
         let tau = f64::from(yr[0] + (yr[1] - yr[0]) * reveal);
         // Light cones through the origin, faint: the null directions `t ± x`, far out.
@@ -503,7 +510,13 @@ impl Diagram<'_> {
         for null in [t() + x(), t() - x()] {
             ax.line(c, null * -big, null * big, 0.8, palette::grid().faded(0.35));
         }
-        Diagram { ax, tau, size, c }
+        Diagram {
+            ax,
+            tau,
+            size,
+            unit,
+            c,
+        }
     }
 
     /// A worldline: faint in full, bright up to the present.
@@ -536,7 +549,8 @@ impl Diagram<'_> {
         for e in events {
             let strength = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
             let faded = colour.faded(strength);
-            self.ax.scatter(self.c, &[*e], marker, size, faded);
+            self.ax
+                .scatter(self.c, &[*e], marker, size * self.unit, faded);
         }
     }
 
@@ -554,7 +568,23 @@ impl Diagram<'_> {
             self.size * 1.7
         };
         let at = middle + Point2::direction(0.0, offset);
+        let at = self.inside(at, font::width(label, self.size));
         self.c.text(label, at, self.size, colour, Align::Center);
+    }
+
+    /// A centred label's anchor moved across, as little as needed, so that a label `width`
+    /// pixels wide stays within the diagram's frame.
+    fn inside(&self, at: Point2, width: f32) -> Point2 {
+        let r = self.ax.rect;
+        let x = at.to_euclidean()[0];
+        let half = width * 0.5;
+        let room = [r.lo.to_euclidean()[0] + half, r.hi.to_euclidean()[0] - half];
+        let shift = if room[0] > room[1] {
+            0.0
+        } else {
+            x.clamp(room[0], room[1]) - x
+        };
+        at + Point2::direction(shift, 0.0)
     }
 
     /// The present: the equal-time slice between two worldlines, with its length.
@@ -562,11 +592,20 @@ impl Diagram<'_> {
         if let (Some(a), Some(b)) = (at(left, self.tau), at(right, self.tau)) {
             self.ax
                 .line(self.c, a, b, 1.6, palette::yellow().faded(0.9));
-            let beside = self.ax.px(b) + Point2::direction(0.6, 0.4).gp(self.size);
             let text = format!("{:.2}", position_of(b) - position_of(a));
             let size = self.size;
-            self.c
-                .text(&text, beside, size, palette::yellow(), Align::Left);
+            // Beside the right end, or beside the left end where that would leave the frame.
+            let beside = self.ax.px(b) + Point2::direction(0.6, 0.4).gp(size);
+            let right_edge = self.ax.rect.hi.to_euclidean()[0];
+            let (at, align) = if beside.to_euclidean()[0] + font::width(&text, size) <= right_edge {
+                (beside, Align::Left)
+            } else {
+                (
+                    self.ax.px(a) + Point2::direction(-0.6, 0.4).gp(size),
+                    Align::Right,
+                )
+            };
+            self.c.text(&text, at, size, palette::yellow(), align);
         }
     }
 
@@ -581,7 +620,7 @@ impl Diagram<'_> {
 
     fn frame(&mut self) {
         self.ax.frame(self.c, "", "X / L0", "");
-        let at = self.ax.rect.lo + Point2::direction(4.0, self.size * 1.4);
+        let at = self.ax.rect.lo + Point2::direction(4.0 * self.unit, self.size * 1.4);
         self.c
             .text("CT", at, self.size, palette::ink(), Align::Left);
     }
@@ -602,7 +641,8 @@ fn reveal(u: f32) -> f32 {
 fn draw_impulse(c: &mut Canvas, r: f32) {
     let (s, _, _) = scenes();
     let row = diagrams(c);
-    let rect = |i: usize| row.column(i, 3).inset(40.0, 0.0, 8.0, 0.0);
+    let unit = c.unit();
+    let rect = |i: usize| row.column(i, 3).inset(40.0 * unit, 0.0, 8.0 * unit, 0.0);
     let titles = [
         "SYMMETRIC FRAME: -0.5C -> +0.5C",
         "BOOSTED FRAME: 0 -> 0.8C",
@@ -649,14 +689,16 @@ fn draw_impulse(c: &mut Canvas, r: f32) {
         1.0,
         palette::ink(),
     );
-    d.text(event(end - 0.05, 0.62), "ONE FIXED MAP, REPEATED", kink());
+    // Below the front end's curve, clear of the steps and the frame's labels.
+    d.text(event(0.12, 1.95), "ONE FIXED MAP,", kink());
+    d.text(event(-0.1, 1.95), "REPEATED", kink());
     d.now(&end_line(&s.train, 0), &end_line(&s.train, 1));
     d.frame();
     d.title("10 IMPULSES: 0 -> 0.8C");
     caption(
         c,
-        "STRAIN-PRESERVING IMPULSES: START WITH A SYMMETRIC REVERSAL",
-        "R(1,1) BY GAX::ALGEBRA!: BOOSTS ARE OPEN SANDWICHES; THE KINKS SIT ON THE BISECTOR",
+        "STRAIN-PRESERVING IMPULSES: SYMMETRIC REVERSAL",
+        "R(1,1) BY GAX::ALGEBRA!: BOOSTS ARE OPEN SANDWICHES; KINKS ON THE BISECTOR",
     );
 }
 
@@ -675,7 +717,8 @@ fn barn(d: &mut Diagram, doors: &[[V; 2]], closure: &[V; 2]) {
 fn draw_ladder(c: &mut Canvas, r: f32) {
     let (_, s, _) = scenes();
     let row = diagrams(c);
-    let rect = |i: usize| row.column(i, 4).inset(34.0, 0.0, 6.0, 0.0);
+    let unit = c.unit();
+    let rect = |i: usize| row.column(i, 4).inset(34.0 * unit, 0.0, 6.0 * unit, 0.0);
 
     // 1. In the barn frame it fits at closure.
     let mut d = Diagram::new(c, rect(0), [-0.46, 1.32], [-0.6, 0.65], r);
@@ -693,7 +736,9 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.rod(&s.moving_ladder, 2.2);
     d.bar(s.ladder_cut, "LADDER 1.00", 1.0, palette::ink());
     d.bar(s.barn_cut, "BARN 0.48", 1.0, door());
-    d.text(event(-1.25, 1.5), "EXIT CLOSES FIRST", door());
+    // Top right, clear of the doors, the bars and the closures.
+    d.text(event(0.12, 1.78), "EXIT CLOSES", door());
+    d.text(event(-0.08, 1.78), "FIRST", door());
     d.now(
         &end_line(&s.moving_ladder, 0),
         &end_line(&s.moving_ladder, 1),
@@ -737,23 +782,28 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     d.title("4. STOP INSIDE: RINGING");
     caption(
         c,
-        "THE LADDER PARADOX: FITTING IN MOTION, STOPPING IN A SHORTER BARN",
-        "LADDER L0 = 1, BARN 0.8 L0, INCOMING 0.8C: ONE OPEN SANDWICH CHANGES THE FRAME",
+        "THE LADDER PARADOX: FITS IN MOTION, NOT AT REST",
+        "LADDER L0 = 1, BARN 0.8 L0, AT 0.8C: ONE OPEN SANDWICH CHANGES THE FRAME",
     );
 }
 
 fn draw_spaceships(c: &mut Canvas, r: f32) {
     let (_, _, s) = scenes();
     let row = diagrams(c);
+    let unit = c.unit();
     let w = row.width();
     // A share of the row from `x0` to `x1` of the canvas's width.
     let span = |x0: f32, x1: f32| row.inset(w * x0, 0.0, w * (1.0 - x1), 0.0);
     let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]);
     let titles = ["STRAIN-PRESERVING TRAIN", "BELL: IDENTICAL CLOCK PROGRAMS"];
-    let notes = ["FRONT IMPULSES ON THE BISECTORS", "MATCHING CLOCK READINGS"];
+    let notes = [
+        ["FRONT IMPULSES", "ON BISECTORS"],
+        ["MATCHING CLOCK", "READINGS"],
+    ];
     let colours = [kink(), elastic()];
     for k in 0..2 {
-        let rect = span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0, 0.0, 8.0, 0.0);
+        let rect =
+            span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0 * unit, 0.0, 8.0 * unit, 0.0);
         let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end as f32 + 0.18], r);
         d.rod(&s.tracks[k], 2.4);
         for step in &s.schedules[k] {
@@ -765,7 +815,9 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
             let dy = if time_of(cut[0]) < 0.0 { -1.0 } else { 1.0 };
             d.bar(*cut, &format!("{label}: {gap:.2} L0"), dy, palette::ink());
         }
-        d.text(event(end - 0.1, 1.4), notes[k], colours[k]);
+        // Below and right of the front end's curve, clear of the steps.
+        d.text(event(0.35, 2.2), notes[k][0], colours[k]);
+        d.text(event(0.12, 2.2), notes[k][1], colours[k]);
         d.now(&end_line(&s.tracks[k], 0), &end_line(&s.tracks[k], 1));
         d.frame();
         d.title(titles[k]);
@@ -775,11 +827,11 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     // diagrams complete.
     let shown = ((r - 0.6) / 0.4).clamp(0.0, 1.0);
     let ax = fit(
-        span(0.73, 1.0).inset(0.0, 0.0, 10.0, 0.0),
+        span(0.73, 1.0).inset(0.0, 0.0, 10.0 * unit, 0.0),
         [-0.22, 2.05],
         [-0.35, 3.03],
     );
-    let size = 10.0;
+    let size = 10.0 * unit;
     title(c, &ax, "IN THE FINAL REST FRAME", palette::ink());
     let gaps = s.final_events.map(|e| position_of(e[1]));
     let rows = [
@@ -814,8 +866,8 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
         // A ship: a triangle pointing along the motion, at its pixel.
         for (at, ship) in [(rear_ship, rear()), (front_ship, front())] {
             let p = ax.px(at);
-            let hull =
-                [(9.0, 0.0), (-6.0, -7.0), (-6.0, 7.0)].map(|(x, y)| p + Point2::direction(x, y));
+            let hull = [(9.0, 0.0), (-6.0, -7.0), (-6.0, 7.0)]
+                .map(|(x, y)| p + Point2::direction(x, y).gp(unit));
             c.fill(&hull, ship, shown);
         }
         // The label under the rope's middle.
@@ -840,7 +892,7 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     );
     caption(
         c,
-        "BELL'S SPACESHIPS: THE TIMING ACROSS THE ROPE MATTERS",
+        "BELL'S SPACESHIPS: TIMING ACROSS THE ROPE MATTERS",
         "10 MATCHING IMPULSES, 0 -> 0.8C, THE SAME REAR HISTORY IN BOTH",
     );
 }
@@ -857,7 +909,8 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     // The legend, along the bottom edge.
     let screen = c.rect();
-    let size = (screen.height() / 50.0).clamp(7.0, 11.0);
+    let unit = c.unit();
+    let size = (screen.height() / 50.0).clamp(7.0 * unit, 11.0 * unit);
     let entries = [
         ("REAR END", rear()),
         ("FRONT END", front()),
@@ -865,19 +918,22 @@ fn draw(c: &mut Canvas, t: f32) {
         ("NOW", palette::yellow()),
     ];
     let right = Point2::direction(size, 0.0);
-    for (i, (label, colour)) in entries.iter().enumerate() {
-        let across = screen.width() * (0.3 + 0.13 * i as f32);
-        let start = screen.bottom_left() + Point2::direction(across, -size * 1.4);
-        c.line(start, start + right.gp(2.0), 2.5, *colour);
+    // Each entry a swatch and its name, two glyphs apart, the row centred.
+    let span = |label: &str| size * 4.6 + font::width(label, size);
+    let total: f32 = entries.iter().map(|(label, _)| span(label)).sum::<f32>() - size * 2.0;
+    let mut start = screen.bottom_middle() + Point2::direction(-total * 0.5, -size * 1.4);
+    for (label, colour) in entries {
+        c.line(start, start + right.gp(2.0), 2.5, colour);
         let at = start + right.gp(2.6) + Point2::direction(0.0, size * 0.4);
         c.text(label, at, size, palette::ink(), Align::Left);
+        start += right.gp(span(label) / size);
     }
 }
 
 /// The row the diagrams share: below the captions, above the legend.
 fn diagrams(c: &Canvas) -> Rect {
     let screen = c.rect();
-    screen.inset(0.0, screen.height() * 0.2, 0.0, 60.0)
+    screen.inset(0.0, screen.height() * 0.2, 0.0, 60.0 * (c.unit()))
 }
 
 fn main() {
@@ -924,6 +980,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::disallowed_methods)] // the Lorentz contraction it is checked against
     fn impulse_train_forms_continuous_worldlines_with_fixed_proper_spacing() {
         for (final_velocity, dt) in [(0.8f64, 0.1), (-0.8, 0.2)] {
             let (events, directions) = small_impulses(final_velocity.atanh(), 10, dt);

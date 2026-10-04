@@ -28,8 +28,10 @@ use gax::Complex;
 use gax::pga3d::{Line, Motor, Plane, Point};
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, backdrop, caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, backdrop, caption, measure, palette,
+    run,
 };
 
 mod klein {
@@ -89,8 +91,10 @@ mod klein {
         [right[4], right[5]]
     }
 
-    /// The discriminant `b² - a c` of the Klein form along the pencil, over the size of its
-    /// coefficients: positive when the transversals are real, negative when they are complex.
+    /// The discriminant `b² - a c` of the Klein form along the pencil, over the size of the form
+    /// there, `a² + 2 b² + c²`: positive when the transversals are real, negative when they are
+    /// complex. The pencil's two bivectors are any orthonormal pair of the null space, and both
+    /// the discriminant and this size are the same for every such pair.
     pub fn discriminant(lines: &[L; 4]) -> f64 {
         let [first, second] = pencil(lines);
         let (a, b, c) = (
@@ -98,7 +102,7 @@ mod klein {
             pairing(first, second),
             pairing(second, second),
         );
-        (b * b - a * c) / (a * a + b * b + c * c)
+        (b * b - a * c) / (a * a + 2.0 * b * b + c * c)
     }
 
     /// A complex line divided by the square root of the sum of the squares of its direction
@@ -164,8 +168,8 @@ mod klein {
         let (nearest, heading) = frame(line);
         (0..count)
             .map(|k| {
-                let a = core::f64::consts::PI * k as f64 / count as f64;
-                nearest.gp(a.cos()) + heading.gp(a.sin())
+                let turned = phasor(core::f64::consts::PI * k as f64 / count as f64);
+                nearest.gp(turned.e20()) + heading.gp(turned.e01())
             })
             .collect()
     }
@@ -222,7 +226,7 @@ mod klein {
 
     /// The offset of the fourth line at a phase of the loop.
     pub fn offset(phase: f64) -> f64 {
-        1.5 * (core::f64::consts::TAU * phase).cos()
+        1.5 * phasor(core::f64::consts::TAU * phase).e20()
     }
 
     /// Whether a complex value is real up to round-off, by its coefficients.
@@ -249,14 +253,14 @@ const SECONDS: f32 = 9.6;
 const RADIUS: f64 = 3.0;
 
 /// The two ends of a line's chord of the ball, or `None` when the line misses it: from the
-/// line's point nearest the centre, half the chord each way along it.
+/// line's point nearest the centre, half the chord each way along it. Along the line the ball
+/// is the quadratic `s² + d² - R²` in the distance `s` from the nearest point, `d` off the
+/// centre: its roots are `±` the half chord.
 fn chord(line: L) -> Option<[P; 2]> {
     let (nearest, heading) = frame(line);
     let off_centre = (origin() & nearest).norm_squared();
-    if off_centre > RADIUS * RADIUS {
-        return None;
-    }
-    let half = (RADIUS * RADIUS - off_centre).sqrt() / heading.ideal_norm();
+    let (_, half_chord) = measure::roots(1.0, 0.0, off_centre - RADIUS * RADIUS)?;
+    let half = half_chord / heading.ideal_norm();
     Some([-half, half].map(|s| nearest + heading.gp(s)))
 }
 
@@ -309,11 +313,14 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::yellow())
     };
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let h = screen.height();
+    let unit = c.unit();
     let bottom_middle = left.bottom_middle();
     c.text(
         verdict,
-        bottom_middle + up.gp(18.0),
-        13.0,
+        bottom_middle + up.gp(18.0 * unit),
+        13.0 * unit,
         tone,
         Align::Center,
     );
@@ -334,36 +341,35 @@ fn draw(c: &mut Canvas, t: f32) {
     let (lo, hi) = values
         .iter()
         .fold((0.0f64, 0.0f64), |(lo, hi), &v| (lo.min(v), hi.max(v)));
-    let h = screen.height();
     let ax = Axes::new(
         screen
             .part(0.62, 0.0, 1.0, 1.0)
-            .inset(50.0, h * 0.2, 20.0, h * 0.28),
+            .inset(50.0 * unit, h * 0.2, 20.0 * unit, h * 0.28),
         [0.0, 1.0],
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
-    ax.frame(c, "DISCRIMINANT ALONG THE PENCIL", "PHASE OF THE SWING", "");
+    ax.frame(c, "DISCRIMINANT ON THE PENCIL", "PHASE OF THE SWING", "");
     ax.line(c, graph(0.0, 0.0), graph(1.0, 0.0), 1.0, palette::grid());
     ax.polyline(c, &curve, 1.6, palette::sky());
     let now = graph(phase, discriminant(&s.lines));
     ax.scatter(c, &[now], Marker::Dot, 10.0, tone);
     let notes = [
-        "ABOVE ZERO: THE FOURTH LINE CROSSES",
-        "THE HYPERBOLOID, TWO REAL TRANSVERSALS",
-        "BELOW ZERO: IT MISSES THE WAIST, A",
-        "COMPLEX-CONJUGATE PAIR OF LINES",
+        "ABOVE ZERO: THE FOURTH LINE CUTS",
+        "THE HYPERBOLOID, TWO REAL LINES;",
+        "BELOW ZERO: IT MISSES THE WAIST,",
+        "A COMPLEX-CONJUGATE PAIR",
     ];
     // The notes stand under the graph, a little out to its left, one line apart.
-    let first = ax.rect.bottom_left() + Point2::direction(-30.0, h * 0.13);
+    let first = ax.rect.bottom_left() + Point2::direction(-30.0 * unit, h * 0.13);
     for (k, note) in notes.iter().enumerate() {
         let at = first + down.gp(k as f32 * h * 0.028);
-        c.text(note, at, 10.0, palette::ink(), Align::Left);
+        c.text(note, at, 10.0 * unit, palette::ink(), Align::Left);
     }
 
     caption(
         c,
         "THE KLEIN QUADRIC: LINES MEETING FOUR LINES",
-        "ZEROS OF THE KLEIN FORM LINE ^ LINE ALONG A PENCIL (PGA3D, COMPLEX COEFFICIENTS)",
+        "ZEROS OF THE KLEIN FORM LINE ^ LINE ON A PENCIL, COMPLEX COEFFICIENTS",
     );
 }
 

@@ -1,8 +1,8 @@
 # The shared drawing code's geometry goes through gax, as in examples/warp: no square roots,
 # trigonometry or hypotenuses on floats. Lengths are the norms of joins (or ideal norms), turns
 # are rotation motors, shading is the inner product of planes. The ban is an error in the
-# library (`#![deny]` in src/lib.rs); the example binaries, which port numga's formulas as
-# written, allow it (`[lints]` in Cargo.toml). `src/rng.rs` (sampling) is the exception.
+# library and the example binaries alike (`[lints]` in Cargo.toml); a scalar formula that is not
+# geometry (a physical law, a statistic, a test's reference) carries its own `allow` and reason.
 disallowed-methods = [
     { path = "f32::sqrt", reason = "lengths are gax: the norm of a join, ideal_norm" },
     { path = "f64::sqrt", reason = "lengths are gax: the norm of a join, ideal_norm" },

@@ -11,12 +11,13 @@
 
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
-    caption, palette, run,
+    caption, palette, run, signal::wave,
 };
 
 mod projection {
     use gax::pga3d::{Line, Motor, Plane, Point, Pseudoscalar};
     use gax::{Unit, pga2d};
+    use gax_numga_examples::signal::wave;
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
@@ -202,7 +203,7 @@ mod projection {
         // The subject, 5 ahead, turning about its vertical (the screen's y) and nodding.
         let pose = Motor::translation(0.0, 0.0, 5.0)
             * Motor::rotation_about(0.0, 1.0, 0.0, t)
-            * Motor::rotation_about(1.0, 0.0, 0.0, 0.25 * t.sin());
+            * Motor::rotation_about(1.0, 0.0, 0.0, 0.25 * wave(t));
         let subject = cube(1.6).map(|p| pose >> p);
         let cast = shadows(&body, ground(), light, sun, body[7], &path);
         let views = stereo(&subject, origin(), screen(), rig_1, rig_2);
@@ -241,7 +242,7 @@ fn rose() -> Light {
 
 /// The shadow scene in 3D: the body, both lights, both shadows and the corner's trail.
 fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
-    let turn = 0.25 * (core::f32::consts::TAU * t / SECONDS).sin();
+    let turn = 0.25 * wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
         c.width,
         c.height,
@@ -340,18 +341,16 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(&mut sub);
     shadow_scene(&mut sub, t, &sc);
     let (wf, hf) = (w as f32, h as f32);
-    let s = (hf / 40.0).clamp(7.0, 13.0);
-    // The key in the bottom left corner: a heading, and a row per light, each `s` in from the
-    // left edge and some lines up from the bottom.
+    // Text scales with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let s = (hf / 40.0).clamp(7.0 * unit, 13.0 * unit);
+    // The key in the bottom left corner: a heading on two lines, and a row per light, each `s`
+    // in from the left edge and some lines up from the bottom.
     let corner = sub.rect().bottom_left();
     let row = |lines: f32| corner + Point2::direction(s, -s * lines);
-    sub.text(
-        "SHADOWS: (LIGHT JOIN POINT) MEET GROUND",
-        row(4.2),
-        s,
-        palette::ink(),
-        Align::Left,
-    );
+    for (heading, lines) in [("SHADOWS: (LIGHT JOIN POINT)", 5.7), ("MEET GROUND", 4.2)] {
+        sub.text(heading, row(lines), s, palette::ink(), Align::Left);
+    }
     for (k, (label, col)) in [
         ("POINT LIGHT, ITS SHADOW", amber()),
         ("SUN, ITS SHADOW (DASHED)", violet()),
@@ -382,13 +381,13 @@ fn draw(c: &mut Canvas, t: f32) {
     screen_panel(
         c,
         rect_2,
-        "CAMERA 2: EPIPOLAR LINES OF CAMERA 1",
+        "CAMERA 2",
         sc.rig_2,
         &v.image_2,
         Some(&v.epipolar_lines_2),
     );
-    // Off the screen, to the left: where camera 2 sees camera 1's centre, and the form on the
-    // matched pairs.
+    // Under the screens: what the red lines are, where camera 2 sees camera 1's centre (off
+    // the screen, to the left), and the form on the matched pairs.
     let [ex, _] = screen_map(sc.rig_2).of(v.epipole_2).to_euclidean();
     let worst = v
         .image_1
@@ -397,6 +396,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|(a, b)| v.correspondence.of(*a).of(*b).e0123().abs())
         .fold(0.0, f64::max);
     for (k, text) in [
+        "RED: CAMERA 1'S CORNERS AS EPIPOLAR LINES".to_string(),
         format!("EPIPOLE OF CAMERA 2 AT X = {ex:.2}"),
         format!("CORRESPONDENCE FORM ON MATCHES: {worst:.0E}"),
     ]
@@ -413,7 +413,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     caption(
         c,
-        "PROJECTION: ONE EXPRESSION, (CENTRE JOIN POINT) MEET SCREEN",
+        "PROJECTION: (CENTRE JOIN POINT) MEET SCREEN",
         "CAMERAS, SHADOWS AND EPIPOLAR GEOMETRY BY WHICH SLOT IS LEFT OPEN (PGA3D)",
     );
 }

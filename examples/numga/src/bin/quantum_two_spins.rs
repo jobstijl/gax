@@ -17,6 +17,7 @@
 //! combination rises from 2 to `2 sqrt 2` and falls back.
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
@@ -146,10 +147,10 @@ mod spins {
     }
 
     /// The largest Bell combination over all directions, `2 sqrt(s1² + s2²)` from the two
-    /// largest singular values of the correlation map.
+    /// largest singular values of the correlation map: twice the length of the vector they make.
     pub fn bell(correlations: Correlation) -> f64 {
         let s = correlations.svdvals();
-        2.0 * s[0].hypot(s[1])
+        2.0 * gax::vga2d::Vector::new(s[0], s[1]).norm()
     }
 
     /// The Bell combination along two directions of each spin as a multivector acting on states
@@ -284,21 +285,23 @@ fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Light) {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
-    let (w, h) = (screen.width(), screen.height());
+    let w = screen.width();
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let tau = core::f64::consts::TAU;
     let phase = f64::from(t) / 8.0;
     // From up-down to swapped and back, easing in and out.
-    let angle = core::f64::consts::FRAC_PI_8 * (1.0 - (tau * phase).cos());
+    let angle = core::f64::consts::FRAC_PI_8 * (1.0 - phasor(tau * phase).e20());
     let state = exchange(up_down(), angle);
     let data = swapped();
     let (first, second) = bloch(state);
     let corr = correlation(state);
     let value = bell(corr);
-    let azimuth = (-55.0f32).to_radians() + 0.35 * (tau * phase).sin() as f32;
+    let azimuth = (-55.0f32).to_radians() + 0.35 * wave(tau * phase) as f32;
     let elevation = 18.0f32.to_radians();
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     // The band of the three balls, in thirds.
-    let band = Rect::new(0.0, h * 92.0 / 540.0, w, h * 392.0 / 540.0);
+    let band = Rect::new(0.0, 92.0 * unit, w, 392.0 * unit);
     let colours: [Light; 3] = [palette::red(), palette::purple(), palette::sky()];
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
     // Each Bloch vector in space, with its tip's path over the whole exchange.
@@ -339,14 +342,14 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         });
         axis_names(c, &drawn);
-        let title = rect.top_middle() + up.gp(4.0);
-        c.text(titles[k], title, 13.0, colours[k], Align::Center);
+        let title = rect.top_middle() + up.gp(4.0 * unit);
+        c.text(titles[k], title, 13.0 * unit, colours[k], Align::Center);
     }
     // The lengths of the Bloch vectors under their balls.
     for (k, (now, _)) in [0, 2].into_iter().zip(&blochs) {
-        let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0);
+        let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0 * unit);
         let text = format!("LENGTH {:.2}", now.norm());
-        c.text(&text, note, 11.0, palette::ink(), Align::Center);
+        c.text(&text, note, 11.0 * unit, palette::ink(), Align::Center);
     }
     // The largest Bell combination along the exchange.
     let quarter = core::f32::consts::FRAC_PI_4;
@@ -354,7 +357,7 @@ fn draw(c: &mut Canvas, t: f32) {
         lo: band.bottom_left(),
         hi: screen.hi,
     };
-    let plot = below.inset(w * 0.073, h * 34.0 / 540.0, w * 0.03, h * 42.0 / 540.0);
+    let plot = below.inset(w * 0.073, 34.0 * unit, w * 0.03, 42.0 * unit);
     let ax = Axes::new(plot, [0.0, quarter], [1.9, 2.95]);
     ax.frame(c, "", "EXCHANGE ANGLE (RAD)", "LARGEST BELL VALUE");
     let root8 = 2.0 * core::f32::consts::SQRT_2;
@@ -362,12 +365,14 @@ fn draw(c: &mut Canvas, t: f32) {
         let across = [Point2::xy(0.0, level), Point2::xy(quarter, level)];
         ax.dashed(c, &across, 1.0, dash, palette::grid());
     }
-    let small = 9.0;
+    let small = 9.0 * unit;
     let note = Point2::xy(quarter / 2.0, 2.04);
     let text = "EACH SPIN ITS OWN ANSWERS";
     ax.text(c, note, text, small, palette::grid(), Align::Center);
-    let note = Point2::xy(0.01, root8 + 0.04);
-    ax.text(c, note, "2 SQRT 2", small, palette::grid(), Align::Left);
+    // The bound's name under its line at the right end, where the curve is low, clear of the
+    // axis label above the frame.
+    let note = ax.px(Point2::xy(quarter, root8)) + Point2::direction(-4.0 * unit, small * 1.5);
+    c.text("2 SQRT 2", note, small, palette::grid(), Align::Right);
     let curve: Vec<Point2> = data
         .angles
         .iter()
@@ -427,7 +432,9 @@ mod tests {
             let middle = frames / 2;
             assert!(s.first[middle].c.iter().all(|v| v.abs() < 1e-7));
             let last = frames - 1;
-            for (i, want) in [(0, 2.0), (middle, 2.0 * 2f64.sqrt()), (last, 2.0)] {
+            #[allow(clippy::disallowed_methods)] // the reference it is checked against
+            let bound = 2.0 * 2f64.sqrt();
+            for (i, want) in [(0, 2.0), (middle, bound), (last, 2.0)] {
                 assert!((s.bells[i] - want).abs() < 1e-7, "{i}: {}", s.bells[i]);
             }
             assert!((s.first[last] + z()).c.iter().all(|v| v.abs() < 1e-7));
@@ -461,7 +468,9 @@ mod tests {
             let want = one() * 4.0 - (a ^ a2) * (b ^ b2) * 4.0;
             assert!(small(e * e - want, 1e-12));
         }
-        assert!((value - 2.0 * 2f64.sqrt()).abs() < 1e-12);
+        #[allow(clippy::disallowed_methods)] // the reference it is checked against
+        let bound = 2.0 * 2f64.sqrt();
+        assert!((value - bound).abs() < 1e-12);
     }
 
     #[test]

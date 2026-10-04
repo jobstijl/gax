@@ -59,10 +59,12 @@ macro_rules! engine {
         }
 
         /// The angle between two unit points of the sphere, or between one and the other's
-        /// antipode where that is smaller: the angle whose sine is the norm of their join (the
-        /// great circle through them) and whose cosine is their inner product, up to sign.
+        /// antipode where that is smaller: the norm of the logarithm of the rotor `b / a` that
+        /// turns one into the other, or its supplement.
         pub fn arc(a: P, b: P) -> f64 {
-            (a & b).norm().atan2((a | b).s().abs())
+            let log: B = (b / a).normalized().log();
+            let angle = log.norm();
+            angle.min(core::f64::consts::PI - angle)
         }
 
         /// One body: its colour (a light), its motor, its momentum in the body frame, its
@@ -215,14 +217,16 @@ macro_rules! engine {
                 let core = uniform_on(&principal[..k], rng);
                 let extent = uniform_on(&principal[k..], rng);
                 let (inward, outward) = (-form.fill(core).s(), form.fill(extent).s());
+                // Sampling: the angle whose tangent squared is the ratio of the blocks.
+                #[allow(clippy::disallowed_methods)] // a sampling bound, not geometry
                 let balance = (inward / outward).sqrt().atan();
                 let angle = balance * rng.uniform();
-                weights.push(
-                    angle.cos().powi(k as i32 - 1)
-                        * angle.sin().powi((DIM - 1 - k) as i32)
-                        * balance,
-                );
-                points.push(core.gp(angle.cos()) + extent.gp(angle.sin()));
+                // The point of the great circle from the core point toward the extent point at
+                // that angle: the turned direction's reach and height.
+                let turned = gax_numga_examples::signal::phasor(angle);
+                let (cosine, sine) = (turned.e20(), turned.e01());
+                weights.push(cosine.powi(k as i32 - 1) * sine.powi((DIM - 1 - k) as i32) * balance);
+                points.push(core.gp(cosine) + extent.gp(sine));
             }
             let total: f64 = weights.iter().sum();
             (points, weights.iter().map(|w| w * mass / total).collect())
@@ -239,9 +243,11 @@ macro_rules! engine {
             (moved, (motor.inverse() * moved) << momentum)
         }
 
-        /// The least eigenvalue of the blend `a + b tan φ` and its eigenvector.
+        /// The least eigenvalue of the blend `a + b tan φ` and its eigenvector. The weight
+        /// `tan φ` is the height over the width of the direction turned by `φ`.
         fn least(a: Quadric, b: Quadric, phi: f64) -> (f64, P) {
-            let blend = a + b.gp(phi.tan());
+            let turned = gax_numga_examples::signal::phasor(phi);
+            let blend = a + b.gp(turned.e01() / turned.e20());
             let (values, points) = (Point::slot() & blend.of(Point::slot())).eigh();
             (values[0], points[0])
         }
@@ -257,6 +263,7 @@ macro_rules! engine {
             // Two probes c < d split the bracket in the golden ratio; whichever side holds the
             // larger value keeps the bracket, and the surviving probe already sits at the golden
             // point of the shrunk bracket, so each step evaluates one fresh probe.
+            #[allow(clippy::disallowed_methods)] // the golden ratio, a constant of the search
             let golden = (5f64.sqrt() - 1.0) / 2.0;
             let (mut lo, mut hi) = (0.0, core::f64::consts::FRAC_PI_2);
             let (mut c, mut d) = (hi - golden * (hi - lo), lo + golden * (hi - lo));

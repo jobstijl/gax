@@ -22,6 +22,7 @@
 
 use gax::pga3d::{Direction, Line, Motor, Plane, Point};
 use gax_colour::light;
+use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -115,6 +116,7 @@ mod top {
 
     /// Six mass points per solid ellipsoid with its mass, centroid and second moments, at
     /// `sqrt(3 / 5)` of each semi-axis on either side.
+    #[allow(clippy::disallowed_methods)] // a number: the points' moment r²/3 matches the solid's 1/5
     pub fn sigma_points(centres: &[P], semi: &[[f64; 3]], mass: &[f64]) -> (Vec<P>, Vec<f64>) {
         let reach = (3.0f64 / 5.0).sqrt();
         let (mut points, mut masses) = (Vec::new(), Vec::new());
@@ -152,7 +154,13 @@ mod top {
         // The plane through the centre, normal to the direction, and its pole, a direction.
         let plane = normal.dual() - w() * (normal.dual() & centre).s();
         let conjugate = dual.of(plane);
-        centre + conjugate / (-(plane & conjugate).s() * (w() & pole).s()).sqrt()
+        // Along the conjugate the form is `t² Q(conjugate) + Q(centre)` (no cross term, by
+        // conjugacy), with `Q(conjugate) = plane & conjugate` and `Q(centre) = 1 / (w & pole)`:
+        // its roots are a pair centred on the centre, and the reach is their radius (none, not
+        // a number, if the quadric is not closed).
+        let a = (plane & conjugate).s();
+        let reach = roots(a, 0.0, (w() & pole).s().recip()).map_or(f64::NAN, |(_, r)| r);
+        centre + conjugate * reach
     }
 
     /// The direction less its part along the ground's normal: its part in the ground's plane.
@@ -261,6 +269,8 @@ mod top {
             let couple = normal[i].dual() ^ w();
             let turned = (couple & (turn * -2.0)).s();
             let [k1, k2] = principal(placed[i], contact[i]);
+            #[allow(clippy::disallowed_methods)]
+            // Hertz's law of contact, the patch radius sqrt(R δ)
             let patch = ((2.0 / (k1 + k2)).abs() * indentation).sqrt();
             let (step, give) = compliance(motor, inertia_inv, couple);
             twist += step * clamp(-turned / give, pressed[i] * stat * patch);
@@ -440,18 +450,16 @@ mod scenarios {
 
     /// Where a ray from `origin` along the unit direction `heading` enters the solid quadric:
     /// its distance and the point. Bound to the ray in both slots, the form is a quadratic in
-    /// the distance; at the entering root it falls through zero, so the root is the one with
-    /// `a distance + b = -sqrt(discriminant)`.
+    /// the distance, whose roots are a pair of points on the ray ([`roots`]); at the
+    /// entering root the form falls through zero, the nearer root where it opens upwards
+    /// (`a > 0`) and the further one where it opens downwards.
     pub fn hit(surface: Quadric, origin: P, heading: P) -> Option<(f64, P)> {
         let along = surface.of(heading);
         let a = (along & heading).s();
         let b = (along & origin).s();
         let c = (surface.of(origin) & origin).s();
-        let discriminant = b * b - a * c;
-        if discriminant < 0.0 {
-            return None;
-        }
-        let distance = (-b - discriminant.sqrt()) / a;
+        let (middle, radius) = roots(a, b, c)?;
+        let distance = middle - radius * a.signum();
         (distance.is_finite() && distance > 0.0).then(|| (distance, origin + heading * distance))
     }
 

@@ -9,6 +9,8 @@
 
 use gax::pga2d::{Line, Motor, Point};
 
+use gax_numga_examples::measure;
+use gax_numga_examples::signal::phasor;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -67,7 +69,10 @@ mod collision {
             (n & q.of(inf)).s(),
             (n & q.of(n)).s(),
         );
-        n - inf.gp(b / a + ((b * b - a * c) / (a * a)).sqrt())
+        // The outward root of the quadratic in the offset ([`measure::roots`]), the support
+        // distance: the midpoint `b / a` plus half the roots' distance.
+        let support = measure::roots(a, -b, c).map_or(f64::NAN, |(middle, half)| middle + half);
+        n - inf.gp(support)
     }
 
     /// The blend `q1 (1 - λ) + q2 λ` of two dual quadrics.
@@ -83,14 +88,18 @@ mod collision {
 
     /// The maximum of a cubic sampled at 0, 1, 2 and -1: `(where, value)`. The cubic is concave
     /// between 0 and 1, so its maximum is the root of the derivative `3 c3 λ² + 2 c2 λ + c1`
-    /// where the second derivative is negative. Written as `c1 / (√(c2² - 3 c3 c1) - c2)`, that
-    /// root stays finite as `c3` vanishes.
+    /// where the second derivative is negative. In the reciprocal `μ = 1 / λ` the derivative
+    /// reads `c1 μ² + 2 c2 μ + 3 c3`, and that root is `μ = (√(c2² - 3 c3 c1) - c2) / c1`, the
+    /// midpoint `-c2 / c1` plus half the roots' distance along `c1` ([`measure::roots`]): it
+    /// stays finite as `c3` vanishes.
     pub fn cubic_peak([y0, y1, y2, y3]: [f64; 4]) -> (f64, f64) {
         let c3 = (3.0 * y0 - 3.0 * y1 + y2 - y3) / 6.0;
         let c2 = -y0 + 0.5 * y1 + 0.5 * y3;
         let c1 = -0.5 * y0 + y1 - y2 / 6.0 - y3 / 3.0;
         let c0 = y0;
-        let peak = c1 / ((c2 * c2 - 3.0 * c3 * c1).sqrt() - c2);
+        let peak = measure::roots(c1, c2, 3.0 * c3).map_or(f64::NAN, |(middle, half)| {
+            1.0 / (middle + half.copysign(c1))
+        });
         (peak, ((c3 * peak + c2) * peak + c1) * peak + c0)
     }
 
@@ -189,13 +198,15 @@ fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Light) {
 /// The offset of the second ellipse at time `t`: from 0.8 apart to 0.6 inside and back.
 fn offset_at(t: f32) -> f64 {
     let phase = f64::from(t) / 8.0 * core::f64::consts::TAU;
-    0.1 + 0.7 * phase.cos()
+    0.1 + 0.7 * phasor(phase).e20()
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let s = scene();
     let offset = offset_at(t);
     let q1 = s.q1;
@@ -214,11 +225,16 @@ fn draw(c: &mut Canvas, t: f32) {
         "DUAL ELLIPSES IN PGA2D, Q(L) = Q1 (1-L) + Q2 L",
     );
 
-    // The ellipses, on the left.
+    // The ellipses, on the left; the lowest tick a little above the corner.
     let ax = Axes::equal(
-        Rect::new(0.0, 64.0, w * 0.58, h).inset(20.0, 30.0, 10.0, 20.0),
+        Rect::new(0.0, 64.0 * unit, w * 0.58, h).inset(
+            34.0 * unit,
+            30.0 * unit,
+            10.0 * unit,
+            24.0 * unit,
+        ),
         Point::xy(-0.4, 0.0),
-        3.0,
+        3.3,
     );
     ax.frame(c, state, "", "");
     if top > 0.0 {
@@ -266,14 +282,15 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The cubic of the current pose, against the three reference poses.
     // The right side, split into an upper and a lower half.
-    let right = Rect::new(w * 0.6, 60.0, w - 16.0, h - 10.0);
+    let right = Rect::new(w * 0.6, 60.0 * unit, w - 16.0 * unit, h - 10.0 * unit);
     let half = Point2::direction(0.0, right.height() / 2.0);
     let top_rect = Rect {
         lo: right.lo,
         hi: right.hi - half,
     }
-    .inset(40.0, 20.0, 0.0, 30.0);
-    let ax = Axes::new(top_rect, [0.0, 1.0], [-3.0, 3.0]);
+    .inset(40.0 * unit, 20.0 * unit, 0.0, 30.0 * unit);
+    // The lowest tick a little above the corner, so its label clears the axis's.
+    let ax = Axes::new(top_rect, [0.0, 1.0], [-3.5, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
     ax.line(
         c,
@@ -308,14 +325,9 @@ fn draw(c: &mut Canvas, t: f32) {
         lo: right.lo + half,
         hi: right.hi,
     }
-    .inset(40.0, 20.0, 0.0, 30.0);
+    .inset(40.0 * unit, 20.0 * unit, 0.0, 30.0 * unit);
     let ax = Axes::new(bottom_rect, [-0.6, 0.8], [-1.5, 2.5]);
-    ax.frame(
-        c,
-        "MAX DET AGAINST THE OFFSET",
-        "OFFSET ALONG THE NORMAL",
-        "",
-    );
+    ax.frame(c, "MAX DET AGAINST THE NORMAL OFFSET", "", "");
     ax.line(
         c,
         Point2::xy(-0.6, 0.0),
@@ -346,7 +358,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c,
         Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
-        11.0,
+        11.0 * unit,
         palette::ink().mix_light(marker, 0.3),
         Align::Left,
     );
@@ -375,6 +387,7 @@ mod tests {
 
     /// The motor rotates counterclockwise and then translates, as numga's.
     #[test]
+    #[allow(clippy::disallowed_methods)] // the references it is checked against
     fn motor_conventions() {
         let m = motor(1.0, 2.0, 0.3);
         // The origin lands on (1, 2): the line joining them has no length.

@@ -19,7 +19,7 @@ use gax_numga_examples::points::{Map2, box_map};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Pos2, Rect, backdrop, caption,
-    colormap, palette, run,
+    colormap, font, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -69,6 +69,13 @@ mod crystal {
         core::array::from_fn(|m| stiffness(C11[m], C12[m], C44[m]))
     }
 
+    /// The phase speed of a wave from the Christoffel map's eigenvalue, density times squared
+    /// speed: `sqrt(value / density)`, the law of elastic waves (as `sqrt(k / m)` is a spring's).
+    #[allow(clippy::disallowed_methods)] // a law of elastic waves, the speed sqrt(c / ρ)
+    pub fn phase_speed(value: f64, density: f64) -> f64 {
+        (value / density).sqrt()
+    }
+
     /// The waves along a heading, slowest first: density times squared speed, and polarization.
     /// The heading bound into the normal and gradient slots leaves the Christoffel map; numga
     /// takes its eigenpairs directly, gax as those of the form `u | Γ(v)` (Euclidean vectors
@@ -82,7 +89,8 @@ mod crystal {
     /// The velocity of each wave's energy, its group velocity. With the polarization in the
     /// normal and displacement slots and the heading in the gradient slot, the stiffness returns
     /// the flux of the wave's energy; divided by density times phase speed it is the group
-    /// velocity, whose component along the heading is the phase speed.
+    /// velocity, whose component along the heading is the phase speed. (The polarization's
+    /// pairing is density times squared phase speed.)
     pub fn energy_flow(
         crystal: &Stiffness,
         heading: V,
@@ -95,7 +103,7 @@ mod crystal {
                 .of(p)
                 .of(p)
                 .of(heading)
-                .gp(1.0 / (squared * density).sqrt())
+                .gp(1.0 / (density * phase_speed(squared, density)))
         })
     }
 
@@ -105,7 +113,7 @@ mod crystal {
         let (values, polarization) = waves(crystal, heading);
         let velocity = energy_flow(crystal, heading, &polarization, DENSITY[m]);
         for (v, value) in velocity.iter().zip(values) {
-            let phase = (value / DENSITY[m]).sqrt();
+            let phase = phase_speed(value, DENSITY[m]);
             debug_assert!(((*v | heading).s() - phase).abs() <= 1e-8 * phase);
         }
         velocity
@@ -151,9 +159,9 @@ mod crystal {
     pub fn wave_fronts(count: usize) -> [Vec<[V; 3]>; 3] {
         let crystals = crystals();
         for m in 0..3 {
-            let speeds = |h: V| waves(&crystals[m], h).0.map(|v| (v / DENSITY[m]).sqrt());
+            let speeds = |h: V| waves(&crystals[m], h).0.map(|v| phase_speed(v, DENSITY[m]));
             let edge = speeds(Vector::new(1.0, 0.0, 0.0));
-            let expected = [C44[m], C44[m], C11[m]].map(|c| (c / DENSITY[m]).sqrt());
+            let expected = [C44[m], C44[m], C11[m]].map(|c| phase_speed(c, DENSITY[m]));
             for (a, b) in edge.iter().zip(expected) {
                 assert!((a - b).abs() <= 1e-8 * b);
             }
@@ -165,7 +173,7 @@ mod crystal {
             ];
             expected.sort_by(f64::total_cmp);
             for (a, b) in diagonal.iter().zip(expected) {
-                let b = (b / DENSITY[m]).sqrt();
+                let b = phase_speed(b, DENSITY[m]);
                 assert!((a - b).abs() <= 1e-8 * b);
             }
         }
@@ -241,11 +249,14 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let d = data();
     let total = 3.0 * SWEEP;
     let u = t.rem_euclid(total) / total;
     let current = ((u * 3.0) as usize).min(2);
     // The focusing images: a growing share of the headings, faster at first.
+    #[allow(clippy::disallowed_methods)] // the animation's pace, a timing curve
     let share = u.sqrt().max(0.02);
     let top = h * 0.17;
     let left = w * 0.13;
@@ -262,7 +273,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let grid = to_grid();
     for (m, name) in NAMES.iter().enumerate() {
         for (wv, mode) in MODES.iter().enumerate() {
-            let rect = square(m, wv).inset(2.0, 2.0, 2.0, 2.0);
+            let rect = square(m, wv).inset(2.0 * unit, 2.0 * unit, 2.0 * unit, 2.0 * unit);
             let ax = Axes::new(rect, [-1.5, 1.5], [-1.5, 1.5]);
             let pts = &d.focus[m][wv];
             let n = ((pts.len() as f32 * share) as usize).min(pts.len());
@@ -278,24 +289,34 @@ fn draw(c: &mut Canvas, t: f32) {
                 c.polyline(&corners, 1.5, palette::yellow().faded(0.9), true);
             }
             if m == 0 {
-                let above = rect.top_middle() + up.gp(6.0);
-                c.text(mode, above, 10.0, mode_colour(wv), Align::Center);
+                let above = rect.top_middle() + up.gp(6.0 * unit);
+                c.text(mode, above, 10.0 * unit, mode_colour(wv), Align::Center);
             }
         }
-        // The crystal's name left of the middle of its row.
+        // The crystal's name left of the middle of its row, a word a line where it would not
+        // fit in the margin with room to spare.
         let row = square(m, 0);
-        let at = row.left_middle() - right.gp(6.0);
+        let at = row.left_middle() - right.gp(6.0 * unit);
         let tone = if m == current {
             palette::yellow()
         } else {
             palette::ink()
         };
-        c.text(name, at, 10.0, tone, Align::Right);
+        let words: Vec<&str> = if font::width(name, 10.0 * unit) + 16.0 * unit > left {
+            name.split(' ').collect()
+        } else {
+            vec![name]
+        };
+        let middle = (words.len() as f32 - 1.0) / 2.0;
+        for (i, word) in words.iter().enumerate() {
+            let line = at - up.gp(13.0 * unit * (i as f32 - middle));
+            c.text(word, line, 10.0 * unit, tone, Align::Right);
+        }
     }
     let count = ((HEADINGS as f32 * share) as usize / 1000) * 1000;
     let at = screen.bottom_left() + Point2::direction(left, -h * 0.005);
     let text = format!("{count} HEADINGS");
-    c.text(&text, at, 10.0, palette::grid(), Align::Left);
+    c.text(&text, at, 10.0 * unit, palette::grid(), Align::Left);
 
     // The wave surfaces of the current crystal in the cube face, and the sweeping heading.
     let fronts = &d.fronts[current];
@@ -324,7 +345,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.line(c, origin, tip, 1.0, palette::ink().faded(0.6));
     for wv in 0..3 {
         // The phase velocity lies along the heading; the energy goes along the group velocity.
-        let phase = (values[wv] / DENSITY[current]).sqrt();
+        let phase = phase_speed(values[wv], DENSITY[current]);
         let ring = face(heading.gp(phase));
         ax.scatter(c, &[ring], Marker::Ring, 8.0, mode_colour(wv));
         ax.arrow(c, origin, face(group[wv]), 2.0, 9.0, mode_colour(wv));
@@ -396,7 +417,7 @@ mod tests {
                 let (values, polarization) = waves(crystal, h);
                 let velocity = energy_flow(crystal, h, &polarization, DENSITY[m]);
                 for (v, value) in velocity.iter().zip(values) {
-                    let phase = (value / DENSITY[m]).sqrt();
+                    let phase = phase_speed(value, DENSITY[m]);
                     assert!(((*v | h).s() - phase).abs() <= 1e-8 * phase);
                 }
             }

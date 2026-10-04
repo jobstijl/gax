@@ -2,10 +2,12 @@
 //! you choose. Projective geometry has joins and meets but no distances; one conic, the
 //! absolute, given as a polarity `C` from points to lines, supplies them all. Distances and
 //! angles are invariants of pairs against the absolute (`C` for points, its inverse `Q` for
-//! lines), the perpendiculars to a line all pass through its pole, reflection in a line is the
-//! harmonic homology about its pole, and a circle is the quadric of points at a fixed invariant
-//! from its centre. With the unit circle as the absolute this is the Beltrami-Klein disk of
-//! hyperbolic geometry; flipping one sign gives elliptic geometry with the same lines.
+//! lines), read off the rotors between vectors of the algebra whose metric is the absolute
+//! (`R(2,1)` for the hyperbolic plane); the perpendiculars to a line all pass through its pole,
+//! reflection in a line is the harmonic homology about its pole, and a circle is the quadric of
+//! points at a fixed invariant from its centre. With the unit circle as the absolute this is the
+//! Beltrami-Klein disk of hyperbolic geometry; flipping one sign gives elliptic geometry with the
+//! same lines.
 //!
 //! The animation moves the triangle's apex and the point P, so the angle sum, the area by
 //! Gauss-Bonnet, the perpendicular through the pole and the reflection all follow, and grows
@@ -17,16 +19,14 @@ use gax_numga_examples::{
 };
 
 mod cayley_klein {
-    use gax::Of;
-    use gax::pga2d::Scalar;
     use gax::pga2d::{Line, Point};
+    use gax_numga_examples::measure;
+    use gax_numga_examples::signal::phasor;
 
     pub type P = Point<(), f64>;
     pub type L = Line<(), f64>;
     /// A polarity, points to lines (`Line <- Point`).
     pub type Polarity = Line<(Point,), f64>;
-    /// A pole map, lines to points (`Point <- Line`).
-    pub type Pole = Point<(Line,), f64>;
 
     /// The absolute from three line dyads, `x (x ∨ P) + y (y ∨ P) ± w (w ∨ P)`: the conic
     /// `x² + y² ± w² = 0`. With `-` it is the unit circle (hyperbolic), with `+` a conic with no
@@ -48,35 +48,79 @@ mod cayley_klein {
         absolute(1.0)
     }
 
-    /// A form's value on a pair.
-    pub fn pair<F, A: Copy>(form: F, a: A, b: A) -> f64
-    where
-        F: Of<A>,
-        F::Output: Of<A, Output = Scalar<(), f64>>,
-    {
-        form.of(a).of(b).s()
+    /// The hyperbolic absolute as a metric: the lines `a x + b y + c = 0` and the points
+    /// `(x, y, w)` of PGA2D as the vectors `a e1 + b e2 + c e0` and `x e1 + y e2 + w e0` of
+    /// `R(2,1)`, whose inner product is the absolute's pairing, `l ∨ Q(m)` for lines and
+    /// `A ∨ C(B)` for points. Lines through the disk are spacelike, and the rotor between two of
+    /// them turns by their angle; points inside are timelike, and the rotor between two of them
+    /// is a boost by their distance.
+    pub mod metric {
+        gax::algebra! {
+            algebra r21 "The hyperbolic plane's absolute as a metric, R(2,1).";
+            basis e1 = 1, e2 = 1, e0 = -1;
+            kind Scalar = [1];
+            versor Vector = [e1, e2, e0];
+            kind Bivector = [e12, e20, e01];
+            versor Rotor = [1, e12, e20, e01];
+            kind Pseudoscalar = [e120];
+        }
+        pub use r21::{Bivector, Vector};
     }
 
-    /// The invariant of a pair against the absolute: their pairing over the root of both
-    /// self-pairings.
-    pub fn invariant<F, A: Copy>(form: F, a: A, b: A) -> f64
-    where
-        F: Of<A> + Copy,
-        F::Output: Of<A, Output = Scalar<(), f64>>,
-    {
-        pair(form, a, b) / (pair(form, a, a) * pair(form, b, b)).sqrt()
+    /// A Cayley-Klein geometry: its absolute, and the angles and distances it measures, each the
+    /// norm of the logarithm of the rotor between two vectors of the algebra whose metric is the
+    /// absolute.
+    pub trait Geometry {
+        /// The absolute.
+        fn absolute() -> Polarity;
+        /// The angle between two lines, from 0 to π.
+        fn angle(l: L, m: L) -> f64;
+        /// The distance between two points.
+        fn distance(a: P, b: P) -> f64;
     }
 
-    /// The point pairing whose invariant is the `cosh` of the hyperbolic distance,
-    /// `-(A ∨ C(B))`: positive inside the disk.
-    pub fn distance_pairing(c: Polarity) -> Scalar<(Point, Point), f64> {
-        -(Point::slot() & c.of(Point::slot()))
+    /// The hyperbolic plane: the unit circle as the absolute.
+    pub struct Hyperbolic;
+
+    /// The elliptic plane: the absolute with no real points.
+    pub struct Elliptic;
+
+    impl Geometry for Hyperbolic {
+        fn absolute() -> Polarity {
+            hyperbolic()
+        }
+
+        fn angle(l: L, m: L) -> f64 {
+            let line = |l: L| metric::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
+            let log: metric::Bivector<(), f64> = (line(m) * line(l)).normalized().log();
+            log.norm()
+        }
+
+        /// Inside the disk `A ∨ C(B)` is negative, `-cosh` of the distance, so the boost from
+        /// `A` to `B` is the rotor `-B A`.
+        fn distance(a: P, b: P) -> f64 {
+            let point = |p: P| metric::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
+            let log: metric::Bivector<(), f64> = (-(point(b) * point(a))).normalized().log();
+            log.norm()
+        }
     }
 
-    /// The line pairing whose invariant is the cosine of the angle, `l ∨ Q(m)`.
-    pub fn angle_pairing(c: Polarity) -> Scalar<(Line, Line), f64> {
-        let q: Pole = c.inverse();
-        Line::slot() & q.of(Line::slot())
+    /// The elliptic absolute is the Euclidean metric of the lines' and the points'
+    /// coefficients: angles and distances are angles between vectors of space.
+    impl Geometry for Elliptic {
+        fn absolute() -> Polarity {
+            elliptic()
+        }
+
+        fn angle(l: L, m: L) -> f64 {
+            let line = |l: L| gax::vga3d::Vector::<(), f64>::new(l.e1(), l.e2(), l.e0());
+            measure::angle(line(l), line(m))
+        }
+
+        fn distance(a: P, b: P) -> f64 {
+            let point = |p: P| gax::vga3d::Vector::<(), f64>::new(p.e20(), p.e01(), p.e12());
+            measure::angle(point(a), point(b))
+        }
     }
 
     /// A triangle against the absolute.
@@ -92,19 +136,13 @@ mod cayley_klein {
     }
 
     /// The sides, angles, side lengths and area of a triangle, all from the absolute.
-    pub fn triangle(c: Polarity, v: [P; 3]) -> Triangle {
-        let (distance, angle) = (distance_pairing(c), angle_pairing(c));
+    pub fn triangle<G: Geometry>(v: [P; 3]) -> Triangle {
         // The sides are joins of consecutive vertices; the angle at a vertex is between the
-        // two sides leaving it. The invariants stay inside the algebra until the last step.
+        // two sides leaving it.
         let to_next: [L; 3] = core::array::from_fn(|i| v[i] & v[(i + 1) % 3]);
         let to_prev: [L; 3] = core::array::from_fn(|i| v[i] & v[(i + 2) % 3]);
-        let angles = core::array::from_fn(|i| {
-            invariant(angle, to_next[i], to_prev[i])
-                .clamp(-1.0, 1.0)
-                .acos()
-        });
-        let lengths =
-            core::array::from_fn(|i| invariant(distance, v[i], v[(i + 1) % 3]).max(1.0).acosh());
+        let angles = core::array::from_fn(|i| G::angle(to_next[i], to_prev[i]));
+        let lengths = core::array::from_fn(|i| G::distance(v[i], v[(i + 1) % 3]));
         let area = core::f64::consts::PI - angles.iter().sum::<f64>();
         Triangle {
             sides: to_next,
@@ -150,14 +188,16 @@ mod cayley_klein {
 
     /// numga's scene with the apex wandering, P circling and the circles' radii growing.
     pub fn hyperbolic_plane(t: f64) -> Scene {
-        let c = hyperbolic();
+        let c = Hyperbolic::absolute();
+        // The apex and P go round on turned directions, stretched into small loops.
+        let (once, twice) = (phasor(t), phasor(2.0 * t));
         let vertices = [
             Point::xy(0.0, 0.0),
             Point::xy(0.65, 0.0),
-            Point::xy(0.2 + 0.25 * t.sin(), 0.55 + 0.2 * (2.0 * t).cos()),
+            Point::xy(0.2 + 0.25 * once.e01(), 0.55 + 0.2 * twice.e20()),
         ];
-        let triangle = triangle(c, vertices);
-        let p = Point::xy(-0.15 + 0.2 * t.cos(), 0.15 + 0.15 * t.sin());
+        let triangle = triangle::<Hyperbolic>(vertices);
+        let p = Point::xy(-0.15 + 0.2 * once.e20(), 0.15 + 0.15 * once.e01());
         let (pole, normal, foot, reflected) = perpendicular(c, triangle.sides[1], p);
         let grow = (t / core::f64::consts::TAU).rem_euclid(1.0);
         Scene {
@@ -204,8 +244,15 @@ fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
     let s = hyperbolic_plane(phase);
     let screen = c.rect();
-    let rect = |i: usize| screen.column(i, 2).inset(20.0, 80.0, 20.0, 24.0);
-    let above = Point2::direction(0.0, -10.0);
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
+    let rect = |i: usize| {
+        screen
+            .column(i, 2)
+            .inset(20.0 * unit, 80.0 * unit, 20.0 * unit, 24.0 * unit)
+    };
+    // The notes go under the panels, centred.
+    let below = Point2::direction(0.0, 16.0 * unit);
     let box_centre = Point::xy(0.35, 0.2);
 
     // The triangle, its perpendicular and the reflection, on the left.
@@ -228,7 +275,7 @@ fn draw(c: &mut Canvas, t: f32) {
             c,
             *v + Point::direction(0.04, 0.06),
             &format!("{:.1}", angle.to_degrees()),
-            11.0,
+            11.0 * unit,
             palette::ink(),
             Align::Left,
         );
@@ -239,7 +286,7 @@ fn draw(c: &mut Canvas, t: f32) {
             c,
             midpoint + Point::direction(0.03, -0.07),
             &format!("{:.2}", s.triangle.lengths[i]),
-            10.0,
+            10.0 * unit,
             palette::sky(),
             Align::Left,
         );
@@ -256,19 +303,19 @@ fn draw(c: &mut Canvas, t: f32) {
     let r = rect(0);
     c.text(
         &format!(
-            "ANGLE SUM {:.1} (ELLIPTIC {:.1}), AREA {:.3}",
+            "ANGLE SUM {:.1} (ELLIPTIC {:.1}) AREA {:.3}",
             s.triangle.angles.iter().sum::<f64>().to_degrees(),
-            triangle(elliptic(), s.vertices)
+            triangle::<Elliptic>(s.vertices)
                 .angles
                 .iter()
                 .sum::<f64>()
                 .to_degrees(),
             s.triangle.area
         ),
-        r.lo + above,
-        10.0,
+        r.bottom_middle() + below,
+        10.0 * unit,
         palette::ink(),
-        Align::Left,
+        Align::Center,
     );
 
     // Circles as level sets of quadrics, on the right.
@@ -285,13 +332,13 @@ fn draw(c: &mut Canvas, t: f32) {
     let r = rect(1);
     c.text(
         &format!(
-            "CIRCLES, RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
+            "RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
             s.radii[0], s.radii[3]
         ),
-        r.lo + above,
-        10.0,
+        r.bottom_middle() + below,
+        10.0 * unit,
         palette::ink(),
-        Align::Left,
+        Align::Center,
     );
     caption(
         c,
@@ -308,16 +355,57 @@ fn main() {
 mod tests {
     use super::cayley_klein::*;
     use gax::ApproxEq;
-    use gax::pga2d::Point;
+    use gax::pga2d::{Line, Point};
+
+    /// A pole map, lines to points (`Point <- Line`).
+    type Pole = Point<(Line,), f64>;
 
     fn assert_close(a: f64, b: f64, tol: f64) {
         assert!((a - b).abs() <= tol, "{a} vs {b}");
     }
 
     /// The invariant of two points against an absolute `C`: `A ∨ C(B)` over the roots.
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
     fn point_invariant(c: Polarity, a: P, b: P) -> f64 {
-        let form = Point::slot() & c.of(Point::slot());
-        invariant(form, a, b)
+        let pair = |a: P, b: P| (a & c.of(b)).s();
+        pair(a, b) / (pair(a, a) * pair(b, b)).sqrt()
+    }
+
+    /// The invariant of two lines against the absolute's inverse `Q`: `l ∨ Q(m)` over the roots.
+    #[allow(clippy::disallowed_methods)] // the reference it is checked against
+    fn line_invariant(c: Polarity, l: L, m: L) -> f64 {
+        let q: Pole = c.inverse();
+        let pair = |l: L, m: L| (l & q.of(m)).s();
+        pair(l, m) / (pair(l, l) * pair(m, m)).sqrt()
+    }
+
+    /// The angles and lengths from the rotors of the absolute's algebra are the arccosines (and
+    /// for hyperbolic lengths the inverse hyperbolic cosines) of the invariants.
+    #[test]
+    #[allow(clippy::disallowed_methods)] // the references they are checked against
+    fn rotor_measures_are_the_invariants_measures() {
+        for k in 0..16 {
+            let s = hyperbolic_plane(0.4 * k as f64);
+            let v = s.vertices;
+            let sides: [L; 3] = core::array::from_fn(|i| v[i] & v[(i + 1) % 3]);
+            let back: [L; 3] = core::array::from_fn(|i| v[i] & v[(i + 2) % 3]);
+            for (c, t) in [
+                (hyperbolic(), triangle::<Hyperbolic>(v)),
+                (elliptic(), triangle::<Elliptic>(v)),
+            ] {
+                for i in 0..3 {
+                    let angle = line_invariant(c, sides[i], back[i]).clamp(-1.0, 1.0).acos();
+                    assert_close(t.angles[i], angle, 1e-9);
+                }
+            }
+            for i in 0..3 {
+                let (a, b) = (v[i], v[(i + 1) % 3]);
+                let h = (-point_invariant(hyperbolic(), a, b)).max(1.0).acosh();
+                assert_close(Hyperbolic::distance(a, b), h, 1e-9);
+                let e = point_invariant(elliptic(), a, b).clamp(-1.0, 1.0).acos();
+                assert_close(Elliptic::distance(a, b), e, 1e-9);
+            }
+        }
     }
 
     #[test]
@@ -335,9 +423,7 @@ mod tests {
     fn hyperbolic_distance_along_a_diameter_is_arctanh() {
         let origin = Point::xy(0.0, 0.0);
         for x in [0.2, 0.5, 0.75] {
-            let d = (-point_invariant(hyperbolic(), origin, Point::xy(x, 0.0)))
-                .max(1.0)
-                .acosh();
+            let d = Hyperbolic::distance(origin, Point::xy(x, 0.0));
             assert_close(d, f64::atanh(x), 1e-12);
         }
     }
@@ -348,9 +434,7 @@ mod tests {
     fn elliptic_distance_along_a_diameter_is_arctan() {
         let origin = Point::xy(0.0, 0.0);
         for x in [0.2, 0.5, 2.0] {
-            let d = point_invariant(elliptic(), origin, Point::xy(x, 0.0))
-                .clamp(-1.0, 1.0)
-                .acos();
+            let d = Elliptic::distance(origin, Point::xy(x, 0.0));
             assert_close(d, x.atan(), 1e-12);
         }
     }
@@ -389,9 +473,10 @@ mod tests {
             Point::xy(0.65, 0.0),
             Point::xy(0.2, 0.55),
         ];
-        let sum = |c| triangle(c, vertices).angles.iter().sum::<f64>();
-        assert!(sum(hyperbolic()) < core::f64::consts::PI);
-        assert!(core::f64::consts::PI < sum(elliptic()));
+        let hyperbolic = triangle::<Hyperbolic>(vertices).angles.iter().sum::<f64>();
+        let elliptic = triangle::<Elliptic>(vertices).angles.iter().sum::<f64>();
+        assert!(hyperbolic < core::f64::consts::PI);
+        assert!(core::f64::consts::PI < elliptic);
     }
 
     #[test]
@@ -402,9 +487,7 @@ mod tests {
         let (mut lo, mut hi) = (0.45, 0.999);
         for _ in 0..60 {
             let mid = 0.5 * (lo + hi);
-            let d = (-point_invariant(c, centre, Point::xy(mid, 0.25)))
-                .max(1.0)
-                .acosh();
+            let d = Hyperbolic::distance(centre, Point::xy(mid, 0.25));
             if d < r { lo = mid } else { hi = mid }
         }
         let on = Point::xy(lo, 0.25);
@@ -420,10 +503,9 @@ mod tests {
             assert!(s.triangle.area > 0.0);
             let pole_of_normal: P = s.c.solve(s.normal);
             assert!((s.triangle.sides[1] & pole_of_normal).s().abs() < 1e-12);
-            let form = distance_pairing(s.c);
             assert_close(
-                invariant(form, s.p, s.foot),
-                invariant(form, s.reflected, s.foot),
+                Hyperbolic::distance(s.p, s.foot),
+                Hyperbolic::distance(s.reflected, s.foot),
                 1e-12,
             );
         }

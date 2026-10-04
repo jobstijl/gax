@@ -17,6 +17,7 @@ use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
 
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -181,10 +182,12 @@ fn panel(
             scene.dot(*m, Marker::Dot, 5.0, palette::red());
         }
     });
-    let size = (rect.height() / 32.0).clamp(8.0, 13.0);
-    // The title at a sixth of the way down the middle, the distance near the bottom.
+    // Scaled with the panel, as drawn at 960x540, so the titles fit a small canvas too.
+    let size = 13.0 * rect.height() / 540.0;
+    // The title a sixth of the way down the middle, the distance near the bottom.
     let down = |f: f32| rect.top_middle() + Point2::direction(0.0, f * rect.height());
     c.text(title, down(0.17), size, palette::ink(), Align::Center);
+    #[allow(clippy::disallowed_methods)] // a statistic: the root of the mean squared distance
     let rms = (cartesian(&moving, target) / source.len() as f64).sqrt();
     let note = format!("RMS DISTANCE {rms:.4}");
     c.text(&note, down(0.94), size, palette::ink(), Align::Center);
@@ -195,8 +198,8 @@ const SECONDS: f32 = 6.0;
 fn draw(c: &mut Canvas, t: f32) {
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     // Fly over, hold, and fly back.
-    let s = (1.4 * (0.5 - 0.5 * phase.cos())).min(1.0);
-    let az = 0.6 + 0.35 * (phase as f32).sin();
+    let s = (1.4 * (0.5 - 0.5 * phasor(phase).e20())).min(1.0);
+    let az = 0.6 + 0.35 * wave(phase as f32);
     let (source, target) = correspondences();
     let fits = [
         (

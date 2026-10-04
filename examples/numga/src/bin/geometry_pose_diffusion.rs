@@ -202,6 +202,8 @@ mod station {
         let mut errors = vec![Point::zero(); bodies];
         let mut predicted = Point::zero();
         let (mut snapshots, mut covariances) = (Vec::new(), Vec::new());
+        // A kick over a step grows with the root of its duration, as a random walk's.
+        #[allow(clippy::disallowed_methods)] // a random walk's deviation, not geometry
         let root = dt.sqrt();
         for count in 0..(seconds / dt).round() as usize {
             if count % every == 0 {
@@ -257,11 +259,13 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Text and its offsets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
     let runs = runs();
     let frames = runs[0].1.errors.len();
     let index = ((t / (DT as f32 * EVERY as f32)) as usize).min(frames - 1);
     let seconds = index as f32 * DT as f32 * EVERY as f32;
-    let top = (h / 30.0).clamp(10.0, 22.0) * 5.2;
+    let top = (h / 30.0).clamp(10.0 * unit, 22.0 * unit) * 5.2;
     for (k, (name, run)) in runs.iter().enumerate() {
         let rect =
             Rect::new(0.0, top, w, h)
@@ -311,8 +315,8 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     c.text(
         "GUSTS MOSTLY SIDEWAYS, TURNING SPREADS THEM",
-        screen.hi - Point2::direction(12.0, 8.0),
-        11.0,
+        screen.hi - Point2::direction(12.0 * unit, 8.0 * unit),
+        11.0 * unit,
         palette::grid(),
         Align::Right,
     );
@@ -392,6 +396,7 @@ mod tests {
                 let reach = ring
                     .iter()
                     .fold(0.0f64, |m, p| m.max((line & *p).s().abs()));
+                #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
                 let sigma = spread.of(line).of(line).s().sqrt();
                 assert!(
                     (reach - 2.0 * sigma).abs() < 1e-4 * sigma,

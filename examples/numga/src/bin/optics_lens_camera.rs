@@ -17,6 +17,7 @@ use gax_numga_examples::{
 mod lens {
     use gax::Unit;
     use gax::pga3d::{Line, Motor, Plane, Point};
+    use gax_numga_examples::measure;
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
@@ -175,9 +176,11 @@ mod lens {
                     (across & cone.of(start)).s(),
                     (start & cone.of(start)).s(),
                 );
-                // A rounding-level negative at the vertex.
-                let root = (b * b - a * c).max(0.0).sqrt();
-                start + across.gp((root - b) / a)
+                // Along `start + across t` the form is `a t² + 2 b t + c`: the boundary is the
+                // root `(√(b² - a c) - b) / a`, on the side of the midpoint `a` points to. At
+                // the vertex the roots can miss by rounding: the midpoint, where they meet.
+                let (middle, half) = measure::roots(a, b, c).unwrap_or((-b / a, 0.0));
+                start + across.gp(middle + a.signum() * half)
             })
             .collect()
     }
@@ -188,6 +191,7 @@ mod lens {
 mod scenes {
     use super::lens::*;
     use gax::pga3d::{Motor, Point};
+    use gax_numga_examples::signal::{phasor, wave};
 
     /// Focal lengths of the front and the rear lens. The front lens sits at `x = 1`; the rear
     /// lens moves to zoom.
@@ -246,9 +250,9 @@ mod scenes {
     /// (radians): the rear lens position, the focus distance, the aperture radius and the
     /// exposure.
     pub fn motion(t: f64) -> (f64, f64, f64, Exposure) {
-        let rear_at = 1.6 + 0.2 * t.sin();
-        let focus_at = 2.4 - 0.8 * t.cos();
-        let radius = 0.3 + 0.1 * (2.0 * t).sin();
+        let rear_at = 1.6 + 0.2 * wave(t);
+        let focus_at = 2.4 - 0.8 * phasor(t).e20();
+        let radius = 0.3 + 0.1 * wave(2.0 * t);
         (
             rear_at,
             focus_at,
@@ -447,10 +451,17 @@ fn raster_rect(corner: Point2, rows: usize, cols: usize) -> Rect {
     Rect::new(x, y, x + cols as f32, y + rows as f32)
 }
 
-/// The stills, rasterised once.
-fn stills_images() -> &'static [Vec<Light>; 3] {
+/// The stills as `rows` x `cols` thumbnails: at the full size rasterised once, smaller ones
+/// (for smaller canvases) each frame.
+fn stills_images(rows: usize, cols: usize) -> std::borrow::Cow<'static, [Vec<Light>; 3]> {
     static STILLS: std::sync::OnceLock<[Vec<Light>; 3]> = std::sync::OnceLock::new();
-    STILLS.get_or_init(|| stills().map(|e| raster::rasterise(&e, 1.0, THUMB[0], THUMB[1])))
+    let raster =
+        |rows: usize, cols: usize| stills().map(|e| raster::rasterise(&e, 1.0, rows, cols));
+    if [rows, cols] == THUMB {
+        std::borrow::Cow::Borrowed(STILLS.get_or_init(|| raster(THUMB[0], THUMB[1])))
+    } else {
+        std::borrow::Cow::Owned(raster(rows, cols))
+    }
 }
 
 /// The side view: points of space seen along `z`, as points of the `x`-`y` plane (PGA2D).
@@ -470,6 +481,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     let z = gax::pga3d::Plane::new(0.0, 0.0, 1.0, 0.0);
     let at = |h: f64| gax::pga3d::Plane::new(0.0, 1.0, 0.0, -h);
     let heights = [radius, 0.6, 0.35];
+    let unit = c.unit();
     let names = ["FRONT", "REAR", "SENSOR"];
     for ((plane, h), name) in exposure.planes.iter().zip(heights).zip(names) {
         let (top, bottom) = (*plane ^ z ^ at(h), *plane ^ z ^ at(-h));
@@ -478,22 +490,21 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         } else {
             palette::sky()
         };
-        let top = flat.of(top);
-        ax.line(c, top, flat.of(bottom), 2.5, colour);
-        ax.text(
-            c,
-            pga2d::Motor::translation(0.0, 0.12) >> top,
-            name,
-            7.0,
-            palette::grid(),
-            Align::Center,
-        );
+        let (top, bottom) = (flat.of(top), flat.of(bottom));
+        ax.line(c, top, bottom, 2.5, colour);
+        // The sensor's name below it, clear of the rear lens's.
+        let label = if name == "SENSOR" {
+            pga2d::Motor::translation(0.0, -0.24) >> bottom
+        } else {
+            pga2d::Motor::translation(0.0, 0.12) >> top
+        };
+        ax.text(c, label, name, 7.0 * unit, palette::grid(), Align::Center);
     }
     let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
     let layer = [palette::red(), palette::green(), palette::blue()];
     let tone = |k: usize| layer[k].mix_light(palette::ink(), 0.3);
     for (k, chunk) in pts.chunks(20).enumerate() {
-        ax.scatter(c, chunk, Marker::Dot, 3.5, tone(k));
+        ax.scatter(c, chunk, Marker::Dot, 3.5 * unit, tone(k));
     }
     // Where the collineation puts each point: its image cone's vertex, the point's focus.
     let images: Vec<_> = scene()
@@ -501,7 +512,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         .map(|p| flat.of(exposure.collineation.of(*p)))
         .collect();
     for (k, chunk) in images.chunks(20).enumerate() {
-        ax.scatter(c, chunk, Marker::Cross, 4.0, (tone(k)).faded(0.9));
+        ax.scatter(c, chunk, Marker::Cross, 4.0 * unit, (tone(k)).faded(0.9));
     }
     for ray in 0..3 {
         let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
@@ -545,22 +556,32 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     let ax = Axes::new(view, [-3.6, 2.6], [-1.2, 1.2]);
     side(c, &ax, &exposure, radius);
-    c.text(
-        "SIDE VIEW: LAYERS FAR, MID, NEAR LIGHT RED, GREEN, BLUE",
-        view.bottom_left() + down.gp(s * 1.3),
-        s * 0.7,
-        palette::grid(),
-        Align::Left,
-    );
-    // The stills, below it, side by side.
-    let stills = stills_images();
-    let gap = ((width - 3.0 * THUMB[1] as f32) / 2.0).max(2.0);
+    // The note on two lines, to fit beside the sensor.
+    for (k, line) in [
+        "SIDE VIEW: LAYERS FAR, MID, NEAR",
+        "IN LIGHT RED, GREEN, BLUE",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        c.text(
+            line,
+            view.bottom_left() + down.gp(s * (1.3 + 1.0 * k as f32)),
+            s * 0.7,
+            palette::grid(),
+            Align::Left,
+        );
+    }
+    // The stills, below it, side by side, at full size on a 960 x 540 canvas.
+    let thumb_size = THUMB.map(|n| (n as f32 * k / 1.5).max(4.0) as usize);
+    let stills = stills_images(thumb_size[0], thumb_size[1]);
+    let gap = ((width - 3.0 * thumb_size[1] as f32) / 2.0).max(2.0);
     let thumbs: Vec<Rect> = (0..3)
         .map(|i| {
             let corner = view.bottom_left()
-                + down.gp(s * 4.0)
-                + right.gp(i as f32 * (THUMB[1] as f32 + gap));
-            raster_rect(corner, THUMB[0], THUMB[1])
+                + down.gp(s * 4.6)
+                + right.gp(i as f32 * (thumb_size[1] as f32 + gap));
+            raster_rect(corner, thumb_size[0], thumb_size[1])
         })
         .collect();
     for ((img, label), thumb) in stills
@@ -571,7 +592,7 @@ fn draw(c: &mut Canvas, t: f32) {
         // Only where the whole thumbnail fits on the canvas.
         let [x, y] = thumb.hi.to_euclidean();
         if x <= w && y <= h {
-            paint(c, img, *thumb, THUMB[1]);
+            paint(c, img, *thumb, thumb_size[1]);
         }
         let below = thumb.bottom_left() + down.gp(s * 1.2);
         c.text(label, below, s * 0.7, palette::ink(), Align::Left);
@@ -586,7 +607,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "LENS CAMERA: A ZOOM WITH DEPTH OF FIELD",
-        "APERTURE CONES PULLED THROUGH THE LENS COLLINEATIONS, CUT BY THE SENSOR (PGA3D)",
+        "APERTURE CONES PULLED THROUGH THE LENS MAPS, CUT BY THE SENSOR (PGA3D)",
     );
 }
 

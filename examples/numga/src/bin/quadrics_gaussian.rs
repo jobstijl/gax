@@ -19,6 +19,7 @@ mod gaussian {
     pub type Polarity = Line<(Point,), f64>;
 
     use gax_numga_examples::rng::{Draw, rng};
+    use gax_numga_examples::signal::{phasor, wave};
 
     /// The fit: the precision, and the 1σ polarity.
     pub struct Fit {
@@ -70,15 +71,17 @@ mod gaussian {
     }
 
     /// The cloud at phase `t` (radians): breathing in its aspect, turned and slid around a
-    /// small loop. The stretch and the motor compose into one map, applied to every point.
+    /// small loop (an ellipse, the turned direction stretched by 0.8 across and 0.6 up). The
+    /// stretch and the motor compose into one map, applied to every point.
     pub fn placed(base: &[P], t: f64) -> Vec<P> {
-        let stretch = 1.0 + 0.35 * (2.0 * t).sin();
+        let stretch = 1.0 + 0.35 * wave(2.0 * t);
         let stretch: Point<(Point,), f64> = Point::from_images([
             Point::new(stretch, 0.0, 0.0),
             Point::new(0.0, 1.0 / stretch, 0.0),
             Point::new(0.0, 0.0, 1.0),
         ]);
-        let placement = Motor::translation(0.6 + 0.8 * t.cos(), -0.4 + 0.6 * t.sin())
+        let round = phasor(t);
+        let placement = Motor::translation(0.6 + 0.8 * round.e20(), -0.4 + 0.6 * round.e01())
             * Motor::rotation(Point::xy(0.0, 0.0), 0.6 + t);
         let map = (placement >> Point::slot()).of(stretch);
         base.iter().map(|p| map.of(*p)).collect()
@@ -110,8 +113,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let fit = fit(&points);
 
     let screen = c.rect();
-    let rect =
-        Rect::new(0.0, 0.0, screen.width() * 0.86, screen.height()).inset(60.0, 76.0, 10.0, 40.0);
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
+    let rect = Rect::new(0.0, 0.0, screen.width() * 0.86, screen.height()).inset(
+        60.0 * unit,
+        76.0 * unit,
+        10.0 * unit,
+        40.0 * unit,
+    );
     // Equal scales about the middle of the data box, widened to the rectangle's aspect.
     let ax = {
         let half = ((Y[1] - Y[0]) / 2.0).max((X[1] - X[0]) / 2.0 * rect.height() / rect.width());
@@ -132,7 +141,12 @@ fn draw(c: &mut Canvas, t: f32) {
         2.4,
         palette::orange(),
     );
-    ax.frame(c, "", "X", "Y");
+    // The y axis named at its middle, left of the ticks: above the frame it would meet the
+    // caption.
+    ax.frame(c, "", "X", "");
+    let [_, middle] = rect.left_middle().to_euclidean();
+    let side = Point2::xy(14.0 * unit, middle);
+    c.text("Y", side, 12.0 * unit, palette::ink(), Align::Left);
     ax.legend(
         c,
         &[
@@ -143,9 +157,9 @@ fn draw(c: &mut Canvas, t: f32) {
     // A colour bar for the density: the point a fraction `x` across and `f` up the bar.
     let bar = Rect::new(
         screen.width() * 0.89,
-        76.0,
+        76.0 * unit,
         screen.width() * 0.91,
-        screen.height() - 40.0,
+        screen.height() - 40.0 * unit,
     );
     let at =
         |x: f32, f: f32| bar.bottom_left() + Point2::direction(x * bar.width(), -f * bar.height());
@@ -159,11 +173,17 @@ fn draw(c: &mut Canvas, t: f32) {
         );
     }
     for (v, s) in [(0.0, "0"), (0.5, "0.5"), (1.0, "1")] {
-        let label = at(1.0, v) + Point2::direction(6.0, 4.0);
-        c.text(s, label, 11.0, palette::ink(), Align::Left);
+        let label = at(1.0, v) + Point2::direction(6.0, 4.0).gp(unit);
+        c.text(s, label, 11.0 * unit, palette::ink(), Align::Left);
     }
-    let title = at(0.5, 1.0) + Point2::direction(0.0, -8.0);
-    c.text("DENSITY", title, 10.0, palette::grid(), Align::Center);
+    let title = at(0.5, 1.0) + Point2::direction(0.0, -8.0 * unit);
+    c.text(
+        "DENSITY",
+        title,
+        10.0 * unit,
+        palette::grid(),
+        Align::Center,
+    );
     caption(
         c,
         "A GAUSSIAN AND ITS 1 SIGMA CONIC FROM POINT MOMENTS",

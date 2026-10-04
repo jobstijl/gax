@@ -21,6 +21,7 @@
 use gax::vga3d::Vector;
 
 use gax_numga_examples::scene3::panel3;
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
     backdrop, caption, colormap, from_above, palette, reach3, run,
@@ -56,23 +57,19 @@ mod graphene {
         (xy() * (-angle / 2.0)).exp()
     }
 
-    /// The bonds from an atom to its three neighbours, in carbon-carbon distances (0.142 nm).
+    /// The bonds from an atom to its three neighbours, in carbon-carbon distances (0.142 nm):
+    /// `-x` and `-x` turned a third of a turn either way.
     pub fn bonds() -> [V; 3] {
-        let h = 3f64.sqrt() / 2.0;
-        [
-            Vector::new(0.5, h, 0.0),
-            Vector::new(0.5, -h, 0.0),
-            Vector::new(-1.0, 0.0, 0.0),
-        ]
+        let third = core::f64::consts::TAU / 3.0;
+        [turn(-third) >> -x(), turn(third) >> -x(), -x()]
     }
 
-    /// The two inequivalent corners of the Brillouin zone, where the cones sit.
+    /// The two inequivalent corners of the Brillouin zone, where the cones sit: `x` turned a
+    /// twelfth of a turn either way, stretched to reach `2π/3` along `x`.
     pub fn valleys() -> [V; 2] {
-        let (a, b) = (
-            2.0 * core::f64::consts::PI / 3.0,
-            2.0 * core::f64::consts::PI / (3.0 * 3f64.sqrt()),
-        );
-        [Vector::new(a, b, 0.0), Vector::new(a, -b, 0.0)]
+        let twelfth = core::f64::consts::TAU / 12.0;
+        [turn(twelfth) >> x(), turn(-twelfth) >> x()]
+            .map(|d| d * (2.0 * core::f64::consts::PI / 3.0 / d.e1()))
     }
 
     /// The pseudospin field: minus the hopping times the sum over the bonds of `x` turned by the
@@ -128,12 +125,15 @@ mod graphene {
     }
 
     /// The Berry phase of a holonomy: its rotor's angle, signed by the sense of the turn about the
-    /// direction the loop starts from.
+    /// direction the loop starts from, from `-π` up to (not including) `π`: the turn read back
+    /// from the mirror image, so that a whole half turn (a gapless loop) reads `-π`, at the foot
+    /// of the plot, as numga has it.
     pub fn phase(rotor: Unit<R>, start: V) -> f64 {
         let r = rotor.into_inner();
         let about = Pseudoscalar::new(1.0) * start;
         let turned = (r.cast::<Bivector>() | about).s();
-        turned.atan2(r.s())
+        let east = gax::vga2d::Vector::new(1.0, 0.0);
+        -gax_numga_examples::measure::turn(east, gax::vga2d::Vector::new(r.s(), -turned))
     }
 
     fn grid(extent: f64, count: usize) -> Vec<V> {
@@ -309,8 +309,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let tau = core::f64::consts::TAU;
     let phase_t = f64::from(t / SECONDS);
     // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
-    let radius = 0.01 + 0.59 * (0.5 - 0.5 * (tau * phase_t).cos());
+    let radius = 0.01 + 0.59 * (0.5 - 0.5 * phasor(tau * phase_t).e20());
     let around = (6.0 * phase_t).fract();
+
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
 
     // The bands, turning.
     let bands_rect = screen.part(0.0, 0.13, 0.42, 1.0);
@@ -324,9 +327,10 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.62),
     );
     panel3(c, bands_rect, cam, |s| draw_bands(s, &d.bands));
-    let title = bands_rect.top_middle() + down.gp(4.0);
+    // The panels' titles stand a line below the caption, level with the field's.
+    let title = bands_rect.top_middle() + down.gp(12.0 * unit);
     let text = "THE TWO BANDS: CONES WHERE THEY MEET";
-    c.text(text, title, 10.0, palette::ink(), Align::Center);
+    c.text(text, title, 10.0 * unit, palette::ink(), Align::Center);
 
     // The field over the momentum plane, with the loop about K.
     let [valley_k, _] = valleys();
@@ -361,7 +365,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let here = valley_k + (turn(tau * around) >> x()) * radius;
     ax.scatter(c, &[on_map(here)], Marker::Dot, 7.0, palette::orange());
     let label = on_map(valley_k + Vector::new(0.25, 0.2, 0.0));
-    ax.text(c, label, "K", 12.0, palette::ink(), Align::Left);
+    ax.text(c, label, "K", 12.0 * unit, palette::ink(), Align::Left);
     ax.frame(c, "THE PSEUDOSPIN FIELD", "MOMENTUM X (1/A)", "");
 
     // The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along.
@@ -394,7 +398,7 @@ fn draw(c: &mut Canvas, t: f32) {
         sphere_rect.height() as usize,
         ORIGIN3,
         4.6,
-        0.6 + 0.3 * (tau * phase_t).sin() as f32,
+        0.6 + 0.3 * wave(tau * phase_t) as f32,
         0.35,
         Lens::Perspective(0.6),
     );
@@ -406,22 +410,22 @@ fn draw(c: &mut Canvas, t: f32) {
         s.arrow(reach3(start), first_frame * 0.45, 1.5, 6.0, palette::grid());
         s.arrow(reach3(current), carried * 0.45, 2.0, 7.0, palette::green());
     });
-    let title = sphere_rect.top_middle() + down.gp(4.0);
+    let title = sphere_rect.top_middle() + down.gp(12.0 * unit);
     c.text(
         "PSEUDOSPIN ON THE LOOP",
         title,
-        10.0,
+        10.0 * unit,
         palette::ink(),
         Align::Center,
     );
-    let note = sphere_rect.bottom_middle() + down.gp(2.0);
+    let note = sphere_rect.bottom_middle() + down.gp(2.0 * unit);
     let text = format!("PHASE {gamma:+.3} PI");
-    c.text(&text, note, 10.0, palette::green(), Align::Center);
+    c.text(&text, note, 10.0 * unit, palette::green(), Align::Center);
     let text = format!("GAP {gap:.1} EV, CONE {cone:.3} PI");
     c.text(
         &text,
-        note + down.gp(14.0),
-        9.0,
+        note + down.gp(14.0 * unit),
+        9.0 * unit,
         palette::green(),
         Align::Center,
     );
@@ -513,11 +517,13 @@ mod tests {
     #[test]
     fn transport_around_a_circle_of_latitude_turns_by_the_enclosed_solid_angle() {
         for theta in [0.3f64, 1.0, 2.0] {
+            // The pole turned down by `theta` towards each direction of the equator.
             let directions: Vec<V> = circle(400)
                 .iter()
-                .map(|u| *u * theta.sin() + z() * theta.cos())
+                .map(|u| ((z() ^ *u) * (-theta / 2.0)).exp() >> z())
                 .collect();
             let holonomy = transport(&directions).last().expect("steps").into_inner();
+            #[allow(clippy::disallowed_methods)] // the reference it is checked against
             let want = (core::f64::consts::PI * (1.0 - theta.cos())).cos();
             assert!((holonomy.s() - want).abs() < 1e-3, "{theta}: {holonomy:?}");
         }
@@ -584,9 +590,11 @@ mod tests {
                     }
                 }
                 let v_r = VELOCITY * radii[0];
-                let near = core::f64::consts::PI * (1.0 - gap / (gap * gap + v_r * v_r).sqrt());
+                let field = Vector::new(v_r, 0.0, *gap);
+                let near = core::f64::consts::PI * (1.0 - gap / field.norm());
                 for row in pair {
                     let got = 1.0 - row[0].0.into_inner().s();
+                    #[allow(clippy::disallowed_methods)] // the reference it is checked against
                     let want = 1.0 - near.cos();
                     assert!((got - want).abs() <= 1e-2 * want, "{gap}: {got} vs {want}");
                 }

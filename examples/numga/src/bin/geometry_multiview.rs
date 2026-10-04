@@ -295,6 +295,7 @@ macro_rules! multiview_core {
         }
 
         /// The RMS distance between unit points: their difference is a direction.
+        #[allow(clippy::disallowed_methods)] // the root of a mean square, a statistic
         pub fn rmse(points: &[P], truth: &[P]) -> f64 {
             let sum: f64 = points
                 .iter()
@@ -523,6 +524,7 @@ fn camera_colour(c: usize) -> Light {
 }
 
 /// Smooth coverage of the level set `sqrt(value) <= level`, a pixel wide at the edge.
+#[allow(clippy::disallowed_methods)] // a quadric's value is a squared width; the edge, its root
 fn coverage(value: f64, level: f64, pixel: f64) -> f64 {
     let d = (level - value.max(0.0).sqrt()) / (0.75 * pixel);
     if d > 12.0 {
@@ -556,6 +558,8 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         .zip(&points)
         .map(|(f, p)| value(f, *p).max(0.0))
         .collect();
+    // Each splat's width: a pixel at its depth and the fused residual, in quadrature.
+    #[allow(clippy::disallowed_methods)] // the root of a sum of squared widths
     let radii: Vec<f64> = points
         .iter()
         .zip(&floors)
@@ -643,6 +647,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         // The ellipse's axes: the modes of the position's spread that read a position (lines
         // with a direction), their normals with their standard deviations.
         let (values, modes) = (readout & cov.of(readout)).eigh();
+        #[allow(clippy::disallowed_methods)] // standard deviations from variances
         let axes: Vec<(Point<(), f64>, f64)> = modes
             .iter()
             .zip(values)
@@ -671,6 +676,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
         ax.fill(c, &ring, colour, 0.3);
         ax.dashed(c, &ring, 1.6, 4.0, colour);
         // The turning's standard deviation, a fan either side of the axis (scaled for display).
+        #[allow(clippy::disallowed_methods)] // a standard deviation from a variance
         let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.35;
         let half = turn.min(core::f64::consts::PI);
         let arc: Vec<Point<(), f64>> = (0..=24)
@@ -688,6 +694,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Text, insets and offsets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
     let data = data();
     let per = PER_STEP * ITERATIONS as f32 + HOLD;
     let which = ((t / per) as usize).min(data.scenarios.len() - 1);
@@ -702,8 +710,9 @@ fn draw(c: &mut Canvas, t: f32) {
         .zip(&s.states[k + 1])
         .map(|(a, b)| gax::pga2d::Motor::interpolate(*a, *b, f))
         .collect();
-    let top = 64.0;
-    let rect = Rect::new(0.0, top, w * 0.5, h).inset(8.0, 4.0, 8.0, 8.0);
+    let top = 64.0 * unit;
+    let rect =
+        Rect::new(0.0, top, w * 0.5, h).inset(8.0 * unit, 4.0 * unit, 8.0 * unit, 8.0 * unit);
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])), span);
     scene(c, &ax, &motors, &data.cones);
@@ -715,10 +724,16 @@ fn draw(c: &mut Canvas, t: f32) {
             .collect();
         covariances(c, &ax, &motors, &blended);
     }
-    // Right: the point error along each scenario's steps, log scale.
-    let chart = Rect::new(w * 0.5, top + 30.0, w, h * 0.8).inset(60.0, 20.0, 20.0, 40.0);
+    // Right: the point error along each scenario's steps, log scale, with a decade of room
+    // above the errors for the legend.
+    let chart = Rect::new(w * 0.5, top + 30.0 * unit, w, h * 0.8).inset(
+        60.0 * unit,
+        20.0 * unit,
+        20.0 * unit,
+        40.0 * unit,
+    );
     let down = Point2::direction(0.0, 1.0);
-    let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 1.0]).log_y();
+    let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 10.0]).log_y();
     errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
     for (i, sc) in data.scenarios.iter().enumerate() {
         // The chart's points: (step, error).
@@ -736,47 +751,62 @@ fn draw(c: &mut Canvas, t: f32) {
         errors.polyline(c, &curve, shown, (palette::series(i)).faded(strength));
         if i == which {
             let (now, _) = plane::triangulate(&motors, &data.cones);
-            let cost = plane::cone_cost(&motors, &now, &data.cones);
-            c.text(
-                &format!("CONE COST {cost:.2e}"),
-                chart.top_right() - down.gp(6.0),
-                11.0,
-                palette::grid(),
-                Align::Right,
-            );
             let e = plane::rmse(&now, &data.truth).max(1e-5) as f32;
             let here = Point2::xy(progress, e);
             errors.scatter(c, &[here], Marker::Dot, 9.0, palette::series(i));
         }
     }
-    let names: Vec<(&str, Light)> = data
+    // The legend names the scenarios by their first two words.
+    let short: Vec<String> = data
         .scenarios
         .iter()
-        .enumerate()
-        .map(|(i, sc)| (sc.name, palette::series(i)))
+        .map(|sc| sc.name.split(' ').take(2).collect::<Vec<_>>().join(" "))
         .collect();
-    errors.legend(c, &names);
-    let anchors: Vec<String> = s
-        .free
+    let names: Vec<(&str, Light)> = short
         .iter()
         .enumerate()
-        .map(|(i, f)| format!("CAM {i}: {}", if *f == 0.0 { "ANCHORED" } else { "FREE" }))
+        .map(|(i, name)| (name.trim_end_matches(','), palette::series(i)))
         .collect();
-    // Two notes under the chart's frame (and its axis labels).
-    c.text(
-        &anchors.join("   "),
-        chart.bottom_left() + down.gp(70.0),
-        12.0,
-        palette::ink(),
-        Align::Left,
-    );
-    c.text(
-        "SIGHT CONES A PIXEL WIDE; ORANGE: FUSED SPLATS",
-        chart.bottom_left() + down.gp(92.0),
-        11.0,
-        palette::grid(),
-        Align::Left,
-    );
+    errors.legend(c, &names);
+    // Notes under the chart's frame (and its axis labels): which cameras move, the cost now,
+    // and what the scene shows.
+    let pick = |free: bool| -> String {
+        let cams: Vec<String> = (s.free.iter().enumerate())
+            .filter(|(_, f)| (**f != 0.0) == free)
+            .map(|(i, _)| i.to_string())
+            .collect();
+        if cams.is_empty() {
+            "NONE".to_string()
+        } else {
+            cams.join(", ")
+        }
+    };
+    let (now, _) = plane::triangulate(&motors, &data.cones);
+    let cost = plane::cone_cost(&motors, &now, &data.cones);
+    for (k, (text, size, light)) in [
+        (
+            format!("CAMERAS ANCHORED: {}   FREE: {}", pick(false), pick(true)),
+            12.0,
+            palette::ink(),
+        ),
+        (format!("CONE COST {cost:.2e}"), 11.0, palette::grid()),
+        (
+            "SIGHT CONES A PIXEL WIDE;".to_string(),
+            11.0,
+            palette::grid(),
+        ),
+        (
+            "ORANGE: THE FUSED SPLATS".to_string(),
+            11.0,
+            palette::grid(),
+        ),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let at = chart.bottom_left() + down.gp((64.0 + 17.0 * k as f32) * unit);
+        c.text(text, at, size * unit, *light, Align::Left);
+    }
     caption(
         c,
         "MULTIVIEW: BUNDLE ADJUSTMENT ON CONE QUADRICS",
@@ -1006,9 +1036,14 @@ mod tests {
             for (p, l) in points.iter().zip(&landmarks()) {
                 assert!(p.max_abs_diff(l) < 0.02);
             }
-            // The residual rotation's scalar part is the cosine of half its angle.
-            let residual = (est[1] * truth[1].reverse()).into_inner().s();
-            let angle = 2.0 * residual.abs().min(1.0).acos();
+            // The residual rotation, taken the shorter way (a motor and its negative move
+            // alike): its logarithm's Euclidean part is half its angle.
+            let mut residual = (est[1] * truth[1].reverse()).into_inner();
+            if residual.s() < 0.0 {
+                residual = -residual;
+            }
+            let log: gax::pga3d::Line<(), f64> = gax::Unit::new_unchecked(residual).log();
+            let angle = 2.0 * log.norm();
             assert!(angle.to_degrees() < 0.5, "{}", angle.to_degrees());
             assert!(space::cone_cost(&est, &points, &cones) < initial_cost * 1e-3);
         }

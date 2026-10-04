@@ -220,8 +220,16 @@ fn seen(n: usize, s: f32, least: usize) -> usize {
     least + ((n - least) as f32 * grow * grow) as usize
 }
 
-/// One panel: a framed tile seen by `cam`, its title and sample count.
-fn tile(c: &mut Canvas, cam: Camera, title: &str, n: usize, draw: impl FnOnce(&mut Scene3)) {
+/// One panel: a framed tile seen by `cam`, its title and sample count, the text scaled by
+/// `unit` (1 on a 960x540 canvas).
+fn tile(
+    c: &mut Canvas,
+    cam: Camera,
+    title: &str,
+    n: usize,
+    unit: f32,
+    draw: impl FnOnce(&mut Scene3),
+) {
     backdrop(c);
     // The frame through the centres of the edge pixels.
     let panel = c.rect();
@@ -231,10 +239,10 @@ fn tile(c: &mut Canvas, cam: Camera, title: &str, n: usize, draw: impl FnOnce(&m
     let mut s = Scene3::new(cam);
     draw(&mut s);
     s.draw(c);
-    let size = (panel.height() / 22.0).clamp(8.0, 12.0);
-    let left = panel.lo + Point2::direction(10.0, size * 1.6);
+    let size = (panel.height() / 22.0).clamp(8.0 * unit, 12.0 * unit);
+    let left = panel.lo + Point2::direction(10.0 * unit, size * 1.6);
     c.text(title, left, size, palette::ink(), Align::Left);
-    let right = panel.top_right() + Point2::direction(-10.0, size * 1.6);
+    let right = panel.top_right() + Point2::direction(-10.0 * unit, size * 1.6);
     let count = format!("{n} SAMPLES");
     c.text(&count, right, size * 0.85, palette::grid(), Align::Right);
 }
@@ -257,7 +265,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let pose = pose();
     let centre = pose >> origin();
     let (truth, fit): (Light, Light) = (palette::sky(), palette::red());
-    let header = 64;
+    // The text and the header scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let header = (64.0 * unit) as usize;
     let (w, h) = (c.width / 2, (c.height - header) / 2);
     let camera = |w: usize, h: usize, distance: f32| {
         Camera::orbit(w, h, centre, distance, az, 0.45, Lens::Perspective(0.6))
@@ -268,11 +278,18 @@ fn draw(c: &mut Canvas, t: f32) {
             0 => {
                 let n = seen(data.cloud.len(), phase, 4);
                 let fitted = point_to_points(&data.cloud[..n]);
-                tile(&mut sub, camera(w, h, 4.0), "POINT: MIN |P V X|", n, |s| {
-                    samples_dots(s, &data.cloud[..n]);
-                    s.dot(centre, Marker::Ring, 20.0, truth);
-                    s.dot(fitted, Marker::Dot, 9.0, fit);
-                });
+                tile(
+                    &mut sub,
+                    camera(w, h, 4.0),
+                    "POINT: MIN |P V X|",
+                    n,
+                    unit,
+                    |s| {
+                        samples_dots(s, &data.cloud[..n]);
+                        s.dot(centre, Marker::Ring, 20.0, truth);
+                        s.dot(fitted, Marker::Dot, 9.0, fit);
+                    },
+                );
             }
             1 => {
                 let n = seen(data.segment.len(), phase, 3);
@@ -281,16 +298,23 @@ fn draw(c: &mut Canvas, t: f32) {
                 let fitted = line_to_points(&pts);
                 let ends = end_planes(2.5).map(|e| pose >> e);
                 let true_line = pose >> (origin() & Point::xyz(0.0, 1.0, 0.0));
-                tile(&mut sub, camera(w, h, 9.0), "LINE: MIN |P V L|", n, |s| {
-                    samples_dots(s, &pts);
-                    s.seg(
-                        true_line ^ ends[0],
-                        true_line ^ ends[1],
-                        2.5,
-                        truth.faded(0.8),
-                    );
-                    s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, fit);
-                });
+                tile(
+                    &mut sub,
+                    camera(w, h, 9.0),
+                    "LINE: MIN |P V L|",
+                    n,
+                    unit,
+                    |s| {
+                        samples_dots(s, &pts);
+                        s.seg(
+                            true_line ^ ends[0],
+                            true_line ^ ends[1],
+                            2.5,
+                            truth.faded(0.8),
+                        );
+                        s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, fit);
+                    },
+                );
             }
             2 => {
                 let n = seen(data.patch.len(), phase, 4);
@@ -302,6 +326,7 @@ fn draw(c: &mut Canvas, t: f32) {
                     camera(w, h, 10.0),
                     "PLANE: MIN |P V PI|",
                     n,
+                    unit,
                     |s| {
                         samples_dots(s, &data.patch[..n]);
                         let quad = |p: Pl| edges.map(|e| p ^ e);
@@ -324,6 +349,7 @@ fn draw(c: &mut Canvas, t: f32) {
                     camera(w, h, 7.0),
                     "POINT OF LINES: MIN |L V X|",
                     n,
+                    unit,
                     |s| {
                         for l in &data.bundle[..n] {
                             // The stretch of each line about its point nearest the fit: the

@@ -13,7 +13,8 @@ use gax::motions::{Motions, Pga2d};
 use gax::pga2d::{Line, Motor, Point, Scalar};
 
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, font, palette, run,
+    signal,
 };
 use std::sync::OnceLock;
 
@@ -61,11 +62,13 @@ mod modes {
         let attachments = points(&[[0.2, 1.5], [1.8, 1.5], [2.0, 1.0]][..springs]);
         let anchors = points(&[[0.2, 2.55], [1.8, 2.55], [2.9, 1.85]][..springs]);
         // Tensor-product two-point Gauss quadrature on the uniform plate: the corners pulled
-        // towards the centre by `1 / sqrt(3)`.
+        // towards the centre by `1 / sqrt(3)`, Gauss's nodes.
         let center = body.iter().fold(Point::zero(), |s: P, p| s + *p).gp(0.25);
+        #[allow(clippy::disallowed_methods)] // a number: Gauss's quadrature nodes ±1/√3
+        let node = 1.0 / 3f64.sqrt();
         let mass_points = body
             .iter()
-            .map(|p| center + (*p - center).gp(1.0 / 3f64.sqrt()))
+            .map(|p| center + (*p - center).gp(node))
             .collect();
         Suspension {
             body,
@@ -114,6 +117,7 @@ mod modes {
 
     /// The generalized eigenproblem between the energy forms: the modes as twists (normalized
     /// to unit kinetic energy form) and the frequencies in Hz.
+    #[allow(clippy::disallowed_methods)] // an oscillator's law, the frequency sqrt(k / m) / 2π
     pub fn normal_modes(stiffness: Response, inertia: Response) -> ([P; 3], [f64; 3]) {
         let pe: Energy = Point::slot() & stiffness;
         let ke: Energy = Point::slot() & inertia;
@@ -254,15 +258,35 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
             palette::yellow(),
         );
     }
-    // The title just inside the lower left corner.
-    let corner = ax.at(0.0, 0.0) + Point2::direction(0.05, 0.12);
-    ax.text(c, corner, title, 11.0, palette::ink(), Align::Left);
+    // The title just inside the lower left corner; where it would not fit across the panel,
+    // broken after its colon and made smaller to fit. Its size is in pixels at 960 by 540,
+    // scaled with the canvas.
+    let unit = c.unit();
+    let corner = ax.px(ax.at(0.0, 0.0) + Point2::direction(0.05, 0.12));
+    let room = rect.width() * 0.95;
+    let lines: Vec<&str> = if font::width(title, 11.0 * unit) > room {
+        title.split(": ").collect()
+    } else {
+        vec![title]
+    };
+    let widest = lines
+        .iter()
+        .map(|l| font::width(l, 11.0 * unit))
+        .fold(0.0, f32::max);
+    let size = 11.0 * unit * (room / widest).min(1.0);
+    let up = Point2::direction(0.0, -1.3 * size);
+    for (i, line) in lines.iter().rev().enumerate() {
+        let at = corner + up.gp(i as f32);
+        c.text(line, at, size, palette::ink(), Align::Left);
+    }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let top = h * 0.12;
     let row_h = (h - top) / 2.0;
     for (r, (case, label)) in cases()
@@ -273,9 +297,12 @@ fn draw(c: &mut Canvas, t: f32) {
         // The row of the case's three modes, under the caption.
         let row = Rect::new(0.0, top + r as f32 * row_h, w, top + (r + 1) as f32 * row_h);
         for mode in 0..3 {
-            let rect = row.column(mode, 3).inset(6.0, 6.0, 6.0, 6.0);
+            let rect = row
+                .column(mode, 3)
+                .inset(6.0 * unit, 6.0 * unit, 6.0 * unit, 6.0 * unit);
             let f = case.frequencies[mode];
-            let phase = (core::f64::consts::TAU * f * f64::from(t)).cos();
+            // The oscillation: the cosine of its phase, a phasor's reach across.
+            let phase = signal::phasor(core::f64::consts::TAU * f * f64::from(t)).e20();
             let title = format!("{label}: {:.3} HZ", f);
             panel(c, rect, case, mode, phase, &title);
         }

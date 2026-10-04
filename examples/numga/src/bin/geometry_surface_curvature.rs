@@ -15,6 +15,7 @@
 //! `eigh_with` applies as in numga's `eigvalsh(metric)`.
 
 use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
+use gax_numga_examples::measure::roots;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, colormap, palette,
     run,
@@ -100,19 +101,19 @@ mod curvature {
             }
         }
 
-        /// Where a ray first meets the surface, and the discriminant, negative where it misses.
-        /// The form bound to the ray in both slots is a quadratic in the distance along it.
-        pub fn hit(&self, origin: P, heading: P) -> (P, f64) {
+        /// Where a ray first meets the surface, or `None` where it misses. The form bound to the
+        /// ray in both slots is the quadratic `a t² + 2 b t + c` in the distance along it, whose
+        /// nearest root ahead is the hit (the ray's origin where both lie behind).
+        pub fn hit(&self, origin: P, heading: P) -> Option<P> {
             let f = |x: P, y: P| self.form.of(x).of(y).s();
             let (a, b, c) = (f(heading, heading), f(heading, origin), f(origin, origin));
-            let disc = b * b - a * c;
-            let root = disc.max(0.0).sqrt();
-            let t = [(-b - root) / a, (-b + root) / a]
+            let (mid, half) = roots(a, b, c)?;
+            let t = [mid - half, mid + half]
                 .into_iter()
                 .filter(|t| *t > 0.0)
                 .fold(f64::INFINITY, f64::min);
             let t = if t.is_finite() { t } else { 0.0 };
-            ((origin + heading.gp(t)).unitized(), disc)
+            Some((origin + heading.gp(t)).unitized())
         }
 
         /// The two principal curvatures at a point of the surface, in order; convex surfaces
@@ -194,8 +195,10 @@ fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> V
                     for x in 0..w {
                         let (o, d) = cam.ray(Point2::xy(x as f32 + 0.5, y as f32 + 0.5));
                         let (o, d) = (f64p(o), f64p(d));
-                        let (p, disc) = surface.hit(o, d);
-                        if disc < 0.0 || p.to_euclidean()[2].abs() >= height {
+                        let Some(p) = surface.hit(o, d) else {
+                            continue;
+                        };
+                        if p.to_euclidean()[2].abs() >= height {
                             continue;
                         }
                         // Lit from behind the viewer's shoulder, both sides alike: the cosine
@@ -341,14 +344,16 @@ fn draw(c: &mut Canvas, t: f32) {
         });
         c.unclip();
         let label = ["ELLIPSOID", "HYPERBOLOID OF ONE SHEET"][i];
-        let size = (c.height as f32 / 30.0).clamp(7.0, 12.0);
+        // Text scales with the canvas, as drawn at 960x540.
+        let unit = c.unit();
+        let size = (c.height as f32 / 30.0).clamp(7.0 * unit, 12.0 * unit);
         let bottom_middle = panel.bottom_middle();
         let at = bottom_middle - Point2::direction(0.0, size * 0.8);
         c.text(label, at, size, palette::ink(), Align::Center);
     }
     caption(
         c,
-        "CURVATURE OF QUADRICS: GAUSSIAN CURVATURE AND LINES OF CURVATURE",
+        "QUADRICS: GAUSSIAN CURVATURE, CURVATURE LINES",
         "PER PIXEL: TWO EIGENPROBLEMS ON DIRECTIONS (PGA3D)",
     );
 }
@@ -369,6 +374,7 @@ mod tests {
 
     /// The ellipsoid's four umbilics, where it curves equally in every direction: in the plane
     /// of its longest and shortest axes.
+    #[allow(clippy::disallowed_methods)] // the umbilics' closed form, the reference checked against
     fn umbilics() -> [P; 4] {
         let [a, b, c] = SEMI_AXES;
         let x = a * ((a * a - b * b) / (a * a - c * c)).sqrt();
@@ -398,7 +404,8 @@ mod tests {
             .iter()
             .map(|t| {
                 let from = Point::xyz(t[0], t[1], t[2]);
-                s.hit(from, Point::xyz(0.0, 0.0, 0.0) - from).0
+                s.hit(from, Point::xyz(0.0, 0.0, 0.0) - from)
+                    .expect("a ray toward the centre meets the surface")
             })
             .collect()
     }
@@ -464,18 +471,19 @@ mod tests {
     #[test]
     fn rays_hit_the_surface() {
         let s = Surface::new(hyperboloid());
-        let (p, disc) = s.hit(Point::xyz(10.0, 0.3, 0.2), Point::direction(-1.0, 0.0, 0.0));
-        assert!(disc > 0.0);
+        let p = s
+            .hit(Point::xyz(10.0, 0.3, 0.2), Point::direction(-1.0, 0.0, 0.0))
+            .expect("the ray meets the hyperboloid");
         assert!(s.form.of(p).of(p).s().abs() < 1e-12);
         let [x, y, z] = p.to_euclidean();
         // On x² / 1.6² + y² - z² = 1 at y = 0.3, z = 0.2.
+        #[allow(clippy::disallowed_methods)] // the reference it is checked against
         let expected = 1.6 * (1.0f64 + 0.2 * 0.2 - 0.3 * 0.3).sqrt();
         assert!((x - expected).abs() < 1e-12 && (y - 0.3).abs() < 1e-12 && (z - 0.2).abs() < 1e-12);
         let e = Surface::new(ellipsoid());
         assert!(
             e.hit(Point::xyz(10.0, 5.0, 0.0), Point::direction(-1.0, 0.0, 0.0))
-                .1
-                < 0.0
+                .is_none()
         );
     }
 

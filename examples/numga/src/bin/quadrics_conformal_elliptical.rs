@@ -9,10 +9,12 @@
 
 use gax::vga3d::Vector;
 
+use gax_numga_examples::disc::Disc;
 use gax_numga_examples::{Anim, Canvas, Point2, backdrop, caption, palette, run};
 
 mod elliptical {
     use gax::vga3d::{Bivector, Rotor, Vector};
+    use gax_numga_examples::signal::phasor;
 
     pub type V = Vector<(), f64>;
     pub type R = gax::Unit<Rotor<(), f64>>;
@@ -58,7 +60,7 @@ mod elliptical {
         } else {
             (third(), s * 2.0 - 1.0)
         };
-        let eased = 0.5 - 0.5 * (core::f64::consts::PI * along).cos();
+        let eased = 0.5 - 0.5 * phasor(core::f64::consts::PI * along).e20();
         // The generator's logarithm scaled: a fraction of its turn.
         let partial: R = (generator.log() * eased).exp();
         let tilt = turn(Bivector::new(0.5, -0.3, 0.15), 0.45);
@@ -94,18 +96,10 @@ fn draw(c: &mut Canvas, t: f32) {
     // Lit from the upper left, so the disk reads as a sphere: the inner product of the normal
     // (on the unit sphere, the point itself) with the direction to the light.
     let light = Vector::new(-0.35, 0.45, 0.82);
+    // The front hemisphere under each pixel, seen along -z: x right, y up, z towards the viewer.
+    let disc = Disc::new(centre, radius);
     c.shade(2, |q: Point2| {
-        // The pixel's offset from the centre in radii: x right, y up.
-        let off = q - centre;
-        let (u, v) = (off.e20() / radius, -off.e01() / radius);
-        // The square of the pixel's distance from the centre, in radii: the join's norm.
-        let r2 = (q & centre).norm_squared() / (radius * radius);
-        if r2 > 1.0 {
-            return None;
-        }
-        // The front hemisphere, seen along -z: x right, y up, z towards the viewer.
-        let z = f64::from(1.0 - r2).sqrt();
-        let p = Vector::new(f64::from(u), f64::from(v), z);
+        let p = disc.point(q)?;
         let s = sides(p, &planes, sharpness) as f32;
         let colour = cell_b.mix_light(cell_a, (s + 1.0) / 2.0);
         let lit = (0.55 + 0.45 * (p | light).s()).clamp(0.2, 1.0);
@@ -115,7 +109,7 @@ fn draw(c: &mut Canvas, t: f32) {
     caption(
         c,
         "THE OCTAHEDRAL MIRROR PLANES ON THE UNIT SPHERE",
-        "13 PLANES AS VECTORS: A POINT P IS ON A GREAT CIRCLE WHERE P | N = 0 (CL(3))",
+        "13 PLANES AS VECTORS N; P IS ON A GREAT CIRCLE WHERE P | N = 0 (CL(3))",
     );
 }
 

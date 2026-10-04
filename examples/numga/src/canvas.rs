@@ -176,16 +176,36 @@ fn drawable(p: Point2) -> bool {
 /// joins with them differ in sign), else to the nearer end. A join of unit points is a line
 /// whose norm is their distance.
 fn segment_distance(a: Point2, b: Point2, q: Point2) -> f32 {
+    capped_distance(a, b, q, [true, true])
+}
+
+/// The same with each end round (`caps`) or flat: past a flat end the segment reaches no pixel,
+/// so where a stroke is drawn in pieces, their flat ends meet without overlapping.
+fn capped_distance(a: Point2, b: Point2, q: Point2, caps: [bool; 2]) -> f32 {
     let join = a & b;
     let len = join.norm();
     if len <= 1e-6 {
-        return (q & a).norm();
+        return if caps[0] || caps[1] {
+            (q & a).norm()
+        } else {
+            f32::INFINITY
+        };
     }
     let l = join.gp(len.recip());
-    if ((l | a) & q).s() * ((l | b) & q).s() <= 0.0 {
-        (l & q).s().abs()
+    let (beyond_a, beyond_b) = (((l | a) & q).s(), ((l | b) & q).s());
+    if beyond_a * beyond_b <= 0.0 {
+        return (l & q).s().abs();
+    }
+    // Past an end: the end nearer the pixel decides.
+    let (near, cap) = if (q & a).norm() < (q & b).norm() {
+        (a, caps[0])
     } else {
-        (q & a).norm().min((q & b).norm())
+        (b, caps[1])
+    };
+    if cap {
+        (q & near).norm()
+    } else {
+        f32::INFINITY
     }
 }
 
@@ -223,6 +243,12 @@ impl Canvas {
             cover: vec![0.0; width * height],
             touched: Vec::new(),
         }
+    }
+
+    /// The canvas's unit of size: its height over 540 (the examples are laid out at 960x540),
+    /// so that text, insets and markers scaled by it make a smaller canvas a miniature.
+    pub fn unit(&self) -> f32 {
+        self.height as f32 / 540.0
     }
 
     /// The whole canvas, as a rectangle.
@@ -291,9 +317,23 @@ impl Canvas {
     /// distance to the nearest segment, then the light added once. Thinner than a pixel, the
     /// stroke is drawn a pixel wide and fainter, keeping its light.
     pub fn stroke(&mut self, segs: &[[Point2; 2]], width: f32, l: Light) {
+        let caps = vec![[true, true]; segs.len()];
+        self.stroke_capped(segs, &caps, width, l);
+    }
+
+    /// [`Canvas::stroke`] with each segment's ends round or flat (`caps`): the pieces of a
+    /// stroke drawn apart (a 3D curve split by what lies between its parts) take flat ends where
+    /// they join, so the joints do not shine twice.
+    pub fn stroke_capped(
+        &mut self,
+        segs: &[[Point2; 2]],
+        caps: &[[bool; 2]],
+        width: f32,
+        l: Light,
+    ) {
         let half = width.max(1.0) * 0.5;
         let l = l * width.min(1.0);
-        for &[a, b] in segs {
+        for (&[a, b], &cap) in segs.iter().zip(caps) {
             if !(drawable(a) && drawable(b)) {
                 continue;
             }
@@ -301,7 +341,7 @@ impl Canvas {
             let [x0, y0, x1, y1] = span(&[a, b], reach(half), self.clip);
             for y in y0..y1 {
                 for x in x0..x1 {
-                    let k = stroke_light(segment_distance(a, b, centre(x, y)), half);
+                    let k = stroke_light(capped_distance(a, b, centre(x, y), cap), half);
                     let i = y * self.width + x;
                     if k > 1e-3 && k > self.cover[i] {
                         if self.cover[i] == 0.0 {

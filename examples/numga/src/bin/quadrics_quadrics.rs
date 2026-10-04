@@ -9,6 +9,7 @@
 
 use gax::pga3d::{Motor, Point};
 
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption, palette,
     run,
@@ -16,6 +17,8 @@ use gax_numga_examples::{
 
 mod quadrics {
     use gax::pga3d::{Motor, Plane, Point};
+    use gax_numga_examples::measure;
+    use gax_numga_examples::signal::wave;
 
     pub type P = Point<(), f64>;
     pub type Pl = Plane<(), f64>;
@@ -47,10 +50,16 @@ mod quadrics {
         // The pole of the plane at infinity: the centre.
         let centre = quadric.of(inf);
         let through_centre = normal - inf * ((normal & centre).s() / (inf & centre).s());
-        // Shift until `tangent ∨ quadric(tangent) == 0`; dividing by the centre's weight makes
-        // the distance independent of the quadric's scale.
-        let radius =
-            (-(through_centre & quadric.of(through_centre)).s() / (inf & centre).s()).sqrt();
+        // Shift until `tangent ∨ quadric(tangent) == 0`: on `through_centre - ∞ t` the form is
+        // `(∞ ∨ centre) t² + through_centre ∨ quadric(through_centre)`, with no cross term since
+        // the plane holds the centre. Its roots lie either side of zero ([`measure::roots`]),
+        // and the distance is half theirs, whatever the quadric's scale.
+        let radius = measure::roots(
+            (inf & centre).s(),
+            0.0,
+            (through_centre & quadric.of(through_centre)).s(),
+        )
+        .map_or(f64::NAN, |(_, half)| half);
         through_centre - inf * radius
     }
 
@@ -76,7 +85,7 @@ mod quadrics {
     /// The tangent's normal: `(1, 2, 3)` swept around by the phase `t` (radians).
     pub fn normal(t: f64) -> Pl {
         let turn = Motor::rotation_about(0.0, 0.0, 1.0, t)
-            * Motor::rotation_about(1.0, 0.0, 0.0, 0.6 * (2.0 * t).sin());
+            * Motor::rotation_about(1.0, 0.0, 0.0, 0.6 * wave(2.0 * t));
         turn >> Plane::new(1.0, 2.0, 3.0, 0.0)
     }
 
@@ -174,7 +183,7 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (w, h) = (c.width, c.height);
     let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
-    let azimuth = 0.66 + 0.35 * (phase.sin() as f32);
+    let azimuth = 0.66 + 0.35 * (wave(phase) as f32);
     let half = w / 2;
     let normal = normal(phase);
 
@@ -195,7 +204,7 @@ fn draw(c: &mut Canvas, t: f32) {
     c.blit(&left, 0, 0);
 
     // The world frame, on the right: the screw from the identity to numga's motor and back.
-    let s = 0.5 - 0.5 * (phase).cos();
+    let s = 0.5 - 0.5 * phasor(phase).e20();
     let m = Motor::interpolate(Motor::translation(0.0, 0.0, 0.0), motor(), s);
     let (world, world_tangent, world_contact, moved) = transport(m, normal);
     let mut right = Canvas::new(w - half, h);
@@ -221,19 +230,21 @@ fn draw(c: &mut Canvas, t: f32) {
     c.blit(&right, half, 0);
     let screen = c.rect();
     let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let (body_side, world_side) = (screen.column(0, 2), screen.column(1, 2));
     // The divide between the panels, from under the caption to just above the bottom.
     let divide = world_side.lo;
     c.line(
-        divide + down.gp(60.0),
-        world_side.bottom_left() + up.gp(20.0),
+        divide + down.gp(60.0 * unit),
+        world_side.bottom_left() + up.gp(20.0 * unit),
         1.0,
         palette::grid(),
     );
 
     let label = |c: &mut Canvas, side: Rect, s: &str| {
-        let at = side.bottom_middle() + up.gp(18.0);
-        c.text(s, at, 11.0, palette::ink(), Align::Center);
+        let at = side.bottom_middle() + up.gp(18.0 * unit);
+        c.text(s, at, 11.0 * unit, palette::ink(), Align::Center);
     };
     label(c, body_side, "BODY FRAME: TANGENT -> CONTACT -> TANGENT");
     label(c, world_side, "WORLD FRAME: M >> Q(M << PLANE)");
@@ -244,13 +255,13 @@ fn draw(c: &mut Canvas, t: f32) {
     ];
     // The key, in the bottom right corner: a dot and its name per row.
     for (i, (s, col)) in key.iter().enumerate() {
-        let row = screen.hi + Point2::direction(-210.0, -100.0 + 18.0 * i as f32);
-        c.disk(row + up.gp(4.0), 4.0, *col);
-        let name = row + Point2::direction(10.0, 0.0);
+        let row = screen.hi + Point2::direction(-230.0, -100.0 + 18.0 * i as f32).gp(unit);
+        c.disk(row + up.gp(4.0 * unit), 4.0 * unit, *col);
+        let name = row + Point2::direction(10.0 * unit, 0.0);
         c.text(
             s,
             name,
-            11.0,
+            11.0 * unit,
             palette::ink().mix_light(*col, 0.3),
             Align::Left,
         );

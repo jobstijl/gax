@@ -9,6 +9,8 @@
 //! with each quadric's error ellipsoid drawn around its vertex.
 
 use gax::pga3d::{Motor, Plane, Point};
+use gax_numga_examples::measure::roots;
+use gax_numga_examples::signal::{phasor, wave};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
     run,
@@ -112,9 +114,10 @@ mod qem {
     /// capped at `max_radius` where the error stays flat.
     pub fn ellipsoid_radius(q: Quadric, dir: P, epsilon: f64, max_radius: f64) -> f64 {
         // On a direction (an ideal point) the quadric reads its quadratic part alone, the
-        // error's growth along that direction.
-        let growth = (q.of(dir) & dir).s();
-        epsilon / growth.max((epsilon / max_radius).powi(2)).sqrt()
+        // error's growth along that direction; the radius is the root of
+        // `growth r² - epsilon² = 0`, half the distance between its two roots `±r`.
+        let growth = (q.of(dir) & dir).s().max((epsilon / max_radius).powi(2));
+        roots(growth, 0.0, -epsilon * epsilon).map_or(max_radius, |(_, radius)| radius)
     }
 }
 
@@ -214,7 +217,7 @@ fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f64, azimuth: f32)
     ellipsoid(&mut s, scene.q_edge, target, palette::green());
     s.dot(target, Marker::Star, 14.0, palette::green());
     s.draw(c);
-    label(c, "3. CONTRACTION: V MINIMIZES QA + QB");
+    label(c, "3. MERGED: V MINIMIZES QA + QB");
     let err = |p: P| error(scene.q_edge, p);
     let text = format!(
         "ERROR AT A {:.4}  AT B {:.4}  AT V {:.4}",
@@ -232,7 +235,9 @@ fn label(c: &mut Canvas, title: &str) {
 /// A line of text centred across the panel at `height` of the way down, small enough to fit.
 fn centred(c: &mut Canvas, text: &str, height: f32) {
     let panel = c.rect();
-    let size = (panel.height() / 32.0).clamp(8.0, 12.0);
+    // Text scales with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let size = (panel.height() / 32.0).clamp(8.0 * unit, 12.0 * unit);
     let fit = panel.width() * 0.94 / gax_numga_examples::font::width(text, 1.0);
     let top_middle = panel.top_middle();
     let at = top_middle + Point2::direction(0.0, height * panel.height());
@@ -243,9 +248,9 @@ const SECONDS: f32 = 8.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     let phase = t / SECONDS * core::f32::consts::TAU;
-    let azimuth = 48f32.to_radians() + 0.5 * phase.sin();
-    // Contract, hold, and open again.
-    let progress = f64::from((1.5 * (0.5 - 0.5 * phase.cos())).min(1.0));
+    let azimuth = 48f32.to_radians() + 0.5 * wave(phase);
+    // Contract, hold, and open again: the phasor's reach across, from 1 down to -1 and back.
+    let progress = f64::from((1.5 * (0.5 - 0.5 * phasor(phase).e20())).min(1.0));
     let scene = collapse();
     let w = c.width / 3;
     for i in 0..3 {
@@ -259,7 +264,7 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     caption(
         c,
-        "QUADRIC ERROR METRICS: EACH VERTEX A SUM OF PLANE DYADS",
+        "QUADRIC ERROR METRICS: SUMS OF PLANE DYADS",
         "THE MERGED VERTEX SOLVES Q(V) = E0 (PGA3D)",
     );
 }

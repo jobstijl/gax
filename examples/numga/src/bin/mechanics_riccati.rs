@@ -279,6 +279,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Lengths in pixels at 960 by 540, scaled with the canvas.
+    let unit = c.unit();
     let seconds = STEP * STEPS as f32 + HOLD;
     let s = (t.rem_euclid(seconds) / STEP).min(STEPS as f32);
     let k = (s.floor() as usize).min(STEPS - 1);
@@ -347,9 +349,16 @@ fn draw(c: &mut Canvas, t: f32) {
         // The labels just inside the top left corner.
         let corner = ax.at(0.0, 1.0);
         let at = |down: f32| corner + Point2::direction(0.05, -down);
-        ax.text(c, at(0.1), label, 12.0, palette::ink(), Align::Left);
+        ax.text(c, at(0.1), label, 12.0 * unit, palette::ink(), Align::Left);
         let note = format!("{remaining} STEPS LEFT: COST 0.15 LEVEL");
-        ax.text(c, at(0.22), &note, 10.0, palette::green(), Align::Left);
+        ax.text(
+            c,
+            at(0.22),
+            &note,
+            10.0 * unit,
+            palette::green(),
+            Align::Left,
+        );
     }
     caption(
         c,

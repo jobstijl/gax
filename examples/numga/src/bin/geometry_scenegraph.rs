@@ -14,13 +14,14 @@ use gax::pga3d::{Motor, Plane, Point};
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3, backdrop,
-    caption, from_above, palette, run,
+    caption, from_above, palette, run, signal::wave,
 };
 use scenegraph::{BOX_FACES, M, P, axis};
 
 mod scene {
     use super::scenegraph::*;
     use gax::pga3d::{Plane, Point};
+    use gax_numga_examples::signal::phasor;
 
     /// The compound camera: pose, front (objective) and rear (relay) lens, the rear lens plane,
     /// pupil, sensor plane, and the world-to-pixel map.
@@ -104,13 +105,15 @@ mod scene {
         photograph(rig, [0.35, -0.45, 0.85, -0.40], &[7, 6, 2])
     }
 
-    /// The looping joint trajectory at phase `t` (radians).
+    /// The looping joint trajectory at phase `t` (radians): the joints swing with the phasor at
+    /// `t` (its height and its reach across) and the wrist with the one at `2 t`.
     pub fn sweep(t: f64) -> [f64; 4] {
+        let (once, twice) = (phasor(t), phasor(2.0 * t));
         [
-            0.45 * t.sin(),
-            -0.40 + 0.25 * t.cos(),
-            0.85 + 0.35 * t.sin(),
-            -0.45 + 0.25 * (2.0 * t).cos(),
+            0.45 * once.e01(),
+            -0.40 + 0.25 * once.e20(),
+            0.85 + 0.35 * once.e01(),
+            -0.45 + 0.25 * twice.e20(),
         ]
     }
 }
@@ -159,7 +162,7 @@ fn rim(pose: M, radius: f64, z: f64) -> Vec<P> {
 
 /// The scene in 3D: floor, arm, the camera's lens rims and sensor, and the traced rays.
 fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
-    let sway = 0.12 * (core::f32::consts::TAU * t / SECONDS).sin();
+    let sway = 0.12 * wave(core::f32::consts::TAU * t / SECONDS);
     let cam = Camera::orbit(
         c.width,
         c.height,
@@ -266,7 +269,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let y0 = (hf - ph) * 0.5 + hf * 0.03;
     let rect = Rect::new(x0, y0, x1, y0 + ph);
     photograph_panel(c, rect, &photo);
-    let s = (hf / 45.0).clamp(7.0, 12.0);
+    // Text scales with the canvas, as drawn at 960x540.
+    let unit = c.unit();
+    let s = (hf / 45.0).clamp(7.0 * unit, 12.0 * unit);
     let down = Point2::direction(0.0, 1.0);
     c.text(
         "ON THE SENSOR, 640 X 480 PIXELS",
@@ -302,6 +307,7 @@ mod tests {
     use super::scenegraph::*;
     use gax::ApproxEq;
     use gax::pga3d::{Motor, Plane, Point};
+    use gax_numga_examples::measure::turn;
 
     /// Whether `p` is the Euclidean point `want` to within `tol` in each coordinate.
     fn at(p: P, want: [f64; 3], tol: f64) -> bool {
@@ -363,8 +369,10 @@ mod tests {
         assert!(ahead.e013() > 0.99 && ahead.e021() < 0.0);
         let across = pose >> Point::direction(1.0, 0.0, 0.0);
         assert!(across.approx_eq(&Point::direction(1.0, 0.0, 0.0), 1e-12));
-        // As numga builds it: a pitch about x, after the translation.
-        let pitch = (1.0f64 - 1.5).atan2(4.0);
+        // As numga builds it: a pitch about x, after the translation. The pitch is the turn
+        // from straight ahead (4 along y) to the target (down 0.5).
+        let level = gax::vga2d::Vector::new(4.0, 0.0);
+        let pitch = turn(level, gax::vga2d::Vector::new(4.0, 1.0 - 1.5));
         let numga = Motor::translation(0.0, -4.0, 1.5)
             * Motor::rotation(axis(1.0, 0.0, 0.0), pitch - core::f64::consts::FRAC_PI_2);
         let p = Point::xyz(0.3, -0.2, 0.7);

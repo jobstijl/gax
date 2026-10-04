@@ -16,7 +16,7 @@ use std::sync::OnceLock;
 
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
-    backdrop, caption, palette, run,
+    backdrop, caption, palette, run, signal::wave,
 };
 
 mod dirac {
@@ -69,6 +69,7 @@ mod dirac {
     // Used by the tests (part of numga's core).
     #[cfg_attr(not(test), allow(dead_code))]
     /// The spinor with the given density, angle `β` and Lorentz rotor.
+    #[allow(clippy::disallowed_methods)] // the amplitude √ρ of a density, not a length
     pub fn spinor(density: f64, beta: f64, rotor: Spinor) -> Spinor {
         phase(beta / 2.0) * rotor * density.sqrt()
     }
@@ -79,14 +80,17 @@ mod dirac {
         psi >> Vector::slot()
     }
 
+    // Used by the tests (part of numga's core).
+    #[cfg_attr(not(test), allow(dead_code))]
     /// `ψ ψ̃ = exp(I β) ρ`: a scalar plus a pseudoscalar (its bivector part vanishes).
     pub fn invariants(psi: Spinor) -> Phasor<(), f64> {
         (psi * psi.reverse()).cast::<Phasor>()
     }
 
-    /// The spinor scaled to unit density, `|ψ ψ̃| = 1`, keeping its angle `β`.
+    /// The spinor scaled to unit density, `|⟨ψ ψ̃⟩| = 1`, keeping its angle `β`: divided by its
+    /// norm (gax's `normalized` would also remove `β`, making `ψ ψ̃ = 1`).
     pub fn unit_density(psi: Spinor) -> Spinor {
-        psi * (1.0 / invariants(psi).s().abs().sqrt())
+        psi * psi.norm().recip()
     }
 
     // Used by the tests (part of numga's core).
@@ -143,6 +147,7 @@ mod dirac {
 
     /// The energy of the plane wave, `√(m² + p²)`: a spatial vector squares to minus its
     /// length squared in this signature.
+    #[allow(clippy::disallowed_methods)] // the energy-momentum relation: a physical law
     pub fn energy(momentum: V, mass: f64) -> f64 {
         (mass * mass - momentum.norm_squared()).sqrt()
     }
@@ -212,6 +217,7 @@ mod dirac {
     /// Electrons of the given momentum with a share of negative energy mixed in, followed in
     /// time: the times, their spinors, and the paths their currents trace.
     #[allow(clippy::type_complexity)]
+    #[allow(clippy::disallowed_methods)] // a superposition's amplitudes √p from its probabilities
     pub fn trembling(
         momentum: V,
         seconds: f64,
@@ -324,7 +330,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let size = (h / 36.0).clamp(7.0, 14.0);
+    let unit = c.unit();
+    let size = (h / 36.0).clamp(7.0 * unit, 14.0 * unit);
     let phase = t / SECONDS;
     let colours = colours();
     let down = Point2::direction(0.0, 1.0);
@@ -335,7 +342,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The trembling paths, traced as time goes on, with each electron's spin where it is.
     let upto = ((phase * SAMPLES as f32) as usize).clamp(2, SAMPLES);
-    let azimuth = -1.05 + 0.5 * (phase * core::f32::consts::TAU).sin();
+    let azimuth = -1.05 + 0.5 * wave(phase * core::f32::consts::TAU);
     let view = view_of(left, h * 0.04, h * 1.08);
     let cam = camera(view, Point3::xyz(0.0, 0.0, 1.7), azimuth, 0.2, 2.0);
     let mut scene3 = Scene3::new(cam);
@@ -355,17 +362,18 @@ fn draw(c: &mut Canvas, t: f32) {
         scene3.polyline(&path[..upto], 1.6, colours[k]);
         let here = path[upto - 1];
         let axis = spins[upto - 1].normalized().into_inner() * 0.4;
-        scene3.arrow(here, axis, 2.0, 8.0, colours[k]);
-        scene3.dot(here, Marker::Dot, 6.0, colours[k]);
+        scene3.arrow(here, axis, 2.0, 8.0 * unit, colours[k]);
+        scene3.dot(here, Marker::Dot, 6.0 * unit, colours[k]);
     }
     c.clip(left);
     scene3.draw(c);
     c.unclip();
     let at = f64::from(phase) * DURATION;
-    let clock = left.bottom_left() + Point2::direction(w * 0.04, -h * 0.05);
+    let key = left.lo + Point2::direction(w * 0.04, h * 0.2);
+    // The clock under the key, clear of the paths below.
+    let clock = key + down.gp(MIXTURES.len() as f32 * size * 1.6 + size * 0.6);
     let text = format!("T = {at:4.1} H/MC2");
     c.text(&text, clock, size, palette::ink(), Align::Left);
-    let key = left.lo + Point2::direction(w * 0.04, h * 0.2);
     for (k, share) in MIXTURES.iter().enumerate() {
         c.text(
             &format!("{:.0}% NEGATIVE ENERGY", share * 100.0),
@@ -405,17 +413,23 @@ fn draw(c: &mut Canvas, t: f32) {
     scene3.draw(c);
     c.unclip();
     let (top_middle, bottom_middle) = (right.top_middle(), right.bottom_middle());
-    let title = top_middle + down.gp(h * 0.2);
-    c.text(
-        "THE MASS SHELL: E = +-SQRT(P2 + M2)",
-        title,
-        size * 0.85,
-        palette::ink(),
-        Align::Center,
-    );
+    // The title on two lines, to fit the panel.
+    let title = top_middle + down.gp(h * 0.17);
+    for (k, line) in ["THE MASS SHELL", "E = +-SQRT(P2 + M2)"]
+        .into_iter()
+        .enumerate()
+    {
+        c.text(
+            line,
+            title + down.gp(k as f32 * size * 1.4),
+            size * 0.85,
+            palette::ink(),
+            Align::Center,
+        );
+    }
     c.text(
         "POSITIVE ENERGY",
-        title + down.gp(size * 1.6),
+        title + down.gp(size * 3.0),
         size * 0.8,
         palette::red(),
         Align::Center,

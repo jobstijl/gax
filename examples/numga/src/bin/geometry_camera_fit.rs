@@ -14,6 +14,7 @@ use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
 
 use gax_numga_examples::rng::{Draw, rng};
+use gax_numga_examples::signal::wave;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption,
     from_above, palette, run,
@@ -139,6 +140,8 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
+    // Text and its offsets scale with the canvas, as drawn at 960x540.
+    let unit = c.unit();
     let path = path();
     // Replay the descent on a logarithmic clock, so that the fast start is seen, then hold.
     let s = ((t / SECONDS) / 0.85).min(1.0);
@@ -159,7 +162,7 @@ fn draw(c: &mut Canvas, t: f32) {
         c.height,
         middle,
         17.0,
-        -1.2 + 0.5 * (t / SECONDS * core::f32::consts::TAU).sin(),
+        -1.2 + 0.5 * wave(t / SECONDS * core::f32::consts::TAU),
         0.35,
         Lens::Perspective(0.65),
     );
@@ -224,8 +227,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let (turn, shift) = pose_error(truth(), g);
     c.text(
         &format!("STEP {k}   POSE ERROR: TURN {turn:.4}  SHIFT {shift:.4}"),
-        screen.bottom_left() + Point2::direction(w * 0.02, -14.0),
-        12.0,
+        screen.bottom_left() + Point2::direction(w * 0.02, -14.0 * unit),
+        12.0 * unit,
         palette::ink(),
         Align::Left,
     );
