@@ -20,7 +20,7 @@
 //! drive, and the echo against the free decay as composed maps.
 
 use gax::vga3d::{Bivector, Vector};
-use gax_light::fade;
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
@@ -381,7 +381,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.polyline(c, &circle, 1.0, palette::grid());
     for a in [x(), Vector::new(0.0, 1.0, 0.0)] {
         let (from, to) = (from_above(reach3(-a * 1.1)), from_above(reach3(a * 1.1)));
-        ax.line(c, from, to, 1.0, fade(palette::grid(), 0.6));
+        ax.line(c, from, to, 1.0, palette::grid().faded(0.6));
     }
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));
@@ -466,7 +466,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let shown = ((phase * d.nutation.len() as f32) as usize).clamp(1, d.nutation.len());
     let colours = [palette::red(), palette::purple(), palette::sky()];
     panel3(c, ball_rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.45));
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.45));
         for a in axes() {
             s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
         }
@@ -475,7 +475,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 .iter()
                 .map(|row| reach3(bloch(row[j])))
                 .collect();
-            s.polyline(&path, 1.2, fade(*colour, 0.9));
+            s.polyline(&path, 1.2, (*colour).faded(0.9));
             s.dot(reach3(bloch(d.settled[j])), Marker::Ring, 7.0, *colour);
             s.dot(*path.last().expect("a state"), Marker::Dot, 6.0, *colour);
         }
@@ -541,7 +541,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ax.scatter(c, &pts, Marker::Dot, 4.5, colour);
     }
     if now > 0.02 {
-        let cursor = fade(palette::yellow(), 0.7);
+        let cursor = palette::yellow().faded(0.7);
         ax.line(c, Point2::xy(now, 0.0), Point2::xy(now, 1.05), 1.0, cursor);
     }
     ax.legend(
@@ -686,7 +686,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 6.0, &mut draw);
-        assert!(gax_light::luma(a.mean()) > 0.0);
+        assert!(a.mean().luma() > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

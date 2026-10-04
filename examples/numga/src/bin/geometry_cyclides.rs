@@ -30,7 +30,7 @@ gax::algebra! {
     versor Even = [1, exy, exz, exw, exe, eyz, eyw, eye, ezw, eze, ewe, eyzwe, exzwe, exywe, exyze, exyzw];
 }
 
-use gax_light::{Light, fade, light, mix};
+use gax_colour::{Light, light};
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::{Align, Anim, Canvas, Point2, backdrop, palette, run};
 
@@ -924,7 +924,7 @@ fn flat_at(index: usize, s: f64) -> (Vec<Quadric>, f64) {
 /// add up.
 fn headlight(facing: f64, colour: Light) -> Light {
     let f = facing.clamp(0.0, 1.0) as f32;
-    fade(colour, 0.2 + 0.8 * f) + light(1.0, 1.0, 1.0, 0.12 * f.powi(16))
+    colour.faded(0.2 + 0.8 * f) + light(1.0, 1.0, 1.0, 0.12 * f.powi(16))
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -993,7 +993,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The shot's number in the bottom right corner.
     let number = format!("{}/{}", index + 1, list.len());
     let corner = screen.hi + Point2::direction(-8.0, -8.0);
-    let dim = mix(palette::ink(), palette::bottom(), 0.4);
+    let dim = palette::ink().mix_light(palette::bottom(), 0.4);
     c.text(&number, corner, 10.0, dim, Align::Right);
 }
 
@@ -1160,6 +1160,6 @@ mod tests {
             1.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

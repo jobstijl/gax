@@ -10,7 +10,7 @@
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Line, Motor, Plane, Point};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
     caption, palette, run,
@@ -259,20 +259,20 @@ fn draw(c: &mut Canvas, t: f32) {
     for k in 0..=8 {
         let v = f64::from(k) * 0.375;
         let (x, y) = (v - 1.0, v - 1.5);
-        let line = fade(palette::grid(), 0.6);
+        let line = palette::grid().faded(0.6);
         sc.seg(floor(x, -1.5), floor(x, 1.5), 1.0, line);
         sc.seg(floor(-1.0, y), floor(2.0, y), 1.0, line);
     }
     // The loop of targets, faint.
     let lp: Vec<P> = (0..=n).map(|k| loop_target(k % n)).collect();
-    sc.polyline(&lp, 1.0, fade(palette::red(), 0.35));
+    sc.polyline(&lp, 1.0, palette::red().faded(0.35));
     // The tip's trail over the last half loop, fading.
     let trail = n / 2;
     for back in 0..trail {
         let k1 = (i + n - back) % n;
         let k0 = (k1 + n - 1) % n;
         let strength = 0.9 * (1.0 - back as f32 / trail as f32);
-        let tone = fade(palette::yellow(), strength);
+        let tone = palette::yellow().faded(strength);
         sc.seg(states[k0].tip, states[k1].tip, 2.0, tone);
     }
     // The links, as lit translucent boxes with their edges.
@@ -282,10 +282,10 @@ fn draw(c: &mut Canvas, t: f32) {
         let p: Vec<P> = corners.iter().map(|q| m >> *q).collect();
         for f in FACES {
             // The faces cover what is behind them: a dimmer light than the glowing strokes.
-            let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], fade(colour, 0.5));
+            let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], colour.faded(0.5));
             sc.quad(p[f[0]], p[f[1]], p[f[2]], p[f[3]], col, 0.8);
             for e in 0..4 {
-                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, fade(palette::ink(), 0.35));
+                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, palette::ink().faded(0.35));
             }
         }
     }
@@ -320,7 +320,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .enumerate()
             .map(|(j, a)| Point2::xy(j as f32 / n as f32, a[k] as f32))
             .collect();
-        ax.polyline(c, &pts, 1.8, fade(*colour, 0.9));
+        ax.polyline(c, &pts, 1.8, (*colour).faded(0.9));
         let now = all[i][k] + (all[(i + 1) % n][k] - all[i][k]) * frac;
         let head = Point2::xy(s / n as f32, now as f32);
         ax.scatter(c, &[head], Marker::Dot, 8.0, *colour);

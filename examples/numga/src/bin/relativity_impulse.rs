@@ -19,7 +19,6 @@
 use std::sync::OnceLock;
 
 use gax::pga2d::Point;
-use gax_light::{fade, srgb};
 use gax_numga_examples::font;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette, run,
@@ -402,13 +401,13 @@ fn kink() -> Light {
     palette::green()
 }
 fn door() -> Light {
-    srgb(0.55, 0.58, 0.64, 1.2)
+    Light::from_srgb(0.55, 0.58, 0.64, 1.2)
 }
 fn elastic() -> Light {
     palette::purple()
 }
 fn contact() -> Light {
-    srgb(0.92, 0.36, 0.36, 1.8)
+    Light::from_srgb(0.92, 0.36, 0.36, 1.8)
 }
 
 /// An event where the diagrams draw it: the point its vector reaches from the origin event,
@@ -502,7 +501,7 @@ impl Diagram<'_> {
         // Light cones through the origin, faint: the null directions `t ± x`, far out.
         let big = 10.0;
         for null in [t() + x(), t() - x()] {
-            ax.line(c, null * -big, null * big, 0.8, fade(palette::grid(), 0.35));
+            ax.line(c, null * -big, null * big, 0.8, palette::grid().faded(0.35));
         }
         Diagram { ax, tau, size, c }
     }
@@ -510,7 +509,7 @@ impl Diagram<'_> {
     /// A worldline: faint in full, bright up to the present.
     fn worldline(&mut self, events: &[V], colour: Light, width: f32) {
         self.ax
-            .polyline(self.c, events, width * 0.6, fade(colour, 0.18));
+            .polyline(self.c, events, width * 0.6, colour.faded(0.18));
         self.ax
             .polyline(self.c, &upto(events, self.tau), width, colour);
     }
@@ -528,7 +527,7 @@ impl Diagram<'_> {
             .map(|e| time_of(*e))
             .fold(f64::INFINITY, f64::min);
         let strength = if first <= self.tau { 0.95 } else { 0.25 };
-        let faded = fade(colour, strength);
+        let faded = colour.faded(strength);
         self.ax.dashed(self.c, events, width, 4.0, faded);
     }
 
@@ -536,7 +535,7 @@ impl Diagram<'_> {
     fn events(&mut self, events: &[V], marker: Marker, size: f32, colour: Light) {
         for e in events {
             let strength = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
-            let faded = fade(colour, strength);
+            let faded = colour.faded(strength);
             self.ax.scatter(self.c, &[*e], marker, size, faded);
         }
     }
@@ -547,7 +546,7 @@ impl Diagram<'_> {
         if time_of(a) > self.tau {
             return;
         }
-        self.ax.line(self.c, a, b, 5.0, fade(colour, 0.35));
+        self.ax.line(self.c, a, b, 5.0, colour.faded(0.35));
         let middle = self.ax.px((a + b) * 0.5);
         let offset = if dy > 0.0 {
             -self.size * 0.8
@@ -562,7 +561,7 @@ impl Diagram<'_> {
     fn now(&mut self, left: &[V], right: &[V]) {
         if let (Some(a), Some(b)) = (at(left, self.tau), at(right, self.tau)) {
             self.ax
-                .line(self.c, a, b, 1.6, fade(palette::yellow(), 0.9));
+                .line(self.c, a, b, 1.6, palette::yellow().faded(0.9));
             let beside = self.ax.px(b) + Point2::direction(0.6, 0.4).gp(self.size);
             let text = format!("{:.2}", position_of(b) - position_of(a));
             let size = self.size;
@@ -667,7 +666,7 @@ fn barn(d: &mut Diagram, doors: &[[V; 2]], closure: &[V; 2]) {
     let mut poly = l.clone();
     poly.extend(r.iter().rev());
     d.ax.fill(d.c, &poly, door(), 0.08);
-    let edge = fade(door(), 0.8);
+    let edge = door().faded(0.8);
     d.ax.dashed(d.c, &l, 1.2, 4.0, edge);
     d.ax.dashed(d.c, &r, 1.2, 4.0, edge);
     d.events(closure, Marker::Square, 7.0, door());
@@ -721,8 +720,8 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     barn(&mut d, &s.doors, &s.closure);
     d.rod(&s.ring_incoming, 2.2);
     d.rod(&s.ring, 2.2);
-    d.ax.dashed(d.c, &end_line(&s.relaxed, 0), 1.0, 2.0, fade(rear(), 0.5));
-    d.ax.dashed(d.c, &end_line(&s.relaxed, 1), 1.0, 2.0, fade(front(), 0.5));
+    d.ax.dashed(d.c, &end_line(&s.relaxed, 0), 1.0, 2.0, rear().faded(0.5));
+    d.ax.dashed(d.c, &end_line(&s.relaxed, 1), 1.0, 2.0, front().faded(0.5));
     d.dashed(&s.incoming, elastic(), 2.2);
     d.events(&s.incoming, Marker::Dot, 7.0, elastic());
     d.bar(s.incoming, "COMPRESSED 0.60", -1.0, elastic());
@@ -806,12 +805,12 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     // Each rope a row: its rear ship at zero, its front ship at the gap, the relaxed length
     // dashed across both.
     let relaxed = [Point::xy(1.0, 0.65), Point::xy(1.0, 2.25)];
-    ax.dashed(c, &relaxed, 1.0, 3.0, fade(door(), shown));
+    ax.dashed(c, &relaxed, 1.0, 3.0, door().faded(shown));
     for (gap, y, colour, head, label) in rows {
         let (rear_ship, front_ship) = (Point::xy(0.0, y), Point::xy(gap, y));
         let (above, below) = (Point::direction(0.0, 0.36), Point::direction(0.0, -0.3));
         ax.text(c, rear_ship + above, head, size, colour, Align::Left);
-        ax.line(c, rear_ship, front_ship, 3.0, fade(colour, shown));
+        ax.line(c, rear_ship, front_ship, 3.0, colour.faded(shown));
         // A ship: a triangle pointing along the motion, at its pixel.
         for (at, ship) in [(rear_ship, rear()), (front_ship, front())] {
             let p = ax.px(at);

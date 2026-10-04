@@ -8,7 +8,7 @@
 //! picture it started from, because each carries every mirror plane onto a mirror plane.
 
 use gax::vga3d::Vector;
-use gax_light::{fade, mix};
+
 use gax_numga_examples::{Anim, Canvas, Point2, backdrop, caption, palette, run};
 
 mod elliptical {
@@ -90,7 +90,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let radius = screen.height() * 0.42;
     let sharpness = 2.0 * f64::from(radius);
     // The cells cover the disk, so they shine far less than a stroke.
-    let (cell_a, cell_b) = (fade(palette::sky(), 0.3), fade(palette::blue(), 0.15));
+    let (cell_a, cell_b) = (palette::sky().faded(0.3), palette::blue().faded(0.15));
     // Lit from the upper left, so the disk reads as a sphere: the inner product of the normal
     // (on the unit sphere, the point itself) with the direction to the light.
     let light = Vector::new(-0.35, 0.45, 0.82);
@@ -107,11 +107,11 @@ fn draw(c: &mut Canvas, t: f32) {
         let z = f64::from(1.0 - r2).sqrt();
         let p = Vector::new(f64::from(u), f64::from(v), z);
         let s = sides(p, &planes, sharpness) as f32;
-        let colour = mix(cell_b, cell_a, (s + 1.0) / 2.0);
+        let colour = cell_b.mix_light(cell_a, (s + 1.0) / 2.0);
         let lit = (0.55 + 0.45 * (p | light).s()).clamp(0.2, 1.0);
-        Some(fade(colour, lit as f32))
+        Some(colour.faded(lit as f32))
     });
-    c.ring(centre, radius, 1.5, fade(palette::ink(), 0.6));
+    c.ring(centre, radius, 1.5, palette::ink().faded(0.6));
     caption(
         c,
         "THE OCTAHEDRAL MIRROR PLANES ON THE UNIT SPHERE",

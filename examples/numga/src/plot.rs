@@ -11,7 +11,7 @@ use crate::font::{self, Align};
 use crate::points::{Dir2, Map2, Point2, Pos2, box_map, finite};
 use crate::{contour, palette};
 use gax::pga2d::Motor;
-use gax_light::{Light, fade};
+use gax_colour::Light;
 
 /// A marker's shape.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -478,7 +478,7 @@ pub fn mark(c: &mut Canvas, p: Point2, marker: Marker, size: f32, l: Light) {
     let r = size * 0.5;
     let at = |x: f32, y: f32| p + gax::pga2d::Point::direction(x, y);
     let shape = |c: &mut Canvas, corners: &[Point2]| {
-        c.fill(corners, fade(l, 0.6), 1.0);
+        c.fill(corners, l.faded(0.6), 1.0);
         c.polyline(corners, 1.0, l, true);
     };
     match marker {

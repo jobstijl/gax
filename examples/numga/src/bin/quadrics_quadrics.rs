@@ -8,7 +8,7 @@
 //! moved body contact point stay one point.
 
 use gax::pga3d::{Motor, Point};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption, palette,
     run,
@@ -135,16 +135,16 @@ fn panel(
     let mut s = Scene3::new(cam);
     if let Some(g) = ghost {
         for row in surface(g, 12, 32) {
-            s.polyline(&row, 1.0, fade(palette::grid(), 0.6));
+            s.polyline(&row, 1.0, palette::grid().faded(0.6));
         }
     }
     let rows = surface(quadric, 16, 48);
     for row in &rows {
-        s.polyline(row, 1.0, fade(palette::sky(), 0.4));
+        s.polyline(row, 1.0, palette::sky().faded(0.4));
     }
     for j in (0..rows[0].len()).step_by(3) {
         let meridian: Vec<P> = rows.iter().map(|r| r[j]).collect();
-        s.polyline(&meridian, 1.0, fade(palette::sky(), 0.4));
+        s.polyline(&meridian, 1.0, palette::sky().faded(0.4));
     }
     s.dot(quadric.of(infinity()), Marker::Dot, 9.0, palette::sky());
     // A square of the tangent plane about the contact point: a square of the plane z = 0,
@@ -247,7 +247,13 @@ fn draw(c: &mut Canvas, t: f32) {
         let row = screen.hi + Point2::direction(-210.0, -100.0 + 18.0 * i as f32);
         c.disk(row + up.gp(4.0), 4.0, *col);
         let name = row + Point2::direction(10.0, 0.0);
-        c.text(s, name, 11.0, mix(palette::ink(), *col, 0.3), Align::Left);
+        c.text(
+            s,
+            name,
+            11.0,
+            palette::ink().mix_light(*col, 0.3),
+            Align::Left,
+        );
     }
     caption(
         c,

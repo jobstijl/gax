@@ -14,7 +14,6 @@
 //! one module per algebra). The animation closes the lap a fifth of the way at a time: in the
 //! plane on the left with each pose's 2σ ellipse, and a short lap in space on the right.
 
-use gax_light::{fade, mix};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption,
@@ -610,15 +609,15 @@ fn draw(c: &mut Canvas, t: f32) {
         1.15,
     );
     ax.polyline(c, &truth, 4.0, palette::grid());
-    ax.dashed(c, &dead, 1.5, 5.0, fade(palette::orange(), 0.9));
+    ax.dashed(c, &dead, 1.5, 5.0, palette::orange().faded(0.9));
     for ((p, u), at) in lap.dead.iter().zip(&lap.reckoned).zip(&dead) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.0, fade(palette::orange(), 0.35));
+        ax.polyline(c, &ring, 1.0, palette::orange().faded(0.35));
     }
     let likely = positions(&poses);
     for ((p, u), at) in poses.iter().zip(&uncertainty).zip(&likely) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.2, fade(palette::sky(), 0.85));
+        ax.polyline(c, &ring, 1.2, palette::sky().faded(0.85));
     }
     ax.polyline(c, &likely, 1.4, palette::sky());
     ax.scatter(c, &likely, Marker::Dot, 4.0, palette::sky());
@@ -642,7 +641,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (pw, ph) = (c.width - x0, c.height - y0);
     let mut sub = Canvas::new(pw, ph);
     sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / h),
+        palette::top().mix_light(palette::bottom(), y0 as f32 / h),
         palette::bottom(),
     );
     let positions = |ps: &[space::M]| -> Vec<gax::pga3d::Point<(), f64>> {
@@ -666,14 +665,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let mut scene = Scene3::new(cam);
     scene.polyline(&truth, 3.5, palette::grid());
     let dead = positions(&space_lap.dead);
-    scene.polyline(&dead, 1.4, fade(palette::orange(), 0.9));
+    scene.polyline(&dead, 1.4, palette::orange().faded(0.9));
     let spath = positions(&sposes);
     scene.polyline(&spath, 1.6, palette::sky());
     for (p, q) in sposes.iter().zip(&spath) {
         scene.dot(*q, Marker::Dot, 5.0, palette::sky());
         // Each pose's heading, a short arrow along its local x.
         let ahead = *p >> gax::pga3d::Point::xyz(0.25, 0.0, 0.0);
-        scene.seg(*q, ahead, 1.4, fade(palette::yellow(), 0.9));
+        scene.seg(*q, ahead, 1.4, palette::yellow().faded(0.9));
     }
     scene.dot(truth[0], Marker::Dot, 8.0, palette::ink());
     scene.draw(&mut sub);

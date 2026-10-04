@@ -8,7 +8,7 @@
 //! side shows the cubic of the current pose and the peak as a function of the offset.
 
 use gax::pga2d::{Line, Motor, Point};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -181,7 +181,7 @@ fn draw_line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
 /// marked.
 fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Light) {
     let pts = outline(q);
-    ax.fill(c, &pts, fade(color, 0.3), 0.35);
+    ax.fill(c, &pts, color.faded(0.3), 0.35);
     ax.polyline(c, &[pts.clone(), vec![pts[0]]].concat(), 2.2, color);
     ax.scatter(c, &[q.of(infinity())], Marker::Dot, 6.0, color);
 }
@@ -238,7 +238,7 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         // The blend at the peak bridges the overlap.
         let pts = outline(blend(q1, q2, lambda));
-        ax.fill(c, &pts, fade(palette::purple(), 0.3), 0.25);
+        ax.fill(c, &pts, palette::purple().faded(0.3), 0.25);
     }
     ellipse_fill(&ax, c, q1, palette::sky());
     ellipse_fill(&ax, c, q2, palette::orange());
@@ -246,8 +246,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = tangent_line(q1, s.normal);
     let second = tangent_line(q2, -s.normal);
     let mid = (first - second).gp(0.5);
-    draw_line(&ax, c, first, 1.0, fade(palette::sky(), 0.7));
-    draw_line(&ax, c, second, 1.0, fade(palette::orange(), 0.7));
+    draw_line(&ax, c, first, 1.0, palette::sky().faded(0.7));
+    draw_line(&ax, c, second, 1.0, palette::orange().faded(0.7));
     let mid_colour = if top > 0.0 {
         palette::green()
     } else {
@@ -292,7 +292,7 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     for (k, o) in [0.8, 0.0, -0.6].into_iter().enumerate() {
         let colour = [palette::green(), palette::orange(), palette::red()][k];
-        ax.polyline(c, &curve(s.second(o)), 1.0, fade(colour, 0.35));
+        ax.polyline(c, &curve(s.second(o)), 1.0, colour.faded(0.35));
     }
     ax.polyline(c, &curve(q2), 2.4, palette::ink());
     ax.scatter(
@@ -347,7 +347,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
         11.0,
-        mix(palette::ink(), marker, 0.3),
+        palette::ink().mix_light(marker, 0.3),
         Align::Left,
     );
 }
@@ -481,7 +481,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(gax_light::luma(c.mean()) > 0.0);
+            assert!(c.mean().luma() > 0.0);
         }
     }
 }

@@ -15,7 +15,6 @@
 //! `eigh_with` applies as in numga's `eigvalsh(metric)`.
 
 use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
-use gax_light::{fade, mix, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, colormap, palette,
     run,
@@ -282,9 +281,12 @@ fn shade(
 ) -> Option<Light> {
     let s = seen[y * w + x]?;
     let gauss = (s.k[0] * s.k[1] / 1.2).clamp(-1.0, 1.0);
-    let mut lit = fade(colormap::rdbu(0.5 + 0.5 * gauss as f32), s.light);
+    let mut lit = (colormap::rdbu(0.5 + 0.5 * gauss as f32)).faded(s.light);
     // The level lines cover the surface in near black and dark red.
-    let families = [srgb(0.10, 0.10, 0.10, 1.0), srgb(0.55, 0.08, 0.08, 1.0)];
+    let families = [
+        Light::from_srgb(0.10, 0.10, 0.10, 1.0),
+        Light::from_srgb(0.55, 0.08, 0.08, 1.0),
+    ];
     for f in 0..2 {
         let spacing = (ranges[f][1] - ranges[f][0]) / LEVELS;
         let at = |x: usize, y: usize| seen[y * w + x].map(|s| s.t[f] / spacing);
@@ -302,7 +304,7 @@ fn shade(
         };
         let rate = gax::pga2d::Point::direction(dx, dy).ideal_norm() + 1e-9;
         let cover = (1.0 - ((v - v.round()).abs() / rate - 0.5 * 1.2)).clamp(0.0, 1.0) as f32;
-        lit = mix(lit, families[f], cover);
+        lit = lit.mix_light(families[f], cover);
     }
     Some(lit)
 }
@@ -485,6 +487,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

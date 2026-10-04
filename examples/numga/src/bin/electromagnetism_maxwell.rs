@@ -14,7 +14,7 @@
 //! cloud's exact third.
 
 use gax::pga2d::Point;
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
     backdrop, caption, palette, reach3, run,
@@ -324,7 +324,7 @@ fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let cols = [palette::orange(), palette::sky(), palette::yellow()];
     for (k, col) in cols.iter().enumerate() {
         let path: Vec<Point3> = tips.iter().map(|p| p[k]).collect();
-        sc.polyline(&path, 1.0, fade(*col, 0.45));
+        sc.polyline(&path, 1.0, (*col).faded(0.45));
     }
     for (v, col) in [(e, cols[0]), (b, cols[1]), (poynting(tm), cols[2])] {
         sc.arrow(ORIGIN3, v, 2.5, 10.0, col);
@@ -386,9 +386,9 @@ fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
-    sc.sphere_wire(ORIGIN3, 1.0, 12, fade(palette::grid(), 0.5));
+    sc.sphere_wire(ORIGIN3, 1.0, 12, palette::grid().faded(0.5));
     // Five hundred dots add their light: each faint, so that the cloud glows rather than burns.
-    let dot = fade(palette::sky(), 0.2);
+    let dot = palette::sky().faded(0.2);
     for d in dirs.iter().step_by(4) {
         sc.dot(reach3(spatial(*d) * speed), Marker::Dot, 3.0, dot);
     }

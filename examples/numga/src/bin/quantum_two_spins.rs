@@ -16,7 +16,6 @@
 //! under the correlation map) swells from a needle to a sphere; below, the largest Bell (CHSH)
 //! combination rises from 2 to `2 sqrt 2` and falls back.
 
-use gax_light::fade;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
@@ -240,7 +239,7 @@ fn space_in_second() -> pair::Second<(gax::vga3d::Vector,), f64> {
 
 /// The unit reach3, faintly, with its three axes.
 fn draw_ball(s: &mut Scene3) {
-    s.sphere_wire(ORIGIN3, 1.0, 18, fade(palette::grid(), 0.55));
+    s.sphere_wire(ORIGIN3, 1.0, 18, palette::grid().faded(0.55));
     for a in axes() {
         s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
     }
@@ -278,7 +277,7 @@ fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Light) {
         14,
         |_, _| colour,
         0.35,
-        Some((fade(colour, 0.6), 0.8)),
+        Some((colour.faded(0.6), 0.8)),
     );
 }
 
@@ -334,7 +333,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 _ => {
                     let (now, path) = &blochs[k / 2];
                     let tips: Vec<_> = path.iter().map(|r| reach3(*r)).collect();
-                    s.polyline(&tips, 2.0, fade(colours[k], 0.35));
+                    s.polyline(&tips, 2.0, colours[k].faded(0.35));
                     s.arrow(ORIGIN3, *now, 3.0, 11.0, colours[k]);
                 }
             }
@@ -472,7 +471,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", 8.0).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 3.0, &mut draw);
-        assert!(gax_light::luma(a.mean()) > 0.0);
+        assert!(a.mean().luma() > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

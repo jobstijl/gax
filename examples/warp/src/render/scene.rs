@@ -8,7 +8,7 @@
 
 use super::font::{self, Align};
 use super::{CameraUniform, LineInstance};
-use crate::light::{Light, fade, light, whiten};
+use crate::light::{Light, light};
 use crate::sim::body::{Pose, identity};
 use crate::sim::{ARENA, Kind, Phase, World};
 use crate::store::Scheme;
@@ -106,7 +106,7 @@ pub fn color(kind: Kind) -> Light {
         (Scheme::BlueYellow, Kind::Warden) => [0.95, 0.95, 1.0],
         (Scheme::BlueYellow, Kind::Carrier) => [0.3, 0.5, 1.0],
     };
-    light(r, g, b, crate::light::intensity(standard))
+    light(r, g, b, standard.intensity())
 }
 
 /// The shards' light, in the current scheme.
@@ -256,14 +256,11 @@ pub fn draw_enemy(
     } else {
         flash
     };
-    let c = fade(
-        whiten(color(kind), 0.45 * flash),
-        (1.0 + 0.45 * flash) * bright,
-    );
+    let c = ((color(kind)).whitened(0.45 * flash)).faded((1.0 + 0.45 * flash) * bright);
     match kind {
         Kind::Drifter => {
             outline(out, &DIAMOND, radius, c, THIN, m);
-            outline(out, &DIAMOND, radius * 0.45, fade(c, 0.7), THIN, m);
+            outline(out, &DIAMOND, radius * 0.45, c.faded(0.7), THIN, m);
         }
         Kind::Chaser => {
             outline(out, &SQUARE, radius * 0.9, c, THIN, m);
@@ -271,7 +268,7 @@ pub fn draw_enemy(
             let inner = m * Motor::rotation(ORIGIN, -3.0 * t);
             for k in 0..4 {
                 let tip = polar(radius * 0.7, k as f32 * core::f32::consts::FRAC_PI_2);
-                out.push(seg(ORIGIN, tip, fade(c, 0.8), THIN, inner));
+                out.push(seg(ORIGIN, tip, c.faded(0.8), THIN, inner));
             }
         }
         Kind::Mote => outline(out, &DART, radius, c, THIN, m),
@@ -286,7 +283,7 @@ pub fn draw_enemy(
             // Its three fragments, visible inside.
             for k in 0..3 {
                 let r = Motor::rotation(ORIGIN, k as f32 * core::f32::consts::TAU / 3.0);
-                outline(out, &SHARP, radius, fade(c, 0.75), THIN, m * r);
+                outline(out, &SHARP, radius, c.faded(0.75), THIN, m * r);
             }
         }
         Kind::Fragment => outline(out, &ARROW, radius, c, THIN, m),
@@ -295,7 +292,7 @@ pub fn draw_enemy(
             // Eyes: a short stroke and its mirror image across the heading.
             for side in [1.0f32, -1.0] {
                 let (a, b) = (pt(0.25, 0.22 * side), pt(0.4, 0.22 * side));
-                out.push(seg(a, b, fade(c, 1.4), THIN, m));
+                out.push(seg(a, b, c.faded(1.4), THIN, m));
             }
         }
         Kind::Warden => {
@@ -306,7 +303,7 @@ pub fn draw_enemy(
             let mut a = polar(1.05 * radius, -1.3);
             for _ in 0..n {
                 let b = step >> a;
-                out.push(seg(a, b, fade(c, 1.3), shield, m));
+                out.push(seg(a, b, c.faded(1.3), shield, m));
                 a = b;
             }
             outline(out, &TAIL, radius, c, THIN, m);
@@ -315,7 +312,7 @@ pub fn draw_enemy(
             let hex = regular(6);
             outline(out, &hex, radius, c, THIN, m);
             let inner = m * Motor::rotation(ORIGIN, -t * 1.3);
-            outline(out, &hex, radius * 0.62, fade(c, 0.7), THIN, inner);
+            outline(out, &hex, radius * 0.62, c.faded(0.7), THIN, inner);
             // Cargo circling inside: each piece a turn about the centre, then out.
             for k in 0..3 {
                 let a = t * 2.0 + k as f32 * core::f32::consts::TAU / 3.0;
@@ -332,7 +329,7 @@ pub fn draw_enemy(
                 radius * 0.72 * pulse,
                 28,
                 -t * 1.7,
-                fade(c, 0.7),
+                c.faded(0.7),
                 THIN,
                 m,
             );
@@ -347,7 +344,7 @@ pub fn draw_enemy(
                     let f = s as f32 / 8.0;
                     dir = turn >> dir;
                     let p = scaled(dir, radius * (1.35 - 1.2 * f));
-                    out.push(seg(prev, p, fade(c, 0.55 * (1.0 - 0.5 * f)), THIN, m));
+                    out.push(seg(prev, p, c.faded(0.55 * (1.0 - 0.5 * f)), THIN, m));
                     prev = p;
                 }
             }
@@ -355,7 +352,7 @@ pub fn draw_enemy(
             out.push(seg(
                 pt(-0.05, 0.0),
                 pt(0.05, 0.0),
-                fade(palette::HOT, bright),
+                palette::HOT.faded(bright),
                 [0.1, 0.35, 0.5, 0.0],
                 m,
             ));
@@ -365,14 +362,14 @@ pub fn draw_enemy(
 
 /// The ship.
 pub fn draw_ship(out: &mut Vec<LineInstance>, m: Pose, speed: f32, t: f32, alpha: f32) {
-    let c = fade(palette::SHIP, alpha);
+    let c = palette::SHIP.faded(alpha);
     let style = [0.04, 0.38, 0.28, 0.0];
     outline(out, &HULL, 1.2, c, style, m);
     for side in [1.0f32, -1.0] {
         out.push(seg(
             pt(0.35, 0.0),
             pt(-0.05, 0.18 * side),
-            fade(c, 0.6),
+            c.faded(0.6),
             THIN,
             m,
         ));
@@ -384,7 +381,7 @@ pub fn draw_ship(out: &mut Vec<LineInstance>, m: Pose, speed: f32, t: f32, alpha
         out.push(seg(
             pt(-0.2, 0.0),
             pt(-0.2 - len, 0.0),
-            fade(palette::FLAME, alpha),
+            palette::FLAME.faded(alpha),
             [0.06, 0.35, 0.5, 0.0],
             m,
         ));
@@ -438,7 +435,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
     for p in &w.pending {
         let f = 1.0 - (p.t / p.total).clamp(0.0, 1.0);
         let m = crate::sim::body::place(p.pos, f * 6.0);
-        let c = fade(color(p.kind), 0.4 + 0.8 * f);
+        let c = (color(p.kind)).faded(0.4 + 0.8 * f);
         let r = p.kind.radius();
         circle(out, r * (3.0 - 2.0 * f), 20, time * 4.0, c, THIN, m);
         draw_enemy(out, p.kind, m, r * f, 0.0, 0.0, time, 0.25 + 0.5 * f);
@@ -451,8 +448,8 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
             for (k, seg_pose) in e.chain.iter().enumerate() {
                 let p = *seg_pose >> ORIGIN;
                 let f = 1.0 - 0.5 * k as f32 / e.chain.len() as f32;
-                out.push(seg(prev, p, fade(c, 0.35), THIN, identity()));
-                outline(out, &DIAMOND, 0.38 * f, fade(c, 0.9 * f), THIN, *seg_pose);
+                out.push(seg(prev, p, c.faded(0.35), THIN, identity()));
+                outline(out, &DIAMOND, 0.38 * f, c.faded(0.9 * f), THIN, *seg_pose);
                 prev = p;
             }
         }
@@ -468,7 +465,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
             1.0
         };
         let m = s.body.lerp(alpha);
-        outline(out, &GEM, 1.0, fade(shard(), blink), THIN, m);
+        outline(out, &GEM, 1.0, shard().faded(blink), THIN, m);
     }
     for b in &w.bullets {
         // A short streak behind the shot, along its velocity.
@@ -484,7 +481,7 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
         let speed = w.ship.body.vel.ideal_norm();
         draw_ship(out, m, speed, time, if blink { 0.35 } else { 1.0 });
         if w.ship.invulnerable > 0.0 {
-            let c = fade(palette::SHIP, 0.35);
+            let c = palette::SHIP.faded(0.35);
             circle(out, 1.1, 32, time * 2.0, c, THIN, m);
         }
     }

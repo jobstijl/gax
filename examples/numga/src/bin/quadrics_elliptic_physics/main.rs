@@ -14,7 +14,7 @@ mod engine;
 mod s3;
 mod scenes;
 
-use gax_light::{Light, fade, light};
+use gax_colour::{Light, light};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -89,7 +89,7 @@ fn hemisphere(
         );
         let body = surfaces.iter().rposition(|s| (p & s.of(p)).s() < 0.0);
         Some(match body {
-            Some(k) => fade(colors[k], BODY),
+            Some(k) => colors[k].faded(BODY),
             None if r2 > 0.985 => rim,
             None => disk,
         })
@@ -142,7 +142,7 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: Rect, f: usize) {
         Point2::xy(time(f), range[0]),
         Point2::xy(time(f), range[1]),
         1.0,
-        fade(palette::ink(), 0.6),
+        palette::ink().faded(0.6),
     );
 }
 
@@ -186,7 +186,7 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     let view = s3::View {
         eye: show.s3.eye,
         surfaces: trajectory.surfaces[f.min(trajectory.surfaces.len() - 1)].clone(),
-        colors: trajectory.colors.iter().map(|l| fade(*l, BODY)).collect(),
+        colors: trajectory.colors.iter().map(|l| (*l).faded(BODY)).collect(),
         light: show.s3.light,
         fov: 120f64.to_radians(),
     };
@@ -433,6 +433,6 @@ mod tests {
             0.5,
             &mut |c, t| super::draw(&show, c, t),
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

@@ -481,6 +481,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "gax-colour"
+version = "0.1.0"
+dependencies = [
+ "gax",
+]
+
+[[package]]
 name = "gax-core"
 version = "0.1.0"
 dependencies = [
@@ -495,13 +502,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gax-light"
-version = "0.1.0"
-dependencies = [
- "gax",
-]
-
-[[package]]
 name = "gax-macros"
 version = "0.1.0"
 dependencies = [
@@ -513,7 +513,7 @@ name = "gax-numga-examples"
 version = "0.1.0"
 dependencies = [
  "gax",
- "gax-light",
+ "gax-colour",
  "gif",
  "png",
  "rand",

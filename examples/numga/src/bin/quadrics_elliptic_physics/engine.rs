@@ -71,7 +71,7 @@ macro_rules! engine {
         /// ball for the broad phase.
         #[derive(Clone, Copy)]
         pub struct Body {
-            pub color: gax_light::Light,
+            pub color: gax_colour::Light,
             pub motor: M,
             pub momentum: Mom,
             pub q: DualQuadric,
@@ -112,7 +112,7 @@ macro_rules! engine {
         /// per body, the energy and the total momentum (in the world frame) per frame, and the
         /// impulses applied.
         pub struct Trajectory {
-            pub colors: Vec<gax_light::Light>,
+            pub colors: Vec<gax_colour::Light>,
             pub surfaces: Vec<Vec<Quadric>>,
             pub rates: Vec<Vec<B>>,
             pub energy: Vec<f64>,
@@ -159,7 +159,7 @@ macro_rules! engine {
         /// A body of any quadric shape, from mass points filling it: inertia from the points,
         /// momentum from the body-frame rate, and the reach of the points from the pole.
         pub fn body(
-            color: gax_light::Light,
+            color: gax_colour::Light,
             q: DualQuadric,
             motor: M,
             rate: B,

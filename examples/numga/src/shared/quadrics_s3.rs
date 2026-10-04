@@ -30,7 +30,7 @@ gax::algebra! {
 }
 
 pub use cl4::{Bivector, Rotor, ScreenPoint, Trivector, Vector};
-use gax_light::{Light, fade};
+use gax_colour::Light;
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::{Point2, Rect};
 
@@ -267,7 +267,7 @@ impl Tracer<'_> {
             lambert = 0.0;
         }
         let k = 0.15 + 0.85 * lambert.clamp(0.0, 1.0);
-        Some(fade(self.view.colors[body], k as f32))
+        Some(self.view.colors[body].faded(k as f32))
     }
 }
 

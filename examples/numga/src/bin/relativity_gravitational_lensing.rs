@@ -14,7 +14,7 @@
 
 use std::sync::OnceLock;
 
-use gax_light::{fade, srgb};
+use gax_colour::Srgb;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
     contour, palette, reach2, run,
@@ -153,11 +153,11 @@ fn starlight(t: f64) -> Light {
     colormap::stops(
         stretched,
         &[
-            [0.035, 0.051, 0.075],
-            [0.255, 0.188, 0.263],
-            [0.588, 0.376, 0.259],
-            [0.918, 0.718, 0.447],
-            [1.0, 0.949, 0.792],
+            Srgb::rgb(0.035, 0.051, 0.075),
+            Srgb::rgb(0.255, 0.188, 0.263),
+            Srgb::rgb(0.588, 0.376, 0.259),
+            Srgb::rgb(0.918, 0.718, 0.447),
+            Srgb::rgb(1.0, 0.949, 0.792),
         ],
     )
 }
@@ -212,8 +212,8 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = scene();
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
-    let critical_colour = srgb(0.333, 0.796, 0.827, 1.6);
-    let caustic_colour = srgb(1.0, 0.53, 0.447, 1.6);
+    let critical_colour = Light::from_srgb(0.333, 0.796, 0.827, 1.6);
+    let caustic_colour = Light::from_srgb(1.0, 0.53, 0.447, 1.6);
     let masses = positions().map(reach2);
     let centre = source_at(t);
     let size = (h / 34.0).clamp(7.0, 15.0);
@@ -255,15 +255,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // Small round sources, as seen.
     let ax = panel(2);
     let preserved = palette::sky();
-    let reversed = srgb(0.79, 0.41, 0.28, 1.7);
+    let reversed = Light::from_srgb(0.79, 0.41, 0.28, 1.7);
     for (_, outline, ratio) in &s.tissot {
         let colour = if *ratio >= 0.0 { preserved } else { reversed };
         let outline: Vec<Point2> = outline.iter().map(|d| reach2(*d)).collect();
         ax.fill(c, &outline, colour, 0.35);
-        ax.polyline(c, &outline, 1.0, fade(colour, 0.9));
+        ax.polyline(c, &outline, 1.0, colour.faded(0.9));
     }
     ax.stroke(c, &s.critical, 1.0, palette::grid());
-    ax.scatter(c, &masses, Marker::Ring, 10.0, fade(palette::ink(), 0.8));
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink().faded(0.8));
     ax.frame(c, "SMALL ROUND SOURCES, AS SEEN", "", "");
     below(c, &ax, -size, "KEPT", preserved, Align::Right);
     below(c, &ax, size, "MIRRORED", reversed, Align::Left);

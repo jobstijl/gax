@@ -10,7 +10,7 @@
 //! its two geodesics to the foci and its tangent great circle.
 
 use gax::vga3d::{Bivector, Vector};
-use gax_light::{fade, srgb};
+use gax_colour::Light;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, colormap,
@@ -192,7 +192,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The point running along the oval.
     let k = ((t / SECONDS * 2.0).fract() * 199.0) as usize;
     let sample = conic.curve[k];
-    let gold = srgb(1.0, 0.8, 0.1, 1.7);
+    let gold = Light::from_srgb(1.0, 0.8, 0.1, 1.7);
     let oval: Vec<_> = conic.curve.iter().map(|p| drawn(*p)).collect();
     // The sphere over the unit square of longitude and polar angle, and the potential over it,
     // for its colours and its level lines.
@@ -235,18 +235,13 @@ fn draw(c: &mut Canvas, t: f32) {
                     on_sphere,
                     36,
                     18,
-                    |u, v| {
-                        fade(
-                            colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32),
-                            0.45,
-                        )
-                    },
+                    |u, v| (colormap::coolwarm(((pot(u, v) - lo) / (hi - lo)) as f32)).faded(0.45),
                     0.45,
                     None,
                 );
                 s.polyline(&oval, 3.0, gold);
                 let anti: Vec<_> = conic.curve.iter().map(|p| drawn(-*p)).collect();
-                s.polyline(&anti, 1.5, fade(gold, 0.6));
+                s.polyline(&anti, 1.5, gold.faded(0.6));
                 for (f, colour) in conic.foci.iter().zip([palette::green(), palette::sky()]) {
                     s.dot(drawn(*f), Marker::Dot, 9.0, palette::red());
                     let arc: Vec<_> = (0..=30)
@@ -259,7 +254,7 @@ fn draw(c: &mut Canvas, t: f32) {
             1 => {
                 // The envelope: sixteen tangent great circles, the running one bright with its
                 // normal.
-                s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.25));
+                s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.25));
                 s.polyline(&oval, 3.0, gold);
                 // The great circle of a tangent plane, through its point of the oval.
                 let circle = |idx: usize| -> Vec<_> {
@@ -272,7 +267,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 };
                 for j in 0..16 {
                     let colour = colormap::inferno(0.2 + 0.7 * j as f32 / 15.0);
-                    s.polyline(&circle(j * 199 / 15), 1.0, fade(colour, 0.45));
+                    s.polyline(&circle(j * 199 / 15), 1.0, colour.faded(0.45));
                 }
                 s.polyline(&circle(k), 2.4, palette::ink());
                 // The tangent plane's normal: the plane itself, a vector.
@@ -297,7 +292,7 @@ fn draw(c: &mut Canvas, t: f32) {
             }
             _ => {
                 // The cone through the oval, and the polhodes: level lines of the potential.
-                s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.25));
+                s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.25));
                 let ev = conic.eigenvalues;
                 let rotor = conic.rotor;
                 s.surface(
@@ -307,12 +302,12 @@ fn draw(c: &mut Canvas, t: f32) {
                     },
                     12,
                     40,
-                    |_, _| srgb(0.94, 0.9, 0.55, 0.4),
+                    |_, _| Light::from_srgb(0.94, 0.9, 0.55, 0.4),
                     0.3,
                     None,
                 );
                 s.polyline(&oval, 3.0, gold);
-                let salmon = srgb(0.98, 0.5, 0.45, 1.6);
+                let salmon = Light::from_srgb(0.98, 0.5, 0.45, 1.6);
                 for (j, fraction) in [0.7, 0.4667, 0.2333].iter().enumerate() {
                     for (level, colour) in [
                         (lo * fraction, salmon),
@@ -322,7 +317,7 @@ fn draw(c: &mut Canvas, t: f32) {
                         let segs =
                             contour::of_fn(potential, [0.0, 1.0], [0.0, 1.0], 90, level as f32);
                         for [a, b] in segs {
-                            s.seg(drawn(at(a)), drawn(at(b)), 1.4, fade(colour, 0.85));
+                            s.seg(drawn(at(a)), drawn(at(b)), 1.4, colour.faded(0.85));
                         }
                     }
                 }
@@ -448,6 +443,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

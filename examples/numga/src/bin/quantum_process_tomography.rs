@@ -15,7 +15,6 @@
 //! Below, the probabilities the learned maps predict after as many uses, for states the
 //! reconstruction never saw, against the exact ones, and the measured probability tables.
 
-use gax_light::fade;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
@@ -322,7 +321,7 @@ fn table(
                 hi: lo + right + down,
             };
             let corners = [cell.lo, cell.top_right(), cell.hi, cell.bottom_left()];
-            c.fill(&corners, fade(colour(*v), 0.45), 1.0);
+            c.fill(&corners, (colour(*v)).faded(0.45), 1.0);
             // Probabilities, without the leading zero, to fit the cells.
             let text = format!("{v:.2}");
             let at = cell.centre() + baseline;
@@ -377,9 +376,9 @@ fn draw(c: &mut Canvas, t: f32) {
             Lens::Perspective(0.62),
         );
         panel3(c, rect, cam, |s| {
-            s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.45));
+            s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.45));
             for a in axes() {
-                s.seg(reach3(-a), reach3(a), 1.0, fade(palette::grid(), 0.8));
+                s.seg(reach3(-a), reach3(a), 1.0, palette::grid().faded(0.8));
             }
             // The image: a translucent surface with its mesh lines.
             for i in 0..LATITUDES {
@@ -394,7 +393,7 @@ fn draw(c: &mut Canvas, t: f32) {
                     s.quad(p, q, r, u, lit, 0.16);
                 }
             }
-            let mesh = fade(colours[k], 0.85);
+            let mesh = colours[k].faded(0.85);
             for row in &image {
                 s.polyline(row, 1.0, mesh);
             }
@@ -452,7 +451,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .zip(predicted.iter().flatten())
             .map(|(a, b)| gax::pga2d::Point::xy(*a, *b))
             .collect();
-        ax.scatter(c, &pts, Marker::Dot, 4.5, fade(colour, 0.85));
+        ax.scatter(c, &pts, Marker::Dot, 4.5, colour.faded(0.85));
     }
 
     // The measured probability tables: preparation by outcome, coloured on a log scale.
@@ -645,7 +644,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.1, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 5.0, &mut draw);
-        assert!(gax_light::luma(a.mean()) > 0.0);
+        assert!(a.mean().luma() > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

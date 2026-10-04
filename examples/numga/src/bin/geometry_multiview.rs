@@ -18,7 +18,7 @@
 
 use gax::ApproxEq;
 use gax::motions::Linear;
-use gax_light::{fade, mix};
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -568,13 +568,8 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
     // the canvas.
     let pixel = f64::from(ax.scale().recip());
     let height = c.height as f32;
-    let backdrop_at = |q: Point2| {
-        mix(
-            palette::top(),
-            palette::bottom(),
-            q.unitized().e01() / height,
-        )
-    };
+    let backdrop_at =
+        |q: Point2| palette::top().mix_light(palette::bottom(), q.unitized().e01() / height);
     let splat = palette::orange();
     let me = *ax;
     ax.image(c, 1, |at| {
@@ -583,7 +578,7 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         let mut ahead = false;
         // The cones glow faintly in their camera's light, so that where they cross the splats
         // still stand out.
-        for (k, cam) in (0..motors.len()).map(|k| (k, fade(camera_colour(k), 0.35))) {
+        for (k, cam) in (0..motors.len()).map(|k| (k, (camera_colour(k)).faded(0.35))) {
             let d = depth(p, k);
             if d <= 0.02 {
                 continue;
@@ -593,14 +588,14 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
             for cone in &world {
                 keep *= 1.0 - 0.3 * coverage(value(&cone[k], p), PIXEL_ANGLE * d.max(0.05), pixel);
             }
-            colour = mix(cam, colour, keep as f32);
+            colour = cam.mix_light(colour, keep as f32);
         }
         if ahead {
             let mut keep = 1.0;
             for ((f, floor), r) in fused.iter().zip(&floors).zip(&radii) {
                 keep *= 1.0 - 0.95 * coverage(value(f, p) - floor, *r, pixel);
             }
-            colour = mix(splat, colour, keep as f32);
+            colour = splat.mix_light(colour, keep as f32);
         }
         Some(colour)
     });
@@ -621,7 +616,7 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         );
         let colour = camera_colour(k);
         ax.fill(c, &[o, l, r], colour, 0.25);
-        ax.polyline(c, &[l, o, r], 1.1, fade(colour, 0.7));
+        ax.polyline(c, &[l, o, r], 1.1, colour.faded(0.7));
         ax.line(c, l, r, 2.0, colour);
         let ahead = *m >> Point::xy(0.0, depth * 1.15);
         ax.dashed(c, &[o, ahead], 1.2, 3.0, colour);
@@ -738,7 +733,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .collect();
         let shown = if i == which { 2.4 } else { 1.0 };
         let strength = if i == which { 1.0 } else { 0.45 };
-        errors.polyline(c, &curve, shown, fade(palette::series(i), strength));
+        errors.polyline(c, &curve, shown, (palette::series(i)).faded(strength));
         if i == which {
             let (now, _) = plane::triangulate(&motors, &data.cones);
             let cost = plane::cone_cost(&motors, &now, &data.cones);

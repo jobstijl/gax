@@ -6,7 +6,7 @@
 //! weight line twice turns the precision into a polarity whose zero locus is the 1σ ellipse.
 //! The animation turns, slides and stretches the cloud and refits it every frame.
 
-use gax_light::{Light, blend, fade};
+use gax_colour::Light;
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -91,11 +91,11 @@ use gaussian::*;
 /// for the points and the conic to shine over it.
 fn shade(d: f32) -> Light {
     let d = d.clamp(0.0, 1.0);
-    let (blue, sky) = (fade(palette::blue(), 0.2), fade(palette::sky(), 0.45));
+    let (blue, sky) = (palette::blue().faded(0.2), palette::sky().faded(0.45));
     if d < 0.5 {
-        blend(palette::bottom(), blue, d * 2.0)
+        palette::bottom().blend(blue, d * 2.0)
     } else {
-        blend(blue, sky, d * 2.0 - 1.0)
+        blue.blend(sky, d * 2.0 - 1.0)
     }
 }
 
@@ -122,7 +122,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let d = fit.density(p.map_coefs(f64::from)) as f32;
         Some(shade(d))
     });
-    let cloud = fade(palette::ink(), 0.35);
+    let cloud = palette::ink().faded(0.35);
     ax.scatter(c, &points, Marker::Dot, 3.5, cloud);
     ax.contour(
         c,

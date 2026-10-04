@@ -21,7 +21,7 @@
 //! a heavier disc and a slippery bowl.
 
 use gax::pga3d::{Direction, Line, Motor, Plane, Point};
-use gax_light::{fade, light, srgb};
+use gax_colour::light;
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -531,7 +531,7 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Re
         Plane::new(0.0, 1.0, 0.0, 0.0),
         Plane::new(1.0, 1.0, 0.0, 0.0),
     ];
-    let colours = PART_COLOURS.map(|[r, g, b]| srgb(r, g, b, SURFACE));
+    let colours = PART_COLOURS.map(|[r, g, b]| Light::from_srgb(r, g, b, SURFACE));
     // The bowl in the lattice's blue, as the floors elsewhere.
     let ground_tone = light(0.3, 0.42, 1.0, 0.12);
     c.clip(view);
@@ -543,7 +543,7 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Re
             let [hx, hy, _] = p.to_euclidean();
             let checker = ((hx / 0.15).floor() + (hy / 0.15).floor()).rem_euclid(2.0) as f32;
             let shade = 0.45 + 0.55 * facing(normal_at(ground, p));
-            best = Some((distance, fade(ground_tone, (0.62 + 0.18 * checker) * shade)));
+            best = Some((distance, ground_tone.faded((0.62 + 0.18 * checker) * shade)));
         }
         for (i, q) in placed.iter().enumerate() {
             if let Some((distance, p)) = hit(*q, origin, heading)
@@ -553,9 +553,9 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Re
                 let local = motor << p;
                 let sign: f64 = spokes.iter().map(|s| (*s & local).s()).product();
                 let sector = f32::from(u8::from(sign <= 0.0));
-                let tint = fade(colours[i], 1.0 - SECTOR_CONTRAST[i] * (1.0 - sector));
+                let tint = colours[i].faded(1.0 - SECTOR_CONTRAST[i] * (1.0 - sector));
                 let shade = 0.35 + 0.65 * facing(normal_at(*q, p));
-                best = Some((distance, fade(tint, shade)));
+                best = Some((distance, tint.faded(shade)));
             }
         }
         best.map(|(_, l)| l)
@@ -694,7 +694,7 @@ mod tests {
             ground,
             gax_numga_examples::Rect::new(0.0, 0.0, 32.0, 32.0),
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 
     /// The top stays on the ground, spinning: its tip neither sinks in nor flies off, it stays
@@ -724,6 +724,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

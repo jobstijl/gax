@@ -9,7 +9,6 @@
 //! with each quadric's error ellipsoid drawn around its vertex.
 
 use gax::pga3d::{Motor, Plane, Point};
-use gax_light::{fade, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
     run,
@@ -131,7 +130,7 @@ fn lerp(a: P, b: P, t: f64) -> P {
 fn face_colour(f: usize) -> Light {
     let hex = [0x0ea5e9, 0x0284c7, 0xf43f5e, 0xe11d48, 0x8b5cf6, 0x7c3aed][f];
     let ch = |s: u32| ((hex >> s) & 0xff) as f32 / 255.0;
-    srgb(ch(16), ch(8), ch(0), 1.6)
+    Light::from_srgb(ch(16), ch(8), ch(0), 1.6)
 }
 
 /// A quadric's error ellipsoid about `centre`, as a wireframe: along each direction (the pole
@@ -149,11 +148,11 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
     };
     for i in 0..n_theta {
         let ring: Vec<P> = (0..n_phi).map(|j| pt(i, j)).collect();
-        s.polyline(&ring, 1.0, fade(colour, 0.45));
+        s.polyline(&ring, 1.0, colour.faded(0.45));
     }
     for j in 0..n_phi {
         let meridian: Vec<P> = (0..n_theta).map(|i| pt(i, j)).collect();
-        s.polyline(&meridian, 1.0, fade(colour, 0.45));
+        s.polyline(&meridian, 1.0, colour.faded(0.45));
     }
 }
 
@@ -175,7 +174,7 @@ fn mesh(s: &mut Scene3, pts: &[P], faces: &[(usize, [usize; 3])], opacity: f32) 
         let (a, b, c) = (pts[i], pts[j], pts[k]);
         let col = s.lit(a, b, c, face_colour(f));
         s.tri(a, b, c, col, opacity);
-        s.polyline(&[a, b, c, a], 1.0, fade(palette::grid(), 0.8));
+        s.polyline(&[a, b, c, a], 1.0, palette::grid().faded(0.8));
     }
 }
 
@@ -209,9 +208,9 @@ fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f64, azimuth: f32)
     pts[1] = lerp(b, target, progress);
     let faces: Vec<_> = scene.faces.iter().copied().enumerate().collect();
     mesh(&mut s, &pts, &faces, 0.55);
-    s.seg(a, b, 1.5, fade(palette::red(), 0.5));
-    s.dot(a, Marker::Dot, 6.0, fade(palette::ink(), 0.4));
-    s.dot(b, Marker::Dot, 6.0, fade(palette::ink(), 0.4));
+    s.seg(a, b, 1.5, palette::red().faded(0.5));
+    s.dot(a, Marker::Dot, 6.0, palette::ink().faded(0.4));
+    s.dot(b, Marker::Dot, 6.0, palette::ink().faded(0.4));
     ellipsoid(&mut s, scene.q_edge, target, palette::green());
     s.dot(target, Marker::Star, 14.0, palette::green());
     s.draw(c);

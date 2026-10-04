@@ -14,7 +14,7 @@
 
 use gax::pga2d;
 use gax::vga3d::{Bivector, Scalar, Vector};
-use gax_light::fade;
+
 use gax_numga_examples::points::{Map2, box_map};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
@@ -277,7 +277,7 @@ fn draw(c: &mut Canvas, t: f32) {
             });
             if m == current {
                 let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-                c.polyline(&corners, 1.5, fade(palette::yellow(), 0.9), true);
+                c.polyline(&corners, 1.5, palette::yellow().faded(0.9), true);
             }
             if m == 0 {
                 let above = rect.top_middle() + up.gp(6.0);
@@ -314,7 +314,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let pts: Vec<pga2d::Point<(), f64>> = fronts.iter().map(|v| face(v[wv])).collect();
         // The dots lie closer than their glow reaches, so their light adds up along the
         // surface: each is faint.
-        ax.scatter(c, &pts, Marker::Dot, 1.6, fade(mode_colour(wv), 0.25));
+        ax.scatter(c, &pts, Marker::Dot, 1.6, (mode_colour(wv)).faded(0.25));
     }
     let s = (u * 3.0).fract();
     let angle = f64::from(s) * core::f64::consts::TAU;
@@ -323,7 +323,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (values, _) = waves(&crystals[current], heading);
     let group = d.fronts[current][((s * FRONT as f32) as usize).min(FRONT - 1)];
     let tip = face(heading.gp(f64::from(reach) * 1.1));
-    ax.line(c, origin, tip, 1.0, fade(palette::ink(), 0.6));
+    ax.line(c, origin, tip, 1.0, palette::ink().faded(0.6));
     for wv in 0..3 {
         // The phase velocity lies along the heading; the energy goes along the group velocity.
         let phase = (values[wv] / DENSITY[current]).sqrt();

@@ -24,7 +24,7 @@
 //! onto it further along.
 
 use gax::vga3d::{Bivector, Rotor, Scalar, Vector};
-use gax_light::{fade, whiten};
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop,
@@ -183,8 +183,8 @@ fn azimuth(d: V) -> f64 {
 /// pole.
 fn colour(d: V) -> Light {
     let hue = (azimuth(d) / core::f64::consts::TAU) as f32;
-    let base = whiten(colormap::hsv(hue), 0.25);
-    fade(base, 0.45 + 0.55 * (1.0 + d.e3() as f32) / 2.0)
+    let base = (colormap::hsv(hue)).whitened(0.25);
+    base.faded(0.45 + 0.55 * (1.0 + d.e3() as f32) / 2.0)
 }
 
 /// The part of the loop spent on the sweep; the rest shows the tori.
@@ -230,7 +230,7 @@ fn draw(c: &mut Canvas, t: f32) {
         for (d, fibre, newest) in &fibres {
             let pts: Vec<_> = fibre.iter().map(|v| clipped(*v)).collect();
             let (width, strength) = if *newest { (2.6, 1.0) } else { (0.9, 0.75) };
-            scene.polyline(&pts, width, fade(colour(*d), strength));
+            scene.polyline(&pts, width, (colour(*d)).faded(strength));
         }
     });
     // Any two fibres link once: the first and the last drawn.
@@ -259,7 +259,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.45),
     );
     panel3(c, sphere_rect, cam, |scene| {
-        scene.sphere_wire(ORIGIN3, 1.0, 24, fade(palette::grid(), 0.6));
+        scene.sphere_wire(ORIGIN3, 1.0, 24, palette::grid().faded(0.6));
         for (d, _, newest) in &fibres {
             let size = if *newest { 10.0 } else { 5.0 };
             scene.dot(at(*d), Marker::Dot, size, colour(*d));

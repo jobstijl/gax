@@ -8,7 +8,7 @@
 //! around a vortex. The animation shows the trio of numga's GIF, large, and every single shape
 //! carried by the same flow.
 
-use gax_light::{Light, light};
+use gax_colour::{Light, light};
 use gax_numga_examples::{Align, Anim, Canvas, Point2, Rect, backdrop, caption, palette, run};
 
 gax::algebra! {
@@ -339,7 +339,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let big = (h * 0.42).min(w * 0.24);
     let trio: Vec<(Quadric, Light)> = trio()
         .iter()
-        .map(|(_, q, col)| (carried(*q), gax_light::hex(*col, 0.8)))
+        .map(|(_, q, col)| (carried(*q), gax_colour::hex(*col, 0.8)))
         .collect();
     hemisphere(c, Point2::xy(w * 0.26, h * 0.54), big, &trio);
     // Every shape on the right, in a grid of four by three.
@@ -351,7 +351,7 @@ fn draw(c: &mut Canvas, t: f32) {
         // The middle of the cell, raised by half a label.
         let (i, j) = ((k % 4) as f32, (k / 4) as f32);
         let centre = grid.lo + Point2::direction(cw * (i + 0.5), ch * (j + 0.5) - label * 0.5);
-        hemisphere(c, centre, r, &[(carried(q), gax_light::hex(col, 0.8))]);
+        hemisphere(c, centre, r, &[(carried(q), gax_colour::hex(col, 0.8))]);
         let under = centre + down.gp(r + label * 1.3);
         c.text(name, under, label, palette::grid(), Align::Center);
     }
@@ -519,7 +519,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(gax_light::luma(c.mean()) > 0.0);
+            assert!(c.mean().luma() > 0.0);
         }
     }
 }

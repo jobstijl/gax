@@ -12,7 +12,7 @@
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::{pga2d, pga3d, vga3d};
-use gax_light::fade;
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
@@ -334,7 +334,7 @@ fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Light, opacity: f
         14,
         |_, _| colour,
         opacity,
-        Some((fade(colour, 0.6), 0.6)),
+        Some((colour.faded(0.6), 0.6)),
     );
 }
 
@@ -418,7 +418,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     let probe_dir = polar(1.0, angle) - hub;
     ax.axline(c, hub, probe_dir, 1.0, palette::grid());
     let east = pga2d::Point::direction(1.0, 0.0);
-    ax.axline(c, hub, east, 0.8, fade(palette::grid(), 0.5));
+    ax.axline(c, hub, east, 0.8, palette::grid().faded(0.5));
     for (k, arm) in sd.arms.iter().enumerate() {
         let colour = if k == 0 {
             palette::orange()
@@ -426,7 +426,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
             palette::sky()
         };
         let pts: Vec<_> = arm.iter().map(|p| from_above(*p)).collect();
-        ax.scatter(c, &pts, Marker::Dot, 4.0, fade(colour, 0.9));
+        ax.scatter(c, &pts, Marker::Dot, 4.0, colour.faded(0.9));
     }
     ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink());
     let reach = probe_dir.gp(2.3);
@@ -462,7 +462,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         (&arm_curve, palette::orange()),
         (&wheel_curve, palette::sky()),
     ] {
-        pax.polyline(c, xy, 1.0, fade(colour, 0.3));
+        pax.polyline(c, xy, 1.0, colour.faded(0.3));
         let upto = ((s * n as f32) as usize).min(n);
         pax.polyline(c, &xy[..=upto], 2.5, colour);
         pax.scatter(c, &[xy[upto]], Marker::Dot, 8.0, colour);
@@ -499,11 +499,11 @@ fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     for k in 1..=4 {
         let r = rmax * k as f64 / 4.0;
         let ring: Vec<_> = (0..=96).map(|j| polar(r, turn(j, 96))).collect();
-        ax.polyline(c, &ring, 0.8, fade(palette::grid(), 0.8));
+        ax.polyline(c, &ring, 0.8, palette::grid().faded(0.8));
     }
     for j in 0..12 {
         let spoke = polar(rmax, turn(j, 12));
-        ax.line(c, origin, spoke, 0.8, fade(palette::grid(), 0.5));
+        ax.line(c, origin, spoke, 0.8, palette::grid().faded(0.5));
     }
 }
 
@@ -618,7 +618,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(gax_light::luma(c.mean()) > 0.0);
+            assert!(c.mean().luma() > 0.0);
         }
     }
 

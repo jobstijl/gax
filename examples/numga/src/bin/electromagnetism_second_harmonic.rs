@@ -14,7 +14,7 @@
 //! crystals.
 
 use gax::pga2d::Point;
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Dir3, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
     backdrop, caption, palette, run,
@@ -295,9 +295,9 @@ fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
     }
     let tips = bonds.map(tip);
     for (i, a) in tips.iter().enumerate() {
-        sc.seg(ORIGIN3, *a, 2.5, fade(palette::ink(), 0.8));
+        sc.seg(ORIGIN3, *a, 2.5, palette::ink().faded(0.8));
         for b in &tips[i + 1..] {
-            sc.seg(*a, *b, 1.0, fade(palette::sky(), 0.35));
+            sc.seg(*a, *b, 1.0, palette::sky().faded(0.35));
         }
         sc.dot(*a, Marker::Dot, 9.0, palette::orange());
     }
@@ -312,13 +312,13 @@ fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
 fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     let ax = Axes::equal(rect.inset(34.0, 30.0, 10.0, 30.0), centre(), 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
-    let faint = fade(palette::grid(), 0.6);
+    let faint = palette::grid().faded(0.6);
     ax.line(c, Spot::xy(-1.15, 0.0), Spot::xy(1.15, 0.0), 1.0, faint);
     ax.line(c, Spot::xy(0.0, -1.15), Spot::xy(0.0, 1.15), 1.0, faint);
     let circle: Vec<Spot> = pumps.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &circle, 1.0, fade(palette::sky(), 0.35));
+    ax.polyline(c, &circle, 1.0, palette::sky().faded(0.35));
     let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &curve, 2.0, fade(palette::orange(), 0.8));
+    ax.polyline(c, &curve, 2.0, palette::orange().faded(0.8));
     ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::sky());
     ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::orange());
 }
@@ -331,7 +331,7 @@ fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
     let ax = Axes::equal(rect.inset(10.0, 30.0, 10.0, 30.0), centre(), 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
-    let faint = fade(palette::grid(), 0.8);
+    let faint = palette::grid().faded(0.8);
     for k in 1..=4 {
         let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
         ax.polyline(c, &ring, 1.0, faint);
@@ -383,12 +383,12 @@ fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     let a = series(pump, horizontal());
     let b = series(harmonic, vertical());
     let zero = (Point::xy(0.0, 0.0), Point::xy(2.0, 0.0));
-    ax.line(c, zero.0, zero.1, 1.0, fade(palette::grid(), 0.6));
+    ax.line(c, zero.0, zero.1, 1.0, palette::grid().faded(0.6));
     ax.polyline(c, &a, 2.0, palette::sky());
     ax.polyline(c, &b, 2.0, palette::orange());
     let k = ((at * (a.len() - 1) as f32) as usize).min(a.len() - 1);
     let now = periods(phase[k]);
-    let cursor = fade(palette::ink(), 0.5);
+    let cursor = palette::ink().faded(0.5);
     ax.line(c, Point::xy(now, -1.2), Point::xy(now, 1.2), 1.0, cursor);
     ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky());
     ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange());
@@ -411,7 +411,7 @@ fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
     let image = on_screen(&generated[1]);
     ax.dashed(c, &circle, 1.5, 6.0, palette::sky());
     let unmixed = on_screen(&generated[0]);
-    ax.polyline(c, &unmixed, 1.0, fade(palette::orange(), 0.3));
+    ax.polyline(c, &unmixed, 1.0, palette::orange().faded(0.3));
     ax.polyline(c, &image, 2.0, palette::orange());
     let k = ((at * (circle.len() - 1) as f32) as usize).min(circle.len() - 1);
     ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::sky());
@@ -453,7 +453,7 @@ fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
             .zip(path)
             .map(|(d, a)| Point::xy(*d, power(*a)))
             .collect();
-        ax.polyline(c, &pts, 1.0, fade(case_colour(k), 0.3));
+        ax.polyline(c, &pts, 1.0, (case_colour(k)).faded(0.3));
         ax.polyline(c, &pts[..n], 2.0, case_colour(k));
     }
     ax.legend(
@@ -642,7 +642,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(320, 180);
         let a = gax_numga_examples::app::frame(&anim, 0.0, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 1.0, &mut draw);
-        assert!(gax_light::luma(a.mean()) > 0.0);
+        assert!(a.mean().luma() > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

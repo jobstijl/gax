@@ -30,7 +30,6 @@
 //! first three directions (left, the view turning); seen in each of the three planes it turns on
 //! a circle, at that plane's rate.
 
-use gax_light::{fade, mix};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop,
@@ -313,7 +312,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|p| Space::xyz(p.c[0], p.c[1], p.c[2]))
         .collect();
     panel3(c, left, cam, |scene| {
-        scene.polyline(&path, 0.8, fade(palette::grid(), 0.9));
+        scene.polyline(&path, 0.8, palette::grid().faded(0.9));
         scene.polyline(&path[..=index], 1.6, palette::purple());
         scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
     });
@@ -344,7 +343,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let name = format!("PLANE {}", k + 1);
         let above = Point2::xy(0.0, extent * 1.15);
         ax.text(c, above, &name, 12.0, palette::ink(), Align::Center);
-        let tone = mix(plane_colour(k), palette::ink(), 0.4);
+        let tone = (plane_colour(k)).mix_light(palette::ink(), 0.4);
         let below = Point2::xy(0.0, -extent * 1.3);
         ax.text(
             c,

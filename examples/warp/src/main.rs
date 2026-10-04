@@ -1216,7 +1216,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let hud_cam = scene::camera(sim::body::pose_at(0.0, 0.0, 0.0), 18.0, size, game.time);
     scene::world_lines(&game.sim, game.alpha, game.time, &mut game.world_lines);
     for p in &game.fx.wreckage {
-        let c = light::fade(p.color, p.life / fx::WRECK_LIFE);
+        let c = p.color.faded(p.life / fx::WRECK_LIFE);
         scene::outline(
             &mut game.world_lines,
             &p.tri,
@@ -1228,7 +1228,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     }
     for (p, text, age, color) in &game.fx.popups {
         // Rising and fading.
-        let c = light::fade(*color, (1.0 - age / 1.1).max(0.0));
+        let c = (*color).faded((1.0 - age / 1.1).max(0.0));
         let at = *p + gax::pga2d::Point::direction(0.0, 0.8 + age * 1.5);
         scene::text(&mut game.world_lines, text, at, 0.9, c, Align::Center);
     }
@@ -1255,10 +1255,8 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let dim = if backdrop { 0.5 } else { 1.0 };
     // The lattice warms towards violet as the intensity rises: its hue turned about OkLab's
     // lightness axis.
-    let grid_color = light::fade(
-        light::hue_shift(palette::GRID, 0.5 * intensity),
-        (0.85 + 0.5 * intensity) * dim,
-    );
+    let grid_color = (palette::GRID.perceptually(|c| c.rotate_hue(0.5 * intensity)))
+        .faded((0.85 + 0.5 * intensity) * dim);
     let f = render::Frame {
         camera,
         hud: hud_cam,
@@ -1348,11 +1346,11 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
     let aspect = size[0] as f32 / size[1] as f32;
     let (left, right, top) = (-18.0 * aspect + 2.2, 18.0 * aspect - 2.2, 18.0 - 2.6);
     let hud = palette::HUD;
-    let dim = light::fade(hud, 0.45);
+    let dim = hud.faded(0.45);
     let blink = signal::wave(g.time * 3.0) > -0.3;
     // Menu rows: the selected one bright and pulsing, the others faint.
-    let hot = light::fade(hud, 1.1 + 0.2 * signal::wave(g.time * 5.0));
-    let faint = light::fade(hud, 0.3);
+    let hot = hud.faded(1.1 + 0.2 * signal::wave(g.time * 5.0));
+    let faint = hud.faded(0.3);
     let st = HudStyle {
         left,
         right,
@@ -1504,7 +1502,7 @@ fn hud_settings(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
                 for k in 0..10 {
                     let x = rx - 9.5 * 0.9 + k as f32 * 0.9;
                     let lit = k < level;
-                    let bc = light::fade(c, if lit { 1.2 } else { 0.25 });
+                    let bc = c.faded(if lit { 1.2 } else { 0.25 });
                     out.push(scene::seg(
                         scene::pt(x, y + 0.15),
                         scene::pt(x, y + 0.35 + 0.1 * k as f32),
@@ -1656,8 +1654,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
     if let Some(speed) = s.speed {
         // The speed bonus: boost for more points; pale gold turning to hot orange (a
         // perceptual gradient).
-        let c = light::blend(
-            light::light(1.0, 0.95, 0.55, 1.2),
+        let c = (light::light(1.0, 0.95, 0.55, 1.2)).blend(
             light::light(1.0, 0.45, 0.15, 2.4),
             ((speed - 1.0) / 0.45).clamp(0.0, 1.0),
         );
@@ -1892,11 +1889,11 @@ impl Stats {
 /// A vertical menu, centred, with the selected item marked.
 fn menu_items(out: &mut Vec<LineInstance>, items: &[&str], sel: usize, y0: f32, time: f32) {
     let hud = palette::HUD;
-    let dim = light::fade(hud, 0.45);
+    let dim = hud.faded(0.45);
     for (k, item) in items.iter().enumerate() {
         let y = y0 - k as f32 * 2.2;
         if k == sel {
-            let c = light::fade(hud, 1.0 + 0.25 * signal::wave(time * 5.0));
+            let c = hud.faded(1.0 + 0.25 * signal::wave(time * 5.0));
             scene::text(
                 out,
                 &format!("> {item} <"),

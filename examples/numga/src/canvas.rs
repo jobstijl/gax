@@ -1,5 +1,5 @@
 //! A software canvas of light, as `examples/warp` draws: every pixel holds a light (a PGA3D
-//! point in linear RGB whose weight is its intensity, the `gax-light` crate), and the canvas is
+//! point in linear RGB whose weight is its intensity, the `gax-colour` crate), and the canvas is
 //! shown through AgX, warp's tonemapper.
 //!
 //! Strokes (lines, polylines, rings, text) and dots add their light: a solid core and a soft
@@ -13,7 +13,7 @@
 
 use crate::font::{self, Align};
 use crate::points::{Point2, box_map};
-use gax_light::{DARK, Light, agx, mix};
+use gax_colour::{DARK, Light, Srgb};
 
 /// How far AgX's look moves colours away from grey (as warp's).
 const SATURATION: f32 = 1.35;
@@ -274,7 +274,7 @@ impl Canvas {
     pub fn backdrop(&mut self, top: Light, bottom: Light) {
         let h = self.height.max(2) as f32 - 1.0;
         for y in 0..self.height {
-            let l = mix(top, bottom, y as f32 / h);
+            let l = top.mix_light(bottom, y as f32 / h);
             self.px[y * self.width..(y + 1) * self.width].fill(l);
         }
     }
@@ -284,7 +284,7 @@ impl Canvas {
     }
 
     fn cover_with(&mut self, i: usize, l: Light, opacity: f32) {
-        self.px[i] = mix(self.px[i], l, opacity);
+        self.px[i] = self.px[i].mix_light(l, opacity);
     }
 
     /// The segments `segs` as one stroke `width` pixels wide: each pixel's coverage from its
@@ -509,7 +509,7 @@ impl Canvas {
                         }
                         if hit > 0 {
                             let opacity = hit as f32 / (n * n) as f32;
-                            *p = mix(*p, acc * (hit as f32).recip(), opacity);
+                            *p = (*p).mix_light(acc * (hit as f32).recip(), opacity);
                         }
                     }
                 });
@@ -530,11 +530,12 @@ impl Canvas {
         self.stroke(&segs, (size / 9.0).max(1.0), l);
     }
 
-    /// Each pixel's display light: AgX of its light, encoded as sRGB bytes.
+    /// Each pixel as shown: AgX of its light, the colour that makes on black, as sRGB bytes.
     fn display(&self) -> impl Iterator<Item = [u8; 3]> + '_ {
         self.px.iter().map(|l| {
-            let d = agx(*l, SATURATION);
-            [d.e032(), d.e013(), d.e021()].map(encode)
+            let shown: Srgb = l.agx(SATURATION).on_black().to();
+            let [r, g, b, _] = shown.to_u8();
+            [r, g, b]
         })
     }
 
@@ -557,15 +558,4 @@ impl Canvas {
         let n = self.px.len().max(1) as f32;
         self.px.iter().fold(DARK, |m, l| m + *l) * n.recip()
     }
-}
-
-/// A display light's coordinate in `[0, 1]`, encoded as an sRGB byte.
-fn encode(c: f32) -> u8 {
-    let c = c.clamp(0.0, 1.0);
-    let s = if c <= 0.003_130_8 {
-        c * 12.92
-    } else {
-        1.055 * c.powf(1.0 / 2.4) - 0.055
-    };
-    (s * 255.0 + 0.5) as u8
 }

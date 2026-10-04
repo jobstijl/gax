@@ -1,6 +1,6 @@
 [package]
-name = "gax-light"
-description = "Light as geometry, shared by the examples: lights as PGA3D points, OkLab tints, AgX tonemapping"
+name = "gax-colour"
+description = "Colour as geometry, shared by the examples: colours as homogeneous PGA3D points in their spaces, after bevy_color"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
@@ -12,3 +12,7 @@ publish = false
 
 [dependencies]
 gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga3d"] }
+
+[features]
+## Conversions to and from gax's GPU layouts (`PointGpu`).
+gpu = ["gax/bytemuck"]

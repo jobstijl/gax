@@ -11,7 +11,7 @@
 //! from the great circle `x = y = 0` is a wall that splits the sphere into two linked solid
 //! tori; ellipsoids bounce inside one, and the eye on its core circle looks down the tube.
 
-use gax_light::{Light, srgb};
+use gax_colour::Light;
 use gax_numga_examples::colormap;
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use rand::seq::SliceRandom;
@@ -112,7 +112,7 @@ pub fn ellipses(specs: &[Ellipse], n_phi: usize) -> Vec<s2::Body> {
             let half = e.half_angles.map(f64::to_radians);
             let (points, masses) = ellipse_mesh(half, e.mass, n_phi, 10);
             s2::body(
-                gax_light::hex(e.color, 1.0),
+                gax_colour::hex(e.color, 1.0),
                 s2::ellipsoid(half.map(f64::tan)),
                 camera() * e.placement,
                 e.rate,
@@ -351,7 +351,7 @@ pub fn gap(frames: usize) -> Scene3 {
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(60.0).tan(), deg(75.0).tan(), deg(70.0).tan()]);
     let huge = resting(
-        srgb(0.75, 0.7, 0.6, 1.0),
+        Light::from_srgb(0.75, 0.7, 0.6, 1.0),
         shape,
         Rate::zero(),
         500.0,
@@ -377,7 +377,13 @@ pub fn needle(frames: usize) -> Scene3 {
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(80.0).tan(), deg(4.0).tan(), deg(3.0).tan()]);
     let spin = turning(TangentPlane::new(2.0, 0.0, 0.0));
-    let long = resting(srgb(0.9, 0.85, 0.3, 1.0), shape, spin, 50.0, &mut rng);
+    let long = resting(
+        Light::from_srgb(0.9, 0.85, 0.3, 1.0),
+        shape,
+        spin,
+        50.0,
+        &mut rng,
+    );
     let mut all = vec![long];
     all.extend(population(&mut rng, 1000, (0.05, 0.3)));
     let bodies = admitted(all, 1, 40);
@@ -416,7 +422,7 @@ pub fn tunnel(frames: usize) -> Tunnel {
         1.0 / deg(20.0).tan().powi(2),
     ]);
     let torus = resting(
-        srgb(0.55, 0.65, 0.75, 1.0),
+        Light::from_srgb(0.55, 0.65, 0.75, 1.0),
         tube,
         Rate::zero(),
         500.0,

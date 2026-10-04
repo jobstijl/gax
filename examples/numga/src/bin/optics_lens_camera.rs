@@ -10,7 +10,6 @@
 //! aperture change; the sensor is rasterised from the 60 cones as implicit functions, with a
 //! side view of the train and numga's three stills (wide, tele, and tele with a tilted sensor).
 
-use gax_light::{fade, mix};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -264,7 +263,7 @@ mod raster {
     use super::lens::{Exposure, Quadric, section};
     use gax::pga2d;
     use gax::pga3d::{Plane, Point};
-    use gax_light::{Light, light, srgb};
+    use gax_colour::{Light, light};
 
     /// Half extents of the sensor window in its own frame.
     pub const SENSOR: [f64; 2] = [0.225, 0.175];
@@ -410,7 +409,7 @@ mod raster {
                     }
                     for (px, rgb) in out.iter_mut().zip(acc) {
                         let [r, g, b] = rgb.map(|v| v.clamp(0.0, 1.0) as f32);
-                        *px = srgb(r, g, b, 1.0);
+                        *px = Light::from_srgb(r, g, b, 1.0);
                     }
                 });
             }
@@ -492,7 +491,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     }
     let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
     let layer = [palette::red(), palette::green(), palette::blue()];
-    let tone = |k: usize| mix(layer[k], palette::ink(), 0.3);
+    let tone = |k: usize| layer[k].mix_light(palette::ink(), 0.3);
     for (k, chunk) in pts.chunks(20).enumerate() {
         ax.scatter(c, chunk, Marker::Dot, 3.5, tone(k));
     }
@@ -502,11 +501,11 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         .map(|p| flat.of(exposure.collineation.of(*p)))
         .collect();
     for (k, chunk) in images.chunks(20).enumerate() {
-        ax.scatter(c, chunk, Marker::Cross, 4.0, fade(tone(k), 0.9));
+        ax.scatter(c, chunk, Marker::Cross, 4.0, (tone(k)).faded(0.9));
     }
     for ray in 0..3 {
         let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
-        ax.polyline(c, &fan, 1.0, fade(palette::yellow(), 0.9));
+        ax.polyline(c, &fan, 1.0, palette::yellow().faded(0.9));
     }
 }
 
@@ -792,8 +791,8 @@ mod tests {
         let drift = [a.0 - b.0, a.1 - b.1, a.2 - b.2];
         assert!(drift.iter().all(|d| d.abs() <= 1e-12), "{drift:?}");
         let image = super::raster::rasterise(&a.3, 1.0, 28, 36);
-        let sum = image.iter().fold(gax_light::DARK, |s, p| s + *p);
-        let [r, g, b] = [sum.e032(), sum.e013(), sum.e021()];
+        let sum = image.iter().fold(gax_colour::DARK, |s, p| s + *p);
+        let [r, g, b, _] = sum.to_premultiplied();
         assert!([r, g, b].iter().all(|v| *v > 1.0), "{sum:?}");
     }
 

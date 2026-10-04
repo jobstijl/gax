@@ -8,7 +8,7 @@ use crate::plot::{Marker, arrow, mark};
 use crate::points::{Dir3, ORIGIN3, Point2, Point3, Pos3, finite};
 use crate::view::Camera;
 use gax::pga3d::{Motor, Plane, Point};
-use gax_light::{Light, fade};
+use gax_colour::Light;
 
 enum Prim {
     /// A triangle, covering what is behind by its opacity.
@@ -60,7 +60,7 @@ impl Scene3 {
         let face = a.point3() & b.point3() & c.point3();
         let facing = Plane::orthogonal_to(self.light);
         let k = 0.35 + 0.65 * ((face | facing).s() / face.norm().max(1e-12)).abs();
-        fade(color, k)
+        color.faded(k)
     }
 
     /// A triangle, covering what is behind it by `opacity`.

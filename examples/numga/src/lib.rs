@@ -28,7 +28,7 @@ pub mod view;
 pub use app::{Anim, run};
 pub use canvas::{Canvas, Rect};
 pub use font::Align;
-pub use gax_light::{Light, light};
+pub use gax_colour::{Light, light};
 pub use plot::{Axes, Marker};
 pub use points::{
     Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, reach2, reach3,
@@ -53,20 +53,13 @@ pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
     );
     if !sub.is_empty() {
         let at = Point2::xy(s * 0.8, s * 3.0);
-        c.text(
-            sub,
-            at,
-            s * 0.7,
-            gax_light::fade(palette::ink(), 0.45),
-            Align::Left,
-        );
+        c.text(sub, at, s * 0.7, palette::ink().faded(0.45), Align::Left);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gax_light::luma;
 
     /// White light at intensity 1.
     const WHITE: Light = light(1.0, 1.0, 1.0, 1.0);
@@ -81,10 +74,10 @@ mod tests {
         let mut c = Canvas::new(40, 30);
         c.line(Point2::xy(5.0, 15.0), Point2::xy(35.0, 15.0), 2.0, WHITE);
         // The core is solid, the glow faint and fading, and beyond its reach nothing.
-        assert!(luma(c.get(20, 14)) > 0.95 && luma(c.get(20, 15)) > 0.95);
-        let glow = luma(c.get(20, 20));
+        assert!((c.get(20, 14)).luma() > 0.95 && (c.get(20, 15)).luma() > 0.95);
+        let glow = (c.get(20, 20)).luma();
         assert!(glow > 0.0 && glow < 0.1, "{glow}");
-        assert_eq!(luma(c.get(20, 0)), 0.0);
+        assert_eq!((c.get(20, 0)).luma(), 0.0);
     }
 
     #[test]
@@ -98,7 +91,7 @@ mod tests {
             Point2::xy(35.0, 10.0),
         ];
         c.polyline(&pts, 2.0, WHITE, false);
-        assert!((luma(c.get(20, 10)) - luma(c.get(12, 10))).abs() < 1e-3);
+        assert!(((c.get(20, 10)).luma() - (c.get(12, 10)).luma()).abs() < 1e-3);
     }
 
     #[test]
@@ -111,7 +104,7 @@ mod tests {
             Point2::xy(0.0, 40.0),
         ];
         c.fill(&corners, WHITE, 1.0);
-        assert!((luma(c.mean()) - 0.5).abs() < 2e-3, "{:?}", c.mean());
+        assert!((c.mean().luma() - 0.5).abs() < 2e-3, "{:?}", c.mean());
         let mut c = Canvas::new(60, 60);
         // A pentagram: every second corner of a pentagon, by turns of two fifths.
         let centre = Point2::xy(30.0, 30.0);
@@ -126,7 +119,7 @@ mod tests {
             .collect();
         c.fill(&star, WHITE, 1.0);
         assert!(
-            luma(c.get(30, 30)) > 0.99,
+            (c.get(30, 30)).luma() > 0.99,
             "non-zero winding fills the centre"
         );
     }
@@ -136,7 +129,7 @@ mod tests {
         let mut c = Canvas::new(10, 10);
         let r = Rect::new(2.0, 2.0, 8.0, 8.0);
         c.fill(&[r.lo, r.top_right(), r.hi, r.bottom_left()], WHITE, 1.0);
-        assert!((luma(c.mean()) - 0.36).abs() < 1e-3);
+        assert!((c.mean().luma() - 0.36).abs() < 1e-3);
     }
 
     #[test]
@@ -231,7 +224,8 @@ mod tests {
         let mut c = Canvas::new(64, 64);
         s.draw(&mut c);
         let p = c.get(32, 32);
-        assert!(p.e032() > 0.5 && p.e013() < 0.01, "{p:?}");
+        let [r, g, _, _] = p.to_premultiplied();
+        assert!(r > 0.5 && g < 0.01, "{p:?}");
     }
 
     #[test]

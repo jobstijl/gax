@@ -14,7 +14,6 @@
 //! the world-momentum drift of the three steppers in 3, 4 and 5 dimensions: RKMK4 conserves it
 //! to fourth order, Verlet and RK4 to first.
 
-use gax_light::fade;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
     backdrop, caption, palette, run,
@@ -271,10 +270,10 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f3
             let at = |u: usize, v: usize| corners[side << a | u << b | v << d];
             let (p, q, r, t) = (at(0, 0), at(1, 0), at(1, 1), at(0, 1));
             // The faces cover what is behind them: a dimmer light than the glowing strokes.
-            let col = s.lit(p, q, r, fade(face_colours[a], 0.5));
+            let col = s.lit(p, q, r, face_colours[a].faded(0.5));
             s.quad(p, q, r, t, col, 0.92);
             for (x, y) in [(p, q), (q, r), (r, t), (t, p)] {
-                s.seg(x, y, 1.0, fade(palette::bottom(), 0.5));
+                s.seg(x, y, 1.0, palette::bottom().faded(0.5));
             }
         }
     }

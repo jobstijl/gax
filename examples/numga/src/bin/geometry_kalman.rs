@@ -16,7 +16,7 @@
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, run,
@@ -281,9 +281,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let readings_seen = shown / STEPS_PER_READING;
     let states_seen = shown + readings_seen;
     for s in scene.states[..states_seen].iter().filter(|s| s.updated) {
-        ax.polyline(c, &ellipse(s, 40), 1.0, fade(palette::sky(), 0.6));
+        ax.polyline(c, &ellipse(s, 40), 1.0, palette::sky().faded(0.6));
     }
-    ax.polyline(c, &dead[..shown], 1.3, fade(palette::red(), 0.9));
+    ax.polyline(c, &dead[..shown], 1.3, palette::red().faded(0.9));
     ax.polyline(c, &truth[..shown], 2.0, palette::ink());
     ax.polyline(c, &filtered[..states_seen], 1.3, palette::sky());
     let measured = path(&scene.measurements[..readings_seen]);
@@ -292,7 +292,7 @@ fn draw(c: &mut Canvas, t: f32) {
         &measured,
         Marker::Cross,
         8.0,
-        fade(palette::green(), 0.8),
+        palette::green().faded(0.8),
     );
     // The live ellipse at the cursor.
     let now = &scene.states[states_seen - 1];
@@ -338,7 +338,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .take(readings_seen)
         .map(|(t, e)| Point2::xy(*t, *e))
         .collect();
-    let own = mix(palette::sky(), palette::ink(), 0.4);
+    let own = palette::sky().mix_light(palette::ink(), 0.4);
     ex.polyline(c, &d, 1.5, palette::red());
     ex.scatter(c, &d, Marker::Dot, 5.0, palette::red());
     ex.polyline(c, &f, 1.5, palette::sky());

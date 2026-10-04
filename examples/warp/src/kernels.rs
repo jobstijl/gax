@@ -115,10 +115,12 @@ pub fn edge_heat<T: Real>(
     -(-stretch.max(motion)).max(-one)
 }
 
-/// Lights: homogeneous points in linear RGB space, shared with the other examples
-/// (`gax-light`); the renderer traces these into its shaders.
+/// Lights: homogeneous points of linear sRGB, shared with the other examples (`gax-colour`);
+/// the renderer traces these into its shaders.
 #[cfg_attr(not(test), allow(unused_imports))] // Traced by build.rs; the tests check them.
-pub use gax_light::{agx, fade as light_fade, luma, mix as light_mix, whiten as light_whiten};
+pub use gax_colour::ops::{
+    agx, fade as light_fade, luma, mix as light_mix, whiten as light_whiten,
+};
 
 /// The tail of a streak: where a point moving at `v` was `dt` ago.
 pub fn streak_tail<T: Real>(p: Point<(), T>, v: Point<(), T>, dt: T) -> Point<(), T> {

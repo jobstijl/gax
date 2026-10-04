@@ -35,7 +35,7 @@
 //! the stereographic projection.
 
 use gax::ApproxEq;
-use gax_light::{fade, mix, whiten};
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop, caption,
@@ -512,11 +512,8 @@ const SECONDS: f32 = 8.0;
 /// fainter the higher it starts.
 fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) -> Light {
     let hue = colormap::hsv(azimuth as f32 / azimuths as f32);
-    let soft = whiten(hue, 0.2);
-    fade(
-        soft,
-        0.95 - 0.4 * height as f32 / (heights.max(2) - 1) as f32,
-    )
+    let soft = hue.whitened(0.2);
+    soft.faded(0.95 - 0.4 * height as f32 / (heights.max(2) - 1) as f32)
 }
 
 /// The point of space a projected vector reaches from the origin.
@@ -587,7 +584,7 @@ fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
         } else {
             palette::grid()
         };
-        let colour = mix(colour, palette::ink(), 0.35);
+        let colour = colour.mix_light(palette::ink(), 0.35);
         let row_at = at + down.gp((k + 1) as f32);
         c.text(&line, row_at, size, colour, Align::Left);
     }
@@ -636,7 +633,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 let colour = orbit_colour(height, 3, azimuth, 12);
                 let pts: Vec<_> = orbit.iter().map(|v| at(*v)).collect();
                 let width = if knots { 1.2 } else { 0.6 };
-                scene.polyline(&pts, width, fade(colour, 0.8));
+                scene.polyline(&pts, width, colour.faded(0.8));
                 // The points carried along: one per orbit, six riding along each knot.
                 let riders = if knots { 6 } else { 1 };
                 for r in 0..riders {

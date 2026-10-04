@@ -17,7 +17,7 @@
 mod scenegraph;
 
 use gax::pga3d::Point;
-use gax_light::{fade, light, mix, srgb};
+use gax_colour::light;
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::{
     Align, Anim, Canvas, Light, Point2, Pos2, Rect, backdrop, caption, palette, run,
@@ -155,7 +155,7 @@ mod render {
     use super::manipulability::Quadric;
     use super::scenegraph::{M, P, Pl, axis};
     use gax::pga3d::{Motor, Plane, Point};
-    use gax_light::{Light, fade, light, mix};
+    use gax_colour::{Light, light};
 
     /// A point of the view's screen plane, its offsets from the centre.
     pub type Screen = gax::pga2d::Point<(), f64>;
@@ -285,7 +285,7 @@ mod render {
                 && nearest.is_none_or(|(best, _)| t < best)
             {
                 let k = lit(n, view.lamp, 0.35) as f32;
-                nearest = Some((t, fade(*col, k)));
+                nearest = Some((t, (*col).faded(k)));
             }
         }
         // The floor `z = 0`, tiled within 2.4 of the base.
@@ -308,7 +308,7 @@ mod render {
             (behind, Some((_, n))) => {
                 let k = lit(n, view.lamp, 0.45) as f32;
                 let base = behind.map_or(super::PANEL, |(_, c)| c);
-                Some(mix(base, fade(colour, k), ALPHA))
+                Some(base.mix_light(colour.faded(k), ALPHA))
             }
         }
     }
@@ -329,11 +329,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let view = render::view(18.0, -60.0, Point::xyz(-0.9, 0.25, 1.3), 2.2);
     let boxes: Vec<render::BoxShape> = pose.bodies.iter().map(|b| render::prepare(*b)).collect();
     let colours = [
-        srgb(0.45, 0.47, 0.52, SURFACE),
-        srgb(0.62, 0.64, 0.70, SURFACE),
-        srgb(0.78, 0.60, 0.30, SURFACE),
-        srgb(0.30, 0.55, 0.62, SURFACE),
-        srgb(0.55, 0.40, 0.60, SURFACE),
+        Light::from_srgb(0.45, 0.47, 0.52, SURFACE),
+        Light::from_srgb(0.62, 0.64, 0.70, SURFACE),
+        Light::from_srgb(0.78, 0.60, 0.30, SURFACE),
+        Light::from_srgb(0.30, 0.55, 0.62, SURFACE),
+        Light::from_srgb(0.55, 0.40, 0.60, SURFACE),
     ];
     let screen = c.rect();
     let (w, h) = (screen.width(), screen.height());
@@ -346,13 +346,13 @@ fn draw(c: &mut Canvas, t: f32) {
             true,
             "VELOCITY ELLIPSOID",
             "TIP SPEEDS AT UNIT JOINT RATES",
-            srgb(0.25, 0.45, 0.85, SURFACE),
+            Light::from_srgb(0.25, 0.45, 0.85, SURFACE),
         ),
         (
             false,
             "FORCE ELLIPSOID",
             "TIP FORCES AT UNIT JOINT TORQUES",
-            srgb(0.92, 0.55, 0.20, SURFACE),
+            Light::from_srgb(0.92, 0.55, 0.20, SURFACE),
         ),
     ]
     .into_iter()
@@ -385,9 +385,9 @@ fn draw(c: &mut Canvas, t: f32) {
         c.unclip();
         c.polyline(&corners, 1.0, palette::grid(), true);
         let inside = |down: f32| rect.lo + Point2::direction(s * 0.6, s * down);
-        let tone = mix(colour, palette::ink(), 0.4);
+        let tone = colour.mix_light(palette::ink(), 0.4);
         c.text(title, inside(1.5), s, tone, Align::Left);
-        let faint = fade(palette::ink(), 0.6);
+        let faint = palette::ink().faded(0.6);
         c.text(sub, inside(2.8), s * 0.75, faint, Align::Left);
     }
     caption(
@@ -534,6 +534,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

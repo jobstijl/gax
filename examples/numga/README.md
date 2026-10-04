@@ -13,7 +13,7 @@ cargo test --release                                       # every example's tes
 ```
 
 The shared drawing code (`src/`) draws with light, as `examples/warp` does (the shared
-`gax-light` crate): every colour is a light, a PGA3D point whose weight is its intensity; strokes
+`gax-colour` crate): every colour is a light, a PGA3D point whose weight is its intensity; strokes
 add their light with a glow, fills and images cover by their opacity, and the canvas is shown
 through AgX. It is gax down to the pixels: pixels and rectangles are PGA2D points, axes and views
 are point maps, a camera projects by meeting its rays with the image plane, and distances are the

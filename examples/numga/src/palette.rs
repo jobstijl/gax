@@ -1,8 +1,8 @@
-//! The examples' colours: lights, as in `examples/warp` (the `gax-light` crate). Accents glow
+//! The examples' colours: lights, as in `examples/warp` (the `gax-colour` crate). Accents glow
 //! like neon on a dark blue backdrop; a light's weight is its intensity, so a fainter stroke is
 //! the same light faded.
 
-use gax_light::{Light, light};
+use gax_colour::{Light, light};
 
 /// The backdrop's top.
 pub fn top() -> Light {

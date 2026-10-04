@@ -18,7 +18,7 @@
 //! cursors sweeping the dispersion scans, the Fresnel surfaces and the drag curve.
 
 use gax::pga2d::Point;
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Light, Marker, Point2, Rect, Scene3, backdrop, caption,
     palette, run,
@@ -408,7 +408,7 @@ fn draw_wave(c: &mut Canvas, rect: Rect, modes: &([f64; 2], [B; 2]), tau: f64, l
         e_line.push(on_beam(z) + across(e));
         b_line.push(on_beam(z) + across(b));
     }
-    sc.polyline(&b_line, 1.5, fade(palette::sky(), 0.8));
+    sc.polyline(&b_line, 1.5, palette::sky().faded(0.8));
     sc.polyline(&e_line, 2.0, palette::orange());
     for k in 0..21 {
         let z = Z_MAX * k as f64 / 20.0;
@@ -437,7 +437,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
         let col = palette::series(i);
         for v in expected {
             let line = [Point::xy(*v, 1e-4), Point::xy(*v, 3.0)];
-            ax.dashed(c, &line, 1.0, 4.0, fade(col, 0.6));
+            ax.dashed(c, &line, 1.0, 4.0, col.faded(0.6));
         }
         let pts: Vec<Point<(), f64>> = s
             .speeds
@@ -445,7 +445,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
             .zip(scan)
             .map(|(v, m)| Point::xy(*v, m.max(1e-4)))
             .collect();
-        ax.polyline(c, &pts, if i == 1 { 1.0 } else { 1.5 }, fade(col, 0.9));
+        ax.polyline(c, &pts, if i == 1 { 1.0 } else { 1.5 }, col.faded(0.9));
         ax.scatter(c, &pts[k..=k], Marker::Dot, 6.0, col);
     }
     ax.line(
@@ -453,7 +453,7 @@ fn draw_dispersion(c: &mut Canvas, rect: Rect, cursor: f64) {
         Point::xy(cursor, 1e-4),
         Point::xy(cursor, 3.0),
         1.0,
-        fade(palette::ink(), 0.5),
+        palette::ink().faded(0.5),
     );
     let names: Vec<(&str, Light)> = s
         .dispersion
@@ -469,7 +469,7 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
     let origin = Point::xy(0.0, 0.0);
     let ax = Axes::equal(rect.inset(14.0, 26.0, 10.0, 34.0), origin, 1.3);
     ax.frame(c, "CRYSTAL MODES", "X", "");
-    let faint = fade(palette::grid(), 0.6);
+    let faint = palette::grid().faded(0.6);
     ax.line(c, Point::xy(-1.3, 0.0), Point::xy(1.3, 0.0), 1.0, faint);
     ax.line(c, Point::xy(0.0, -1.3), Point::xy(0.0, 1.3), 1.0, faint);
     // Each mode's field oscillating in its plane at the entrance face, in phase.
@@ -478,7 +478,7 @@ fn draw_polarizations(c: &mut Canvas, rect: Rect, tau: f64) {
         let (e, _) = arrows(*f);
         let a = e.normalized().into_inner();
         let along = |k: f64| origin + Point::direction(a.e1(), a.e2()).gp(k);
-        ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, fade(col, 0.7));
+        ax.dashed(c, &[along(-1.0), along(1.0)], 1.0, 4.0, col.faded(0.7));
         ax.arrow(c, origin, along(1.0), 2.5, 9.0, col);
         ax.scatter(c, &[along(tau.cos())], Marker::Dot, 7.0, palette::ink());
     }
@@ -509,7 +509,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
         let ring: Vec<Point<(), f64>> = (0..=72)
             .map(|k| place(core::f64::consts::TAU * k as f64 / 72.0, r))
             .collect();
-        ax.polyline(c, &ring, 1.0, fade(palette::grid(), 0.6));
+        ax.polyline(c, &ring, 1.0, palette::grid().faded(0.6));
     }
     for (m, (name, per_angle)) in s.sheets.iter().enumerate() {
         let col = palette::series([0, 2, 4][m]);
@@ -521,7 +521,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
                 .zip(per_angle)
                 .filter_map(|(a, v)| v.get(b).map(|v| place(*a, *v)))
                 .collect();
-            ax.polyline(c, &pts, 1.6, fade(col, 0.9));
+            ax.polyline(c, &pts, 1.6, col.faded(0.9));
         }
         // Where the sweeping direction meets each sheet, from the nearest scanned angle.
         let i = ((angle / core::f64::consts::TAU * (s.angles.len() - 1) as f64).round() as usize)
@@ -541,7 +541,7 @@ fn draw_fresnel(c: &mut Canvas, rect: Rect, angle: f64) {
         );
     }
     let d = place(angle, 1.1);
-    ax.line(c, origin, d, 1.0, fade(palette::ink(), 0.6));
+    ax.line(c, origin, d, 1.0, palette::ink().faded(0.6));
 }
 
 fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
@@ -559,8 +559,8 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
     ax.polyline(c, &curve(&|b| add_speeds(1.0 / n, -b)), 1.5, up);
     // First-order Fresnel drag, dashed.
     let first_order = |b: f64| 1.0 / n + b * coeff;
-    ax.dashed(c, &curve(&first_order), 1.0, 5.0, fade(down, 0.6));
-    ax.dashed(c, &curve(&|b| first_order(-b)), 1.0, 5.0, fade(up, 0.6));
+    ax.dashed(c, &curve(&first_order), 1.0, 5.0, down.faded(0.6));
+    ax.dashed(c, &curve(&|b| first_order(-b)), 1.0, 5.0, up.faded(0.6));
     let pts = |v: &[f64]| -> Vec<Point<(), f64>> {
         s.betas
             .iter()
@@ -574,7 +574,7 @@ fn draw_drag(c: &mut Canvas, rect: Rect, beta: f64) {
         Point::xy(beta, add_speeds(1.0 / n, beta)),
         Point::xy(beta, add_speeds(1.0 / n, -beta)),
     ];
-    let cursor = fade(palette::ink(), 0.5);
+    let cursor = palette::ink().faded(0.5);
     ax.line(c, Point::xy(beta, 0.0), Point::xy(beta, 1.0), 1.0, cursor);
     ax.scatter(c, &now, Marker::Ring, 11.0, palette::ink());
     ax.legend(c, &[("WITH FLOW", down), ("AGAINST", up)]);

@@ -15,7 +15,7 @@
 use gax::Unit;
 use gax::pga2d;
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
@@ -292,7 +292,7 @@ fn frustum(s: &mut Scene3, pose: M, size: f64, color: Light, width: f32) {
     let [a, b, c, d] = corners;
     s.polyline(&[a, b, c, d, a], width, color);
     for corner in corners {
-        s.seg(centre, corner, width * 0.8, fade(color, 0.8));
+        s.seg(centre, corner, width * 0.8, color.faded(0.8));
     }
     s.seg(centre, at(0.0, 0.0, size * 1.3), width * 1.2, color);
     s.dot(centre, Marker::Dot, 7.0, color);
@@ -308,7 +308,7 @@ fn sensor_panel(c: &mut Canvas, rect: Rect, title: &str, truth: &[P], measured: 
     let colour = |i: usize| colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
     for (i, l) in lines.iter().enumerate() {
         let [a, b] = ends(*l, 0.7).map(|p| on_sensor.of(p));
-        ax.line(c, a, b, 1.0, fade(colour(i), 0.45));
+        ax.line(c, a, b, 1.0, (colour(i)).faded(0.45));
     }
     let pts: Vec<pga2d::Point<(), f64>> = truth.iter().map(|p| on_sensor.of(*p)).collect();
     ax.scatter(c, &pts, Marker::Ring, 7.0, palette::grid());
@@ -355,7 +355,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (pw, ph) = (c.width - x0, c.height - y0);
     let mut sub = Canvas::new(pw, ph);
     sub.backdrop(
-        mix(palette::top(), palette::bottom(), y0 as f32 / h),
+        palette::top().mix_light(palette::bottom(), y0 as f32 / h),
         palette::bottom(),
     );
     let azimuth =
@@ -378,8 +378,8 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(*l, Marker::Ring, 10.0, palette::grid());
         scene.dot(*p, Marker::Star, 12.0, colour);
         if i % 5 == 0 {
-            scene.seg(origin(), *p, 0.8, fade(palette::sky(), 0.4));
-            scene.seg(centre_2, *p, 0.8, fade(palette::green(), 0.4));
+            scene.seg(origin(), *p, 0.8, palette::sky().faded(0.4));
+            scene.seg(centre_2, *p, 0.8, palette::green().faded(0.4));
         }
     }
     frustum(

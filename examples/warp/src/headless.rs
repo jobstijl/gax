@@ -898,8 +898,9 @@ mod tests {
                 crate::kernels::streak_tail(p, v, 0.03),
             );
             assert!(a.c.iter().zip(&b.c).all(|(x, y)| close(*x, *y)));
-            let l1 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 2.0);
-            let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5);
+            // The traced kernels work on the lights' bare points.
+            let l1 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 2.0).point();
+            let l2 = crate::light::light(rng.unit(), rng.unit(), rng.unit(), 0.5).point();
             let t = rng.unit();
             let pairs = [
                 (

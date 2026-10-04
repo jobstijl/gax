@@ -14,7 +14,7 @@
 
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
-use gax_light::fade;
+
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
@@ -177,7 +177,7 @@ fn panel(
         for ((p, q), m) in source.iter().zip(target).zip(&moving) {
             scene.dot(*p, Marker::Dot, 4.0, palette::grid());
             scene.dot(*q, Marker::Cross, 7.0, palette::sky());
-            scene.seg(*m, *q, 0.8, fade(palette::red(), 0.45));
+            scene.seg(*m, *q, 0.8, palette::red().faded(0.45));
             scene.dot(*m, Marker::Dot, 5.0, palette::red());
         }
     });

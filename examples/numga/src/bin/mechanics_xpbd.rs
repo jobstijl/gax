@@ -22,7 +22,7 @@
 //! numga's bound of 1% of the spacing (the plot on the right).
 
 use gax::pga3d::{Line, Motor, Point};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
 };
@@ -367,7 +367,7 @@ fn draw(c: &mut Canvas, t: f32) {
             floor(x, -0.3),
             floor(x, 0.3),
             1.0,
-            fade(palette::grid(), 0.6),
+            palette::grid().faded(0.6),
         );
     }
     for j in -3..=3 {
@@ -376,13 +376,13 @@ fn draw(c: &mut Canvas, t: f32) {
             floor(-0.4, y),
             floor(0.6, y),
             1.0,
-            fade(palette::grid(), 0.6),
+            palette::grid().faded(0.6),
         );
     }
     // The free end's path so far.
     let [end, start] = anchors(LINK_SPACING);
     let trail: Vec<P> = motors[..=k].iter().map(|m| m[LINKS - 1] >> end).collect();
-    s.polyline(&trail, 1.5, fade(palette::yellow(), 0.6));
+    s.polyline(&trail, 1.5, palette::yellow().faded(0.6));
     let cloud = cloud(5e-2);
     let colours = [palette::orange(), palette::sky(), palette::green()];
     let origin = Point::xyz(0.0, 0.0, 0.0);
@@ -397,7 +397,7 @@ fn draw(c: &mut Canvas, t: f32) {
             );
         }
         // The link's anchors and the rod between them.
-        s.seg(m >> start, m >> end, 1.5 * u, fade(palette::ink(), 0.8));
+        s.seg(m >> start, m >> end, 1.5 * u, palette::ink().faded(0.8));
         let col = if i == 0 {
             palette::red()
         } else {

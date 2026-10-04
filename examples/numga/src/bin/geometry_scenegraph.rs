@@ -11,7 +11,6 @@
 mod scenegraph;
 
 use gax::pga3d::{Motor, Plane, Point};
-use gax_light::{fade, mix, srgb};
 use gax_numga_examples::points::box_map;
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3, backdrop,
@@ -122,25 +121,25 @@ const SECONDS: f32 = 6.0;
 
 fn body_colour(i: usize) -> Light {
     [
-        srgb(0.29, 0.333, 0.408, 1.4),
-        srgb(0.169, 0.424, 0.69, 1.4),
-        srgb(0.192, 0.51, 0.808, 1.4),
-        srgb(0.259, 0.6, 0.882, 1.4),
-        srgb(0.929, 0.537, 0.212, 1.4),
+        Light::from_srgb(0.29, 0.333, 0.408, 1.4),
+        Light::from_srgb(0.169, 0.424, 0.69, 1.4),
+        Light::from_srgb(0.192, 0.51, 0.808, 1.4),
+        Light::from_srgb(0.259, 0.6, 0.882, 1.4),
+        Light::from_srgb(0.929, 0.537, 0.212, 1.4),
     ][i]
 }
 
 fn ray_colour(i: usize) -> Light {
     [
-        srgb(0.898, 0.243, 0.243, 1.7),
-        srgb(0.22, 0.631, 0.412, 1.7),
-        srgb(0.839, 0.62, 0.18, 1.7),
+        Light::from_srgb(0.898, 0.243, 0.243, 1.7),
+        Light::from_srgb(0.22, 0.631, 0.412, 1.7),
+        Light::from_srgb(0.839, 0.62, 0.18, 1.7),
     ][i % 3]
 }
 
 /// A face's edges: one faint stroke around it.
 fn edge_light() -> Light {
-    fade(palette::grid(), 0.8)
+    palette::grid().faded(0.8)
 }
 
 /// A circle of `radius` at height `z` in the camera frame, in the world: a point of it turned
@@ -174,7 +173,7 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..7 {
         let g = -1.2 + 0.4 * f64::from(k);
-        let line = fade(mix(palette::grid(), palette::ink(), 0.25), 0.8);
+        let line = (palette::grid().mix_light(palette::ink(), 0.25)).faded(0.8);
         s.seg(floor(g, -1.2), floor(g, 1.2), 1.0, line);
         s.seg(floor(-1.2, g), floor(1.2, g), 1.0, line);
     }
@@ -188,8 +187,8 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     }
     // The front lens rim (radius 0.3 at z = 0) and the rear one (0.25 at z = -0.3).
     let (front, rear) = (
-        srgb(0.192, 0.592, 0.584, 1.6),
-        srgb(0.502, 0.353, 0.835, 1.6),
+        Light::from_srgb(0.192, 0.592, 0.584, 1.6),
+        Light::from_srgb(0.502, 0.353, 0.835, 1.6),
     );
     s.polyline(&rim(rig.pose, 0.3, 0.0), 2.0, front);
     s.polyline(&rim(rig.pose, 0.25, -0.3), 2.0, rear);
@@ -201,14 +200,14 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
         corner(0.8, 0.6),
         corner(-0.8, 0.6),
     ];
-    let orange = srgb(0.867, 0.42, 0.125, 1.6);
+    let orange = Light::from_srgb(0.867, 0.42, 0.125, 1.6);
     let [a, b, cc, d] = chip;
     s.quad(a, b, cc, d, orange, 0.55);
     s.polyline(&[a, b, cc, d, a], 1.5, orange);
     // The rays: scene point to pupil, pupil to the rear lens, rear lens to the sensor.
     for (i, p) in photo.rays.iter().enumerate() {
         for (leg, width) in [1.4, 1.8, 1.8].into_iter().enumerate() {
-            s.seg(p[leg], p[leg + 1], width, fade(ray_colour(i), 0.9));
+            s.seg(p[leg], p[leg + 1], width, (ray_colour(i)).faded(0.9));
         }
         s.dot(p[3], Marker::Dot, 6.0, ray_colour(i));
     }
@@ -225,7 +224,7 @@ fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
     let to_panel = box_map([ORIGIN2, sensor], [rect.lo, rect.hi]);
     let px = |p: P| to_panel.of(from_above(p)).unitized();
     let frame = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
-    c.fill(&frame, srgb(0.11, 0.12, 0.16, 1.0), 1.0);
+    c.fill(&frame, Light::from_srgb(0.11, 0.12, 0.16, 1.0), 1.0);
     c.clip(rect);
     let facing = Plane::orthogonal_to(Point::direction(-0.4, -0.8, 0.45))
         .normalized()
@@ -235,11 +234,11 @@ fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
             let poly: Vec<Point2> = f.iter().map(|&j| px(pixels[j])).collect();
             let face = w[f[0]] & w[f[1]] & w[f[3]];
             let lit = 0.55 + 0.45 * ((face | facing).s() / face.norm().max(1e-9)).abs() as f32;
-            c.fill(&poly, fade(body_colour(i), lit), 0.88);
+            c.fill(&poly, (body_colour(i)).faded(lit), 0.88);
             c.polyline(&poly, 1.0, edge_light(), true);
         }
         for p in pixels {
-            c.disk(px(*p), 1.6, fade(palette::ink(), 0.9));
+            c.disk(px(*p), 1.6, palette::ink().faded(0.9));
         }
     }
     c.unclip();

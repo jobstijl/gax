@@ -19,7 +19,7 @@
 //! loops of every radius is plotted for four gaps.
 
 use gax::vga3d::Vector;
-use gax_light::{blend, fade};
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
@@ -293,7 +293,7 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
                 let (i, j) = node(u, v);
                 // Dimmer than the strokes: a surface lit at a stroke's intensity washes out.
                 let e = b.values[j * n + i][band].abs() as f32;
-                fade(blend(high, low, e / top), 0.25)
+                (high.blend(low, e / top)).faded(0.25)
             },
             0.95,
             None,
@@ -334,13 +334,13 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.image(c, 1, |p| {
         let f = pseudospin(momentum(p), 0.0);
         let len = f.norm() as f32;
-        Some(fade(colormap::viridis(len / (3.0 * HOPPING as f32)), 0.75))
+        Some((colormap::viridis(len / (3.0 * HOPPING as f32))).faded(0.75))
     });
     // The Brillouin zone: the hexagon through the six valleys, K turned by sixths of a turn.
     let hexagon: Vec<_> = (0..=6)
         .map(|k| on_map(turn(tau * k as f64 / 6.0) >> valley_k))
         .collect();
-    ax.polyline(c, &hexagon, 1.0, fade(palette::ink(), 0.6));
+    ax.polyline(c, &hexagon, 1.0, palette::ink().faded(0.6));
     // The upper band's pseudospin with the gap: in the plane it turns once around each corner,
     // and near the corners it tilts out of the plane (red up, blue down), oppositely in K and K'.
     let step = 0.8f32;
@@ -399,7 +399,7 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.6),
     );
     panel3(c, sphere_rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.5));
+        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid().faded(0.5));
         let path: Vec<_> = dirs.iter().map(|d| reach3(*d)).collect();
         s.polyline(&path, 2.0, palette::orange());
         s.arrow(ORIGIN3, current, 2.5, 9.0, palette::orange());
@@ -455,7 +455,7 @@ fn draw(c: &mut Canvas, t: f32) {
         }
         legend.push((format!("GAP {:.1}", GAPS[g]), colour));
     }
-    let cursor = fade(palette::orange(), 0.8);
+    let cursor = palette::orange().faded(0.8);
     ax.line(
         c,
         on_plot(radius, -1.15),
@@ -609,7 +609,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 4.0, &mut draw);
-        assert!(gax_light::luma(a.mean()) > 0.0);
+        assert!(a.mean().luma() > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

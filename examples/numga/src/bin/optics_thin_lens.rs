@@ -7,7 +7,7 @@
 //! because every element is a collineation.
 
 use gax::pga2d::{Line, Motor, Point};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -182,7 +182,7 @@ use optics::*;
 /// The bundle between two planes.
 fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Light) {
     for r in &leg.rays {
-        ax.line(c, *r ^ leg.start, *r ^ leg.stop, 1.2, fade(color, 0.9));
+        ax.line(c, *r ^ leg.start, *r ^ leg.stop, 1.2, color.faded(0.9));
     }
 }
 
@@ -232,7 +232,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let colour = palette::series(k);
         let mirror = k == planes.len() - 1;
         for (i, r) in legs[k].iter().enumerate() {
-            ax.line(c, start[i], *r ^ *pl, 1.3, fade(colour, 0.9));
+            ax.line(c, start[i], *r ^ *pl, 1.3, colour.faded(0.9));
             start[i] = (legs[k + 1][i] ^ *pl).unitized();
             // Through: on to the side it was heading; at the mirror: back.
             let side = (*pl & dir[i]).s();
@@ -241,7 +241,7 @@ fn draw(c: &mut Canvas, t: f32) {
         plane(&ax, c, *pl, 0.8);
     }
     for (s, d) in start.iter().zip(&dir) {
-        ax.line(c, *s, *s + d.gp(2.5), 1.3, fade(palette::series(4), 0.9));
+        ax.line(c, *s, *s + d.gp(2.5), 1.3, (palette::series(4)).faded(0.9));
     }
     ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0));
     ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow());

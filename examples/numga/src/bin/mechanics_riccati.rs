@@ -12,7 +12,7 @@
 
 use gax::Unit;
 use gax::pga2d::{Line, Motor, Point, Scalar};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
 };
@@ -310,7 +310,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
         ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::grid());
         let path: Vec<P> = case.errors.iter().map(|e| pose(*e) >> centre()).collect();
-        ax.polyline(c, &path, 1.0, fade(palette::sky(), 0.35));
+        ax.polyline(c, &path, 1.0, palette::sky().faded(0.35));
         // The pose between steps: along the screw from one to the next.
         let m = Motor::interpolate(
             pose(case.errors[k]),
@@ -319,7 +319,7 @@ fn draw(c: &mut Canvas, t: f32) {
         );
         let body: Vec<P> = hull.iter().map(|p| m >> *p).collect();
         // The hull's fill covers what is below, a dim blue: its outline glows.
-        ax.fill(c, &body, fade(palette::blue(), 0.1), 0.5);
+        ax.fill(c, &body, palette::blue().faded(0.1), 0.5);
         ax.polyline(c, &closed(&body), 1.6, palette::sky());
         // The total push the feedback asks for, a forque: its line of action, through the foot
         // of the perpendicular from the dock (the meet of the forque with the perpendicular),
@@ -328,7 +328,7 @@ fn draw(c: &mut Canvas, t: f32) {
             let f = case.feedbacks[k].of(case.errors[k]);
             if f.norm() > 1e-6 {
                 let foot = (f | centre()) ^ f;
-                ax.axline(c, foot, f ^ horizon, 1.0, fade(palette::orange(), 0.35));
+                ax.axline(c, foot, f ^ horizon, 1.0, palette::orange().faded(0.35));
             }
         }
         // The thrusters' commands: a signed command reverses its ideal direction before the

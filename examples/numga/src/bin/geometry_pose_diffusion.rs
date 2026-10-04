@@ -14,7 +14,7 @@
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
-use gax_light::fade;
+
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
@@ -287,11 +287,11 @@ fn draw(c: &mut Canvas, t: f32) {
                 [here - half, here + half]
             })
             .collect();
-        ax.stroke(c, &dashes, 1.0, fade(palette::sky(), 0.6));
+        ax.stroke(c, &dashes, 1.0, palette::sky().faded(0.6));
         let ring = |cov: Covariance| ellipse(position_spread(cov), 96);
         ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::red());
         let sample = ring(empirical(&run.errors[index]));
-        ax.polyline(c, &sample, 1.4, fade(palette::yellow(), 0.9));
+        ax.polyline(c, &sample, 1.4, palette::yellow().faded(0.9));
         ax.polyline(c, &ring(run.predicted[index]), 2.2, palette::red());
         if k == 0 {
             ax.legend(

@@ -11,7 +11,7 @@
 
 use gax::motions::{Motions, Pga2d};
 use gax::pga2d::{Line, Motor, Point, Scalar};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
@@ -228,7 +228,7 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
     let closed = |pts: &[P]| [pts, &pts[..1]].concat();
     ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::grid());
     // The plate's fill covers what is below, a dim blue: its outline glows.
-    ax.fill(c, &body, fade(palette::blue(), 0.1), 0.55);
+    ax.fill(c, &body, palette::blue().faded(0.1), 0.55);
     ax.polyline(c, &closed(&body), 2.0, palette::sky());
     for (j, (anchor, attachment)) in s.anchors.iter().zip(&s.attachments).enumerate() {
         let b = moved(*attachment, case.attachment_offsets[mode][j]);
@@ -241,7 +241,7 @@ fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, t
     // arrow from the plate's centre shows the direction it slides in instead.
     let m = case.modes[mode];
     if m.e12().abs() > 1e-9 {
-        ax.scatter(c, &[m], Marker::Cross, 9.0, fade(palette::yellow(), 0.9));
+        ax.scatter(c, &[m], Marker::Cross, 9.0, palette::yellow().faded(0.9));
     } else {
         let centre = Point::xy(1.0, 1.0);
         let slide = centre.commutator(m);

@@ -14,7 +14,7 @@
 
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
 use gax::{Form, Kind, Reverse, ScalarProduct};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
@@ -227,7 +227,7 @@ fn tile(c: &mut Canvas, cam: Camera, title: &str, n: usize, draw: impl FnOnce(&m
     let panel = c.rect();
     let edge = panel.inset(0.5, 0.5, 0.5, 0.5);
     let corners = [edge.lo, edge.top_right(), edge.hi, edge.bottom_left()];
-    c.polyline(&corners, 1.0, fade(palette::grid(), 0.4), true);
+    c.polyline(&corners, 1.0, palette::grid().faded(0.4), true);
     let mut s = Scene3::new(cam);
     draw(&mut s);
     s.draw(c);
@@ -245,7 +245,7 @@ fn samples_dots(s: &mut Scene3, pts: &[P]) {
             *p,
             Marker::Dot,
             3.5,
-            mix(palette::grid(), palette::ink(), 0.45),
+            palette::grid().mix_light(palette::ink(), 0.45),
         );
     }
 }
@@ -287,7 +287,7 @@ fn draw(c: &mut Canvas, t: f32) {
                         true_line ^ ends[0],
                         true_line ^ ends[1],
                         2.5,
-                        fade(truth, 0.8),
+                        truth.faded(0.8),
                     );
                     s.seg(fitted ^ ends[0], fitted ^ ends[1], 2.0, fit);
                 });
@@ -308,7 +308,7 @@ fn draw(c: &mut Canvas, t: f32) {
                         let (tq, fq) = (quad(true_plane), quad(fitted));
                         let mut tl = tq.to_vec();
                         tl.push(tq[0]);
-                        s.polyline(&tl, 2.5, fade(truth, 0.8));
+                        s.polyline(&tl, 2.5, truth.faded(0.8));
                         s.quad(fq[0], fq[1], fq[2], fq[3], fit, 0.18);
                         let mut fl = fq.to_vec();
                         fl.push(fq[0]);
@@ -331,7 +331,7 @@ fn draw(c: &mut Canvas, t: f32) {
                             let d = direction(*l);
                             let foot = (*l ^ (*l | fitted)).unitized();
                             let (a, b) = (foot + d.gp(-2.0), foot + d.gp(2.0));
-                            s.seg(a, b, 0.8, fade(palette::grid(), 0.7));
+                            s.seg(a, b, 0.8, palette::grid().faded(0.7));
                         }
                         s.dot(centre, Marker::Ring, 20.0, truth);
                         s.dot(fitted, Marker::Dot, 9.0, fit);
@@ -519,6 +519,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

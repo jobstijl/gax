@@ -19,7 +19,6 @@ use std::sync::OnceLock;
 
 use gax::pga2d::Point;
 use gax::{sta, vga3d};
-use gax_light::{fade, srgb};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Dir3, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
@@ -309,10 +308,10 @@ const SECONDS: f32 = 9.0;
 
 fn tracking() -> [Light; 4] {
     [
-        srgb(0.82, 0.35, 0.40, 1.7),
-        srgb(0.85, 0.65, 0.20, 1.7),
-        srgb(0.15, 0.70, 0.60, 1.7),
-        srgb(0.65, 0.45, 0.85, 1.7),
+        Light::from_srgb(0.82, 0.35, 0.40, 1.7),
+        Light::from_srgb(0.85, 0.65, 0.20, 1.7),
+        Light::from_srgb(0.15, 0.70, 0.60, 1.7),
+        Light::from_srgb(0.65, 0.45, 0.85, 1.7),
     ]
 }
 
@@ -421,7 +420,7 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
     for axis in [x(), y()] {
         let reach = axis * 1.08;
         let (from, to) = (transverse(-reach), transverse(reach));
-        ax.line(c, from, to, 0.8, fade(palette::grid(), 0.5));
+        ax.line(c, from, to, 0.8, palette::grid().faded(0.5));
     }
     // The weak-wave prediction, the strain map applied to the rest separations: the integrated
     // beads land on it.
@@ -433,10 +432,10 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
             .map(|s| transverse((*s + strain.of(*s) * AMPLIFICATION) * (1.0 / RADIUS)))
             .collect(),
     );
-    ax.dashed(c, &predicted, 1.0, 3.0, fade(palette::ink(), 0.3));
+    ax.dashed(c, &predicted, 1.0, 3.0, palette::ink().faded(0.3));
     let beads = &r.positions[polarization][k];
     let now: Vec<Point<(), f64>> = beads.iter().map(|p| transverse(*p)).collect();
-    ax.polyline(c, &closed(now.clone()), 1.2, fade(blue, 0.3));
+    ax.polyline(c, &closed(now.clone()), 1.2, blue.faded(0.3));
     let tracked = [0, 6, 12, 18];
     let first = k.saturating_sub(r.time.len() / 7);
     for (j, bead) in tracked.iter().enumerate() {
@@ -444,7 +443,7 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
             .iter()
             .map(|row| transverse(row[*bead]))
             .collect();
-        ax.polyline(c, &trail, 1.6, fade(tracking()[j], 0.6));
+        ax.polyline(c, &trail, 1.6, tracking()[j].faded(0.6));
     }
     for (p, a) in beads.iter().zip(&r.arrows[polarization][k]).step_by(3) {
         ax.arrow(c, transverse(*p), transverse(*p + *a), 1.4, 6.0, blue);
@@ -456,7 +455,7 @@ fn ring(c: &mut Canvas, ax: &Axes, r: &Rings, polarization: usize, k: usize) {
         .collect();
     ax.scatter(c, &untracked, Marker::Dot, 5.0, blue);
     for (j, bead) in tracked.iter().enumerate() {
-        ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, fade(tracking()[j], 1.5));
+        ax.scatter(c, &[now[*bead]], Marker::Dot, 8.0, tracking()[j].faded(1.5));
     }
     ax.scatter(c, &[ORIGIN2], Marker::Dot, 5.0, palette::orange());
 }
@@ -553,9 +552,9 @@ fn draw(c: &mut Canvas, t_now: f32) {
             .zip(&r.strain)
             .map(|(t, s)| Point::xy(*t, s[part]))
             .collect();
-        ax.polyline(c, &curve, 1.3, fade(colour, 0.9));
+        ax.polyline(c, &curve, 1.3, colour.faded(0.9));
     }
-    let cursor = fade(palette::yellow(), 0.9);
+    let cursor = palette::yellow().faded(0.9);
     ax.line(c, Point::xy(now, -1.15), Point::xy(now, 1.15), 1.2, cursor);
     ax.frame(c, "STRAIN / 1E-4: PLUS, CROSS", "TIME (C = 1)", "");
 
@@ -596,7 +595,7 @@ fn draw(c: &mut Canvas, t_now: f32) {
             Point2::xy(q, (-2.0 * q).exp())
         })
         .collect();
-    ax.polyline(c, &fine, 1.3, fade(palette::ink(), 0.9));
+    ax.polyline(c, &fine, 1.3, palette::ink().faded(0.9));
     let dots: Vec<Point<(), f64>> = r
         .doppler
         .0

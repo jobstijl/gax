@@ -17,7 +17,7 @@
 
 use gax::motions::Motions;
 use gax::pga3d::{Line, Motor, Point};
-use gax_light::fade;
+
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
     Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
@@ -500,10 +500,10 @@ fn draw(c: &mut Canvas, t: f32) {
     for f in [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]] {
         let (a, b, d) = (corners[f[0]], corners[f[1]], corners[f[2]]);
         // The faces cover what is behind them, so they are a dim light: the frame inside shows.
-        let col = s.lit(a, b, d, fade(palette::purple(), 0.3));
+        let col = s.lit(a, b, d, palette::purple().faded(0.3));
         s.tri(a, b, d, col, 0.55);
         for (x, y) in [(a, b), (b, d), (d, a)] {
-            s.seg(x, y, 1.2 * u, fade(palette::ink(), 0.7));
+            s.seg(x, y, 1.2 * u, palette::ink().faded(0.7));
         }
     }
     // The principal axes and the second-moment ellipsoid, in the recovered frame: the images
@@ -527,7 +527,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 ellipsoid.of(turn >> start)
             })
             .collect();
-        s.polyline(&ring, 1.2 * u, fade(colours[k], 0.6));
+        s.polyline(&ring, 1.2 * u, colours[k].faded(0.6));
     }
     s.draw(c);
     // Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the

@@ -14,7 +14,6 @@
 
 use std::sync::OnceLock;
 
-use gax_light::{fade, srgb};
 use gax_numga_examples::{
     Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
     backdrop, caption, palette, run,
@@ -291,7 +290,7 @@ fn colours() -> [Light; 3] {
     [
         palette::sky(),
         palette::purple(),
-        srgb(0.95, 0.42, 0.33, 1.8),
+        Light::from_srgb(0.95, 0.42, 0.33, 1.8),
     ]
 }
 
@@ -341,7 +340,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let cam = camera(view, Point3::xyz(0.0, 0.0, 1.7), azimuth, 0.2, 2.0);
     let mut scene3 = Scene3::new(cam);
     // A floor grid and the z axis.
-    let g = fade(palette::grid(), 0.7);
+    let g = palette::grid().faded(0.7);
     for k in 0..=6 {
         let a = -0.6 + 0.2 * k as f32;
         let (x0, x1) = (Point3::xyz(a, -0.6, 0.0), Point3::xyz(a, 0.6, 0.0));
@@ -350,7 +349,7 @@ fn draw(c: &mut Canvas, t: f32) {
         scene3.seg(y0, y1, 1.0, g);
     }
     let up = Point3::direction(0.0, 0.0, 1.0);
-    let axis_light = fade(palette::grid(), 0.9);
+    let axis_light = palette::grid().faded(0.9);
     scene3.seg(ORIGIN3, ORIGIN3 + up.gp(3.4), 1.0, axis_light);
     for (k, (path, spins)) in s.paths.iter().zip(&s.spins).enumerate() {
         scene3.polyline(&path[..upto], 1.6, colours[k]);
@@ -392,7 +391,7 @@ fn draw(c: &mut Canvas, t: f32) {
             );
             sheet[j * n + i]
         };
-        let edges = Some((fade(colour, 0.6), 0.6));
+        let edges = Some((colour.faded(0.6), 0.6));
         scene3.surface(at, m, m, |_, _| colour, 0.6, edges);
     }
     let reach = up.gp(3.2);
@@ -400,7 +399,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ORIGIN3 - reach,
         ORIGIN3 + reach,
         1.0,
-        fade(palette::ink(), 0.6),
+        palette::ink().faded(0.6),
     );
     c.clip(right);
     scene3.draw(c);

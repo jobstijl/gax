@@ -14,7 +14,7 @@ use s3::*;
 
 mod walk {
     use super::s3::*;
-    use gax_light::srgb;
+    use gax_colour::Light;
 
     /// The scene from an eye: four copies of one ellipsoid, angular half-widths 0.2, 0.28 and
     /// 0.15, carried to increasing angular distances along `+x`, offset sideways and up so they
@@ -40,10 +40,10 @@ mod walk {
             eye,
             surfaces,
             colors: vec![
-                srgb(0.9, 0.3, 0.3, BODY),
-                srgb(0.3, 0.8, 0.4, BODY),
-                srgb(0.3, 0.5, 0.95, BODY),
-                srgb(0.95, 0.8, 0.3, BODY),
+                Light::from_srgb(0.9, 0.3, 0.3, BODY),
+                Light::from_srgb(0.3, 0.8, 0.4, BODY),
+                Light::from_srgb(0.3, 0.5, 0.95, BODY),
+                Light::from_srgb(0.95, 0.8, 0.3, BODY),
             ],
             light: direction(Tangent::new(-0.4, 0.6, 0.7)),
             fov: 80f64.to_radians(),
@@ -174,6 +174,6 @@ mod tests {
             1.0,
             &mut draw,
         );
-        assert!(gax_light::luma(c.mean()) > 0.0);
+        assert!(c.mean().luma() > 0.0);
     }
 }

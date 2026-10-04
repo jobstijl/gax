@@ -22,7 +22,7 @@
 //! stays at round-off over the whole turn.
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
-use gax_light::fade;
+
 use gax_numga_examples::{
     Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
 };
@@ -181,7 +181,7 @@ fn draw(c: &mut Canvas, t: f32) {
             c,
             hexagon[i] & hexagon[NEXT[i]],
             1.0,
-            fade(pairs(i), 0.55),
+            (pairs(i)).faded(0.55),
         );
     }
     let conic_level = |p: Point2| on(shape, p.map_coefs(f64::from)) as f32;

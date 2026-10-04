@@ -26,7 +26,7 @@
 
 use gax::Complex;
 use gax::pga3d::{Line, Motor, Plane, Point};
-use gax_light::fade;
+
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, backdrop, caption, palette, run,
@@ -286,10 +286,10 @@ fn draw(c: &mut Canvas, t: f32) {
             }
         };
         for l in &s.rulings[0] {
-            segment(*l, 0.9, fade(palette::sky(), 0.55));
+            segment(*l, 0.9, palette::sky().faded(0.55));
         }
         for l in &s.rulings[1] {
-            segment(*l, 0.9, fade(palette::grid(), 0.9));
+            segment(*l, 0.9, palette::grid().faded(0.9));
         }
         for l in &s.lines[..3] {
             segment(*l, 2.6, palette::blue());

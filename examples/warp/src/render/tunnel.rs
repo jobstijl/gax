@@ -283,7 +283,7 @@ impl View {
                         self.shock = Some((pos, 0.0));
                         self.flash = self.flash.max(0.45);
                         self.shake = self.shake.max(1.0);
-                        self.burst(pos, light::whiten(c, 0.5), 700, 30.0, 1.4);
+                        self.burst(pos, c.whitened(0.5), 700, 30.0, 1.4);
                     }
                 }
                 Event::Wall { pos } => self.burst(pos, palette::BULLET, 4, 4.0, 0.2),
@@ -300,7 +300,7 @@ impl View {
                 }
                 Event::Death { pos } => {
                     let k = 0.35 + 0.65 * self.flash_scale;
-                    self.burst(pos, light::fade(palette::SHIP, k), 900, 22.0, 1.8);
+                    self.burst(pos, palette::SHIP.faded(k), 900, 22.0, 1.8);
                     self.shake = 1.6;
                     self.flash = 0.7;
                 }
@@ -325,12 +325,12 @@ impl View {
                     }
                 }
                 Event::GateMiss { pos } => {
-                    let grey = light::desaturate(GATE_LIGHT, 1.0);
-                    self.burst(pos, light::fade(grey, 0.5), 20, 4.0, 0.4);
+                    let grey = GATE_LIGHT.perceptually(|c| c.desaturated(1.0));
+                    self.burst(pos, grey.faded(0.5), 20, 4.0, 0.4);
                 }
                 Event::Absorb { pos, .. } => {
                     let c = scene::color(Foe::Singularity.kind());
-                    self.burst(pos, light::whiten(c, 0.4), 30, 5.0, 0.3);
+                    self.burst(pos, c.whitened(0.4), 30, 5.0, 0.3);
                 }
                 Event::Burst { pos } => {
                     let c = scene::color(Foe::Singularity.kind());
@@ -338,7 +338,7 @@ impl View {
                     self.shake = self.shake.max(0.8);
                 }
                 Event::Slingshot { pos } => {
-                    let c = light::whiten(scene::color(Foe::Singularity.kind()), 0.3);
+                    let c = (scene::color(Foe::Singularity.kind())).whitened(0.3);
                     self.popups
                         .push((pos + dir(0.0, 1.4, 0.0), "SLINGSHOT".into(), 0.0, c));
                 }
@@ -523,7 +523,7 @@ impl View {
                 let mut edge = |b: Option<(P, f32, f32)>, bright: f32| {
                     if let Some((b, sb, zb)) = b {
                         let glow = 1.0 + 4.0 * (sa + sb).min(1.5);
-                        let c = tinted(light::fade(grid, 1.5 * bright * glow), 0.5 * (za + zb));
+                        let c = tinted(grid.faded(1.5 * bright * glow), 0.5 * (za + zb));
                         p.segment(out, a, b, c, 0.03, 0.22, Fog::Wall);
                     }
                 };
@@ -547,7 +547,7 @@ impl View {
         // Warp-ins: rings contracting onto where a spawn lands.
         for pd in &w.pending {
             let k = (pd.t / 0.8).clamp(0.0, 1.0);
-            let c = light::fade(scene::color(pd.foe.kind()), 0.8);
+            let c = (scene::color(pd.foe.kind())).faded(0.8);
             p.ring(
                 out,
                 &p.at(track, pd.pos),
@@ -572,26 +572,18 @@ impl View {
                         0.55
                     };
                     open += 1;
-                    let c = light::fade(GATE_LIGHT, k);
+                    let c = GATE_LIGHT.faded(k);
                     let view = p.at(track, g.pos);
                     p.ring(out, &view, g.pos, GATE_RADIUS, c, 32, 0.09);
-                    p.ring(
-                        out,
-                        &view,
-                        g.pos,
-                        GATE_RADIUS * 0.8,
-                        light::fade(c, 0.3),
-                        32,
-                        0.03,
-                    );
+                    p.ring(out, &view, g.pos, GATE_RADIUS * 0.8, c.faded(0.3), 32, 0.03);
                     if let Some(prev) = last {
-                        let path = light::fade(GATE_LIGHT, 0.15);
+                        let path = GATE_LIGHT.faded(0.15);
                         p.line(out, place(prev), place(g.pos), path, 0.02, Fog::Objects);
                     }
                     last = Some(g.pos);
                 }
                 GateState::Passed if g.t < 0.5 => {
-                    let c = light::fade(light::whiten(GATE_LIGHT, 0.6), 1.5 * (1.0 - g.t / 0.5));
+                    let c = (GATE_LIGHT.whitened(0.6)).faded(1.5 * (1.0 - g.t / 0.5));
                     p.ring(
                         out,
                         &p.at(track, g.pos),
@@ -603,8 +595,8 @@ impl View {
                     );
                 }
                 GateState::Missed if g.t < 0.6 => {
-                    let grey = light::desaturate(GATE_LIGHT, 1.0);
-                    let c = light::fade(grey, 0.5 * (1.0 - g.t / 0.6));
+                    let grey = GATE_LIGHT.perceptually(|c| c.desaturated(1.0));
+                    let c = grey.faded(0.5 * (1.0 - g.t / 0.6));
                     p.ring(out, &p.at(track, g.pos), g.pos, GATE_RADIUS, c, 32, 0.04);
                 }
                 _ => {}
@@ -616,7 +608,7 @@ impl View {
         for e in &w.enemies {
             let q = lerp(e.prev, e.pos, alpha);
             let c = scene::color(e.foe.kind());
-            let c = light::fade(light::whiten(c, e.flash), 1.0 + e.flash);
+            let c = (c.whitened(e.flash)).faded(1.0 + e.flash);
             let c = if e.foe == Foe::Singularity {
                 c
             } else {
@@ -637,7 +629,7 @@ impl View {
                     // A pyramid on the wall pointing at the axis, turned about the axis to its
                     // place; it glows before it fires.
                     let charge = ((0.35 - e.timer) / 0.35).clamp(0.0, 1.0);
-                    let c = light::fade(c, 1.0 + 2.0 * charge);
+                    let c = c.faded(1.0 + 2.0 * charge);
                     let model = p.object(track, q, about_axis(e.angle));
                     p.solid(out, &model, &PYRAMID, 1.0, c);
                 }
@@ -651,7 +643,7 @@ impl View {
                     let mut last = q;
                     for (k, seg) in e.body.iter().enumerate() {
                         let sq = lerp(seg.prev, seg.pos, alpha);
-                        let sc = tinted(light::fade(base, 1.0 - 0.45 * k as f32 / n), shift(sq));
+                        let sc = tinted(base.faded(1.0 - 0.45 * k as f32 / n), shift(sq));
                         let spin =
                             Motor::rotation_about(0.0, 0.0, 1.0, e.age * 3.0 + k as f32 * 0.5);
                         p.solid(out, &p.object(track, sq, spin), &OCTAHEDRON, 0.5, sc);
@@ -659,7 +651,7 @@ impl View {
                             out,
                             place(last),
                             place(sq),
-                            light::fade(sc, 0.5),
+                            sc.faded(0.5),
                             0.03,
                             Fog::Objects,
                         );
@@ -681,7 +673,7 @@ impl View {
                 &p.object(track, q, spin),
                 &OCTAHEDRON,
                 0.32,
-                light::fade(bolt, 1.0 + 2.5 * near),
+                bolt.faded(1.0 + 2.5 * near),
             );
         }
 
@@ -701,7 +693,7 @@ impl View {
 
         // Sparks: streaks along their velocity.
         for sp in &self.sparks {
-            let c = light::fade(sp.light, sp.life / sp.total);
+            let c = sp.light.faded(sp.life / sp.total);
             p.streak(
                 out,
                 track,
@@ -720,7 +712,7 @@ impl View {
                 && w.ship.roll.is_none()
                 && crate::signal::wave(w.ship.invulnerable * 14.0) < 0.0;
             // Close to the camera, the ship needs less light than on the Plane.
-            let c = light::fade(palette::SHIP, if blink { 0.2 } else { 0.55 });
+            let c = palette::SHIP.faded(if blink { 0.2 } else { 0.55 });
             let roll = w.ship.roll.map_or(0.0, |r| {
                 r.dir * core::f32::consts::TAU * (r.t / 0.4).min(1.0)
             });
@@ -771,7 +763,7 @@ impl View {
                 let at = p.screen(c) + Point2::direction(0.0, 1.0 + age * 2.0);
                 let size = (self.focal / p.depth(c)).clamp(0.4, 1.6);
                 let k = (1.0 - age / 1.1).max(0.0);
-                scene::text(out, text, at, size, light::fade(*color, k), Align::Center);
+                scene::text(out, text, at, size, (*color).faded(k), Align::Center);
             }
         }
     }
@@ -864,7 +856,7 @@ fn singularity(
     let step = Motor::rotation_about(0.0, 0.0, 1.0, core::f32::consts::TAU / N as f32);
     for (k, r) in [1.9f32, 2.5, 3.2].into_iter().enumerate() {
         let heat = 1.0 - 0.3 * k as f32;
-        let base = light::fade(light::whiten(c, 0.55 * heat), heat);
+        let base = (c.whitened(0.55 * heat)).faded(heat);
         let spin = time * (2.4 - 0.6 * k as f32);
         let mut radial = Motor::rotation_about(0.0, 0.0, 1.0, spin) >> dir(r * grow, 0.0, 0.0);
         for _ in 0..N {
@@ -878,7 +870,7 @@ fn singularity(
             radial = next;
         }
     }
-    let rim = light::fade(light::whiten(c, 0.75), 1.3);
+    let rim = (c.whitened(0.75)).faded(1.3);
     p.ring(out, view, q, 1.2 * grow, rim, 32, 0.05);
 }
 
@@ -1124,7 +1116,7 @@ impl Proj {
         out.push(scene::seg(
             self.lensed(a),
             self.lensed(b),
-            light::fade(color, k),
+            color.faded(k),
             style,
             identity(),
         ));

@@ -148,7 +148,7 @@ impl Fx {
         // Big bursts are the bright ones.
         let (color, hot) = if n >= 200 {
             let k = 0.35 + 0.65 * self.flash_scale;
-            (light::fade(color, k), hot * k)
+            (color.faded(k), hot * k)
         } else {
             (color, hot)
         };
@@ -156,7 +156,7 @@ impl Fx {
             let v = heading(self.rng.angle(), self.rng.range(speed.0, speed.1));
             // Some sparks leave white: the same light, all the way to white, a little brighter.
             let c = if self.rng.chance(hot) {
-                light::fade(light::whiten(color, 1.0), 1.3)
+                (color.whitened(1.0)).faded(1.3)
             } else {
                 color
             };
@@ -257,7 +257,7 @@ impl Fx {
                 }
                 Event::Warn { pos, kind } => {
                     // Particles converging on the spot: from a ring around it, inwards.
-                    let c = light::fade(scene::color(kind), 0.6);
+                    let c = (scene::color(kind)).faded(0.6);
                     for _ in 0..24 {
                         let out = heading(self.rng.angle(), self.rng.range(1.5, 3.0));
                         self.particle(pos + out, out * -2.5, c, [0.0, 0.4, 0.5, 0.03]);

@@ -61,8 +61,8 @@ impl LineInstance {
     /// Step back behind a menu: towards grey (its tint's foot on OkLab's lightness axis) and
     /// dimmer.
     pub fn recede(&mut self, k: f32) {
-        let l = crate::light::desaturate(self.color.into(), 0.75);
-        self.color = crate::light::fade(l, k).into();
+        let l = crate::light::Light::from(self.color).perceptually(|c| c.desaturated(0.75));
+        self.color = l.faded(k).into();
     }
 }
 

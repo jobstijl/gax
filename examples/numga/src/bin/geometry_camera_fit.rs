@@ -12,7 +12,7 @@
 use gax::dual::{Dual, gradient};
 use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
-use gax_light::{fade, mix};
+
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption,
@@ -124,7 +124,7 @@ fn frustum(s: &mut Scene3, generator: B, colour: Light, width: f32) {
         at(0.8, 0.6, 1.0),
         at(-0.8, 0.6, 1.0),
     ];
-    let colour = fade(colour, 0.9);
+    let colour = colour.faded(0.9);
     for corner in corners {
         s.seg(centre, corner, width, colour);
     }
@@ -169,7 +169,7 @@ fn draw(c: &mut Canvas, t: f32) {
             *p,
             Marker::Dot,
             4.0,
-            mix(palette::grid(), palette::ink(), 0.5),
+            palette::grid().mix_light(palette::ink(), 0.5),
         );
     }
     frustum(&mut scene, truth(), palette::sky(), 2.0);
@@ -177,7 +177,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The rays of the estimate, from its centre through each world point.
     let centre = g.exp() >> origin;
     for p in &world {
-        scene.seg(centre, *p, 0.6, fade(palette::red(), 0.25));
+        scene.seg(centre, *p, 0.6, palette::red().faded(0.25));
     }
     scene.draw(&mut left);
     c.blit(&left, 0, 0);
@@ -194,7 +194,7 @@ fn draw(c: &mut Canvas, t: f32) {
             from_above(*a),
             from_above(*o),
             0.8,
-            fade(palette::red(), 0.5),
+            palette::red().faded(0.5),
         );
     }
     let obs: Vec<_> = observed.iter().copied().map(from_above).collect();
