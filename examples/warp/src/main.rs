@@ -898,10 +898,8 @@ fn advance_tunnel(g: &mut Game, input: sim::Input, dt: f32, sound: &mut audio::S
         let movement = run.view.across(&run.world, input.movement);
         // The reticle: the cursor, or the right stick pushing it out from the ship on screen.
         let reticle = match (flight.stick, flight.cursor) {
-            (Some([x, y]), _) => {
-                run.view.ship_on_screen(&run.world) + Point2::direction(x, y) * 9.0
-            }
-            (None, Some([x, y])) => Point2::xy(x, y),
+            (Some(stick), _) => run.view.ship_on_screen(&run.world) + stick * 9.0,
+            (None, Some(cursor)) => cursor,
             (None, None) => run.view.ship_on_screen(&run.world) + Point2::direction(0.0, 4.0),
         };
         let aim = run.view.aim(&run.world, reticle);
@@ -1202,7 +1200,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
         let f = render::Frame {
             camera: hud_cam,
             hud: hud_cam,
-            centre: [0.0, 0.0],
+            centre: crate::geom::ORIGIN,
             world: &game.world_lines,
             hud_lines: &game.hud_lines,
             grid_steps: &[],
@@ -1232,8 +1230,8 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     for (p, text, age, color) in &game.fx.popups {
         // Rising and fading.
         let c = light::fade(*color, (1.0 - age / 1.1).max(0.0));
-        let [x, y] = (*p + gax::pga2d::Point::direction(0.0, 0.8 + age * 1.5)).to_euclidean();
-        scene::text(&mut game.world_lines, text, x, y, 0.9, c, Align::Center);
+        let at = *p + gax::pga2d::Point::direction(0.0, 0.8 + age * 1.5);
+        scene::text(&mut game.world_lines, text, at, 0.9, c, Align::Center);
     }
     // Menus over the world: the world steps back.
     let backdrop = matches!(
@@ -1265,7 +1263,7 @@ fn render_game(game: &mut Game, renderer: &mut Renderer, view: &wgpu::TextureVie
     let f = render::Frame {
         camera,
         hud: hud_cam,
-        centre: (game.cam >> crate::geom::ORIGIN).to_euclidean(),
+        centre: game.cam >> crate::geom::ORIGIN,
         world: &game.world_lines,
         hud_lines: &game.hud_lines,
         grid_steps: &game.fx.grid_steps,
@@ -1337,7 +1335,7 @@ pub fn grid_spec() -> GridSpec {
     GridSpec {
         cols: 129,
         rows: 73,
-        origin: [-ARENA[0], -ARENA[1]],
+        origin: gax::pga2d::Point::xy(-ARENA[0], -ARENA[1]),
         spacing: 2.0 * ARENA[0] / 128.0,
     }
 }
@@ -1405,8 +1403,7 @@ fn hud(g: &mut Game, size: [u32; 2], timings: Option<render::Timings>) {
             scene::text(
                 &mut out,
                 l,
-                left,
-                -16.5 + 1.1 * (lines.len() - 1 - i) as f32,
+                scene::pt(left, -16.5 + 1.1 * (lines.len() - 1 - i) as f32),
                 0.6,
                 dim,
                 Align::Left,
@@ -1435,8 +1432,7 @@ fn hud_title(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
     scene::text(
         out,
         "WARP",
-        0.0,
-        7.0,
+        scene::pt(0.0, 7.0),
         6.5,
         light::light(0.55, 0.7, 1.0, 1.7),
         Align::Center,
@@ -1444,8 +1440,7 @@ fn hud_title(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
     scene::text(
         out,
         "A NEON SHOOTER ON WARPED SPACE",
-        0.0,
-        3.4,
+        scene::pt(0.0, 3.4),
         1.0,
         dim,
         Align::Center,
@@ -1456,14 +1451,21 @@ fn hud_title(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
     } else {
         "MOVE WASD / LEFT STICK    AIM + FIRE MOUSE / RIGHT STICK    BOMB SPACE / TRIGGER"
     };
-    scene::text(out, controls, 0.0, -13.0, 0.7, dim, Align::Center);
+    scene::text(
+        out,
+        controls,
+        scene::pt(0.0, -13.0),
+        0.7,
+        dim,
+        Align::Center,
+    );
     let best = match (g.best, g.tunnel_best) {
         (0, 0) => String::new(),
         (p, 0) => format!("BEST {}", scene::grouped(p)),
         (0, t) => format!("TUNNEL BEST {}", scene::grouped(t)),
         (p, t) => format!("BEST {}    TUNNEL {}", scene::grouped(p), scene::grouped(t)),
     };
-    scene::text(out, &best, 0.0, -15.0, 0.9, dim, Align::Center);
+    scene::text(out, &best, scene::pt(0.0, -15.0), 0.9, dim, Align::Center);
 }
 
 /// The HUD of the settings screen.
@@ -1475,7 +1477,14 @@ fn hud_settings(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
         faint,
         ..
     } = st;
-    scene::text(out, "SETTINGS", 0.0, 13.0, 3.0, hud, Align::Center);
+    scene::text(
+        out,
+        "SETTINGS",
+        scene::pt(0.0, 13.0),
+        3.0,
+        hud,
+        Align::Center,
+    );
     let (lx, rx) = (-15.0, 15.0);
     let row_y = |row: usize| 8.5 - row as f32 * 1.75;
     for (row, label) in Settings::ROWS.iter().enumerate() {
@@ -1483,13 +1492,13 @@ fn hud_settings(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
         let on = row == g.sel;
         let c = if on { hot } else { faint };
         if on {
-            scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+            scene::text(out, ">", scene::pt(lx - 2.0, y), 1.1, hud, Align::Left);
         }
-        scene::text(out, label, lx, y, 1.1, c, Align::Left);
+        scene::text(out, label, scene::pt(lx, y), 1.1, c, Align::Left);
         match g.settings.value(row) {
             Ok(v) => {
                 let v = if on { format!("< {v} >") } else { v };
-                scene::text(out, &v, rx, y, 1.1, c, Align::Right);
+                scene::text(out, &v, scene::pt(rx, y), 1.1, c, Align::Right);
             }
             Err(level) => {
                 // Ten bars, lit up to the level.
@@ -1512,14 +1521,13 @@ fn hud_settings(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
     let y = row_y(back) - 0.5;
     let c = if g.sel == back { hot } else { faint };
     if g.sel == back {
-        scene::text(out, ">", lx - 2.0, y, 1.1, hud, Align::Left);
+        scene::text(out, ">", scene::pt(lx - 2.0, y), 1.1, hud, Align::Left);
     }
-    scene::text(out, "BACK", lx, y, 1.1, c, Align::Left);
+    scene::text(out, "BACK", scene::pt(lx, y), 1.1, c, Align::Left);
     scene::text(
         out,
         "LEFT / RIGHT TO CHANGE    ESC / B TO GO BACK",
-        0.0,
-        -16.2,
+        scene::pt(0.0, -16.2),
         0.7,
         dim,
         Align::Center,
@@ -1535,15 +1543,29 @@ fn hud_scores(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
         faint,
         ..
     } = st;
-    scene::text(out, "HIGH SCORES", 0.0, 12.0, 3.0, hud, Align::Center);
+    scene::text(
+        out,
+        "HIGH SCORES",
+        scene::pt(0.0, 12.0),
+        3.0,
+        hud,
+        Align::Center,
+    );
     let (table, name) = if g.table == Mode::Plane {
         (&g.scores, "< PLANE >")
     } else {
         (&g.tunnel_scores, "< TUNNEL >")
     };
-    scene::text(out, name, 0.0, 9.0, 1.2, hot, Align::Center);
+    scene::text(out, name, scene::pt(0.0, 9.0), 1.2, hot, Align::Center);
     if table.entries.is_empty() {
-        scene::text(out, "NO RUNS YET", 0.0, 2.0, 1.4, dim, Align::Center);
+        scene::text(
+            out,
+            "NO RUNS YET",
+            scene::pt(0.0, 2.0),
+            1.4,
+            dim,
+            Align::Center,
+        );
     }
     for (r, e) in table.entries.iter().enumerate() {
         let y = 6.0 - r as f32 * 1.75;
@@ -1556,18 +1578,38 @@ fn hud_scores(g: &Game, out: &mut Vec<LineInstance>, st: HudStyle) {
             faint
         };
         if r == g.sel {
-            scene::text(out, ">", -15.0, y, 1.0, c, Align::Left);
+            scene::text(out, ">", scene::pt(-15.0, y), 1.0, c, Align::Left);
         }
-        scene::text(out, &format!("{:>2}", r + 1), -13.0, y, 1.0, c, Align::Left);
-        scene::text(out, &e.name, -9.0, y, 1.0, c, Align::Left);
-        scene::text(out, &scene::grouped(e.score), 7.0, y, 1.0, c, Align::Right);
-        scene::text(out, &clock(e.seconds as f32), 14.0, y, 1.0, c, Align::Right);
+        scene::text(
+            out,
+            &format!("{:>2}", r + 1),
+            scene::pt(-13.0, y),
+            1.0,
+            c,
+            Align::Left,
+        );
+        scene::text(out, &e.name, scene::pt(-9.0, y), 1.0, c, Align::Left);
+        scene::text(
+            out,
+            &scene::grouped(e.score),
+            scene::pt(7.0, y),
+            1.0,
+            c,
+            Align::Right,
+        );
+        scene::text(
+            out,
+            &clock(e.seconds as f32),
+            scene::pt(14.0, y),
+            1.0,
+            c,
+            Align::Right,
+        );
     }
     scene::text(
         out,
         "ENTER / A TO WATCH    LEFT / RIGHT FOR THE OTHER GAME    ESC / B TO GO BACK",
-        0.0,
-        -14.5,
+        scene::pt(0.0, -14.5),
         0.7,
         dim,
         Align::Center,
@@ -1589,8 +1631,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
     scene::text(
         out,
         &scene::grouped(s.score),
-        left,
-        top - 0.2,
+        scene::pt(left, top - 0.2),
         1.3,
         hud,
         Align::Left,
@@ -1598,8 +1639,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
     scene::text(
         out,
         &format!("X{}", s.mult),
-        left,
-        top - 2.2,
+        scene::pt(left, top - 2.2),
         0.9,
         scene::shard(),
         Align::Left,
@@ -1608,8 +1648,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             &format!("GATES X{}", s.chain),
-            left,
-            top - 5.2,
+            scene::pt(left, top - 5.2),
             0.7,
             render::tunnel::GATE_LIGHT,
             Align::Left,
@@ -1626,8 +1665,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             &format!("SPEED X{speed:.1}"),
-            left,
-            top - 3.8,
+            scene::pt(left, top - 3.8),
             0.7,
             c,
             Align::Left,
@@ -1652,23 +1690,21 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             "SHIP LOST",
-            0.0,
-            1.0,
+            scene::pt(0.0, 1.0),
             2.0,
             palette::SHIP,
             Align::Center,
         );
     }
     if g.screen == Screen::Paused {
-        scene::text(out, "PAUSED", 0.0, 4.0, 3.0, hud, Align::Center);
+        scene::text(out, "PAUSED", scene::pt(0.0, 4.0), 3.0, hud, Align::Center);
         menu_items(out, &PAUSE_ITEMS, g.sel, -0.5, g.time);
     }
     if g.screen == Screen::Initials {
         scene::text(
             out,
             "A NEW HIGH SCORE",
-            0.0,
-            6.0,
+            scene::pt(0.0, 6.0),
             2.2,
             scene::shard(),
             Align::Center,
@@ -1676,8 +1712,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             &scene::grouped(s.score),
-            0.0,
-            2.5,
+            scene::pt(0.0, 2.5),
             1.6,
             hud,
             Align::Center,
@@ -1687,9 +1722,9 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
             let on = k == g.cursor;
             let c = if on { hud } else { dim };
             let l = (g.initials[k] as char).to_string();
-            scene::text(out, &l, x, -2.5, 2.4, c, Align::Center);
+            scene::text(out, &l, scene::pt(x, -2.5), 2.4, c, Align::Center);
             if on && blink {
-                scene::text(out, "_", x, -2.9, 2.4, hud, Align::Center);
+                scene::text(out, "_", scene::pt(x, -2.9), 2.4, hud, Align::Center);
             }
         }
         let msg = if g.cursor >= 3 {
@@ -1697,12 +1732,26 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         } else {
             "TYPE OR UP / DOWN    ENTER TO KEEP"
         };
-        scene::text(out, msg, 0.0, -6.5, 0.8, dim, Align::Center);
+        scene::text(out, msg, scene::pt(0.0, -6.5), 0.8, dim, Align::Center);
     }
     if g.demo {
-        scene::text(out, "DEMO", 0.0, top - 0.2, 1.2, hud, Align::Center);
+        scene::text(
+            out,
+            "DEMO",
+            scene::pt(0.0, top - 0.2),
+            1.2,
+            hud,
+            Align::Center,
+        );
         if blink {
-            scene::text(out, "PRESS ENTER", 0.0, -15.5, 1.0, dim, Align::Center);
+            scene::text(
+                out,
+                "PRESS ENTER",
+                scene::pt(0.0, -15.5),
+                1.0,
+                dim,
+                Align::Center,
+            );
         }
     } else if g.screen == Screen::Watch
         && let Some(w) = &g.watch
@@ -1712,8 +1761,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             &format!("REPLAY {t} / {total}"),
-            0.0,
-            top - 0.2,
+            scene::pt(0.0, top - 0.2),
             0.9,
             dim,
             Align::Center,
@@ -1722,8 +1770,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
             scene::text(
                 out,
                 &format!("X{} SPEED", w.speed),
-                0.0,
-                top - 1.8,
+                scene::pt(0.0, top - 1.8),
                 0.7,
                 dim,
                 Align::Center,
@@ -1733,24 +1780,29 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
             scene::text(
                 out,
                 "RECORDED ON ANOTHER BUILD",
-                0.0,
-                -15.0,
+                scene::pt(0.0, -15.0),
                 0.7,
                 dim,
                 Align::Center,
             );
         }
         if let Some(end) = &w.end {
-            scene::text(out, end, 0.0, 2.0, 2.0, hud, Align::Center);
+            scene::text(out, end, scene::pt(0.0, 2.0), 2.0, hud, Align::Center);
             if blink {
-                scene::text(out, "PRESS ENTER", 0.0, -1.5, 0.9, dim, Align::Center);
+                scene::text(
+                    out,
+                    "PRESS ENTER",
+                    scene::pt(0.0, -1.5),
+                    0.9,
+                    dim,
+                    Align::Center,
+                );
             }
         } else {
             scene::text(
                 out,
                 "LEFT / RIGHT SPEED    ESC TO STOP",
-                0.0,
-                -16.5,
+                scene::pt(0.0, -16.5),
                 0.6,
                 dim,
                 Align::Center,
@@ -1761,8 +1813,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             "GAME OVER",
-            0.0,
-            3.0,
+            scene::pt(0.0, 3.0),
             3.2,
             light::light(1.0, 0.35, 0.5, 3.0),
             Align::Center,
@@ -1770,8 +1821,7 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
         scene::text(
             out,
             &format!("SCORE {}", scene::grouped(s.score)),
-            0.0,
-            -0.8,
+            scene::pt(0.0, -0.8),
             1.4,
             hud,
             Align::Center,
@@ -1780,15 +1830,21 @@ fn hud_play(g: &Game, stats: &Stats, out: &mut Vec<LineInstance>, st: HudStyle) 
             scene::text(
                 out,
                 "NEW BEST",
-                0.0,
-                -3.2,
+                scene::pt(0.0, -3.2),
                 1.0,
                 scene::shard(),
                 Align::Center,
             );
         }
         if g.over_timer > 1.5 && blink {
-            scene::text(out, "PRESS ENTER", 0.0, -6.5, 1.0, dim, Align::Center);
+            scene::text(
+                out,
+                "PRESS ENTER",
+                scene::pt(0.0, -6.5),
+                1.0,
+                dim,
+                Align::Center,
+            );
         }
     }
 }
@@ -1842,9 +1898,16 @@ fn menu_items(out: &mut Vec<LineInstance>, items: &[&str], sel: usize, y0: f32, 
         let y = y0 - k as f32 * 2.2;
         if k == sel {
             let c = light::fade(hud, 1.0 + 0.25 * signal::wave(time * 5.0));
-            scene::text(out, &format!("> {item} <"), 0.0, y, 1.4, c, Align::Center);
+            scene::text(
+                out,
+                &format!("> {item} <"),
+                scene::pt(0.0, y),
+                1.4,
+                c,
+                Align::Center,
+            );
         } else {
-            scene::text(out, item, 0.0, y, 1.2, dim, Align::Center);
+            scene::text(out, item, scene::pt(0.0, y), 1.2, dim, Align::Center);
         }
     }
 }

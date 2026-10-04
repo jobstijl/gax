@@ -14,7 +14,7 @@
 
 use crate::light::{self, Light};
 use crate::render::scene::{self, palette};
-use crate::render::{Particle, PostSettings};
+use crate::render::{Particle, PostSettings, Shock, Source};
 use crate::sim::body::{Body, ORIGIN, Pose, heading, pose_at, turned};
 use crate::sim::rng::Rng;
 use crate::sim::{ARENA, Event, Kind, World, Wreck};
@@ -94,9 +94,8 @@ pub struct Fx {
     pub flash_scale: f32,
     /// Less motion (a setting): no shock ripple.
     pub reduced_motion: bool,
-    /// The grid's sources per simulation tick this frame: `[x, y, strength, r²]`, the layout
-    /// of the traced `source_force` kernel on the GPU.
-    pub grid_steps: Vec<Vec<[f32; 4]>>,
+    /// The grid's sources per simulation tick this frame.
+    pub grid_steps: Vec<Vec<Source>>,
     /// Floating texts: `(position, text, age, light)`.
     pub popups: Vec<(P, String, f32, Light)>,
     /// The view's half height and aspect ratio (for the camera's bounds).
@@ -316,37 +315,30 @@ impl Fx {
 
     /// The grid's sources for one simulation tick (blasts and wells), and age the blasts.
     pub fn grid_tick(&mut self, w: &World, dt: f32) {
-        let mut s: Vec<[f32; 4]> = Vec::new();
-        let source = |p: P, strength: f32, r2: f32| {
-            let [x, y] = p.to_euclidean();
-            [x, y, strength, r2]
-        };
+        let mut s = Vec::new();
         for b in &mut self.blasts {
             let k = (b.life / b.total).clamp(0.0, 1.0);
-            s.push(source(b.pos, b.strength * k, b.r2));
+            s.push(Source::new(b.pos, b.strength * k, b.r2));
             b.life -= dt;
         }
         self.blasts.retain(|b| b.life > 0.0);
         for (p, strength) in w.wells() {
-            s.push(source(p, strength * 3.0, 12.0));
+            s.push(Source::new(p, strength * 3.0, 12.0));
         }
         // The ship's wake: a light push where it flies.
         if w.phase == crate::sim::Phase::Playing {
             let v = w.ship.body.vel.ideal_norm();
             if v > 1.0 {
-                s.push(source(w.ship.body.pos(), -3.0 * v, 0.8));
+                s.push(Source::new(w.ship.body.pos(), -3.0 * v, 0.8));
             }
         }
         self.grid_steps.push(s);
     }
 
     /// The wells as particle attractors.
-    pub fn particle_wells(w: &World) -> Vec<[f32; 4]> {
+    pub fn particle_wells(w: &World) -> Vec<Source> {
         w.wells()
-            .map(|(p, s)| {
-                let [x, y] = p.to_euclidean();
-                [x, y, s * 1.2, 4.0]
-            })
+            .map(|(p, s)| Source::new(p, s * 1.2, 4.0))
             .collect()
     }
 
@@ -401,11 +393,14 @@ impl Fx {
     /// Post settings for the frame: the shock ripple placed where the blast was, through the
     /// view map.
     pub fn post(&self, view: &Point<(Point,), f32>) -> PostSettings {
-        let shock = self.shock.filter(|_| !self.reduced_motion).map(|(p, t)| {
-            let uv = scene::to_uv(view, p);
-            let strength = 0.035 * (1.0 - t / 0.8) * (0.4 + 0.6 * self.flash_scale);
-            (uv, t * 0.9, strength)
-        });
+        let shock = self
+            .shock
+            .filter(|_| !self.reduced_motion)
+            .map(|(p, t)| Shock {
+                at: scene::to_uv(view, p),
+                radius: t * 0.9,
+                strength: 0.035 * (1.0 - t / 0.8) * (0.4 + 0.6 * self.flash_scale),
+            });
         PostSettings {
             bloom: 0.32,
             exposure: 1.0 + self.flash * 1.5 * self.flash_scale,
@@ -459,10 +454,10 @@ mod tests {
         assert!(fx.wreckage.is_empty(), "wreckage outlived its life");
     }
 
-    /// `p × v` for a point and a direction (the moment of a momentum about the origin).
+    /// `p × v` for a point and a direction (the moment of a momentum about the origin): the
+    /// join's moment, its `e0` coefficient.
     fn cross(p: P, v: P) -> f32 {
-        let [x, y] = p.to_euclidean();
-        x * v.e01() - y * v.e20()
+        (p.unitized() & v).e0()
     }
 
     /// The wreckage carries the body's linear and angular momentum: the pieces' masses (areas)

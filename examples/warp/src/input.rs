@@ -49,9 +49,9 @@ pub struct Menu {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Flight {
     /// The cursor in the HUD's screen units (`y` in `-18..18`), if it is over the window.
-    pub cursor: Option<[f32; 2]>,
-    /// The right stick, when it is held.
-    pub stick: Option<[f32; 2]>,
+    pub cursor: Option<Point<(), f32>>,
+    /// The right stick, when it is held: a direction.
+    pub stick: Option<Point<(), f32>>,
     /// Barrel roll (edge): Q / E, or the bumpers.
     pub roll: i8,
     /// Brake to boost: Ctrl / Shift, or the triggers.
@@ -171,7 +171,7 @@ pub fn read(
     {
         let (width, height) = (w.width().max(1.0), w.height().max(1.0));
         let (nx, ny) = (2.0 * c.x / width - 1.0, 1.0 - 2.0 * c.y / height);
-        flight.cursor = Some([nx * 18.0 * width / height, ny * 18.0]);
+        flight.cursor = Some(Point::xy(nx * 18.0 * width / height, ny * 18.0));
         let local = Point::xy(nx * half_height * width / height, ny * half_height);
         aim = (camera >> local) - ship;
     }
@@ -193,7 +193,7 @@ pub fn read(
         if right.ideal_norm() > 0.0 {
             aim = right;
             input.fire = true;
-            flight.stick = Some([right.e20(), right.e01()]);
+            flight.stick = Some(right);
             *device = Device::Pad;
         }
         flight.roll += i8::from(pad.just_pressed(GamepadButton::RightTrigger))

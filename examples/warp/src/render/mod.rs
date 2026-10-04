@@ -13,7 +13,7 @@ pub mod scene;
 pub mod tunnel;
 
 use bytemuck::{Pod, Zeroable};
-use gax::pga2d::{MotorGpu, PointGpu};
+use gax::pga2d::{MotorGpu, Point, PointGpu};
 use gax::pga3d::PointGpu as Light3Gpu;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -40,14 +40,15 @@ pub const MAX_SOURCES: usize = 64;
 pub const MAX_WELLS: usize = 16;
 const BLOOM_MIPS: usize = 6;
 
-/// A line segment: endpoints in the local frame of `motor` (`[ax, ay, bx, by]`), a light (a
-/// PGA3D point in RGB space, `light.rs`), a style (half width, glow radius, glow strength, 0)
-/// in world units.
+/// A line segment: endpoints in the local frame of `motor`, a light (a PGA3D point in RGB
+/// space, `light.rs`), a style (half width, glow radius, glow strength, 0) in world units.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 pub struct LineInstance {
-    /// Endpoints.
-    pub ab: [f32; 4],
+    /// The first endpoint: the WGSL `Point`.
+    pub a: PointGpu,
+    /// The second endpoint.
+    pub b: PointGpu,
     /// The light: the WGSL `gax::pga3d::Point`.
     pub color: Light3Gpu,
     /// Half width, glow radius, glow strength, unused.
@@ -104,7 +105,64 @@ pub struct Particle {
 struct GridUniform {
     dims: [u32; 4],
     k: [f32; 4],
+    origin: PointGpu,
     frame: [f32; 4],
+}
+
+/// A point that pushes the lattice or the particles away (positive strength) or pulls them
+/// in: the parameters of the traced `source_force` kernel.
+#[derive(Clone, Copy, Debug)]
+pub struct Source {
+    /// Where it is.
+    pub at: Point<(), f32>,
+    /// How hard it pushes.
+    pub strength: f32,
+    /// The square of its radius, below which the force fades.
+    pub radius2: f32,
+}
+
+impl Source {
+    /// A source at `at`.
+    pub fn new(at: Point<(), f32>, strength: f32, radius2: f32) -> Source {
+        Source {
+            at,
+            strength,
+            radius2,
+        }
+    }
+
+    /// `source_force`'s parameters, `[strength, radius²]`.
+    pub fn k(self) -> [f32; 2] {
+        [self.strength, self.radius2]
+    }
+
+    /// A slot no source fills: no force (and none of the 0/0 a zero radius gives at its point).
+    fn none() -> Source {
+        Source::new(Point::xy(0.0, 0.0), 0.0, 1.0)
+    }
+}
+
+/// A source on the GPU: the WGSL `Source`.
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct SourceGpu {
+    at: PointGpu,
+    /// Strength, radius², unused, unused.
+    k: [f32; 4],
+}
+
+impl From<Source> for SourceGpu {
+    fn from(s: Source) -> SourceGpu {
+        SourceGpu {
+            at: s.at.into(),
+            k: [s.strength, s.radius2, 0.0, 0.0],
+        }
+    }
+}
+
+/// `sources` as a full uniform array of `N`, the rest filled with [`Source::none`].
+fn source_array<const N: usize>(sources: &[Source]) -> [SourceGpu; N] {
+    core::array::from_fn(|i| sources.get(i).copied().unwrap_or_else(Source::none).into())
 }
 
 #[repr(C)]
@@ -139,7 +197,7 @@ pub struct GridSpec {
     /// Rows.
     pub rows: u32,
     /// Lower-left corner.
-    pub origin: [f32; 2],
+    pub origin: Point<(), f32>,
     /// Distance between nodes.
     pub spacing: f32,
 }
@@ -159,8 +217,19 @@ pub struct PostSettings {
     pub aberration: f32,
     /// Saturation of the tonemapper's look.
     pub saturation: f32,
-    /// A shock ripple: `(uv centre, radius, strength)`.
-    pub shock: Option<([f32; 2], f32, f32)>,
+    /// A shock ripple.
+    pub shock: Option<Shock>,
+}
+
+/// A shock ripple across the screen.
+#[derive(Clone, Copy, Debug)]
+pub struct Shock {
+    /// Its centre in the target's uv coordinates (`0..1`, y down).
+    pub at: Point<(), f32>,
+    /// Its radius, in uv.
+    pub radius: f32,
+    /// How far it displaces.
+    pub strength: f32,
 }
 
 /// Everything a frame draws.
@@ -170,16 +239,15 @@ pub struct Frame<'a> {
     /// The HUD camera.
     pub hud: CameraUniform,
     /// Camera centre in the world (for the starfield's parallax).
-    pub centre: [f32; 2],
+    pub centre: Point<(), f32>,
     /// World-space segments (shapes, bullets, border).
     pub world: &'a [LineInstance],
     /// HUD segments.
     pub hud_lines: &'a [LineInstance],
-    /// Grid steps to run this frame (one per simulation tick), each with its sources
-    /// (`[x, y, strength, radius²]`).
-    pub grid_steps: &'a [Vec<[f32; 4]>],
-    /// Wells pulling particles (`[x, y, strength, radius²]`).
-    pub wells: &'a [[f32; 4]],
+    /// Grid steps to run this frame (one per simulation tick), each with its sources.
+    pub grid_steps: &'a [Vec<Source>],
+    /// Wells pulling particles.
+    pub wells: &'a [Source],
     /// Particles to add before stepping.
     pub spawn: &'a [Particle],
     /// Grid colour (rgb, intensity).
@@ -394,7 +462,7 @@ impl Renderer {
             &[Some(wgpu::VertexBufferLayout {
                 array_stride: size_of::<LineInstance>() as u64,
                 step_mode: wgpu::VertexStepMode::Instance,
-                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4],
+                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4],
             })],
             strip,
             HDR,
@@ -411,7 +479,7 @@ impl Renderer {
             &[Some(wgpu::VertexBufferLayout {
                 array_stride: size_of::<LineInstance>() as u64,
                 step_mode: wgpu::VertexStepMode::Instance,
-                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4],
+                attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4],
             })],
             strip,
             format,
@@ -433,13 +501,11 @@ impl Renderer {
         let rest: Vec<Node> = (0..n)
             .map(|k| {
                 let (i, j) = (k as u32 % grid.cols, k as u32 / grid.cols);
-                let p = gax::pga2d::Point::xy(
-                    grid.origin[0] + i as f32 * grid.spacing,
-                    grid.origin[1] + j as f32 * grid.spacing,
-                );
+                let p = grid.origin
+                    + Point::direction(i as f32 * grid.spacing, j as f32 * grid.spacing);
                 Node {
                     p: p.into(),
-                    v: gax::pga2d::Point::direction(0.0, 0.0).into(),
+                    v: Point::direction(0.0, 0.0).into(),
                 }
             })
             .collect();
@@ -457,7 +523,7 @@ impl Renderer {
         let grid_step = compute("grid_step", &step_module);
         // One sources buffer per step in a frame (up to 8 steps), so each dispatch sees its own.
         let grid_sources: Vec<wgpu::Buffer> = (0..8)
-            .map(|_| uniform("grid sources", 16 * MAX_SOURCES))
+            .map(|_| uniform("grid sources", size_of::<SourceGpu>() * MAX_SOURCES))
             .collect();
         let grid_step_groups = grid_sources
             .iter()
@@ -508,7 +574,7 @@ impl Renderer {
             mapped_at_creation: false,
         });
         let particle_step_uniform = uniform("particle step", size_of::<StepUniform>());
-        let particle_wells = uniform("particle wells", 16 * MAX_WELLS);
+        let particle_wells = uniform("particle wells", size_of::<SourceGpu>() * MAX_WELLS);
         let pstep_module = module("particles_step", wgsl::PARTICLES_STEP);
         let particle_step = compute("particles_step", &pstep_module);
         let particle_step_group = group(
@@ -817,12 +883,15 @@ impl Renderer {
                 bytemuck::bytes_of(&u),
             );
         }
-        let (centre, radius, strength) = p.shock.unwrap_or(([0.5, 0.5], 0.0, 0.0));
+        let shock = p.shock.map_or([0.5, 0.5, 0.0, 0.0], |s| {
+            let [u, v] = s.at.to_euclidean();
+            [u, v, s.radius, s.strength]
+        });
         let u = PostUniform {
             texel: [0.0; 4],
             k: [0.0, p.bloom, p.exposure, self.time],
             look: [p.vignette, p.grain, p.aberration, p.saturation],
-            shock: [centre[0], centre[1], radius, strength],
+            shock,
         };
         q.write_buffer(
             &self.post_uniforms[2 * BLOOM_MIPS],
@@ -928,7 +997,7 @@ impl Renderer {
         q.write_buffer(
             &self.stars_uniform,
             0,
-            bytemuck::bytes_of(&[f.centre[0], f.centre[1], 0.0f32, 0.0]),
+            bytemuck::bytes_of(&PointGpu::from(f.centre)),
         );
         let g = self.grid;
         q.write_buffer(
@@ -940,9 +1009,8 @@ impl Renderer {
                 style: [0.014, 0.1, 0.12, g.spacing],
             }),
         );
-        let mut wells = [[0.0f32; 4]; MAX_WELLS];
         let nw = f.wells.len().min(MAX_WELLS);
-        wells[..nw].copy_from_slice(&f.wells[..nw]);
+        let wells = source_array::<MAX_WELLS>(f.wells);
         q.write_buffer(&self.particle_wells, 0, bytemuck::cast_slice(&wells));
         q.write_buffer(
             &self.particle_step_uniform,
@@ -954,12 +1022,10 @@ impl Renderer {
         );
         let steps = f.grid_steps.len().min(self.grid_sources.len());
         for (s, sources) in f.grid_steps.iter().take(steps).enumerate() {
-            let mut buf = [[0.0f32; 4]; MAX_SOURCES];
-            let n = sources.len().min(MAX_SOURCES);
-            buf[..n].copy_from_slice(&sources[..n]);
+            let buf = source_array::<MAX_SOURCES>(sources);
             q.write_buffer(&self.grid_sources[s], 0, bytemuck::cast_slice(&buf));
         }
-        // Every step loops over the most sources any step has; unused slots have strength 0.
+        // Every step loops over the most sources any step has; unused slots push with no force.
         let max_sources = f
             .grid_steps
             .iter()
@@ -979,7 +1045,8 @@ impl Renderer {
                     cpu_grid::ANCHOR,
                     cpu_grid::DAMPING,
                 ],
-                frame: [g.origin[0], g.origin[1], g.spacing, crate::sim::DT],
+                origin: g.origin.into(),
+                frame: [g.spacing, crate::sim::DT, 0.0, 0.0],
             }),
         );
         self.spawn_particles(f.spawn);

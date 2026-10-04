@@ -5,7 +5,7 @@
 //! compute shader, run by their SIMD batch forms (`gax::batch`). It is the fallback for a
 //! device without compute, and the oracle the GPU is tested against.
 
-use super::{GridSpec, Node};
+use super::{GridSpec, Node, Source};
 use gax::pga2d::Point;
 
 type P = Point<(), f32>;
@@ -37,10 +37,7 @@ impl CpuGrid {
         let rest: Vec<P> = (0..spec.cols * spec.rows)
             .map(|k| {
                 let (i, j) = (k % spec.cols, k / spec.cols);
-                Point::xy(
-                    spec.origin[0] + i as f32 * spec.spacing,
-                    spec.origin[1] + j as f32 * spec.spacing,
-                )
+                spec.origin + Point::direction(i as f32 * spec.spacing, j as f32 * spec.spacing)
             })
             .collect();
         let n = rest.len();
@@ -64,18 +61,13 @@ impl CpuGrid {
         }
     }
 
-    /// One step of `dt` with `sources` (`[x, y, strength, radius²]`).
-    pub fn step(&mut self, sources: &[[f32; 4]], dt: f32) {
+    /// One step of `dt` with `sources`.
+    pub fn step(&mut self, sources: &[Source], dt: f32) {
         let (w, h) = (self.spec.cols as usize, self.spec.rows as usize);
         // External forces, source by source in the GPU's order.
         self.f.fill(Point::direction(0.0, 0.0));
         for s in sources {
-            crate::source_force_batch(
-                &self.p,
-                &[Point::xy(s[0], s[1])],
-                &[[s[2], s[3]]],
-                &mut self.tmp,
-            );
+            crate::source_force_batch(&self.p, &[s.at], &[s.k()], &mut self.tmp);
             for (f, a) in self.f.iter_mut().zip(&self.tmp) {
                 *f += *a;
             }

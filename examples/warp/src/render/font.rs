@@ -1,6 +1,8 @@
 //! A stroke vector font in the arcade tradition, drawn by the line renderer: every glyph is a
 //! few polylines on a 4 x 6 grid (y up). The game's own design; no font data is borrowed.
 
+use gax::pga2d::Point;
+
 /// The strokes of a glyph (points on the 4 x 6 grid), or `None` for characters it lacks.
 fn glyph(c: char) -> Option<&'static [&'static [(f32, f32)]]> {
     Some(match c.to_ascii_uppercase() {
@@ -152,24 +154,24 @@ pub fn width(s: &str, size: f32) -> f32 {
     }
 }
 
-/// The segments of `s` with its baseline at `(x, y)` and glyphs `size` tall, as
-/// `[x0, y0, x1, y1]`.
-pub fn segments(s: &str, x: f32, y: f32, size: f32, align: Align) -> Vec<[f32; 4]> {
+/// The segments of `s` with its baseline at `at` and glyphs `size` tall, as endpoint pairs.
+pub fn segments(s: &str, at: Point<(), f32>, size: f32, align: Align) -> Vec<[Point<(), f32>; 2]> {
     let k = size / 6.0;
     let w = width(s, size);
-    let x0 = match align {
-        Align::Left => x,
-        Align::Center => x - w * 0.5,
-        Align::Right => x - w,
+    // The left end of the baseline.
+    let start = match align {
+        Align::Left => 0.0,
+        Align::Center => -w * 0.5,
+        Align::Right => -w,
     };
     let mut out = Vec::new();
     for (i, c) in s.chars().enumerate() {
-        let gx = x0 + i as f32 * 6.0 * k;
+        let gx = start + i as f32 * 6.0 * k;
+        let on_grid = |(x, y): (f32, f32)| at + Point::direction(gx + x * k, y * k);
         let strokes = glyph(c).or_else(|| glyph('?')).unwrap_or(&[]);
         for stroke in strokes {
             for pair in stroke.windows(2) {
-                let (a, b) = (pair[0], pair[1]);
-                out.push([gx + a.0 * k, y + a.1 * k, gx + b.0 * k, y + b.1 * k]);
+                out.push([on_grid(pair[0]), on_grid(pair[1])]);
             }
         }
     }
@@ -185,7 +187,7 @@ mod tests {
         for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:-+*!?/'()<>=% ".chars() {
             assert!(glyph(c).is_some(), "{c}");
         }
-        let s = segments("WARP 2x", 0.0, 0.0, 6.0, Align::Center);
+        let s = segments("WARP 2x", Point::xy(0.0, 0.0), 6.0, Align::Center);
         assert!(s.len() > 15);
         assert!((width("AB", 6.0) - 10.0).abs() < 1e-6);
     }

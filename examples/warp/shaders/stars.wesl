@@ -3,11 +3,11 @@
 // twinkle a phasor (traced gax kernels).
 import package::common::Camera;
 import package::fused::{distance, wave};
-import gax::pga2d::point_new;
+import gax::pga2d::{Point, point_new};
 
 struct Stars {
-    // Camera centre (world), unused, unused.
-    centre: vec4<f32>,
+    // The camera's centre in the world.
+    centre: Point,
 }
 
 @group(0) @binding(0) var<uniform> cam: Camera;
@@ -36,7 +36,7 @@ fn fs_main(f: Full) -> @location(0) vec4<f32> {
     for (var layer = 0; layer < 3; layer++) {
         let depth = 0.15 + 0.2 * f32(layer);
         let scale = 38.0 + 22.0 * f32(layer);
-        let p = (px + stars.centre.xy * vec2<f32>(1.0, -1.0) / cam.viewport.z * depth) / scale;
+        let p = (px + stars.centre.c0.xy / stars.centre.c0.z * vec2<f32>(1.0, -1.0) / cam.viewport.z * depth) / scale;
         let cell = floor(p);
         let h = hash2(cell + f32(layer) * 17.0);
         let star = cell + 0.15 + 0.7 * h;

@@ -357,9 +357,11 @@ impl View {
         // The collapse's ripple, from where the singularity was on screen.
         let shock = self.shock.filter(|_| self.lensing).and_then(|(q, t)| {
             let [x, y] = self.on_screen(w, q)?.to_euclidean();
-            let uv = [x / (36.0 * aspect) + 0.5, 0.5 - y / 36.0];
-            let strength = 0.05 * (1.0 - t / 0.9) * (0.4 + 0.6 * self.flash_scale);
-            Some((uv, t * 1.1, strength))
+            Some(super::Shock {
+                at: Point2::xy(x / (36.0 * aspect) + 0.5, 0.5 - y / 36.0),
+                radius: t * 1.1,
+                strength: 0.05 * (1.0 - t / 0.9) * (0.4 + 0.6 * self.flash_scale),
+            })
         });
         super::PostSettings {
             bloom: 0.34,
@@ -766,19 +768,10 @@ impl View {
         // Popups, at their depth.
         for (pos, text, age, color) in &self.popups {
             if let Some(c) = p.camera(place(*pos)) {
-                let [sx, sy] = p.screen(c).to_euclidean();
+                let at = p.screen(c) + Point2::direction(0.0, 1.0 + age * 2.0);
                 let size = (self.focal / p.depth(c)).clamp(0.4, 1.6);
                 let k = (1.0 - age / 1.1).max(0.0);
-                let y = sy + 1.0 + age * 2.0;
-                scene::text(
-                    out,
-                    text,
-                    sx,
-                    y,
-                    size,
-                    light::fade(*color, k),
-                    Align::Center,
-                );
+                scene::text(out, text, at, size, light::fade(*color, k), Align::Center);
             }
         }
     }

@@ -14,13 +14,20 @@ struct Grid {
     dims: vec4<u32>,
     // Spring stiffness, rest length, anchor stiffness, damping.
     k: vec4<f32>,
-    // Origin x, origin y, spacing, dt.
+    // The lower-left node's rest position.
+    origin: Point,
+    // Spacing, dt, unused, unused.
     frame: vec4<f32>,
 }
 
+struct Source {
+    at: Point,
+    // Strength, radius², unused, unused.
+    k: vec4<f32>,
+}
+
 struct Sources {
-    // x, y, strength, radius².
-    s: array<vec4<f32>, 64>,
+    s: array<Source, 64>,
 }
 
 @group(0) @binding(0) var<uniform> grid: Grid;
@@ -29,7 +36,8 @@ struct Sources {
 @group(0) @binding(3) var<storage, read_write> dst: array<Node>;
 
 fn rest(i: u32, j: u32) -> Point {
-    return point_new(grid.frame.x + f32(i) * grid.frame.z, grid.frame.y + f32(j) * grid.frame.z, 1.0);
+    // The origin moved along a direction (a point at infinity).
+    return Point(grid.origin.c0 + point_new(f32(i) * grid.frame.x, f32(j) * grid.frame.x, 0.0).c0);
 }
 
 @compute @workgroup_size(64)
@@ -49,10 +57,10 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var f = point_new(0.0, 0.0, 0.0);
     for (var s = 0u; s < grid.dims.z; s++) {
         let q = sources.s[s];
-        let a = source_force(node.p, point_new(q.x, q.y, 1.0), array<f32, 2>(q.z, q.w));
+        let a = source_force(node.p, q.at, array<f32, 2>(q.k.x, q.k.y));
         f = Point(f.c0 + a.c0);
     }
     let n = array<Point, 4>(src[id.x - 1u].p, src[id.x + 1u].p, src[id.x - w].p, src[id.x + w].p);
-    let r = grid_node(node.p, node.v, rest(i, j), n, f, array<f32, 5>(grid.k.x, grid.k.y, grid.k.z, grid.k.w, grid.frame.w));
+    let r = grid_node(node.p, node.v, rest(i, j), n, f, array<f32, 5>(grid.k.x, grid.k.y, grid.k.z, grid.k.w, grid.frame.y));
     dst[id.x] = Node(r.f0, r.f1);
 }

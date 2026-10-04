@@ -146,9 +146,9 @@ pub fn seg(
     style: [f32; 4],
     motor: Pose,
 ) -> LineInstance {
-    let ([ax, ay], [bx, by]) = (a.to_euclidean(), b.to_euclidean());
     LineInstance {
-        ab: [ax, ay, bx, by],
+        a: a.into(),
+        b: b.into(),
         color: color.into(),
         style,
         motor: motor.into(),
@@ -420,9 +420,9 @@ pub fn camera(cam: Pose, half_height: f32, size: [u32; 2], time: f32) -> CameraU
 
 /// Where a world point lands on the target, in `0..1` uv (y down), for screen effects: the
 /// view map applied to the point.
-pub fn to_uv(view: &Point<(Point,), f32>, p: Point<(), f32>) -> [f32; 2] {
+pub fn to_uv(view: &Point<(Point,), f32>, p: Point<(), f32>) -> Point<(), f32> {
     let [x, y] = view.of(p).to_euclidean();
-    [0.5 + 0.5 * x, 0.5 - 0.5 * y]
+    pt(0.5 + 0.5 * x, 0.5 - 0.5 * y)
 }
 
 /// All world segments of a frame, `alpha` of the way from the last tick to the current one.
@@ -490,20 +490,19 @@ pub fn world_lines(w: &World, alpha: f32, time: f32, out: &mut Vec<LineInstance>
     }
 }
 
-/// Text into the HUD (HUD units: the screen is 36 units tall, centred).
+/// Text into the HUD (HUD units: the screen is 36 units tall, centred), its baseline at `at`.
 pub fn text(
     out: &mut Vec<LineInstance>,
     s: &str,
-    x: f32,
-    y: f32,
+    at: Point<(), f32>,
     size: f32,
     color: Light,
     align: Align,
 ) {
     // Stroke width grows with the glyph; the glow does not, beyond a point.
     let style = [0.045 * size / 1.2, (0.3 * size / 1.2).min(0.45), 0.3, 0.0];
-    for [ax, ay, bx, by] in font::segments(s, x, y, size, align) {
-        out.push(seg(pt(ax, ay), pt(bx, by), color, style, identity()));
+    for [a, b] in font::segments(s, at, size, align) {
+        out.push(seg(a, b, color, style, identity()));
     }
 }
 

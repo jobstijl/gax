@@ -19,9 +19,14 @@ struct Step {
     k: vec4<f32>,
 }
 
+struct Source {
+    at: Point,
+    // Strength, radius², unused, unused.
+    k: vec4<f32>,
+}
+
 struct Wells {
-    // x, y, strength, radius².
-    s: array<vec4<f32>, 16>,
+    s: array<Source, 16>,
 }
 
 @group(0) @binding(0) var<uniform> step_params: Step;
@@ -40,7 +45,7 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>) {
     var f = point_new(0.0, 0.0, 0.0);
     for (var s = 0u; s < step_params.dims.y; s++) {
         let w = wells.s[s];
-        let a = source_force(q.p, point_new(w.x, w.y, 1.0), array<f32, 2>(w.z * step_params.k.y, w.w));
+        let a = source_force(q.p, w.at, array<f32, 2>(w.k.x * step_params.k.y, w.k.y));
         // Forces add (directions: points at infinity).
         f = Point(f.c0 + a.c0);
     }

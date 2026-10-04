@@ -49,9 +49,7 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
         .filter(|e| crate::tunnel::arc(e.pos) > s + 6.0)
         .min_by(|a, b| crate::tunnel::arc(a.pos).total_cmp(&crate::tunnel::arc(b.pos)))
         .map(|e| e.pos);
-    let cursor = target
-        .and_then(|q| run.view.on_screen(w, q))
-        .map(|p| p.to_euclidean());
+    let cursor = target.and_then(|q| run.view.on_screen(w, q));
     let danger = w.bolts.iter().any(|b| {
         let d = crate::tunnel::arc(b.pos) - s;
         d > 0.0 && d < 6.0
@@ -66,7 +64,7 @@ pub fn tunnel_bot(g: &Game, t: f32) -> (sim::Input, input::Flight) {
         ..sim::Input::default()
     };
     let flight = input::Flight {
-        cursor: cursor.or(Some([0.0, 0.0])),
+        cursor: cursor.or(Some(crate::geom::ORIGIN)),
         stick: None,
         roll: if danger { 1 } else { 0 },
         throttle: crate::signal::wave(t * 0.2),
@@ -475,7 +473,7 @@ pub fn png(w: u32, h: u32, rgb: &[u8]) -> Vec<u8> {
 mod tests {
     use super::*;
     use crate::render::cpu_grid::CpuGrid;
-    use crate::render::{Frame, Node, Particle};
+    use crate::render::{Frame, Node, Particle, Source};
     use crate::sim::rng::Rng;
 
     /// The whole loop without a window: a bot plays through `advance` at uneven frame rates
@@ -707,8 +705,8 @@ mod tests {
     }
 
     fn frame<'a>(
-        steps: &'a [Vec<[f32; 4]>],
-        wells: &'a [[f32; 4]],
+        steps: &'a [Vec<Source>],
+        wells: &'a [Source],
         spawn: &'a [Particle],
     ) -> Frame<'a> {
         let cam =
@@ -716,7 +714,7 @@ mod tests {
         Frame {
             camera: cam,
             hud: cam,
-            centre: [0.0, 0.0],
+            centre: crate::geom::ORIGIN,
             world: &[],
             hud_lines: &[],
             grid_steps: steps,
@@ -771,14 +769,17 @@ mod tests {
                 let edge = x.abs() >= 31.9 || y.abs() >= 17.9;
                 let d = if edge { 0.0 } else { 0.15 };
                 Node {
-                    p: Point::xy(x + rng.range(-d, d), y + rng.range(-d, d)).into(),
+                    p: (*p + Point::direction(rng.range(-d, d), rng.range(-d, d))).into(),
                     v: Point::direction(rng.range(-d, d) * 10.0, rng.range(-d, d) * 10.0).into(),
                 }
             })
             .collect();
         r.write_grid(&start);
         cpu.set(&start);
-        let sources = vec![[3.0, 2.0, -400.0, 4.0], [-10.0, 5.0, 80.0, 3.0]];
+        let sources = vec![
+            Source::new(Point::xy(3.0, 2.0), -400.0, 4.0),
+            Source::new(Point::xy(-10.0, 5.0), 80.0, 3.0),
+        ];
         let compare = |r: &Renderer, cpu: &CpuGrid| {
             let gpu = r.read_grid();
             let mut worst = 0.0f32;
@@ -823,7 +824,7 @@ mod tests {
                 life: [0.0, 100.0, rng.range(0.5, 3.0), 0.03],
             })
             .collect();
-        let wells = [[2.0f32, -1.0, 90.0, 1.2]];
+        let wells = [Source::new(Point::xy(2.0, -1.0), 90.0, 1.2)];
         let steps = vec![Vec::new(); 3];
         r.render(&view, &frame(&steps, &wells, &ps));
         let gpu = r.read_particles(ps.len());
@@ -831,11 +832,7 @@ mod tests {
         for (q, g) in ps.iter().zip(&gpu) {
             let (mut p, mut v): (Point<(), f32>, Point<(), f32>) = (q.p.into(), q.v.into());
             for _ in 0..3 {
-                let f = crate::source_force(
-                    p,
-                    Point::xy(wells[0][0], wells[0][1]),
-                    [wells[0][2], wells[0][3]],
-                );
+                let f = crate::source_force(p, wells[0].at, wells[0].k());
                 (p, v) = crate::particle_step(p, v, f, [q.life[2], sim::DT]);
             }
             let (gp, gv): (Point<(), f32>, Point<(), f32>) = (g.p.into(), g.v.into());
