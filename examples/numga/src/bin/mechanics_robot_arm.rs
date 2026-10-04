@@ -9,7 +9,7 @@
 
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
-use gax::pga3d::{Line, Motor, Point};
+use gax::pga3d::{Line, Motor, Plane, Point};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, caption,
     palette, plot, run,
@@ -119,8 +119,12 @@ mod arm {
             centre & Point::direction(0.0, 0.0, 1.0),
             -core::f64::consts::TAU * k as f64 / TARGETS as f64,
         );
-        let [x, y, _] = (turn >> Point::xyz(1.0, 1.5, 0.0)).to_euclidean();
-        Point::xyz(x, y, 1.2 + 2.4 * (x - 1.0) * (y - 1.0))
+        let below = turn >> Point::xyz(1.0, 1.5, 0.0);
+        // `(x - 1) (y - 1)`: its signed distances from the planes x = 1 and y = 1, its joins.
+        let across = Plane::from_normal([1.0, 0.0, 0.0], 1.0) & below;
+        let along = Plane::from_normal([0.0, 1.0, 0.0], 1.0) & below;
+        let height = 1.2 + 2.4 * across.s() * along.s();
+        below + Point::direction(0.0, 0.0, height)
     }
 
     /// The corners of slender boxes along `z`, one per unit link, in the home pose; corner

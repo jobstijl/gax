@@ -4,8 +4,8 @@
 //! arrows and axes are built from these.
 
 use crate::canvas::{Canvas, Px, Rgb, scale};
-use crate::coords::{Dir3, Point3, Pos3, finite};
 use crate::plot::{Marker, arrow, mark};
+use crate::points::{Dir3, Point3, Pos3, finite};
 use crate::view::Camera;
 use gax::pga3d::{Motor, Plane, Point};
 

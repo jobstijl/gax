@@ -3,7 +3,7 @@
 //! ray through each pixel for the ray-traced examples.
 
 use crate::canvas::Px;
-use crate::coords::{Point2, Pos2, Pos3};
+use crate::points::{Point2, Pos2, Pos3};
 use gax::Unit;
 use gax::pga3d::{Motor, Point};
 

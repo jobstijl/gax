@@ -15,8 +15,8 @@ use gax::{Real, Unit};
 use gax_numga_examples::canvas::mix;
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Scene3, backdrop, caption, palette,
-    plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Scene3, backdrop, caption, from_above,
+    palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -188,13 +188,12 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let ax = Axes::equal(right, Point2::xy(0.0, 0.0), 0.75);
     ax.frame(c, "THE SCREEN Z = 1", "", "");
-    // A point of the screen `z = 1` as a point of the plane: its `z` dropped.
-    let flat = |p: &P| gax::pga2d::Point::new(p.e032(), p.e013(), p.e123());
+    // The screen `z = 1` seen from above: its points with their `z` dropped.
     for (a, o) in images.iter().zip(&observed) {
-        ax.line(c, flat(a), flat(o), 0.8, palette::red(), 0.5);
+        ax.line(c, from_above(*a), from_above(*o), 0.8, palette::red(), 0.5);
     }
-    let obs: Vec<_> = observed.iter().map(flat).collect();
-    let cur: Vec<_> = images.iter().map(flat).collect();
+    let obs: Vec<_> = observed.iter().copied().map(from_above).collect();
+    let cur: Vec<_> = images.iter().copied().map(from_above).collect();
     ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky(), 1.0);
     ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red(), 1.0);
     // The misfit over the steps, on a log scale.

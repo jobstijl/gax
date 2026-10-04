@@ -1,7 +1,7 @@
 //! Level lines of a scalar field on a grid by marching squares: the segments where the field
 //! crosses `level`, with the crossings placed by linear interpolation along the cell edges.
 
-use crate::coords::Point2;
+use crate::points::Point2;
 
 /// The segments (in grid coordinates: the point `(column, row)`) where `f` crosses `level`, for
 /// `f` sampled on a `cols` x `rows` grid (`f[row * cols + col]`). Non-finite samples break the

@@ -3,8 +3,8 @@
 //! lines, images and legends in data coordinates.
 
 use crate::canvas::{Canvas, Px, Rgb};
-use crate::coords::{Dir2, Point2, Pos2, finite};
 use crate::font::Align;
+use crate::points::{Dir2, Point2, Pos2, finite};
 use crate::{contour, palette};
 use gax::pga2d::{Motor, Point};
 

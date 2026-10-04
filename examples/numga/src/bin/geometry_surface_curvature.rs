@@ -243,19 +243,23 @@ fn scene() -> &'static Scene {
         // Points of the unit sphere and of the unit hyperboloid `x² + y² - z² = 1`, turned
         // about z by the longitude `v`, then stretched along the axes.
         let turned = |v: f64, p: P| Motor::rotation_about(0.0, 0.0, 1.0, v * tau) >> p;
-        let stretched = |p: P, k: [f64; 3]| {
-            let [x, y, z] = p.to_euclidean();
-            Point::xyz(k[0] * x, k[1] * y, k[2] * z)
+        // The stretch by `k` along x, y and z, as a map on points (the weight kept).
+        let stretch = |[a, b, c]: [f64; 3]| {
+            Point::<(Point,), f64>::from_coeffs([
+                [a, 0.0, 0.0, 0.0],
+                [0.0, b, 0.0, 0.0],
+                [0.0, 0.0, c, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ])
         };
-        let on_ellipsoid = |u: f64, v: f64| {
+        let (to_ellipsoid, to_hyperboloid) = (stretch(SEMI_AXES), stretch([1.6, 1.0, 1.0]));
+        let on_ellipsoid = move |u: f64, v: f64| {
             let latitude = Motor::rotation_about(0.0, -1.0, 0.0, (u - 0.5) * tau / 2.0);
-            let p = turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0));
-            stretched(p, SEMI_AXES)
+            to_ellipsoid.of(turned(v, latitude >> Point::xyz(1.0, 0.0, 0.0)))
         };
-        let on_hyperboloid = |u: f64, v: f64| {
+        let on_hyperboloid = move |u: f64, v: f64| {
             let s = (2.0 * u - 1.0) * 2f64.asinh();
-            let p = turned(v, Point::xyz(s.cosh(), 0.0, s.sinh()));
-            stretched(p, [1.6, 1.0, 1.0])
+            to_hyperboloid.of(turned(v, Point::xyz(s.cosh(), 0.0, s.sinh())))
         };
         Scene {
             ranges: [ranges(&e, on_ellipsoid), ranges(&h, on_hyperboloid)],

@@ -23,7 +23,7 @@ use gax::vga3d::{Bivector, Vector};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, colormap,
-    palette, run,
+    from_above, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -343,11 +343,6 @@ fn data() -> &'static Data {
     })
 }
 
-/// A Bloch vector seen from above the field: its part in the `x y` plane.
-fn from_above(r: Vector<(), f64>) -> gax::vga2d::Vector<(), f64> {
-    gax::vga2d::Vector::new(r.e1(), r.e2())
-}
-
 /// A point of a plot, from its two values.
 fn on_plot(across: f64, up: f64) -> gax::pga2d::Point<(), f64> {
     gax::pga2d::Point::xy(across, up)
@@ -382,8 +377,14 @@ fn draw(c: &mut Canvas, t: f32) {
         .collect();
     ax.polyline(c, &circle, 1.0, palette::grid(), 1.0);
     for a in [x(), Vector::new(0.0, 1.0, 0.0)] {
-        let reach = from_above(a * 1.1);
-        ax.line(c, -reach, reach, 1.0, palette::grid(), 0.6);
+        ax.line(
+            c,
+            from_above(-a * 1.1),
+            from_above(a * 1.1),
+            1.0,
+            palette::grid(),
+            0.6,
+        );
     }
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));

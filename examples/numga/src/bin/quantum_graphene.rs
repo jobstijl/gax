@@ -23,7 +23,7 @@ use gax_numga_examples::canvas::{mix, scale};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, Scene3, backdrop,
-    caption, colormap, palette, run,
+    caption, colormap, from_above, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -254,11 +254,6 @@ fn data() -> &'static Data {
     })
 }
 
-/// A momentum as a vector of the momentum plane, for the plots.
-fn in_plane(k: V) -> gax::vga2d::Vector<(), f64> {
-    gax::vga2d::Vector::new(k.e1(), k.e2())
-}
-
 /// A point of the Berry phase plot: the loop's radius across, the phase up.
 fn on_plot(radius: f64, phase: f64) -> gax::pga2d::Point<(), f64> {
     gax::pga2d::Point::xy(radius, phase)
@@ -343,7 +338,7 @@ fn draw(c: &mut Canvas, t: f32) {
     });
     // The Brillouin zone: the hexagon through the six valleys, K turned by sixths of a turn.
     let hexagon: Vec<_> = (0..=6)
-        .map(|k| in_plane(turn(tau * k as f64 / 6.0) >> valley_k))
+        .map(|k| from_above(turn(tau * k as f64 / 6.0) >> valley_k))
         .collect();
     ax.polyline(c, &hexagon, 1.0, palette::ink(), 0.6);
     // The upper band's pseudospin with the gap: in the plane it turns once around each corner,
@@ -356,8 +351,8 @@ fn draw(c: &mut Canvas, t: f32) {
             let half = d * 0.3;
             ax.arrow(
                 c,
-                in_plane(k - half),
-                in_plane(k + half),
+                from_above(k - half),
+                from_above(k + half),
                 1.2,
                 5.0,
                 colormap::coolwarm(0.5 + 0.5 * d.e3() as f32),
@@ -366,13 +361,13 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     let ring: Vec<_> = circle(64)
         .iter()
-        .map(|u| in_plane(valley_k + *u * radius))
+        .map(|u| from_above(valley_k + *u * radius))
         .collect();
     ax.polyline(c, &ring, 2.0, palette::orange(), 1.0);
     let here = valley_k + (turn(tau * around) >> x()) * radius;
     ax.scatter(
         c,
-        &[in_plane(here)],
+        &[from_above(here)],
         Marker::Dot,
         7.0,
         palette::orange(),
@@ -380,7 +375,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     ax.text(
         c,
-        in_plane(valley_k + Vector::new(0.25, 0.2, 0.0)),
+        from_above(valley_k + Vector::new(0.25, 0.2, 0.0)),
         "K",
         12.0,
         palette::ink(),

@@ -16,20 +16,20 @@ pub mod app;
 pub mod canvas;
 pub mod colormap;
 pub mod contour;
-pub mod coords;
 pub mod font;
 pub mod measure;
 pub mod palette;
 pub mod plot;
+pub mod points;
 pub mod rng;
 pub mod scene3;
 pub mod view;
 
 pub use app::{Anim, run};
 pub use canvas::{Canvas, Px, Rgb};
-pub use coords::{Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3};
 pub use font::Align;
 pub use plot::{Axes, Marker};
+pub use points::{Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above};
 pub use scene3::Scene3;
 pub use view::{Camera, Lens, View2};
 

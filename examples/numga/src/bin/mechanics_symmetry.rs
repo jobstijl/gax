@@ -14,7 +14,7 @@ use gax::motions::{Motions, Pga3d};
 use gax::{pga2d, pga3d, vga3d};
 use gax_numga_examples::{
     Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, canvas,
-    caption, palette, plot, run,
+    caption, from_above, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -444,7 +444,7 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         } else {
             palette::sky()
         };
-        let pts: Vec<pga2d::Point<(), f64>> = arm.iter().map(|p| from_above(*p)).collect();
+        let pts: Vec<_> = arm.iter().map(|p| from_above(*p)).collect();
         ax.scatter(c, &pts, Marker::Dot, 4.0, colour, 0.9);
     }
     ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink(), 1.0);
@@ -516,11 +516,6 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
         "SYMMETRY: THREE ARMS, AXIALLY SYMMETRIC INERTIA",
         "ONE ARM TURNED AND ADDED. RADIUS: MOMENT ABOUT EACH AXIS IN PLANE (PGA3D)",
     );
-}
-
-/// A point of space seen from above: the point of the plane under it (its `z` dropped).
-fn from_above(p: P3) -> pga2d::Point<(), f64> {
-    pga2d::Point::new(p.e032(), p.e013(), p.e123())
 }
 
 /// The point at radius `r` and angle `a` in the plane: `(r, 0)` turned about the origin.
