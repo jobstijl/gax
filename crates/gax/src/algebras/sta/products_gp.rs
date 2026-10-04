@@ -102,24 +102,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Scalar<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 1)).0,
             ],
         }
@@ -988,24 +982,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (-p(0, 1)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
             ],
         }
@@ -1096,24 +1084,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Multivector<S2, T>> for P
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Scalar<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn gp(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Scalar<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(1, 0)).0,
             ],
         }
@@ -1194,24 +1176,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Trivector<S2, T>> for Pha
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Pseudoscalar<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (-p(1, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
             ],
         }
@@ -1219,24 +1195,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Pseudoscalar<S2, T>> for 
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Gp<Phasor<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn gp(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn gp(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Gp::gp(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 ((p(0, 0) - p(1, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((p(0, 1) + p(1, 0))).0,
             ],
         }

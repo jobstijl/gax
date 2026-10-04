@@ -60,11 +60,6 @@ mod curvature {
         Bivector::new(0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
     }
 
-    /// The product of two phasors, a phasor: they multiply as complex numbers.
-    pub fn times(a: Phasor, b: Phasor) -> Phasor {
-        (a * b).cast::<gax::sta::Phasor>()
-    }
-
     /// Vacuum plane-wave curvature along the null direction `k`, polarized on the transverse
     /// pair `(a, b)`. The null bivectors `k ∧ a` and `k ∧ b` are mutually orthogonal, so their
     /// dyads compose to zero and the map is nilpotent; opposite weights cancel the Ricci
@@ -144,8 +139,8 @@ mod curvature {
                 let envelope = amplitude * (-s * s / (2.0 * sigma * sigma)).exp();
                 let profile = Pseudoscalar::new(-b * s).exp() * envelope;
                 let rate = Phasor::new(-s / (sigma * sigma), -b);
-                let curving = times(rate, rate) - Phasor::new(1.0 / (sigma * sigma), 0.0);
-                (profile, times(curving, profile))
+                let curving = rate * rate - Phasor::new(1.0 / (sigma * sigma), 0.0);
+                (profile, curving * profile)
             })
             .unzip()
     }

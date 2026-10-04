@@ -5296,7 +5296,7 @@ impl<T: gx::Real> Phasor<(), T> {
 
     /// The inverse under the geometric product, `~x (x ~x)â»Â¹` (10 mul, 3 add, 1 div).
     #[inline(always)]
-    pub fn inverse(self) -> Even<(), T> {
+    pub fn inverse(self) -> Phasor<(), T> {
         let x = self.c;
         let t0 = x[0] * x[0];
         let t1 = x[1] * x[1];
@@ -5310,7 +5310,7 @@ impl<T: gx::Real> Phasor<(), T> {
         let t12 = x[0] * t11;
         let t13 = x[1] * t11;
         let t14 = -t13;
-        Even::from_coeffs([t12, T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), T::from_i64(0), t14])
+        Phasor::from_coeffs([t12, t14])
     }
 
     /// Scaled to a unit versor, `(x ~x)^(-1/2) x`, so that `x ~x = 1` (`Â±1` when the norm is negative).
@@ -5374,7 +5374,7 @@ impl<T: gx::Coef> gx::NewtonStep for Phasor<(), T> {
 }
 
 impl<T: gx::Real> gx::Inverse for Phasor<(), T> {
-    type Output = Even<(), T>;
+    type Output = Phasor<(), T>;
     #[inline(always)]
     fn inverse(self) -> Self::Output {
         Self::inverse(self)

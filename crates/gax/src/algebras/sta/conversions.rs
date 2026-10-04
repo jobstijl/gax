@@ -442,7 +442,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Pseudoscalar<(), T>> for Multivector<S
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Scalar<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -450,7 +450,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Scalar<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Vector<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -458,7 +458,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Vector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Bivector<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -466,7 +466,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Bivector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Trivector<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -474,7 +474,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Trivector<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Pseudoscalar<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -482,7 +482,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Pseudoscalar<S, T> 
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Phasor<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -490,7 +490,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Phasor<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Even<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -498,7 +498,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Even<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Odd<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -506,7 +506,7 @@ impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Odd<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Real> gx::DivBy<Phasor<(), T>> for Multivector<S, T> {
-    type Output = <Self as gx::Gp<Even<(), T>>>::Output;
+    type Output = <Self as gx::Gp<Phasor<(), T>>>::Output;
     #[inline(always)]
     fn div_by(self, rhs: Phasor<(), T>) -> Self::Output {
         gx::Gp::gp(self, rhs.inverse())
@@ -1277,47 +1277,47 @@ impl<S: gx::Slots, T: gx::Coef> gx::Undual for Pseudoscalar<S, T> {
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::Reverse for Phasor<S, T> {
-    type Output = Even<S, T>;
+    type Output = Phasor<S, T>;
     #[inline]
-    fn reverse(self) -> Even<S, T> {
+    fn reverse(self) -> Phasor<S, T> {
         let a = self.c;
-        Even { c: [a[0], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1]] }
+        Phasor { c: [a[0], a[1]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::Involute for Phasor<S, T> {
-    type Output = Even<S, T>;
+    type Output = Phasor<S, T>;
     #[inline]
-    fn involute(self) -> Even<S, T> {
+    fn involute(self) -> Phasor<S, T> {
         let a = self.c;
-        Even { c: [a[0], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1]] }
+        Phasor { c: [a[0], a[1]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::Conjugate for Phasor<S, T> {
-    type Output = Even<S, T>;
+    type Output = Phasor<S, T>;
     #[inline]
-    fn conjugate(self) -> Even<S, T> {
+    fn conjugate(self) -> Phasor<S, T> {
         let a = self.c;
-        Even { c: [a[0], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[1]] }
+        Phasor { c: [a[0], a[1]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::Dual for Phasor<S, T> {
-    type Output = Even<S, T>;
+    type Output = Phasor<S, T>;
     #[inline]
-    fn dual(self) -> Even<S, T> {
+    fn dual(self) -> Phasor<S, T> {
         let a = self.c;
-        Even { c: [a[1], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[0]] }
+        Phasor { c: [a[1], a[0]] }
     }
 }
 
 impl<S: gx::Slots, T: gx::Coef> gx::Undual for Phasor<S, T> {
-    type Output = Even<S, T>;
+    type Output = Phasor<S, T>;
     #[inline]
-    fn undual(self) -> Even<S, T> {
+    fn undual(self) -> Phasor<S, T> {
         let a = self.c;
-        Even { c: [a[1], S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), S::from_flat(&mut |_| T::zero(), 0), a[0]] }
+        Phasor { c: [a[1], a[0]] }
     }
 }
 

@@ -102,24 +102,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Phasor<S2, T>> for Scalar<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn wedge(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn wedge(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 1)).0,
             ],
         }
@@ -765,24 +759,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Multivector<S2, T>> fo
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Scalar<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn wedge(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn wedge(self, rhs: Scalar<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(1, 0)).0,
             ],
         }
@@ -873,24 +861,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Pseudoscalar<S2, T>> f
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Wedge<Phasor<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn wedge(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn wedge(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 3 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Wedge::wedge(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((p(0, 1) + p(1, 0))).0,
             ],
         }

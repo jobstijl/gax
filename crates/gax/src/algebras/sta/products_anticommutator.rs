@@ -102,24 +102,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Phasor<S2, T>> for Scalar<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 1)).0,
             ],
         }
@@ -441,24 +435,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Vector<S2, T>
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Bivector<S2, T>> for Bivector<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Bivector<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Bivector<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 12 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 ((((p(0, 0) + p(1, 1)) + p(2, 2)) - ((p(3, 3) + p(4, 4)) + p(5, 5)))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (-(((p(0, 3) + p(1, 4)) + p(2, 5)) + ((p(3, 0) + p(4, 1)) + p(5, 2)))).0,
             ],
         }
@@ -862,24 +850,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Phasor<S2, T>> for Pseudoscalar<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (-p(0, 1)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
             ],
         }
@@ -937,24 +919,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Multivector<S
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Scalar<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Scalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Scalar<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (p(0, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(1, 0)).0,
             ],
         }
@@ -1027,24 +1003,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Trivector<S2,
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Pseudoscalar<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 2 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 (-p(1, 0)).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 (p(0, 0)).0,
             ],
         }
@@ -1052,24 +1022,18 @@ impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Pseudoscalar<
 }
 
 impl<S1: gx::Slots, S2: gx::Slots, T: gx::Coef> gx::Anticommutator<Phasor<S2, T>> for Phasor<S1, T> {
-    type Output = Even<gx::Cat<S1, S2>, T>;
+    type Output = Phasor<gx::Cat<S1, S2>, T>;
     #[inline(always)]
-    fn anticommutator(self, rhs: Phasor<S2, T>) -> Even<gx::Cat<S1, S2>, T> {
+    fn anticommutator(self, rhs: Phasor<S2, T>) -> Phasor<gx::Cat<S1, S2>, T> {
         if const { <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > 1 && 4 * <S1 as gx::Slots>::SIZE * <S2 as gx::Slots>::SIZE > gx::slots::SLOT_UNROLL_MAX } {
             return gx::slots::by_entries(&self, &rhs, |x, y| gx::Anticommutator::anticommutator(x, y));
         }
         let a = self.c.map(gx::SlotArr::<S1, T>);
         let b = rhs.c.map(gx::SlotArr::<S2, T>);
         let p = move |i: usize, j: usize| a[i] * b[j];
-        Even {
+        Phasor {
             c: [
                 ((p(0, 0) - p(1, 1))).0,
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
-                <gx::Cat<S1, S2> as gx::Slots>::from_flat(&mut |_| T::zero(), 0),
                 ((p(0, 1) + p(1, 0))).0,
             ],
         }

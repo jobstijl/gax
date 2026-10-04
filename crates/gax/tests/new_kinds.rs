@@ -19,7 +19,7 @@ fn phasor_exp_is_the_series() {
     let series = |x: Phasor<(), f64>| {
         let (mut term, mut sum) = (Phasor::new(1.0, 0.0), Phasor::new(1.0, 0.0));
         for k in 1..40 {
-            term = (term * x).cast::<Phasor>().gp(1.0 / f64::from(k));
+            term = (term * x).gp(1.0 / f64::from(k));
             sum += term;
         }
         sum

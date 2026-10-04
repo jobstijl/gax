@@ -1403,6 +1403,10 @@ mod tests {
     /// `study_q` for `f = exp`, whose answer is known in closed form: `f0 = eᵃ cosh √q` and
     /// `f1 = eᵃ sinh √q / √q` (cos and sin for `q < 0`), across the small-`q` switch.
     #[test]
+    #[cfg_attr(
+        miri,
+        ignore = "miri perturbs std's float functions by a few ulp on purpose"
+    )]
     fn study_q_is_accurate_for_every_q() {
         let exp = |x: Dual<Cx<f64>>| x.cosh() + x.sinh();
         for a in [-0.7, 0.0, 0.3, 1.2] {
