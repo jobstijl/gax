@@ -30,15 +30,8 @@ const MIN_PIECE_AREA: f32 = 8.0;
 /// The origin of the plane.
 const ORIGIN: Point = Point::new(0.0, 0.0, 1.0);
 
-/// A velocity (or any vector) as a direction, an ideal point.
-fn dir(v: [f32; 2]) -> Point {
-    Point::direction(v[0], v[1])
-}
-
-/// A direction's components.
-fn xy(d: Point) -> [f32; 2] {
-    [d.e20(), d.e01()]
-}
+/// The ship's nose, in its body frame: forwards.
+const FORWARDS: Point = Point::new(0.0, 1.0, 0.0);
 
 /// The direction of `length` at `angle` from the x axis: `(length, 0)` turned by a rotation.
 fn polar(length: f32, angle: f32) -> Point {
@@ -64,18 +57,18 @@ pub struct Input {
 pub struct Body {
     /// Body to world.
     pub pose: Unit<Motor>,
-    /// World velocity.
-    pub vel: [f32; 2],
+    /// World velocity: a direction.
+    pub vel: Point,
     /// Angular velocity, counterclockwise, rad/s.
     pub spin: f32,
 }
 
 impl Body {
-    /// A body at `(x, y)`, turned by `angle`, at rest.
-    pub fn at(x: f32, y: f32, angle: f32) -> Body {
+    /// A body at `p`, turned by `angle`, at rest.
+    pub fn at(p: Point, angle: f32) -> Body {
         Body {
-            pose: Motor::translation(x, y) * Motor::rotation(ORIGIN, angle),
-            vel: [0.0, 0.0],
+            pose: Motor::between(ORIGIN, p) * Motor::rotation(ORIGIN, angle),
+            vel: Point::direction(0.0, 0.0),
             spin: 0.0,
         }
     }
@@ -83,39 +76,33 @@ impl Body {
     /// Advance by `dt`: translate in the world frame, spin in the body frame, wrap around.
     pub fn step(&mut self, dt: f32) {
         // The twists (bivectors: in PGA2D, points) of the velocities; exp(t B) moves for time t.
-        let travel = Point::translation_twist(self.vel[0], self.vel[1])
-            .gp(dt)
-            .exp();
+        let travel = self.translation_twist().gp(dt).exp();
         let turn = Point::rotation_twist(ORIGIN, self.spin).gp(dt).exp();
         self.pose = travel * self.pose * turn;
-        let [x, y] = self.position();
-        let wrap = |p: f32, size: f32| {
-            if p > size / 2.0 {
-                -size
-            } else if p < -size / 2.0 {
-                size
-            } else {
-                0.0
-            }
-        };
-        let (dx, dy) = (wrap(x, WORLD[0]), wrap(y, WORLD[1]));
-        if dx != 0.0 || dy != 0.0 {
-            self.pose = Motor::translation(dx, dy) * self.pose;
+        // Across an edge: carried to the other side, a world's width or height away.
+        let p = self.position();
+        let wrapped = wrap(p);
+        if !near(p, wrapped, 1.0) {
+            self.pose = Motor::between(p, wrapped) * self.pose;
         }
         // Keep the motor unit despite rounding (one Newton step, no square root).
         self.pose = self.pose.renormalize_fast();
     }
 
     /// The body's origin in the world.
-    pub fn position(&self) -> [f32; 2] {
-        (self.pose >> ORIGIN).to_euclidean()
+    pub fn position(&self) -> Point {
+        self.pose >> ORIGIN
+    }
+
+    /// The twist of a translation at `vel`.
+    fn translation_twist(&self) -> Point {
+        Point::translation_twist(self.vel.e20(), self.vel.e01())
     }
 
     /// The world twist of its motion: a translation at `vel` plus a turn at `spin` about its
     /// origin. Twists add.
     pub fn twist(&self) -> Point {
-        Point::translation_twist(self.vel[0], self.vel[1])
-            + Point::rotation_twist(self.pose >> ORIGIN, self.spin)
+        self.translation_twist() + Point::rotation_twist(self.position(), self.spin)
     }
 
     /// The world velocity of the body's point at `p` (a unit point): the rate of `exp(t B) p
@@ -124,10 +111,9 @@ impl Body {
         self.twist().commutator(p).gp(2.0)
     }
 
-    /// A body direction (such as forwards, `(0, 1)`) in the world.
-    pub fn direction(&self, d: [f32; 2]) -> [f32; 2] {
-        let p = self.pose >> Point::direction(d[0], d[1]);
-        [p.e20(), p.e01()]
+    /// A body direction (such as [`FORWARDS`]) in the world.
+    pub fn direction(&self, d: Point) -> Point {
+        self.pose >> d
     }
 }
 
@@ -163,8 +149,7 @@ impl Shape {
     /// spins about it), and that centre in the old coordinates.
     fn centred(points: &[Point]) -> (Shape, Point) {
         let c = Moments::<f32>::of_polygon(points).centroid();
-        let [x, y] = c.to_euclidean();
-        let back = Motor::translation(-x, -y);
+        let back = Motor::between(c, ORIGIN);
         (Shape::new(points.iter().map(|&p| back >> p).collect()), c)
     }
 
@@ -225,7 +210,7 @@ pub struct Asteroid {
 }
 
 impl Asteroid {
-    fn random(rng: &mut Rng, x: f32, y: f32, size: u8) -> Asteroid {
+    fn random(rng: &mut Rng, at: Point, size: u8) -> Asteroid {
         let r = 3.5 * f32::from(size);
         let n = 7 + usize::from(size) * 2;
         let points: Vec<Point> = (0..n)
@@ -235,10 +220,10 @@ impl Asteroid {
                 Motor::rotation(ORIGIN, a) >> Point::xy(d, 0.0)
             })
             .collect();
-        let mut body = Body::at(x, y, rng.random_range(0.0..std::f32::consts::TAU));
+        let mut body = Body::at(at, rng.random_range(0.0..std::f32::consts::TAU));
         let speed = rng.random_range(4.0..14.0) * (4.0 - f32::from(size)) / 2.0;
         let heading = rng.random_range(0.0..std::f32::consts::TAU);
-        body.vel = xy(polar(speed, heading));
+        body.vel = polar(speed, heading);
         body.spin = rng.random_range(-1.2..1.2);
         Asteroid {
             body,
@@ -247,22 +232,22 @@ impl Asteroid {
         }
     }
 
-    /// The pieces of this rock when a bullet at `hit` with velocity `bullet` strikes it. The
+    /// The pieces of this rock when a bullet at `hit` with velocity `bullet` (a direction)
+    /// strikes it. The
     /// bullet's momentum first knocks the rock (through its mass and, about its centre of
     /// mass, its inertia); then the rock is cut along the bullet's path, and each piece keeps
     /// the rock's rigid motion at its own centre of mass, the two pushed apart with equal and
     /// opposite momentum. Small rocks and slivers turn to dust.
-    pub fn shatter(&self, hit: [f32; 2], bullet: [f32; 2]) -> Vec<Asteroid> {
+    pub fn shatter(&self, hit: Point, bullet: Point) -> Vec<Asteroid> {
         if self.size <= 1 {
             return Vec::new();
         }
         let (pose, shape) = (self.body.pose, &self.shape);
-        let (hit, bullet) = (Point::xy(hit[0], hit[1]), dir(bullet));
         // The knock: Δv = J / m, and Δω the moment of the impulse about the centre of mass over
         // the inertia. The moment is the join of the impulse's line, `hit & J`, with the centre.
         let j = bullet.gp(BULLET_MASS);
         let mut knocked = self.body;
-        knocked.vel = xy(dir(self.body.vel) + j.gp(shape.mass.recip()));
+        knocked.vel += j.gp(shape.mass.recip());
         knocked.spin += ((hit & j) & (pose >> ORIGIN)).s() / shape.inertia;
         // The cut, in body coordinates: the line through the hit along the bullet.
         let path = (pose << hit) & (pose << bullet);
@@ -278,14 +263,13 @@ impl Asteroid {
                 if piece.area() < MIN_PIECE_AREA {
                     return None;
                 }
-                let [ox, oy] = centre.to_euclidean();
                 let mut body = knocked;
-                body.pose = pose * Motor::translation(ox, oy);
+                body.pose = pose * Motor::between(ORIGIN, centre);
                 // The knocked rock's velocity at the piece's centre, plus the push apart, away
                 // from the cut on the piece's side of it.
                 let at = body.pose >> ORIGIN;
                 let push = (line & at).s().signum() * SPLIT_MOMENTUM / piece.mass;
-                body.vel = xy(knocked.velocity_at(at) + normal.gp(push));
+                body.vel = knocked.velocity_at(at) + normal.gp(push);
                 let size = (self.size - 1).min(if piece.area() >= 60.0 { 2 } else { 1 });
                 Some(Asteroid {
                     body,
@@ -301,9 +285,9 @@ impl Asteroid {
 #[derive(Clone, Copy, Debug)]
 pub struct Bullet {
     /// Position.
-    pub pos: [f32; 2],
-    /// Velocity.
-    pub vel: [f32; 2],
+    pub pos: Point,
+    /// Velocity: a direction.
+    pub vel: Point,
     /// Seconds left.
     pub life: f32,
 }
@@ -312,9 +296,9 @@ pub struct Bullet {
 #[derive(Clone, Copy, Debug)]
 pub struct Spark {
     /// Position.
-    pub pos: [f32; 2],
-    /// Velocity.
-    pub vel: [f32; 2],
+    pub pos: Point,
+    /// Velocity: a direction.
+    pub vel: Point,
     /// Seconds left.
     pub life: f32,
 }
@@ -353,7 +337,7 @@ impl Game {
     /// A new game.
     pub fn new(seed: u64) -> Game {
         let mut g = Game {
-            ship: Body::at(0.0, 0.0, 0.0),
+            ship: Body::at(ORIGIN, 0.0),
             ship_shape: Shape::new(vec![
                 Point::xy(0.0, 3.0),
                 Point::xy(-1.8, -2.0),
@@ -381,25 +365,26 @@ impl Game {
         self.wave += 1;
         for _ in 0..(2 + self.wave).min(9) {
             // Spawn away from the ship.
-            let (x, y) = loop {
+            let at = loop {
                 let x = self.rng.random_range(-WORLD[0] / 2.0..WORLD[0] / 2.0);
                 let y = self.rng.random_range(-WORLD[1] / 2.0..WORLD[1] / 2.0);
-                if !near([x, y], self.ship.position(), 30.0) {
-                    break (x, y);
+                let p = Point::xy(x, y);
+                if !near(p, self.ship.position(), 30.0) {
+                    break p;
                 }
             };
-            let a = Asteroid::random(&mut self.rng, x, y, 3);
+            let a = Asteroid::random(&mut self.rng, at, 3);
             self.asteroids.push(a);
         }
     }
 
-    fn explode(&mut self, at: [f32; 2], n: usize, speed: f32) {
+    fn explode(&mut self, at: Point, n: usize, speed: f32) {
         for _ in 0..n {
             let a = self.rng.random_range(0.0..std::f32::consts::TAU);
             let s = self.rng.random_range(0.2..1.0) * speed;
             self.sparks.push(Spark {
                 pos: at,
-                vel: xy(polar(s, a)),
+                vel: polar(s, a),
                 life: self.rng.random_range(0.3..0.9),
             });
         }
@@ -415,12 +400,10 @@ impl Game {
         self.ship.spin = turn * SHIP_TURN;
         self.thrusting = input.thrust;
         if input.thrust {
-            let f = self.ship.direction([0.0, 1.0]);
-            self.ship.vel[0] += f[0] * SHIP_THRUST * dt;
-            self.ship.vel[1] += f[1] * SHIP_THRUST * dt;
+            self.ship.vel += self.ship.direction(FORWARDS).gp(SHIP_THRUST * dt);
         }
         let keep = (1.0 - SHIP_DRAG * dt).max(0.0);
-        self.ship.vel = self.ship.vel.map(|v| v * keep);
+        self.ship.vel = self.ship.vel.gp(keep);
         self.ship.step(dt);
         self.shield = (self.shield - dt).max(0.0);
 
@@ -428,24 +411,20 @@ impl Game {
         self.cooldown -= dt;
         if input.fire && self.cooldown <= 0.0 {
             self.cooldown = FIRE_DELAY;
-            let nose = (self.ship.pose >> Point::xy(0.0, 3.0)).to_euclidean();
-            let f = self.ship.direction([0.0, 1.0]);
+            let nose = self.ship.pose >> Point::xy(0.0, 3.0);
             self.bullets.push(Bullet {
                 pos: nose,
-                vel: [
-                    self.ship.vel[0] + f[0] * BULLET_SPEED,
-                    self.ship.vel[1] + f[1] * BULLET_SPEED,
-                ],
+                vel: self.ship.vel + self.ship.direction(FORWARDS).gp(BULLET_SPEED),
                 life: BULLET_LIFE,
             });
         }
         for b in &mut self.bullets {
-            b.pos = wrap([b.pos[0] + b.vel[0] * dt, b.pos[1] + b.vel[1] * dt]);
+            b.pos = wrap(b.pos + b.vel.gp(dt));
             b.life -= dt;
         }
         self.bullets.retain(|b| b.life > 0.0);
         for s in &mut self.sparks {
-            s.pos = [s.pos[0] + s.vel[0] * dt, s.pos[1] + s.vel[1] * dt];
+            s.pos += s.vel.gp(dt);
             s.life -= dt;
         }
         self.sparks.retain(|s| s.life > 0.0);
@@ -465,12 +444,11 @@ impl Game {
         let [placed, ship] = &mut self.scratch;
         for (i, a) in self.asteroids.iter().enumerate() {
             let c = a.body.position();
-            let center = Point::xy(c[0], c[1]);
             a.shape.placed(a.body.pose, placed);
-            let hit = self.bullets.iter().position(|b| {
-                near(c, b.pos, a.shape.radius)
-                    && contains(placed, center, Point::xy(b.pos[0], b.pos[1]))
-            });
+            let hit = self
+                .bullets
+                .iter()
+                .position(|b| near(c, b.pos, a.shape.radius) && contains(placed, c, b.pos));
             if let Some(j) = hit {
                 let b = self.bullets.swap_remove(j);
                 split.push((i, b));
@@ -481,16 +459,14 @@ impl Game {
         if self.shield <= 0.0 {
             self.ship_shape.placed(self.ship.pose, ship);
             let sc = self.ship.position();
-            let ship_center = Point::xy(sc[0], sc[1]);
             for a in &self.asteroids {
                 let c = a.body.position();
                 if !near(c, sc, a.shape.radius + self.ship_shape.radius) {
                     continue;
                 }
                 a.shape.placed(a.body.pose, placed);
-                let center = Point::xy(c[0], c[1]);
-                if ship.iter().any(|&p| contains(placed, center, p))
-                    || placed.iter().any(|&p| contains(ship, ship_center, p))
+                if ship.iter().any(|&p| contains(placed, c, p))
+                    || placed.iter().any(|&p| contains(ship, sc, p))
                 {
                     crashed = true;
                     break;
@@ -508,7 +484,7 @@ impl Game {
             self.explode(at, 30, 35.0);
             if self.lives > 1 {
                 self.lives -= 1;
-                self.ship = Body::at(0.0, 0.0, 0.0);
+                self.ship = Body::at(ORIGIN, 0.0);
                 self.shield = INVULNERABLE;
             } else {
                 self.lives = 0;
@@ -518,50 +494,55 @@ impl Game {
     }
 }
 
-/// Whether `a` and `b` are within `r`: the norm of their join is their distance.
-fn near(a: [f32; 2], b: [f32; 2], r: f32) -> bool {
-    (Point::xy(a[0], a[1]) & Point::xy(b[0], b[1])).norm() <= r
+/// Whether the unit points `a` and `b` are within `r`: the norm of their join is their
+/// distance.
+fn near(a: Point, b: Point, r: f32) -> bool {
+    (a & b).norm() <= r
 }
 
-fn wrap(p: [f32; 2]) -> [f32; 2] {
+/// `p` wrapped into the world (a torus): its coordinates taken modulo the world's size.
+fn wrap(p: Point) -> Point {
+    let [x, y] = p.to_euclidean();
     let w = |x: f32, s: f32| (x + s / 2.0).rem_euclid(s) - s / 2.0;
-    [w(p[0], WORLD[0]), w(p[1], WORLD[1])]
+    Point::xy(w(x, WORLD[0]), w(y, WORLD[1]))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn close(a: [f32; 2], b: [f32; 2]) -> bool {
-        (a[0] - b[0]).abs() < 1e-4 && (a[1] - b[1]).abs() < 1e-4
+    /// Points (or directions) with the same coefficients, to rounding.
+    fn close(a: Point, b: Point) -> bool {
+        a.c.iter().zip(b.c).all(|(x, y)| (x - y).abs() < 1e-4)
     }
 
     #[test]
     fn twists_move_as_intended() {
         // Translation twist: after 2 s at (3, -1) the origin is at (6, -2).
-        let mut b = Body::at(0.0, 0.0, 0.0);
-        b.vel = [3.0, -1.0];
+        let mut b = Body::at(ORIGIN, 0.0);
+        b.vel = Point::direction(3.0, -1.0);
         b.step(2.0);
-        assert!(close(b.position(), [6.0, -2.0]), "{:?}", b.position());
+        assert!(
+            close(b.position(), Point::xy(6.0, -2.0)),
+            "{:?}",
+            b.position()
+        );
         // Rotation twist: a quarter turn counterclockwise takes the nose (0, 1) to (-1, 0).
-        let mut b = Body::at(5.0, 5.0, 0.0);
+        let mut b = Body::at(Point::xy(5.0, 5.0), 0.0);
         b.spin = std::f32::consts::FRAC_PI_2;
         b.step(1.0);
-        assert!(
-            close(b.direction([0.0, 1.0]), [-1.0, 0.0]),
-            "{:?}",
-            b.direction([0.0, 1.0])
-        );
-        assert!(close(b.position(), [5.0, 5.0]));
+        let nose = b.direction(FORWARDS);
+        assert!(close(nose, Point::direction(-1.0, 0.0)), "{nose:?}");
+        assert!(close(b.position(), Point::xy(5.0, 5.0)));
     }
 
     #[test]
     fn bodies_wrap_around_the_world() {
-        let mut b = Body::at(WORLD[0] / 2.0 - 1.0, 0.0, 0.0);
-        b.vel = [2.0, 0.0];
+        let mut b = Body::at(Point::xy(WORLD[0] / 2.0 - 1.0, 0.0), 0.0);
+        b.vel = Point::direction(2.0, 0.0);
         b.step(1.0);
         assert!(
-            close(b.position(), [-WORLD[0] / 2.0 + 1.0, 0.0]),
+            close(b.position(), Point::xy(-WORLD[0] / 2.0 + 1.0, 0.0)),
             "{:?}",
             b.position()
         );
@@ -591,15 +572,15 @@ mod tests {
         let pose = Motor::translation(2.0, 3.0)
             * Motor::rotation(Point::xy(0.0, 0.0), std::f32::consts::FRAC_PI_2);
         shape.placed(pose, &mut out);
-        assert!(close(out[0].to_euclidean(), [2.0, 4.0]));
-        assert!(close(out[1].to_euclidean(), [1.0, 3.0]));
+        assert!(close(out[0], Point::xy(2.0, 4.0)));
+        assert!(close(out[1], Point::xy(1.0, 3.0)));
     }
 
     #[test]
     fn a_shot_splits_an_asteroid() {
         let mut g = Game::new(1);
         g.asteroids.truncate(1);
-        g.asteroids[0].body = Body::at(0.0, 20.0, 0.0);
+        g.asteroids[0].body = Body::at(Point::xy(0.0, 20.0), 0.0);
         let before = g.score;
         // Fire straight up until the rock breaks.
         for _ in 0..120 {
@@ -624,35 +605,34 @@ mod tests {
     fn shattering_conserves_area_and_momentum() {
         let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(3);
         for k in 0..50 {
-            let mut rock = Asteroid::random(&mut rng, 5.0, -3.0, 3);
+            let mut rock = Asteroid::random(&mut rng, Point::xy(5.0, -3.0), 3);
             rock.body.spin = 0.7;
             let c = rock.body.position();
             // A bullet through a point near the centre, from below.
-            let hit = [
-                c[0] + rng.random_range(-2.0..2.0),
-                c[1] + rng.random_range(-2.0..2.0),
-            ];
-            let bullet = [rng.random_range(-20.0..20.0), 70.0];
+            let (dx, dy) = (rng.random_range(-2.0..2.0), rng.random_range(-2.0..2.0));
+            let hit = c + Point::direction(dx, dy);
+            let bullet = Point::direction(rng.random_range(-20.0..20.0), 70.0);
             let pieces = rock.shatter(hit, bullet);
             assert_eq!(pieces.len(), 2, "rock {k}");
             let area: f32 = pieces.iter().map(|p| p.shape.area()).sum();
             assert!((area - rock.shape.area()).abs() < 1e-3 * rock.shape.area());
-            let before = [
-                rock.shape.mass * rock.body.vel[0] + BULLET_MASS * bullet[0],
-                rock.shape.mass * rock.body.vel[1] + BULLET_MASS * bullet[1],
-            ];
-            for (i, want) in before.iter().enumerate() {
-                let after: f32 = pieces.iter().map(|p| p.shape.mass * p.body.vel[i]).sum();
-                assert!(
-                    (after - want).abs() < 1e-3 * want.abs().max(100.0),
-                    "{after} vs {want}"
-                );
-            }
-            // Apart: the relative velocity points from one centre to the other.
+            // Momenta are directions; they add.
+            let before = rock.body.vel.gp(rock.shape.mass) + bullet.gp(BULLET_MASS);
+            let after = pieces.iter().fold(Point::direction(0.0, 0.0), |sum, p| {
+                sum + p.body.vel.gp(p.shape.mass)
+            });
+            assert!(
+                (after - before).ideal_norm() < 1e-3 * before.ideal_norm().max(100.0),
+                "{after:?} vs {before:?}"
+            );
+            // Apart: a moment later the centres are farther from each other.
             let (a, b) = (pieces[0].body.position(), pieces[1].body.position());
             let (va, vb) = (pieces[0].body.vel, pieces[1].body.vel);
-            let separating = (b[0] - a[0]) * (vb[0] - va[0]) + (b[1] - a[1]) * (vb[1] - va[1]);
-            assert!(separating > 0.0, "rock {k}: the pieces close in");
+            let later = (a + va.gp(0.01)) & (b + vb.gp(0.01));
+            assert!(
+                later.norm() > (a & b).norm(),
+                "rock {k}: the pieces close in"
+            );
         }
     }
 
@@ -680,9 +660,9 @@ mod tests {
     fn an_off_centre_knock_spins_the_rock_the_right_way() {
         // A shot up along x = 2, right of the centre: r x J = 2 J > 0, counterclockwise.
         let mut rng = <Rng as rand::SeedableRng>::seed_from_u64(3);
-        let rock = Asteroid::random(&mut rng, 0.0, 0.0, 3);
+        let rock = Asteroid::random(&mut rng, ORIGIN, 3);
         let c = rock.body.position();
-        let pieces = rock.shatter([c[0] + 2.0, c[1]], [0.0, 50.0]);
+        let pieces = rock.shatter(c + Point::direction(2.0, 0.0), Point::direction(0.0, 50.0));
         assert!(!pieces.is_empty());
         for p in &pieces {
             let want = rock.body.spin + 2.0 * BULLET_MASS * 50.0 / rock.shape.inertia;

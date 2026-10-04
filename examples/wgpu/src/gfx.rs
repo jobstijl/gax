@@ -5,7 +5,7 @@
 //! pool), and `draw` records a frame into any colour target (a window or an offscreen texture).
 
 use bytemuck::{Pod, Zeroable};
-use gax::pga2d::{MotorGpu, PointGpu};
+use gax::pga2d::{MotorGpu, Point, PointGpu};
 use wgpu::util::DeviceExt;
 
 /// The WGSL shaders, linked by `build.rs` against `gax::wgsl`'s modules.
@@ -88,8 +88,13 @@ pub struct Gfx {
     instances: Option<(wgpu::Buffer, usize)>,
 }
 
-/// A triangle pointing along the local x axis: a ship.
-const SHIP: [[f32; 2]; 3] = [[0.35, 0.0], [-0.25, 0.2], [-0.25, -0.2]];
+/// A triangle pointing along the local x axis: a ship (`Point::new(x, y, 1)` is the point
+/// `(x, y)`).
+const SHIP: [Point<(), f32>; 3] = [
+    Point::new(0.35, 0.0, 1.0),
+    Point::new(-0.25, 0.2, 1.0),
+    Point::new(-0.25, -0.2, 1.0),
+];
 
 impl Gfx {
     /// Build the pipelines for colour format `format`.
@@ -109,7 +114,7 @@ impl Gfx {
         });
         let corners = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("ship corners"),
-            contents: bytemuck::cast_slice(&SHIP),
+            contents: bytemuck::cast_slice(&SHIP.map(PointGpu::from)),
             usage: wgpu::BufferUsages::VERTEX,
         });
         let target = [Some(wgpu::ColorTargetState {
@@ -125,9 +130,9 @@ impl Gfx {
             write_mask: wgpu::ColorWrites::ALL,
         })];
         let corner_layout = wgpu::VertexBufferLayout {
-            array_stride: 8,
+            array_stride: size_of::<PointGpu>() as u64,
             step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+            attributes: &wgpu::vertex_attr_array![0 => Float32x4],
         };
         let pipeline = |label,
                         m: &wgpu::ShaderModule,
