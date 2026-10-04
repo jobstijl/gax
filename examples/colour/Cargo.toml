@@ -11,7 +11,7 @@ publish = false
 [workspace]
 
 [dependencies]
-gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga3d"] }
+gax = { path = "../../crates/gax", default-features = false, features = ["std", "pga2d", "pga3d"] }
 
 [features]
 ## Conversions to and from gax's GPU layouts (`PointGpu`).

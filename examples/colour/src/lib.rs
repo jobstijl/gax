@@ -25,6 +25,14 @@
 //!   axis, which keeps lightness and chroma;
 //! * mixing around the axis ([`Colour::mix_hue`]) is all three at once.
 //!
+//! **HSV, HSL and HWB** ([`Hsv`], [`Hsl`], [`Hwb`]) are the pickers' piecewise models of the
+//! sRGB cube, exact and constructed in it: value and whiteness are meets of rays with the cube's
+//! faces, and hue is the position on the hexagon of its saturated edges ([`models`]).
+//!
+//! **Chromaticity is a projective plane**: the colour's ray from black in XYZ meets the plane
+//! `X + Y + Z = 1` at its chromaticity, and colour temperature lives there ([`chromaticity`]:
+//! black bodies on the Planckian locus, the correlated temperature through McCamy's epicentre).
+//!
 //! **Luminance and gamut are planes** in linear sRGB: the relative luminance is the pairing with
 //! the plane of luminance weights, and the sRGB gamut is the unit cube, inside six planes; a
 //! colour is brought into it where the segment from its grey meets the faces
@@ -57,18 +65,24 @@
 //! assert!(sunset.at(0.25).to_gamut().in_gamut());
 //! ```
 
+pub mod any;
+pub mod chromaticity;
 pub mod colour;
 pub mod gamut;
 pub mod gradient;
 pub mod light;
+pub mod models;
 pub mod ops;
 pub mod palettes;
 pub mod space;
 pub mod srgb;
 
+pub use any::AnyColour;
+pub use chromaticity::Chromaticity;
 pub use colour::{Colour, Lab, LinearRgb, Oklab, Srgb, Xyz};
 pub use gradient::{ColourRange, Gradient};
 pub use light::{DARK, Light, light};
+pub use models::{Hsl, Hsv, Hwb};
 pub use space::Space;
 pub use srgb::{HexError, hex};
 
@@ -297,5 +311,90 @@ mod tests {
         let bright = LinearRgb::rgb(1.0, 1.0, 1.0).faded(16.0).agx(1.0);
         // The tonemapper works on radiance, the raw coordinates.
         assert!(bright.point().e032() > 0.9, "{bright:?}");
+    }
+
+    /// HSV, HSL and HWB match their textbook definitions (on the channels) and convert back.
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn the_pickers_models_are_the_textbook_ones() {
+        let tau = core::f32::consts::TAU;
+        for (r, g, b) in [
+            (1.0, 0.0, 0.0),
+            (0.9, 0.6, 0.2),
+            (0.2, 0.7, 0.4),
+            (0.1, 0.3, 0.8),
+            (0.7, 0.2, 0.6),
+            (0.5, 0.5, 0.5),
+            (0.95, 0.9, 0.3),
+        ] {
+            let c = Srgb::rgb(r, g, b);
+            let (max, min) = (r.max(g).max(b), r.min(g).min(b));
+            let chroma = max - min;
+            // The textbook hue, in sixths of a turn.
+            let sixth = if chroma == 0.0 {
+                0.0
+            } else if max == r {
+                ((g - b) / chroma).rem_euclid(6.0)
+            } else if max == g {
+                (b - r) / chroma + 2.0
+            } else {
+                (r - g) / chroma + 4.0
+            };
+            let hsv = Hsv::from(c);
+            assert!((hsv.value - max).abs() < 1e-5, "{c:?} {hsv:?}");
+            assert!((hsv.hue - sixth / 6.0 * tau).abs() < 1e-4, "{c:?} {hsv:?}");
+            let s = if max > 0.0 { chroma / max } else { 0.0 };
+            assert!((hsv.saturation - s).abs() < 1e-5, "{c:?} {hsv:?}");
+            let hwb = Hwb::from(c);
+            assert!(
+                (hwb.whiteness - min).abs() < 1e-5 && (hwb.blackness - (1.0 - max)).abs() < 1e-5
+            );
+            let hsl = Hsl::from(c);
+            assert!((hsl.lightness - (max + min) / 2.0).abs() < 1e-5);
+            for back in [Srgb::from(hsv), Srgb::from(hsl), Srgb::from(hwb)] {
+                assert!(near(back, c, 1e-4), "{c:?} -> {back:?}");
+            }
+        }
+    }
+
+    /// Chromaticity is the ray's meet with the unit plane: D65 white sits at its published
+    /// point, a colour and its dilations share it, and it gives the colour back with its
+    /// luminance. Black bodies run from orange to blue, and McCamy reads their temperature.
+    #[test]
+    fn chromaticity_and_temperature() {
+        let white = Srgb::rgb(1.0, 1.0, 1.0);
+        let xy = white.chromaticity().unwrap().to_euclidean();
+        assert!(
+            close([xy[0], xy[1], 0.0], [0.3127, 0.3290, 0.0], 1e-3),
+            "{xy:?}"
+        );
+        let c = LinearRgb::rgb(0.6, 0.3, 0.1);
+        let dimmer = LinearRgb::rgb(0.3, 0.15, 0.05);
+        let (a, b) = (c.chromaticity().unwrap(), dimmer.chromaticity().unwrap());
+        assert!((a & b).norm() < 1e-6);
+        let back = Xyz::from_chromaticity(a, c.luminance());
+        assert!(near(back.to::<LinearRgb>(), c, 1e-5));
+        let warm = LinearRgb::from_temperature(2700.0, 1.0);
+        let cool = LinearRgb::from_temperature(9000.0, 1.0);
+        let [wr, _, wb] = coords(warm);
+        let [cr, _, cb] = coords(cool);
+        assert!(wr > wb && cb > cr, "{warm:?} {cool:?}");
+        for kelvin in [3000.0, 5000.0, 6500.0, 8000.0] {
+            let read = LinearRgb::from_temperature(kelvin, 1.0)
+                .temperature()
+                .unwrap();
+            assert!(
+                (read - kelvin).abs() < kelvin * 0.02,
+                "{kelvin} read as {read}"
+            );
+        }
+        assert!(Srgb::rgb(0.0, 0.0, 0.0).chromaticity().is_none());
+    }
+
+    #[test]
+    fn any_colour_converts_on_demand() {
+        let c = Srgb::rgb(0.2, 0.5, 0.9);
+        let any = AnyColour::from(Oklab::from(c));
+        assert!(near(any.to::<Srgb>(), c, 1e-4));
     }
 }

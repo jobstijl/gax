@@ -2,7 +2,6 @@
 //! pairing with a plane, and the gamut is the unit cube, bounded by six planes.
 
 use crate::colour::{Colour, LinearRgb};
-use crate::ops;
 use crate::space::Space;
 use gax::pga3d::{Plane, Point};
 
@@ -21,10 +20,10 @@ fn faces() -> [Plane<(), f32>; 6] {
 }
 
 impl<S: Space> Colour<S> {
-    /// The relative luminance (CIE `Y`, white 1): the pairing of the colour in linear sRGB with
-    /// the plane of luminance weights.
+    /// The relative luminance (CIE `Y`, white 1): the pairing of the colour in XYZ with the
+    /// plane `Y = 0`.
     pub fn luminance(self) -> f32 {
-        ops::luma(self.convert::<crate::space::LinearRgb>().unit())
+        (Plane::new(0.0, 1.0, 0.0, 0.0) & self.convert::<crate::space::Xyz>().unit()).s()
     }
 
     /// The same chromaticity at luminance `y`: in linear sRGB, the colour dilated about black.
