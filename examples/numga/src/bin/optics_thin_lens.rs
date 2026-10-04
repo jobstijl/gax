@@ -7,8 +7,9 @@
 //! because every element is a collineation.
 
 use gax::pga2d::{Line, Motor, Point};
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod optics {
@@ -179,9 +180,9 @@ mod optics {
 use optics::*;
 
 /// The bundle between two planes.
-fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Rgb) {
+fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Light) {
     for r in &leg.rays {
-        ax.line(c, *r ^ leg.start, *r ^ leg.stop, 1.2, color, 0.9);
+        ax.line(c, *r ^ leg.start, *r ^ leg.stop, 1.2, fade(color, 0.9));
     }
 }
 
@@ -189,7 +190,7 @@ fn rays(ax: &Axes, c: &mut Canvas, leg: &Leg, color: Rgb) {
 fn plane(ax: &Axes, c: &mut Canvas, plane: L, h: f64) {
     let a = plane ^ Line::new(0.0, 1.0, h);
     let b = plane ^ Line::new(0.0, 1.0, -h);
-    ax.line(c, a, b, 2.5, palette::grid(), 1.0);
+    ax.line(c, a, b, 2.5, palette::grid());
 }
 
 /// A ray's heading: the unit direction along a line (its point at infinity), flipped to the
@@ -206,11 +207,13 @@ fn heading(ray: L, plane: L, towards: f64) -> P {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let phase = f64::from(t) / 4.32 * core::f64::consts::TAU;
     // The train, animated, on the left.
+    let left = Rect::new(0.0, 0.0, w * 0.64, h);
     let ax = Axes::equal(
-        plot::inset([0.0, 0.0, w * 0.64, h], 20.0, 70.0, 10.0, 20.0),
+        left.inset(20.0, 70.0, 10.0, 20.0),
         Point::xy(1.7, 0.85),
         2.2,
     );
@@ -229,7 +232,7 @@ fn draw(c: &mut Canvas, t: f32) {
         let colour = palette::series(k);
         let mirror = k == planes.len() - 1;
         for (i, r) in legs[k].iter().enumerate() {
-            ax.line(c, start[i], *r ^ *pl, 1.3, colour, 0.9);
+            ax.line(c, start[i], *r ^ *pl, 1.3, fade(colour, 0.9));
             start[i] = (legs[k + 1][i] ^ *pl).unitized();
             // Through: on to the side it was heading; at the mirror: back.
             let side = (*pl & dir[i]).s();
@@ -238,10 +241,10 @@ fn draw(c: &mut Canvas, t: f32) {
         plane(&ax, c, *pl, 0.8);
     }
     for (s, d) in start.iter().zip(&dir) {
-        ax.line(c, *s, *s + d.gp(2.5), 1.3, palette::series(4), 0.9);
+        ax.line(c, *s, *s + d.gp(2.5), 1.3, fade(palette::series(4), 0.9));
     }
-    ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0), 1.0);
-    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow(), 1.0);
+    ax.scatter(c, &[subject], Marker::Dot, 9.0, palette::series(0));
+    ax.scatter(c, &[image], Marker::Star, 13.0, palette::yellow());
     caption(
         c,
         "THIN LENS: AN OPTICAL TRAIN AS ONE MAP ON LINES",
@@ -249,19 +252,16 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     // One lens and two lenses, still, on the right.
     let bench = lenses();
-    let right = [w * 0.64, 0.0, w, h];
+    // Below the caption, the right side in two halves, one above the other.
+    let right = Rect::new(w * 0.64, 60.0, w, h);
+    let half = Point2::direction(0.0, right.height() / 2.0);
     for (k, (legs, title)) in [(&bench.one, "ONE LENS"), (&bench.two, "TWO LENSES")]
         .into_iter()
         .enumerate()
     {
-        let top = right[1] + 60.0 + k as f32 * (h - 60.0) / 2.0;
-        let rect = plot::inset(
-            [right[0], top, right[2], top + (h - 60.0) / 2.0],
-            14.0,
-            24.0,
-            14.0,
-            14.0,
-        );
+        let lo = right.lo + half.gp(k as f32);
+        let hi = lo + Point2::direction(right.width(), 0.0) + half;
+        let rect = Rect { lo, hi }.inset(14.0, 24.0, 14.0, 14.0);
         let ax = Axes::equal(rect, Point::xy(0.4, 0.0), 1.1);
         for (i, leg) in legs.iter().enumerate() {
             rays(&ax, c, leg, palette::series(i + 1));
@@ -270,11 +270,11 @@ fn draw(c: &mut Canvas, t: f32) {
             plane(&ax, c, *pl, 1.0);
         }
         let mark = if k == 0 { bench.image } else { bench.focus };
-        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow(), 1.0);
+        ax.scatter(c, &[mark], Marker::Star, 11.0, palette::yellow());
         ax.text(
             c,
             // Just inside the top left corner of the data box.
-            Point::xy(ax.x[0] + 0.1, ax.y[1] - 0.25),
+            ax.at(0.0, 1.0) + Point2::direction(0.1, -0.25),
             title,
             11.0,
             palette::ink(),

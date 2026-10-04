@@ -9,9 +9,10 @@
 //! with each quadric's error ellipsoid drawn around its vertex.
 
 use gax::pga3d::{Motor, Plane, Point};
-use gax_numga_examples::canvas::{Rgb, srgb};
+use gax_light::{fade, srgb};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption, palette,
+    run,
 };
 
 mod qem {
@@ -127,16 +128,16 @@ fn lerp(a: P, b: P, t: f64) -> P {
 
 /// The face colours: blue for the flanking faces, red for the corner at a, purple for the ramp
 /// at b.
-fn face_colour(f: usize) -> Rgb {
+fn face_colour(f: usize) -> Light {
     let hex = [0x0ea5e9, 0x0284c7, 0xf43f5e, 0xe11d48, 0x8b5cf6, 0x7c3aed][f];
     let ch = |s: u32| ((hex >> s) & 0xff) as f32 / 255.0;
-    srgb(ch(16), ch(8), ch(0))
+    srgb(ch(16), ch(8), ch(0), 1.6)
 }
 
 /// A quadric's error ellipsoid about `centre`, as a wireframe: along each direction (the pole
 /// `z` tilted by `theta` towards `x`, then turned by `phi` about `z`), the radius at which the
 /// error reaches its level.
-fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Rgb) {
+fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Light) {
     let (n_theta, n_phi) = (17, 25);
     let pt = |i: usize, j: usize| {
         let theta = core::f64::consts::PI * i as f64 / (n_theta - 1) as f64;
@@ -148,11 +149,11 @@ fn ellipsoid(s: &mut Scene3, q: Quadric, centre: P, colour: Rgb) {
     };
     for i in 0..n_theta {
         let ring: Vec<P> = (0..n_phi).map(|j| pt(i, j)).collect();
-        s.polyline(&ring, 1.0, colour, 0.7);
+        s.polyline(&ring, 1.0, fade(colour, 0.45));
     }
     for j in 0..n_phi {
         let meridian: Vec<P> = (0..n_theta).map(|i| pt(i, j)).collect();
-        s.polyline(&meridian, 1.0, colour, 0.7);
+        s.polyline(&meridian, 1.0, fade(colour, 0.45));
     }
 }
 
@@ -168,15 +169,13 @@ fn camera(c: &Canvas, azimuth: f32) -> Camera {
     )
 }
 
-/// Triangles with their edges.
-fn mesh(s: &mut Scene3, pts: &[P], faces: &[(usize, [usize; 3])], alpha: f32) {
+/// Triangles covering what is behind by `opacity`, with their edges as one faint stroke each.
+fn mesh(s: &mut Scene3, pts: &[P], faces: &[(usize, [usize; 3])], opacity: f32) {
     for &(f, [i, j, k]) in faces {
         let (a, b, c) = (pts[i], pts[j], pts[k]);
         let col = s.lit(a, b, c, face_colour(f));
-        s.tri(a, b, c, col, alpha);
-        for (p, q) in [(a, b), (b, c), (c, a)] {
-            s.seg(p, q, 1.0, palette::bottom(), 0.8);
-        }
+        s.tri(a, b, c, col, opacity);
+        s.polyline(&[a, b, c, a], 1.0, fade(palette::grid(), 0.8));
     }
 }
 
@@ -210,9 +209,9 @@ fn collapse_panel(c: &mut Canvas, scene: &Collapse, progress: f64, azimuth: f32)
     pts[1] = lerp(b, target, progress);
     let faces: Vec<_> = scene.faces.iter().copied().enumerate().collect();
     mesh(&mut s, &pts, &faces, 0.55);
-    s.seg(a, b, 1.5, palette::red(), 0.5);
-    s.dot(a, Marker::Dot, 6.0, palette::grid());
-    s.dot(b, Marker::Dot, 6.0, palette::grid());
+    s.seg(a, b, 1.5, fade(palette::red(), 0.5));
+    s.dot(a, Marker::Dot, 6.0, fade(palette::ink(), 0.4));
+    s.dot(b, Marker::Dot, 6.0, fade(palette::ink(), 0.4));
     ellipsoid(&mut s, scene.q_edge, target, palette::green());
     s.dot(target, Marker::Star, 14.0, palette::green());
     s.draw(c);
@@ -233,16 +232,12 @@ fn label(c: &mut Canvas, title: &str) {
 
 /// A line of text centred across the panel at `height` of the way down, small enough to fit.
 fn centred(c: &mut Canvas, text: &str, height: f32) {
-    let size = (c.height as f32 / 32.0).clamp(8.0, 12.0);
-    let fit = c.width as f32 * 0.94 / gax_numga_examples::font::width(text, 1.0);
-    c.text(
-        text,
-        c.width as f32 * 0.5,
-        c.height as f32 * height,
-        size.min(fit),
-        palette::ink(),
-        Align::Center,
-    );
+    let panel = c.rect();
+    let size = (panel.height() / 32.0).clamp(8.0, 12.0);
+    let fit = panel.width() * 0.94 / gax_numga_examples::font::width(text, 1.0);
+    let top_middle = panel.top_middle();
+    let at = top_middle + Point2::direction(0.0, height * panel.height());
+    c.text(text, at, size.min(fit), palette::ink(), Align::Center);
 }
 
 const SECONDS: f32 = 8.0;

@@ -19,10 +19,10 @@
 use std::sync::OnceLock;
 
 use gax::pga2d::Point;
-use gax_numga_examples::canvas::srgb;
+use gax_light::{fade, srgb};
 use gax_numga_examples::font;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, palette, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Pos2, Rect, backdrop, caption, palette, run,
 };
 
 gax::algebra! {
@@ -392,29 +392,31 @@ use impulse::*;
 /// Each scene's share of the loop, in seconds.
 const SCENE: f32 = 7.0;
 
-fn rear() -> Rgb {
+fn rear() -> Light {
     palette::sky()
 }
-fn front() -> Rgb {
+fn front() -> Light {
     palette::orange()
 }
-fn kink() -> Rgb {
+fn kink() -> Light {
     palette::green()
 }
-fn door() -> Rgb {
-    srgb(0.55, 0.58, 0.64)
+fn door() -> Light {
+    srgb(0.55, 0.58, 0.64, 1.2)
 }
-fn elastic() -> Rgb {
+fn elastic() -> Light {
     palette::purple()
 }
-fn contact() -> Rgb {
-    srgb(0.92, 0.36, 0.36)
+fn contact() -> Light {
+    srgb(0.92, 0.36, 0.36, 1.8)
 }
 
-/// An event where the diagrams draw it: position across, time up.
+/// An event where the diagrams draw it: the point its vector reaches from the origin event,
+/// position across, time up.
 impl Pos2 for V {
     fn point2(self) -> Point2 {
-        Point::xy(position_of(self), time_of(self)).point2()
+        let origin = Point::xy(0.0, 0.0);
+        (origin + Point::direction(position_of(self), time_of(self))).point2()
     }
 }
 
@@ -424,26 +426,26 @@ fn end_line(events: &[[V; 2]], end: usize) -> Vec<V> {
 }
 
 /// Axes of equal scales showing `xr` by `yr`, as large as fits in `rect`, centred.
-fn fit(rect: [f32; 4], xr: [f32; 2], yr: [f32; 2]) -> Axes {
-    let (w, h) = (rect[2] - rect[0], rect[3] - rect[1]);
-    let k = (w / (xr[1] - xr[0])).min(h / (yr[1] - yr[0]));
-    let (pw, ph) = (k * (xr[1] - xr[0]), k * (yr[1] - yr[0]));
-    let (x0, y0) = (rect[0] + (w - pw) * 0.5, rect[1] + (h - ph) * 0.5);
-    Axes::new([x0, y0, x0 + pw, y0 + ph], xr, yr)
+fn fit(rect: Rect, xr: [f32; 2], yr: [f32; 2]) -> Axes {
+    let (dx, dy) = (xr[1] - xr[0], yr[1] - yr[0]);
+    let k = (rect.width() / dx).min(rect.height() / dy);
+    // Half the diagonal of the box, `k` pixels a unit.
+    let half = Point2::direction(k * dx, k * dy).gp(0.5);
+    let centre = rect.centre();
+    let fitted = Rect {
+        lo: centre - half,
+        hi: centre + half,
+    };
+    Axes::new(fitted, xr, yr)
 }
 
 /// A panel title above the axes, shrunk to fit their width.
-fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Rgb) {
-    let [x0, y0, x1, _] = ax.rect;
-    let size = (12.0f32).min((x1 - x0 + 30.0) / font::width(text, 1.0));
-    c.text(
-        text,
-        (x0 + x1) * 0.5,
-        y0 - size * 1.1,
-        size,
-        colour,
-        Align::Center,
-    );
+fn title(c: &mut Canvas, ax: &Axes, text: &str, colour: Light) {
+    let r = ax.rect;
+    let size = (12.0f32).min((r.width() + 30.0) / font::width(text, 1.0));
+    let top_middle = r.top_middle();
+    let at = top_middle - Point2::direction(0.0, size * 1.1);
+    c.text(text, at, size, colour, Align::Center);
 }
 
 /// The part of a worldline (events in time order) up to the observer time `tau`.
@@ -488,28 +490,29 @@ struct Diagram<'a> {
 impl Diagram<'_> {
     fn new<'a>(
         c: &'a mut Canvas,
-        rect: [f32; 4],
+        rect: Rect,
         xr: [f32; 2],
         yr: [f32; 2],
         reveal: f32,
     ) -> Diagram<'a> {
         let ax = fit(rect, xr, yr);
-        let size = ((ax.rect[2] - ax.rect[0]) / 26.0).clamp(7.0, 11.0);
+        let size = (ax.rect.width() / 26.0).clamp(7.0, 11.0);
         // The present rises from the bottom of the diagram to its top.
         let tau = f64::from(yr[0] + (yr[1] - yr[0]) * reveal);
         // Light cones through the origin, faint: the null directions `t ± x`, far out.
         let big = 10.0;
         for null in [t() + x(), t() - x()] {
-            ax.line(c, null * -big, null * big, 0.8, palette::grid(), 0.35);
+            ax.line(c, null * -big, null * big, 0.8, fade(palette::grid(), 0.35));
         }
         Diagram { ax, tau, size, c }
     }
 
     /// A worldline: faint in full, bright up to the present.
-    fn worldline(&mut self, events: &[V], colour: Rgb, width: f32) {
-        self.ax.polyline(self.c, events, width * 0.6, colour, 0.18);
+    fn worldline(&mut self, events: &[V], colour: Light, width: f32) {
         self.ax
-            .polyline(self.c, &upto(events, self.tau), width, colour, 1.0);
+            .polyline(self.c, events, width * 0.6, fade(colour, 0.18));
+        self.ax
+            .polyline(self.c, &upto(events, self.tau), width, colour);
     }
 
     /// Both ends' worldlines.
@@ -519,53 +522,52 @@ impl Diagram<'_> {
     }
 
     /// A dashed line through events, shown once the present has passed its first.
-    fn dashed(&mut self, events: &[V], colour: Rgb, width: f32) {
+    fn dashed(&mut self, events: &[V], colour: Light, width: f32) {
         let first = events
             .iter()
             .map(|e| time_of(*e))
             .fold(f64::INFINITY, f64::min);
-        let alpha = if first <= self.tau { 0.95 } else { 0.25 };
-        self.ax.dashed(self.c, events, width, 4.0, colour, alpha);
+        let strength = if first <= self.tau { 0.95 } else { 0.25 };
+        let faded = fade(colour, strength);
+        self.ax.dashed(self.c, events, width, 4.0, faded);
     }
 
     /// Events, bright once the present has passed them.
-    fn events(&mut self, events: &[V], marker: Marker, size: f32, colour: Rgb) {
+    fn events(&mut self, events: &[V], marker: Marker, size: f32, colour: Light) {
         for e in events {
-            let alpha = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
-            self.ax.scatter(self.c, &[*e], marker, size, colour, alpha);
+            let strength = if time_of(*e) <= self.tau { 1.0 } else { 0.25 };
+            let faded = fade(colour, strength);
+            self.ax.scatter(self.c, &[*e], marker, size, faded);
         }
     }
 
     /// A length bar across two equal-time events, labelled above (`dy > 0`) or below, once the
     /// present has reached it.
-    fn bar(&mut self, [a, b]: [V; 2], label: &str, dy: f32, colour: Rgb) {
+    fn bar(&mut self, [a, b]: [V; 2], label: &str, dy: f32, colour: Light) {
         if time_of(a) > self.tau {
             return;
         }
-        self.ax.line(self.c, a, b, 5.0, colour, 0.35);
-        let [px, py] = self.ax.px((a + b) * 0.5);
-        let y = if dy > 0.0 {
-            py - self.size * 0.8
+        self.ax.line(self.c, a, b, 5.0, fade(colour, 0.35));
+        let middle = self.ax.px((a + b) * 0.5);
+        let offset = if dy > 0.0 {
+            -self.size * 0.8
         } else {
-            py + self.size * 1.7
+            self.size * 1.7
         };
-        self.c.text(label, px, y, self.size, colour, Align::Center);
+        let at = middle + Point2::direction(0.0, offset);
+        self.c.text(label, at, self.size, colour, Align::Center);
     }
 
     /// The present: the equal-time slice between two worldlines, with its length.
     fn now(&mut self, left: &[V], right: &[V]) {
         if let (Some(a), Some(b)) = (at(left, self.tau), at(right, self.tau)) {
-            self.ax.line(self.c, a, b, 1.6, palette::yellow(), 0.9);
-            let [px, py] = self.ax.px(b);
+            self.ax
+                .line(self.c, a, b, 1.6, fade(palette::yellow(), 0.9));
+            let beside = self.ax.px(b) + Point2::direction(0.6, 0.4).gp(self.size);
             let text = format!("{:.2}", position_of(b) - position_of(a));
-            self.c.text(
-                &text,
-                px + self.size * 0.6,
-                py + self.size * 0.4,
-                self.size,
-                palette::yellow(),
-                Align::Left,
-            );
+            let size = self.size;
+            self.c
+                .text(&text, beside, size, palette::yellow(), Align::Left);
         }
     }
 
@@ -573,17 +575,16 @@ impl Diagram<'_> {
         title(self.c, &self.ax, text, palette::ink());
     }
 
-    fn text(&mut self, at: impl Pos2, text: &str, colour: Rgb) {
+    fn text(&mut self, at: impl Pos2, text: &str, colour: Light) {
         self.ax
             .text(self.c, at, text, self.size, colour, Align::Center);
     }
 
     fn frame(&mut self) {
         self.ax.frame(self.c, "", "X / L0", "");
-        let [x0, y0, ..] = self.ax.rect;
-        let at = [x0 + 4.0, y0 + self.size * 1.4];
+        let at = self.ax.rect.lo + Point2::direction(4.0, self.size * 1.4);
         self.c
-            .text("CT", at[0], at[1], self.size, palette::ink(), Align::Left);
+            .text("CT", at, self.size, palette::ink(), Align::Left);
     }
 }
 
@@ -601,15 +602,8 @@ fn reveal(u: f32) -> f32 {
 
 fn draw_impulse(c: &mut Canvas, r: f32) {
     let (s, _, _) = scenes();
-    let (w, h) = (c.width as f32, c.height as f32);
-    let rect = |i: usize| {
-        [
-            w * i as f32 / 3.0 + 40.0,
-            h * 0.2,
-            w * (i + 1) as f32 / 3.0 - 8.0,
-            h - 60.0,
-        ]
-    };
+    let row = diagrams(c);
+    let rect = |i: usize| row.column(i, 3).inset(40.0, 0.0, 8.0, 0.0);
     let titles = [
         "SYMMETRIC FRAME: -0.5C -> +0.5C",
         "BOOSTED FRAME: 0 -> 0.8C",
@@ -673,22 +667,16 @@ fn barn(d: &mut Diagram, doors: &[[V; 2]], closure: &[V; 2]) {
     let mut poly = l.clone();
     poly.extend(r.iter().rev());
     d.ax.fill(d.c, &poly, door(), 0.08);
-    d.ax.dashed(d.c, &l, 1.2, 4.0, door(), 0.8);
-    d.ax.dashed(d.c, &r, 1.2, 4.0, door(), 0.8);
+    let edge = fade(door(), 0.8);
+    d.ax.dashed(d.c, &l, 1.2, 4.0, edge);
+    d.ax.dashed(d.c, &r, 1.2, 4.0, edge);
     d.events(closure, Marker::Square, 7.0, door());
 }
 
 fn draw_ladder(c: &mut Canvas, r: f32) {
     let (_, s, _) = scenes();
-    let (w, h) = (c.width as f32, c.height as f32);
-    let rect = |i: usize| {
-        [
-            w * i as f32 / 4.0 + 34.0,
-            h * 0.2,
-            w * (i + 1) as f32 / 4.0 - 6.0,
-            h - 60.0,
-        ]
-    };
+    let row = diagrams(c);
+    let rect = |i: usize| row.column(i, 4).inset(34.0, 0.0, 6.0, 0.0);
 
     // 1. In the barn frame it fits at closure.
     let mut d = Diagram::new(c, rect(0), [-0.46, 1.32], [-0.6, 0.65], r);
@@ -733,8 +721,8 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
     barn(&mut d, &s.doors, &s.closure);
     d.rod(&s.ring_incoming, 2.2);
     d.rod(&s.ring, 2.2);
-    d.ax.dashed(d.c, &end_line(&s.relaxed, 0), 1.0, 2.0, rear(), 0.5);
-    d.ax.dashed(d.c, &end_line(&s.relaxed, 1), 1.0, 2.0, front(), 0.5);
+    d.ax.dashed(d.c, &end_line(&s.relaxed, 0), 1.0, 2.0, fade(rear(), 0.5));
+    d.ax.dashed(d.c, &end_line(&s.relaxed, 1), 1.0, 2.0, fade(front(), 0.5));
     d.dashed(&s.incoming, elastic(), 2.2);
     d.events(&s.incoming, Marker::Dot, 7.0, elastic());
     d.bar(s.incoming, "COMPRESSED 0.60", -1.0, elastic());
@@ -757,18 +745,16 @@ fn draw_ladder(c: &mut Canvas, r: f32) {
 
 fn draw_spaceships(c: &mut Canvas, r: f32) {
     let (_, _, s) = scenes();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let row = diagrams(c);
+    let w = row.width();
+    // A share of the row from `x0` to `x1` of the canvas's width.
+    let span = |x0: f32, x1: f32| row.inset(w * x0, 0.0, w * (1.0 - x1), 0.0);
     let end = time_of(s.tracks[0][s.tracks[0].len() - 1][0]);
     let titles = ["STRAIN-PRESERVING TRAIN", "BELL: IDENTICAL CLOCK PROGRAMS"];
     let notes = ["FRONT IMPULSES ON THE BISECTORS", "MATCHING CLOCK READINGS"];
     let colours = [kink(), elastic()];
     for k in 0..2 {
-        let rect = [
-            w * 0.36 * k as f32 + 40.0,
-            h * 0.2,
-            w * 0.36 * (k + 1) as f32 - 8.0,
-            h - 60.0,
-        ];
+        let rect = span(0.36 * k as f32, 0.36 * (k + 1) as f32).inset(40.0, 0.0, 8.0, 0.0);
         let mut d = Diagram::new(c, rect, [-0.20, 3.05], [-0.40, end as f32 + 0.18], r);
         d.rod(&s.tracks[k], 2.4);
         for step in &s.schedules[k] {
@@ -788,9 +774,9 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
 
     // The rope each schedule demands, in the final shared rest frame, fading in as the
     // diagrams complete.
-    let alpha = ((r - 0.6) / 0.4).clamp(0.0, 1.0);
+    let shown = ((r - 0.6) / 0.4).clamp(0.0, 1.0);
     let ax = fit(
-        [w * 0.73, h * 0.2, w - 10.0, h - 60.0],
+        span(0.73, 1.0).inset(0.0, 0.0, 10.0, 0.0),
         [-0.22, 2.05],
         [-0.35, 3.03],
     );
@@ -820,19 +806,18 @@ fn draw_spaceships(c: &mut Canvas, r: f32) {
     // Each rope a row: its rear ship at zero, its front ship at the gap, the relaxed length
     // dashed across both.
     let relaxed = [Point::xy(1.0, 0.65), Point::xy(1.0, 2.25)];
-    ax.dashed(c, &relaxed, 1.0, 3.0, door(), alpha);
+    ax.dashed(c, &relaxed, 1.0, 3.0, fade(door(), shown));
     for (gap, y, colour, head, label) in rows {
         let (rear_ship, front_ship) = (Point::xy(0.0, y), Point::xy(gap, y));
         let (above, below) = (Point::direction(0.0, 0.36), Point::direction(0.0, -0.3));
         ax.text(c, rear_ship + above, head, size, colour, Align::Left);
-        ax.line(c, rear_ship, front_ship, 3.0, colour, alpha);
+        ax.line(c, rear_ship, front_ship, 3.0, fade(colour, shown));
+        // A ship: a triangle pointing along the motion, at its pixel.
         for (at, ship) in [(rear_ship, rear()), (front_ship, front())] {
-            let [px, py] = ax.px(at);
-            c.fill(
-                &[[px + 9.0, py], [px - 6.0, py - 7.0], [px - 6.0, py + 7.0]],
-                ship,
-                alpha,
-            );
+            let p = ax.px(at);
+            let hull =
+                [(9.0, 0.0), (-6.0, -7.0), (-6.0, 7.0)].map(|(x, y)| p + Point2::direction(x, y));
+            c.fill(&hull, ship, shown);
         }
         // The label under the rope's middle.
         let under = (rear_ship + front_ship).gp(0.5) + below;
@@ -871,33 +856,29 @@ fn draw(c: &mut Canvas, t: f32) {
         1 => draw_ladder(c, r),
         _ => draw_spaceships(c, r),
     }
-    // The legend.
-    let (w, h) = (c.width as f32, c.height as f32);
-    let size = (h / 50.0).clamp(7.0, 11.0);
+    // The legend, along the bottom edge.
+    let screen = c.rect();
+    let size = (screen.height() / 50.0).clamp(7.0, 11.0);
     let entries = [
         ("REAR END", rear()),
         ("FRONT END", front()),
         ("IMPULSES", kink()),
         ("NOW", palette::yellow()),
     ];
+    let right = Point2::direction(size, 0.0);
     for (i, (label, colour)) in entries.iter().enumerate() {
-        let x = w * (0.3 + 0.13 * i as f32);
-        c.line(
-            [x, h - size * 1.4],
-            [x + size * 2.0, h - size * 1.4],
-            2.5,
-            *colour,
-            1.0,
-        );
-        c.text(
-            label,
-            x + size * 2.6,
-            h - size,
-            size,
-            palette::ink(),
-            Align::Left,
-        );
+        let across = screen.width() * (0.3 + 0.13 * i as f32);
+        let start = screen.bottom_left() + Point2::direction(across, -size * 1.4);
+        c.line(start, start + right.gp(2.0), 2.5, *colour);
+        let at = start + right.gp(2.6) + Point2::direction(0.0, size * 0.4);
+        c.text(label, at, size, palette::ink(), Align::Left);
     }
+}
+
+/// The row the diagrams share: below the captions, above the legend.
+fn diagrams(c: &Canvas) -> Rect {
+    let screen = c.rect();
+    screen.inset(0.0, screen.height() * 0.2, 0.0, 60.0)
 }
 
 fn main() {

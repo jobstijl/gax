@@ -23,6 +23,8 @@ gif = "0.13"
 png = "0.17"
 rand = "0.9"
 rand_distr = "0.5"
+# Light as geometry, shared with warp: lights, OkLab tints, AgX.
+gax-light = { path = "../light" }
 
 [profile.dev]
 opt-level = 1

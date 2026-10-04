@@ -14,10 +14,12 @@
 
 use gax::pga2d;
 use gax::vga3d::{Bivector, Scalar, Vector};
+use gax_light::fade;
+use gax_numga_examples::points::{Map2, box_map};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, colormap, palette,
-    plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Pos2, Rect, backdrop, caption,
+    colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -204,13 +206,23 @@ fn data() -> &'static Data {
     })
 }
 
+/// The square `[-1.5, 1.5]²` onto the histogram's grid of `BINS` x `BINS` unit cells.
+fn to_grid() -> Map2 {
+    let square = [Point2::xy(-1.5, -1.5), Point2::xy(1.5, 1.5)];
+    box_map(square, [ORIGIN2, Point2::xy(BINS as f32, BINS as f32)])
+}
+
+/// The column and row of the grid cell a point falls in (outside the grid too).
+fn cell(grid: &Map2, p: Point2) -> [f32; 2] {
+    grid.of(p).to_euclidean().map(f32::floor)
+}
+
 /// A 2D histogram of `pts` over `[-1.5, 1.5]²`.
 fn histogram(pts: &[Point2]) -> Vec<u32> {
+    let grid = to_grid();
     let mut h = vec![0u32; BINS * BINS];
     for p in pts {
-        let [x, y] = p.to_euclidean();
-        let i = ((x + 1.5) / 3.0 * BINS as f32).floor();
-        let j = ((y + 1.5) / 3.0 * BINS as f32).floor();
+        let [i, j] = cell(&grid, *p);
         if (0.0..BINS as f32).contains(&i) && (0.0..BINS as f32).contains(&j) {
             h[j as usize * BINS + i as usize] += 1;
         }
@@ -223,13 +235,14 @@ fn face(v: V) -> pga2d::Point<(), f64> {
     pga2d::Point::xy(v.e1(), v.e2())
 }
 
-fn mode_colour(w: usize) -> Rgb {
+fn mode_colour(w: usize) -> Light {
     [palette::red(), palette::sky(), palette::purple()][w]
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let d = data();
     let total = 3.0 * SWEEP;
     let u = t.rem_euclid(total) / total;
@@ -239,76 +252,52 @@ fn draw(c: &mut Canvas, t: f32) {
     let top = h * 0.17;
     let left = w * 0.13;
     let size = ((h - top - h * 0.03) / 3.0).min((w * 0.56 - left) / 3.0);
+    // The square of crystal `m` and mode `wv`: rows of crystals, columns of modes.
+    let square = |m: usize, wv: usize| {
+        let lo = Point2::xy(left, top) + Point2::direction(wv as f32, m as f32).gp(size);
+        Rect {
+            lo,
+            hi: lo + Point2::direction(size, size),
+        }
+    };
+    let (up, right) = (Point2::direction(0.0, -1.0), Point2::direction(1.0, 0.0));
+    let grid = to_grid();
     for (m, name) in NAMES.iter().enumerate() {
         for (wv, mode) in MODES.iter().enumerate() {
-            let rect = [
-                left + wv as f32 * size,
-                top + m as f32 * size,
-                left + (wv + 1) as f32 * size,
-                top + (m + 1) as f32 * size,
-            ];
-            let rect = plot::inset(rect, 2.0, 2.0, 2.0, 2.0);
+            let rect = square(m, wv).inset(2.0, 2.0, 2.0, 2.0);
             let ax = Axes::new(rect, [-1.5, 1.5], [-1.5, 1.5]);
             let pts = &d.focus[m][wv];
             let n = ((pts.len() as f32 * share) as usize).min(pts.len());
             let hist = histogram(&pts[..n]);
             let peak = (hist.iter().copied().max().unwrap_or(1).max(1) as f32).ln_1p();
             ax.image(c, 1, |p| {
-                let [x, y] = p.to_euclidean();
-                let i = ((x + 1.5) / 3.0 * BINS as f32).floor() as usize;
-                let j = ((y + 1.5) / 3.0 * BINS as f32).floor() as usize;
+                let [i, j] = cell(&grid, p).map(|k| k as usize);
                 let v = hist[j.min(BINS - 1) * BINS + i.min(BINS - 1)] as f32;
                 Some(colormap::inferno(v.ln_1p() / peak))
             });
             if m == current {
-                c.polyline(
-                    &[
-                        [rect[0], rect[1]],
-                        [rect[2], rect[1]],
-                        [rect[2], rect[3]],
-                        [rect[0], rect[3]],
-                    ],
-                    1.5,
-                    palette::yellow(),
-                    0.9,
-                    true,
-                );
+                let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
+                c.polyline(&corners, 1.5, fade(palette::yellow(), 0.9), true);
             }
             if m == 0 {
-                c.text(
-                    mode,
-                    (rect[0] + rect[2]) * 0.5,
-                    rect[1] - 6.0,
-                    10.0,
-                    mode_colour(wv),
-                    Align::Center,
-                );
+                let above = rect.top_middle() + up.gp(6.0);
+                c.text(mode, above, 10.0, mode_colour(wv), Align::Center);
             }
         }
-        c.text(
-            name,
-            left - 6.0,
-            top + (m as f32 + 0.5) * size,
-            10.0,
-            if m == current {
-                palette::yellow()
-            } else {
-                palette::ink()
-            },
-            Align::Right,
-        );
+        // The crystal's name left of the middle of its row.
+        let row = square(m, 0);
+        let at = row.left_middle() - right.gp(6.0);
+        let tone = if m == current {
+            palette::yellow()
+        } else {
+            palette::ink()
+        };
+        c.text(name, at, 10.0, tone, Align::Right);
     }
-    c.text(
-        &format!(
-            "{} HEADINGS",
-            ((HEADINGS as f32 * share) as usize / 1000) * 1000
-        ),
-        left,
-        h - h * 0.005,
-        10.0,
-        palette::grid(),
-        Align::Left,
-    );
+    let count = ((HEADINGS as f32 * share) as usize / 1000) * 1000;
+    let at = screen.bottom_left() + Point2::direction(left, -h * 0.005);
+    let text = format!("{count} HEADINGS");
+    c.text(&text, at, 10.0, palette::grid(), Align::Left);
 
     // The wave surfaces of the current crystal in the cube face, and the sweeping heading.
     let fronts = &d.fronts[current];
@@ -317,13 +306,15 @@ fn draw(c: &mut Canvas, t: f32) {
         .flatten()
         .map(|v| v.norm())
         .fold(0.0, f64::max) as f32;
-    let rect = plot::inset([w * 0.58, 0.0, w, h], w * 0.05, h * 0.2, w * 0.03, h * 0.1);
-    let origin = Point2::xy(0.0, 0.0);
+    let rect = Rect::new(w * 0.58, 0.0, w, h).inset(w * 0.05, h * 0.2, w * 0.03, h * 0.1);
+    let origin = ORIGIN2;
     let ax = Axes::equal(rect, origin, reach * 1.12);
     ax.frame(c, NAMES[current], "KM/S ALONG (100)", "");
     for wv in 0..3 {
         let pts: Vec<pga2d::Point<(), f64>> = fronts.iter().map(|v| face(v[wv])).collect();
-        ax.scatter(c, &pts, Marker::Dot, 1.6, mode_colour(wv), 0.8);
+        // The dots lie closer than their glow reaches, so their light adds up along the
+        // surface: each is faint.
+        ax.scatter(c, &pts, Marker::Dot, 1.6, fade(mode_colour(wv), 0.25));
     }
     let s = (u * 3.0).fract();
     let angle = f64::from(s) * core::f64::consts::TAU;
@@ -331,28 +322,16 @@ fn draw(c: &mut Canvas, t: f32) {
     let crystals = crystals();
     let (values, _) = waves(&crystals[current], heading);
     let group = d.fronts[current][((s * FRONT as f32) as usize).min(FRONT - 1)];
-    ax.line(
-        c,
-        origin,
-        face(heading.gp(f64::from(reach) * 1.1)),
-        1.0,
-        palette::ink(),
-        0.6,
-    );
+    let tip = face(heading.gp(f64::from(reach) * 1.1));
+    ax.line(c, origin, tip, 1.0, fade(palette::ink(), 0.6));
     for wv in 0..3 {
         // The phase velocity lies along the heading; the energy goes along the group velocity.
         let phase = (values[wv] / DENSITY[current]).sqrt();
-        ax.scatter(
-            c,
-            &[face(heading.gp(phase))],
-            Marker::Ring,
-            8.0,
-            mode_colour(wv),
-            1.0,
-        );
+        let ring = face(heading.gp(phase));
+        ax.scatter(c, &[ring], Marker::Ring, 8.0, mode_colour(wv));
         ax.arrow(c, origin, face(group[wv]), 2.0, 9.0, mode_colour(wv));
     }
-    let legend: Vec<(&str, Rgb)> = MODES.iter().copied().zip((0..3).map(mode_colour)).collect();
+    let legend: Vec<(&str, Light)> = MODES.iter().copied().zip((0..3).map(mode_colour)).collect();
     ax.legend(c, &legend);
     caption(
         c,

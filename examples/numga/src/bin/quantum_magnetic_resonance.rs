@@ -20,10 +20,11 @@
 //! drive, and the echo against the free decay as composed maps.
 
 use gax::vga3d::{Bivector, Vector};
+use gax_light::fade;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, backdrop, caption, colormap,
-    from_above, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN2, ORIGIN3, Point2, backdrop, caption,
+    colormap, from_above, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -356,45 +357,41 @@ fn axes() -> [Vector<(), f64>; 3] {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let d = data();
-    let (w, h) = (c.width, c.height);
-    let (wf, hf) = (w as f32, h as f32);
+    let screen = c.rect();
     let phase = (t / SECONDS).clamp(0.0, 1.0);
-    let small = (hf / 50.0).clamp(7.0, 11.0);
+    let small = (screen.height() / 50.0).clamp(7.0, 11.0);
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
 
     // The ensemble seen from above the field, coloured by detuning.
     let records = d.ensemble.len();
     let index = ((phase * records as f32) as usize).min(records - 1);
     let dt = (ECHO_DT * ECHO_EVERY as f64) as f32;
     let now = index as f32 * dt;
-    let top_rect = [wf * 0.02, hf * 0.15, wf * 0.34, hf * 0.58];
-    let ax = Axes::equal(top_rect, Point2::xy(0.0, 0.0), 1.12);
+    let top_rect = screen.part(0.02, 0.15, 0.34, 0.58);
+    let ax = Axes::equal(top_rect, ORIGIN2, 1.12);
     // The unit circle: x turned about the field.
     let circle: Vec<_> = (0..=96)
         .map(|k| {
             let a = core::f64::consts::TAU * k as f64 / 96.0;
-            from_above((Bivector::new(0.0, 0.0, 1.0) * (-a / 2.0)).exp() >> x())
+            from_above(reach3(
+                (Bivector::new(0.0, 0.0, 1.0) * (-a / 2.0)).exp() >> x(),
+            ))
         })
         .collect();
-    ax.polyline(c, &circle, 1.0, palette::grid(), 1.0);
+    ax.polyline(c, &circle, 1.0, palette::grid());
     for a in [x(), Vector::new(0.0, 1.0, 0.0)] {
-        ax.line(
-            c,
-            from_above(-a * 1.1),
-            from_above(a * 1.1),
-            1.0,
-            palette::grid(),
-            0.6,
-        );
+        let (from, to) = (from_above(reach3(-a * 1.1)), from_above(reach3(a * 1.1)));
+        ax.line(c, from, to, 1.0, fade(palette::grid(), 0.6));
     }
     let mut order: Vec<usize> = (0..d.detunings.len()).collect();
     order.sort_by(|a, b| d.detunings[*a].total_cmp(&d.detunings[*b]));
     for k in order {
-        let r = from_above(bloch(d.ensemble[index][k]));
+        let r = from_above(reach3(bloch(d.ensemble[index][k])));
         let tone = colormap::coolwarm(0.5 + d.detunings[k] as f32 / 8.0);
-        ax.scatter(c, &[r], Marker::Dot, 3.5, tone, 0.9);
+        ax.scatter(c, &[r], Marker::Dot, 3.5, tone);
     }
-    let signal = from_above(bloch(mean(&d.ensemble[index])));
-    ax.arrow(c, Point2::xy(0.0, 0.0), signal, 2.5, 9.0, palette::yellow());
+    let signal = from_above(reach3(bloch(mean(&d.ensemble[index]))));
+    ax.arrow(c, ORIGIN2, signal, 2.5, 9.0, palette::yellow());
     let stage = if now < 0.3 {
         "TIPPED ONTO -Y"
     } else if now < DELAY as f32 - 0.05 {
@@ -408,27 +405,22 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         "FANNING OUT AGAIN"
     };
+    let title = top_rect.top_middle() + up.gp(6.0);
     c.text(
         "SPINS FROM ABOVE",
-        (top_rect[0] + top_rect[2]) * 0.5,
-        top_rect[1] - 6.0,
+        title,
         small * 0.9,
         palette::ink(),
         Align::Center,
     );
-    c.text(
-        &format!("T = {now:.2} US: {stage}"),
-        (top_rect[0] + top_rect[2]) * 0.5,
-        top_rect[3] + small * 1.2,
-        small * 0.9,
-        palette::ink(),
-        Align::Center,
-    );
+    let note = top_rect.bottom_middle() + down.gp(small * 1.2);
+    let text = format!("T = {now:.2} US: {stage}");
+    c.text(&text, note, small * 0.9, palette::ink(), Align::Center);
 
     // The signal so far.
     let total = records as f32 * dt;
     let ax = Axes::new(
-        [wf * 0.42, hf * 0.17, wf * 0.97, hf * 0.52],
+        screen.part(0.42, 0.17, 0.97, 0.52),
         [0.0, total],
         [0.0, 1.05],
     );
@@ -440,16 +432,9 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(at, 1.05),
             1.0,
             palette::grid(),
-            1.0,
         );
-        ax.text(
-            c,
-            Point2::xy(at + 0.06, 0.95),
-            name,
-            small,
-            palette::grid(),
-            Align::Left,
-        );
+        let label = Point2::xy(at + 0.06, 0.95);
+        ax.text(c, label, name, small, palette::grid(), Align::Left);
     }
     let decay: Vec<Point2> = (0..=100)
         .map(|k| {
@@ -457,28 +442,21 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
-    ax.dashed(c, &decay, 1.0, 5.0, palette::grid(), 1.0);
+    ax.dashed(c, &decay, 1.0, 5.0, palette::grid());
     let trace: Vec<Point2> = d.signal[..=index]
         .iter()
         .enumerate()
         .map(|(k, s)| Point2::xy(k as f32 * dt, *s as f32))
         .collect();
-    ax.polyline(c, &trace, 1.8, palette::sky(), 1.0);
-    ax.scatter(
-        c,
-        &[Point2::xy(now, d.signal[index] as f32)],
-        Marker::Dot,
-        6.0,
-        palette::sky(),
-        1.0,
-    );
+    ax.polyline(c, &trace, 1.8, palette::sky());
+    let head = Point2::xy(now, d.signal[index] as f32);
+    ax.scatter(c, &[head], Marker::Dot, 6.0, palette::sky());
 
     // Spins switched on to a steady drive, nutating into their steady states.
-    let row = hf * 0.64;
-    let ball = [0.0, row, wf * 0.3, hf];
+    let ball_rect = screen.part(0.0, 0.64, 0.3, 1.0);
     let cam = Camera::orbit(
-        (ball[2] - ball[0]) as usize,
-        (ball[3] - ball[1]) as usize,
+        ball_rect.width() as usize,
+        ball_rect.height() as usize,
         ORIGIN3,
         4.4,
         (-50.0f32).to_radians() + 0.3 * phase,
@@ -487,36 +465,32 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     let shown = ((phase * d.nutation.len() as f32) as usize).clamp(1, d.nutation.len());
     let colours = [palette::red(), palette::purple(), palette::sky()];
-    panel3(c, ball, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.45);
+    panel3(c, ball_rect, cam, |s| {
+        s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.45));
         for a in axes() {
-            s.seg(-a, a, 1.0, palette::grid(), 1.0);
+            s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
         }
         for (j, colour) in colours.iter().enumerate() {
             let path: Vec<_> = d.nutation[..shown]
                 .iter()
-                .map(|row| bloch(row[j]))
+                .map(|row| reach3(bloch(row[j])))
                 .collect();
-            s.polyline(&path, 1.2, *colour, 0.9);
-            s.dot(bloch(d.settled[j]), Marker::Ring, 7.0, *colour);
+            s.polyline(&path, 1.2, fade(*colour, 0.9));
+            s.dot(reach3(bloch(d.settled[j])), Marker::Ring, 7.0, *colour);
             s.dot(*path.last().expect("a state"), Marker::Dot, 6.0, *colour);
         }
     });
+    let label = ball_rect.top_middle() + down.gp(4.0);
     c.text(
         "NUTATION TO THE STEADY STATE",
-        wf * 0.15,
-        row + 4.0,
+        label,
         small * 0.9,
         palette::ink(),
         Align::Center,
     );
 
     // Absorption against detuning, per unit drive: a stronger drive broadens and flattens it.
-    let ax = Axes::new(
-        [wf * 0.36, hf * 0.7, wf * 0.63, hf * 0.9],
-        [-3.0, 3.0],
-        [0.0, 4.2],
-    );
+    let ax = Axes::new(screen.part(0.36, 0.7, 0.63, 0.9), [-3.0, 3.0], [0.0, 4.2]);
     ax.frame(c, "ABSORPTION PER UNIT DRIVE", "DETUNING (RAD/US)", "");
     let mut legend = Vec::new();
     for (j, drive) in DRIVES.iter().enumerate() {
@@ -526,7 +500,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .zip(&d.lines)
             .map(|(det, row)| on_plot(*det, -bloch(row[j]).e2() / drive))
             .collect();
-        ax.polyline(c, &pts, 1.5, colours[j], 1.0);
+        ax.polyline(c, &pts, 1.5, colours[j]);
         legend.push((format!("DRIVE {drive}"), colours[j]));
     }
     // A cursor sweeping the detuning.
@@ -537,14 +511,13 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(sweep, 4.2),
         1.0,
         palette::grid(),
-        1.0,
     );
     let entries: Vec<(&str, _)> = legend.iter().map(|(s, c)| (s.as_str(), *c)).collect();
     ax.legend(c, &entries);
 
     // The echo against the free decay, from composed maps, on a logarithmic time axis.
     let ax = Axes::new(
-        [wf * 0.69, hf * 0.7, wf * 0.97, hf * 0.9],
+        screen.part(0.69, 0.7, 0.97, 0.9),
         [0.015, 30.0],
         [0.0, 1.05],
     )
@@ -556,7 +529,7 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(s, (-s / T2 as f32).exp())
         })
         .collect();
-    ax.dashed(c, &fine, 1.0, 5.0, palette::grid(), 1.0);
+    ax.dashed(c, &fine, 1.0, 5.0, palette::grid());
     for (states, colour) in [(&d.echoed, palette::sky()), (&d.faded, palette::red())] {
         let pts: Vec<_> = d
             .decay_times
@@ -564,18 +537,12 @@ fn draw(c: &mut Canvas, t: f32) {
             .zip(states)
             .map(|(s, rho)| on_plot(*s, transverse(*rho)))
             .collect();
-        ax.polyline(c, &pts, 1.5, colour, 1.0);
-        ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 1.0);
+        ax.polyline(c, &pts, 1.5, colour);
+        ax.scatter(c, &pts, Marker::Dot, 4.5, colour);
     }
     if now > 0.02 {
-        ax.line(
-            c,
-            Point2::xy(now, 0.0),
-            Point2::xy(now, 1.05),
-            1.0,
-            palette::yellow(),
-            0.7,
-        );
+        let cursor = fade(palette::yellow(), 0.7);
+        ax.line(c, Point2::xy(now, 0.0), Point2::xy(now, 1.05), 1.0, cursor);
     }
     ax.legend(
         c,
@@ -719,7 +686,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 6.0, &mut draw);
-        assert!(a.mean()[0] > 0.0);
+        assert!(gax_light::luma(a.mean()) > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

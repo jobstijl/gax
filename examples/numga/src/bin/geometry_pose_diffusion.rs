@@ -14,8 +14,11 @@
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
+use gax_light::fade;
 use gax_numga_examples::rng::{Draw, rng};
-use gax_numga_examples::{Align, Anim, Axes, Canvas, backdrop, caption, palette, plot, run};
+use gax_numga_examples::{
+    Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
+};
 use std::sync::OnceLock;
 
 mod station {
@@ -252,20 +255,18 @@ fn runs() -> &'static [(String, Diffusion); 2] {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let runs = runs();
     let frames = runs[0].1.errors.len();
     let index = ((t / (DT as f32 * EVERY as f32)) as usize).min(frames - 1);
     let seconds = index as f32 * DT as f32 * EVERY as f32;
     let top = (h / 30.0).clamp(10.0, 22.0) * 5.2;
     for (k, (name, run)) in runs.iter().enumerate() {
-        let rect = plot::inset(
-            [k as f32 * w / 2.0, top, (k + 1) as f32 * w / 2.0, h],
-            w * 0.06,
-            h * 0.05,
-            w * 0.02,
-            h * 0.13,
-        );
+        let rect =
+            Rect::new(0.0, top, w, h)
+                .column(k, 2)
+                .inset(w * 0.06, h * 0.05, w * 0.02, h * 0.13);
         let ax = Axes::equal(rect, origin(), EXTENT);
         ax.frame(
             c,
@@ -273,25 +274,25 @@ fn draw(c: &mut Canvas, t: f32) {
             "FORWARD (M)",
             "SIDEWAYS (M)",
         );
-        // Each vessel as a short stroke through its position along its heading: the set point
-        // and a point a little ahead of it, moved by the vessel's pose.
+        // Each vessel as a short dash through its position along its heading: the set point
+        // and a point a little ahead of it, moved by the vessel's pose. The swarm is one
+        // stroke, so where the vessels crowd it does not burn white.
         let ahead = Point::xy(0.08 * f64::from(EXTENT), 0.0);
-        for error in &run.errors[index] {
-            let pose = pose(*error);
-            let here = pose >> origin();
-            let half = ((pose >> ahead) - here).gp(0.5);
-            ax.line(c, here - half, here + half, 1.0, palette::sky(), 0.35);
-        }
+        let dashes: Vec<[Twist; 2]> = run.errors[index]
+            .iter()
+            .map(|error| {
+                let pose = pose(*error);
+                let here = pose >> origin();
+                let half = ((pose >> ahead) - here).gp(0.5);
+                [here - half, here + half]
+            })
+            .collect();
+        ax.stroke(c, &dashes, 1.0, fade(palette::sky(), 0.6));
         let ring = |cov: Covariance| ellipse(position_spread(cov), 96);
-        ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::red(), 1.0);
-        ax.polyline(
-            c,
-            &ring(empirical(&run.errors[index])),
-            1.4,
-            palette::yellow(),
-            0.9,
-        );
-        ax.polyline(c, &ring(run.predicted[index]), 2.2, palette::red(), 1.0);
+        ax.dashed(c, &ring(run.limit), 1.8, 6.0, palette::red());
+        let sample = ring(empirical(&run.errors[index]));
+        ax.polyline(c, &sample, 1.4, fade(palette::yellow(), 0.9));
+        ax.polyline(c, &ring(run.predicted[index]), 2.2, palette::red());
         if k == 0 {
             ax.legend(
                 c,
@@ -310,8 +311,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     c.text(
         "GUSTS MOSTLY SIDEWAYS, TURNING SPREADS THEM",
-        w - 12.0,
-        h - 8.0,
+        screen.hi - Point2::direction(12.0, 8.0),
         11.0,
         palette::grid(),
         Align::Right,

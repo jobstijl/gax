@@ -191,50 +191,34 @@ const TITLES: [&str; 2] = ["CLOSES FROM EVERY START", "MISSES FROM EVERY START"]
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
     let angle = core::f64::consts::TAU * f64::from(t / SECONDS) + 0.05;
     let outer = ellipse();
     let inners = inners();
     let paths = paths(angle, 5);
     for (k, (inner, corners)) in inners.into_iter().zip(&paths).enumerate() {
-        let rect = plot::inset(
-            [k as f32 * w / 2.0, 0.0, (k + 1) as f32 * w / 2.0, h],
-            14.0,
-            90.0,
-            14.0,
-            14.0,
-        );
+        let rect = plot::panel(c, k, 2).inset(14.0, 90.0, 14.0, 14.0);
         let ax = Axes::equal(rect, Point2::xy(0.4, -0.25), 2.2);
         let conic = inner.inverse();
         let level = |f: Conic| move |p: Point2| on(f, p.map_coefs(f64::from)) as f32;
         ax.contour(c, level(outer), 260, 0.0, 2.0, palette::ink());
         ax.contour(c, level(conic), 260, 0.0, 1.8, palette::sky());
-        ax.polyline(c, corners, 1.8, palette::red(), 1.0);
-        ax.scatter(c, &corners[1..5], Marker::Dot, 6.0, palette::red(), 1.0);
-        ax.scatter(c, &corners[..1], Marker::Dot, 12.0, palette::orange(), 1.0);
-        ax.scatter(c, &corners[5..], Marker::Ring, 18.0, palette::red(), 1.0);
+        ax.polyline(c, corners, 1.8, palette::red());
+        ax.scatter(c, &corners[1..5], Marker::Dot, 6.0, palette::red());
+        ax.scatter(c, &corners[..1], Marker::Dot, 12.0, palette::orange());
+        ax.scatter(c, &corners[5..], Marker::Ring, 18.0, palette::red());
         let colour = if k == 0 {
             palette::green()
         } else {
             palette::yellow()
         };
-        ax.text(
-            c,
-            Point2::xy(ax.x[0] + 0.1, ax.y[1] - 0.1),
-            TITLES[k],
-            12.0,
-            colour,
-            Align::Left,
-        );
+        // The notes sit a tenth of a unit in from the panel's top left and bottom left corners.
+        let unit = ax.scale();
+        let title = rect.lo + Point2::direction(0.1, 0.1).gp(unit);
+        c.text(TITLES[k], title, 12.0, colour, Align::Left);
         let miss = gap(corners[5], corners[0]);
-        ax.text(
-            c,
-            Point2::xy(ax.x[0] + 0.1, ax.y[0] + 0.15),
-            &format!("GAP AFTER FIVE SIDES: {miss:.1E}"),
-            10.0,
-            palette::grid(),
-            Align::Left,
-        );
+        let note = rect.bottom_left() + Point2::direction(0.1, -0.15).gp(unit);
+        let text = format!("GAP AFTER FIVE SIDES: {miss:.1E}");
+        c.text(&text, note, 10.0, palette::grid(), Align::Left);
     }
     caption(
         c,

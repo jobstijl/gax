@@ -8,9 +8,10 @@
 //! moved body contact point stay one point.
 
 use gax::pga3d::{Motor, Point};
-use gax_numga_examples::canvas::mix;
+use gax_light::{fade, mix};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption, palette,
+    run,
 };
 
 mod quadrics {
@@ -134,16 +135,16 @@ fn panel(
     let mut s = Scene3::new(cam);
     if let Some(g) = ghost {
         for row in surface(g, 12, 32) {
-            s.polyline(&row, 1.0, palette::grid(), 0.6);
+            s.polyline(&row, 1.0, fade(palette::grid(), 0.6));
         }
     }
     let rows = surface(quadric, 16, 48);
     for row in &rows {
-        s.polyline(row, 1.0, palette::sky(), 0.55);
+        s.polyline(row, 1.0, fade(palette::sky(), 0.4));
     }
     for j in (0..rows[0].len()).step_by(3) {
         let meridian: Vec<P> = rows.iter().map(|r| r[j]).collect();
-        s.polyline(&meridian, 1.0, palette::sky(), 0.55);
+        s.polyline(&meridian, 1.0, fade(palette::sky(), 0.4));
     }
     s.dot(quadric.of(infinity()), Marker::Dot, 9.0, palette::sky());
     // A square of the tangent plane about the contact point: a square of the plane z = 0,
@@ -218,36 +219,35 @@ fn draw(c: &mut Canvas, t: f32) {
         Some(moved),
     );
     c.blit(&right, half, 0);
+    let screen = c.rect();
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
+    let (body_side, world_side) = (screen.column(0, 2), screen.column(1, 2));
+    // The divide between the panels, from under the caption to just above the bottom.
+    let divide = world_side.lo;
     c.line(
-        [half as f32, 60.0],
-        [half as f32, h as f32 - 20.0],
+        divide + down.gp(60.0),
+        world_side.bottom_left() + up.gp(20.0),
         1.0,
         palette::grid(),
-        1.0,
     );
 
-    let (wf, hf) = (w as f32, h as f32);
-    let label = |c: &mut Canvas, x: f32, s: &str| {
-        c.text(s, x, hf - 18.0, 11.0, palette::ink(), Align::Center);
+    let label = |c: &mut Canvas, side: Rect, s: &str| {
+        let at = side.bottom_middle() + up.gp(18.0);
+        c.text(s, at, 11.0, palette::ink(), Align::Center);
     };
-    label(c, wf * 0.25, "BODY FRAME: TANGENT -> CONTACT -> TANGENT");
-    label(c, wf * 0.75, "WORLD FRAME: M >> Q(M << PLANE)");
+    label(c, body_side, "BODY FRAME: TANGENT -> CONTACT -> TANGENT");
+    label(c, world_side, "WORLD FRAME: M >> Q(M << PLANE)");
     let key = [
         ("CENTRE Q(INFINITY)", palette::sky()),
         ("CONTACT Q(TANGENT)", palette::red()),
         ("M >> CONTACT", palette::yellow()),
     ];
+    // The key, in the bottom right corner: a dot and its name per row.
     for (i, (s, col)) in key.iter().enumerate() {
-        let y = hf - 100.0 + 18.0 * i as f32;
-        c.disk([wf - 210.0, y - 4.0], 4.0, *col, 1.0);
-        c.text(
-            s,
-            wf - 200.0,
-            y,
-            11.0,
-            mix(palette::ink(), *col, 0.3),
-            Align::Left,
-        );
+        let row = screen.hi + Point2::direction(-210.0, -100.0 + 18.0 * i as f32);
+        c.disk(row + up.gp(4.0), 4.0, *col);
+        let name = row + Point2::direction(10.0, 0.0);
+        c.text(s, name, 11.0, mix(palette::ink(), *col, 0.3), Align::Left);
     }
     caption(
         c,

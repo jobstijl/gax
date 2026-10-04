@@ -15,9 +15,10 @@
 //! `eigh_with` applies as in numga's `eigvalsh(metric)`.
 
 use gax::pga3d::{Direction, Motor, Plane, Point, Scalar};
-use gax_numga_examples::canvas::{Rgb, mix, scale, srgb};
+use gax_light::{fade, mix, srgb};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, backdrop, caption, colormap, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, colormap, palette,
+    run,
 };
 use std::sync::OnceLock;
 
@@ -192,7 +193,7 @@ fn render(surface: &Surface, cam: &Camera, w: usize, h: usize, height: f64) -> V
             s.spawn(move || {
                 for (i, &y) in chunk.iter().enumerate() {
                     for x in 0..w {
-                        let (o, d) = cam.ray([x as f32 + 0.5, y as f32 + 0.5]);
+                        let (o, d) = cam.ray(Point2::xy(x as f32 + 0.5, y as f32 + 0.5));
                         let (o, d) = (f64p(o), f64p(d));
                         let (p, disc) = surface.hit(o, d);
                         if disc < 0.0 || p.to_euclidean()[2].abs() >= height {
@@ -278,11 +279,12 @@ fn shade(
     x: usize,
     y: usize,
     ranges: &[[f64; 2]; 2],
-) -> Option<Rgb> {
+) -> Option<Light> {
     let s = seen[y * w + x]?;
     let gauss = (s.k[0] * s.k[1] / 1.2).clamp(-1.0, 1.0);
-    let mut rgb = scale(colormap::rdbu(0.5 + 0.5 * gauss as f32), s.light);
-    let families = [srgb(0.10, 0.10, 0.10), srgb(0.55, 0.08, 0.08)];
+    let mut lit = fade(colormap::rdbu(0.5 + 0.5 * gauss as f32), s.light);
+    // The level lines cover the surface in near black and dark red.
+    let families = [srgb(0.10, 0.10, 0.10, 1.0), srgb(0.55, 0.08, 0.08, 1.0)];
     for f in 0..2 {
         let spacing = (ranges[f][1] - ranges[f][0]) / LEVELS;
         let at = |x: usize, y: usize| seen[y * w + x].map(|s| s.t[f] / spacing);
@@ -300,9 +302,9 @@ fn shade(
         };
         let rate = gax::pga2d::Point::direction(dx, dy).ideal_norm() + 1e-9;
         let cover = (1.0 - ((v - v.round()).abs() / rate - 0.5 * 1.2)).clamp(0.0, 1.0) as f32;
-        rgb = mix(rgb, families[f], cover);
+        lit = mix(lit, families[f], cover);
     }
-    Some(rgb)
+    Some(lit)
 }
 
 const SECONDS: f32 = 16.0;
@@ -325,24 +327,22 @@ fn draw(c: &mut Canvas, t: f32) {
             Lens::Parallel(extent),
         );
         let seen = render(&scene.surfaces[i], &cam, pw, ph, height);
-        let x0 = i * pw;
-        c.clip([x0 as f32, top as f32, (x0 + pw) as f32, c.height as f32]);
+        let x0 = (i * pw) as f32;
+        let panel = Rect::new(x0, top as f32, x0 + pw as f32, c.height as f32);
+        c.clip(panel);
         let ranges = scene.ranges[i];
-        c.shade(1, |x, y| {
-            let (px, py) = (x as usize - x0, y as usize - top);
+        // Each pixel's place in the panel: its offset from the panel's corner.
+        c.shade(1, |p| {
+            let offset = p - panel.lo;
+            let (px, py) = (offset.e20() as usize, offset.e01() as usize);
             shade(&seen, pw, px, py, &ranges)
         });
         c.unclip();
         let label = ["ELLIPSOID", "HYPERBOLOID OF ONE SHEET"][i];
         let size = (c.height as f32 / 30.0).clamp(7.0, 12.0);
-        c.text(
-            label,
-            (x0 + pw / 2) as f32,
-            c.height as f32 - size * 0.8,
-            size,
-            palette::ink(),
-            Align::Center,
-        );
+        let bottom_middle = panel.bottom_middle();
+        let at = bottom_middle - Point2::direction(0.0, size * 0.8);
+        c.text(label, at, size, palette::ink(), Align::Center);
     }
     caption(
         c,
@@ -485,6 +485,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

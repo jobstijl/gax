@@ -1,10 +1,15 @@
-//! Colormaps as functions of `t ∈ [0, 1]`, linear between stops given in sRGB (the stops of
-//! matplotlib's maps of the same names, sampled).
+//! Colormaps as functions of `t ∈ [0, 1]`: lights through stops given in sRGB (the stops of
+//! matplotlib's maps of the same names, sampled), blended in OkLab between them, so that equal
+//! steps of `t` look like equal steps.
 
-use crate::canvas::{Rgb, mix, srgb};
+use gax_light::{Light, blend, srgb};
 
-/// A colormap through `s`, sRGB stops spaced evenly over `t ∈ [0, 1]`, linear between them.
-pub fn stops(t: f32, s: &[[f32; 3]]) -> Rgb {
+/// The intensity of a colormap's lights.
+pub const INTENSITY: f32 = 1.0;
+
+/// A colormap through `s`, sRGB stops spaced evenly over `t ∈ [0, 1]`, blended perceptually
+/// between them.
+pub fn stops(t: f32, s: &[[f32; 3]]) -> Light {
     let t = if t.is_finite() {
         t.clamp(0.0, 1.0)
     } else {
@@ -12,12 +17,12 @@ pub fn stops(t: f32, s: &[[f32; 3]]) -> Rgb {
     };
     let x = t * (s.len() - 1) as f32;
     let i = (x.floor() as usize).min(s.len() - 2);
-    let c = |k: usize| srgb(s[k][0], s[k][1], s[k][2]);
-    mix(c(i), c(i + 1), x - i as f32)
+    let c = |k: usize| srgb(s[k][0], s[k][1], s[k][2], INTENSITY);
+    blend(c(i), c(i + 1), x - i as f32)
 }
 
 /// Dark purple through teal to yellow.
-pub fn viridis(t: f32) -> Rgb {
+pub fn viridis(t: f32) -> Light {
     stops(
         t,
         &[
@@ -37,7 +42,7 @@ pub fn viridis(t: f32) -> Rgb {
 }
 
 /// Black through red and orange to pale yellow.
-pub fn inferno(t: f32) -> Rgb {
+pub fn inferno(t: f32) -> Light {
     stops(
         t,
         &[
@@ -57,7 +62,7 @@ pub fn inferno(t: f32) -> Rgb {
 }
 
 /// Blue through white to red (diverging, centred at `t = 0.5`).
-pub fn coolwarm(t: f32) -> Rgb {
+pub fn coolwarm(t: f32) -> Light {
     stops(
         t,
         &[
@@ -71,7 +76,7 @@ pub fn coolwarm(t: f32) -> Rgb {
 }
 
 /// Red through white to blue, reversed: blue for low, red for high (matplotlib's RdBu_r).
-pub fn rdbu(t: f32) -> Rgb {
+pub fn rdbu(t: f32) -> Light {
     stops(
         t,
         &[
@@ -85,7 +90,7 @@ pub fn rdbu(t: f32) -> Rgb {
 }
 
 /// A rainbow without its harshest steps.
-pub fn turbo(t: f32) -> Rgb {
+pub fn turbo(t: f32) -> Light {
     stops(
         t,
         &[
@@ -103,7 +108,7 @@ pub fn turbo(t: f32) -> Rgb {
 }
 
 /// White to dark blue.
-pub fn blues(t: f32) -> Rgb {
+pub fn blues(t: f32) -> Light {
     stops(
         t,
         &[
@@ -117,7 +122,7 @@ pub fn blues(t: f32) -> Rgb {
 }
 
 /// The hue circle at full saturation (`t` wraps).
-pub fn hsv(t: f32) -> Rgb {
+pub fn hsv(t: f32) -> Light {
     let t = t.rem_euclid(1.0);
     stops(
         t,

@@ -10,9 +10,9 @@
 
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Point};
-use gax_numga_examples::canvas::mix;
+use gax_light::{blend, fade};
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Scene3, backdrop, caption, colormap, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Point2, Scene3, backdrop, caption, colormap, palette, run,
 };
 
 mod skinning {
@@ -144,8 +144,7 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
         Point::xyz(-0.25, 0.0, 0.0),
         Point::xyz(1.25, 0.0, 0.0),
         2.0,
-        palette::ink(),
-        0.8,
+        fade(palette::ink(), 0.8),
     );
     let up = Point::direction(0.0, 0.0, 1.5);
     s.arrow(Point::xyz(0.0, 0.0, 0.0), up, 2.0, 8.0, palette::orange());
@@ -161,25 +160,22 @@ fn panel(c: &mut Canvas, skin: &[P], angle: f64, azimuth: f32, title: &str) {
         let px: Option<Vec<_>> = q.iter().map(|p| cam.px(*p)).collect();
         if let Some(px) = px {
             c.fill(&px, colour, 0.92);
-            c.polyline(&px, 0.6, palette::bottom(), 0.6, true);
+            c.polyline(&px, 0.6, fade(palette::grid(), 0.6), true);
         }
     }
-    let size = (c.height as f32 / 30.0).clamp(8.0, 13.0);
-    let mid = c.width as f32 * 0.5;
-    c.text(
-        title,
-        mid,
-        c.height as f32 * 0.17,
-        size,
-        palette::ink(),
-        Align::Center,
-    );
+    // The title a sixth of the way down the middle, and the least radius near the bottom,
+    // from red at no radius to green at the full one.
+    let screen = c.rect();
+    let size = (screen.height() / 30.0).clamp(8.0, 13.0);
+    let (top, down) = (screen.top_middle(), Point2::direction(0.0, 1.0));
+    let title_at = top + down.gp(screen.height() * 0.17);
+    c.text(title, title_at, size, palette::ink(), Align::Center);
     let least = skin.iter().map(|v| radius(*v)).fold(f64::MAX, f64::min);
-    let colour = mix(palette::red(), palette::green(), least as f32);
+    let colour = blend(palette::red(), palette::green(), least as f32);
+    let note = top + down.gp(screen.height() * 0.92);
     c.text(
         &format!("MIN RADIUS {least:.3}"),
-        mid,
-        c.height as f32 * 0.92,
+        note,
         size,
         colour,
         Align::Center,

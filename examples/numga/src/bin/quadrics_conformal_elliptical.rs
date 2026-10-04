@@ -8,8 +8,8 @@
 //! picture it started from, because each carries every mirror plane onto a mirror plane.
 
 use gax::vga3d::Vector;
-use gax_numga_examples::canvas::{mix, scale};
-use gax_numga_examples::{Anim, Canvas, backdrop, caption, palette, run};
+use gax_light::{fade, mix};
+use gax_numga_examples::{Anim, Canvas, Point2, backdrop, caption, palette, run};
 
 mod elliptical {
     use gax::vga3d::{Bivector, Rotor, Vector};
@@ -82,31 +82,36 @@ use elliptical::*;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
     let phase = f64::from(t) / 16.0 * core::f64::consts::TAU;
     let planes = planes_at(phase);
-    let centre = [w * 0.5, h * 0.54];
-    let radius = h * 0.42;
+    // The sphere's disk, a little below the middle of the screen.
+    let centre = screen.centre() + Point2::direction(0.0, screen.height() * 0.04);
+    let radius = screen.height() * 0.42;
     let sharpness = 2.0 * f64::from(radius);
-    let (cell_a, cell_b) = (palette::sky(), palette::blue());
+    // The cells cover the disk, so they shine far less than a stroke.
+    let (cell_a, cell_b) = (fade(palette::sky(), 0.3), fade(palette::blue(), 0.15));
     // Lit from the upper left, so the disk reads as a sphere: the inner product of the normal
     // (on the unit sphere, the point itself) with the direction to the light.
     let light = Vector::new(-0.35, 0.45, 0.82);
-    c.shade(2, |x, y| {
-        let (u, v) = ((x - centre[0]) / radius, (centre[1] - y) / radius);
-        let r2 = u * u + v * v;
+    c.shade(2, |q: Point2| {
+        // The pixel's offset from the centre in radii: x right, y up.
+        let off = q - centre;
+        let (u, v) = (off.e20() / radius, -off.e01() / radius);
+        // The square of the pixel's distance from the centre, in radii: the join's norm.
+        let r2 = (q & centre).norm_squared() / (radius * radius);
         if r2 > 1.0 {
             return None;
         }
         // The front hemisphere, seen along -z: x right, y up, z towards the viewer.
-        let z = (1.0 - r2).sqrt();
-        let p = Vector::new(f64::from(u), f64::from(v), f64::from(z));
+        let z = f64::from(1.0 - r2).sqrt();
+        let p = Vector::new(f64::from(u), f64::from(v), z);
         let s = sides(p, &planes, sharpness) as f32;
         let colour = mix(cell_b, cell_a, (s + 1.0) / 2.0);
         let lit = (0.55 + 0.45 * (p | light).s()).clamp(0.2, 1.0);
-        Some(scale(colour, lit as f32))
+        Some(fade(colour, lit as f32))
     });
-    c.ring(centre, radius, 1.5, palette::ink(), 0.6);
+    c.ring(centre, radius, 1.5, fade(palette::ink(), 0.6));
     caption(
         c,
         "THE OCTAHEDRAL MIRROR PLANES ON THE UNIT SPHERE",

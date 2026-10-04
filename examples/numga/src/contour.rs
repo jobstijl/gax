@@ -1,7 +1,7 @@
 //! Level lines of a scalar field on a grid by marching squares: the segments where the field
 //! crosses `level`, with the crossings placed by linear interpolation along the cell edges.
 
-use crate::points::Point2;
+use crate::points::{Point2, box_map};
 
 /// The segments (in grid coordinates: the point `(column, row)`) where `f` crosses `level`, for
 /// `f` sampled on a `cols` x `rows` grid (`f[row * cols + col]`). Non-finite samples break the
@@ -62,17 +62,17 @@ pub fn of_fn(
     level: f32,
 ) -> Vec<[Point2; 2]> {
     let n = n.max(2);
-    // Grid point `(i, j)` in the function's coordinates.
-    let to = |g: Point2| {
-        let [i, j] = g.to_euclidean();
-        let s = |r: [f32; 2], v: f32| r[0] + (r[1] - r[0]) * v / (n - 1) as f32;
-        Point2::xy(s(x, i), s(y, j))
-    };
+    // The grid's corners onto the ranges' corners.
+    let last = (n - 1) as f32;
+    let to = box_map(
+        [Point2::xy(0.0, 0.0), Point2::xy(last, last)],
+        [Point2::xy(x[0], y[0]), Point2::xy(x[1], y[1])],
+    );
     let grid: Vec<f32> = (0..n * n)
-        .map(|k| f(to(Point2::xy((k % n) as f32, (k / n) as f32))))
+        .map(|k| f(to.of(Point2::xy((k % n) as f32, (k / n) as f32))))
         .collect();
     segments(&grid, n, n, level)
         .into_iter()
-        .map(|[a, b]| [to(a), to(b)])
+        .map(|[a, b]| [to.of(a), to.of(b)])
         .collect()
 }

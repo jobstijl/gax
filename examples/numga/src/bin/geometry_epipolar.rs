@@ -15,10 +15,11 @@
 use gax::Unit;
 use gax::pga2d;
 use gax::pga3d::{Line, Motor, Plane, Point, Scalar};
+use gax_light::{fade, mix};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, colormap,
-    palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
+    caption, colormap, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -278,7 +279,7 @@ fn scene() -> &'static Scene {
 }
 
 /// A camera's wireframe: its centre, sensor rectangle and optical axis, moved by its pose.
-fn frustum(s: &mut Scene3, pose: M, size: f64, color: Rgb, width: f32) {
+fn frustum(s: &mut Scene3, pose: M, size: f64, color: Light, width: f32) {
     let (w, h) = (0.5 * size, 0.38 * size);
     let at = |x: f64, y: f64, z: f64| pose >> Point::xyz(x, y, z);
     let corners = [
@@ -288,24 +289,18 @@ fn frustum(s: &mut Scene3, pose: M, size: f64, color: Rgb, width: f32) {
         at(-w, h, size),
     ];
     let centre = at(0.0, 0.0, 0.0);
-    for k in 0..4 {
-        s.seg(corners[k], corners[(k + 1) % 4], width, color, 1.0);
-        s.seg(centre, corners[k], width * 0.8, color, 0.8);
+    let [a, b, c, d] = corners;
+    s.polyline(&[a, b, c, d, a], width, color);
+    for corner in corners {
+        s.seg(centre, corner, width * 0.8, fade(color, 0.8));
     }
-    s.seg(centre, at(0.0, 0.0, size * 1.3), width * 1.2, color, 1.0);
+    s.seg(centre, at(0.0, 0.0, size * 1.3), width * 1.2, color);
     s.dot(centre, Marker::Dot, 7.0, color);
 }
 
 /// A camera's sensor: the true projections and the measured keypoints, and optionally the
 /// epipolar lines.
-fn sensor_panel(
-    c: &mut Canvas,
-    rect: [f32; 4],
-    title: &str,
-    truth: &[P],
-    measured: &[P],
-    lines: &[L],
-) {
+fn sensor_panel(c: &mut Canvas, rect: Rect, title: &str, truth: &[P], measured: &[P], lines: &[L]) {
     let ax = Axes::new(rect, [-0.6, 0.6], [-0.45, 0.45]);
     ax.frame(c, title, "SENSOR U", "SENSOR V");
     let on_sensor = sensor();
@@ -313,18 +308,19 @@ fn sensor_panel(
     let colour = |i: usize| colormap::turbo(0.08 + 0.84 * i as f32 / (n - 1) as f32);
     for (i, l) in lines.iter().enumerate() {
         let [a, b] = ends(*l, 0.7).map(|p| on_sensor.of(p));
-        ax.line(c, a, b, 1.0, colour(i), 0.45);
+        ax.line(c, a, b, 1.0, fade(colour(i), 0.45));
     }
     let pts: Vec<pga2d::Point<(), f64>> = truth.iter().map(|p| on_sensor.of(*p)).collect();
-    ax.scatter(c, &pts, Marker::Ring, 7.0, palette::grid(), 1.0);
+    ax.scatter(c, &pts, Marker::Ring, 7.0, palette::grid());
     for (i, p) in measured.iter().enumerate() {
-        ax.scatter(c, &[on_sensor.of(*p)], Marker::Dot, 5.0, colour(i), 1.0);
+        ax.scatter(c, &[on_sensor.of(*p)], Marker::Dot, 5.0, colour(i));
     }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let s = scene();
     // The motor shown: along the Gauss-Newton steps, eased between them.
     let progress = (t / PER_STEP).min(SHOWN as f32);
@@ -336,9 +332,11 @@ fn draw(c: &mut Canvas, t: f32) {
     // The sensors, left.
     let top = 70.0;
     let panel = (h - top) / 2.0;
+    let sensor_rect =
+        |y0: f32, y1: f32| Rect::new(0.0, y0, w * 0.36, y1).inset(46.0, 18.0, 10.0, 30.0);
     sensor_panel(
         c,
-        plot::inset([0.0, top, w * 0.36, top + panel], 46.0, 18.0, 10.0, 30.0),
+        sensor_rect(top, top + panel),
         "CAMERA 1",
         &s.image_1,
         &s.noisy_1,
@@ -346,7 +344,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     sensor_panel(
         c,
-        plot::inset([0.0, top + panel, w * 0.36, h], 46.0, 18.0, 10.0, 30.0),
+        sensor_rect(top + panel, h),
         "CAMERA 2, EPIPOLAR LINES",
         &s.image_2,
         &s.noisy_2,
@@ -357,7 +355,7 @@ fn draw(c: &mut Canvas, t: f32) {
     let (pw, ph) = (c.width - x0, c.height - y0);
     let mut sub = Canvas::new(pw, ph);
     sub.backdrop(
-        gax_numga_examples::canvas::mix(palette::top(), palette::bottom(), y0 as f32 / h),
+        mix(palette::top(), palette::bottom(), y0 as f32 / h),
         palette::bottom(),
     );
     let azimuth =
@@ -380,8 +378,8 @@ fn draw(c: &mut Canvas, t: f32) {
         scene.dot(*l, Marker::Ring, 10.0, palette::grid());
         scene.dot(*p, Marker::Star, 12.0, colour);
         if i % 5 == 0 {
-            scene.seg(origin(), *p, 0.8, palette::sky(), 0.4);
-            scene.seg(centre_2, *p, 0.8, palette::green(), 0.4);
+            scene.seg(origin(), *p, 0.8, fade(palette::sky(), 0.4));
+            scene.seg(centre_2, *p, 0.8, fade(palette::green(), 0.4));
         }
     }
     frustum(
@@ -402,14 +400,13 @@ fn draw(c: &mut Canvas, t: f32) {
             degrees(baseline_cosine(motor, s.true_motor)),
             rms_error(s, motor)
         ),
-        10.0,
-        18.0,
+        sub.rect().lo + Point2::direction(10.0, 18.0),
         11.0,
         palette::ink(),
         Align::Left,
     );
     c.blit(&sub, x0, y0);
-    let key = Axes::new([x0 as f32, h - 80.0, w, h], [0.0, 1.0], [0.0, 1.0]);
+    let key = Axes::new(Rect::new(x0 as f32, h - 80.0, w, h), [0.0, 1.0], [0.0, 1.0]);
     key.legend(
         c,
         &[

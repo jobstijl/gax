@@ -11,8 +11,9 @@
 
 use gax::motions::{Motions, Pga2d};
 use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -190,14 +191,14 @@ fn support(ax: &Axes, c: &mut Canvas, anchor: P, attachment: P) {
     let out = out.gp(1.0 / out.ideal_norm());
     let side = across(out);
     let at = |s: f64| anchor + side.gp(s);
-    ax.line(c, at(-0.14), at(0.14), 2.0, palette::grid(), 1.0);
+    ax.line(c, at(-0.14), at(0.14), 2.0, palette::grid());
     for k in 0..5 {
         let s = at(-0.12 + 0.06 * k as f64);
-        ax.line(c, s, s + (out + side).gp(0.075), 1.0, palette::grid(), 1.0);
+        ax.line(c, s, s + (out + side).gp(0.075), 1.0, palette::grid());
     }
 }
 
-fn spring_colour(extension: f64) -> Rgb {
+fn spring_colour(extension: f64) -> Light {
     if extension > 1e-9 {
         palette::orange()
     } else if extension < -1e-9 {
@@ -208,7 +209,7 @@ fn spring_colour(extension: f64) -> Rgb {
 }
 
 /// One mode's panel at `phase` (the cosine of the oscillation).
-fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f64, title: &str) {
+fn panel(c: &mut Canvas, rect: Rect, case: &ModeCase, mode: usize, phase: f64, title: &str) {
     let ax = Axes::equal(rect, P::xy(1.35, 1.5), 1.4);
     let s = &case.system;
     // The mode's shape, enlarged so that the largest corner moves 0.2.
@@ -225,21 +226,22 @@ fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f6
         .map(|(p, o)| moved(*p, *o))
         .collect();
     let closed = |pts: &[P]| [pts, &pts[..1]].concat();
-    ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::grid(), 1.0);
-    ax.fill(c, &body, canvas::scale(palette::blue(), 0.8), 0.55);
-    ax.polyline(c, &closed(&body), 2.0, palette::sky(), 1.0);
+    ax.dashed(c, &closed(&s.body), 1.2, 4.0, palette::grid());
+    // The plate's fill covers what is below, a dim blue: its outline glows.
+    ax.fill(c, &body, fade(palette::blue(), 0.1), 0.55);
+    ax.polyline(c, &closed(&body), 2.0, palette::sky());
     for (j, (anchor, attachment)) in s.anchors.iter().zip(&s.attachments).enumerate() {
         let b = moved(*attachment, case.attachment_offsets[mode][j]);
         support(&ax, c, *anchor, *attachment);
         let colour = spring_colour(case.extensions[mode][j] * k);
-        ax.polyline(c, &spring_path(*anchor, b), 2.0, colour, 1.0);
-        ax.scatter(c, &[b], Marker::Dot, 7.0, palette::ink(), 1.0);
+        ax.polyline(c, &spring_path(*anchor, b), 2.0, colour);
+        ax.scatter(c, &[b], Marker::Dot, 7.0, palette::ink());
     }
     // The mode's centre of rotation. A translation's is at infinity (its weight is zero), so an
     // arrow from the plate's centre shows the direction it slides in instead.
     let m = case.modes[mode];
     if m.e12().abs() > 1e-9 {
-        ax.scatter(c, &[m], Marker::Cross, 9.0, palette::yellow(), 0.9);
+        ax.scatter(c, &[m], Marker::Cross, 9.0, fade(palette::yellow(), 0.9));
     } else {
         let centre = Point::xy(1.0, 1.0);
         let slide = centre.commutator(m);
@@ -252,19 +254,15 @@ fn panel(c: &mut Canvas, rect: [f32; 4], case: &ModeCase, mode: usize, phase: f6
             palette::yellow(),
         );
     }
-    ax.text(
-        c,
-        Point2::xy(ax.x[0] + 0.05, ax.y[0] + 0.12),
-        title,
-        11.0,
-        palette::ink(),
-        Align::Left,
-    );
+    // The title just inside the lower left corner.
+    let corner = ax.at(0.0, 0.0) + Point2::direction(0.05, 0.12);
+    ax.text(c, corner, title, 11.0, palette::ink(), Align::Left);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let top = h * 0.12;
     let row_h = (h - top) / 2.0;
     for (r, (case, label)) in cases()
@@ -272,24 +270,14 @@ fn draw(c: &mut Canvas, t: f32) {
         .zip(["TWO SPRINGS", "THREE SPRINGS"])
         .enumerate()
     {
+        // The row of the case's three modes, under the caption.
+        let row = Rect::new(0.0, top + r as f32 * row_h, w, top + (r + 1) as f32 * row_h);
         for mode in 0..3 {
-            let rect = [
-                w * mode as f32 / 3.0,
-                top + r as f32 * row_h,
-                w * (mode + 1) as f32 / 3.0,
-                top + (r + 1) as f32 * row_h,
-            ];
+            let rect = row.column(mode, 3).inset(6.0, 6.0, 6.0, 6.0);
             let f = case.frequencies[mode];
             let phase = (core::f64::consts::TAU * f * f64::from(t)).cos();
             let title = format!("{label}: {:.3} HZ", f);
-            panel(
-                c,
-                plot::inset(rect, 6.0, 6.0, 6.0, 6.0),
-                case,
-                mode,
-                phase,
-                &title,
-            );
+            panel(c, rect, case, mode, phase, &title);
         }
     }
     caption(

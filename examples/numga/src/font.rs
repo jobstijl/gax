@@ -1,6 +1,8 @@
 //! A stroke vector font in the arcade tradition: every glyph is a few polylines on a 4 x 6 grid
 //! (y up). From the warp example of this repository.
 
+use crate::points::Point2;
+
 /// The strokes of a glyph (points on the 4 x 6 grid), or `None` for characters it lacks.
 fn glyph(c: char) -> Option<&'static [&'static [(f32, f32)]]> {
     Some(match c.to_ascii_uppercase() {
@@ -169,24 +171,25 @@ pub fn width(s: &str, size: f32) -> f32 {
     }
 }
 
-/// The segments of `s` with its baseline at `(x, y)` and glyphs `size` tall, as
-/// `[x0, y0, x1, y1]`.
-pub fn segments(s: &str, x: f32, y: f32, size: f32, align: Align) -> Vec<[f32; 4]> {
-    let k = size / 6.0;
-    let w = width(s, size);
-    let x0 = match align {
-        Align::Left => x,
-        Align::Center => x - w * 0.5,
-        Align::Right => x - w,
+/// The segments of `s` in the font's frame: glyph units (a glyph is 6 tall and 4 wide, 6 apart),
+/// `y` up, the baseline along `x` with its anchor (left end, middle or right end, by `align`)
+/// at the origin.
+pub fn segments(s: &str, align: Align) -> Vec<[Point2; 2]> {
+    let w = width(s, 6.0);
+    let start = match align {
+        Align::Left => 0.0,
+        Align::Center => -w * 0.5,
+        Align::Right => -w,
     };
     let mut out = Vec::new();
     for (i, c) in s.chars().enumerate() {
-        let gx = x0 + i as f32 * 6.0 * k;
+        // The glyph's own origin, `6 i` along the baseline.
+        let origin = Point2::xy(start + 6.0 * i as f32, 0.0);
+        let at = |(x, y): (f32, f32)| origin + Point2::direction(x, y);
         let strokes = glyph(c).or_else(|| glyph('?')).unwrap_or(&[]);
         for stroke in strokes {
             for pair in stroke.windows(2) {
-                let (a, b) = (pair[0], pair[1]);
-                out.push([gx + a.0 * k, y + a.1 * k, gx + b.0 * k, y + b.1 * k]);
+                out.push([at(pair[0]), at(pair[1])]);
             }
         }
     }
@@ -202,7 +205,7 @@ mod tests {
         for c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:-+*!?/'()<>=% ".chars() {
             assert!(glyph(c).is_some(), "{c}");
         }
-        let s = segments("WARP 2x", 0.0, 0.0, 6.0, Align::Center);
+        let s = segments("WARP 2x", Align::Center);
         assert!(s.len() > 15);
         assert!((width("AB", 6.0) - 10.0).abs() < 1e-6);
     }

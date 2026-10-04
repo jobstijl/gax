@@ -14,10 +14,10 @@
 
 use std::sync::OnceLock;
 
-use gax_numga_examples::canvas::{mix, srgb};
+use gax_light::{fade, srgb};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Pos2, Rgb, backdrop, caption, contour, palette,
-    plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, ORIGIN2, Point2, Rect, backdrop, caption, colormap,
+    contour, palette, reach2, run,
 };
 
 mod lensing {
@@ -148,24 +148,25 @@ const WIDTH: f64 = 0.035;
 const SECONDS: f32 = 8.0;
 
 /// The colours of starlight, dark to bright (numga's map), with a power-law stretch.
-fn starlight(t: f64) -> Rgb {
-    let stops = [
-        srgb(0.035, 0.051, 0.075),
-        srgb(0.255, 0.188, 0.263),
-        srgb(0.588, 0.376, 0.259),
-        srgb(0.918, 0.718, 0.447),
-        srgb(1.0, 0.949, 0.792),
-    ];
-    let x = (t.clamp(0.0, 1.0).powf(0.65) * 4.0) as f32;
-    let i = (x.floor() as usize).min(3);
-    mix(stops[i], stops[i + 1], x - i as f32)
+fn starlight(t: f64) -> Light {
+    let stretched = t.clamp(0.0, 1.0).powf(0.65) as f32;
+    colormap::stops(
+        stretched,
+        &[
+            [0.035, 0.051, 0.075],
+            [0.255, 0.188, 0.263],
+            [0.588, 0.376, 0.259],
+            [0.918, 0.718, 0.447],
+            [1.0, 0.949, 0.792],
+        ],
+    )
 }
 
 /// What the frames share: the critical curve and the caustic (as segments), the small round
 /// sources, and a sky grid with the source direction each pixel reaches (for the magnification).
 struct Scene {
     critical: Vec<[Point2; 2]>,
-    caustic: Vec<[V; 2]>,
+    caustic: Vec<[Point2; 2]>,
     tissot: Vec<(V, Vec<V>, f64)>,
     grid: (Vec<V>, Vec<V>),
 }
@@ -178,7 +179,7 @@ fn scene() -> &'static Scene {
         // The lens carries the critical curve to the caustic.
         let caustic = critical
             .iter()
-            .map(|seg| seg.map(|p| binary(at(p))))
+            .map(|seg| seg.map(|p| reach2(binary(at(p)))))
             .collect();
         let (directions, reached, _) = lens(400);
         Scene {
@@ -196,59 +197,40 @@ fn source_at(t: f32) -> V {
     v(-0.6 * phase.cos(), 0.12)
 }
 
-fn square(rect: [f32; 4]) -> Axes {
-    let side = (rect[2] - rect[0]).min(rect[3] - rect[1]);
-    let cx = (rect[0] + rect[2]) * 0.5;
-    let top = rect[1];
-    Axes::equal(
-        [cx - side * 0.5, top, cx + side * 0.5, top + side],
-        Point2::xy(0.0, 0.0),
-        HALF,
-    )
-}
-
-fn segments(ax: &Axes, c: &mut Canvas, segs: &[[impl Pos2; 2]], width: f32, colour: Rgb) {
-    for [a, b] in segs {
-        ax.line(c, *a, *b, width, colour, 1.0);
-    }
+/// Axes on the sky in the largest square hanging from the middle of the top of `rect`.
+fn square(rect: Rect) -> Axes {
+    let side = rect.width().min(rect.height());
+    let top_middle = rect.top_middle();
+    let half = Point2::direction(side * 0.5, 0.0);
+    let lo = top_middle - half;
+    let hi = top_middle + half + Point2::direction(0.0, side);
+    Axes::equal(Rect { lo, hi }, ORIGIN2, HALF)
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let s = scene();
-    let (w, h) = (c.width as f32, c.height as f32);
-    let critical_colour = srgb(0.333, 0.796, 0.827);
-    let caustic_colour = srgb(1.0, 0.53, 0.447);
-    let masses = positions();
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let critical_colour = srgb(0.333, 0.796, 0.827, 1.6);
+    let caustic_colour = srgb(1.0, 0.53, 0.447, 1.6);
+    let masses = positions().map(reach2);
     let centre = source_at(t);
     let size = (h / 34.0).clamp(7.0, 15.0);
-    let (top, bottom) = (h * 0.17, h - size * 3.2);
-    let panel = |i: usize| {
-        let x0 = w * i as f32 / 3.0;
-        square(plot::inset(
-            [x0, top, x0 + w / 3.0, bottom],
-            w * 0.02,
-            0.0,
-            w * 0.02,
-            0.0,
-        ))
-    };
-    let below = |c: &mut Canvas, ax: &Axes, dx: f32, text: &str, colour: Rgb, align: Align| {
-        let [x0, _, x1, y1] = ax.rect;
-        c.text(
-            text,
-            (x0 + x1) * 0.5 + dx,
-            y1 + size * 1.8,
-            size,
-            colour,
-            align,
-        );
+    // Three columns between the caption and the notes below the panels.
+    let row = Rect::new(0.0, h * 0.17, w, h - size * 3.2);
+    let panel = |i: usize| square(row.column(i, 3).inset(w * 0.02, 0.0, w * 0.02, 0.0));
+    // A note under a panel, from the middle of its bottom edge.
+    let below = |c: &mut Canvas, ax: &Axes, dx: f32, text: &str, colour: Light, align: Align| {
+        let bottom_middle = ax.rect.bottom_middle();
+        let at = bottom_middle + Point2::direction(dx, size * 1.8);
+        c.text(text, at, size, colour, align);
     };
 
     // The source plane: the source unlensed, with the caustic.
     let ax = panel(0);
     ax.image(c, 1, |p| Some(starlight(brightness(at(p), centre, WIDTH))));
-    segments(&ax, c, &s.caustic, 1.3, caustic_colour);
+    ax.stroke(c, &s.caustic, 1.3, caustic_colour);
     ax.frame(c, "SOURCE", "", "");
     below(c, &ax, 0.0, "CAUSTIC", caustic_colour, Align::Center);
 
@@ -257,8 +239,8 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.image(c, 2, |p| {
         Some(starlight(brightness(binary(at(p)), centre, WIDTH)))
     });
-    segments(&ax, c, &s.critical, 1.1, critical_colour);
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid(), 1.0);
+    ax.stroke(c, &s.critical, 1.1, critical_colour);
+    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::grid());
     ax.frame(c, "SKY", "", "");
     // The magnification: the light over the whole sky over the source's own.
     let (directions, reached) = &s.grid;
@@ -273,14 +255,15 @@ fn draw(c: &mut Canvas, t: f32) {
     // Small round sources, as seen.
     let ax = panel(2);
     let preserved = palette::sky();
-    let reversed = srgb(0.79, 0.41, 0.28);
+    let reversed = srgb(0.79, 0.41, 0.28, 1.7);
     for (_, outline, ratio) in &s.tissot {
         let colour = if *ratio >= 0.0 { preserved } else { reversed };
-        ax.fill(c, outline, colour, 0.35);
-        ax.polyline(c, outline, 1.0, colour, 0.9);
+        let outline: Vec<Point2> = outline.iter().map(|d| reach2(*d)).collect();
+        ax.fill(c, &outline, colour, 0.35);
+        ax.polyline(c, &outline, 1.0, fade(colour, 0.9));
     }
-    segments(&ax, c, &s.critical, 1.0, palette::grid());
-    ax.scatter(c, &masses, Marker::Ring, 10.0, palette::ink(), 0.8);
+    ax.stroke(c, &s.critical, 1.0, palette::grid());
+    ax.scatter(c, &masses, Marker::Ring, 10.0, fade(palette::ink(), 0.8));
     ax.frame(c, "SMALL ROUND SOURCES, AS SEEN", "", "");
     below(c, &ax, -size, "KEPT", preserved, Align::Right);
     below(c, &ax, size, "MIRRORED", reversed, Align::Left);

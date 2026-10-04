@@ -24,9 +24,11 @@
 //! onto it further along.
 
 use gax::vga3d::{Bivector, Rotor, Scalar, Vector};
+use gax_light::{fade, whiten};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, canvas, caption, colormap,
-    palette, run,
+    Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, backdrop,
+    caption, colormap, palette, run,
 };
 
 mod hopf {
@@ -153,32 +155,36 @@ const FRAMES: usize = 90;
 const LIMIT: f64 = 2.6;
 const LIFT_POLAR: f64 = 2.2;
 
-/// A projected point as drawn: beyond the limit, a gap in the curve.
-fn clipped(v: V) -> V {
+/// A projected point as drawn, a point of space: the origin plus the vector, and beyond the
+/// limit a gap in the curve.
+fn clipped(v: V) -> gax::pga3d::Point<(), f64> {
     if v.norm() > LIMIT {
-        Vector::new(f64::NAN, f64::NAN, f64::NAN)
+        gax::pga3d::Point::xyz(f64::NAN, f64::NAN, f64::NAN)
     } else {
-        v
+        at(v)
     }
 }
 
-/// A direction's colour: its azimuth as the hue, darker towards the south pole.
-fn colour(d: V) -> Rgb {
-    let hue = (d.e2().atan2(d.e1()) / core::f64::consts::TAU) as f32;
-    let base = canvas::mix(colormap::hsv(hue), [1.0; 3], 0.25);
-    canvas::scale(base, 0.45 + 0.55 * (1.0 + d.e3() as f32) / 2.0)
+/// The point a vector reaches from the origin: a direction as a point of the sphere of
+/// directions, a projected spinor as a point of space.
+fn at(v: V) -> gax::pga3d::Point<(), f64> {
+    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
-/// A canvas for a panel at `rect`, its backdrop the matching band of the full backdrop, so that
-/// a 3D scene drawn on it with its own camera can be blitted in place.
-fn panel(c: &Canvas, rect: [usize; 4]) -> Canvas {
-    let mut p = Canvas::new(rect[2] - rect[0], rect[3] - rect[1]);
-    let h = c.height as f32 - 1.0;
-    p.backdrop(
-        canvas::mix(palette::top(), palette::bottom(), rect[1] as f32 / h),
-        canvas::mix(palette::top(), palette::bottom(), (rect[3] - 1) as f32 / h),
-    );
-    p
+/// A direction's azimuth: the angle about z from x to its part in the xy plane, read off the
+/// logarithm of the rotor that turns one into the other (`level x` turns by minus the angle).
+fn azimuth(d: V) -> f64 {
+    let level: V = Vector::new(d.e1(), d.e2(), 0.0);
+    let turn: Bivector<(), f64> = (level * Vector::new(1.0, 0.0, 0.0)).normalized().log();
+    -turn.e12()
+}
+
+/// A direction's colour: its azimuth as the hue, whitened a little, fainter towards the south
+/// pole.
+fn colour(d: V) -> Light {
+    let hue = (azimuth(d) / core::f64::consts::TAU) as f32;
+    let base = whiten(colormap::hsv(hue), 0.25);
+    fade(base, 0.45 + 0.55 * (1.0 + d.e3() as f32) / 2.0)
 }
 
 /// The part of the loop spent on the sweep; the rest shows the tori.
@@ -186,7 +192,7 @@ const SWEEP: f32 = 0.72;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width, c.height);
+    let screen = c.rect();
     let phase = t / SECONDS;
     let azimuth = -0.96 + 0.6 * (phase * core::f32::consts::TAU).sin();
     let elevation = 0.38;
@@ -209,125 +215,103 @@ fn draw(c: &mut Canvas, t: f32) {
     };
 
     // Space: the fibres so far, the newest heavier.
-    let rect = [(w as f32 * 0.3) as usize, 0, w, h];
-    let mut space = panel(c, rect);
+    let (w, h) = (screen.width(), screen.height());
+    let right = Rect::new(0.3 * w, 0.0, w, h);
     let cam = Camera::orbit(
-        space.width,
-        space.height,
-        Vector::new(0.0, 0.0, -0.3),
+        right.width() as usize,
+        right.height() as usize,
+        Point3::xyz(0.0, 0.0, -0.3),
         11.0,
         azimuth,
         elevation,
         Lens::Perspective(0.42),
     );
-    let mut scene = Scene3::new(cam);
-    for (d, fibre, newest) in &fibres {
-        let pts: Vec<V> = fibre.iter().map(|v| clipped(*v)).collect();
-        let (width, alpha) = if *newest { (2.6, 1.0) } else { (0.9, 0.75) };
-        scene.polyline(&pts, width, colour(*d), alpha);
-    }
-    scene.draw(&mut space);
-    c.blit(&space, rect[0], rect[1]);
+    panel3(c, right, cam, |scene| {
+        for (d, fibre, newest) in &fibres {
+            let pts: Vec<_> = fibre.iter().map(|v| clipped(*v)).collect();
+            let (width, strength) = if *newest { (2.6, 1.0) } else { (0.9, 0.75) };
+            scene.polyline(&pts, width, fade(colour(*d), strength));
+        }
+    });
     // Any two fibres link once: the first and the last drawn.
     let link = gax_numga_examples::measure::linking(&fibres[0].1, &fibres[fibres.len() - 1].1);
     if fibres.len() > 1 {
-        c.text(
-            &format!("LINKING NUMBER OF THE FIRST AND LAST FIBRE: {link:+.3}"),
-            w as f32 - 14.0,
-            h as f32 - 14.0,
-            11.0,
-            palette::ink(),
-            Align::Right,
-        );
+        let text = format!("LINKING NUMBER OF THE FIRST AND LAST FIBRE: {link:+.3}");
+        let corner = screen.hi + Point2::direction(-14.0, -14.0);
+        c.text(&text, corner, 11.0, palette::ink(), Align::Right);
     }
     if phase >= SWEEP {
-        c.text(
-            "FIBRES OVER CIRCLES OF DIRECTIONS FILL NESTED TORI",
-            w as f32 - 14.0,
-            30.0,
-            11.0,
-            palette::ink(),
-            Align::Right,
-        );
+        let text = "FIBRES OVER CIRCLES OF DIRECTIONS FILL NESTED TORI";
+        let corner = screen.top_right() + Point2::direction(-14.0, 30.0);
+        c.text(text, corner, 11.0, palette::ink(), Align::Right);
     }
 
-    // The sphere of directions.
-    let rect = [0, 60, (w as f32 * 0.3) as usize, h / 2 + 30];
-    let mut base = panel(c, rect);
+    // The sphere of directions, on the left above the lift.
+    let split = h * 0.5 + 30.0;
+    let sphere_rect = Rect::new(0.0, 60.0, 0.3 * w, split);
     let cam = Camera::orbit(
-        base.width,
-        base.height,
-        Vector::new(0.0, 0.0, 0.0),
+        sphere_rect.width() as usize,
+        sphere_rect.height() as usize,
+        ORIGIN3,
         6.0,
         azimuth,
         elevation,
         Lens::Perspective(0.45),
     );
-    let mut scene = Scene3::new(cam);
-    scene.sphere_wire(Vector::new(0.0, 0.0, 0.0), 1.0, 24, palette::grid(), 0.6);
-    for (d, _, newest) in &fibres {
-        let size = if *newest { 10.0 } else { 5.0 };
-        scene.dot(*d, Marker::Dot, size, colour(*d));
-    }
-    scene.draw(&mut base);
-    c.blit(&base, rect[0], rect[1]);
-    c.text(
-        "DIRECTIONS",
-        14.0,
-        rect[1] as f32 + 14.0,
-        11.0,
-        palette::ink(),
-        Align::Left,
-    );
+    panel3(c, sphere_rect, cam, |scene| {
+        scene.sphere_wire(ORIGIN3, 1.0, 24, fade(palette::grid(), 0.6));
+        for (d, _, newest) in &fibres {
+            let size = if *newest { 10.0 } else { 5.0 };
+            scene.dot(at(*d), Marker::Dot, size, colour(*d));
+        }
+    });
+    let label = sphere_rect.lo + Point2::direction(14.0, 14.0);
+    c.text("DIRECTIONS", label, 11.0, palette::ink(), Align::Left);
 
     // The lift: a spinor carried around a circle of directions, drawn up to now.
-    let rect = [0, h / 2 + 30, (w as f32 * 0.3) as usize, h];
-    let mut inset = panel(c, rect);
+    let lift_rect = Rect::new(0.0, split, 0.3 * w, h);
     let (_, start, carried) = lift(LIFT_POLAR, 200);
     let cam = Camera::orbit(
-        inset.width,
-        inset.height,
-        Vector::new(0.0, 0.0, 0.0),
+        lift_rect.width() as usize,
+        lift_rect.height() as usize,
+        ORIGIN3,
         9.0,
         azimuth,
         elevation,
         Lens::Perspective(0.42),
     );
-    let mut scene = Scene3::new(cam);
-    let circle: Vec<V> = fibre(start, &turn(200))
-        .into_iter()
-        .map(|r| clipped(stereographic(r)))
-        .collect();
-    scene.polyline(&circle, 1.2, palette::grid(), 1.0);
-    let upto = ((phase / SWEEP * carried.len() as f32) as usize).clamp(1, carried.len());
-    let track: Vec<V> = core::iter::once(start)
-        .chain(carried[..upto].iter().copied())
-        .map(|r| clipped(stereographic(r)))
-        .collect();
-    scene.polyline(&track, 1.8, palette::red(), 1.0);
-    scene.dot(
-        clipped(stereographic(start)),
-        Marker::Dot,
-        8.0,
-        palette::sky(),
-    );
-    scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::red());
-    scene.draw(&mut inset);
-    c.blit(&inset, rect[0], rect[1]);
+    panel3(c, lift_rect, cam, |scene| {
+        let circle: Vec<_> = fibre(start, &turn(200))
+            .into_iter()
+            .map(|r| clipped(stereographic(r)))
+            .collect();
+        scene.polyline(&circle, 1.2, palette::grid());
+        let upto = ((phase / SWEEP * carried.len() as f32) as usize).clamp(1, carried.len());
+        let track: Vec<_> = core::iter::once(start)
+            .chain(carried[..upto].iter().copied())
+            .map(|r| clipped(stereographic(r)))
+            .collect();
+        scene.polyline(&track, 1.8, palette::red());
+        let first = clipped(stereographic(start));
+        scene.dot(first, Marker::Dot, 8.0, palette::sky());
+        scene.dot(track[track.len() - 1], Marker::Dot, 8.0, palette::red());
+    });
+    let down = Point2::direction(0.0, 1.0);
+    let label = lift_rect.lo + Point2::direction(14.0, 8.0);
+    let ink = palette::ink();
     c.text(
         "BERRY PHASE: BACK ON THE FIBRE,",
-        14.0,
-        rect[1] as f32 + 8.0,
+        label,
         10.0,
-        palette::ink(),
+        ink,
         Align::Left,
     );
+    let next = label + down.gp(14.0);
     c.text(
         "TURNED BY HALF THE SOLID ANGLE",
-        14.0,
-        rect[1] as f32 + 22.0,
+        next,
         10.0,
-        palette::ink(),
+        ink,
         Align::Left,
     );
 

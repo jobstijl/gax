@@ -1,17 +1,22 @@
-//! Plot axes on a canvas: a rectangle of pixels showing a range of data, linear or logarithmic
-//! on each axis, with a frame, ticks and labels; lines, markers, arrows, filled shapes, level
-//! lines, images and legends in data coordinates.
+//! Plot axes on a canvas: a rectangle of the canvas showing a range of data, linear or
+//! logarithmic on each axis, with a frame, ticks and labels; lines, markers, arrows, filled
+//! shapes, level lines, images and legends in data coordinates.
+//!
+//! The axes are a map of the plane: the data box (in logarithms where an axis is logarithmic)
+//! onto the rectangle, its lower left corner to the rectangle's bottom left. Everything is
+//! placed through it, and pixels are points too.
 
-use crate::canvas::{Canvas, Px, Rgb};
-use crate::font::Align;
-use crate::points::{Dir2, Point2, Pos2, finite};
+use crate::canvas::{Canvas, Rect};
+use crate::font::{self, Align};
+use crate::points::{Dir2, Map2, Point2, Pos2, box_map, finite};
 use crate::{contour, palette};
-use gax::pga2d::{Motor, Point};
+use gax::pga2d::Motor;
+use gax_light::{Light, fade};
 
 /// A marker's shape.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Marker {
-    /// A filled disk.
+    /// A glowing dot.
     Dot,
     /// A hollow circle.
     Ring,
@@ -25,11 +30,11 @@ pub enum Marker {
     Triangle,
 }
 
-/// Axes: data `x` and `y` ranges shown in the pixel rectangle `rect` (`[x0, y0, x1, y1]`).
+/// Axes: data `x` and `y` ranges shown in the rectangle `rect` of the canvas.
 #[derive(Clone, Copy, Debug)]
 pub struct Axes {
-    /// The pixel rectangle.
-    pub rect: [f32; 4],
+    /// Where on the canvas.
+    pub rect: Rect,
     /// The data range across.
     pub x: [f32; 2],
     /// The data range up.
@@ -38,24 +43,17 @@ pub struct Axes {
     pub log_x: bool,
     /// Logarithmic up.
     pub log_y: bool,
+    /// The (scaled) data plane onto the canvas, and back.
+    to_px: Map2,
+    from_px: Map2,
 }
 
-/// `[x0, y0, x1, y1]` of panel `i` of `n` side by side on a canvas, with a margin.
-pub fn panel(c: &Canvas, i: usize, n: usize) -> [f32; 4] {
-    let w = c.width as f32 / n as f32;
-    [i as f32 * w, 0.0, (i + 1) as f32 * w, c.height as f32]
+/// Panel `i` of `n` side by side on a canvas.
+pub fn panel(c: &Canvas, i: usize, n: usize) -> Rect {
+    c.rect().column(i, n)
 }
 
-/// `rect` shrunk by `left`, `top`, `right`, `bottom` pixels (room for ticks and titles).
-pub fn inset(rect: [f32; 4], left: f32, top: f32, right: f32, bottom: f32) -> [f32; 4] {
-    [
-        rect[0] + left,
-        rect[1] + top,
-        rect[2] - right,
-        rect[3] - bottom,
-    ]
-}
-
+/// A round step for about `n` ticks over `span`: 1, 2 or 5 times a power of ten.
 fn nice_step(span: f32, n: f32) -> f32 {
     let raw = (span / n).abs().max(1e-30);
     let mag = 10f32.powf(raw.log10().floor());
@@ -71,6 +69,7 @@ fn nice_step(span: f32, n: f32) -> f32 {
     }
 }
 
+/// A tick's label: as many decimals as the step needs.
 fn label(v: f32, step: f32) -> String {
     if v.abs() < step * 1e-3 {
         return "0".into();
@@ -83,38 +82,84 @@ fn label(v: f32, step: f32) -> String {
     }
 }
 
+/// The ticks over the range `r`: round steps, or the powers of ten on a logarithmic axis.
+fn ticks(r: [f32; 2], log: bool) -> Vec<f32> {
+    let (lo, hi) = (r[0].min(r[1]), r[0].max(r[1]));
+    if log {
+        let (a, b) = (lo.log10().ceil() as i32, hi.log10().floor() as i32);
+        (a..=b).map(|k| 10f32.powi(k)).collect()
+    } else {
+        let step = nice_step(hi - lo, 5.0);
+        let first = (lo / step).ceil() as i64;
+        let last = (hi / step).floor() as i64;
+        (first..=last).map(|k| k as f32 * step).collect()
+    }
+}
+
 impl Axes {
     /// Axes showing `x` by `y` in `rect`.
-    pub fn new(rect: [f32; 4], x: [f32; 2], y: [f32; 2]) -> Axes {
+    pub fn new(rect: Rect, x: [f32; 2], y: [f32; 2]) -> Axes {
         Axes {
             rect,
             x,
             y,
             log_x: false,
             log_y: false,
+            to_px: Map2::zero(),
+            from_px: Map2::zero(),
         }
+        .mapped()
+    }
+
+    /// The same axes with their map built: the data box's lower left and upper right corners
+    /// onto the rectangle's bottom left and top right.
+    fn mapped(self) -> Axes {
+        let lo = self.scaled(Point2::xy(self.x[0], self.y[0]));
+        let hi = self.scaled(Point2::xy(self.x[1], self.y[1]));
+        let to_px = box_map([lo, hi], [self.rect.bottom_left(), self.rect.top_right()]);
+        Axes {
+            to_px,
+            from_px: to_px.inverse(),
+            ..self
+        }
+    }
+
+    /// A data point as the map takes it: each logarithmic coordinate replaced by its logarithm
+    /// (a logarithmic axis is one on each coordinate by definition).
+    fn scaled(&self, p: Point2) -> Point2 {
+        if !(self.log_x || self.log_y) {
+            return p;
+        }
+        let [x, y] = p.to_euclidean();
+        let log = |v: f32, on: bool| if on { v.max(1e-30).ln() } else { v };
+        Point2::xy(log(x, self.log_x), log(y, self.log_y))
+    }
+
+    /// The inverse of [`Axes::scaled`].
+    fn unscaled(&self, p: Point2) -> Point2 {
+        if !(self.log_x || self.log_y) {
+            return p;
+        }
+        let [x, y] = p.to_euclidean();
+        let exp = |v: f32, on: bool| if on { v.exp() } else { v };
+        Point2::xy(exp(x, self.log_x), exp(y, self.log_y))
     }
 
     /// Axes with equal scales across and up, centred on `centre`, `half_height` units from the
     /// middle to the top (for geometry).
-    pub fn equal(rect: [f32; 4], centre: impl Pos2, half_height: f32) -> Axes {
-        let centre = centre.point2().to_euclidean();
-        let (w, h) = (rect[2] - rect[0], rect[3] - rect[1]);
-        let half_width = half_height * w / h;
-        Axes::new(
-            rect,
-            [centre[0] - half_width, centre[0] + half_width],
-            [centre[1] - half_height, centre[1] + half_height],
-        )
+    pub fn equal(rect: Rect, centre: impl Pos2, half_height: f32) -> Axes {
+        let half = Point2::direction(half_height * rect.width() / rect.height(), half_height);
+        let centre = centre.point2().unitized();
+        let ([x0, y0], [x1, y1]) = (
+            (centre - half).to_euclidean(),
+            (centre + half).to_euclidean(),
+        );
+        Axes::new(rect, [x0, x1], [y0, y1])
     }
 
     /// Axes with equal scales, centred on the box around `points` and large enough to show it
     /// whole in `rect`, with `margin` to spare (`1.1` leaves a tenth).
-    pub fn fitting<P: Pos2>(
-        rect: [f32; 4],
-        points: impl IntoIterator<Item = P>,
-        margin: f32,
-    ) -> Axes {
+    pub fn fitting<P: Pos2>(rect: Rect, points: impl IntoIterator<Item = P>, margin: f32) -> Axes {
         // The box: its lower left and upper right corners.
         let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
         for p in points {
@@ -125,7 +170,7 @@ impl Axes {
         let (lo, hi) = (Point2::xy(lo[0], lo[1]), Point2::xy(hi[0], hi[1]));
         // Its diagonal, fitted to the rectangle's aspect.
         let span = hi - lo;
-        let aspect = (rect[3] - rect[1]) / (rect[2] - rect[0]);
+        let aspect = rect.height() / rect.width();
         let half = 0.5 * span.e01().max(span.e20() * aspect) * margin;
         Axes::equal(rect, (lo + hi).unitized(), half)
     }
@@ -136,6 +181,7 @@ impl Axes {
             log_y: true,
             ..self
         }
+        .mapped()
     }
 
     /// The same, logarithmic across.
@@ -144,44 +190,28 @@ impl Axes {
             log_x: true,
             ..self
         }
-    }
-
-    fn t(v: f32, r: [f32; 2], log: bool) -> f32 {
-        if log {
-            (v.max(1e-30).ln() - r[0].ln()) / (r[1].ln() - r[0].ln())
-        } else {
-            (v - r[0]) / (r[1] - r[0])
-        }
+        .mapped()
     }
 
     /// The pixel of data point `p`.
-    pub fn px(&self, p: impl Pos2) -> Px {
-        let [x, y] = p.point2().to_euclidean();
-        let tx = Self::t(x, self.x, self.log_x);
-        let ty = Self::t(y, self.y, self.log_y);
-        [
-            self.rect[0] + tx * (self.rect[2] - self.rect[0]),
-            self.rect[3] - ty * (self.rect[3] - self.rect[1]),
-        ]
+    pub fn px(&self, p: impl Pos2) -> Point2 {
+        self.to_px.of(self.scaled(p.point2().unitized()))
     }
 
     /// The data point at pixel `q`.
-    pub fn data(&self, q: Px) -> Point2 {
-        let tx = (q[0] - self.rect[0]) / (self.rect[2] - self.rect[0]);
-        let ty = (self.rect[3] - q[1]) / (self.rect[3] - self.rect[1]);
-        let v = |t: f32, r: [f32; 2], log: bool| {
-            if log {
-                (r[0].ln() + t * (r[1].ln() - r[0].ln())).exp()
-            } else {
-                r[0] + t * (r[1] - r[0])
-            }
-        };
-        Point2::xy(v(tx, self.x, self.log_x), v(ty, self.y, self.log_y))
+    pub fn data(&self, q: Point2) -> Point2 {
+        self.unscaled(self.from_px.of(q).unitized())
+    }
+
+    /// The data point a fraction `fx` across and `fy` up the axes (for labels and notes).
+    pub fn at(&self, fx: f32, fy: f32) -> Point2 {
+        let r = self.rect;
+        self.data(r.bottom_left() + Point2::direction(fx * r.width(), -fy * r.height()))
     }
 
     /// Pixels per data unit across (linear axes).
     pub fn scale(&self) -> f32 {
-        (self.rect[2] - self.rect[0]) / (self.x[1] - self.x[0])
+        self.rect.width() / (self.x[1] - self.x[0])
     }
 
     /// Confine drawing to the axes.
@@ -192,63 +222,51 @@ impl Axes {
     /// A frame with ticks and tick labels, a title above and axis labels.
     pub fn frame(&self, c: &mut Canvas, title: &str, xlabel: &str, ylabel: &str) {
         c.unclip();
-        let ink = palette::ink();
-        let dim = palette::grid();
-        let s = ((self.rect[3] - self.rect[1]) / 26.0).clamp(8.0, 14.0);
-        let [x0, y0, x1, y1] = self.rect;
+        let (ink, dim) = (palette::ink(), palette::grid());
+        let r = self.rect;
+        let s = (r.height() / 26.0).clamp(8.0, 14.0);
         c.polyline(
-            &[[x0, y0], [x1, y0], [x1, y1], [x0, y1]],
+            &[r.lo, r.top_right(), r.hi, r.bottom_left()],
             1.0,
             dim,
-            1.0,
             true,
         );
-        let ticks = |r: [f32; 2], log: bool| -> Vec<f32> {
-            let (lo, hi) = (r[0].min(r[1]), r[0].max(r[1]));
-            if log {
-                let (a, b) = (lo.log10().ceil() as i32, hi.log10().floor() as i32);
-                (a..=b).map(|k| 10f32.powi(k)).collect()
-            } else {
-                let step = nice_step(hi - lo, 5.0);
-                let first = (lo / step).ceil() as i64;
-                let last = (hi / step).floor() as i64;
-                (first..=last).map(|k| k as f32 * step).collect()
-            }
+        let (up, right) = (Point2::direction(0.0, -1.0), Point2::direction(1.0, 0.0));
+        // A tick's foot: where the line through its pixel, across the edge, meets the edge.
+        let foot_on = |edge: [Point2; 2], along: Point2| {
+            move |px: Point2| ((px & (px + along)) ^ (edge[0] & edge[1])).unitized()
         };
+        let bottom = foot_on([r.bottom_left(), r.hi], up);
+        let left = foot_on([r.lo, r.bottom_left()], right);
         let step_x = nice_step(self.x[1] - self.x[0], 5.0);
         for v in ticks(self.x, self.log_x) {
-            let [px, _] = self.px(Point2::xy(v, self.y[0]));
-            c.line([px, y1], [px, y1 - 4.0], 1.0, dim, 1.0);
+            let foot = bottom(self.px(Point2::xy(v, self.y[0])));
+            c.line(foot, foot + up.gp(4.0), 1.0, dim);
             let text = if self.log_x {
                 format!("1E{}", v.log10().round())
             } else {
                 label(v, step_x)
             };
-            c.text(&text, px, y1 + s * 1.3, s * 0.8, ink, Align::Center);
+            c.text(&text, foot - up.gp(s * 1.3), s * 0.8, ink, Align::Center);
         }
         let step_y = nice_step(self.y[1] - self.y[0], 5.0);
         for v in ticks(self.y, self.log_y) {
-            let [_, py] = self.px(Point2::xy(self.x[0], v));
-            c.line([x0, py], [x0 + 4.0, py], 1.0, dim, 1.0);
+            let foot = left(self.px(Point2::xy(self.x[0], v)));
+            c.line(foot, foot + right.gp(4.0), 1.0, dim);
             let text = if self.log_y {
                 format!("1E{}", v.log10().round())
             } else {
                 label(v, step_y)
             };
-            c.text(
-                &text,
-                x0 - s * 0.4,
-                py + s * 0.4,
-                s * 0.8,
-                ink,
-                Align::Right,
-            );
+            let at = foot - right.gp(s * 0.4) - up.gp(s * 0.4);
+            c.text(&text, at, s * 0.8, ink, Align::Right);
         }
+        let top_middle = (r.lo + r.top_right()).unitized();
+        let bottom_middle = (r.bottom_left() + r.hi).unitized();
         if !title.is_empty() {
             c.text(
                 title,
-                (x0 + x1) * 0.5,
-                y0 - s * 0.6,
+                top_middle + up.gp(s * 0.6),
                 s * 1.1,
                 ink,
                 Align::Center,
@@ -257,104 +275,95 @@ impl Axes {
         if !xlabel.is_empty() {
             c.text(
                 xlabel,
-                (x0 + x1) * 0.5,
-                y1 + s * 2.7,
+                bottom_middle - up.gp(s * 2.7),
                 s * 0.9,
                 ink,
                 Align::Center,
             );
         }
         if !ylabel.is_empty() {
-            c.text(
-                ylabel,
-                x0,
-                y0 - s * 0.6 - if title.is_empty() { 0.0 } else { s * 1.6 },
-                s * 0.9,
-                ink,
-                Align::Left,
-            );
+            let above = s * 0.6 + if title.is_empty() { 0.0 } else { s * 1.6 };
+            c.text(ylabel, r.lo + up.gp(above), s * 0.9, ink, Align::Left);
         }
     }
 
     /// A segment in data coordinates.
-    pub fn line(
-        &self,
-        c: &mut Canvas,
-        a: impl Pos2,
-        b: impl Pos2,
-        width: f32,
-        color: Rgb,
-        alpha: f32,
-    ) {
+    pub fn line(&self, c: &mut Canvas, a: impl Pos2, b: impl Pos2, width: f32, l: Light) {
         self.clip(c);
-        c.line(self.px(a), self.px(b), width, color, alpha);
+        c.line(self.px(a), self.px(b), width, l);
         c.unclip();
     }
 
-    /// A polyline through data points; non-finite points break it.
-    pub fn polyline(&self, c: &mut Canvas, pts: &[impl Pos2], width: f32, color: Rgb, alpha: f32) {
-        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
-        self.clip(c);
-        for w in pts.windows(2) {
-            if finite(w[0]) && finite(w[1]) {
-                c.line(self.px(w[0]), self.px(w[1]), width, color, alpha);
+    /// The runs of `pts` between non-finite points, as pixels.
+    fn runs(&self, pts: &[impl Pos2]) -> Vec<Vec<Point2>> {
+        let mut runs = vec![Vec::new()];
+        for p in pts {
+            let p = p.point2();
+            if finite(p) {
+                runs.last_mut().expect("a run").push(self.px(p));
+            } else if !runs.last().expect("a run").is_empty() {
+                runs.push(Vec::new());
             }
+        }
+        runs
+    }
+
+    /// Segments in data coordinates as one stroke (a grid, spokes, a set of dashes).
+    pub fn stroke<P: Pos2>(&self, c: &mut Canvas, segs: &[[P; 2]], width: f32, l: Light) {
+        self.clip(c);
+        let px: Vec<[Point2; 2]> = segs
+            .iter()
+            .map(|&[a, b]| [self.px(a), self.px(b)])
+            .collect();
+        c.stroke(&px, width, l);
+        c.unclip();
+    }
+
+    /// A polyline through data points, one stroke; non-finite points break it.
+    pub fn polyline(&self, c: &mut Canvas, pts: &[impl Pos2], width: f32, l: Light) {
+        self.clip(c);
+        for run in self.runs(pts) {
+            c.polyline(&run, width, l, false);
         }
         c.unclip();
     }
 
-    /// A dashed polyline: dashes of `dash` pixels with equal gaps.
-    pub fn dashed(
-        &self,
-        c: &mut Canvas,
-        pts: &[impl Pos2],
-        width: f32,
-        dash: f32,
-        color: Rgb,
-        alpha: f32,
-    ) {
-        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
+    /// A dashed polyline: dashes of `dash` pixels with equal gaps, measured along it on the
+    /// canvas, all one stroke.
+    pub fn dashed(&self, c: &mut Canvas, pts: &[impl Pos2], width: f32, dash: f32, l: Light) {
         self.clip(c);
-        let mut along = 0.0f32;
-        for w in pts.windows(2) {
-            let (a, b) = (self.px(w[0]), self.px(w[1]));
-            let (pa, pb) = (Point::xy(a[0], a[1]), Point::xy(b[0], b[1]));
-            let len = (pa & pb).norm();
-            let mut s = 0.0;
-            while s < len {
-                let phase = (along + s) % (2.0 * dash);
-                let run = if phase < dash {
-                    dash - phase
-                } else {
-                    2.0 * dash - phase
-                };
-                let e = (s + run).min(len);
-                if phase < dash {
-                    let p = |t: f32| (pa + (pb - pa).gp(t / len)).to_euclidean();
-                    c.line(p(s), p(e), width, color, alpha);
+        let mut dashes: Vec<[Point2; 2]> = Vec::new();
+        for run in self.runs(pts) {
+            let mut along = 0.0f32;
+            for w in run.windows(2) {
+                let (a, b) = (w[0].unitized(), w[1].unitized());
+                let len = (a & b).norm();
+                // The point `t` pixels from `a` towards `b`.
+                let at = |t: f32| a + (b - a).gp(t / len.max(1e-12));
+                let mut s = 0.0;
+                while s < len {
+                    let phase = (along + s) % (2.0 * dash);
+                    let on = phase < dash;
+                    let e = (s + if on { dash - phase } else { 2.0 * dash - phase }).min(len);
+                    if on {
+                        dashes.push([at(s), at(e)]);
+                    }
+                    s = e;
                 }
-                s = e;
+                along += len;
             }
-            along += len;
         }
+        c.stroke(&dashes, width, l);
         c.unclip();
     }
 
     /// A marker of `size` pixels at each data point.
-    pub fn scatter(
-        &self,
-        c: &mut Canvas,
-        pts: &[impl Pos2],
-        marker: Marker,
-        size: f32,
-        color: Rgb,
-        alpha: f32,
-    ) {
-        let pts: Vec<Point2> = pts.iter().map(|p| p.point2()).collect();
+    pub fn scatter(&self, c: &mut Canvas, pts: &[impl Pos2], marker: Marker, size: f32, l: Light) {
         self.clip(c);
         for p in pts {
+            let p = p.point2();
             if finite(p) {
-                mark(c, self.px(p), marker, size, color, alpha);
+                mark(c, self.px(p), marker, size, l);
             }
         }
         c.unclip();
@@ -368,53 +377,36 @@ impl Axes {
         to: impl Pos2,
         width: f32,
         head: f32,
-        color: Rgb,
+        l: Light,
     ) {
         self.clip(c);
-        arrow(c, self.px(from), self.px(to), width, head, color, 1.0);
+        arrow(c, self.px(from), self.px(to), width, head, l);
         c.unclip();
     }
 
     /// The infinite line through `p` along `d`, clipped to the axes.
-    pub fn axline(
-        &self,
-        c: &mut Canvas,
-        p: impl Pos2,
-        d: impl Dir2,
-        width: f32,
-        color: Rgb,
-        alpha: f32,
-    ) {
+    pub fn axline(&self, c: &mut Canvas, p: impl Pos2, d: impl Dir2, width: f32, l: Light) {
         let big = 4.0 * ((self.x[1] - self.x[0]).abs() + (self.y[1] - self.y[0]).abs());
         let d = d.dir2();
         let reach = d.gp(big / d.ideal_norm().max(1e-30));
         let p = p.point2().unitized();
-        self.line(c, p - reach, p + reach, width, color, alpha);
+        self.line(c, p - reach, p + reach, width, l);
     }
 
-    /// A filled polygon in data coordinates.
-    pub fn fill(&self, c: &mut Canvas, poly: &[impl Pos2], color: Rgb, alpha: f32) {
+    /// A filled polygon in data coordinates, covering what is below by `opacity`.
+    pub fn fill(&self, c: &mut Canvas, poly: &[impl Pos2], l: Light, opacity: f32) {
         self.clip(c);
-        let px: Vec<Px> = poly.iter().map(|&p| self.px(p)).collect();
-        c.fill(&px, color, alpha);
+        let px: Vec<Point2> = poly.iter().map(|&p| self.px(p)).collect();
+        c.fill(&px, l, opacity);
         c.unclip();
     }
 
     /// Text at a data point.
-    pub fn text(
-        &self,
-        c: &mut Canvas,
-        at: impl Pos2,
-        s: &str,
-        size: f32,
-        color: Rgb,
-        align: Align,
-    ) {
-        let [x, y] = self.px(at);
-        c.text(s, x, y, size, color, align);
+    pub fn text(&self, c: &mut Canvas, at: impl Pos2, s: &str, size: f32, l: Light, align: Align) {
+        c.text(s, self.px(at), size, l, align);
     }
 
-    /// The level line `f(p) = level`, from `n` x `n` samples over the axes.
+    /// The level line `f(p) = level`, from `n` x `n` samples over the axes, one stroke.
     pub fn contour(
         &self,
         c: &mut Canvas,
@@ -422,117 +414,102 @@ impl Axes {
         n: usize,
         level: f32,
         width: f32,
-        color: Rgb,
+        l: Light,
     ) {
         self.clip(c);
-        for [a, b] in contour::of_fn(f, self.x, self.y, n, level) {
-            c.line(self.px(a), self.px(b), width, color, 1.0);
-        }
+        let segs: Vec<[Point2; 2]> = contour::of_fn(f, self.x, self.y, n, level)
+            .into_iter()
+            .map(|[a, b]| [self.px(a), self.px(b)])
+            .collect();
+        c.stroke(&segs, width, l);
         c.unclip();
     }
 
     /// An image over the axes: `f` of the data point under each pixel (`samples` x `samples`
     /// each), `None` showing the canvas through.
-    pub fn image(&self, c: &mut Canvas, samples: usize, f: impl Fn(Point2) -> Option<Rgb> + Sync) {
+    pub fn image(
+        &self,
+        c: &mut Canvas,
+        samples: usize,
+        f: impl Fn(Point2) -> Option<Light> + Sync,
+    ) {
         self.clip(c);
         let me = *self;
-        c.shade(samples, |x, y| f(me.data([x, y])));
+        c.shade(samples, |q| f(me.data(q)));
         c.unclip();
     }
 
-    /// A legend in the top right corner: a short line of each colour and its label.
-    pub fn legend(&self, c: &mut Canvas, entries: &[(&str, Rgb)]) {
-        let s = ((self.rect[3] - self.rect[1]) / 30.0).clamp(7.0, 12.0);
+    /// A legend in the top right corner: a short line of each light and its label.
+    pub fn legend(&self, c: &mut Canvas, entries: &[(&str, Light)]) {
+        let s = (self.rect.height() / 30.0).clamp(7.0, 12.0);
         let w = entries
             .iter()
-            .map(|(t, _)| crate::font::width(t, s))
+            .map(|(t, _)| font::width(t, s))
             .fold(0.0, f32::max)
             + s * 3.5;
-        let (x1, y0) = (self.rect[2] - s * 0.6, self.rect[1] + s * 0.6);
-        let x0 = x1 - w;
+        let (right, down) = (Point2::direction(1.0, 0.0), Point2::direction(0.0, 1.0));
+        let corner = self.rect.top_right() + (down - right).gp(s * 0.6);
+        let lo = corner - right.gp(w);
+        let hi = corner + down.gp(s * (1.6 * entries.len() as f32 + 0.4));
+        let card = Rect { lo, hi };
         c.fill(
-            &[
-                [x0, y0],
-                [x1, y0],
-                [x1, y0 + s * 1.6 * entries.len() as f32 + s * 0.4],
-                [x0, y0 + s * 1.6 * entries.len() as f32 + s * 0.4],
-            ],
+            &[card.lo, card.top_right(), card.hi, card.bottom_left()],
             palette::bottom(),
             0.75,
         );
-        for (i, (t, col)) in entries.iter().enumerate() {
-            let y = y0 + s * (1.2 + 1.6 * i as f32);
-            c.line(
-                [x0 + s * 0.5, y - s * 0.35],
-                [x0 + s * 2.2, y - s * 0.35],
-                2.0,
-                *col,
-                1.0,
+        for (i, (t, l)) in entries.iter().enumerate() {
+            let baseline = lo + down.gp(s * (1.2 + 1.6 * i as f32));
+            let mid = baseline - down.gp(s * 0.35);
+            c.line(mid + right.gp(s * 0.5), mid + right.gp(s * 2.2), 2.0, *l);
+            c.text(
+                t,
+                baseline + right.gp(s * 2.8),
+                s,
+                palette::ink(),
+                Align::Left,
             );
-            c.text(t, x0 + s * 2.8, y, s, palette::ink(), Align::Left);
         }
     }
 }
 
-/// A marker at pixel `p`.
-pub fn mark(c: &mut Canvas, p: Px, marker: Marker, size: f32, color: Rgb, alpha: f32) {
+/// A marker at pixel `p`: dots and rings glow; square, triangle and star are filled and edged
+/// with a glowing outline; the cross is one stroke.
+pub fn mark(c: &mut Canvas, p: Point2, marker: Marker, size: f32, l: Light) {
     let r = size * 0.5;
+    let at = |x: f32, y: f32| p + gax::pga2d::Point::direction(x, y);
+    let shape = |c: &mut Canvas, corners: &[Point2]| {
+        c.fill(corners, fade(l, 0.6), 1.0);
+        c.polyline(corners, 1.0, l, true);
+    };
     match marker {
-        Marker::Dot => c.disk(p, r, color, alpha),
-        Marker::Ring => c.ring(p, r, (size / 6.0).max(1.0), color, alpha),
-        Marker::Square => c.fill(
-            &[
-                [p[0] - r, p[1] - r],
-                [p[0] + r, p[1] - r],
-                [p[0] + r, p[1] + r],
-                [p[0] - r, p[1] + r],
-            ],
-            color,
-            alpha,
+        Marker::Dot => c.disk(p, r * 0.85, l),
+        Marker::Ring => c.ring(p, r, (size / 6.0).max(1.0), l),
+        Marker::Square => shape(c, &[at(-r, -r), at(r, -r), at(r, r), at(-r, r)]),
+        Marker::Triangle => shape(c, &[at(0.0, -r), at(r, r * 0.8), at(-r, r * 0.8)]),
+        Marker::Cross => c.stroke(
+            &[[at(-r, -r), at(r, r)], [at(-r, r), at(r, -r)]],
+            (size / 5.0).max(1.0),
+            l,
         ),
-        Marker::Triangle => c.fill(
-            &[
-                [p[0], p[1] - r],
-                [p[0] + r, p[1] + r * 0.8],
-                [p[0] - r, p[1] + r * 0.8],
-            ],
-            color,
-            alpha,
-        ),
-        Marker::Cross => {
-            c.line(
-                [p[0] - r, p[1] - r],
-                [p[0] + r, p[1] + r],
-                (size / 5.0).max(1.0),
-                color,
-                alpha,
-            );
-            c.line(
-                [p[0] - r, p[1] + r],
-                [p[0] + r, p[1] - r],
-                (size / 5.0).max(1.0),
-                color,
-                alpha,
-            );
-        }
         Marker::Star => {
             // Ten corners a tenth of a turn apart, alternately long and short, from the top.
-            let centre = Point::xy(p[0], p[1]);
-            let pts: Vec<Px> = (0..10)
+            let p = p.unitized();
+            let pts: Vec<Point2> = (0..10)
                 .map(|k| {
                     let rr = if k % 2 == 0 { r * 1.2 } else { r * 0.5 };
-                    let turn = Motor::rotation(centre, core::f32::consts::TAU * k as f32 / 10.0);
-                    (turn >> Point::xy(p[0], p[1] - rr)).to_euclidean()
+                    let turn = Motor::rotation(p, core::f32::consts::TAU * k as f32 / 10.0);
+                    turn >> (p + gax::pga2d::Point::direction(0.0, -rr))
                 })
                 .collect();
-            c.fill(&pts, color, alpha);
+            shape(c, &pts);
         }
     }
 }
 
-/// An arrow between pixels with a head of `head` pixels.
-pub fn arrow(c: &mut Canvas, a: Px, b: Px, width: f32, head: f32, color: Rgb, alpha: f32) {
-    let (pa, pb) = (Point::xy(a[0], a[1]), Point::xy(b[0], b[1]));
+/// An arrow between pixels with a head of `head` pixels: the shaft one stroke, the head a
+/// filled triangle.
+pub fn arrow(c: &mut Canvas, a: Point2, b: Point2, width: f32, head: f32, l: Light) {
+    let (pa, pb) = (a.unitized(), b.unitized());
     // The shaft's line: its norm is the length, its normal `(e1, e2)` the head's crossbar.
     let shaft = pa & pb;
     let len = shaft.norm();
@@ -541,29 +518,21 @@ pub fn arrow(c: &mut Canvas, a: Px, b: Px, width: f32, head: f32, color: Rgb, al
     }
     let h = head.min(len * 0.6);
     let base = pb - (pb - pa).gp(h / len);
-    let across = Point::direction(shaft.e1(), shaft.e2()).gp(h * 0.45 / len);
-    c.line(a, base.to_euclidean(), width, color, alpha);
-    c.fill(
-        &[
-            b,
-            (base + across).to_euclidean(),
-            (base - across).to_euclidean(),
-        ],
-        color,
-        alpha,
-    );
+    let across = gax::pga2d::Point::direction(shaft.e1(), shaft.e2()).gp(h * 0.45 / len);
+    c.line(pa, base, width, l);
+    c.fill(&[pb, base + across, base - across], l, 1.0);
 }
 
 /// The 2σ ellipse of a planar Gaussian about `centre`, from its variances and principal axes
 /// (unit directions, as `eigh` gives them), as `n + 1` points around it: the unit circle turned
 /// by rotations and stretched by `2√variance` along each axis (a sum of dyads).
 pub fn ellipse(
-    centre: Point<(), f64>,
+    centre: gax::pga2d::Point<(), f64>,
     variances: [f64; 2],
     axes: [gax::vga2d::Vector<(), f64>; 2],
     n: usize,
-) -> Vec<Point<(), f64>> {
-    use gax::pga2d::Line;
+) -> Vec<gax::pga2d::Point<(), f64>> {
+    use gax::pga2d::{Line, Point};
     let mut stretch = Point::<(Point,), f64>::zero();
     for (a, v) in axes.iter().zip(variances) {
         let along = Point::direction(a.c[0], a.c[1]);

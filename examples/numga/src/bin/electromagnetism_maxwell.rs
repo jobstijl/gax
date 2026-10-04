@@ -14,9 +14,10 @@
 //! cloud's exact third.
 
 use gax::pga2d::Point;
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Marker, ORIGIN3, Point3, Rgb, Scene3, backdrop, caption,
-    palette, run,
+    Align, Anim, Axes, Camera, Canvas, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
+    backdrop, caption, palette, reach3, run,
 };
 
 mod maxwell {
@@ -243,35 +244,43 @@ fn axes3(c: &mut Canvas, cam: &Camera, s: &mut Scene3, len: f32) {
         Point3::direction(0.0, 0.0, 1.0),
     ];
     for (d, name) in axes.into_iter().zip(["X", "Y", "Z"]) {
-        s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::grid(), 1.0);
+        s.seg(ORIGIN3, ORIGIN3 + d.gp(len), 1.0, palette::grid());
         if let Some(q) = cam.px(ORIGIN3 + d.gp(len * 1.1)) {
-            c.text(name, q[0], q[1] + 4.0, 10.0, palette::grid(), Align::Center);
+            let below = q + Point2::direction(0.0, 4.0);
+            c.text(name, below, 10.0, palette::grid(), Align::Center);
         }
     }
 }
 
 /// Text in a colour at a pixel, left aligned.
-fn note(c: &mut Canvas, s: &str, x: f32, y: f32, col: Rgb) {
-    c.text(s, x, y, 11.0, col, Align::Left);
+fn note(c: &mut Canvas, s: &str, at: Point2, col: Light) {
+    c.text(s, at, 11.0, col, Align::Left);
 }
 
-/// The plot rectangle in the lower part of a panel.
-fn lower(rect: [f32; 4]) -> [f32; 4] {
-    [
-        rect[0] + 52.0,
-        rect[1] + (rect[3] - rect[1]) * 0.68,
-        rect[2] - 16.0,
-        rect[3] - 34.0,
-    ]
-}
-
-/// The 3D view of a panel, above its plot, and its clipping rectangle (a margin above the
-/// plot's title).
-fn upper(rect: [f32; 4]) -> ([f32; 4], [f32; 4]) {
-    let bottom = lower(rect)[1];
+/// A panel's parts: the 3D view in its upper two thirds, the view's clipping rectangle (a
+/// margin above the plot's title), and the plot rectangle below.
+fn parts(rect: Rect) -> (Rect, Rect, Rect) {
+    let cut = rect.height() * 0.68;
+    let view = Rect {
+        lo: rect.lo,
+        hi: rect.top_right() + Point2::direction(0.0, cut),
+    };
+    let plot = Rect {
+        lo: view.bottom_left(),
+        hi: rect.hi,
+    };
     (
-        [rect[0], rect[1], rect[2], bottom],
-        [rect[0], rect[1], rect[2], bottom - 12.0],
+        view,
+        view.inset(0.0, 0.0, 0.0, 12.0),
+        plot.inset(52.0, 0.0, 16.0, 34.0),
+    )
+}
+
+/// Where a panel's notes start, and the step down to the next line.
+fn notes(rect: Rect) -> (Point2, Point2) {
+    (
+        rect.lo + Point2::direction(14.0, 14.0),
+        Point2::direction(0.0, 16.0),
     )
 }
 
@@ -295,46 +304,43 @@ fn readout(zeta: f64) -> [f64; 4] {
     ]
 }
 
-fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
+fn draw_field(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let zeta = rapidity(phase);
     let (g, tm) = boosted_field(zeta);
     let (e, b) = electric_magnetic(g);
-    let (view, clip) = upper(rect);
+    let (view, clip, plot) = parts(rect);
     let cam = Camera::parallel(view, 48.0, 0.6 + spin, 0.35);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
     axes3(c, &cam, &mut sc, 2.2);
     // The tips' paths over the whole swing.
-    let tips: Vec<[Space; 3]> = (0..=SAMPLES)
+    let tips: Vec<[Point3; 3]> = (0..=SAMPLES)
         .map(|i| {
             let (g, tm) = boosted_field(sampled(i));
             let (e, b) = electric_magnetic(g);
-            [e, b, poynting(tm)]
+            [e, b, poynting(tm)].map(reach3)
         })
         .collect();
     let cols = [palette::orange(), palette::sky(), palette::yellow()];
     for (k, col) in cols.iter().enumerate() {
-        let path: Vec<Space> = tips.iter().map(|p| p[k]).collect();
-        sc.polyline(&path, 1.0, *col, 0.45);
+        let path: Vec<Point3> = tips.iter().map(|p| p[k]).collect();
+        sc.polyline(&path, 1.0, fade(*col, 0.45));
     }
     for (v, col) in [(e, cols[0]), (b, cols[1]), (poynting(tm), cols[2])] {
         sc.arrow(ORIGIN3, v, 2.5, 10.0, col);
     }
     sc.draw(c);
     c.unclip();
-    let (x0, y0) = (rect[0] + 14.0, rect[1] + 14.0);
-    note(
-        c,
-        &format!("BOOST ALONG X, RAPIDITY {zeta:+.2}"),
-        x0,
-        y0,
-        palette::ink(),
-    );
-    note(c, "E", x0, y0 + 16.0, palette::orange());
-    note(c, "B", x0 + 16.0, y0 + 16.0, palette::sky());
-    note(c, "POYNTING FLUX", x0 + 32.0, y0 + 16.0, palette::yellow());
+    let (at, line) = notes(rect);
+    let boost = format!("BOOST ALONG X, RAPIDITY {zeta:+.2}");
+    note(c, &boost, at, palette::ink());
+    let across = Point2::direction(16.0, 0.0);
+    note(c, "E", at + line, palette::orange());
+    note(c, "B", at + line + across, palette::sky());
+    let flux = at + line + across.gp(2.0);
+    note(c, "POYNTING FLUX", flux, palette::yellow());
 
-    let ax = Axes::new(lower(rect), [-SWING as f32, SWING as f32], [-1.0, 6.0]);
+    let ax = Axes::new(plot, [-SWING as f32, SWING as f32], [-1.0, 6.0]);
     ax.frame(c, "", "RAPIDITY", "");
     let readouts: Vec<(f64, [f64; 4])> = (0..=SAMPLES)
         .map(|i| (sampled(i), readout(sampled(i))))
@@ -348,7 +354,7 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
     for (k, col) in cols.iter().enumerate() {
         let curve: Vec<Point<(), f64>> =
             readouts.iter().map(|(z, r)| Point::xy(*z, r[k])).collect();
-        ax.polyline(c, &curve, 1.8, *col, 1.0);
+        ax.polyline(c, &curve, 1.8, *col);
     }
     let now = readout(zeta);
     ax.scatter(
@@ -357,7 +363,6 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
         Marker::Dot,
         8.0,
         palette::ink(),
-        1.0,
     );
     ax.legend(
         c,
@@ -370,41 +375,33 @@ fn draw_field(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
     );
 }
 
-fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
+fn draw_cloud(c: &mut Canvas, rect: Rect, phase: f64, spin: f32) {
     let speed = cloud_speed(phase);
     let dirs = directions();
     let us = moving(dirs, speed);
     let tm = cloud_tensor(&us, 1.0 / us.len() as f64);
     let s = spectrum(tm);
     let (pressure, energy) = pressure_energy(tm);
-    let (view, clip) = upper(rect);
+    let (view, clip, plot) = parts(rect);
     let cam = Camera::parallel(view, 80.0, -0.4 + spin, 0.3);
     c.clip(clip);
     let mut sc = Scene3::new(cam);
-    sc.sphere_wire(ORIGIN3, 1.0, 12, palette::grid(), 0.5);
+    sc.sphere_wire(ORIGIN3, 1.0, 12, fade(palette::grid(), 0.5));
+    // Five hundred dots add their light: each faint, so that the cloud glows rather than burns.
+    let dot = fade(palette::sky(), 0.2);
     for d in dirs.iter().step_by(4) {
-        sc.dot(spatial(*d) * speed, Marker::Dot, 3.0, palette::sky());
+        sc.dot(reach3(spatial(*d) * speed), Marker::Dot, 3.0, dot);
     }
     sc.draw(c);
     c.unclip();
-    let (x0, y0) = (rect[0] + 14.0, rect[1] + 14.0);
-    note(
-        c,
-        &format!("SPEED {speed:.2}   TRACE {:.3}", tm.trace()),
-        x0,
-        y0,
-        palette::ink(),
-    );
-    note(
-        c,
-        &format!("ENERGY {energy:.2}   PRESSURE {pressure:.3}"),
-        x0,
-        y0 + 16.0,
-        palette::ink(),
-    );
-    note(c, "VELOCITIES IN SPACE", x0, y0 + 32.0, palette::sky());
+    let (at, line) = notes(rect);
+    let speeds = format!("SPEED {speed:.2}   TRACE {:.3}", tm.trace());
+    note(c, &speeds, at, palette::ink());
+    let balance = format!("ENERGY {energy:.2}   PRESSURE {pressure:.3}");
+    note(c, &balance, at + line, palette::ink());
+    note(c, "VELOCITIES IN SPACE", at + line.gp(2.0), palette::sky());
 
-    let ax = Axes::new(lower(rect), [0.0, 1.0], [0.0, 0.4]);
+    let ax = Axes::new(plot, [0.0, 1.0], [0.0, 0.4]);
     ax.frame(c, "", "SPEED", "");
     let theory: Vec<Point<(), f32>> = (0..=60)
         .map(|i| {
@@ -412,29 +409,22 @@ fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
             Point::xy(v, v * v / 3.0)
         })
         .collect();
-    ax.polyline(c, &theory, 1.5, palette::green(), 1.0);
+    ax.polyline(c, &theory, 1.5, palette::green());
     ax.dashed(
         c,
         &[Point::xy(0.0, 1.0 / 3.0), Point::xy(1.0, 1.0 / 3.0)],
         1.0,
         8.0,
         palette::grid(),
-        1.0,
     );
     // Each stress eigenvalue over the energy: the three nearly coincide (isotropy).
     let marks: Vec<Point<(), f64>> = s[..3]
         .iter()
         .map(|p| Point::xy(speed, -p / energy))
         .collect();
-    ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange(), 1.0);
-    ax.scatter(
-        c,
-        &[Point::xy(1.0, null_ratio())],
-        Marker::Star,
-        12.0,
-        palette::yellow(),
-        1.0,
-    );
+    ax.scatter(c, &marks, Marker::Ring, 9.0, palette::orange());
+    let light = Point::xy(1.0, null_ratio());
+    ax.scatter(c, &[light], Marker::Star, 12.0, palette::yellow());
     ax.legend(
         c,
         &[
@@ -447,12 +437,13 @@ fn draw_cloud(c: &mut Canvas, rect: [f32; 4], phase: f64, spin: f32) {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let spin = 0.25 * (core::f32::consts::TAU * t / SECONDS).sin();
-    let top = h * 0.12;
-    draw_field(c, [0.0, top, w * 0.5, h], phase, spin);
-    draw_cloud(c, [w * 0.5, top, w, h], phase, spin);
+    // Two panels side by side below the caption.
+    let below = screen.inset(0.0, screen.height() * 0.12, 0.0, 0.0);
+    draw_field(c, below.column(0, 2), phase, spin);
+    draw_cloud(c, below.column(1, 2), phase, spin);
     caption(
         c,
         "MAXWELL: STRESS-ENERGY MAPS IN SPACETIME",

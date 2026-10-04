@@ -11,6 +11,8 @@
 //! from the great circle `x = y = 0` is a wall that splits the sphere into two linked solid
 //! tori; ellipsoids bounce inside one, and the eye on its core circle looks down the tube.
 
+use gax_light::{Light, srgb};
+use gax_numga_examples::colormap;
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use rand::seq::SliceRandom;
 
@@ -36,25 +38,6 @@ pub mod s3 {
     /// The dimension of the ambient space.
     pub const DIM: usize = 4;
     crate::engine::engine!();
-}
-
-/// A colour from its hex code, as display values.
-pub fn hex(c: u32) -> [f64; 3] {
-    [16, 8, 0].map(|s| f64::from((c >> s) & 0xff) / 255.0)
-}
-
-/// matplotlib's `hsv` colour map, as display values.
-pub fn hue(t: f64) -> [f64; 3] {
-    let h = t.rem_euclid(1.0) * 6.0;
-    let f = h - h.floor();
-    match h as usize {
-        0 => [1.0, f, 0.0],
-        1 => [1.0 - f, 1.0, 0.0],
-        2 => [0.0, 1.0, f],
-        3 => [0.0, 1.0 - f, 1.0],
-        4 => [f, 0.0, 1.0],
-        _ => [1.0, 0.0, 1.0 - f],
-    }
 }
 
 /// The spread of a series relative to its first value, `ptp(x) / |x[0]|`.
@@ -129,7 +112,7 @@ pub fn ellipses(specs: &[Ellipse], n_phi: usize) -> Vec<s2::Body> {
             let half = e.half_angles.map(f64::to_radians);
             let (points, masses) = ellipse_mesh(half, e.mass, n_phi, 10);
             s2::body(
-                hex(e.color),
+                gax_light::hex(e.color, 1.0),
                 s2::ellipsoid(half.map(f64::tan)),
                 camera() * e.placement,
                 e.rate,
@@ -247,7 +230,7 @@ pub fn placed(place: s3::P, spin: s3::B) -> s3::M {
 
 /// One large body at the origin, unturned.
 pub fn resting(
-    color: [f64; 3],
+    color: Light,
     q: s3::DualQuadric,
     rate: s3::B,
     mass: f64,
@@ -281,7 +264,7 @@ pub fn population(rng: &mut Rng, candidates: usize, sizes: (f64, f64)) -> Vec<s3
             let q = s3::ellipsoid(half);
             let (points, masses) = s3::filled(q, half.iter().product::<f64>() * 200.0, 400, rng);
             s3::body(
-                hue(hues[k]),
+                colormap::hsv(hues[k] as f32),
                 q,
                 placed(place, spin),
                 Bivector::from_coeffs(rate),
@@ -367,7 +350,13 @@ pub fn gap(frames: usize) -> Scene3 {
     let mut rng = rng(5);
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(60.0).tan(), deg(75.0).tan(), deg(70.0).tan()]);
-    let huge = resting([0.75, 0.7, 0.6], shape, Rate::zero(), 500.0, &mut rng);
+    let huge = resting(
+        srgb(0.75, 0.7, 0.6, 1.0),
+        shape,
+        Rate::zero(),
+        500.0,
+        &mut rng,
+    );
     let mut all = vec![huge];
     all.extend(population(&mut rng, 2000, (0.03, 0.15)));
     let bodies = admitted(all, 1, 60);
@@ -388,7 +377,7 @@ pub fn needle(frames: usize) -> Scene3 {
     let deg = f64::to_radians;
     let shape = s3::ellipsoid([deg(80.0).tan(), deg(4.0).tan(), deg(3.0).tan()]);
     let spin = turning(TangentPlane::new(2.0, 0.0, 0.0));
-    let long = resting([0.9, 0.85, 0.3], shape, spin, 50.0, &mut rng);
+    let long = resting(srgb(0.9, 0.85, 0.3, 1.0), shape, spin, 50.0, &mut rng);
     let mut all = vec![long];
     all.extend(population(&mut rng, 1000, (0.05, 0.3)));
     let bodies = admitted(all, 1, 40);
@@ -426,7 +415,13 @@ pub fn tunnel(frames: usize) -> Tunnel {
         1.0 / deg(40.0).tan().powi(2),
         1.0 / deg(20.0).tan().powi(2),
     ]);
-    let torus = resting([0.55, 0.65, 0.75], tube, Rate::zero(), 500.0, &mut rng);
+    let torus = resting(
+        srgb(0.55, 0.65, 0.75, 1.0),
+        tube,
+        Rate::zero(),
+        500.0,
+        &mut rng,
+    );
     let mut all = vec![torus];
     all.extend(population(&mut rng, 2000, (0.03, 0.1)));
     let bodies = admitted(all, 1, 50);

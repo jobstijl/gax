@@ -16,10 +16,10 @@
 
 use gax::pga2d::{Line, Motor, Point, Scalar};
 use gax::{Unit, vga2d};
-use gax_numga_examples::canvas::mix;
+use gax_light::{fade, mix};
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
-    Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
+    Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod kalman {
@@ -255,7 +255,12 @@ const SECONDS: f32 = 12.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    // A column of the screen by fractions of its width, inset for the frame's labels: the
+    // paths on the left, the errors on the right.
+    let (w, h) = (screen.width(), screen.height());
+    let column =
+        |x0: f32, x1: f32| Rect::new(x0 * w, 0.0, x1 * w, h).inset(50.0, 104.0, 16.0, 46.0);
     let scene = tracking(SEED);
     let n = scene.truth.len();
     // The cursor runs over the drive in the first 85% of the loop, then holds.
@@ -268,7 +273,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|s| s.estimate >> origin())
         .collect();
     // The axes hold every path at every time.
-    let left = plot::inset([0.0, 0.0, w * 0.58, h], 50.0, 104.0, 16.0, 46.0);
+    let left = column(0.0, 0.58);
     let every = truth.iter().chain(&dead).chain(&filtered).copied();
     let ax = Axes::fitting(left, every, 1.12);
     ax.frame(c, "PATHS AND 2 SIGMA ELLIPSES", "X", "Y");
@@ -276,24 +281,24 @@ fn draw(c: &mut Canvas, t: f32) {
     let readings_seen = shown / STEPS_PER_READING;
     let states_seen = shown + readings_seen;
     for s in scene.states[..states_seen].iter().filter(|s| s.updated) {
-        ax.polyline(c, &ellipse(s, 40), 1.0, palette::sky(), 0.6);
+        ax.polyline(c, &ellipse(s, 40), 1.0, fade(palette::sky(), 0.6));
     }
-    ax.polyline(c, &dead[..shown], 1.3, palette::red(), 0.9);
-    ax.polyline(c, &truth[..shown], 2.0, palette::ink(), 1.0);
-    ax.polyline(c, &filtered[..states_seen], 1.3, palette::sky(), 1.0);
+    ax.polyline(c, &dead[..shown], 1.3, fade(palette::red(), 0.9));
+    ax.polyline(c, &truth[..shown], 2.0, palette::ink());
+    ax.polyline(c, &filtered[..states_seen], 1.3, palette::sky());
     let measured = path(&scene.measurements[..readings_seen]);
-    ax.scatter(c, &measured, Marker::Cross, 8.0, palette::green(), 0.8);
-    // The live ellipse at the cursor.
-    let now = &scene.states[states_seen - 1];
-    ax.polyline(c, &ellipse(now, 40), 2.0, palette::yellow(), 1.0);
     ax.scatter(
         c,
-        &[filtered[states_seen - 1]],
-        Marker::Dot,
-        7.0,
-        palette::yellow(),
-        1.0,
+        &measured,
+        Marker::Cross,
+        8.0,
+        fade(palette::green(), 0.8),
     );
+    // The live ellipse at the cursor.
+    let now = &scene.states[states_seen - 1];
+    ax.polyline(c, &ellipse(now, 40), 2.0, palette::yellow());
+    let here = filtered[states_seen - 1];
+    ax.scatter(c, &[here], Marker::Dot, 7.0, palette::yellow());
     ax.legend(
         c,
         &[
@@ -314,7 +319,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|k| (k * STEPS_PER_READING) as f32 * DT as f32)
         .collect();
     let top = dead_err.iter().fold(0.0f64, |m, v| m.max(*v)) as f32 * 1.1;
-    let right = plot::inset([w * 0.58, 0.0, w, h], 50.0, 104.0, 16.0, 46.0);
+    let right = column(0.58, 1.0);
     let ex = Axes::new(right, [0.0, times[READINGS - 1] + 1.0], [0.0, top]);
     ex.frame(c, "ERROR AT THE READINGS", "TIME", "ERROR");
     // The chart's points: (time, error).
@@ -333,36 +338,21 @@ fn draw(c: &mut Canvas, t: f32) {
         .take(readings_seen)
         .map(|(t, e)| Point2::xy(*t, *e))
         .collect();
-    ex.polyline(c, &d, 1.5, palette::red(), 1.0);
-    ex.scatter(c, &d, Marker::Dot, 5.0, palette::red(), 1.0);
-    ex.polyline(c, &f, 1.5, palette::sky(), 1.0);
-    ex.scatter(c, &f, Marker::Dot, 5.0, palette::sky(), 1.0);
-    ex.dashed(
-        c,
-        &s2,
-        1.2,
-        4.0,
-        mix(palette::sky(), palette::ink(), 0.4),
-        1.0,
-    );
+    let own = mix(palette::sky(), palette::ink(), 0.4);
+    ex.polyline(c, &d, 1.5, palette::red());
+    ex.scatter(c, &d, Marker::Dot, 5.0, palette::red());
+    ex.polyline(c, &f, 1.5, palette::sky());
+    ex.scatter(c, &f, Marker::Dot, 5.0, palette::sky());
+    ex.dashed(c, &s2, 1.2, 4.0, own);
     let now_t = shown as f32 * DT as f32;
-    ex.line(
-        c,
-        Point2::xy(now_t, 0.0),
-        Point2::xy(now_t, top),
-        1.0,
-        palette::grid(),
-        1.0,
-    );
+    let cursor = [Point2::xy(now_t, 0.0), Point2::xy(now_t, top)];
+    ex.line(c, cursor[0], cursor[1], 1.0, palette::grid());
     ex.legend(
         c,
         &[
             ("DEAD RECKONING", palette::red()),
             ("FILTERED", palette::sky()),
-            (
-                "FILTER'S OWN 2 SIGMA",
-                mix(palette::sky(), palette::ink(), 0.4),
-            ),
+            ("FILTER'S OWN 2 SIGMA", own),
         ],
     );
     caption(

@@ -12,8 +12,9 @@
 
 use gax::Unit;
 use gax::pga2d::{Line, Motor, Point, Scalar};
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, backdrop, caption, palette, plot, run,
 };
 use std::sync::OnceLock;
 
@@ -261,32 +262,23 @@ fn cases() -> &'static [Docking; 2] {
 const STEP: f32 = 0.08;
 const HOLD: f32 = 1.4;
 
-/// The lower left and upper right corners of a box around every hull position of both
-/// approaches and the dock.
-fn limits() -> (P, P) {
-    static L: OnceLock<(P, P)> = OnceLock::new();
-    *L.get_or_init(|| {
-        let mut lo = [f64::MAX; 2];
-        let mut hi = [f64::MIN; 2];
+/// Every corner of the hull at every pose of both approaches (the last pose is the dock).
+fn corners() -> &'static [P] {
+    static L: OnceLock<Vec<P>> = OnceLock::new();
+    L.get_or_init(|| {
         let hull = hull();
-        for case in cases() {
-            for e in &case.errors {
-                for p in &hull {
-                    let q = (pose(*e) >> *p).to_euclidean();
-                    for i in 0..2 {
-                        lo[i] = lo[i].min(q[i]);
-                        hi[i] = hi[i].max(q[i]);
-                    }
-                }
-            }
-        }
-        (Point::xy(lo[0], lo[1]), Point::xy(hi[0], hi[1]))
+        cases()
+            .iter()
+            .flat_map(|case| &case.errors)
+            .flat_map(|e| hull.iter().map(|p| pose(*e) >> *p))
+            .collect()
     })
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let seconds = STEP * STEPS as f32 + HOLD;
     let s = (t.rem_euclid(seconds) / STEP).min(STEPS as f32);
     let k = (s.floor() as usize).min(STEPS - 1);
@@ -297,17 +289,10 @@ fn draw(c: &mut Canvas, t: f32) {
     let horizon = x & y;
     let labels = ["LOWER EFFORT PENALTY", "HIGHER EFFORT PENALTY"];
     let (mounts, directions) = (mounts(), directions());
-    // Shared limits: a square around every pose of both approaches and the dock.
-    let (lo, hi) = limits();
     for (i, (case, label)) in cases().iter().zip(labels).enumerate() {
-        let rect = plot::inset(
-            [w * i as f32 / 2.0, 0.0, w * (i + 1) as f32 / 2.0, h],
-            w * 0.02,
-            h * 0.17,
-            w * 0.02,
-            h * 0.04,
-        );
-        let ax = Axes::fitting(rect, [lo, hi], 1.1);
+        let rect = plot::panel(c, i, 2).inset(w * 0.02, h * 0.17, w * 0.02, h * 0.04);
+        // Shared limits: a square around every pose of both approaches and the dock.
+        let ax = Axes::fitting(rect, corners().iter().copied(), 1.1);
         // The level set of the cost still to pay, over translations of the hull with heading
         // zero: everywhere from which the rest of the approach costs 0.15.
         let remaining = if s >= STEPS as f32 { 1 } else { STEPS - k };
@@ -323,9 +308,9 @@ fn draw(c: &mut Canvas, t: f32) {
             1.5,
             palette::green(),
         );
-        ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::grid(), 1.0);
+        ax.dashed(c, &closed(&hull), 1.2, 5.0, palette::grid());
         let path: Vec<P> = case.errors.iter().map(|e| pose(*e) >> centre()).collect();
-        ax.polyline(c, &path, 1.0, palette::sky(), 0.35);
+        ax.polyline(c, &path, 1.0, fade(palette::sky(), 0.35));
         // The pose between steps: along the screw from one to the next.
         let m = Motor::interpolate(
             pose(case.errors[k]),
@@ -333,8 +318,9 @@ fn draw(c: &mut Canvas, t: f32) {
             if s >= STEPS as f32 { 1.0 } else { frac },
         );
         let body: Vec<P> = hull.iter().map(|p| m >> *p).collect();
-        ax.fill(c, &body, canvas::scale(palette::blue(), 0.9), 0.5);
-        ax.polyline(c, &closed(&body), 1.6, palette::sky(), 1.0);
+        // The hull's fill covers what is below, a dim blue: its outline glows.
+        ax.fill(c, &body, fade(palette::blue(), 0.1), 0.5);
+        ax.polyline(c, &closed(&body), 1.6, palette::sky());
         // The total push the feedback asks for, a forque: its line of action, through the foot
         // of the perpendicular from the dock (the meet of the forque with the perpendicular),
         // along its point at infinity (its meet with the horizon).
@@ -342,7 +328,7 @@ fn draw(c: &mut Canvas, t: f32) {
             let f = case.feedbacks[k].of(case.errors[k]);
             if f.norm() > 1e-6 {
                 let foot = (f | centre()) ^ f;
-                ax.axline(c, foot, f ^ horizon, 1.0, palette::orange(), 0.35);
+                ax.axline(c, foot, f ^ horizon, 1.0, fade(palette::orange(), 0.35));
             }
         }
         // The thrusters' commands: a signed command reverses its ideal direction before the
@@ -355,25 +341,15 @@ fn draw(c: &mut Canvas, t: f32) {
         for j in 0..3 {
             let base = m >> mounts[j];
             let force = m >> directions[j].gp(command[j] * 0.04);
-            ax.scatter(c, &[base], Marker::Square, 6.0, palette::ink(), 1.0);
+            ax.scatter(c, &[base], Marker::Square, 6.0, palette::ink());
             ax.arrow(c, base, base + force, 2.0, 8.0, palette::orange());
         }
-        ax.text(
-            c,
-            Point2::xy(ax.x[0] + 0.05, ax.y[1] - 0.1),
-            label,
-            12.0,
-            palette::ink(),
-            Align::Left,
-        );
-        ax.text(
-            c,
-            Point2::xy(ax.x[0] + 0.05, ax.y[1] - 0.22),
-            &format!("{remaining} STEPS LEFT: COST 0.15 LEVEL"),
-            10.0,
-            palette::green(),
-            Align::Left,
-        );
+        // The labels just inside the top left corner.
+        let corner = ax.at(0.0, 1.0);
+        let at = |down: f32| corner + Point2::direction(0.05, -down);
+        ax.text(c, at(0.1), label, 12.0, palette::ink(), Align::Left);
+        let note = format!("{remaining} STEPS LEFT: COST 0.15 LEVEL");
+        ax.text(c, at(0.22), &note, 10.0, palette::green(), Align::Left);
     }
     caption(
         c,

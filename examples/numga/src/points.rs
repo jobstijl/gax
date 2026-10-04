@@ -1,12 +1,14 @@
-//! The points and directions the drawing code takes: gax values as the examples hold them, of
-//! either precision, drawn as `f32` PGA points.
+//! The points, directions and maps the drawing code works with: PGA points of either
+//! precision, drawn as `f32` PGA points, and the maps of the plane between data, the screen and
+//! pixels.
 //!
-//! These are traits rather than `From` conversions for two reasons. Both sides are gax types,
-//! so the orphan rule leaves no room for an `f64` to `f32` conversion here. And a VGA vector
-//! drawn as a position (its tip, from the origin) is a convention of the drawing, not an
-//! algebra map: gax's own maps send a vector to a line or plane through the origin.
+//! The examples hand over their own gax values through traits rather than `From` conversions:
+//! both sides are gax types, so the orphan rule leaves no room for an `f64` to `f32`
+//! conversion here. Positions are PGA points; a VGA vector is a direction only (to draw where it
+//! points, add it to the origin).
 
 use gax::{Coef, pga2d, pga3d, vga2d, vga3d};
+use pga2d::Motor;
 
 /// A point of the plane, as the drawing code holds it.
 pub type Point2 = pga2d::Point<(), f32>;
@@ -17,6 +19,24 @@ pub type Point3 = pga3d::Point<(), f32>;
 pub const ORIGIN2: Point2 = Point2::new(0.0, 0.0, 1.0);
 /// The origin of space.
 pub const ORIGIN3: Point3 = Point3::new(0.0, 0.0, 0.0, 1.0);
+
+/// A map of the plane on points, as gax holds it: a slot map from points to points.
+pub type Map2 = pga2d::Point<(pga2d::Point,), f32>;
+
+/// The stretch by `sx` across and `sy` up about the origin, as a map on points (the weight
+/// kept; a negative factor mirrors).
+pub fn stretch(sx: f32, sy: f32) -> Map2 {
+    Map2::from_coeffs([[sx, 0.0, 0.0], [0.0, sy, 0.0], [0.0, 0.0, 1.0]])
+}
+
+/// The map taking the box with corners `from` onto the box with corners `to`, corner to
+/// corner (each axis stretched on its own; a box's corners in the other order mirror it): a
+/// translation of `from[0]` to the origin, the stretch, and a translation to `to[0]`.
+pub fn box_map(from: [Point2; 2], to: [Point2; 2]) -> Map2 {
+    let (a, b) = (from[1] - from[0], to[1] - to[0]);
+    let s = stretch(b.e20() / a.e20(), b.e01() / a.e01());
+    Motor::between(ORIGIN2, to[0]) >> s.of(Motor::between(from[0], ORIGIN2) >> Point2::slot())
+}
 
 /// The coefficient types the examples compute in.
 pub trait Precision: Coef {
@@ -69,18 +89,6 @@ impl<T: Precision> Pos3 for pga3d::Point<(), T> {
     }
 }
 
-// A VGA vector as a position: its tip.
-impl<T: Precision> Pos2 for vga2d::Vector<(), T> {
-    fn point2(self) -> Point2 {
-        ORIGIN2 + self.dir2()
-    }
-}
-impl<T: Precision> Pos3 for vga3d::Vector<(), T> {
-    fn point3(self) -> Point3 {
-        ORIGIN3 + self.dir3()
-    }
-}
-
 // Directions: a PGA point's weightless part (a weight, if any, is dropped), the `Direction`
 // kinds, and VGA vectors.
 impl<T: Precision> Dir2 for pga2d::Point<(), T> {
@@ -118,6 +126,17 @@ impl<T: Precision> Dir3 for vga3d::Vector<(), T> {
         let [x, y, z] = self.c.map(T::to_f32);
         Point3::direction(x, y, z)
     }
+}
+
+/// The point a direction reaches from the origin of the plane: where a VGA vector (or any
+/// direction) points, as a position to draw.
+pub fn reach2(d: impl Dir2) -> Point2 {
+    ORIGIN2 + d.dir2()
+}
+
+/// The point a direction reaches from the origin of space.
+pub fn reach3(d: impl Dir3) -> Point3 {
+    ORIGIN3 + d.dir3()
 }
 
 /// A point of space seen from above (along `-z`): the point of the plane under it, its `z`

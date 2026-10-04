@@ -26,8 +26,10 @@
 
 use gax::Complex;
 use gax::pga3d::{Line, Motor, Plane, Point};
+use gax_light::fade;
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, backdrop, caption, palette, run,
 };
 
 mod klein {
@@ -260,61 +262,59 @@ fn chord(line: L) -> Option<[P; 2]> {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = f64::from(t / SECONDS);
     let s = scene(three(), steep(offset(phase)), 36);
 
     // The lines in space, turning once around the hyperboloid over the loop.
-    let wide = (w * 0.62) as usize;
+    let left = screen.part(0.0, 0.0, 0.62, 1.0);
     let cam = Camera::orbit(
-        wide,
-        c.height,
+        left.width() as usize,
+        left.height() as usize,
         origin(),
         15.0,
         (-60.0f32).to_radians() + core::f32::consts::TAU * phase as f32,
         18.0f32.to_radians(),
         Lens::Perspective(0.44),
     );
-    let mut scene3 = Scene3::new(cam);
-    let mut segment = |l: L, width: f32, colour, alpha| {
-        if let Some([a, b]) = chord(l) {
-            scene3.seg(a, b, width, colour, alpha);
-        }
-    };
-    for l in &s.rulings[0] {
-        segment(*l, 0.9, palette::sky(), 0.55);
-    }
-    for l in &s.rulings[1] {
-        segment(*l, 0.9, palette::grid(), 0.9);
-    }
-    for l in &s.lines[..3] {
-        segment(*l, 2.6, palette::blue(), 1.0);
-    }
-    segment(s.lines[3], 2.6, palette::orange(), 1.0);
     let visible = s.across.iter().all(|l| real(&l.c));
-    if visible {
-        for l in &s.across {
-            segment(real_line(*l), 2.8, palette::red(), 1.0);
+    panel3(c, left, cam, |scene3| {
+        let mut segment = |l: L, width: f32, colour| {
+            if let Some([a, b]) = chord(l) {
+                scene3.seg(a, b, width, colour);
+            }
+        };
+        for l in &s.rulings[0] {
+            segment(*l, 0.9, fade(palette::sky(), 0.55));
         }
-        for p in &s.crossing {
-            scene3.dot(real_point(*p), Marker::Dot, 10.0, palette::red());
+        for l in &s.rulings[1] {
+            segment(*l, 0.9, fade(palette::grid(), 0.9));
         }
-    }
-    scene3.draw(c);
+        for l in &s.lines[..3] {
+            segment(*l, 2.6, palette::blue());
+        }
+        segment(s.lines[3], 2.6, palette::orange());
+        if visible {
+            for l in &s.across {
+                segment(real_line(*l), 2.8, palette::red());
+            }
+            for p in &s.crossing {
+                scene3.dot(real_point(*p), Marker::Dot, 10.0, palette::red());
+            }
+        }
+    });
+    let (verdict, tone) = if visible {
+        ("TWO REAL TRANSVERSALS", palette::red())
+    } else {
+        ("TWO COMPLEX-CONJUGATE TRANSVERSALS", palette::yellow())
+    };
+    let bottom_middle = left.bottom_middle();
     c.text(
-        if visible {
-            "TWO REAL TRANSVERSALS"
-        } else {
-            "TWO COMPLEX-CONJUGATE TRANSVERSALS"
-        },
-        w * 0.31,
-        h - 18.0,
+        verdict,
+        bottom_middle + up.gp(18.0),
         13.0,
-        if visible {
-            palette::red()
-        } else {
-            palette::yellow()
-        },
+        tone,
         Align::Center,
     );
 
@@ -334,49 +334,30 @@ fn draw(c: &mut Canvas, t: f32) {
     let (lo, hi) = values
         .iter()
         .fold((0.0f64, 0.0f64), |(lo, hi), &v| (lo.min(v), hi.max(v)));
+    let h = screen.height();
     let ax = Axes::new(
-        plot::inset([w * 0.62, 0.0, w, h], 50.0, h * 0.2, 20.0, h * 0.28),
+        screen
+            .part(0.62, 0.0, 1.0, 1.0)
+            .inset(50.0, h * 0.2, 20.0, h * 0.28),
         [0.0, 1.0],
         [lo as f32 * 1.15, hi as f32 * 1.15],
     );
     ax.frame(c, "DISCRIMINANT ALONG THE PENCIL", "PHASE OF THE SWING", "");
-    ax.line(
-        c,
-        graph(0.0, 0.0),
-        graph(1.0, 0.0),
-        1.0,
-        palette::grid(),
-        1.0,
-    );
-    ax.polyline(c, &curve, 1.6, palette::sky(), 1.0);
+    ax.line(c, graph(0.0, 0.0), graph(1.0, 0.0), 1.0, palette::grid());
+    ax.polyline(c, &curve, 1.6, palette::sky());
     let now = graph(phase, discriminant(&s.lines));
-    ax.scatter(
-        c,
-        &[now],
-        Marker::Dot,
-        10.0,
-        if visible {
-            palette::red()
-        } else {
-            palette::yellow()
-        },
-        1.0,
-    );
+    ax.scatter(c, &[now], Marker::Dot, 10.0, tone);
     let notes = [
         "ABOVE ZERO: THE FOURTH LINE CROSSES",
         "THE HYPERBOLOID, TWO REAL TRANSVERSALS",
         "BELOW ZERO: IT MISSES THE WAIST, A",
         "COMPLEX-CONJUGATE PAIR OF LINES",
     ];
+    // The notes stand under the graph, a little out to its left, one line apart.
+    let first = ax.rect.bottom_left() + Point2::direction(-30.0, h * 0.13);
     for (k, note) in notes.iter().enumerate() {
-        c.text(
-            note,
-            ax.rect[0] - 30.0,
-            ax.rect[3] + h * 0.13 + k as f32 * h * 0.028,
-            10.0,
-            palette::ink(),
-            Align::Left,
-        );
+        let at = first + down.gp(k as f32 * h * 0.028);
+        c.text(note, at, 10.0, palette::ink(), Align::Left);
     }
 
     caption(

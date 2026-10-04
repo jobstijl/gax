@@ -17,9 +17,10 @@
 
 use gax::motions::Motions;
 use gax::pga3d::{Line, Motor, Point};
+use gax_light::fade;
 use gax_numga_examples::rng::{Draw, Rng, rng};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -453,7 +454,8 @@ fn scene() -> &'static Scene {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let sc = scene();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let u = h / 540.0;
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(sc.motors.len() - 1);
     let m = sc.motors[k];
@@ -497,10 +499,11 @@ fn draw(c: &mut Canvas, t: f32) {
     let corners: Vec<simplex::P> = sc.corners.iter().map(|p| m >> *p).collect();
     for f in [[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]] {
         let (a, b, d) = (corners[f[0]], corners[f[1]], corners[f[2]]);
-        let col = s.lit(a, b, d, palette::purple());
+        // The faces cover what is behind them, so they are a dim light: the frame inside shows.
+        let col = s.lit(a, b, d, fade(palette::purple(), 0.3));
         s.tri(a, b, d, col, 0.55);
         for (x, y) in [(a, b), (b, d), (d, a)] {
-            s.seg(x, y, 1.2 * u, palette::ink(), 0.7);
+            s.seg(x, y, 1.2 * u, fade(palette::ink(), 0.7));
         }
     }
     // The principal axes and the second-moment ellipsoid, in the recovered frame: the images
@@ -514,7 +517,7 @@ fn draw(c: &mut Canvas, t: f32) {
     ];
     for (k, axis) in axes.into_iter().enumerate() {
         let tip = ellipsoid.of(origin + axis);
-        s.seg(ellipsoid.of(origin - axis), tip, 2.2 * u, colours[k], 1.0);
+        s.seg(ellipsoid.of(origin - axis), tip, 2.2 * u, colours[k]);
         s.dot(tip, Marker::Dot, 6.0 * u, colours[k]);
         // The ellipse in the plane of the other two axes.
         let start = origin + axes[(k + 1) % 3];
@@ -524,13 +527,14 @@ fn draw(c: &mut Canvas, t: f32) {
                 ellipsoid.of(turn >> start)
             })
             .collect();
-        s.polyline(&ring, 1.2 * u, colours[k], 0.6);
+        s.polyline(&ring, 1.2 * u, fade(colours[k], 0.6));
     }
     s.draw(c);
     // Sampling a tetrahedron's inertia: the error of a grid and of Monte Carlo against the
     // lumped inertia, revealed over the loop.
+    let right = Rect::new(left, 0.0, w, h);
     let ax = Axes::new(
-        plot::inset([left, 0.0, w, h], 60.0 * u, 110.0 * u, 24.0 * u, 64.0 * u),
+        right.inset(60.0 * u, 110.0 * u, 24.0 * u, 64.0 * u),
         [1.0, 1e5],
         [1e-17, 1e5],
     )
@@ -543,27 +547,17 @@ fn draw(c: &mut Canvas, t: f32) {
         &pts[..n]
     };
     let (g, r) = (reveal(&sc.grid), reveal(&sc.monte_carlo));
-    ax.polyline(c, g, 1.8, palette::orange(), 1.0);
-    ax.scatter(c, g, Marker::Dot, 5.0 * u, palette::orange(), 1.0);
-    ax.polyline(c, r, 1.4, palette::sky(), 1.0);
+    ax.polyline(c, g, 1.8, palette::orange());
+    ax.scatter(c, g, Marker::Dot, 5.0 * u, palette::orange());
+    ax.polyline(c, r, 1.4, palette::sky());
     // The lumped inertia takes four points; gax's mesh moments agree with it to rounding.
     let floor = 2e-16;
-    ax.scatter(
-        c,
-        &[Chart::xy(4.0, floor)],
-        Marker::Star,
-        13.0 * u,
-        palette::green(),
-        1.0,
+    let (lumped, mesh) = (
+        Chart::xy(4.0, floor),
+        Chart::xy(4.0, sc.mesh.max(floor) * 8.0),
     );
-    ax.scatter(
-        c,
-        &[Chart::xy(4.0, sc.mesh.max(floor) * 8.0)],
-        Marker::Square,
-        9.0 * u,
-        palette::yellow(),
-        1.0,
-    );
+    ax.scatter(c, &[lumped], Marker::Star, 13.0 * u, palette::green());
+    ax.scatter(c, &[mesh], Marker::Square, 9.0 * u, palette::yellow());
     ax.legend(
         c,
         &[

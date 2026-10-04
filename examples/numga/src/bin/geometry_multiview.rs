@@ -18,9 +18,9 @@
 
 use gax::ApproxEq;
 use gax::motions::Linear;
-use gax_numga_examples::canvas::mix;
+use gax_light::{fade, mix};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -518,7 +518,7 @@ fn data() -> &'static Data {
     })
 }
 
-fn camera_colour(c: usize) -> Rgb {
+fn camera_colour(c: usize) -> Light {
     [palette::sky(), palette::purple(), palette::green()][c % 3]
 }
 
@@ -564,16 +564,26 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
             ((PIXEL_ANGLE * d.max(0.2)).powi(2) + floor).sqrt()
         })
         .collect();
-    let pixel = f64::from((ax.x[1] - ax.x[0]) / (ax.rect[2] - ax.rect[0]));
+    // A pixel's width in the scene, and the backdrop's light at a pixel, by its depth down
+    // the canvas.
+    let pixel = f64::from(ax.scale().recip());
     let height = c.height as f32;
+    let backdrop_at = |q: Point2| {
+        mix(
+            palette::top(),
+            palette::bottom(),
+            q.unitized().e01() / height,
+        )
+    };
     let splat = palette::orange();
     let me = *ax;
     ax.image(c, 1, |at| {
         let p = at.map_coefs(f64::from);
-        let row = me.px(at)[1];
-        let mut colour = mix(palette::top(), palette::bottom(), row / height);
+        let mut colour = backdrop_at(me.px(at));
         let mut ahead = false;
-        for (k, cam) in (0..motors.len()).map(|k| (k, camera_colour(k))) {
+        // The cones glow faintly in their camera's light, so that where they cross the splats
+        // still stand out.
+        for (k, cam) in (0..motors.len()).map(|k| (k, fade(camera_colour(k), 0.35))) {
             let d = depth(p, k);
             if d <= 0.02 {
                 continue;
@@ -611,13 +621,12 @@ fn scene(c: &mut Canvas, ax: &Axes, motors: &[plane::M], cones: &[Vec<plane::Qua
         );
         let colour = camera_colour(k);
         ax.fill(c, &[o, l, r], colour, 0.25);
-        ax.line(c, o, l, 1.1, colour, 0.7);
-        ax.line(c, o, r, 1.1, colour, 0.7);
-        ax.line(c, l, r, 2.0, colour, 1.0);
+        ax.polyline(c, &[l, o, r], 1.1, fade(colour, 0.7));
+        ax.line(c, l, r, 2.0, colour);
         let ahead = *m >> Point::xy(0.0, depth * 1.15);
-        ax.dashed(c, &[o, ahead], 1.2, 3.0, colour, 1.0);
+        ax.dashed(c, &[o, ahead], 1.2, 3.0, colour);
     }
-    ax.scatter(c, &points, Marker::Dot, 3.0, palette::ink(), 1.0);
+    ax.scatter(c, &points, Marker::Dot, 3.0, palette::ink());
 }
 
 /// Each moving camera's position ellipse (scaled for display) and turning fan, from its
@@ -665,7 +674,7 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
             .collect();
         let colour = camera_colour(k);
         ax.fill(c, &ring, colour, 0.3);
-        ax.dashed(c, &ring, 1.6, 4.0, colour, 1.0);
+        ax.dashed(c, &ring, 1.6, 4.0, colour);
         // The turning's standard deviation, a fan either side of the axis (scaled for display).
         let turn = (w & cov.of(w)).s().max(0.0).sqrt() * 0.35;
         let half = turn.min(core::f64::consts::PI);
@@ -675,14 +684,15 @@ fn covariances(c: &mut Canvas, ax: &Axes, motors: &[plane::M], information: &[pl
                 *m >> (Motor::rotation(origin, angle) >> Point::xy(0.0, 0.38))
             })
             .collect();
-        ax.dashed(c, &[arc[0], *m >> origin, arc[24]], 1.1, 2.0, colour, 1.0);
-        ax.dashed(c, &arc, 1.3, 2.0, colour, 1.0);
+        ax.dashed(c, &[arc[0], *m >> origin, arc[24]], 1.1, 2.0, colour);
+        ax.dashed(c, &arc, 1.3, 2.0, colour);
     }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let data = data();
     let per = PER_STEP * ITERATIONS as f32 + HOLD;
     let which = ((t / per) as usize).min(data.scenarios.len() - 1);
@@ -698,7 +708,7 @@ fn draw(c: &mut Canvas, t: f32) {
         .map(|(a, b)| gax::pga2d::Motor::interpolate(*a, *b, f))
         .collect();
     let top = 64.0;
-    let rect = plot::inset([0.0, top, w * 0.5, h], 8.0, 4.0, 8.0, 8.0);
+    let rect = Rect::new(0.0, top, w * 0.5, h).inset(8.0, 4.0, 8.0, 8.0);
     let span = (Y_RANGE[1] - Y_RANGE[0]) * 0.5;
     let ax = Axes::equal(rect, Point2::xy(0.0, 0.5 * (Y_RANGE[0] + Y_RANGE[1])), span);
     scene(c, &ax, &motors, &data.cones);
@@ -711,7 +721,8 @@ fn draw(c: &mut Canvas, t: f32) {
         covariances(c, &ax, &motors, &blended);
     }
     // Right: the point error along each scenario's steps, log scale.
-    let chart = plot::inset([w * 0.5, top + 30.0, w, h * 0.8], 60.0, 20.0, 20.0, 40.0);
+    let chart = Rect::new(w * 0.5, top + 30.0, w, h * 0.8).inset(60.0, 20.0, 20.0, 40.0);
+    let down = Point2::direction(0.0, 1.0);
     let errors = Axes::new(chart, [0.0, ITERATIONS as f32], [1e-5, 1.0]).log_y();
     errors.frame(c, "POINT RMSE ALONG THE STEPS", "GAUSS-NEWTON STEP", "RMSE");
     for (i, sc) in data.scenarios.iter().enumerate() {
@@ -726,31 +737,24 @@ fn draw(c: &mut Canvas, t: f32) {
             })
             .collect();
         let shown = if i == which { 2.4 } else { 1.0 };
-        let alpha = if i == which { 1.0 } else { 0.45 };
-        errors.polyline(c, &curve, shown, palette::series(i), alpha);
+        let strength = if i == which { 1.0 } else { 0.45 };
+        errors.polyline(c, &curve, shown, fade(palette::series(i), strength));
         if i == which {
             let (now, _) = plane::triangulate(&motors, &data.cones);
             let cost = plane::cone_cost(&motors, &now, &data.cones);
             c.text(
                 &format!("CONE COST {cost:.2e}"),
-                chart[2],
-                chart[1] - 6.0,
+                chart.top_right() - down.gp(6.0),
                 11.0,
                 palette::grid(),
                 Align::Right,
             );
             let e = plane::rmse(&now, &data.truth).max(1e-5) as f32;
-            errors.scatter(
-                c,
-                &[Point2::xy(progress, e)],
-                Marker::Dot,
-                9.0,
-                palette::series(i),
-                1.0,
-            );
+            let here = Point2::xy(progress, e);
+            errors.scatter(c, &[here], Marker::Dot, 9.0, palette::series(i));
         }
     }
-    let names: Vec<(&str, Rgb)> = data
+    let names: Vec<(&str, Light)> = data
         .scenarios
         .iter()
         .enumerate()
@@ -763,18 +767,17 @@ fn draw(c: &mut Canvas, t: f32) {
         .enumerate()
         .map(|(i, f)| format!("CAM {i}: {}", if *f == 0.0 { "ANCHORED" } else { "FREE" }))
         .collect();
+    // Two notes under the chart's frame (and its axis labels).
     c.text(
         &anchors.join("   "),
-        w * 0.5 + 60.0,
-        h * 0.8 + 30.0,
+        chart.bottom_left() + down.gp(70.0),
         12.0,
         palette::ink(),
         Align::Left,
     );
     c.text(
         "SIGHT CONES A PIXEL WIDE; ORANGE: FUSED SPLATS",
-        w * 0.5 + 60.0,
-        h * 0.8 + 52.0,
+        chart.bottom_left() + down.gp(92.0),
         11.0,
         palette::grid(),
         Align::Left,

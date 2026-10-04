@@ -15,10 +15,11 @@
 //! Below, the probabilities the learned maps predict after as many uses, for states the
 //! reconstruction never saw, against the exact ones, and the measured probability tables.
 
+use gax_light::fade;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, backdrop, caption,
-    colormap, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Rect,
+    backdrop, caption, colormap, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -297,59 +298,52 @@ fn data() -> &'static Data {
 }
 
 /// A table of values as coloured cells (a heat map), `[row][column]`, with the values written in
-/// and the rows and columns named.
+/// and the rows and columns named. The cells are dimmed so that the values, light added on
+/// top, stand out.
 fn table(
     c: &mut Canvas,
-    rect: [f32; 4],
+    rect: Rect,
     cells: &[Vec<f64>],
     names: &[&str],
-    colour: impl Fn(f64) -> Rgb,
+    colour: impl Fn(f64) -> Light,
 ) {
     let rows = cells.len() as f32;
     let cols = cells[0].len() as f32;
-    let (cw, ch) = ((rect[2] - rect[0]) / cols, (rect[3] - rect[1]) / rows);
+    let (cw, ch) = (rect.width() / cols, rect.height() / rows);
+    let (right, down) = (Point2::direction(cw, 0.0), Point2::direction(0.0, ch));
     let size = (ch * 0.32).clamp(6.0, 10.0);
+    // Text sits on its baseline: half a text height below a centre.
+    let baseline = Point2::direction(0.0, size * 0.5);
     for (i, row) in cells.iter().enumerate() {
         for (j, v) in row.iter().enumerate() {
-            let (x0, y0) = (rect[0] + j as f32 * cw, rect[1] + i as f32 * ch);
-            let quad = [[x0, y0], [x0 + cw, y0], [x0 + cw, y0 + ch], [x0, y0 + ch]];
-            c.fill(&quad, colour(*v), 1.0);
-            c.text(
-                // Probabilities, without the leading zero, to fit the cells.
-                format!("{v:.2}").trim_start_matches('0'),
-                x0 + cw * 0.5,
-                y0 + ch * 0.5 + size * 0.5,
-                size,
-                palette::bottom(),
-                Align::Center,
-            );
+            let lo = rect.lo + right.gp(j as f32) + down.gp(i as f32);
+            let cell = Rect {
+                lo,
+                hi: lo + right + down,
+            };
+            let corners = [cell.lo, cell.top_right(), cell.hi, cell.bottom_left()];
+            c.fill(&corners, fade(colour(*v), 0.45), 1.0);
+            // Probabilities, without the leading zero, to fit the cells.
+            let text = format!("{v:.2}");
+            let at = cell.centre() + baseline;
+            let text = text.trim_start_matches('0');
+            c.text(text, at, size, palette::ink(), Align::Center);
         }
-        c.text(
-            names[i],
-            rect[0] - 4.0,
-            rect[1] + (i as f32 + 0.5) * ch + size * 0.5,
-            size,
-            palette::ink(),
-            Align::Right,
-        );
+        let name = rect.lo + down.gp(i as f32 + 0.5) + baseline - Point2::direction(4.0, 0.0);
+        c.text(names[i], name, size, palette::ink(), Align::Right);
     }
     for (j, name) in names.iter().enumerate().take(cols as usize) {
-        c.text(
-            name,
-            rect[0] + (j as f32 + 0.5) * cw,
-            rect[3] + size * 1.4,
-            size,
-            palette::ink(),
-            Align::Center,
-        );
+        let at = rect.bottom_left() + right.gp(j as f32 + 0.5) + baseline.gp(2.8);
+        c.text(name, at, size, palette::ink(), Align::Center);
     }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let d = data();
-    let (w, h) = (c.width, c.height);
-    let (wf, hf) = (w as f32, h as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = (t / SECONDS).clamp(0.0, 0.9999);
     let uses = 1 + (phase * STEPS as f32) as usize;
     let colours = [palette::sky(), palette::orange(), palette::purple()];
@@ -359,24 +353,23 @@ fn draw(c: &mut Canvas, t: f32) {
         palette::green(),
         palette::purple(),
     ];
-    let small = (hf / 50.0).clamp(7.0, 11.0);
+    let small = (h / 50.0).clamp(7.0, 11.0);
 
-    // Each learned channel, applied `uses` times to the sphere of pure states and to the probes.
-    let top = (hf * 0.13) as usize;
-    let bottom = (hf * 0.66) as usize;
-    let third = w / 3;
+    // Each learned channel, applied `uses` times to the sphere of pure states and to the probes,
+    // in thirds of a band across the screen.
+    let band = Rect::new(0.0, (h * 0.13).floor(), w, (h * 0.66).floor());
     let azimuth = (-54.0f32).to_radians() + 0.5 * (core::f32::consts::TAU * phase).sin();
     for k in 0..3 {
         let map = d.powers[k][uses - 1];
-        let image: Vec<Vec<Space>> = d
+        let image: Vec<Vec<_>> = d
             .surface
             .iter()
-            .map(|row| row.iter().map(|s| bloch(map.of(*s))).collect())
+            .map(|row| row.iter().map(|s| reach3(bloch(map.of(*s)))).collect())
             .collect();
-        let rect = [k * third, top, (k + 1) * third, bottom].map(|v| v as f32);
+        let rect = band.column(k, 3);
         let cam = Camera::orbit(
-            third,
-            bottom - top,
+            rect.width() as usize,
+            rect.height() as usize,
             ORIGIN3,
             4.6,
             azimuth,
@@ -384,9 +377,9 @@ fn draw(c: &mut Canvas, t: f32) {
             Lens::Perspective(0.62),
         );
         panel3(c, rect, cam, |s| {
-            s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.45);
+            s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.45));
             for a in axes() {
-                s.seg(-a, a, 1.0, palette::grid(), 0.8);
+                s.seg(reach3(-a), reach3(a), 1.0, fade(palette::grid(), 0.8));
             }
             // The image: a translucent surface with its mesh lines.
             for i in 0..LATITUDES {
@@ -401,71 +394,56 @@ fn draw(c: &mut Canvas, t: f32) {
                     s.quad(p, q, r, u, lit, 0.16);
                 }
             }
+            let mesh = fade(colours[k], 0.85);
             for row in &image {
-                s.polyline(row, 1.0, colours[k], 0.85);
+                s.polyline(row, 1.0, mesh);
             }
             for j in (0..LONGITUDES).step_by(2) {
-                let meridian: Vec<Space> = image.iter().map(|row| row[j]).collect();
-                s.polyline(&meridian, 1.0, colours[k], 0.85);
+                let meridian: Vec<_> = image.iter().map(|row| row[j]).collect();
+                s.polyline(&meridian, 1.0, mesh);
             }
             // Hollow and filled markers pair each preparation with its image.
             for (p, pc) in d.prepared.iter().zip(probe_colours) {
-                s.dot(bloch(*p), Marker::Ring, 8.0, pc);
-                s.dot(bloch(map.of(*p)), Marker::Dot, 6.0, pc);
+                s.dot(reach3(bloch(*p)), Marker::Ring, 8.0, pc);
+                s.dot(reach3(bloch(map.of(*p))), Marker::Dot, 6.0, pc);
             }
         });
-        c.text(
-            LABELS[k],
-            (k as f32 + 0.5) * third as f32,
-            top as f32 + 2.0,
-            small * 1.15,
-            colours[k],
-            Align::Center,
-        );
+        let title = rect.top_middle() + down.gp(2.0);
+        c.text(LABELS[k], title, small * 1.15, colours[k], Align::Center);
     }
-    c.text(
-        &format!("{uses} USES OF EACH LEARNED CHANNEL"),
-        wf * 0.5,
-        bottom as f32 - small * 0.8,
-        small * 1.1,
-        palette::ink(),
-        Align::Center,
-    );
-    // How many state directions each probe set determines: the singular values of its dyads.
-    for (k, (name, spectrum)) in ["TETRAHEDRON", "TWO PROBES"]
+    let note = band.bottom_middle() + up.gp(small * 0.8);
+    let text = format!("{uses} USES OF EACH LEARNED CHANNEL");
+    c.text(&text, note, small * 1.1, palette::ink(), Align::Center);
+    // How many state directions each probe set determines: the singular values of its dyads,
+    // under the band's two bottom corners.
+    let corners = [
+        (
+            band.bottom_left() + Point2::direction(0.02 * w, small * 0.5),
+            Align::Left,
+        ),
+        (
+            band.hi + Point2::direction(-0.02 * w, small * 0.5),
+            Align::Right,
+        ),
+    ];
+    for ((name, spectrum), (at, align)) in ["TETRAHEDRON", "TWO PROBES"]
         .iter()
         .zip(completeness())
-        .enumerate()
+        .zip(corners)
     {
         let values: Vec<String> = spectrum.iter().map(|v| format!("{v:.2}")).collect();
-        c.text(
-            &format!("{name}: {}", values.join(" ")),
-            if k == 0 { wf * 0.02 } else { wf * 0.98 },
-            bottom as f32 + small * 0.5,
-            small * 0.85,
-            palette::grid(),
-            if k == 0 { Align::Left } else { Align::Right },
-        );
+        let text = format!("{name}: {}", values.join(" "));
+        c.text(&text, at, small * 0.85, palette::grid(), align);
     }
 
     // Predictions after as many uses for unseen states, against the exact probabilities.
-    let quarter = wf / 4.0;
-    let y0 = hf * 0.76;
-    let y1 = hf * 0.94;
-    let ax = Axes::equal(
-        [quarter * 0.3, y0, quarter * 0.3 + (y1 - y0), y1],
-        Point2::xy(0.27, 0.27),
-        0.27,
-    );
+    let quarter = w / 4.0;
+    let (y0, y1) = (h * 0.76, h * 0.94);
+    let side = Point2::direction(y1 - y0, y1 - y0);
+    let lo = Point2::xy(quarter * 0.3, y0);
+    let ax = Axes::equal(Rect { lo, hi: lo + side }, Point2::xy(0.27, 0.27), 0.27);
     ax.frame(c, "UNSEEN STATES", "EXACT", "");
-    ax.line(
-        c,
-        Point2::xy(0.0, 0.0),
-        Point2::xy(0.54, 0.54),
-        1.0,
-        palette::grid(),
-        1.0,
-    );
+    ax.line(c, ORIGIN2, Point2::xy(0.54, 0.54), 1.0, palette::grid());
     for ((exact, predicted), colour) in validation(&d.learned, uses).iter().zip(colours) {
         // Each probability as a point of the plot: exact across, predicted up.
         let pts: Vec<gax::pga2d::Point<(), f64>> = exact
@@ -474,7 +452,7 @@ fn draw(c: &mut Canvas, t: f32) {
             .zip(predicted.iter().flatten())
             .map(|(a, b)| gax::pga2d::Point::xy(*a, *b))
             .collect();
-        ax.scatter(c, &pts, Marker::Dot, 4.5, colour, 0.85);
+        ax.scatter(c, &pts, Marker::Dot, 4.5, fade(colour, 0.85));
     }
 
     // The measured probability tables: preparation by outcome, coloured on a log scale.
@@ -491,24 +469,16 @@ fn draw(c: &mut Canvas, t: f32) {
         let t = (v.max(lowest).ln() - lowest.ln()) / (0.5f64.ln() - lowest.ln());
         colormap::turbo(t as f32)
     };
+    let size = (y1 - y0).min(quarter * 0.7);
     for (k, table_values) in d.measured.iter().enumerate() {
-        let x0 = quarter * (k as f32 + 1.0) + quarter * 0.22;
-        let size = (y1 - y0).min(quarter * 0.7);
-        table(
-            c,
-            [x0, y0, x0 + size, y0 + size],
-            table_values,
-            &names,
-            shade,
-        );
-        c.text(
-            LABELS[k],
-            x0 + size * 0.5,
-            y0 - small * 0.6,
-            small,
-            colours[k],
-            Align::Center,
-        );
+        let lo = Point2::xy(quarter * (k as f32 + 1.0) + quarter * 0.22, y0);
+        let rect = Rect {
+            lo,
+            hi: lo + Point2::direction(size, size),
+        };
+        table(c, rect, table_values, &names, shade);
+        let title = rect.top_middle() + up.gp(small * 0.6);
+        c.text(LABELS[k], title, small, colours[k], Align::Center);
     }
 
     caption(
@@ -675,7 +645,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.1, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 5.0, &mut draw);
-        assert!(a.mean()[0] > 0.0);
+        assert!(gax_light::luma(a.mean()) > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

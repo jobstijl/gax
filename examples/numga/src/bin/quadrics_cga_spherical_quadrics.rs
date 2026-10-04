@@ -8,7 +8,8 @@
 //! around a vortex. The animation shows the trio of numga's GIF, large, and every single shape
 //! carried by the same flow.
 
-use gax_numga_examples::{Align, Anim, Canvas, Rgb, backdrop, canvas, caption, palette, run};
+use gax_light::{Light, light};
+use gax_numga_examples::{Align, Anim, Canvas, Point2, Rect, backdrop, caption, palette, run};
 
 gax::algebra! {
     algebra cl31 "The conformal algebra of the sphere S², R(3,1,0): x, y, z square to 1, w to -1.";
@@ -295,27 +296,26 @@ const SECONDS: f32 = 6.0;
 
 /// The front hemisphere seen along z in the disc of `radius` pixels at `centre`: each pixel the
 /// colour of the last quadric that holds it, the disc and its rim otherwise.
-fn hemisphere(c: &mut Canvas, centre: [f32; 2], radius: f32, quadrics: &[(Quadric, Rgb)]) {
-    let (disk, rim) = (
-        canvas::srgb(0.067, 0.094, 0.153),
-        canvas::srgb(0.2, 0.255, 0.333),
-    );
-    c.clip([
-        centre[0] - radius - 1.0,
-        centre[1] - radius - 1.0,
-        centre[0] + radius + 1.0,
-        centre[1] + radius + 1.0,
-    ]);
-    c.shade(2, |px, py| {
-        let (u, v) = ((px - centre[0]) / radius, (centre[1] - py) / radius);
-        let r2 = u * u + v * v;
+fn hemisphere(c: &mut Canvas, centre: Point2, radius: f32, quadrics: &[(Quadric, Light)]) {
+    let (disk, rim) = (light(0.4, 0.55, 1.0, 0.025), light(0.5, 0.62, 0.85, 0.12));
+    let corner = Point2::direction(radius + 1.0, radius + 1.0);
+    c.clip(Rect {
+        lo: centre - corner,
+        hi: centre + corner,
+    });
+    c.shade(2, |q: Point2| {
+        // The pixel's offset from the centre in radii (x right, y up), and the square of its
+        // distance from the centre: the join's norm.
+        let off = q - centre;
+        let (u, v) = (off.e20() / radius, -off.e01() / radius);
+        let r2 = (q & centre).norm_squared() / (radius * radius);
         if r2 > 1.0 {
             return None;
         }
         let p = point([
             f64::from(u),
             f64::from(v),
-            f64::from((1.0 - r2).max(0.0).sqrt()),
+            f64::from(1.0 - r2).max(0.0).sqrt(),
         ]);
         let hit = quadrics.iter().rev().find(|(q, _)| potential(*q, p) < 0.0);
         Some(match hit {
@@ -329,36 +329,31 @@ fn hemisphere(c: &mut Canvas, centre: [f32; 2], radius: f32, quadrics: &[(Quadri
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let down = Point2::direction(0.0, 1.0);
     let generator = vortex();
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let carried = |q: Quadric| flow(q, generator, phase);
     // The trio, large, on the left.
     let big = (h * 0.42).min(w * 0.24);
-    let trio: Vec<(Quadric, Rgb)> = trio()
+    let trio: Vec<(Quadric, Light)> = trio()
         .iter()
-        .map(|(_, q, col)| (carried(*q), canvas::hex(*col)))
+        .map(|(_, q, col)| (carried(*q), gax_light::hex(*col, 0.8)))
         .collect();
-    hemisphere(c, [w * 0.26, h * 0.54], big, &trio);
+    hemisphere(c, Point2::xy(w * 0.26, h * 0.54), big, &trio);
     // Every shape on the right, in a grid of four by three.
-    let (x0, y0) = (w * 0.52, h * 0.13);
-    let (cw, ch) = ((w - x0 - 8.0) / 4.0, (h - y0 - 4.0) / 3.0);
+    let grid = Rect::new(w * 0.52, h * 0.13, w - 8.0, h - 4.0);
+    let (cw, ch) = (grid.width() / 4.0, grid.height() / 3.0);
     let r = (cw.min(ch) * 0.5 - 12.0).max(4.0);
     let label = (h / 50.0).clamp(7.0, 11.0);
     for (k, (name, q, col)) in shapes().into_iter().enumerate() {
-        let centre = [
-            x0 + cw * ((k % 4) as f32 + 0.5),
-            y0 + ch * ((k / 4) as f32 + 0.5) - label * 0.5,
-        ];
-        hemisphere(c, centre, r, &[(carried(q), canvas::hex(col))]);
-        c.text(
-            name,
-            centre[0],
-            centre[1] + r + label * 1.3,
-            label,
-            palette::grid(),
-            Align::Center,
-        );
+        // The middle of the cell, raised by half a label.
+        let (i, j) = ((k % 4) as f32, (k / 4) as f32);
+        let centre = grid.lo + Point2::direction(cw * (i + 0.5), ch * (j + 0.5) - label * 0.5);
+        hemisphere(c, centre, r, &[(carried(q), gax_light::hex(col, 0.8))]);
+        let under = centre + down.gp(r + label * 1.3);
+        c.text(name, under, label, palette::grid(), Align::Center);
     }
     caption(
         c,
@@ -524,7 +519,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(c.mean()[0] > 0.0);
+            assert!(gax_light::luma(c.mean()) > 0.0);
         }
     }
 }

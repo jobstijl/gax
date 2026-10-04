@@ -63,7 +63,7 @@ pub fn frame(anim: &Anim, t: f32, draw: &mut impl FnMut(&mut Canvas, f32)) -> Ca
 /// For tests: one frame of `draw` at `t` (320 × 180) puts something on the canvas.
 pub fn assert_draws(mut draw: impl FnMut(&mut Canvas, f32), t: f32) {
     let c = frame(&Anim::new("t", 1.0).size(320, 180), t, &mut draw);
-    assert!(c.mean()[0] > 0.0);
+    assert!(gax_light::luma(c.mean()) > 0.0);
 }
 
 /// Write one loop of the animation as a GIF.

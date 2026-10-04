@@ -35,8 +35,10 @@
 //! the stereographic projection.
 
 use gax::ApproxEq;
+use gax_light::{fade, mix, whiten};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Point3, Rgb, Scene3, backdrop, canvas, caption,
+    Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop, caption,
     colormap, palette, run,
 };
 use std::sync::OnceLock;
@@ -506,15 +508,20 @@ use spin::*;
 
 const SECONDS: f32 = 8.0;
 
-/// A colour per orbit: the start's position around the xy plane as the hue, its height as the
-/// value.
-fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) -> Rgb {
+/// A colour per orbit: the start's position around the xy plane as the hue, whitened a little,
+/// fainter the higher it starts.
+fn orbit_colour(height: usize, heights: usize, azimuth: usize, azimuths: usize) -> Light {
     let hue = colormap::hsv(azimuth as f32 / azimuths as f32);
-    let soft = canvas::mix(hue, [1.0; 3], 0.2);
-    canvas::scale(
+    let soft = whiten(hue, 0.2);
+    fade(
         soft,
         0.95 - 0.4 * height as f32 / (heights.max(2) - 1) as f32,
     )
+}
+
+/// The point of space a projected vector reaches from the origin.
+fn at(v: four::Space) -> gax::pga3d::Point<(), f64> {
+    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
 }
 
 /// The checks of the four-dimensional scenes, live: the isoclinic split of a random rotor, the
@@ -557,9 +564,11 @@ fn checks() -> &'static Checks {
     })
 }
 
-fn draw_table(c: &mut Canvas, x: f32, y: f32, size: f32) {
+/// The table of algebras, its header's baseline starting at `at`, one row under another.
+fn draw_table(c: &mut Canvas, at: Point2, size: f32) {
     let header = "(P,Q)  PLANES  ROTATIONS  BOOSTS  FORM/INNER  I*I  SPINORS";
-    c.text(header, x, y, size, palette::ink(), Align::Left);
+    c.text(header, at, size, palette::ink(), Align::Left);
+    let down = Point2::direction(0.0, size * 1.45);
     for (k, row) in table().iter().enumerate() {
         let (rotations, boosts) = row.counts();
         let line = format!(
@@ -578,24 +587,20 @@ fn draw_table(c: &mut Canvas, x: f32, y: f32, size: f32) {
         } else {
             palette::grid()
         };
-        let colour = canvas::mix(colour, palette::ink(), 0.35);
-        c.text(
-            &line,
-            x,
-            y + (k + 1) as f32 * size * 1.45,
-            size,
-            colour,
-            Align::Left,
-        );
+        let colour = mix(colour, palette::ink(), 0.35);
+        let row_at = at + down.gp((k + 1) as f32);
+        c.text(&line, row_at, size, colour, Align::Left);
     }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let phase = t / SECONDS;
     let size = (h / 52.0).clamp(4.0, 10.0);
-    draw_table(c, w * 0.43, h * 0.05, size);
+    draw_table(c, Point2::xy(0.43 * w, 0.05 * h), size);
 
     let flows = four::cached();
     let families = [&flows.left, &flows.right, &flows.knotted];
@@ -611,54 +616,43 @@ fn draw(c: &mut Canvas, t: f32) {
         "AGAINST: XY AGAINST ZW",
         "XY TWICE, ZW THREE TIMES",
     ];
-    let top = (h * 0.38) as usize;
-    let width = c.width / 3;
+    // The three flows side by side below the table.
+    let below = Rect::new(0.0, (0.38 * h).floor(), w, h);
     for (k, family) in families.iter().enumerate() {
-        let rect = [k * width, top, (k + 1) * width, c.height];
-        let mut panel = Canvas::new(rect[2] - rect[0], rect[3] - rect[1]);
-        let edge = |y: usize| canvas::mix(palette::top(), palette::bottom(), y as f32 / (h - 1.0));
-        panel.backdrop(edge(rect[1]), edge(rect[3] - 1));
+        let rect = below.column(k, 3);
         let cam = Camera::orbit(
-            panel.width,
-            panel.height,
-            Point3::xyz(0.0, 0.0, 0.0),
+            rect.width() as usize,
+            rect.height() as usize,
+            ORIGIN3,
             (extent * 4.2) as f32,
             (-55.0f32).to_radians() + 0.5 * (phase * core::f32::consts::TAU).sin(),
             24.0f32.to_radians(),
             Lens::Perspective(0.5),
         );
-        let mut scene = Scene3::new(cam);
         let knots = k == 2;
-        for (o, orbit) in family.iter().enumerate() {
-            let (height, azimuth) = if knots { (o, 0) } else { flows.index[o] };
-            let colour = orbit_colour(height, 3, azimuth, 12);
-            scene.polyline(orbit, if knots { 1.2 } else { 0.6 }, colour, 0.8);
-            // The points carried along: one per orbit, six riding along each knot.
-            let riders = if knots { 6 } else { 1 };
-            for r in 0..riders {
-                let at = (step + r * length / riders) % length;
-                scene.dot(orbit[at], Marker::Dot, 7.0, colour);
+        panel3(c, rect, cam, |scene| {
+            for (o, orbit) in family.iter().enumerate() {
+                let (height, azimuth) = if knots { (o, 0) } else { flows.index[o] };
+                let colour = orbit_colour(height, 3, azimuth, 12);
+                let pts: Vec<_> = orbit.iter().map(|v| at(*v)).collect();
+                let width = if knots { 1.2 } else { 0.6 };
+                scene.polyline(&pts, width, fade(colour, 0.8));
+                // The points carried along: one per orbit, six riding along each knot.
+                let riders = if knots { 6 } else { 1 };
+                for r in 0..riders {
+                    let now = (step + r * length / riders) % length;
+                    scene.dot(pts[now], Marker::Dot, 7.0, colour);
+                }
             }
-        }
-        scene.draw(&mut panel);
-        c.blit(&panel, rect[0], rect[1]);
-        c.text(
-            titles[k],
-            rect[0] as f32 + width as f32 * 0.5,
-            top as f32 + 16.0,
-            11.0,
-            palette::ink(),
-            Align::Center,
-        );
+        });
+        let top_middle = rect.top_middle();
+        let title = top_middle + down.gp(16.0);
+        c.text(titles[k], title, 11.0, palette::ink(), Align::Center);
         if k < 2 {
-            c.text(
-                &format!("LINKING NUMBER {:+.2}", checks().links[k]),
-                rect[0] as f32 + width as f32 * 0.5,
-                h - 12.0,
-                10.0,
-                palette::grid(),
-                Align::Center,
-            );
+            let bottom_middle = rect.bottom_middle();
+            let text = format!("LINKING NUMBER {:+.2}", checks().links[k]);
+            let note = bottom_middle + up.gp(12.0);
+            c.text(&text, note, 10.0, palette::grid(), Align::Center);
         }
     }
     let exact = table().iter().all(|row| row.form_is_inner);
@@ -676,15 +670,10 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         format!("2 XY + 3 ZW = 5 AGAINST - ALONG: {:.0E}", ch.combined),
     ];
+    let first = Point2::xy(0.015 * w, 0.2 * h);
     for (k, line) in lines.iter().enumerate() {
-        c.text(
-            line,
-            w * 0.015,
-            h * 0.2 + k as f32 * size * 1.6,
-            size,
-            palette::grid(),
-            Align::Left,
-        );
+        let line_at = first + down.gp(k as f32 * size * 1.6);
+        c.text(line, line_at, size, palette::grid(), Align::Left);
     }
     caption(
         c,

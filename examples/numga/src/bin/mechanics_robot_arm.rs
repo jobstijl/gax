@@ -10,9 +10,10 @@
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::pga3d::{Line, Motor, Plane, Point};
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, caption,
-    palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
+    caption, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -227,7 +228,8 @@ const FACES: [[usize; 4]; 6] = [
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let states = states();
     let n = states.len();
     let s = (t / SECONDS).rem_euclid(1.0) * n as f32;
@@ -257,25 +259,21 @@ fn draw(c: &mut Canvas, t: f32) {
     for k in 0..=8 {
         let v = f64::from(k) * 0.375;
         let (x, y) = (v - 1.0, v - 1.5);
-        sc.seg(floor(x, -1.5), floor(x, 1.5), 1.0, palette::grid(), 0.6);
-        sc.seg(floor(-1.0, y), floor(2.0, y), 1.0, palette::grid(), 0.6);
+        let line = fade(palette::grid(), 0.6);
+        sc.seg(floor(x, -1.5), floor(x, 1.5), 1.0, line);
+        sc.seg(floor(-1.0, y), floor(2.0, y), 1.0, line);
     }
     // The loop of targets, faint.
     let lp: Vec<P> = (0..=n).map(|k| loop_target(k % n)).collect();
-    sc.polyline(&lp, 1.0, palette::red(), 0.35);
+    sc.polyline(&lp, 1.0, fade(palette::red(), 0.35));
     // The tip's trail over the last half loop, fading.
     let trail = n / 2;
     for back in 0..trail {
         let k1 = (i + n - back) % n;
         let k0 = (k1 + n - 1) % n;
-        let alpha = 0.9 * (1.0 - back as f32 / trail as f32);
-        sc.seg(
-            states[k0].tip,
-            states[k1].tip,
-            2.0,
-            palette::yellow(),
-            alpha,
-        );
+        let strength = 0.9 * (1.0 - back as f32 / trail as f32);
+        let tone = fade(palette::yellow(), strength);
+        sc.seg(states[k0].tip, states[k1].tip, 2.0, tone);
     }
     // The links, as lit translucent boxes with their edges.
     let boxes = link_boxes(0.15, 0.06);
@@ -283,10 +281,11 @@ fn draw(c: &mut Canvas, t: f32) {
     for ((corners, m), colour) in boxes.iter().zip(links).zip(colours) {
         let p: Vec<P> = corners.iter().map(|q| m >> *q).collect();
         for f in FACES {
-            let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], colour);
+            // The faces cover what is behind them: a dimmer light than the glowing strokes.
+            let col = sc.lit(p[f[0]], p[f[1]], p[f[2]], fade(colour, 0.5));
             sc.quad(p[f[0]], p[f[1]], p[f[2]], p[f[3]], col, 0.8);
             for e in 0..4 {
-                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, palette::ink(), 0.35);
+                sc.seg(p[f[e]], p[f[(e + 1) % 4]], 1.0, fade(palette::ink(), 0.35));
             }
         }
     }
@@ -306,13 +305,7 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 
     // The joint angles over the loop, with the current ones marked.
-    let rect = plot::inset(
-        [w * 0.62, 0.0, w, h * 0.62],
-        w * 0.05,
-        h * 0.15,
-        w * 0.02,
-        h * 0.075,
-    );
+    let rect = Rect::new(w * 0.62, 0.0, w, h * 0.62).inset(w * 0.05, h * 0.15, w * 0.02, h * 0.075);
     let all: Vec<[f64; 3]> = states.iter().map(|st| angles(&st.joints, &axis)).collect();
     let (lo, hi) = all
         .iter()
@@ -327,24 +320,18 @@ fn draw(c: &mut Canvas, t: f32) {
             .enumerate()
             .map(|(j, a)| Point2::xy(j as f32 / n as f32, a[k] as f32))
             .collect();
-        ax.polyline(c, &pts, 1.8, *colour, 0.9);
+        ax.polyline(c, &pts, 1.8, fade(*colour, 0.9));
         let now = all[i][k] + (all[(i + 1) % n][k] - all[i][k]) * frac;
-        ax.scatter(
-            c,
-            &[Point2::xy(s / n as f32, now as f32)],
-            Marker::Dot,
-            8.0,
-            *colour,
-            1.0,
-        );
+        let head = Point2::xy(s / n as f32, now as f32);
+        ax.scatter(c, &[head], Marker::Dot, 8.0, *colour);
     }
-    let legend: Vec<(&str, Rgb)> = names.iter().copied().zip(colours).collect();
+    let legend: Vec<(&str, Light)> = names.iter().copied().zip(colours).collect();
     ax.legend(c, &legend);
 
     // The statics at rest, in text.
     let (velocity, torques) = statics();
     let (error, _) = homing();
-    let x0 = w * 0.6;
+    let (first, down) = (Point2::xy(w * 0.6, h * 0.7), Point2::direction(0.0, 20.0));
     let lines = [
         "AT REST, FORCE (0,2,-1) AT (1,0,3):".to_string(),
         format!(
@@ -361,18 +348,12 @@ fn draw(c: &mut Canvas, t: f32) {
         format!("TRACKING ERROR {:.1E}", (a.target & a.tip).norm()),
     ];
     for (k, l) in lines.iter().enumerate() {
-        c.text(
-            l,
-            x0,
-            h * 0.70 + k as f32 * 20.0,
-            10.0,
-            if k == 0 {
-                palette::grid()
-            } else {
-                palette::ink()
-            },
-            Align::Left,
-        );
+        let tone = if k == 0 {
+            palette::grid()
+        } else {
+            palette::ink()
+        };
+        c.text(l, first + down.gp(k as f32), 10.0, tone, Align::Left);
     }
 }
 

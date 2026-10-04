@@ -30,6 +30,9 @@ gax::algebra! {
 }
 
 pub use cl4::{Bivector, Rotor, ScreenPoint, Trivector, Vector};
+use gax_light::{Light, fade};
+use gax_numga_examples::points::box_map;
+use gax_numga_examples::{Point2, Rect};
 
 /// A point of S³: a trivector, on numga's `yzw`, `zxw`, `xyw`, `zyx`.
 pub type Point = Trivector<(), f64>;
@@ -168,13 +171,13 @@ pub fn hit(eye_frame: Motor, depth: f64, pixel: Pixel) -> Point {
         .into_inner()
 }
 
-/// A scene to trace: the eye, the bodies' primal forms in the world, their colours (display
-/// values in `[0, 1]`), the light (a unit point), and the field of view.
+/// A scene to trace: the eye, the bodies' primal forms in the world, their colours (lights, at
+/// the intensity of a body lit head on), the light (a unit point), and the field of view.
 #[derive(Clone)]
 pub struct View {
     pub eye: Motor,
     pub surfaces: Vec<Quadric>,
-    pub colors: Vec<[f64; 3]>,
+    pub colors: Vec<Light>,
     pub light: Point,
     pub fov: f64,
 }
@@ -241,13 +244,13 @@ impl Tracer<'_> {
             })
     }
 
-    /// The colour of a pixel (display values), or `None` for the background. Lighting is done
+    /// The colour of a pixel, or `None` for the background. Lighting is done
     /// on S³ itself: the light is one point, and the hit is the point reached first, kept with
     /// its own sign, since the antipode of a hit is a different point facing the other way. The
     /// one great circle out of the light through the hit reaches it along an arc; the surface is
     /// lit where that arc arrives from outside, which the pairing of the polar plane with the
     /// light decides, with the falloff `1 / sin²(arc)` of a point source.
-    pub fn color(&self, pixel: Pixel) -> Option<[f64; 3]> {
+    pub fn color(&self, pixel: Pixel) -> Option<Light> {
         let (body, depth) = self.nearest(pixel)?;
         let hit = hit(self.view.eye, depth, pixel);
         let light = self.view.light;
@@ -264,16 +267,23 @@ impl Tracer<'_> {
             lambert = 0.0;
         }
         let k = 0.15 + 0.85 * lambert.clamp(0.0, 1.0);
-        Some(self.view.colors[body].map(|c| (c * k).clamp(0.0, 1.0)))
+        Some(fade(self.view.colors[body], k as f32))
     }
 }
 
-/// The pixel of a canvas point `(x, y)` on a `width` by `height` image, numga's chart: `u` across
-/// from -1 to 1, `v` down from `height / width` to `-height / width`.
-pub fn chart(fov: f64, x: f64, y: f64, width: f64, height: f64) -> Pixel {
-    let u = -1.0 + 2.0 * x / width;
-    let v = (1.0 - 2.0 * y / height) * height / width;
-    pixel(fov, u, v)
+/// numga's pixel chart of a rectangle of the canvas: the map taking a canvas point to its pixel,
+/// `u` across from -1 to 1, `v` down from `height / width` to `-height / width` (the rectangle
+/// onto that box, corner to corner).
+pub fn chart(fov: f64, screen: Rect) -> impl Fn(Point2) -> Pixel {
+    let aspect = screen.height() / screen.width();
+    let to_uv = box_map(
+        [screen.lo, screen.hi],
+        [Point2::xy(-1.0, aspect), Point2::xy(1.0, -aspect)],
+    );
+    move |at| {
+        let [u, v] = to_uv.of(at).to_euclidean();
+        pixel(fov, f64::from(u), f64::from(v))
+    }
 }
 
 #[cfg(test)]
@@ -308,15 +318,10 @@ mod tests {
         let identity = motion(along(Tangent::zero()));
         let (conic, polar) = project(identity, surface);
         let (mut hits, mut total) = (0, 0);
+        let chart = chart(60f64.to_radians(), Rect::new(0.0, 0.0, 40.0, 30.0));
         for r in 0..30 {
             for c in 0..40 {
-                let px = chart(
-                    60f64.to_radians(),
-                    c as f64 + 0.5,
-                    r as f64 + 0.5,
-                    40.0,
-                    30.0,
-                );
+                let px = chart(Point2::xy(c as f32 + 0.5, r as f32 + 0.5));
                 let depth = reproject(conic, polar, px);
                 total += 1;
                 if depth.is_nan() {

@@ -12,9 +12,13 @@ cargo run --release --bin mechanics_spinning_top -- --png top.png --at 2.5
 cargo test --release                                       # every example's tests
 ```
 
-The shared drawing code (`src/`) is a software canvas in linear light: antialiased lines, disks,
-polygons and text, per-pixel shading for the ray-traced examples, plot axes with contours and
-colormaps, a depth-sorted 3D scene, and cameras posed by gax motors.
+The shared drawing code (`src/`) draws with light, as `examples/warp` does (the shared
+`gax-light` crate): every colour is a light, a PGA3D point whose weight is its intensity; strokes
+add their light with a glow, fills and images cover by their opacity, and the canvas is shown
+through AgX. It is gax down to the pixels: pixels and rectangles are PGA2D points, axes and views
+are point maps, a camera projects by meeting its rays with the image plane, and distances are the
+norms of joins. On top: plot axes with contours and OkLab colormaps, a depth-sorted 3D scene, and
+cameras posed by gax motors.
 
 | area | examples |
 |---|---|

@@ -14,9 +14,10 @@
 //! crystals.
 
 use gax::pga2d::Point;
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Marker, Point3, Rgb, Scene3, backdrop, caption, palette,
-    plot, run,
+    Align, Anim, Axes, Camera, Canvas, Dir3, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
+    backdrop, caption, palette, run,
 };
 
 mod shg {
@@ -267,74 +268,57 @@ fn still() -> &'static Still {
     })
 }
 
-fn title(c: &mut Canvas, rect: [f32; 4], s: &str) {
-    c.text(
-        s,
-        (rect[0] + rect[2]) * 0.5,
-        rect[1] + 12.0,
-        11.0,
-        palette::ink(),
-        Align::Center,
-    );
+/// A panel's title, centred under its top edge.
+fn title(c: &mut Canvas, rect: Rect, s: &str) {
+    let top_middle = rect.top_middle();
+    let at = top_middle + Point2::direction(0.0, 12.0);
+    c.text(s, at, 11.0, palette::ink(), Align::Center);
 }
 
 /// The crystal's bonds in space, the beam along the face diagonal and the screen's axes.
-fn draw_bonds(c: &mut Canvas, rect: [f32; 4], bonds: &[B; 4], spin: f32) {
-    let view = [rect[0], rect[1] + 16.0, rect[2], rect[3]];
-    let cam = Camera::parallel(view, (rect[3] - rect[1]) * 0.32, -0.98 + spin, 0.40);
+fn draw_bonds(c: &mut Canvas, rect: Rect, bonds: &[B; 4], spin: f32) {
+    let view = rect.inset(0.0, 16.0, 0.0, 0.0);
+    let cam = Camera::parallel(view, rect.height() * 0.32, -0.98 + spin, 0.40);
     let mut sc = Scene3::new(cam);
-    let origin = Point3::xyz(0.0, 0.0, 0.0);
-    let beam = direction(longitudinal());
-    sc.seg(beam * -1.4, beam * 1.4, 1.0, palette::grid(), 1.0);
-    sc.arrow(beam, beam * 0.5, 1.5, 8.0, palette::yellow());
+    // The point an electric plane's direction reaches from the crystal's centre.
+    let tip = |b: B| ORIGIN3 + direction(b).dir3();
+    let beam = direction(longitudinal()).dir3();
+    sc.seg(
+        ORIGIN3 - beam.gp(1.4),
+        ORIGIN3 + beam.gp(1.4),
+        1.0,
+        palette::grid(),
+    );
+    sc.arrow(ORIGIN3 + beam, beam.gp(0.5), 1.5, 8.0, palette::yellow());
     for axis in [horizontal(), vertical()] {
-        sc.arrow(origin, direction(axis), 1.0, 6.0, palette::grid());
+        sc.arrow(ORIGIN3, direction(axis), 1.0, 6.0, palette::grid());
     }
-    let tips = bonds.map(direction);
+    let tips = bonds.map(tip);
     for (i, a) in tips.iter().enumerate() {
-        sc.seg(origin, *a, 2.5, palette::ink(), 0.8);
+        sc.seg(ORIGIN3, *a, 2.5, fade(palette::ink(), 0.8));
         for b in &tips[i + 1..] {
-            sc.seg(*a, *b, 1.0, palette::sky(), 0.35);
+            sc.seg(*a, *b, 1.0, fade(palette::sky(), 0.35));
         }
         sc.dot(*a, Marker::Dot, 9.0, palette::orange());
     }
-    sc.dot(origin, Marker::Dot, 7.0, palette::grid());
+    sc.dot(ORIGIN3, Marker::Dot, 7.0, palette::grid());
     sc.draw(c);
     title(c, rect, "CRYSTAL BONDS");
-    c.text(
-        "BEAM",
-        rect[2] - 34.0,
-        rect[3] - 10.0,
-        10.0,
-        palette::yellow(),
-        Align::Center,
-    );
+    let corner = rect.hi - Point2::direction(34.0, 10.0);
+    c.text("BEAM", corner, 10.0, palette::yellow(), Align::Center);
 }
 
 /// The screen: pump directions all around and the doubled polarization each drives.
-fn draw_polarization(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
-    let ax = Axes::equal(plot::inset(rect, 34.0, 30.0, 10.0, 30.0), centre(), 1.15);
+fn draw_polarization(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
+    let ax = Axes::equal(rect.inset(34.0, 30.0, 10.0, 30.0), centre(), 1.15);
     ax.frame(c, "TRANSVERSE POLARIZATION", "HORIZONTAL", "");
-    ax.line(
-        c,
-        Spot::xy(-1.15, 0.0),
-        Spot::xy(1.15, 0.0),
-        1.0,
-        palette::grid(),
-        0.6,
-    );
-    ax.line(
-        c,
-        Spot::xy(0.0, -1.15),
-        Spot::xy(0.0, 1.15),
-        1.0,
-        palette::grid(),
-        0.6,
-    );
+    let faint = fade(palette::grid(), 0.6);
+    ax.line(c, Spot::xy(-1.15, 0.0), Spot::xy(1.15, 0.0), 1.0, faint);
+    ax.line(c, Spot::xy(0.0, -1.15), Spot::xy(0.0, 1.15), 1.0, faint);
     let circle: Vec<Spot> = pumps.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &circle, 1.0, palette::sky(), 0.35);
+    ax.polyline(c, &circle, 1.0, fade(palette::sky(), 0.35));
     let curve: Vec<Spot> = harmonic.iter().map(|p| screen(*p)).collect();
-    ax.polyline(c, &curve, 2.0, palette::orange(), 0.8);
+    ax.polyline(c, &curve, 2.0, fade(palette::orange(), 0.8));
     ax.arrow(c, centre(), circle[0], 2.0, 8.0, palette::sky());
     ax.arrow(c, centre(), curve[0], 2.0, 8.0, palette::orange());
 }
@@ -342,18 +326,19 @@ fn draw_polarization(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]
 /// A polar plot of the power over the pump's direction. (numga uses matplotlib's polar
 /// axes; this draws the rings, the spokes and the curve itself.) The pumps go once around the
 /// beam at unit strength, so scaled they draw the rings, and every eighth of the way a spoke.
-fn draw_power(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
+fn draw_power(c: &mut Canvas, rect: Rect, pumps: &[B], harmonic: &[B]) {
     let intensity: Vec<f64> = harmonic.iter().map(|h| h.dot(*h).s()).collect();
     let top = intensity.iter().cloned().fold(0.0, f64::max).max(1e-9) * 1.12;
-    let ax = Axes::equal(plot::inset(rect, 10.0, 30.0, 10.0, 30.0), centre(), 1.0);
+    let ax = Axes::equal(rect.inset(10.0, 30.0, 10.0, 30.0), centre(), 1.0);
     title(c, rect, "POWER BY PUMP DIRECTION");
+    let faint = fade(palette::grid(), 0.8);
     for k in 1..=4 {
         let ring: Vec<Spot> = pumps.iter().map(|p| screen(p.gp(k as f64 / 4.0))).collect();
-        ax.polyline(c, &ring, 1.0, palette::grid(), 0.8);
+        ax.polyline(c, &ring, 1.0, faint);
     }
     let below = gax::pga2d::Motor::translation(0.0, -0.04);
     for (k, p) in pumps.iter().step_by(pumps.len() / 8).take(8).enumerate() {
-        ax.line(c, centre(), screen(*p), 1.0, palette::grid(), 0.8);
+        ax.line(c, centre(), screen(*p), 1.0, faint);
         ax.text(
             c,
             below >> screen(p.gp(1.1)),
@@ -372,25 +357,20 @@ fn draw_power(c: &mut Canvas, rect: [f32; 4], pumps: &[B], harmonic: &[B]) {
     // fourth point of the curve.
     let coarse: Vec<Spot> = pts.iter().step_by(4).copied().collect();
     ax.fill(c, &coarse, palette::orange(), 0.12);
-    ax.polyline(c, &pts, 2.0, palette::orange(), 1.0);
-    ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::sky(), 1.0);
+    ax.polyline(c, &pts, 2.0, palette::orange());
+    ax.scatter(c, &pts[..1], Marker::Dot, 9.0, palette::sky());
     c.text(
         &format!("MAX {:.2}", top / 1.12),
-        rect[0] + 12.0,
-        rect[3] - 10.0,
+        rect.bottom_left() + Point2::direction(12.0, -10.0),
         10.0,
         palette::grid(),
         Align::Left,
     );
 }
 
-fn draw_waveform(c: &mut Canvas, rect: [f32; 4], at: f32) {
+fn draw_waveform(c: &mut Canvas, rect: Rect, at: f32) {
     let (phase, pump, harmonic) = &still().waveform;
-    let ax = Axes::new(
-        plot::inset(rect, 34.0, 30.0, 10.0, 34.0),
-        [0.0, 2.0],
-        [-1.2, 1.2],
-    );
+    let ax = Axes::new(rect.inset(34.0, 30.0, 10.0, 34.0), [0.0, 2.0], [-1.2, 1.2]);
     ax.frame(c, "WAVEFORM", "PUMP PERIODS", "");
     let periods = |p: f64| p / core::f64::consts::TAU;
     let series = |v: &[B], pick: B| -> Vec<Point<(), f64>> {
@@ -402,33 +382,21 @@ fn draw_waveform(c: &mut Canvas, rect: [f32; 4], at: f32) {
     };
     let a = series(pump, horizontal());
     let b = series(harmonic, vertical());
-    ax.line(
-        c,
-        Point::xy(0.0, 0.0),
-        Point::xy(2.0, 0.0),
-        1.0,
-        palette::grid(),
-        0.6,
-    );
-    ax.polyline(c, &a, 2.0, palette::sky(), 1.0);
-    ax.polyline(c, &b, 2.0, palette::orange(), 1.0);
+    let zero = (Point::xy(0.0, 0.0), Point::xy(2.0, 0.0));
+    ax.line(c, zero.0, zero.1, 1.0, fade(palette::grid(), 0.6));
+    ax.polyline(c, &a, 2.0, palette::sky());
+    ax.polyline(c, &b, 2.0, palette::orange());
     let k = ((at * (a.len() - 1) as f32) as usize).min(a.len() - 1);
     let now = periods(phase[k]);
-    ax.line(
-        c,
-        Point::xy(now, -1.2),
-        Point::xy(now, 1.2),
-        1.0,
-        palette::ink(),
-        0.5,
-    );
-    ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky(), 1.0);
-    ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange(), 1.0);
+    let cursor = fade(palette::ink(), 0.5);
+    ax.line(c, Point::xy(now, -1.2), Point::xy(now, 1.2), 1.0, cursor);
+    ax.scatter(c, &[a[k]], Marker::Dot, 8.0, palette::sky());
+    ax.scatter(c, &[b[k]], Marker::Dot, 8.0, palette::orange());
 }
 
-fn draw_mixing(c: &mut Canvas, rect: [f32; 4], at: f32) {
+fn draw_mixing(c: &mut Canvas, rect: Rect, at: f32) {
     let (pumps, probes, generated) = &still().mixing;
-    let ax = Axes::equal(plot::inset(rect, 30.0, 30.0, 10.0, 34.0), centre(), 0.5);
+    let ax = Axes::equal(rect.inset(30.0, 30.0, 10.0, 34.0), centre(), 0.5);
     ax.frame(c, "PUMP AT 45: MIXING", "HORIZONTAL", "");
     ax.arrow(
         c,
@@ -441,9 +409,10 @@ fn draw_mixing(c: &mut Canvas, rect: [f32; 4], at: f32) {
     let on_screen = |fields: &[B]| -> Vec<Spot> { fields.iter().map(|p| screen(*p)).collect() };
     let circle = on_screen(probes);
     let image = on_screen(&generated[1]);
-    ax.dashed(c, &circle, 1.5, 6.0, palette::sky(), 1.0);
-    ax.polyline(c, &on_screen(&generated[0]), 1.0, palette::orange(), 0.3);
-    ax.polyline(c, &image, 2.0, palette::orange(), 1.0);
+    ax.dashed(c, &circle, 1.5, 6.0, palette::sky());
+    let unmixed = on_screen(&generated[0]);
+    ax.polyline(c, &unmixed, 1.0, fade(palette::orange(), 0.3));
+    ax.polyline(c, &image, 2.0, palette::orange());
     let k = ((at * (circle.len() - 1) as f32) as usize).min(circle.len() - 1);
     ax.arrow(c, centre(), circle[k], 1.5, 6.0, palette::sky());
     ax.arrow(c, centre(), image[k], 1.5, 6.0, palette::orange());
@@ -451,15 +420,15 @@ fn draw_mixing(c: &mut Canvas, rect: [f32; 4], at: f32) {
 
 const CASES: [&str; 3] = ["MATCHED", "MISMATCHED", "FLIPPED"];
 
-fn case_colour(k: usize) -> Rgb {
+fn case_colour(k: usize) -> Light {
     [palette::sky(), palette::orange(), palette::purple()][k]
 }
 
-fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) {
+fn draw_growth(c: &mut Canvas, phasor: Rect, power_rect: Rect, at: f32) {
     let (depths, amplitude) = &still().growth;
     let n = ((at * depths.len() as f32) as usize).clamp(1, depths.len());
     let ax = Axes::equal(
-        plot::inset(phasor, 30.0, 30.0, 10.0, 34.0),
+        phasor.inset(30.0, 30.0, 10.0, 34.0),
         Point::xy(0.45, 0.2),
         0.62,
     );
@@ -469,11 +438,11 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
             .iter()
             .map(|a| Point::xy((a[0] | vertical()).s(), (a[1] | vertical()).s()))
             .collect();
-        ax.polyline(c, &pts, 2.0, case_colour(k), 1.0);
-        ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0, case_colour(k), 1.0);
+        ax.polyline(c, &pts, 2.0, case_colour(k));
+        ax.scatter(c, &pts[n - 1..], Marker::Dot, 7.0, case_colour(k));
     }
     let ax = Axes::new(
-        plot::inset(power_rect, 34.0, 30.0, 10.0, 34.0),
+        power_rect.inset(34.0, 30.0, 10.0, 34.0),
         [0.0, 1.0],
         [0.0, 1.05],
     );
@@ -484,8 +453,8 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
             .zip(path)
             .map(|(d, a)| Point::xy(*d, power(*a)))
             .collect();
-        ax.polyline(c, &pts, 1.0, case_colour(k), 0.3);
-        ax.polyline(c, &pts[..n], 2.0, case_colour(k), 1.0);
+        ax.polyline(c, &pts, 1.0, fade(case_colour(k), 0.3));
+        ax.polyline(c, &pts[..n], 2.0, case_colour(k));
     }
     ax.legend(
         c,
@@ -499,22 +468,24 @@ fn draw_growth(c: &mut Canvas, phasor: [f32; 4], power_rect: [f32; 4], at: f32) 
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let h = screen.height();
     let at = (t / SECONDS).rem_euclid(1.0);
     let s = still();
     let angle = core::f64::consts::TAU * f64::from(at);
     let (bonds, harmonic) = turning(angle, &s.pumps);
+    // Below the caption, a row of three panels over a row of four.
     let top = h * 0.11;
     let mid = top + (h - top) * 0.52;
-    let third = w / 3.0;
+    let upper = screen.inset(0.0, top, 0.0, h - mid);
+    let lower = screen.inset(0.0, mid, 0.0, 0.0);
     let spin = 0.15 * (core::f32::consts::TAU * at).sin();
-    draw_bonds(c, [0.0, top, third, mid], &bonds, spin);
-    draw_polarization(c, [third, top, 2.0 * third, mid], &s.pumps, &harmonic);
-    draw_power(c, [2.0 * third, top, w, mid], &s.pumps, &harmonic);
-    let q = w / 4.0;
-    draw_waveform(c, [0.0, mid, q, h], at);
-    draw_mixing(c, [q, mid, 2.0 * q, h], at);
-    draw_growth(c, [2.0 * q, mid, 3.0 * q, h], [3.0 * q, mid, w, h], at);
+    draw_bonds(c, upper.column(0, 3), &bonds, spin);
+    draw_polarization(c, upper.column(1, 3), &s.pumps, &harmonic);
+    draw_power(c, upper.column(2, 3), &s.pumps, &harmonic);
+    draw_waveform(c, lower.column(0, 4), at);
+    draw_mixing(c, lower.column(1, 4), at);
+    draw_growth(c, lower.column(2, 4), lower.column(3, 4), at);
     caption(
         c,
         "SECOND HARMONIC: A CRYSTAL THAT DOUBLES THE FREQUENCY",
@@ -671,7 +642,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(320, 180);
         let a = gax_numga_examples::app::frame(&anim, 0.0, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 1.0, &mut draw);
-        assert!(a.mean()[0] > 0.0);
+        assert!(gax_light::luma(a.mean()) > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

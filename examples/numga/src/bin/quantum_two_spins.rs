@@ -16,10 +16,11 @@
 //! under the correlation map) swells from a needle to a sphere; below, the largest Bell (CHSH)
 //! combination rises from 2 to `2 sqrt 2` and falls back.
 
+use gax_light::fade;
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, Scene3, backdrop,
-    caption, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, Scene3,
+    backdrop, caption, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -237,19 +238,20 @@ fn space_in_second() -> pair::Second<(gax::vga3d::Vector,), f64> {
     pair::Second::from_images([big_x(), big_y(), big_z()])
 }
 
-/// The unit ball, faintly, with its three axes.
-fn ball(s: &mut Scene3) {
-    s.sphere_wire(ORIGIN3, 1.0, 18, palette::grid(), 0.55);
+/// The unit reach3, faintly, with its three axes.
+fn draw_ball(s: &mut Scene3) {
+    s.sphere_wire(ORIGIN3, 1.0, 18, fade(palette::grid(), 0.55));
     for a in axes() {
-        s.seg(-a, a, 1.0, palette::grid(), 1.0);
+        s.seg(reach3(-a), reach3(a), 1.0, palette::grid());
     }
 }
 
-/// Axis names at the ends of the axes.
+/// Axis names just beyond the ends of the axes.
 fn axis_names(c: &mut Canvas, cam: &Camera) {
     for (name, a) in ["X", "Y", "Z"].iter().zip(axes()) {
-        if let Some(p) = cam.px(a * 1.18) {
-            c.text(name, p[0], p[1] + 4.0, 11.0, palette::grid(), Align::Center);
+        if let Some(p) = cam.px(reach3(a * 1.18)) {
+            let at = p + Point2::direction(0.0, 4.0);
+            c.text(name, at, 11.0, palette::grid(), Align::Center);
         }
     }
 }
@@ -264,25 +266,27 @@ fn on_sphere(lon: f64, lat: f64) -> Space {
 }
 
 /// The image of the second spin's unit sphere under the correlation map, as a map of space.
-fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Rgb) {
+fn ellipsoid(s: &mut Scene3, corr: Correlation, colour: Light) {
     let shown = first_in_space().of(corr.of(space_in_second()));
     s.surface(
         |u, v| {
             let lon = core::f64::consts::TAU * f64::from(u);
             let lat = core::f64::consts::PI * (f64::from(v) - 0.5);
-            shown.of(on_sphere(lon, lat))
+            reach3(shown.of(on_sphere(lon, lat)))
         },
         28,
         14,
         |_, _| colour,
         0.35,
-        Some((colour, 0.8)),
+        Some((fade(colour, 0.6), 0.8)),
     );
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width, c.height);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let (up, down) = (Point2::direction(0.0, -1.0), Point2::direction(0.0, 1.0));
     let tau = core::f64::consts::TAU;
     let phase = f64::from(t) / 8.0;
     // From up-down to swapped and back, easing in and out.
@@ -294,22 +298,12 @@ fn draw(c: &mut Canvas, t: f32) {
     let value = bell(corr);
     let azimuth = (-55.0f32).to_radians() + 0.35 * (tau * phase).sin() as f32;
     let elevation = 18.0f32.to_radians();
-    let top = h * 92 / 540;
-    let bottom = h * 392 / 540;
-    let third = w / 3;
-    let cam = Camera::orbit(
-        third,
-        bottom - top,
-        ORIGIN3,
-        4.4,
-        azimuth,
-        elevation,
-        Lens::Perspective(0.62),
-    );
-    let colours: [Rgb; 3] = [palette::red(), palette::purple(), palette::sky()];
+    // The band of the three balls, in thirds.
+    let band = Rect::new(0.0, h * 92.0 / 540.0, w, h * 392.0 / 540.0);
+    let colours: [Light; 3] = [palette::red(), palette::purple(), palette::sky()];
     let titles = ["FIRST SPIN", "CORRELATIONS", "SECOND SPIN"];
     // Each Bloch vector in space, with its tip's path over the whole exchange.
-    let blochs = [
+    let blochs: [(Space, Vec<Space>); 2] = [
         (
             first_in_space().of(first),
             data.first.iter().map(|v| first_in_space().of(*v)).collect(),
@@ -323,95 +317,67 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
     ];
     for k in 0..3 {
-        let rect = [k * third, top, (k + 1) * third, bottom].map(|v| v as f32);
+        let rect = band.column(k, 3);
+        let cam = Camera::orbit(
+            rect.width() as usize,
+            rect.height() as usize,
+            ORIGIN3,
+            4.4,
+            azimuth,
+            elevation,
+            Lens::Perspective(0.62),
+        );
         let drawn = panel3(c, rect, cam, |s| {
-            ball(s);
+            draw_ball(s);
             match k {
                 1 => ellipsoid(s, corr, colours[1]),
                 _ => {
-                    let (now, path): &(Space, Vec<Space>) = &blochs[k / 2];
-                    s.polyline(path, 2.0, colours[k], 0.35);
+                    let (now, path) = &blochs[k / 2];
+                    let tips: Vec<_> = path.iter().map(|r| reach3(*r)).collect();
+                    s.polyline(&tips, 2.0, fade(colours[k], 0.35));
                     s.arrow(ORIGIN3, *now, 3.0, 11.0, colours[k]);
                 }
             }
         });
         axis_names(c, &drawn);
-        c.text(
-            titles[k],
-            (k as f32 + 0.5) * third as f32,
-            top as f32 - 4.0,
-            13.0,
-            colours[k],
-            Align::Center,
-        );
+        let title = rect.top_middle() + up.gp(4.0);
+        c.text(titles[k], title, 13.0, colours[k], Align::Center);
     }
     // The lengths of the Bloch vectors under their balls.
     for (k, (now, _)) in [0, 2].into_iter().zip(&blochs) {
-        c.text(
-            &format!("LENGTH {:.2}", now.norm()),
-            (k as f32 + 0.5) * third as f32,
-            bottom as f32 + 2.0,
-            11.0,
-            palette::ink(),
-            Align::Center,
-        );
+        let note = (band.column(k, 3)).bottom_middle() + down.gp(2.0);
+        let text = format!("LENGTH {:.2}", now.norm());
+        c.text(&text, note, 11.0, palette::ink(), Align::Center);
     }
     // The largest Bell combination along the exchange.
     let quarter = core::f32::consts::FRAC_PI_4;
-    let ax = Axes::new(
-        [
-            w as f32 * 0.073,
-            (bottom + h * 34 / 540) as f32,
-            w as f32 * 0.97,
-            (h - h * 42 / 540) as f32,
-        ],
-        [0.0, quarter],
-        [1.9, 2.95],
-    );
+    let below = Rect {
+        lo: band.bottom_left(),
+        hi: screen.hi,
+    };
+    let plot = below.inset(w * 0.073, h * 34.0 / 540.0, w * 0.03, h * 42.0 / 540.0);
+    let ax = Axes::new(plot, [0.0, quarter], [1.9, 2.95]);
     ax.frame(c, "", "EXCHANGE ANGLE (RAD)", "LARGEST BELL VALUE");
     let root8 = 2.0 * core::f32::consts::SQRT_2;
     for (level, dash) in [(2.0, 6.0), (root8, 2.0)] {
-        ax.dashed(
-            c,
-            &[Point2::xy(0.0, level), Point2::xy(quarter, level)],
-            1.0,
-            dash,
-            palette::grid(),
-            1.0,
-        );
+        let across = [Point2::xy(0.0, level), Point2::xy(quarter, level)];
+        ax.dashed(c, &across, 1.0, dash, palette::grid());
     }
     let small = 9.0;
-    ax.text(
-        c,
-        Point2::xy(quarter / 2.0, 2.04),
-        "EACH SPIN ITS OWN ANSWERS",
-        small,
-        palette::grid(),
-        Align::Center,
-    );
-    ax.text(
-        c,
-        Point2::xy(0.01, root8 + 0.04),
-        "2 SQRT 2",
-        small,
-        palette::grid(),
-        Align::Left,
-    );
+    let note = Point2::xy(quarter / 2.0, 2.04);
+    let text = "EACH SPIN ITS OWN ANSWERS";
+    ax.text(c, note, text, small, palette::grid(), Align::Center);
+    let note = Point2::xy(0.01, root8 + 0.04);
+    ax.text(c, note, "2 SQRT 2", small, palette::grid(), Align::Left);
     let curve: Vec<Point2> = data
         .angles
         .iter()
         .zip(&data.bells)
         .map(|(a, b)| Point2::xy(*a as f32, *b as f32))
         .collect();
-    ax.polyline(c, &curve, 1.6, colours[1], 1.0);
-    ax.scatter(
-        c,
-        &[Point2::xy(angle as f32, value as f32)],
-        Marker::Dot,
-        8.0,
-        colours[1],
-        1.0,
-    );
+    ax.polyline(c, &curve, 1.6, colours[1]);
+    let now = Point2::xy(angle as f32, value as f32);
+    ax.scatter(c, &[now], Marker::Dot, 8.0, colours[1]);
     // The singlet's Bell combination along the directions that reach the bound, and the
     // state's norm, which the exchange keeps.
     let (_, _, reached) = singlet();
@@ -506,7 +472,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", 8.0).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 3.0, &mut draw);
-        assert!(a.mean()[0] > 0.0);
+        assert!(gax_light::luma(a.mean()) > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

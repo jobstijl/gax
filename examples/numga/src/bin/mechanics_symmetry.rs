@@ -12,9 +12,11 @@
 use gax::Unit;
 use gax::motions::{Motions, Pga3d};
 use gax::{pga2d, pga3d, vga3d};
+use gax_light::fade;
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, canvas,
-    caption, from_above, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
+    caption, from_above, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -309,35 +311,39 @@ fn scenes() -> &'static Scenes {
 /// Seconds per scene.
 const SCENE: f32 = 7.0;
 
-/// A canvas for a panel at `rect`, its backdrop the matching band of the full backdrop, so that
-/// a 3D scene drawn with its own camera can be blitted in place.
-fn panel(c: &Canvas, rect: [usize; 4]) -> Canvas {
-    let mut p = Canvas::new(rect[2] - rect[0], rect[3] - rect[1]);
-    let h = c.height as f32 - 1.0;
-    p.backdrop(
-        canvas::mix(palette::top(), palette::bottom(), rect[1] as f32 / h),
-        canvas::mix(palette::top(), palette::bottom(), (rect[3] - 1) as f32 / h),
-    );
-    p
+/// A camera orbiting the origin at `azimuth` and `elevation`, parallel, showing `half` units
+/// above and below the centre of the panel `rect`.
+fn orbit(rect: Rect, azimuth: f32, elevation: f32, half: f32) -> Camera {
+    let (w, h) = (rect.width() as usize, rect.height() as usize);
+    let origin = P3::xyz(0.0, 0.0, 0.0);
+    Camera::orbit(w, h, origin, 20.0, azimuth, elevation, Lens::Parallel(half))
 }
 
 /// A surface `radius(d) d` (or the image `f(d)` of the unit sphere) in a scene: longitude by
 /// latitude.
-fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Rgb, alpha: f32) {
+fn sphere_surface(sc: &mut Scene3, f: impl Fn(V) -> V, colour: Light, opacity: f32) {
     sc.surface(
         |u, v| {
             let d = direction(
                 core::f64::consts::TAU * f64::from(u),
                 core::f64::consts::PI * (f64::from(v) - 0.5),
             );
-            f(d)
+            reach3(f(d))
         },
         28,
         14,
         |_, _| colour,
-        alpha,
-        Some((canvas::scale(colour, 0.6), 0.6)),
+        opacity,
+        Some((fade(colour, 0.6), 0.6)),
     );
+}
+
+/// The middle of a rectangle's top edge, and of its bottom edge.
+fn top_middle(r: Rect) -> Point2 {
+    r.top_middle()
+}
+fn bottom_middle(r: Rect) -> Point2 {
+    r.bottom_middle()
 }
 
 /// The angle between two vectors in degrees: the norm of the logarithm of the rotor from one to
@@ -348,9 +354,11 @@ fn degrees(a: V, b: V) -> f64 {
 
 fn conduction_scene(c: &mut Canvas, s: f32) {
     let sc_data = scenes();
-    let (w, h) = (c.width, c.height);
-    let top = (h as f32 * 0.16) as usize;
-    let bottom = h - (h as f32 * 0.14) as usize;
+    let screen = c.rect();
+    let h = screen.height();
+    // The band of the panels, under the caption.
+    let band = screen.inset(0.0, h * 0.16, 0.0, h * 0.14);
+    let down = Point2::direction(0.0, 1.0);
     let labels = [
         ("MEASURED", "6 COMPONENTS"),
         ("HALF TURNS", "3 COMPONENTS"),
@@ -361,51 +369,33 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
     let phase = f64::from(s) * core::f64::consts::TAU;
     let driving = direction(phase, 0.45);
     for (i, (k, (title, sub))) in sc_data.conduction.iter().zip(labels).enumerate() {
-        let rect = [i * w / 4, top, (i + 1) * w / 4, bottom];
-        let mut p = panel(c, rect);
+        let rect = band.column(i, 4);
         let origin = P3::xyz(0.0, 0.0, 0.0);
-        let cam = Camera::orbit(
-            p.width,
-            p.height,
-            origin,
-            20.0,
-            -2.1 + 0.6 * s,
-            0.42,
-            Lens::Parallel(7.4),
-        );
-        let mut sc = Scene3::new(cam);
-        sc.axes(origin, 1.2);
-        sphere_surface(&mut sc, |d| k.of(d), palette::sky(), 0.3);
         let flux = k.of(driving);
-        sc.arrow(origin, driving.gp(4.0), 2.0, 9.0, palette::ink());
-        sc.arrow(origin, flux, 3.0, 11.0, palette::orange());
-        sc.draw(&mut p);
-        c.blit(&p, rect[0], rect[1]);
-        let cx = (rect[0] + rect[2]) as f32 * 0.5;
+        panel3(c, rect, orbit(rect, -2.1 + 0.6 * s, 0.42, 7.4), |sc| {
+            sc.axes(origin, 1.2);
+            sphere_surface(sc, |d| k.of(d), palette::sky(), 0.3);
+            sc.arrow(origin, driving.gp(4.0), 2.0, 9.0, palette::ink());
+            sc.arrow(origin, flux, 3.0, 11.0, palette::orange());
+        });
+        let (head, foot) = (top_middle(rect), bottom_middle(rect));
         c.text(
             title,
-            cx,
-            top as f32 + 14.0,
+            head + down.gp(14.0),
             13.0,
             palette::ink(),
             Align::Center,
         );
         c.text(
             sub,
-            cx,
-            top as f32 + 30.0,
+            head + down.gp(30.0),
             10.0,
             palette::grid(),
             Align::Center,
         );
-        c.text(
-            &format!("DEFLECTION {:.1} DEG", degrees(flux, driving)),
-            cx,
-            bottom as f32 + 22.0,
-            11.0,
-            palette::orange(),
-            Align::Center,
-        );
+        let deflection = format!("DEFLECTION {:.1} DEG", degrees(flux, driving));
+        let at = foot + down.gp(22.0);
+        c.text(&deflection, at, 11.0, palette::orange(), Align::Center);
     }
     caption(
         c,
@@ -416,28 +406,19 @@ fn conduction_scene(c: &mut Canvas, s: f32) {
 
 fn flywheel_scene(c: &mut Canvas, s: f32) {
     let sd = scenes();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let angle = f64::from(s) * core::f64::consts::TAU;
     // The wheel from above, the probe axis through the hub.
-    let left = plot::inset(
-        [0.0, 0.0, w * 0.5, h],
-        w * 0.04,
-        h * 0.17,
-        w * 0.02,
-        h * 0.06,
-    );
+    let left = screen
+        .column(0, 2)
+        .inset(w * 0.04, h * 0.17, w * 0.02, h * 0.06);
     let hub = pga2d::Point::xy(0.0, 0.0);
     let ax = Axes::equal(left, hub, 2.4);
     let probe_dir = polar(1.0, angle) - hub;
-    ax.axline(c, hub, probe_dir, 1.0, palette::grid(), 1.0);
-    ax.axline(
-        c,
-        hub,
-        pga2d::Point::direction(1.0, 0.0),
-        0.8,
-        palette::grid(),
-        0.5,
-    );
+    ax.axline(c, hub, probe_dir, 1.0, palette::grid());
+    let east = pga2d::Point::direction(1.0, 0.0);
+    ax.axline(c, hub, east, 0.8, fade(palette::grid(), 0.5));
     for (k, arm) in sd.arms.iter().enumerate() {
         let colour = if k == 0 {
             palette::orange()
@@ -445,54 +426,46 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
             palette::sky()
         };
         let pts: Vec<_> = arm.iter().map(|p| from_above(*p)).collect();
-        ax.scatter(c, &pts, Marker::Dot, 4.0, colour, 0.9);
+        ax.scatter(c, &pts, Marker::Dot, 4.0, fade(colour, 0.9));
     }
-    ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink(), 1.0);
-    ax.line(
-        c,
-        hub - probe_dir.gp(2.3),
-        hub + probe_dir.gp(2.3),
-        2.5,
-        palette::yellow(),
-        1.0,
-    );
-    ax.text(
-        c,
-        Point2::xy(ax.x[0] + 0.1, ax.y[1] - 0.3),
-        "THREE UNIT-MASS ARMS, 120 DEG APART",
-        11.0,
-        palette::ink(),
-        Align::Left,
-    );
+    ax.scatter(c, &[hub], Marker::Dot, 9.0, palette::ink());
+    let reach = probe_dir.gp(2.3);
+    ax.line(c, hub - reach, hub + reach, 2.5, palette::yellow());
+    let note = ax.at(0.0, 1.0) + Point2::direction(0.1, -0.3);
+    let text = "THREE UNIT-MASS ARMS, 120 DEG APART";
+    ax.text(c, note, text, 11.0, palette::ink(), Align::Left);
     // The moments about axes in the wheel's plane, as a polar plot traced up to the probe.
-    let right = plot::inset([w * 0.5, 0.0, w, h], w * 0.04, h * 0.17, w * 0.04, h * 0.06);
+    let right = screen
+        .column(1, 2)
+        .inset(w * 0.04, h * 0.17, w * 0.04, h * 0.06);
     let n = 180;
-    let curve = |inertia: &Inertia| -> Vec<(f64, f64)> {
+    // The point at the moment about each axis, out along it.
+    let curve = |inertia: &Inertia| -> Vec<pga2d::Point<(), f64>> {
         (0..=n)
             .map(|k| {
                 let a = core::f64::consts::TAU * k as f64 / n as f64;
-                (a, moment(inertia, probe(a)))
+                polar(moment(inertia, probe(a)), a)
             })
             .collect()
     };
     let arm_curve = curve(&sd.arm_inertia);
     let wheel_curve = curve(&sd.inertia);
+    // The largest moment: the farthest point from the hub.
     let rmax = arm_curve
         .iter()
         .chain(&wheel_curve)
-        .map(|(_, r)| r.abs())
+        .map(|p| (*p & hub).norm())
         .fold(0.0, f64::max);
     let pax = Axes::equal(right, hub, rmax as f32 * 1.15);
     polar_grid(&pax, c, rmax);
-    for (pts, colour) in [
+    for (xy, colour) in [
         (&arm_curve, palette::orange()),
         (&wheel_curve, palette::sky()),
     ] {
-        let xy: Vec<pga2d::Point<(), f64>> = pts.iter().map(|(a, r)| polar(*r, *a)).collect();
-        pax.polyline(c, &xy, 1.0, colour, 0.3);
+        pax.polyline(c, xy, 1.0, fade(colour, 0.3));
         let upto = ((s * n as f32) as usize).min(n);
-        pax.polyline(c, &xy[..=upto], 2.5, colour, 1.0);
-        pax.scatter(c, &[xy[upto]], Marker::Dot, 8.0, colour, 1.0);
+        pax.polyline(c, &xy[..=upto], 2.5, colour);
+        pax.scatter(c, &[xy[upto]], Marker::Dot, 8.0, colour);
     }
     pax.legend(
         c,
@@ -503,14 +476,9 @@ fn flywheel_scene(c: &mut Canvas, s: f32) {
     );
     let axial = moment(&sd.inertia, z_axis());
     let transverse = moment(&sd.inertia, probe(angle));
-    pax.text(
-        c,
-        Point2::xy(pax.x[0], pax.y[0] + rmax as f32 * 0.05),
-        &format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}"),
-        11.0,
-        palette::ink(),
-        Align::Left,
-    );
+    let note = pax.at(0.0, 0.0) + Point2::direction(0.0, rmax as f32 * 0.05);
+    let text = format!("ABOUT Z: {axial:.3} = 2 X {transverse:.3}");
+    pax.text(c, note, &text, 11.0, palette::ink(), Align::Left);
     caption(
         c,
         "SYMMETRY: THREE ARMS, AXIALLY SYMMETRIC INERTIA",
@@ -531,19 +499,21 @@ fn polar_grid(ax: &Axes, c: &mut Canvas, rmax: f64) {
     for k in 1..=4 {
         let r = rmax * k as f64 / 4.0;
         let ring: Vec<_> = (0..=96).map(|j| polar(r, turn(j, 96))).collect();
-        ax.polyline(c, &ring, 0.8, palette::grid(), 0.8);
+        ax.polyline(c, &ring, 0.8, fade(palette::grid(), 0.8));
     }
     for j in 0..12 {
         let spoke = polar(rmax, turn(j, 12));
-        ax.line(c, origin, spoke, 0.8, palette::grid(), 0.5);
+        ax.line(c, origin, spoke, 0.8, fade(palette::grid(), 0.5));
     }
 }
 
 fn lattice_scene(c: &mut Canvas, s: f32) {
     let sd = scenes();
-    let (w, h) = (c.width, c.height);
-    let top = (h as f32 * 0.16) as usize;
-    let bottom = h - (h as f32 * 0.12) as usize;
+    let screen = c.rect();
+    let h = screen.height();
+    // The band of the panels, under the caption.
+    let band = screen.inset(0.0, h * 0.16, 0.0, h * 0.12);
+    let down = Point2::direction(0.0, 1.0);
     let azimuth = -1.0 + 1.2 * s;
     let (sites, axial, diagonal) = lattice_samples();
     let titles = [
@@ -552,28 +522,17 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
         ("STIFFNESS: CUBIC", "C: 1/2 ON AXES, 1/3 DIAGONAL"),
     ];
     for (i, (title, sub)) in titles.iter().enumerate() {
-        let rect = [i * w / 3, top, (i + 1) * w / 3, bottom];
-        let mut p = panel(c, rect);
+        let rect = band.column(i, 3);
         let half = if i == 0 { 1.9 } else { 0.85 };
         let origin = P3::xyz(0.0, 0.0, 0.0);
-        let cam = Camera::orbit(
-            p.width,
-            p.height,
-            origin,
-            20.0,
-            azimuth,
-            0.4,
-            Lens::Parallel(half),
-        );
-        let mut sc = Scene3::new(cam);
-        match i {
+        panel3(c, rect, orbit(rect, azimuth, 0.4, half), |sc| match i {
             0 => {
                 for q in &sites {
                     sc.dot(*q, Marker::Dot, 6.0, palette::grid());
                 }
                 for (shell, colour) in [(&axial, palette::orange()), (&diagonal, palette::sky())] {
                     for q in shell {
-                        sc.seg(origin, *q, 2.0, colour, 1.0);
+                        sc.seg(origin, *q, 2.0, colour);
                         sc.dot(*q, Marker::Dot, 8.0, colour);
                     }
                 }
@@ -581,28 +540,24 @@ fn lattice_scene(c: &mut Canvas, s: f32) {
             }
             1 => {
                 let k = sd.conductivity;
-                sphere_surface(&mut sc, |d| d.gp((d | k.of(d)).s()), palette::sky(), 0.85);
+                sphere_surface(sc, |d| d.gp((d | k.of(d)).s()), palette::sky(), 0.85);
             }
             _ => {
                 let e4 = sd.elasticity;
-                sphere_surface(&mut sc, |d| d.gp(e4.fill(d).s()), palette::orange(), 0.85);
+                sphere_surface(sc, |d| d.gp(e4.fill(d).s()), palette::orange(), 0.85);
             }
-        }
-        sc.draw(&mut p);
-        c.blit(&p, rect[0], rect[1]);
-        let cx = (rect[0] + rect[2]) as f32 * 0.5;
+        });
+        let (head, foot) = (top_middle(rect), bottom_middle(rect));
         c.text(
             title,
-            cx,
-            top as f32 + 14.0,
+            head + down.gp(14.0),
             13.0,
             palette::ink(),
             Align::Center,
         );
         c.text(
             sub,
-            cx,
-            bottom as f32 + 18.0,
+            foot + down.gp(18.0),
             10.0,
             palette::grid(),
             Align::Center,
@@ -663,7 +618,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(c.mean()[0] > 0.0);
+            assert!(gax_light::luma(c.mean()) > 0.0);
         }
     }
 

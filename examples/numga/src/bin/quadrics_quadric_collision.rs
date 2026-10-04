@@ -8,8 +8,9 @@
 //! side shows the cubic of the current pose and the peak as a function of the offset.
 
 use gax::pga2d::{Line, Motor, Point};
+use gax_light::{fade, mix};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod collision {
@@ -171,16 +172,18 @@ fn outline(q: Quadric) -> Vec<P> {
 
 /// An infinite line, drawn through its point nearest the origin (its meet with the
 /// perpendicular from the origin) along its direction (its meet with the line at infinity).
-fn draw_line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Rgb, alpha: f32) {
+fn draw_line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
     let foot = l ^ (l | origin());
-    ax.axline(c, foot, l ^ infinity(), width, color, alpha);
+    ax.axline(c, foot, l ^ infinity(), width, color);
 }
 
-fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Rgb) {
+/// An ellipse filled (a faint cover of its colour), outlined, and its centre `Q(infinity)`
+/// marked.
+fn ellipse_fill(ax: &Axes, c: &mut Canvas, q: Quadric, color: Light) {
     let pts = outline(q);
-    ax.fill(c, &pts, color, 0.35);
-    ax.polyline(c, &[pts.clone(), vec![pts[0]]].concat(), 2.2, color, 1.0);
-    ax.scatter(c, &[q.of(infinity())], Marker::Dot, 6.0, color, 1.0);
+    ax.fill(c, &pts, fade(color, 0.3), 0.35);
+    ax.polyline(c, &[pts.clone(), vec![pts[0]]].concat(), 2.2, color);
+    ax.scatter(c, &[q.of(infinity())], Marker::Dot, 6.0, color);
 }
 
 /// The offset of the second ellipse at time `t`: from 0.8 apart to 0.6 inside and back.
@@ -191,7 +194,8 @@ fn offset_at(t: f32) -> f64 {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let s = scene();
     let offset = offset_at(t);
     let q1 = s.q1;
@@ -212,7 +216,7 @@ fn draw(c: &mut Canvas, t: f32) {
 
     // The ellipses, on the left.
     let ax = Axes::equal(
-        plot::inset([0.0, 64.0, w * 0.58, h], 20.0, 30.0, 10.0, 20.0),
+        Rect::new(0.0, 64.0, w * 0.58, h).inset(20.0, 30.0, 10.0, 20.0),
         Point::xy(-0.4, 0.0),
         3.0,
     );
@@ -234,7 +238,7 @@ fn draw(c: &mut Canvas, t: f32) {
     } else {
         // The blend at the peak bridges the overlap.
         let pts = outline(blend(q1, q2, lambda));
-        ax.fill(c, &pts, palette::purple(), 0.25);
+        ax.fill(c, &pts, fade(palette::purple(), 0.3), 0.25);
     }
     ellipse_fill(&ax, c, q1, palette::sky());
     ellipse_fill(&ax, c, q2, palette::orange());
@@ -242,28 +246,33 @@ fn draw(c: &mut Canvas, t: f32) {
     let first = tangent_line(q1, s.normal);
     let second = tangent_line(q2, -s.normal);
     let mid = (first - second).gp(0.5);
-    draw_line(&ax, c, first, 1.0, palette::sky(), 0.7);
-    draw_line(&ax, c, second, 1.0, palette::orange(), 0.7);
+    draw_line(&ax, c, first, 1.0, fade(palette::sky(), 0.7));
+    draw_line(&ax, c, second, 1.0, fade(palette::orange(), 0.7));
     let mid_colour = if top > 0.0 {
         palette::green()
     } else {
         palette::purple()
     };
-    draw_line(&ax, c, mid, 2.0, mid_colour, 1.0);
+    draw_line(&ax, c, mid, 2.0, mid_colour);
     let (p1, p2) = (q1.of(first), q2.of(second));
-    ax.dashed(c, &[p1, p2], 1.5, 4.0, palette::ink(), 1.0);
-    ax.scatter(c, &[p1, p2], Marker::Dot, 7.0, palette::ink(), 1.0);
+    ax.dashed(c, &[p1, p2], 1.5, 4.0, palette::ink());
+    ax.scatter(c, &[p1, p2], Marker::Dot, 7.0, palette::ink());
     if top.abs() < 0.08 {
         // Near contact: the blend's null line and the contact point.
         let (_, line, point) = contact(q1, q2);
-        draw_line(&ax, c, line, 2.2, palette::red(), 1.0);
-        ax.scatter(c, &[point], Marker::Star, 13.0, palette::yellow(), 1.0);
+        draw_line(&ax, c, line, 2.2, palette::red());
+        ax.scatter(c, &[point], Marker::Star, 13.0, palette::yellow());
     }
 
     // The cubic of the current pose, against the three reference poses.
-    let right = [w * 0.6, 60.0, w - 16.0, h - 10.0];
-    let mid_y = (right[1] + right[3]) / 2.0;
-    let top_rect = plot::inset([right[0], right[1], right[2], mid_y], 40.0, 20.0, 0.0, 30.0);
+    // The right side, split into an upper and a lower half.
+    let right = Rect::new(w * 0.6, 60.0, w - 16.0, h - 10.0);
+    let half = Point2::direction(0.0, right.height() / 2.0);
+    let top_rect = Rect {
+        lo: right.lo,
+        hi: right.hi - half,
+    }
+    .inset(40.0, 20.0, 0.0, 30.0);
     let ax = Axes::new(top_rect, [0.0, 1.0], [-3.0, 3.0]);
     ax.frame(c, "DET Q(L) ALONG THE BLEND", "L", "");
     ax.line(
@@ -272,7 +281,6 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(1.0, 0.0),
         1.0,
         palette::grid(),
-        1.0,
     );
     let curve = |q2: Quadric| -> Vec<Point2> {
         (0..=100)
@@ -284,20 +292,23 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     for (k, o) in [0.8, 0.0, -0.6].into_iter().enumerate() {
         let colour = [palette::green(), palette::orange(), palette::red()][k];
-        ax.polyline(c, &curve(s.second(o)), 1.0, colour, 0.35);
+        ax.polyline(c, &curve(s.second(o)), 1.0, fade(colour, 0.35));
     }
-    ax.polyline(c, &curve(q2), 2.4, palette::ink(), 1.0);
+    ax.polyline(c, &curve(q2), 2.4, palette::ink());
     ax.scatter(
         c,
         &[Point2::xy(lambda as f32, top as f32)],
         Marker::Dot,
         8.0,
         palette::yellow(),
-        1.0,
     );
 
     // The peak against the offset: it crosses zero where they touch.
-    let bottom_rect = plot::inset([right[0], mid_y, right[2], right[3]], 40.0, 20.0, 0.0, 30.0);
+    let bottom_rect = Rect {
+        lo: right.lo + half,
+        hi: right.hi,
+    }
+    .inset(40.0, 20.0, 0.0, 30.0);
     let ax = Axes::new(bottom_rect, [-0.6, 0.8], [-1.5, 2.5]);
     ax.frame(
         c,
@@ -311,7 +322,6 @@ fn draw(c: &mut Canvas, t: f32) {
         Point2::xy(0.8, 0.0),
         1.0,
         palette::grid(),
-        1.0,
     );
     let sweep: Vec<Point2> = (0..=70)
         .map(|k| {
@@ -319,7 +329,7 @@ fn draw(c: &mut Canvas, t: f32) {
             Point2::xy(o as f32, peak(q1, s.second(o)).1 as f32)
         })
         .collect();
-    ax.polyline(c, &sweep, 2.0, palette::sky(), 1.0);
+    ax.polyline(c, &sweep, 2.0, palette::sky());
     let marker = if top > 0.0 {
         palette::green()
     } else {
@@ -331,14 +341,13 @@ fn draw(c: &mut Canvas, t: f32) {
         Marker::Dot,
         9.0,
         marker,
-        1.0,
     );
     ax.text(
         c,
         Point2::xy(-0.55, 2.2),
         &format!("MAX = {top:+.3}"),
         11.0,
-        canvas::mix(palette::ink(), marker, 0.3),
+        mix(palette::ink(), marker, 0.3),
         Align::Left,
     );
 }
@@ -472,7 +481,7 @@ mod tests {
                 t,
                 &mut draw,
             );
-            assert!(c.mean()[0] > 0.0);
+            assert!(gax_light::luma(c.mean()) > 0.0);
         }
     }
 }

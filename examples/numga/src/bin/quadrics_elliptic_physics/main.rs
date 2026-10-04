@@ -14,8 +14,9 @@ mod engine;
 mod s3;
 mod scenes;
 
+use gax_light::{Light, fade, light};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Point2, Rect, backdrop, caption, palette, run,
 };
 use scenes::{Scene3, s2};
 
@@ -53,44 +54,42 @@ fn show(s2_name: &str, s3_name: &str, frames: usize) -> Show {
     }
 }
 
-fn display(c: [f64; 3]) -> Rgb {
-    canvas::srgb(c[0] as f32, c[1] as f32, c[2] as f32)
-}
+/// The intensity of a body: the bodies fill their pictures, so they shine less than strokes.
+const BODY: f32 = 0.8;
 
 /// The front hemisphere of S² seen along z in a disc: a pixel is a point of S², and it belongs
 /// to the last body whose primal form is negative there. The spherical quadric is a cone through
 /// the centre, so the front hemisphere shows both halves of a body.
 fn hemisphere(
     c: &mut Canvas,
-    centre: [f32; 2],
+    centre: Point2,
     radius: f32,
     surfaces: &[s2::Quadric],
-    colors: &[Rgb],
+    colors: &[Light],
 ) {
-    let (disk, rim) = (
-        canvas::srgb(0.067, 0.094, 0.153),
-        canvas::srgb(0.2, 0.255, 0.333),
-    );
-    c.clip([
-        centre[0] - radius - 1.0,
-        centre[1] - radius - 1.0,
-        centre[0] + radius + 1.0,
-        centre[1] + radius + 1.0,
-    ]);
-    c.shade(2, |x, y| {
-        let (u, v) = ((x - centre[0]) / radius, (centre[1] - y) / radius);
-        let r2 = u * u + v * v;
+    let (disk, rim) = (light(0.4, 0.55, 1.0, 0.025), light(0.5, 0.62, 0.85, 0.12));
+    let corner = Point2::direction(radius + 1.0, radius + 1.0);
+    c.clip(Rect {
+        lo: centre - corner,
+        hi: centre + corner,
+    });
+    c.shade(2, |q: Point2| {
+        // The pixel's offset from the centre in radii (x right, y up), and the square of its
+        // distance from the centre: the join's norm.
+        let off = q - centre;
+        let (u, v) = (off.e20() / radius, -off.e01() / radius);
+        let r2 = (q & centre).norm_squared() / (radius * radius);
         if r2 > 1.0 {
             return None;
         }
         let p = gax::vga3d::Bivector::new(
             f64::from(u),
             f64::from(v),
-            f64::from((1.0 - r2).max(0.0).sqrt()),
+            f64::from(1.0 - r2).max(0.0).sqrt(),
         );
         let body = surfaces.iter().rposition(|s| (p & s.of(p)).s() < 0.0);
         Some(match body {
-            Some(k) => colors[k],
+            Some(k) => fade(colors[k], BODY),
             None if r2 > 0.985 => rim,
             None => disk,
         })
@@ -100,7 +99,7 @@ fn hemisphere(
 
 /// The S² scene's invariants over time, normalized by their start, and its body rates when it
 /// tumbles; a cursor at frame `f`.
-fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
+fn plot_invariants(show: &Show, c: &mut Canvas, rect: Rect, f: usize) {
     let frames = show.s2.energy.len();
     let time = |k: usize| (k as f64 * scenes::DT2) as f32;
     let tumbling = show.s2_name == "TUMBLING";
@@ -126,7 +125,7 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
             let rate: Vec<Point2> = (0..frames)
                 .map(|k| Point2::xy(time(k), show.s2.rates[k][0].c[i] as f32))
                 .collect();
-            ax.polyline(c, &rate, 1.5, colour, 1.0);
+            ax.polyline(c, &rate, 1.5, colour);
         }
     }
     let (e0, m0) = (show.s2.energy[0], show.s2.momentum[0].norm());
@@ -136,21 +135,22 @@ fn plot_invariants(show: &Show, c: &mut Canvas, rect: [f32; 4], f: usize) {
     let momentum: Vec<Point2> = (0..frames)
         .map(|k| Point2::xy(time(k), (show.s2.momentum[k].norm() / m0) as f32))
         .collect();
-    ax.polyline(c, &energy, 1.8, palette::green(), 1.0);
-    ax.polyline(c, &momentum, 1.4, palette::purple(), 1.0);
+    ax.polyline(c, &energy, 1.8, palette::green());
+    ax.polyline(c, &momentum, 1.4, palette::purple());
     ax.line(
         c,
         Point2::xy(time(f), range[0]),
         Point2::xy(time(f), range[1]),
         1.0,
-        palette::ink(),
-        0.6,
+        fade(palette::ink(), 0.6),
     );
 }
 
 fn draw(show: &Show, c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let down = Point2::direction(0.0, 1.0);
     let frames = show.s2.energy.len();
     let f = (((t / SECONDS).fract() * frames as f32) as usize).min(frames - 1);
     caption(
@@ -162,72 +162,49 @@ fn draw(show: &Show, c: &mut Canvas, t: f32) {
     let top = h * 0.13;
 
     // S²: the hemisphere, and the invariants under it.
-    let colors: Vec<Rgb> = show.s2.colors.iter().map(|c| display(*c)).collect();
     let radius = (w * 0.2).min((h - top - 110.0) / 2.0).max(4.0);
-    let centre = [w * 0.22, top + 10.0 + radius];
-    hemisphere(c, centre, radius, &show.s2.surfaces[f], &colors);
-    c.text(
-        &format!("S2: {}", show.s2_name),
-        centre[0],
-        centre[1] + radius + size * 1.4,
-        size,
-        palette::ink(),
-        Align::Center,
-    );
-    let rect = plot::inset(
-        [0.0, centre[1] + radius + size * 1.6, w * 0.44, h],
-        34.0,
-        16.0,
-        8.0,
-        20.0,
-    );
-    if rect[3] - rect[1] > 10.0 {
+    let centre = Point2::xy(w * 0.22, top + 10.0 + radius);
+    hemisphere(c, centre, radius, &show.s2.surfaces[f], &show.s2.colors);
+    let name = format!("S2: {}", show.s2_name);
+    let label = centre + down.gp(radius + size * 1.4);
+    c.text(&name, label, size, palette::ink(), Align::Center);
+    let below = centre + down.gp(radius + size * 1.6);
+    let rect = Rect::new(0.0, below.e01(), w * 0.44, h).inset(34.0, 16.0, 8.0, 20.0);
+    if rect.height() > 10.0 {
         plot_invariants(show, c, rect, f);
     }
 
     // S³: traced from the eye, a 4:3 picture.
     let width = w - 8.0 - w * 0.46;
-    let panel = [
+    let panel = Rect::new(
         w * 0.46,
         top,
         w - 8.0,
         (top + width * 0.75).min(h - 2.0 * size),
-    ];
+    );
     let trajectory = &show.s3.trajectory;
     let view = s3::View {
         eye: show.s3.eye,
         surfaces: trajectory.surfaces[f.min(trajectory.surfaces.len() - 1)].clone(),
-        colors: trajectory.colors.clone(),
+        colors: trajectory.colors.iter().map(|l| fade(*l, BODY)).collect(),
         light: show.s3.light,
         fov: 120f64.to_radians(),
     };
     let tracer = view.tracer();
-    let background = canvas::srgb(0.02, 0.02, 0.02);
+    // The picture's sky: a faint blue, so the panel stands out from the backdrop.
+    let background = light(0.3, 0.42, 1.0, 0.03);
+    let chart = s3::chart(view.fov, panel);
     c.clip(panel);
-    c.shade(2, |x, y| {
-        let px = s3::chart(
-            view.fov,
-            f64::from(x - panel[0]),
-            f64::from(y - panel[1]),
-            f64::from(panel[2] - panel[0]),
-            f64::from(panel[3] - panel[1]),
-        );
-        Some(tracer.color(px).map_or(background, display))
-    });
+    c.shade(2, |q| Some(tracer.color(chart(q)).unwrap_or(background)));
     c.unclip();
-    c.text(
-        &format!(
-            "S3: {}, {} BODIES, {} IMPULSES",
-            show.s3_name,
-            view.surfaces.len(),
-            trajectory.impulses
-        ),
-        panel[0] + 4.0,
-        panel[3] + size * 1.5,
-        size,
-        palette::ink(),
-        Align::Left,
+    let note = format!(
+        "S3: {}, {} BODIES, {} IMPULSES",
+        show.s3_name,
+        view.surfaces.len(),
+        trajectory.impulses
     );
+    let at = panel.bottom_left() + Point2::direction(4.0, size * 1.5);
+    c.text(&note, at, size, palette::ink(), Align::Left);
 }
 
 fn main() {
@@ -456,6 +433,6 @@ mod tests {
             0.5,
             &mut |c, t| super::draw(&show, c, t),
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

@@ -12,11 +12,11 @@
 use gax::dual::{Dual, gradient};
 use gax::pga3d::{Line, Plane, Point};
 use gax::{Real, Unit};
-use gax_numga_examples::canvas::mix;
+use gax_light::{fade, mix};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Scene3, backdrop, caption, from_above,
-    palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Scene3, backdrop, caption,
+    from_above, palette, run,
 };
 use std::sync::OnceLock;
 
@@ -114,7 +114,7 @@ fn path() -> &'static [(B, f64)] {
 }
 
 /// A camera's frustum: its centre, and the corners of its screen.
-fn frustum(s: &mut Scene3, generator: B, colour: gax_numga_examples::Rgb, width: f32) {
+fn frustum(s: &mut Scene3, generator: B, colour: Light, width: f32) {
     let rig: Unit<_> = generator.exp();
     let at = |x: f64, y: f64, z: f64| rig >> Point::xyz(x, y, z);
     let centre = at(0.0, 0.0, 0.0);
@@ -124,10 +124,12 @@ fn frustum(s: &mut Scene3, generator: B, colour: gax_numga_examples::Rgb, width:
         at(0.8, 0.6, 1.0),
         at(-0.8, 0.6, 1.0),
     ];
-    for k in 0..4 {
-        s.seg(centre, corners[k], width, colour, 0.9);
-        s.seg(corners[k], corners[(k + 1) % 4], width, colour, 0.9);
+    let colour = fade(colour, 0.9);
+    for corner in corners {
+        s.seg(centre, corner, width, colour);
     }
+    let [a, b, c, d] = corners;
+    s.polyline(&[a, b, c, d, a], width, colour);
     s.dot(centre, Marker::Dot, 6.0, colour);
 }
 
@@ -135,7 +137,8 @@ const SECONDS: f32 = 10.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let path = path();
     // Replay the descent on a logarithmic clock, so that the fast start is seen, then hold.
     let s = ((t / SECONDS) / 0.85).min(1.0);
@@ -174,36 +177,34 @@ fn draw(c: &mut Canvas, t: f32) {
     // The rays of the estimate, from its centre through each world point.
     let centre = g.exp() >> origin;
     for p in &world {
-        scene.seg(centre, *p, 0.6, palette::red(), 0.25);
+        scene.seg(centre, *p, 0.6, fade(palette::red(), 0.25));
     }
     scene.draw(&mut left);
     c.blit(&left, 0, 0);
     // The screen: the observed images and the current ones, tied together.
-    let right = plot::inset(
-        [w * 0.55, 0.0, w, h * 0.6],
-        w * 0.05,
-        h * 0.14,
-        w * 0.02,
-        h * 0.06,
-    );
+    let right = screen
+        .part(0.55, 0.0, 1.0, 0.6)
+        .inset(w * 0.05, h * 0.14, w * 0.02, h * 0.06);
     let ax = Axes::equal(right, Point2::xy(0.0, 0.0), 0.75);
     ax.frame(c, "THE SCREEN Z = 1", "", "");
     // The screen `z = 1` seen from above: its points with their `z` dropped.
     for (a, o) in images.iter().zip(&observed) {
-        ax.line(c, from_above(*a), from_above(*o), 0.8, palette::red(), 0.5);
+        ax.line(
+            c,
+            from_above(*a),
+            from_above(*o),
+            0.8,
+            fade(palette::red(), 0.5),
+        );
     }
     let obs: Vec<_> = observed.iter().copied().map(from_above).collect();
     let cur: Vec<_> = images.iter().copied().map(from_above).collect();
-    ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky(), 1.0);
-    ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red(), 1.0);
+    ax.scatter(c, &obs, Marker::Cross, 8.0, palette::sky());
+    ax.scatter(c, &cur, Marker::Dot, 5.0, palette::red());
     // The misfit over the steps, on a log scale.
-    let lower = plot::inset(
-        [w * 0.55, h * 0.6, w, h],
-        w * 0.05,
-        h * 0.06,
-        w * 0.02,
-        h * 0.075,
-    );
+    let lower = screen
+        .part(0.55, 0.6, 1.0, 1.0)
+        .inset(w * 0.05, h * 0.06, w * 0.02, h * 0.075);
     let least = path.iter().fold(f64::MAX, |m, p| m.min(p.1)).max(1e-30) as f32;
     let most = path.iter().fold(0.0f64, |m, p| m.max(p.1)) as f32;
     let mx = Axes::new(lower, [1.0, (STEPS + 1) as f32], [least * 0.5, most * 2.0])
@@ -216,21 +217,14 @@ fn draw(c: &mut Canvas, t: f32) {
         .enumerate()
         .map(|(i, p)| Point2::xy((i + 1) as f32, p.1 as f32))
         .collect();
-    mx.polyline(c, &curve, 1.0, palette::grid(), 1.0);
-    mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::yellow(), 1.0);
-    mx.scatter(
-        c,
-        &[Point2::xy((k + 1) as f32, value as f32)],
-        Marker::Dot,
-        7.0,
-        palette::yellow(),
-        1.0,
-    );
+    mx.polyline(c, &curve, 1.0, palette::grid());
+    mx.polyline(c, &curve[..=k.min(STEPS)], 2.0, palette::yellow());
+    let now = Point2::xy((k + 1) as f32, value as f32);
+    mx.scatter(c, &[now], Marker::Dot, 7.0, palette::yellow());
     let (turn, shift) = pose_error(truth(), g);
     c.text(
         &format!("STEP {k}   POSE ERROR: TURN {turn:.4}  SHIFT {shift:.4}"),
-        w * 0.02,
-        h - 14.0,
+        screen.bottom_left() + Point2::direction(w * 0.02, -14.0),
         12.0,
         palette::ink(),
         Align::Left,

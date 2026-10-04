@@ -22,8 +22,9 @@
 //! numga's bound of 1% of the spacing (the plot on the right).
 
 use gax::pga3d::{Line, Motor, Point};
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Rect, Scene3, backdrop, caption, palette, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -336,7 +337,8 @@ fn scene() -> &'static History {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let (motors, gaps) = scene();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let u = h / 540.0;
     let k = ((f64::from(t.rem_euclid(SECONDS)) / DT) as usize).min(motors.len() - 1);
     caption(
@@ -361,16 +363,26 @@ fn draw(c: &mut Canvas, t: f32) {
     let floor = |x: f64, y: f64| Point::xyz(x, y, -0.62);
     for i in -4..=6 {
         let x = f64::from(i) * 0.1;
-        s.seg(floor(x, -0.3), floor(x, 0.3), 1.0, palette::grid(), 0.6);
+        s.seg(
+            floor(x, -0.3),
+            floor(x, 0.3),
+            1.0,
+            fade(palette::grid(), 0.6),
+        );
     }
     for j in -3..=3 {
         let y = f64::from(j) * 0.1;
-        s.seg(floor(-0.4, y), floor(0.6, y), 1.0, palette::grid(), 0.6);
+        s.seg(
+            floor(-0.4, y),
+            floor(0.6, y),
+            1.0,
+            fade(palette::grid(), 0.6),
+        );
     }
     // The free end's path so far.
     let [end, start] = anchors(LINK_SPACING);
     let trail: Vec<P> = motors[..=k].iter().map(|m| m[LINKS - 1] >> end).collect();
-    s.polyline(&trail, 1.5, palette::yellow(), 0.6);
+    s.polyline(&trail, 1.5, fade(palette::yellow(), 0.6));
     let cloud = cloud(5e-2);
     let colours = [palette::orange(), palette::sky(), palette::green()];
     let origin = Point::xyz(0.0, 0.0, 0.0);
@@ -382,11 +394,10 @@ fn draw(c: &mut Canvas, t: f32) {
                 m >> cloud[axis + 3],
                 3.0 * u,
                 colours[axis],
-                1.0,
             );
         }
         // The link's anchors and the rod between them.
-        s.seg(m >> start, m >> end, 1.5 * u, palette::ink(), 0.8);
+        s.seg(m >> start, m >> end, 1.5 * u, fade(palette::ink(), 0.8));
         let col = if i == 0 {
             palette::red()
         } else {
@@ -397,8 +408,9 @@ fn draw(c: &mut Canvas, t: f32) {
     s.dot(origin, Marker::Square, 9.0 * u, palette::red());
     s.draw(c);
     // The joint gaps over time, as numga's figure: the largest and the mean.
+    let right = Rect::new(left, 0.0, w, h);
     let ax = Axes::new(
-        plot::inset([left, 0.0, w, h], 54.0 * u, 80.0 * u, 20.0 * u, 60.0 * u),
+        right.inset(54.0 * u, 80.0 * u, 20.0 * u, 60.0 * u),
         [0.0, SECONDS],
         [1e-7, 1e-2],
     )
@@ -415,21 +427,16 @@ fn draw(c: &mut Canvas, t: f32) {
     };
     let largest = series(&|g| g.iter().fold(0.0, |a: f64, &b| a.max(b)));
     let mean = series(&|g| g.iter().sum::<f64>() / g.len() as f64);
-    ax.polyline(c, &largest, 1.6, palette::red(), 1.0);
-    ax.dashed(c, &mean, 1.6, 5.0, palette::sky(), 1.0);
+    ax.polyline(c, &largest, 1.6, palette::red());
+    ax.dashed(c, &mean, 1.6, 5.0, palette::sky());
     // numga's bound: the joints stay closed to within 1% of the spacing.
     let bound = 1e-2 * LINK_SPACING;
-    ax.dashed(
-        c,
-        &[at(0.0, bound), at(f64::from(SECONDS), bound)],
-        1.0,
-        3.0,
-        palette::grid(),
-        1.0,
-    );
+    let level = [at(0.0, bound), at(f64::from(SECONDS), bound)];
+    ax.dashed(c, &level, 1.0, 3.0, palette::grid());
+    let label = at(0.1, bound * 1.4);
     ax.text(
         c,
-        at(0.1, bound * 1.4),
+        label,
         "1% OF THE SPACING",
         9.0 * u,
         palette::grid(),

@@ -65,13 +65,13 @@ macro_rules! engine {
             (a & b).norm().atan2((a | b).s().abs())
         }
 
-        /// One body: its colour (display values), its motor, its momentum in the body frame, its
+        /// One body: its colour (a light), its motor, its momentum in the body frame, its
         /// shape in its own frame, dual (a plane to its pole) and primal (a point to its polar
         /// plane, negative inside), its inverse inertia, and the angular radius of its bounding
         /// ball for the broad phase.
         #[derive(Clone, Copy)]
         pub struct Body {
-            pub color: [f64; 3],
+            pub color: gax_light::Light,
             pub motor: M,
             pub momentum: Mom,
             pub q: DualQuadric,
@@ -112,7 +112,7 @@ macro_rules! engine {
         /// per body, the energy and the total momentum (in the world frame) per frame, and the
         /// impulses applied.
         pub struct Trajectory {
-            pub colors: Vec<[f64; 3]>,
+            pub colors: Vec<gax_light::Light>,
             pub surfaces: Vec<Vec<Quadric>>,
             pub rates: Vec<Vec<B>>,
             pub energy: Vec<f64>,
@@ -159,7 +159,7 @@ macro_rules! engine {
         /// A body of any quadric shape, from mass points filling it: inertia from the points,
         /// momentum from the body-frame rate, and the reach of the points from the pole.
         pub fn body(
-            color: [f64; 3],
+            color: gax_light::Light,
             q: DualQuadric,
             motor: M,
             rate: B,

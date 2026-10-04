@@ -13,7 +13,7 @@
 
 use gax::pga2d::{Line, Point};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, Rgb, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, backdrop, caption, palette, run,
 };
 
 mod cayley_klein {
@@ -179,13 +179,13 @@ use cayley_klein::*;
 
 /// A line, drawn through its point nearest the origin (its meet with the perpendicular from
 /// the origin) along its direction (its meet with the line at infinity).
-fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Rgb) {
+fn line(ax: &Axes, c: &mut Canvas, l: L, width: f32, color: Light) {
     let foot = l ^ (l | Point::xy(0.0, 0.0));
-    ax.axline(c, foot, l ^ Line::new(0.0, 0.0, 1.0), width, color, 1.0);
+    ax.axline(c, foot, l ^ Line::new(0.0, 0.0, 1.0), width, color);
 }
 
 /// The locus `P ∨ quadric(P) = 0`.
-fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Rgb) {
+fn level_set(ax: &Axes, c: &mut Canvas, quadric: Polarity, width: f32, color: Light) {
     ax.contour(
         c,
         |p| {
@@ -203,8 +203,9 @@ fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let phase = f64::from(t) / 12.0 * core::f64::consts::TAU;
     let s = hyperbolic_plane(phase);
-    let rects = [0, 1].map(|i| plot::inset(plot::panel(c, i, 2), 20.0, 80.0, 20.0, 24.0));
-    let rect = |i: usize| rects[i];
+    let screen = c.rect();
+    let rect = |i: usize| screen.column(i, 2).inset(20.0, 80.0, 20.0, 24.0);
+    let above = Point2::direction(0.0, -10.0);
     let box_centre = Point::xy(0.35, 0.2);
 
     // The triangle, its perpendicular and the reflection, on the left.
@@ -216,11 +217,11 @@ fn draw(c: &mut Canvas, t: f32) {
     }
     line(&ax, c, s.normal, 1.4, palette::red());
     ax.fill(c, &s.vertices, palette::sky(), 0.18);
-    ax.scatter(c, &s.vertices, Marker::Dot, 8.0, palette::sky(), 1.0);
-    ax.scatter(c, &[s.p], Marker::Dot, 9.0, palette::red(), 1.0);
-    ax.scatter(c, &[s.foot], Marker::Square, 8.0, palette::red(), 1.0);
-    ax.scatter(c, &[s.reflected], Marker::Dot, 9.0, palette::orange(), 1.0);
-    ax.scatter(c, &[s.pole], Marker::Triangle, 10.0, palette::purple(), 1.0);
+    ax.scatter(c, &s.vertices, Marker::Dot, 8.0, palette::sky());
+    ax.scatter(c, &[s.p], Marker::Dot, 9.0, palette::red());
+    ax.scatter(c, &[s.foot], Marker::Square, 8.0, palette::red());
+    ax.scatter(c, &[s.reflected], Marker::Dot, 9.0, palette::orange());
+    ax.scatter(c, &[s.pole], Marker::Triangle, 10.0, palette::purple());
     // The angles beside their vertices, the lengths beside the midpoints of the sides.
     for (v, angle) in s.vertices.iter().zip(s.triangle.angles) {
         ax.text(
@@ -264,8 +265,7 @@ fn draw(c: &mut Canvas, t: f32) {
                 .to_degrees(),
             s.triangle.area
         ),
-        r[0],
-        r[1] - 10.0,
+        r.lo + above,
         10.0,
         palette::ink(),
         Align::Left,
@@ -280,7 +280,7 @@ fn draw(c: &mut Canvas, t: f32) {
             level_set(&ax, c, circle(s.c, *centre, r), 1.4, colour);
         }
     }
-    ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::ink(), 1.0);
+    ax.scatter(c, &s.centres, Marker::Dot, 7.0, palette::ink());
     c.unclip();
     let r = rect(1);
     c.text(
@@ -288,8 +288,7 @@ fn draw(c: &mut Canvas, t: f32) {
             "CIRCLES, RADII {:.2} TO {:.2}: P & CIRCLE(P) = 0",
             s.radii[0], s.radii[3]
         ),
-        r[0],
-        r[1] - 10.0,
+        r.lo + above,
         10.0,
         palette::ink(),
         Align::Left,

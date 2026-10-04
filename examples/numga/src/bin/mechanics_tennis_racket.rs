@@ -14,9 +14,10 @@
 //! the world-momentum drift of the three steppers in 3, 4 and 5 dimensions: RKMK4 conserves it
 //! to fourth order, Verlet and RK4 to first.
 
+use gax_light::fade;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point3, Scene3, backdrop, caption, palette,
-    plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Point3, Rect, Scene3,
+    backdrop, caption, palette, run,
 };
 
 /// A point of a chart: (time, value).
@@ -235,23 +236,33 @@ fn scenes() -> &'static Scenes {
     })
 }
 
+/// The point a vector of the body reaches from its centre, which stays at the origin.
+fn placed(v: gax::vga3d::Vector<(), f64>) -> gax::pga3d::Point<(), f64> {
+    gax::pga3d::Point::xyz(0.0, 0.0, 0.0) + gax::pga3d::Point::direction(v.e1(), v.e2(), v.e3())
+}
+
 /// One box of the 3D racket, turned by its rotor, drawn with its spin axis about pixel `centre`
 /// at `scale` pixels per unit.
-fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: [f32; 2], scale: f32) {
+fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: Point2, scale: f32) {
     use gax::vga3d::Vector;
-    // A parallel camera whose canvas centre falls on `centre`.
-    let half = centre[1] / scale;
+    // A parallel camera drawing into the square five units either way of `centre`.
+    let reach = Point2::direction(5.0, 5.0).gp(scale);
+    let view = Rect {
+        lo: centre - reach,
+        hi: centre + reach,
+    };
     let cam = Camera::looking(
-        (2.0 * centre[0]) as usize,
-        (2.0 * centre[1]) as usize,
+        view.width() as usize,
+        view.height() as usize,
         Point3::xyz(10.0, -16.0, 9.0),
-        Point3::xyz(0.0, 0.0, 0.0),
-        Lens::Parallel(half),
-    );
+        ORIGIN3,
+        Lens::Parallel(5.0),
+    )
+    .viewport(view);
     let mut s = Scene3::new(cam);
-    let corners: Vec<Vector<(), f64>> = corners::<D3>()
+    let corners: Vec<_> = corners::<D3>()
         .into_iter()
-        .map(|c| rotor >> Vector::from_coeffs(c))
+        .map(|c| placed(rotor >> Vector::from_coeffs(c)))
         .collect();
     let face_colours = [palette::orange(), palette::sky(), palette::green()];
     for a in 0..3 {
@@ -259,25 +270,27 @@ fn draw_box(c: &mut Canvas, rotor: M<D3>, axis: usize, centre: [f32; 2], scale: 
         for side in [0, 1] {
             let at = |u: usize, v: usize| corners[side << a | u << b | v << d];
             let (p, q, r, t) = (at(0, 0), at(1, 0), at(1, 1), at(0, 1));
-            let col = s.lit(p, q, r, face_colours[a]);
+            // The faces cover what is behind them: a dimmer light than the glowing strokes.
+            let col = s.lit(p, q, r, fade(face_colours[a], 0.5));
             s.quad(p, q, r, t, col, 0.92);
             for (x, y) in [(p, q), (q, r), (r, t), (t, p)] {
-                s.seg(x, y, 1.0, palette::bottom(), 0.5);
+                s.seg(x, y, 1.0, fade(palette::bottom(), 0.5));
             }
         }
     }
     // The axis the body was spun about, carried with it.
     let along = core::array::from_fn(|i| if i == axis { 4.6 } else { 0.0 });
     let tip = rotor >> Vector::<(), f64>::from_coeffs(along);
-    s.seg(-tip, tip, 2.5, palette::yellow(), 1.0);
-    s.dot(tip, Marker::Dot, 7.0, palette::yellow());
+    s.seg(placed(-tip), placed(tip), 2.5, palette::yellow());
+    s.dot(placed(tip), Marker::Dot, 7.0, palette::yellow());
     s.draw(c);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let sc = scenes();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let u = h / 540.0;
     let time = f64::from(t.rem_euclid(LOOP) / LOOP) * SPAN;
     let k = ((time / SHOW_DT) as usize).min(sc.rates3.len() - 1);
@@ -293,24 +306,20 @@ fn draw(c: &mut Canvas, t: f32) {
         ("MINOR AXIS", "STABLE"),
     ];
     let scale = 15.5 * u;
+    let down = Point2::direction(0.0, 13.0 * u);
     for (i, (axis, fate)) in labels.iter().enumerate() {
-        let centre = [w * (0.09 + 0.16 * i as f32), h * 0.33];
-        draw_box(c, sc.motors3[k][i], i, centre, scale);
+        let across = w * (0.09 + 0.16 * i as f32);
+        draw_box(c, sc.motors3[k][i], i, Point2::xy(across, h * 0.33), scale);
+        let label = Point2::xy(across, h * 0.51);
         for (line, text) in [axis, fate].into_iter().enumerate() {
-            let y = h * 0.51 + line as f32 * 13.0 * u;
-            c.text(text, centre[0], y, 10.0 * u, palette::ink(), Align::Center);
+            let at = label + down.gp(line as f32);
+            c.text(text, at, 10.0 * u, palette::ink(), Align::Center);
         }
     }
     // The rates, each body's spin in its own plane: the three 3D bodies, and the six 4D ones,
     // some of whose medial spins wander.
     let rates3 = Axes::new(
-        plot::inset(
-            [0.0, h * 0.55, w * 0.5, h],
-            46.0 * u,
-            34.0 * u,
-            16.0 * u,
-            34.0 * u,
-        ),
+        Rect::new(0.0, h * 0.55, w * 0.5, h).inset(46.0 * u, 34.0 * u, 16.0 * u, 34.0 * u),
         [0.0, SPAN as f32],
         [-1.25, 1.25],
     );
@@ -325,13 +334,7 @@ fn draw(c: &mut Canvas, t: f32) {
         ],
     );
     let rates4 = Axes::new(
-        plot::inset(
-            [w * 0.5, h * 0.12, w, h * 0.52],
-            46.0 * u,
-            34.0 * u,
-            16.0 * u,
-            30.0 * u,
-        ),
+        Rect::new(w * 0.5, h * 0.12, w, h * 0.52).inset(46.0 * u, 34.0 * u, 16.0 * u, 30.0 * u),
         [0.0, SPAN as f32],
         [-1.25, 1.25],
     );
@@ -340,15 +343,10 @@ fn draw(c: &mut Canvas, t: f32) {
     // The steppers' world-momentum drift, per dimension.
     let shown = ((time.min(COMPARE_RUN) / COMPARE_DT) as usize).max(1);
     let colours = [palette::orange(), palette::sky(), palette::green()];
+    let drifts = Rect::new(w * 0.5, h * 0.55, w, h);
     for (p, curves) in sc.drift.iter().enumerate() {
-        let x0 = w * 0.5 + p as f32 * w * 0.5 / 3.0;
-        let rect = plot::inset(
-            [x0, h * 0.55, x0 + w * 0.5 / 3.0, h],
-            if p == 0 { 40.0 } else { 14.0 } * u,
-            34.0 * u,
-            8.0 * u,
-            34.0 * u,
-        );
+        let left = if p == 0 { 40.0 } else { 14.0 } * u;
+        let rect = drifts.column(p, 3).inset(left, 34.0 * u, 8.0 * u, 34.0 * u);
         let ax = Axes::new(rect, [0.0, COMPARE_RUN as f32], [1e-12, 1.0]).log_y();
         ax.frame(c, &format!("{}D DRIFT", p + 3), "TIME", "");
         for (s, (name, curve)) in STEPPERS.iter().zip(curves).enumerate() {
@@ -356,13 +354,13 @@ fn draw(c: &mut Canvas, t: f32) {
                 .map(|j| Chart::xy(j as f64 * COMPARE_DT, curve[j].max(1e-30)))
                 .collect();
             if *name == "rk4" {
-                ax.dashed(c, &pts, 1.6, 5.0, colours[s], 1.0);
+                ax.dashed(c, &pts, 1.6, 5.0, colours[s]);
             } else {
-                ax.polyline(c, &pts, 1.6, colours[s], 1.0);
+                ax.polyline(c, &pts, 1.6, colours[s]);
             }
         }
         if p == 2 {
-            let entries: Vec<(&str, gax_numga_examples::Rgb)> = STEPPERS
+            let entries: Vec<(&str, Light)> = STEPPERS
                 .iter()
                 .zip(colours)
                 .map(|(name, colour)| (*name, colour))
@@ -373,7 +371,7 @@ fn draw(c: &mut Canvas, t: f32) {
     // The time cursor on the rate plots.
     for ax in [rates3, rates4] {
         let at = |rate: f64| Chart::xy(time, rate);
-        ax.line(c, at(-1.25), at(1.25), 1.0, palette::grid(), 1.0);
+        ax.line(c, at(-1.25), at(1.25), 1.0, palette::grid());
     }
 }
 
@@ -390,7 +388,7 @@ fn rate_curves(
         let pts: Vec<Chart> = (0..=k)
             .map(|j| Chart::xy(j as f64 * SHOW_DT, rate(j, i)))
             .collect();
-        ax.polyline(c, &pts, width, palette::series(i), 1.0);
+        ax.polyline(c, &pts, width, palette::series(i));
     }
 }
 

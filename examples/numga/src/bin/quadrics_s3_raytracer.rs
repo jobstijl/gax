@@ -9,11 +9,12 @@
 #[path = "../shared/quadrics_s3.rs"]
 mod s3;
 
-use gax_numga_examples::{Anim, Canvas, backdrop, canvas, caption, run};
+use gax_numga_examples::{Anim, Canvas, backdrop, caption, run};
 use s3::*;
 
 mod walk {
     use super::s3::*;
+    use gax_light::srgb;
 
     /// The scene from an eye: four copies of one ellipsoid, angular half-widths 0.2, 0.28 and
     /// 0.15, carried to increasing angular distances along `+x`, offset sideways and up so they
@@ -39,15 +40,19 @@ mod walk {
             eye,
             surfaces,
             colors: vec![
-                [0.9, 0.3, 0.3],
-                [0.3, 0.8, 0.4],
-                [0.3, 0.5, 0.95],
-                [0.95, 0.8, 0.3],
+                srgb(0.9, 0.3, 0.3, BODY),
+                srgb(0.3, 0.8, 0.4, BODY),
+                srgb(0.3, 0.5, 0.95, BODY),
+                srgb(0.95, 0.8, 0.3, BODY),
             ],
             light: direction(Tangent::new(-0.4, 0.6, 0.7)),
             fov: 80f64.to_radians(),
         }
     }
+
+    /// The intensity of a body lit head on: the bodies fill the view, so they shine less than
+    /// strokes.
+    const BODY: f32 = 0.8;
 
     /// The eye a distance `s` along the x geodesic; the scene stays fixed in the world.
     pub fn eye(s: f64) -> Motor {
@@ -66,14 +71,9 @@ fn draw(c: &mut Canvas, t: f32) {
     let s = 0.6 - 0.6 * phase.cos();
     let view = walk(eye(s));
     let tracer = view.tracer();
-    let (w, h) = (c.width as f64, c.height as f64);
-    let background = canvas::srgb(0.02, 0.02, 0.02);
-    c.shade(2, |x, y| {
-        let rgb = tracer
-            .color(chart(view.fov, f64::from(x), f64::from(y), w, h))
-            .map(|[r, g, b]| canvas::srgb(r as f32, g as f32, b as f32));
-        Some(rgb.unwrap_or(background))
-    });
+    // The whole canvas is the picture; where no body is hit the backdrop shows.
+    let chart = chart(view.fov, c.rect());
+    c.shade(2, |q| tracer.color(chart(q)));
     caption(
         c,
         "ELLIPSOIDS ON THE 3-SPHERE",
@@ -92,6 +92,7 @@ fn main() {
 mod tests {
     use super::s3::*;
     use super::walk::*;
+    use gax_numga_examples::{Point2, Rect};
 
     /// The scenario's checks. A ray is inside a body's outline cone exactly when its great circle
     /// `origin + pixel λ` meets the body, when the quadratic `a λ² + 2 b λ + c` has real roots
@@ -103,6 +104,7 @@ mod tests {
         let scene = walk(identity);
         let o = origin();
         let (rows, cols) = (90, 120);
+        let chart = chart(scene.fov, Rect::new(0.0, 0.0, cols as f32, rows as f32));
         for (body, surface) in scene.surfaces.iter().enumerate() {
             let cone = outline(identity, *surface);
             let (conic, polar) = project(identity, *surface);
@@ -110,7 +112,7 @@ mod tests {
             let mut discs = Vec::new();
             for r in 0..rows {
                 for col in 0..cols {
-                    let px = chart(scene.fov, col as f64, r as f64, cols as f64, rows as f64);
+                    let px = chart(Point2::xy(col as f32, r as f32));
                     let ray: Point = px.cast::<Trivector>();
                     let k_dir = surface.of(ray);
                     let (a, b, c) = ((ray & k_dir).s(), (ray & k_eye).s(), (o & k_eye).s());
@@ -146,12 +148,13 @@ mod tests {
     fn the_farthest_body_looms_larger() {
         let identity = eye(0.0);
         let scene = walk(identity);
+        let chart = chart(scene.fov, Rect::new(0.0, 0.0, 120.0, 90.0));
         let count = |surface: Quadric| {
             let cone = outline(identity, surface);
             let mut n = 0;
             for r in 0..90 {
                 for col in 0..120 {
-                    let px = chart(scene.fov, col as f64, r as f64, 120.0, 90.0);
+                    let px = chart(Point2::xy(col as f32, r as f32));
                     if inside(cone, px) {
                         n += 1;
                     }
@@ -171,6 +174,6 @@ mod tests {
             1.0,
             &mut draw,
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

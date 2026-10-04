@@ -21,8 +21,9 @@
 //! a heavier disc and a slippery bowl.
 
 use gax::pga3d::{Direction, Line, Motor, Plane, Point};
+use gax_light::{fade, light, srgb};
 use gax_numga_examples::{
-    Anim, Axes, Camera, Canvas, Lens, Point2, Rgb, backdrop, canvas, caption, palette, plot, run,
+    Anim, Axes, Camera, Canvas, Lens, Light, Point2, Rect, backdrop, caption, palette, run,
 };
 
 #[path = "../shared/mechanics_lie.rs"]
@@ -499,20 +500,22 @@ fn runs() -> &'static Runs {
 /// The colours of the disc, the stem and the tip (sRGB), and their sector contrasts.
 const PART_COLOURS: [[f32; 3]; 3] = [[0.85, 0.30, 0.25], [0.35, 0.35, 0.40], [0.80, 0.70, 0.35]];
 const SECTOR_CONTRAST: [f32; 3] = [0.25, 0.0, 0.0];
+/// The intensity of the lit surfaces, facing the lamp squarely.
+const SURFACE: f32 = 1.0;
 
-/// The ray-traced top placed by the motor, in the square `[x0, y0, side]` of the canvas.
-fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32; 3]) {
-    let [x0, y0, side] = at;
+/// The ray-traced top placed by the motor, in the square `view` of the canvas.
+fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, view: Rect) {
     let (elevation, azimuth) = (VIEW.0.to_radians(), VIEW.1.to_radians());
     let cam = Camera::orbit(
-        side as usize,
-        side as usize,
+        view.width() as usize,
+        view.height() as usize,
         CENTRE,
         (20.0 * EXTENT) as f32,
         azimuth as f32,
         elevation as f32,
         Lens::Parallel(EXTENT as f32),
-    );
+    )
+    .viewport(view);
     // The lamp, above the viewer's left shoulder: back toward the viewer (the camera looks
     // along its +z), and up and to the right on screen (its +y and -x).
     let to64 = |p: Point<(), f32>| p.map_coefs(f64::from);
@@ -528,21 +531,19 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
         Plane::new(0.0, 1.0, 0.0, 0.0),
         Plane::new(1.0, 1.0, 0.0, 0.0),
     ];
-    let colours = PART_COLOURS.map(|[r, g, b]| canvas::srgb(r, g, b));
-    let ground_tone = canvas::srgb(0.95, 0.93, 0.88);
-    c.clip([x0, y0, x0 + side, y0 + side]);
-    c.shade(2, |x, y| {
-        let (o, d) = cam.ray([x - x0, y - y0]);
+    let colours = PART_COLOURS.map(|[r, g, b]| srgb(r, g, b, SURFACE));
+    // The bowl in the lattice's blue, as the floors elsewhere.
+    let ground_tone = light(0.3, 0.42, 1.0, 0.12);
+    c.clip(view);
+    c.shade(2, |q| {
+        let (o, d) = cam.ray(q);
         let (origin, heading) = (to64(o), to64(d));
-        let mut best: Option<(f64, Rgb)> = None;
+        let mut best: Option<(f64, Light)> = None;
         if let Some((distance, p)) = hit(ground, origin, heading) {
             let [hx, hy, _] = p.to_euclidean();
             let checker = ((hx / 0.15).floor() + (hy / 0.15).floor()).rem_euclid(2.0) as f32;
             let shade = 0.45 + 0.55 * facing(normal_at(ground, p));
-            best = Some((
-                distance,
-                canvas::scale(ground_tone, (0.62 + 0.18 * checker) * shade),
-            ));
+            best = Some((distance, fade(ground_tone, (0.62 + 0.18 * checker) * shade)));
         }
         for (i, q) in placed.iter().enumerate() {
             if let Some((distance, p)) = hit(*q, origin, heading)
@@ -552,12 +553,12 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
                 let local = motor << p;
                 let sign: f64 = spokes.iter().map(|s| (*s & local).s()).product();
                 let sector = f32::from(u8::from(sign <= 0.0));
-                let tint = canvas::scale(colours[i], 1.0 - SECTOR_CONTRAST[i] * (1.0 - sector));
+                let tint = fade(colours[i], 1.0 - SECTOR_CONTRAST[i] * (1.0 - sector));
                 let shade = 0.35 + 0.65 * facing(normal_at(*q, p));
-                best = Some((distance, canvas::scale(tint, shade)));
+                best = Some((distance, fade(tint, shade)));
             }
         }
-        best.map(|(_, rgb)| rgb)
+        best.map(|(_, l)| l)
     });
     c.unclip();
 }
@@ -565,17 +566,19 @@ fn render(c: &mut Canvas, motor: M, parts: &[Quadric], ground: Quadric, at: [f32
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let runs = runs();
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let u = h / 270.0;
     let k = ((f64::from(t) / (DT * EVERY as f64)) as usize).min(runs.samples[0].len() - 1);
+    // The view: a square at the bottom left.
     let side = h * 0.86;
-    render(
-        c,
-        runs.samples[0][k].motor,
-        &runs.parts,
-        runs.ground,
-        [4.0 * u, h - side - 2.0 * u, side],
-    );
+    let corner = screen.bottom_left() + Point2::direction(4.0 * u, -2.0 * u);
+    let view = Rect {
+        lo: corner - Point2::direction(0.0, side),
+        hi: corner + Point2::direction(side, 0.0),
+    };
+    let motor = runs.samples[0][k].motor;
+    render(c, motor, &runs.parts, runs.ground, view);
     caption(
         c,
         "SPINNING TOP: QUADRICS IN A BOWL",
@@ -590,13 +593,8 @@ fn draw(c: &mut Canvas, t: f32) {
     ];
     for (p, (title, range)) in panels.iter().enumerate() {
         let top = h * 0.12 + p as f32 * h * 0.44;
-        let rect = plot::inset(
-            [x0, top, w, top + h * 0.44],
-            24.0 * u,
-            14.0 * u,
-            6.0 * u,
-            16.0 * u,
-        );
+        let row = Rect::new(x0, top, w, top + h * 0.44);
+        let rect = row.inset(24.0 * u, 14.0 * u, 6.0 * u, 16.0 * u);
         let ax = Axes::new(rect, [0.0, SECONDS as f32], *range);
         ax.frame(c, title, if p == 1 { "TIME (S)" } else { "" }, "");
         for (v, samples) in runs.samples.iter().enumerate() {
@@ -609,25 +607,14 @@ fn draw(c: &mut Canvas, t: f32) {
                     gax::pga2d::Point::xy(j as f64 * DT * EVERY as f64, value)
                 })
                 .collect();
-            ax.polyline(
-                c,
-                &pts,
-                if v == 0 { 1.8 } else { 1.1 },
-                palette::series(v),
-                1.0,
-            );
+            let width = if v == 0 { 1.8 } else { 1.1 };
+            ax.polyline(c, &pts, width, palette::series(v));
         }
-        ax.line(
-            c,
-            Point2::xy(time, range[0]),
-            Point2::xy(time, range[1]),
-            0.8,
-            palette::grid(),
-            1.0,
-        );
+        let (low, high) = (Point2::xy(time, range[0]), Point2::xy(time, range[1]));
+        ax.line(c, low, high, 0.8, palette::grid());
         // The legend where the spin has decayed.
         if p == 1 {
-            let entries: Vec<(&str, Rgb)> = VARIATIONS
+            let entries: Vec<(&str, Light)> = VARIATIONS
                 .iter()
                 .enumerate()
                 .map(|(v, (name, _))| (*name, palette::series(v)))
@@ -705,9 +692,9 @@ mod tests {
             samples[0].motor,
             &body.parts,
             ground,
-            [0.0, 0.0, 32.0],
+            gax_numga_examples::Rect::new(0.0, 0.0, 32.0, 32.0),
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 
     /// The top stays on the ground, spinning: its tip neither sinks in nor flies off, it stays
@@ -737,6 +724,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

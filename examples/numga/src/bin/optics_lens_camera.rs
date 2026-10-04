@@ -10,8 +10,10 @@
 //! aperture change; the sensor is rasterised from the 60 cones as implicit functions, with a
 //! side view of the train and numga's three stills (wide, tele, and tele with a tilted sensor).
 
-use gax_numga_examples::canvas::{mix, srgb};
-use gax_numga_examples::{Align, Anim, Axes, Canvas, Marker, backdrop, caption, palette, run};
+use gax_light::{fade, mix};
+use gax_numga_examples::{
+    Align, Anim, Axes, Canvas, Light, Marker, Point2, Rect, backdrop, caption, palette, run,
+};
 
 mod lens {
     use gax::Unit;
@@ -262,6 +264,7 @@ mod raster {
     use super::lens::{Exposure, Quadric, section};
     use gax::pga2d;
     use gax::pga3d::{Plane, Point};
+    use gax_light::{Light, light, srgb};
 
     /// Half extents of the sensor window in its own frame.
     pub const SENSOR: [f64; 2] = [0.225, 0.175];
@@ -342,10 +345,11 @@ mod raster {
         ]
     }
 
-    /// The sensor image, `rows` x `cols` sRGB values row by row. Each disc deposits the same
-    /// energy, so a point in focus is a bright dot and a defocused one a dim wide disc; the
-    /// points of each depth layer light one colour channel (far red, middle green, near blue).
-    pub fn rasterise(exposure: &Exposure, energy: f64, rows: usize, cols: usize) -> Vec<[f32; 3]> {
+    /// The sensor image, `rows` x `cols` lights row by row: what each pixel collects, channel by
+    /// channel, saturating at one and read as sRGB values (as a camera's image is). Each disc deposits the same energy, so a point in
+    /// focus is a bright dot and a defocused one a dim wide disc; the points of each depth layer
+    /// light one colour channel (far red, middle green, near blue).
+    pub fn rasterise(exposure: &Exposure, energy: f64, rows: usize, cols: usize) -> Vec<Light> {
         // Sensor points `(y, z)` in the sensor's own frame, carried into the world.
         let on_sensor = exposure.frame
             >> Point::<(pga2d::Point,), f64>::from_images([
@@ -385,7 +389,7 @@ mod raster {
         // numga's brightness, 550 per unit share at its resolution, kept at this one.
         let gain = 550.0 * (rows * cols) as f64 / NUMGA_SAMPLES * energy;
         let weights: Vec<f64> = totals.iter().map(|t| gain / t.max(1e-12)).collect();
-        let mut image = vec![[0.0f32; 3]; rows * cols];
+        let mut image = vec![light(0.0, 0.0, 0.0, 1.0); rows * cols];
         std::thread::scope(|s| {
             let per = rows.div_ceil(n).max(1);
             for (k, out) in image.chunks_mut(per * cols).enumerate() {
@@ -405,7 +409,8 @@ mod raster {
                         }
                     }
                     for (px, rgb) in out.iter_mut().zip(acc) {
-                        *px = rgb.map(|v| v.clamp(0.0, 1.0) as f32);
+                        let [r, g, b] = rgb.map(|v| v.clamp(0.0, 1.0) as f32);
+                        *px = srgb(r, g, b, 1.0);
                     }
                 });
             }
@@ -425,20 +430,27 @@ const LIVE: [usize; 2] = [252, 324];
 /// The stills' thumbnails.
 const THUMB: [usize; 2] = [63, 81];
 
-/// Paint a raster with its top left corner at `(x, y)`.
-fn paint(c: &mut Canvas, image: &[[f32; 3]], x: usize, y: usize, rows: usize, cols: usize) {
-    c.clip([x as f32, y as f32, (x + cols) as f32, (y + rows) as f32]);
-    c.shade(1, |px, py| {
-        let (col, row) = (px as usize - x, py as usize - y);
-        let [r, g, b] = image[row * cols + col];
-        Some(srgb(r, g, b))
+/// Paint a raster `cols` lights wide into the canvas rectangle `rect`, a light a pixel: each
+/// pixel shows the light its offset from the rectangle's corner counts to.
+fn paint(c: &mut Canvas, image: &[Light], rect: Rect, cols: usize) {
+    c.clip(rect);
+    c.shade(1, |q| {
+        let offset = q - rect.lo;
+        let (col, row) = (offset.e20() as usize, offset.e01() as usize);
+        image.get(row * cols + col).copied()
     });
     c.unclip();
 }
 
+/// The `rows` x `cols` pixels with their top left corner at the pixel corner nearest `corner`.
+fn raster_rect(corner: Point2, rows: usize, cols: usize) -> Rect {
+    let [x, y] = corner.to_euclidean().map(f32::floor);
+    Rect::new(x, y, x + cols as f32, y + rows as f32)
+}
+
 /// The stills, rasterised once.
-fn stills_images() -> &'static [Vec<[f32; 3]>; 3] {
-    static STILLS: std::sync::OnceLock<[Vec<[f32; 3]>; 3]> = std::sync::OnceLock::new();
+fn stills_images() -> &'static [Vec<Light>; 3] {
+    static STILLS: std::sync::OnceLock<[Vec<Light>; 3]> = std::sync::OnceLock::new();
     STILLS.get_or_init(|| stills().map(|e| raster::rasterise(&e, 1.0, THUMB[0], THUMB[1])))
 }
 
@@ -468,7 +480,7 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
             palette::sky()
         };
         let top = flat.of(top);
-        ax.line(c, top, flat.of(bottom), 2.5, colour, 1.0);
+        ax.line(c, top, flat.of(bottom), 2.5, colour);
         ax.text(
             c,
             pga2d::Motor::translation(0.0, 0.12) >> top,
@@ -480,15 +492,9 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
     }
     let pts: Vec<_> = scene().iter().map(|p| flat.of(*p)).collect();
     let layer = [palette::red(), palette::green(), palette::blue()];
+    let tone = |k: usize| mix(layer[k], palette::ink(), 0.3);
     for (k, chunk) in pts.chunks(20).enumerate() {
-        ax.scatter(
-            c,
-            chunk,
-            Marker::Dot,
-            3.5,
-            mix(layer[k], palette::ink(), 0.3),
-            1.0,
-        );
+        ax.scatter(c, chunk, Marker::Dot, 3.5, tone(k));
     }
     // Where the collineation puts each point: its image cone's vertex, the point's focus.
     let images: Vec<_> = scene()
@@ -496,25 +502,20 @@ fn side(c: &mut Canvas, ax: &Axes, exposure: &Exposure, radius: f64) {
         .map(|p| flat.of(exposure.collineation.of(*p)))
         .collect();
     for (k, chunk) in images.chunks(20).enumerate() {
-        ax.scatter(
-            c,
-            chunk,
-            Marker::Cross,
-            4.0,
-            mix(layer[k], palette::ink(), 0.3),
-            0.9,
-        );
+        ax.scatter(c, chunk, Marker::Cross, 4.0, fade(tone(k), 0.9));
     }
     for ray in 0..3 {
         let fan: Vec<_> = exposure.legs.iter().map(|leg| flat.of(leg[ray])).collect();
-        ax.polyline(c, &fan, 1.0, palette::yellow(), 0.9);
+        ax.polyline(c, &fan, 1.0, fade(palette::yellow(), 0.9));
     }
 }
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let k = (h / 360.0).min(w / 640.0);
+    let (right, down) = (Point2::direction(1.0, 0.0), Point2::direction(0.0, 1.0));
     let phase = f64::from(t / SECONDS) * core::f64::consts::TAU;
     let (rear_at, focus_at, radius, exposure) = motion(phase);
     // The live sensor, at the left; smaller canvases get a smaller raster.
@@ -522,71 +523,63 @@ fn draw(c: &mut Canvas, t: f32) {
         ((LIVE[0] as f32 * k) as usize).max(8),
         ((LIVE[1] as f32 * k) as usize).max(8),
     );
-    let (x0, y0) = ((12.0 * k) as usize, (58.0 * k) as usize);
+    let live = raster_rect(Point2::xy(12.0 * k, 58.0 * k), rows, cols);
     let energy = (radius / 0.45).powi(2);
     let image = raster::rasterise(&exposure, energy, rows, cols);
-    paint(c, &image, x0, y0, rows, cols);
-    let (fx, fy) = (x0 as f32, y0 as f32);
-    c.polyline(
-        &[
-            [fx, fy],
-            [fx + cols as f32, fy],
-            [fx + cols as f32, fy + rows as f32],
-            [fx, fy + rows as f32],
-        ],
-        1.0,
-        palette::grid(),
-        1.0,
-        true,
-    );
+    paint(c, &image, live, cols);
+    let corners = [live.lo, live.top_right(), live.hi, live.bottom_left()];
+    c.polyline(&corners, 1.0, palette::grid(), true);
     let s = 9.0 * k;
     c.text(
         &format!("REAR LENS AT {rear_at:.2}, FOCUSED AT {focus_at:.2}, APERTURE {radius:.2}"),
-        fx,
-        fy + rows as f32 + s * 1.6,
+        live.bottom_left() + down.gp(s * 1.6),
         s * 0.85,
         palette::ink(),
         Align::Left,
     );
-    // The side view, top right.
-    let right = fx + cols as f32 + 16.0 * k;
-    let width = w - right - 10.0 * k;
-    let ax = Axes::new(
-        [right, fy, right + width, fy + width * 2.4 / 6.2],
-        [-3.6, 2.6],
-        [-1.2, 1.2],
-    );
+    // The side view, top right: from beside the sensor to near the canvas's right edge.
+    let lo = live.top_right() + right.gp(16.0 * k);
+    let width = (screen.hi - lo).e20() - 10.0 * k;
+    let view = Rect {
+        lo,
+        hi: lo + Point2::direction(width, width * 2.4 / 6.2),
+    };
+    let ax = Axes::new(view, [-3.6, 2.6], [-1.2, 1.2]);
     side(c, &ax, &exposure, radius);
     c.text(
         "SIDE VIEW: LAYERS FAR, MID, NEAR LIGHT RED, GREEN, BLUE",
-        right,
-        ax.rect[3] + s * 1.3,
+        view.bottom_left() + down.gp(s * 1.3),
         s * 0.7,
         palette::grid(),
         Align::Left,
     );
-    // The stills, below it.
+    // The stills, below it, side by side.
     let stills = stills_images();
-    let ty = (ax.rect[3] + s * 4.0) as usize;
     let gap = ((width - 3.0 * THUMB[1] as f32) / 2.0).max(2.0);
-    for (i, (img, label)) in stills.iter().zip(["WIDE", "TELE", "TILTED 25"]).enumerate() {
-        let tx = (right + i as f32 * (THUMB[1] as f32 + gap)) as usize;
-        if tx + THUMB[1] <= c.width && ty + THUMB[0] <= c.height {
-            paint(c, img, tx, ty, THUMB[0], THUMB[1]);
+    let thumbs: Vec<Rect> = (0..3)
+        .map(|i| {
+            let corner = view.bottom_left()
+                + down.gp(s * 4.0)
+                + right.gp(i as f32 * (THUMB[1] as f32 + gap));
+            raster_rect(corner, THUMB[0], THUMB[1])
+        })
+        .collect();
+    for ((img, label), thumb) in stills
+        .iter()
+        .zip(["WIDE", "TELE", "TILTED 25"])
+        .zip(&thumbs)
+    {
+        // Only where the whole thumbnail fits on the canvas.
+        let [x, y] = thumb.hi.to_euclidean();
+        if x <= w && y <= h {
+            paint(c, img, *thumb, THUMB[1]);
         }
-        c.text(
-            label,
-            tx as f32,
-            (ty + THUMB[0]) as f32 + s * 1.2,
-            s * 0.7,
-            palette::ink(),
-            Align::Left,
-        );
+        let below = thumb.bottom_left() + down.gp(s * 1.2);
+        c.text(label, below, s * 0.7, palette::ink(), Align::Left);
     }
     c.text(
         "STILLS: APERTURE 0.45, FOCUSED AT 2.2",
-        right,
-        ty as f32 - s * 0.6,
+        thumbs[0].lo - down.gp(s * 0.6),
         s * 0.7,
         palette::grid(),
         Align::Left,
@@ -799,10 +792,9 @@ mod tests {
         let drift = [a.0 - b.0, a.1 - b.1, a.2 - b.2];
         assert!(drift.iter().all(|d| d.abs() <= 1e-12), "{drift:?}");
         let image = super::raster::rasterise(&a.3, 1.0, 28, 36);
-        let sum = image
-            .iter()
-            .fold([0.0f32; 3], |s, p| [s[0] + p[0], s[1] + p[1], s[2] + p[2]]);
-        assert!(sum.iter().all(|v| *v > 1.0), "{sum:?}");
+        let sum = image.iter().fold(gax_light::DARK, |s, p| s + *p);
+        let [r, g, b] = [sum.e032(), sum.e013(), sum.e021()];
+        assert!([r, g, b].iter().all(|v| *v > 1.0), "{sum:?}");
     }
 
     #[test]

@@ -9,10 +9,10 @@
 //! its circle (the corner's shadow runs along the trail the reopened slot drew), and turns the
 //! subject in front of the stereo rig, whose epipolar lines follow.
 
-use gax_numga_examples::canvas::{mix, srgb};
+use gax_light::{fade, mix, srgb};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rgb, Scene3, backdrop, caption,
-    palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, Point2, Rect, Scene3, backdrop,
+    caption, palette, run,
 };
 
 mod projection {
@@ -224,20 +224,20 @@ use projection::*;
 
 const SECONDS: f32 = 10.0;
 
-fn sky() -> Rgb {
-    srgb(0.22, 0.74, 0.97)
+fn sky() -> Light {
+    srgb(0.22, 0.74, 0.97, 1.7)
 }
 
-fn amber() -> Rgb {
-    srgb(0.98, 0.75, 0.14)
+fn amber() -> Light {
+    srgb(0.98, 0.75, 0.14, 1.7)
 }
 
-fn violet() -> Rgb {
-    srgb(0.66, 0.33, 0.97)
+fn violet() -> Light {
+    srgb(0.66, 0.33, 0.97, 1.7)
 }
 
-fn rose() -> Rgb {
-    srgb(0.96, 0.25, 0.37)
+fn rose() -> Light {
+    srgb(0.96, 0.25, 0.37, 1.7)
 }
 
 /// The shadow scene in 3D: the body, both lights, both shadows and the corner's trail.
@@ -256,20 +256,20 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     let floor = |x: f64, y: f64| P::xyz(x, y, 0.0);
     for k in 0..=6 {
         let g = -3.0 + f64::from(k);
-        let line = mix(palette::grid(), palette::ink(), 0.15);
-        s.seg(floor(g, -3.0), floor(g, 3.0), 1.0, line, 0.7);
-        s.seg(floor(-3.0, g), floor(3.0, g), 1.0, line, 0.7);
+        let line = fade(mix(palette::grid(), palette::ink(), 0.15), 0.7);
+        s.seg(floor(g, -3.0), floor(g, 3.0), 1.0, line);
+        s.seg(floor(-3.0, g), floor(3.0, g), 1.0, line);
     }
     let (body, spot) = (&sc.body, &sc.cast.spot);
     let sun = sc.cast.sun.map(|p| p.unitized());
     for [a, b] in CUBE_EDGES {
-        s.seg(body[a], body[b], 2.0, sky(), 1.0);
-        s.seg(spot[a], spot[b], 1.5, amber(), 1.0);
+        s.seg(body[a], body[b], 2.0, sky());
+        s.seg(spot[a], spot[b], 1.5, amber());
         // The sun's shadow, dashed: the points a share of the way along each edge.
         let at = |w: f64| sun[a] + (sun[b] - sun[a]).gp(w);
         for k in 0..6 {
             let u = f64::from(k) / 6.0;
-            s.seg(at(u), at(u + 0.55 / 6.0), 1.5, violet(), 1.0);
+            s.seg(at(u), at(u + 0.55 / 6.0), 1.5, violet());
         }
     }
     // The corner's shadow as the light moves round its path: the reopened slot, bound to every
@@ -278,13 +278,14 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
     trail.push(trail[0]);
     for (k, w) in trail.windows(2).enumerate() {
         if k % 2 == 0 {
-            s.seg(w[0], w[1], 1.2, amber(), 0.8);
+            s.seg(w[0], w[1], 1.2, fade(amber(), 0.8));
         }
     }
+    // The light's path, dimmer.
     let path: Vec<P> = sc.path.iter().chain(&sc.path[..1]).copied().collect();
-    s.polyline(&path, 1.0, mix(amber(), palette::bottom(), 0.5), 0.8);
+    s.polyline(&path, 1.0, fade(amber(), 0.4));
     // The ray from the light through the corner to its shadow.
-    s.seg(sc.light, spot[7], 1.0, amber(), 0.5);
+    s.seg(sc.light, spot[7], 1.0, fade(amber(), 0.5));
     s.dot(sc.light, Marker::Dot, 11.0, amber());
     s.dot(spot[7], Marker::Dot, 6.0, amber());
     // The sun's direction, a unit arrow at (-2, 2, 4).
@@ -302,7 +303,7 @@ fn shadow_scene(c: &mut Canvas, t: f32, sc: &Scene) {
 /// first camera's corners through their matches.
 fn screen_panel(
     c: &mut Canvas,
-    rect: [f32; 4],
+    rect: Rect,
     title: &str,
     rig: M,
     image: &[P; 8],
@@ -316,14 +317,14 @@ fn screen_panel(
     if let Some(lines) = lines {
         for l in lines {
             let [a, b] = screen_line(rig, *l, half);
-            ax.line(c, a, b, 1.0, rose(), 0.8);
+            ax.line(c, a, b, 1.0, fade(rose(), 0.8));
         }
     }
     for [a, b] in CUBE_EDGES {
-        ax.line(c, image[a], image[b], 2.0, sky(), 1.0);
+        ax.line(c, image[a], image[b], 2.0, sky());
     }
     if lines.is_some() {
-        ax.scatter(c, &image, Marker::Dot, 6.0, rose(), 1.0);
+        ax.scatter(c, &image, Marker::Dot, 6.0, rose());
     }
     c.unclip();
     ax.frame(c, title, "", "");
@@ -341,10 +342,13 @@ fn draw(c: &mut Canvas, t: f32) {
     shadow_scene(&mut sub, t, &sc);
     let (wf, hf) = (w as f32, h as f32);
     let s = (hf / 40.0).clamp(7.0, 13.0);
+    // The key in the bottom left corner: a heading, and a row per light, each `s` in from the
+    // left edge and some lines up from the bottom.
+    let corner = sub.rect().bottom_left();
+    let row = |lines: f32| corner + Point2::direction(s, -s * lines);
     sub.text(
         "SHADOWS: (LIGHT JOIN POINT) MEET GROUND",
-        s,
-        hf - s * 4.2,
+        row(4.2),
         s,
         palette::ink(),
         Align::Left,
@@ -360,18 +364,20 @@ fn draw(c: &mut Canvas, t: f32) {
     .into_iter()
     .enumerate()
     {
-        let y = hf - s * (2.8 - 1.2 * k as f32);
-        sub.line([s, y - s * 0.3], [s * 2.4, y - s * 0.3], 2.0, col, 1.0);
-        sub.text(label, s * 3.0, y, s * 0.75, palette::ink(), Align::Left);
+        let baseline = row(2.8 - 1.2 * k as f32);
+        let mid = baseline + Point2::direction(0.0, -s * 0.3);
+        sub.line(mid, mid + Point2::direction(s * 1.4, 0.0), 2.0, col);
+        let at = baseline + Point2::direction(s * 2.0, 0.0);
+        sub.text(label, at, s * 0.75, palette::ink(), Align::Left);
     }
     c.blit(&sub, 0, 0);
     // The two cameras on the right.
     let panel = ((wf - left as f32) / 2.0 - wf * 0.035).min(hf * 0.62);
     let top = (hf - panel) * 0.55;
     let x0 = left as f32 + wf * 0.035;
-    let rect_1 = [x0, top, x0 + panel, top + panel];
+    let rect_1 = Rect::new(x0, top, x0 + panel, top + panel);
     let x1 = x0 + panel + wf * 0.035;
-    let rect_2 = [x1, top, x1 + panel, top + panel];
+    let rect_2 = Rect::new(x1, top, x1 + panel, top + panel);
     let v = &sc.views;
     screen_panel(c, rect_1, "CAMERA 1", sc.rig_1, &v.image_1, None);
     screen_panel(
@@ -400,8 +406,7 @@ fn draw(c: &mut Canvas, t: f32) {
     {
         c.text(
             text,
-            x0,
-            top + panel + s * (3.4 + 1.4 * k as f32),
+            rect_1.bottom_left() + Point2::direction(0.0, s * (3.4 + 1.4 * k as f32)),
             s * 0.8,
             mix(palette::grid(), palette::ink(), 0.5),
             Align::Left,

@@ -26,10 +26,13 @@ pub mod scene3;
 pub mod view;
 
 pub use app::{Anim, run};
-pub use canvas::{Canvas, Px, Rgb};
+pub use canvas::{Canvas, Rect};
 pub use font::Align;
+pub use gax_light::{Light, light};
 pub use plot::{Axes, Marker};
-pub use points::{Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above};
+pub use points::{
+    Dir2, Dir3, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, from_above, reach2, reach3,
+};
 pub use scene3::Scene3;
 pub use view::{Camera, Lens, View2};
 
@@ -41,44 +44,99 @@ pub fn backdrop(c: &mut Canvas) {
 /// A title in the top left corner, and an optional caption under it.
 pub fn caption(c: &mut Canvas, title: &str, sub: &str) {
     let s = (c.height as f32 / 30.0).clamp(10.0, 22.0);
-    c.text(title, s * 0.8, s * 1.6, s, palette::ink(), Align::Left);
+    c.text(
+        title,
+        Point2::xy(s * 0.8, s * 1.6),
+        s,
+        palette::ink(),
+        Align::Left,
+    );
     if !sub.is_empty() {
-        c.text(sub, s * 0.8, s * 3.0, s * 0.7, palette::grid(), Align::Left);
+        let at = Point2::xy(s * 0.8, s * 3.0);
+        c.text(
+            sub,
+            at,
+            s * 0.7,
+            gax_light::fade(palette::ink(), 0.45),
+            Align::Left,
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gax_light::luma;
+
+    /// White light at intensity 1.
+    const WHITE: Light = light(1.0, 1.0, 1.0, 1.0);
+
+    /// Two pixel points within `eps` of each other.
+    fn near(a: Point2, b: Point2, eps: f32) -> bool {
+        (a.unitized() & b.unitized()).norm() < eps
+    }
 
     #[test]
-    fn a_line_covers_its_pixels_and_not_others() {
-        let mut c = Canvas::new(20, 10);
-        c.line([2.0, 5.0], [18.0, 5.0], 2.0, [1.0; 3], 1.0);
-        assert!(c.get(10, 4)[0] > 0.9 && c.get(10, 5)[0] > 0.9);
-        assert!(c.get(10, 1)[0] < 1e-6 && c.get(0, 5)[0] < 1e-6);
+    fn a_line_glows_around_a_solid_core() {
+        let mut c = Canvas::new(40, 30);
+        c.line(Point2::xy(5.0, 15.0), Point2::xy(35.0, 15.0), 2.0, WHITE);
+        // The core is solid, the glow faint and fading, and beyond its reach nothing.
+        assert!(luma(c.get(20, 14)) > 0.95 && luma(c.get(20, 15)) > 0.95);
+        let glow = luma(c.get(20, 20));
+        assert!(glow > 0.0 && glow < 0.1, "{glow}");
+        assert_eq!(luma(c.get(20, 0)), 0.0);
+    }
+
+    #[test]
+    fn a_polyline_is_one_stroke() {
+        // Its joints do not shine twice: the light where two segments meet is the light along
+        // either.
+        let mut c = Canvas::new(40, 20);
+        let pts = [
+            Point2::xy(5.0, 10.0),
+            Point2::xy(20.0, 10.0),
+            Point2::xy(35.0, 10.0),
+        ];
+        c.polyline(&pts, 2.0, WHITE, false);
+        assert!((luma(c.get(20, 10)) - luma(c.get(12, 10))).abs() < 1e-3);
     }
 
     #[test]
     fn fills_cover_their_area() {
-        // A triangle, a star with a hole by winding, and a camera viewport into a panel.
+        // A triangle, and a star with a hole by winding.
         let mut c = Canvas::new(40, 40);
-        c.fill(&[[0.0, 0.0], [40.0, 0.0], [0.0, 40.0]], [1.0; 3], 1.0);
-        assert!((c.mean()[0] - 0.5).abs() < 2e-3, "{:?}", c.mean());
+        let corners = [
+            Point2::xy(0.0, 0.0),
+            Point2::xy(40.0, 0.0),
+            Point2::xy(0.0, 40.0),
+        ];
+        c.fill(&corners, WHITE, 1.0);
+        assert!((luma(c.mean()) - 0.5).abs() < 2e-3, "{:?}", c.mean());
         let mut c = Canvas::new(60, 60);
         // A pentagram: every second corner of a pentagon, by turns of two fifths.
-        let centre = gax::pga2d::Point::xy(30.0, 30.0);
-        let star: Vec<Px> = (0..5)
+        let centre = Point2::xy(30.0, 30.0);
+        let star: Vec<Point2> = (0..5)
             .map(|k| {
                 let turn = gax::pga2d::Motor::rotation(
                     centre,
                     core::f32::consts::TAU * (k * 2) as f32 / 5.0,
                 );
-                (turn >> gax::pga2d::Point::xy(55.0, 30.0)).to_euclidean()
+                turn >> Point2::xy(55.0, 30.0)
             })
             .collect();
-        c.fill(&star, [1.0; 3], 1.0);
-        assert!(c.get(30, 30)[0] > 0.99, "non-zero winding fills the centre");
+        c.fill(&star, WHITE, 1.0);
+        assert!(
+            luma(c.get(30, 30)) > 0.99,
+            "non-zero winding fills the centre"
+        );
+    }
+
+    #[test]
+    fn a_square_fills_its_area() {
+        let mut c = Canvas::new(10, 10);
+        let r = Rect::new(2.0, 2.0, 8.0, 8.0);
+        c.fill(&[r.lo, r.top_right(), r.hi, r.bottom_left()], WHITE, 1.0);
+        assert!((luma(c.mean()) - 0.36).abs() < 1e-3);
     }
 
     #[test]
@@ -87,16 +145,13 @@ mod tests {
             100,
             100,
             Point3::xyz(0.0, -5.0, 0.0),
-            Point3::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             Lens::Perspective(0.8),
         )
-        .viewport([200.0, 50.0, 300.0, 150.0]);
-        let o = cam.px(Point3::xyz(0.0, 0.0, 0.0)).expect("in view");
-        assert!(
-            (o[0] - 250.0).abs() < 1e-3 && (o[1] - 100.0).abs() < 1e-3,
-            "{o:?}"
-        );
-        let (origin, dir) = cam.ray([250.0, 100.0]);
+        .viewport(Rect::new(200.0, 50.0, 300.0, 150.0));
+        let o = cam.px(ORIGIN3).expect("in view");
+        assert!(near(o, Point2::xy(250.0, 100.0), 1e-3), "{o:?}");
+        let (origin, dir) = cam.ray(Point2::xy(250.0, 100.0));
         // From the eye, straight ahead along +y.
         assert!(
             (origin & Point3::xyz(0.0, -5.0, 0.0)).norm() < 1e-4,
@@ -123,38 +178,36 @@ mod tests {
     }
 
     #[test]
-    fn a_square_fills_its_area() {
-        let mut c = Canvas::new(10, 10);
-        c.fill(
-            &[[2.0, 2.0], [8.0, 2.0], [8.0, 8.0], [2.0, 8.0]],
-            [1.0; 3],
-            1.0,
-        );
-        assert!((c.mean()[0] - 0.36).abs() < 1e-3);
-    }
-
-    #[test]
     fn a_circle_s_contour_is_a_closed_ring_of_segments() {
         // The unit circle: the level 1 of the squared distance from the origin.
-        let origin = Point2::xy(0.0, 0.0);
-        let r2 = |p: Point2| (p & origin).norm_squared();
+        let r2 = |p: Point2| (p & ORIGIN2).norm_squared();
         let segs = contour::of_fn(r2, [-2.0, 2.0], [-2.0, 2.0], 41, 1.0);
         assert!(segs.len() > 20);
         for p in segs.into_iter().flatten() {
-            let r = (p & origin).norm();
+            let r = (p & ORIGIN2).norm();
             assert!((r - 1.0).abs() < 0.02, "{p:?}");
         }
     }
 
     #[test]
     fn axes_map_data_to_pixels_and_back() {
-        let ax = Axes::new([10.0, 20.0, 110.0, 220.0], [0.0, 1.0], [-1.0, 1.0]);
-        assert_eq!(ax.px(Point2::xy(0.0, -1.0)), [10.0, 220.0]);
-        assert_eq!(ax.px(Point2::xy(1.0, 1.0)), [110.0, 20.0]);
+        let ax = Axes::new(Rect::new(10.0, 20.0, 110.0, 220.0), [0.0, 1.0], [-1.0, 1.0]);
+        assert!(near(
+            ax.px(Point2::xy(0.0, -1.0)),
+            Point2::xy(10.0, 220.0),
+            1e-4
+        ));
+        assert!(near(
+            ax.px(Point2::xy(1.0, 1.0)),
+            Point2::xy(110.0, 20.0),
+            1e-4
+        ));
         let back = ax.data(ax.px(Point2::xy(0.25, 0.5)));
-        assert!((back & Point2::xy(0.25, 0.5)).norm() < 1e-6, "{back:?}");
-        let log = Axes::new([0.0, 0.0, 100.0, 100.0], [0.0, 1.0], [1e-3, 1.0]).log_y();
-        assert!((log.px(Point2::xy(0.0, 1e-2))[1] - 200.0 / 3.0).abs() < 1e-3);
+        assert!(near(back, Point2::xy(0.25, 0.5), 1e-6), "{back:?}");
+        assert!(near(ax.at(0.5, 1.0), Point2::xy(0.5, 1.0), 1e-6));
+        let log = Axes::new(Rect::new(0.0, 0.0, 100.0, 100.0), [0.0, 1.0], [1e-3, 1.0]).log_y();
+        let p = log.px(Point2::xy(0.0, 1e-2));
+        assert!(near(p, Point2::xy(0.0, 200.0 / 3.0), 1e-3), "{p:?}");
     }
 
     #[test]
@@ -163,31 +216,22 @@ mod tests {
             64,
             64,
             Point3::xyz(5.0, 0.0, 0.0),
-            Point3::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             Lens::Perspective(0.8),
         );
         let mut s = Scene3::new(cam);
         // A red square in front of a green one: the centre is red.
-        s.quad(
-            Point3::xyz(1.0, -1.0, -1.0),
-            Point3::xyz(1.0, 1.0, -1.0),
-            Point3::xyz(1.0, 1.0, 1.0),
-            Point3::xyz(1.0, -1.0, 1.0),
-            [1.0, 0.0, 0.0],
-            1.0,
-        );
-        s.quad(
-            Point3::xyz(-1.0, -1.0, -1.0),
-            Point3::xyz(-1.0, 1.0, -1.0),
-            Point3::xyz(-1.0, 1.0, 1.0),
-            Point3::xyz(-1.0, -1.0, 1.0),
-            [0.0, 1.0, 0.0],
-            1.0,
-        );
+        let square = |x: f32| {
+            [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(y, z)| Point3::xyz(x, y, z))
+        };
+        let [a, b, c, d] = square(1.0);
+        s.quad(a, b, c, d, light(1.0, 0.0, 0.0, 1.0), 1.0);
+        let [a, b, c, d] = square(-1.0);
+        s.quad(a, b, c, d, light(0.0, 1.0, 0.0, 1.0), 1.0);
         let mut c = Canvas::new(64, 64);
         s.draw(&mut c);
         let p = c.get(32, 32);
-        assert!(p[0] > 0.5 && p[1] < 0.01, "{p:?}");
+        assert!(p.e032() > 0.5 && p.e013() < 0.01, "{p:?}");
     }
 
     #[test]
@@ -197,16 +241,15 @@ mod tests {
             100,
             100,
             Point3::xyz(0.0, -0.001, 10.0),
-            Point3::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             Lens::Perspective(0.8),
         );
-        let o = cam.px(Point3::xyz(0.0, 0.0, 0.0)).expect("in view");
+        let o = cam.px(ORIGIN3).expect("in view");
         let x = cam.px(Point3::xyz(1.0, 0.0, 0.0)).expect("in view");
         let y = cam.px(Point3::xyz(0.0, 1.0, 0.0)).expect("in view");
-        assert!(x[0] > o[0] + 1.0, "{o:?} {x:?}");
-        assert!(y[1] < o[1] - 1.0, "{o:?} {y:?}");
-        // The ray through a point's pixel passes through the point.
-        // The ray meets the ground plane `z = 0` at the point.
+        assert!((x - o).e20() > 1.0, "{o:?} {x:?}");
+        assert!((y - o).e01() < -1.0, "{o:?} {y:?}");
+        // The ray through a point's pixel meets the ground plane `z = 0` at the point.
         let (origin, dir) = cam.ray(x);
         let ray = origin & (origin + dir);
         let hit = ray ^ gax::pga3d::Plane::from_normal([0.0, 0.0, 1.0], 0.0);
@@ -223,14 +266,11 @@ mod tests {
         let cam = Camera::looking(
             100,
             80,
-            Point3::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             Point3::xyz(1.0, 0.0, 0.0),
             Lens::Perspective(core::f32::consts::FRAC_PI_2),
         );
         let top = cam.px(Point3::xyz(1.0, 0.0, 1.0)).expect("in view");
-        assert!(
-            (top[1] - 0.0).abs() < 1e-3 && (top[0] - 50.0).abs() < 1e-3,
-            "{top:?}"
-        );
+        assert!(near(top, Point2::xy(50.0, 0.0), 1e-3), "{top:?}");
     }
 }

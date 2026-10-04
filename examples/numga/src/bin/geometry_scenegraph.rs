@@ -11,9 +11,11 @@
 mod scenegraph;
 
 use gax::pga3d::{Motor, Plane, Point};
-use gax_numga_examples::canvas::{mix, scale, srgb};
+use gax_light::{fade, mix, srgb};
+use gax_numga_examples::points::box_map;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Rgb, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Light, Marker, ORIGIN2, Point2, Rect, Scene3, backdrop,
+    caption, from_above, palette, run,
 };
 use scenegraph::{BOX_FACES, M, P, axis};
 
@@ -118,22 +120,27 @@ use scene::*;
 
 const SECONDS: f32 = 6.0;
 
-fn body_colour(i: usize) -> Rgb {
+fn body_colour(i: usize) -> Light {
     [
-        srgb(0.29, 0.333, 0.408),
-        srgb(0.169, 0.424, 0.69),
-        srgb(0.192, 0.51, 0.808),
-        srgb(0.259, 0.6, 0.882),
-        srgb(0.929, 0.537, 0.212),
+        srgb(0.29, 0.333, 0.408, 1.4),
+        srgb(0.169, 0.424, 0.69, 1.4),
+        srgb(0.192, 0.51, 0.808, 1.4),
+        srgb(0.259, 0.6, 0.882, 1.4),
+        srgb(0.929, 0.537, 0.212, 1.4),
     ][i]
 }
 
-fn ray_colour(i: usize) -> Rgb {
+fn ray_colour(i: usize) -> Light {
     [
-        srgb(0.898, 0.243, 0.243),
-        srgb(0.22, 0.631, 0.412),
-        srgb(0.839, 0.62, 0.18),
+        srgb(0.898, 0.243, 0.243, 1.7),
+        srgb(0.22, 0.631, 0.412, 1.7),
+        srgb(0.839, 0.62, 0.18, 1.7),
     ][i % 3]
+}
+
+/// A face's edges: one faint stroke around it.
+fn edge_light() -> Light {
+    fade(palette::grid(), 0.8)
 }
 
 /// A circle of `radius` at height `z` in the camera frame, in the world: a point of it turned
@@ -167,33 +174,25 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
     let floor = |x: f64, y: f64| Point::xyz(x, y, 0.0);
     for k in 0..7 {
         let g = -1.2 + 0.4 * f64::from(k);
-        let line = mix(palette::grid(), palette::ink(), 0.25);
-        s.seg(floor(g, -1.2), floor(g, 1.2), 1.0, line, 0.8);
-        s.seg(floor(-1.2, g), floor(1.2, g), 1.0, line, 0.8);
+        let line = fade(mix(palette::grid(), palette::ink(), 0.25), 0.8);
+        s.seg(floor(g, -1.2), floor(g, 1.2), 1.0, line);
+        s.seg(floor(-1.2, g), floor(1.2, g), 1.0, line);
     }
     for (i, v) in photo.world.iter().enumerate() {
         for f in BOX_FACES {
             let [a, b, cc, d] = f.map(|k| v[k]);
             let col = s.lit(a, b, cc, body_colour(i));
             s.quad(a, b, cc, d, col, 1.0);
-            for (p, q) in [(a, b), (b, cc), (cc, d), (d, a)] {
-                s.seg(p, q, 0.8, srgb(0.1, 0.12, 0.17), 0.9);
-            }
+            s.polyline(&[a, b, cc, d, a], 0.8, edge_light());
         }
     }
     // The front lens rim (radius 0.3 at z = 0) and the rear one (0.25 at z = -0.3).
-    s.polyline(
-        &rim(rig.pose, 0.3, 0.0),
-        2.0,
-        srgb(0.192, 0.592, 0.584),
-        1.0,
+    let (front, rear) = (
+        srgb(0.192, 0.592, 0.584, 1.6),
+        srgb(0.502, 0.353, 0.835, 1.6),
     );
-    s.polyline(
-        &rim(rig.pose, 0.25, -0.3),
-        2.0,
-        srgb(0.502, 0.353, 0.835),
-        1.0,
-    );
+    s.polyline(&rim(rig.pose, 0.3, 0.0), 2.0, front);
+    s.polyline(&rim(rig.pose, 0.25, -0.3), 2.0, rear);
     // The 1.6 x 1.2 sensor at z = -1.25.
     let corner = |x: f64, y: f64| rig.pose >> Point::xyz(x, y, -1.25);
     let chip = [
@@ -202,15 +201,14 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
         corner(0.8, 0.6),
         corner(-0.8, 0.6),
     ];
-    let orange = srgb(0.867, 0.42, 0.125);
-    s.quad(chip[0], chip[1], chip[2], chip[3], orange, 0.55);
-    for k in 0..4 {
-        s.seg(chip[k], chip[(k + 1) % 4], 1.5, orange, 1.0);
-    }
+    let orange = srgb(0.867, 0.42, 0.125, 1.6);
+    let [a, b, cc, d] = chip;
+    s.quad(a, b, cc, d, orange, 0.55);
+    s.polyline(&[a, b, cc, d, a], 1.5, orange);
     // The rays: scene point to pupil, pupil to the rear lens, rear lens to the sensor.
     for (i, p) in photo.rays.iter().enumerate() {
         for (leg, width) in [1.4, 1.8, 1.8].into_iter().enumerate() {
-            s.seg(p[leg], p[leg + 1], width, ray_colour(i), 0.9);
+            s.seg(p[leg], p[leg + 1], width, fade(ray_colour(i), 0.9));
         }
         s.dot(p[3], Marker::Dot, 6.0, ray_colour(i));
     }
@@ -220,37 +218,32 @@ fn scene_3d(c: &mut Canvas, t: f32, rig: &Rig, photo: &Photo) {
 /// The photograph: the sensor's pixels in `rect`, bodies painted from the base to the gripper,
 /// each face shaded by how squarely its plane in the world faces a light from the camera's
 /// upper left: the inner product of the planes, over the face's norm.
-fn photograph_panel(c: &mut Canvas, rect: [f32; 4], photo: &Photo) {
-    let k = (rect[2] - rect[0]) / PIXELS[0] as f32;
-    let px = |p: P| {
-        let [u, v, _] = p.to_euclidean();
-        [rect[0] + u as f32 * k, rect[1] + v as f32 * k]
-    };
-    let frame = [
-        [rect[0], rect[1]],
-        [rect[2], rect[1]],
-        [rect[2], rect[3]],
-        [rect[0], rect[3]],
-    ];
-    c.fill(&frame, srgb(0.11, 0.12, 0.16), 1.0);
+fn photograph_panel(c: &mut Canvas, rect: Rect, photo: &Photo) {
+    // The sensor's pixels onto the panel: its corners onto the panel's (both with rows growing
+    // downward), the sensor point seen along its `z`.
+    let sensor = Point2::xy(PIXELS[0] as f32, PIXELS[1] as f32);
+    let to_panel = box_map([ORIGIN2, sensor], [rect.lo, rect.hi]);
+    let px = |p: P| to_panel.of(from_above(p)).unitized();
+    let frame = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
+    c.fill(&frame, srgb(0.11, 0.12, 0.16, 1.0), 1.0);
     c.clip(rect);
     let facing = Plane::orthogonal_to(Point::direction(-0.4, -0.8, 0.45))
         .normalized()
         .into_inner();
     for (i, (pixels, w)) in photo.pixels.iter().zip(&photo.world).enumerate() {
         for f in BOX_FACES {
-            let poly: Vec<[f32; 2]> = f.iter().map(|&j| px(pixels[j])).collect();
+            let poly: Vec<Point2> = f.iter().map(|&j| px(pixels[j])).collect();
             let face = w[f[0]] & w[f[1]] & w[f[3]];
             let lit = 0.55 + 0.45 * ((face | facing).s() / face.norm().max(1e-9)).abs() as f32;
-            c.fill(&poly, scale(body_colour(i), lit), 0.88);
-            c.polyline(&poly, 1.0, srgb(0.12, 0.16, 0.23), 1.0, true);
+            c.fill(&poly, fade(body_colour(i), lit), 0.88);
+            c.polyline(&poly, 1.0, edge_light(), true);
         }
         for p in pixels {
-            c.disk(px(*p), 1.6, palette::ink(), 0.9);
+            c.disk(px(*p), 1.6, fade(palette::ink(), 0.9));
         }
     }
     c.unclip();
-    c.polyline(&frame, 1.2, palette::grid(), 1.0, true);
+    c.polyline(&frame, 1.2, palette::grid(), true);
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -272,13 +265,13 @@ fn draw(c: &mut Canvas, t: f32) {
     let x1 = wf - wf * 0.03;
     let ph = (x1 - x0) * 0.75;
     let y0 = (hf - ph) * 0.5 + hf * 0.03;
-    let rect = [x0, y0, x1, y0 + ph];
+    let rect = Rect::new(x0, y0, x1, y0 + ph);
     photograph_panel(c, rect, &photo);
     let s = (hf / 45.0).clamp(7.0, 12.0);
+    let down = Point2::direction(0.0, 1.0);
     c.text(
         "ON THE SENSOR, 640 X 480 PIXELS",
-        x0,
-        y0 - s * 0.8,
+        rect.lo - down.gp(s * 0.8),
         s,
         palette::ink(),
         Align::Left,
@@ -290,14 +283,8 @@ fn draw(c: &mut Canvas, t: f32) {
     .into_iter()
     .enumerate()
     {
-        c.text(
-            line,
-            x0,
-            y0 + ph + s * (1.8 + 1.2 * k as f32),
-            s * 0.8,
-            palette::grid(),
-            Align::Left,
-        );
+        let at = rect.bottom_left() + down.gp(s * (1.8 + 1.2 * k as f32));
+        c.text(line, at, s * 0.8, palette::grid(), Align::Left);
     }
     caption(
         c,

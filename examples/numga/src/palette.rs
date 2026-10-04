@@ -1,64 +1,65 @@
-//! The examples' colours: a dark backdrop, and accents that stay apart for colour-blind eyes
-//! (after Okabe and Ito), in linear light.
+//! The examples' colours: lights, as in `examples/warp` (the `gax-light` crate). Accents glow
+//! like neon on a dark blue backdrop; a light's weight is its intensity, so a fainter stroke is
+//! the same light faded.
 
-use crate::canvas::{Rgb, srgb};
+use gax_light::{Light, light};
 
 /// The backdrop's top.
-pub fn top() -> Rgb {
-    srgb(0.085, 0.095, 0.13)
+pub fn top() -> Light {
+    light(0.06, 0.08, 0.22, 0.12)
 }
 
 /// The backdrop's bottom.
-pub fn bottom() -> Rgb {
-    srgb(0.02, 0.022, 0.035)
+pub fn bottom() -> Light {
+    light(0.02, 0.03, 0.10, 0.06)
 }
 
-/// Grid lines and axes.
-pub fn grid() -> Rgb {
-    srgb(0.22, 0.24, 0.30)
+/// Grid lines, frames and axes: the lattice's blue.
+pub fn grid() -> Light {
+    light(0.3, 0.42, 1.0, 0.14)
 }
 
-/// Text and light strokes.
-pub fn ink() -> Rgb {
-    srgb(0.88, 0.89, 0.92)
+/// Text and light strokes: the HUD's blue-white.
+pub fn ink() -> Light {
+    light(0.75, 0.85, 1.0, 1.4)
 }
 
 /// Orange.
-pub fn orange() -> Rgb {
-    srgb(0.90, 0.62, 0.0)
+pub fn orange() -> Light {
+    light(1.0, 0.42, 0.08, 1.8)
 }
 
-/// Sky blue.
-pub fn sky() -> Rgb {
-    srgb(0.34, 0.71, 0.91)
+/// Cyan.
+pub fn sky() -> Light {
+    light(0.15, 0.85, 1.0, 1.7)
 }
 
-/// Bluish green.
-pub fn green() -> Rgb {
-    srgb(0.0, 0.62, 0.45)
+/// Teal green.
+pub fn green() -> Light {
+    light(0.1, 1.0, 0.62, 1.6)
 }
 
 /// Yellow.
-pub fn yellow() -> Rgb {
-    srgb(0.94, 0.89, 0.26)
+pub fn yellow() -> Light {
+    light(1.0, 0.86, 0.1, 1.7)
 }
 
 /// Blue.
-pub fn blue() -> Rgb {
-    srgb(0.0, 0.45, 0.70)
+pub fn blue() -> Light {
+    light(0.32, 0.48, 1.0, 1.9)
 }
 
-/// Vermillion.
-pub fn red() -> Rgb {
-    srgb(0.84, 0.37, 0.0)
+/// Red.
+pub fn red() -> Light {
+    light(1.0, 0.14, 0.18, 1.9)
 }
 
-/// Reddish purple.
-pub fn purple() -> Rgb {
-    srgb(0.80, 0.47, 0.65)
+/// Magenta.
+pub fn purple() -> Light {
+    light(1.0, 0.2, 0.75, 1.8)
 }
 
 /// The accents in order, for series.
-pub fn series(i: usize) -> Rgb {
+pub fn series(i: usize) -> Light {
     [orange, sky, green, yellow, blue, red, purple][i % 7]()
 }

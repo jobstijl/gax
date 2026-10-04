@@ -30,8 +30,9 @@ gax::algebra! {
     versor Even = [1, exy, exz, exw, exe, eyz, eyw, eye, ezw, eze, ewe, eyzwe, exzwe, exywe, exyze, exyzw];
 }
 
-use gax_numga_examples::canvas::mix;
-use gax_numga_examples::{Align, Anim, Canvas, Rgb, backdrop, palette, run};
+use gax_light::{Light, fade, light, mix};
+use gax_numga_examples::points::box_map;
+use gax_numga_examples::{Align, Anim, Canvas, Point2, backdrop, palette, run};
 
 // numga's scenes in full: the tests check every one, the animation shows a selection.
 #[cfg_attr(not(test), allow(dead_code))]
@@ -781,12 +782,12 @@ use cyclides::*;
 
 /// numga's headlight colours, in linear light: teal for a single surface, one colour per body
 /// in the flat scenes.
-const TEAL: Rgb = [0.055, 0.42, 0.39];
-const BODIES: [Rgb; 4] = [
+const TEAL: Light = light(0.055, 0.42, 0.39, 1.0);
+const BODIES: [Light; 4] = [
     TEAL,
-    [0.65, 0.38, 0.08],
-    [0.35, 0.13, 0.40],
-    [0.12, 0.35, 0.60],
+    light(0.65, 0.38, 0.08, 1.0),
+    light(0.35, 0.13, 0.40, 1.0),
+    light(0.12, 0.35, 0.60, 1.0),
 ];
 
 /// Seconds per shot.
@@ -919,10 +920,11 @@ fn flat_at(index: usize, s: f64) -> (Vec<Quadric>, f64) {
 }
 
 /// The surface colour lit from the eye, numga's headlight: `facing` is the cosine between the
-/// ray and the normal.
-fn headlight(facing: f64, colour: Rgb) -> Rgb {
+/// ray and the normal. The diffuse light and a white glint where the surface faces the eye
+/// add up.
+fn headlight(facing: f64, colour: Light) -> Light {
     let f = facing.clamp(0.0, 1.0) as f32;
-    colour.map(|c| (c * (0.2 + 0.8 * f) + 0.12 * f.powi(16)).min(1.0))
+    fade(colour, 0.2 + 0.8 * f) + light(1.0, 1.0, 1.0, 0.12 * f.powi(16))
 }
 
 fn draw(c: &mut Canvas, t: f32) {
@@ -942,13 +944,18 @@ fn draw(c: &mut Canvas, t: f32) {
         .into_iter()
         .map(|q| Traced::new(q, &rays))
         .collect();
-    let (w, h) = (c.width as f64, c.height as f64);
+    let screen = c.rect();
     let single = matches!(shot.scene, Scene::Built(_));
-    c.shade(1, |px, py| {
-        // numga's pinhole sensor: u across from -1 to 1, v up, scaled by the aspect.
-        let u = 2.0 * f64::from(px) / w - 1.0;
-        let v = (1.0 - 2.0 * f64::from(py) / h) * h / w;
-        let d = direction(u, v, fov);
+    // numga's pinhole sensor: the canvas onto `u` across from -1 to 1, `v` up, scaled by the
+    // aspect.
+    let aspect = screen.height() / screen.width();
+    let sensor = box_map(
+        [screen.lo, screen.hi],
+        [Point2::xy(-1.0, aspect), Point2::xy(1.0, -aspect)],
+    );
+    c.shade(1, |q: Point2| {
+        let [u, v] = sensor.of(q).to_euclidean();
+        let d = direction(f64::from(u), f64::from(v), fov);
         let (k, hit) = traced
             .iter()
             .enumerate()
@@ -966,31 +973,28 @@ fn draw(c: &mut Canvas, t: f32) {
         };
         Some(headlight(facing, colour))
     });
-    // A short fade between shots.
+    // A short fade between shots: the backdrop's bottom drawn over everything.
     let edge = local.min(SHOT - local);
-    let fade = (1.0 - edge / 0.25).clamp(0.0, 1.0) as f32;
-    if fade > 0.0 {
-        let (wf, hf) = (w as f32, h as f32);
-        c.fill(
-            &[[0.0, 0.0], [wf, 0.0], [wf, hf], [0.0, hf]],
-            palette::bottom(),
-            fade,
-        );
+    let veil = (1.0 - edge / 0.25).clamp(0.0, 1.0) as f32;
+    if veil > 0.0 {
+        let corners = [
+            screen.lo,
+            screen.top_right(),
+            screen.hi,
+            screen.bottom_left(),
+        ];
+        c.fill(&corners, palette::bottom(), veil);
     }
     let title = format!(
         "DUPIN CYCLIDES ON THE 3-SPHERE: {}",
         shot.title.to_uppercase()
     );
     gax_numga_examples::caption(c, &title, shot.note);
-    let (wf, hf) = (w as f32, h as f32);
-    c.text(
-        &format!("{}/{}", index + 1, list.len()),
-        wf - 8.0,
-        hf - 8.0,
-        10.0,
-        mix(palette::ink(), palette::bottom(), 0.4),
-        Align::Right,
-    );
+    // The shot's number in the bottom right corner.
+    let number = format!("{}/{}", index + 1, list.len());
+    let corner = screen.hi + Point2::direction(-8.0, -8.0);
+    let dim = mix(palette::ink(), palette::bottom(), 0.4);
+    c.text(&number, corner, 10.0, dim, Align::Right);
 }
 
 fn main() {
@@ -1156,6 +1160,6 @@ mod tests {
             1.5,
             &mut draw,
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

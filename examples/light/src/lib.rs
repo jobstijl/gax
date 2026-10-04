@@ -53,6 +53,12 @@ pub fn srgb(r: f32, g: f32, b: f32, i: f32) -> Light {
     light(linear(r), linear(g), linear(b), i)
 }
 
+/// The light of a colour given as an sRGB hex code `0xRRGGBB`, at intensity `i`.
+pub fn hex(code: u32, i: f32) -> Light {
+    let [r, g, b] = [16, 8, 0].map(|s| ((code >> s) & 0xff) as f32 / 255.0);
+    srgb(r, g, b, i)
+}
+
 /// No light.
 pub const DARK: Light = Point::new(0.0, 0.0, 0.0, 0.0);
 

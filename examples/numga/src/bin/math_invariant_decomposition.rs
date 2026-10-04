@@ -30,9 +30,11 @@
 //! first three directions (left, the view turning); seen in each of the three planes it turns on
 //! a circle, at that plane's rate.
 
+use gax_light::{fade, mix};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Point3, Rgb, Scene3, backdrop, canvas,
-    caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN3, Point2, Rect, backdrop,
+    caption, palette, run,
 };
 
 gax::algebra! {
@@ -253,15 +255,15 @@ const SEED: u64 = 0;
 const SAMPLES: usize = 600;
 
 /// A point in one of the planes, in the plane's own frame.
-type Flat = gax::vga2d::Vector<(), f64>;
+type Flat = gax::pga2d::Point<(), f64>;
 /// A point of the first three directions.
-type Space = gax::vga3d::Vector<(), f64>;
+type Space = gax::pga3d::Point<(), f64>;
 
-fn plane_colour(k: usize) -> Rgb {
+fn plane_colour(k: usize) -> Light {
     [palette::red(), palette::sky(), palette::green()][k]
 }
 
-/// The orbit at the sample times, and its projections into each plane as vectors of the plane's
+/// The orbit at the sample times, and its projections into each plane as points of the plane's
 /// own frame: along the direction of the first projected point, and a quarter turn on from it.
 fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
     let points: Vec<V> = (0..SAMPLES)
@@ -278,7 +280,7 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
             .iter()
             .map(|p| {
                 let q = projected(*p, ex.parts)[k];
-                Flat::new((q | across).s(), (q | along).s())
+                Flat::xy((q | across).s(), (q | along).s())
             })
             .collect()
     });
@@ -287,79 +289,69 @@ fn tracks(ex: &Example) -> (Vec<V>, [Vec<Flat>; 3]) {
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
+    let down = Point2::direction(0.0, 1.0);
     let ex = example(SEED);
     let (points, flat) = tracks(&ex);
     let index = ((t / SECONDS * SAMPLES as f32) as usize).min(SAMPLES - 1);
 
     // The tangle in the first three directions.
-    let wide = (w * 0.4) as usize;
+    let left = Rect::new(0.0, 0.0, 0.4 * w, h);
     let cam = Camera::orbit(
-        wide,
-        c.height,
-        Point3::xyz(0.0, 0.0, 0.0),
+        left.width() as usize,
+        left.height() as usize,
+        ORIGIN3,
         6.5,
         -0.9 + core::f32::consts::TAU * t / SECONDS,
         0.45,
         Lens::Perspective(0.42),
     );
-    let mut scene = Scene3::new(cam);
     // The orbit's shadow in the first three directions.
     let path: Vec<Space> = points
         .iter()
-        .map(|p| Space::new(p.c[0], p.c[1], p.c[2]))
+        .map(|p| Space::xyz(p.c[0], p.c[1], p.c[2]))
         .collect();
-    scene.polyline(&path, 0.8, palette::grid(), 0.9);
-    scene.polyline(&path[..=index], 1.6, palette::purple(), 1.0);
-    scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
-    scene.draw(c);
-    c.text(
-        "X, Y AND Z",
-        w * 0.2,
-        h * 0.88,
-        12.0,
-        palette::ink(),
-        Align::Center,
-    );
+    panel3(c, left, cam, |scene| {
+        scene.polyline(&path, 0.8, fade(palette::grid(), 0.9));
+        scene.polyline(&path[..=index], 1.6, palette::purple());
+        scene.dot(path[index], Marker::Dot, 9.0, palette::purple());
+    });
+    let label = Point2::xy(0.2 * w, 0.88 * h);
+    c.text("X, Y AND Z", label, 12.0, palette::ink(), Align::Center);
 
-    // Each plane: a circle at the plane's own rate.
+    // Each plane: a circle at the plane's own rate, in a square panel of its own.
+    let side = 0.18 * w;
+    let centre = Flat::xy(0.0, 0.0);
     for (k, track) in flat.iter().enumerate() {
-        let x0 = w * 0.42 + k as f32 * w * 0.19;
-        let rect = plot::inset(
-            [x0, h * 0.25, x0 + w * 0.18, h * 0.25 + w * 0.18],
-            4.0,
-            4.0,
-            4.0,
-            4.0,
-        );
+        let lo = Point2::xy(0.42 * w + k as f32 * 0.19 * w, 0.25 * h);
+        let rect = Rect {
+            lo,
+            hi: lo + Point2::direction(side, side),
+        }
+        .inset(4.0, 4.0, 4.0, 4.0);
         // The circle's radius, with a margin.
-        let extent = (track.iter().fold(0.0f64, |m, p| m.max(p.norm())) * 1.2) as f32;
-        let ax = Axes::equal(rect, Point2::xy(0.0, 0.0), extent);
-        ax.polyline(c, track, 0.9, palette::grid(), 1.0);
-        ax.polyline(c, &track[..=index], 1.8, plane_colour(k), 1.0);
-        ax.scatter(
-            c,
-            &track[index..=index],
-            Marker::Dot,
-            9.0,
-            plane_colour(k),
-            1.0,
-        );
-        let rate = (-ex.squares[k]).sqrt();
+        let radius = track
+            .iter()
+            .fold(0.0f64, |m, p| m.max((centre & *p).norm()));
+        let extent = (radius * 1.2) as f32;
+        let ax = Axes::equal(rect, centre, extent);
+        ax.polyline(c, track, 0.9, palette::grid());
+        ax.polyline(c, &track[..=index], 1.8, plane_colour(k));
+        ax.scatter(c, &track[index..=index], Marker::Dot, 9.0, plane_colour(k));
+        // The plane's rate: the norm of its part, whose square is minus the rate's.
+        let rate = ex.parts[k].norm();
+        let name = format!("PLANE {}", k + 1);
+        let above = Point2::xy(0.0, extent * 1.15);
+        ax.text(c, above, &name, 12.0, palette::ink(), Align::Center);
+        let tone = mix(plane_colour(k), palette::ink(), 0.4);
+        let below = Point2::xy(0.0, -extent * 1.3);
         ax.text(
             c,
-            Point2::xy(0.0, extent * 1.15),
-            &format!("PLANE {}", k + 1),
-            12.0,
-            palette::ink(),
-            Align::Center,
-        );
-        ax.text(
-            c,
-            Point2::xy(0.0, -extent * 1.3),
+            below,
             &format!("RATE {rate:.2}"),
             10.0,
-            canvas::mix(plane_colour(k), palette::ink(), 0.4),
+            tone,
             Align::Center,
         );
     }
@@ -381,15 +373,10 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         format!("PLACED PLANES SIMPLE, P ^ P: {simple:.0E}"),
     ];
+    let first = Point2::xy(0.43 * w, 0.78 * h);
     for (k, line) in lines.iter().enumerate() {
-        c.text(
-            line,
-            w * 0.43,
-            h * 0.78 + k as f32 * h * 0.04,
-            10.0,
-            palette::grid(),
-            Align::Left,
-        );
+        let at = first + down.gp(k as f32 * 0.04 * h);
+        c.text(line, at, 10.0, palette::grid(), Align::Left);
     }
     caption(
         c,

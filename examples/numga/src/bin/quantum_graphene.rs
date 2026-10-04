@@ -19,11 +19,11 @@
 //! loops of every radius is plotted for four gaps.
 
 use gax::vga3d::Vector;
-use gax_numga_examples::canvas::{mix, scale};
+use gax_light::{blend, fade};
 use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, ORIGIN3, Point2, Rgb, Scene3, backdrop,
-    caption, colormap, from_above, palette, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Light, Marker, ORIGIN2, ORIGIN3, Point2, Scene3,
+    backdrop, caption, colormap, from_above, palette, reach3, run,
 };
 use std::sync::OnceLock;
 
@@ -259,6 +259,11 @@ fn on_plot(radius: f64, phase: f64) -> gax::pga2d::Point<(), f64> {
     gax::pga2d::Point::xy(radius, phase)
 }
 
+/// A momentum as a point of the drawn momentum plane.
+fn on_map(k: V) -> Point2 {
+    from_above(reach3(k))
+}
+
 /// The two bands over the momentum plane, energies scaled down to sit beside the momenta.
 fn draw_bands(s: &mut Scene3, b: &Bands) {
     let n = b.count;
@@ -280,14 +285,15 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
                 let (i, j) = node(u, v);
                 // The momentum, raised by the band's energy.
                 let e = b.values[j * n + i][band];
-                b.momenta[j * n + i] + z() * (e * squash)
+                reach3(b.momenta[j * n + i] + z() * (e * squash))
             },
             n - 1,
             n - 1,
             |u, v| {
                 let (i, j) = node(u, v);
+                // Dimmer than the strokes: a surface lit at a stroke's intensity washes out.
                 let e = b.values[j * n + i][band].abs() as f32;
-                mix(high, low, e / top)
+                fade(blend(high, low, e / top), 0.25)
             },
             0.95,
             None,
@@ -298,49 +304,43 @@ fn draw_bands(s: &mut Scene3, b: &Bands) {
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
     let d = data();
-    let (wf, hf) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let down = Point2::direction(0.0, 1.0);
     let tau = core::f64::consts::TAU;
     let phase_t = f64::from(t / SECONDS);
     // The loop's radius grows and shrinks; a marker runs round it six times per cycle.
     let radius = 0.01 + 0.59 * (0.5 - 0.5 * (tau * phase_t).cos());
     let around = (6.0 * phase_t).fract();
-    let top = hf * 0.13;
 
     // The bands, turning.
-    let left = wf * 0.42;
+    let bands_rect = screen.part(0.0, 0.13, 0.42, 1.0);
     let cam = Camera::orbit(
-        left as usize,
-        (hf - top) as usize,
+        bands_rect.width() as usize,
+        bands_rect.height() as usize,
         ORIGIN3,
         23.0,
         (tau * phase_t) as f32 - 1.05,
         0.42,
         Lens::Perspective(0.62),
     );
-    panel3(c, [0.0, top, left, hf], cam, |s| draw_bands(s, &d.bands));
-    c.text(
-        "THE TWO BANDS: CONES WHERE THEY MEET",
-        wf * 0.21,
-        top + 4.0,
-        10.0,
-        palette::ink(),
-        Align::Center,
-    );
+    panel3(c, bands_rect, cam, |s| draw_bands(s, &d.bands));
+    let title = bands_rect.top_middle() + down.gp(4.0);
+    let text = "THE TWO BANDS: CONES WHERE THEY MEET";
+    c.text(text, title, 10.0, palette::ink(), Align::Center);
 
     // The field over the momentum plane, with the loop about K.
     let [valley_k, _] = valleys();
-    let map_rect = [wf * 0.46, hf * 0.16, wf * 0.72, hf * 0.56];
-    let ax = Axes::equal(map_rect, Point2::xy(0.0, 0.0), 3.2);
+    let ax = Axes::equal(screen.part(0.46, 0.16, 0.72, 0.56), ORIGIN2, 3.2);
     ax.image(c, 1, |p| {
         let f = pseudospin(momentum(p), 0.0);
         let len = f.norm() as f32;
-        Some(scale(colormap::viridis(len / (3.0 * HOPPING as f32)), 0.75))
+        Some(fade(colormap::viridis(len / (3.0 * HOPPING as f32)), 0.75))
     });
     // The Brillouin zone: the hexagon through the six valleys, K turned by sixths of a turn.
     let hexagon: Vec<_> = (0..=6)
-        .map(|k| from_above(turn(tau * k as f64 / 6.0) >> valley_k))
+        .map(|k| on_map(turn(tau * k as f64 / 6.0) >> valley_k))
         .collect();
-    ax.polyline(c, &hexagon, 1.0, palette::ink(), 0.6);
+    ax.polyline(c, &hexagon, 1.0, fade(palette::ink(), 0.6));
     // The upper band's pseudospin with the gap: in the plane it turns once around each corner,
     // and near the corners it tilts out of the plane (red up, blue down), oppositely in K and K'.
     let step = 0.8f32;
@@ -349,38 +349,19 @@ fn draw(c: &mut Canvas, t: f32) {
             let k = momentum(Point2::xy(i as f32 * step, j as f32 * step));
             let d = upper_pseudospin(k, GAPS[SHOWN]);
             let half = d * 0.3;
-            ax.arrow(
-                c,
-                from_above(k - half),
-                from_above(k + half),
-                1.2,
-                5.0,
-                colormap::coolwarm(0.5 + 0.5 * d.e3() as f32),
-            );
+            let tone = colormap::coolwarm(0.5 + 0.5 * d.e3() as f32);
+            ax.arrow(c, on_map(k - half), on_map(k + half), 1.2, 5.0, tone);
         }
     }
     let ring: Vec<_> = circle(64)
         .iter()
-        .map(|u| from_above(valley_k + *u * radius))
+        .map(|u| on_map(valley_k + *u * radius))
         .collect();
-    ax.polyline(c, &ring, 2.0, palette::orange(), 1.0);
+    ax.polyline(c, &ring, 2.0, palette::orange());
     let here = valley_k + (turn(tau * around) >> x()) * radius;
-    ax.scatter(
-        c,
-        &[from_above(here)],
-        Marker::Dot,
-        7.0,
-        palette::orange(),
-        1.0,
-    );
-    ax.text(
-        c,
-        from_above(valley_k + Vector::new(0.25, 0.2, 0.0)),
-        "K",
-        12.0,
-        palette::ink(),
-        Align::Left,
-    );
+    ax.scatter(c, &[on_map(here)], Marker::Dot, 7.0, palette::orange());
+    let label = on_map(valley_k + Vector::new(0.25, 0.2, 0.0));
+    ax.text(c, label, "K", 12.0, palette::ink(), Align::Left);
     ax.frame(c, "THE PSEUDOSPIN FIELD", "MOMENTUM X (1/A)", "");
 
     // The pseudospin met around the loop, on the sphere, with a gap; and a frame carried along.
@@ -388,28 +369,29 @@ fn draw(c: &mut Canvas, t: f32) {
     let gap = GAPS[SHOWN];
     let dirs = loop_directions(valley_k, radius, gap, count);
     let rotors = transport(&dirs);
-    let at = ((around * count as f64) as usize).min(count - 1);
+    let now = ((around * count as f64) as usize).min(count - 1);
     let start = dirs[0];
     // A frame vector perpendicular to the start: `(z ^ d) d` is z less its part along d.
     let first_frame = ((z() ^ start) * start)
         .cast::<Vector>()
         .normalized()
         .into_inner();
-    let carried = if at == 0 {
+    let carried = if now == 0 {
         first_frame
     } else {
-        rotors[at - 1] >> first_frame
+        rotors[now - 1] >> first_frame
     };
-    let current = dirs[at];
+    let current = dirs[now];
     let holonomy = *rotors.last().expect("a closed loop");
     let gamma = phase(holonomy, start) / core::f64::consts::PI;
-    // A small loop sees a cone of slope VELOCITY: its phase in closed form.
-    let v_r = VELOCITY * radius;
-    let cone = 1.0 - gap / (gap * gap + v_r * v_r).sqrt();
-    let sphere_rect = [wf * 0.74, top, wf, hf * 0.6];
+    // A small loop sees a cone of slope VELOCITY, a field of the gap along z and `VELOCITY r`
+    // in the plane: its phase in closed form.
+    let field = z() * gap + x() * (VELOCITY * radius);
+    let cone = 1.0 - gap / field.norm();
+    let sphere_rect = screen.part(0.74, 0.13, 1.0, 0.6);
     let cam = Camera::orbit(
-        (sphere_rect[2] - sphere_rect[0]) as usize,
-        (sphere_rect[3] - sphere_rect[1]) as usize,
+        sphere_rect.width() as usize,
+        sphere_rect.height() as usize,
         ORIGIN3,
         4.6,
         0.6 + 0.3 * (tau * phase_t).sin() as f32,
@@ -417,43 +399,35 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.6),
     );
     panel3(c, sphere_rect, cam, |s| {
-        s.sphere_wire(ORIGIN3, 1.0, 16, palette::grid(), 0.5);
-        s.polyline(&dirs, 2.0, palette::orange(), 1.0);
+        s.sphere_wire(ORIGIN3, 1.0, 16, fade(palette::grid(), 0.5));
+        let path: Vec<_> = dirs.iter().map(|d| reach3(*d)).collect();
+        s.polyline(&path, 2.0, palette::orange());
         s.arrow(ORIGIN3, current, 2.5, 9.0, palette::orange());
-        s.arrow(start, first_frame * 0.45, 1.5, 6.0, palette::grid());
-        s.arrow(current, carried * 0.45, 2.0, 7.0, palette::green());
+        s.arrow(reach3(start), first_frame * 0.45, 1.5, 6.0, palette::grid());
+        s.arrow(reach3(current), carried * 0.45, 2.0, 7.0, palette::green());
     });
+    let title = sphere_rect.top_middle() + down.gp(4.0);
     c.text(
         "PSEUDOSPIN ON THE LOOP",
-        wf * 0.87,
-        top + 4.0,
+        title,
         10.0,
         palette::ink(),
         Align::Center,
     );
+    let note = sphere_rect.bottom_middle() + down.gp(2.0);
+    let text = format!("PHASE {gamma:+.3} PI");
+    c.text(&text, note, 10.0, palette::green(), Align::Center);
+    let text = format!("GAP {gap:.1} EV, CONE {cone:.3} PI");
     c.text(
-        &format!("PHASE {gamma:+.3} PI"),
-        wf * 0.87,
-        hf * 0.6 + 2.0,
-        10.0,
-        palette::green(),
-        Align::Center,
-    );
-    c.text(
-        &format!("GAP {gap:.1} EV, CONE {cone:.3} PI"),
-        wf * 0.87,
-        hf * 0.6 + 16.0,
+        &text,
+        note + down.gp(14.0),
         9.0,
         palette::green(),
         Align::Center,
     );
 
     // The Berry phase against the loop's radius, per gap; solid K, dashed K'.
-    let ax = Axes::new(
-        [wf * 0.49, hf * 0.7, wf * 0.97, hf * 0.9],
-        [0.0, 0.6],
-        [-1.15, 1.15],
-    );
+    let ax = Axes::new(screen.part(0.49, 0.7, 0.97, 0.9), [0.0, 0.6], [-1.15, 1.15]);
     ax.frame(c, "", "LOOP RADIUS (1/A)", "BERRY PHASE (PI)");
     ax.line(
         c,
@@ -461,9 +435,8 @@ fn draw(c: &mut Canvas, t: f32) {
         on_plot(0.6, 0.0),
         1.0,
         palette::grid(),
-        1.0,
     );
-    let mut legend: Vec<(String, Rgb)> = Vec::new();
+    let mut legend: Vec<(String, Light)> = Vec::new();
     for (g, pair) in d.phases.iter().enumerate() {
         let colour = palette::series(g + 1);
         for (valley, row) in pair.iter().enumerate() {
@@ -475,30 +448,24 @@ fn draw(c: &mut Canvas, t: f32) {
                 .collect();
             let width = if g == SHOWN { 2.2 } else { 1.3 };
             if valley == 0 {
-                ax.polyline(c, &pts, width, colour, 1.0);
+                ax.polyline(c, &pts, width, colour);
             } else {
-                ax.dashed(c, &pts, width, 5.0, colour, 1.0);
+                ax.dashed(c, &pts, width, 5.0, colour);
             }
         }
         legend.push((format!("GAP {:.1}", GAPS[g]), colour));
     }
+    let cursor = fade(palette::orange(), 0.8);
     ax.line(
         c,
         on_plot(radius, -1.15),
         on_plot(radius, 1.15),
         1.0,
-        palette::orange(),
-        0.8,
+        cursor,
     );
-    ax.scatter(
-        c,
-        &[on_plot(radius, gamma)],
-        Marker::Dot,
-        7.0,
-        palette::series(SHOWN + 1),
-        1.0,
-    );
-    let entries: Vec<(&str, Rgb)> = legend.iter().map(|(s, c)| (s.as_str(), *c)).collect();
+    let shown = palette::series(SHOWN + 1);
+    ax.scatter(c, &[on_plot(radius, gamma)], Marker::Dot, 7.0, shown);
+    let entries: Vec<(&str, Light)> = legend.iter().map(|(s, c)| (s.as_str(), *c)).collect();
     ax.legend(c, &entries);
     caption(
         c,
@@ -507,10 +474,11 @@ fn draw(c: &mut Canvas, t: f32) {
     );
 }
 
-/// The momentum at a point of the drawn momentum plane.
+/// The momentum at a point of the drawn momentum plane: the point's displacement from the
+/// origin.
 fn momentum(p: Point2) -> V {
-    let [x, y] = p.map_coefs(f64::from).to_euclidean();
-    Vector::new(x, y, 0.0)
+    let d = p.unitized() - ORIGIN2;
+    Vector::new(f64::from(d.e20()), f64::from(d.e01()), 0.0)
 }
 
 fn main() {
@@ -641,7 +609,7 @@ mod tests {
         let anim = gax_numga_examples::Anim::new("t", super::SECONDS).size(480, 270);
         let a = gax_numga_examples::app::frame(&anim, 0.5, &mut draw);
         let b = gax_numga_examples::app::frame(&anim, 4.0, &mut draw);
-        assert!(a.mean()[0] > 0.0);
+        assert!(gax_light::luma(a.mean()) > 0.0);
         assert!(a.mean() != b.mean());
     }
 }

@@ -17,8 +17,11 @@
 mod scenegraph;
 
 use gax::pga3d::Point;
-use gax_numga_examples::canvas::{mix, scale, srgb};
-use gax_numga_examples::{Align, Anim, Canvas, Rgb, backdrop, caption, palette, run};
+use gax_light::{fade, light, mix, srgb};
+use gax_numga_examples::points::box_map;
+use gax_numga_examples::{
+    Align, Anim, Canvas, Light, Point2, Pos2, Rect, backdrop, caption, palette, run,
+};
 
 mod manipulability {
     use super::scenegraph::{self as arm, L, P, Pl, PointMap};
@@ -152,7 +155,10 @@ mod render {
     use super::manipulability::Quadric;
     use super::scenegraph::{M, P, Pl, axis};
     use gax::pga3d::{Motor, Plane, Point};
-    use gax_numga_examples::Rgb;
+    use gax_light::{Light, fade, light, mix};
+
+    /// A point of the view's screen plane, its offsets from the centre.
+    pub type Screen = gax::pga2d::Point<(), f64>;
 
     /// An orthographic view: its frame (the view's `x` axis towards the viewer, `y` to the
     /// screen's right and `z` up, from its centre), half width, and the plane facing the lamp.
@@ -179,19 +185,20 @@ mod render {
     }
 
     impl View {
-        /// The ray at screen offsets `(u, v)` from the centre: its origin far out towards the
-        /// viewer, and its heading.
-        pub fn ray(&self, u: f64, v: f64) -> (P, P) {
+        /// The ray through a point of the screen plane: its origin far out towards the viewer,
+        /// and its heading.
+        pub fn ray(&self, at: Screen) -> (P, P) {
+            let [u, v] = at.to_euclidean();
             (
                 self.frame >> Point::xyz(20.0 * self.extent, u, v),
                 self.frame >> Point::direction(-1.0, 0.0, 0.0),
             )
         }
 
-        /// The screen offsets of a world point.
-        pub fn screen(&self, p: P) -> [f64; 2] {
+        /// The point of the screen plane a world point is seen at.
+        pub fn screen(&self, p: P) -> Screen {
             let [_, u, v] = (self.frame << p).to_euclidean();
-            [u, v]
+            Screen::xy(u, v)
         }
     }
 
@@ -265,21 +272,20 @@ mod render {
     /// first. `None` where the ray meets nothing.
     pub fn shade(
         boxes: &[BoxShape],
-        colours: &[Rgb],
+        colours: &[Light],
         quadric: Quadric,
-        colour: Rgb,
+        colour: Light,
         view: &View,
-        u: f64,
-        v: f64,
-    ) -> Option<Rgb> {
-        let (origin, heading) = view.ray(u, v);
-        let mut nearest: Option<(f64, Rgb)> = None;
+        at: Screen,
+    ) -> Option<Light> {
+        let (origin, heading) = view.ray(at);
+        let mut nearest: Option<(f64, Light)> = None;
         for (shape, col) in boxes.iter().zip(colours) {
             if let Some((t, n)) = shape.hit(origin, heading)
                 && nearest.is_none_or(|(best, _)| t < best)
             {
                 let k = lit(n, view.lamp, 0.35) as f32;
-                nearest = Some((t, col.map(|x| x * k)));
+                nearest = Some((t, fade(*col, k)));
             }
         }
         // The floor `z = 0`, tiled within 2.4 of the base.
@@ -290,7 +296,7 @@ mod render {
             if x.abs() < 2.4 && y.abs() < 2.4 {
                 let odd = ((x / 0.4).floor() + (y / 0.4).floor()).rem_euclid(2.0) > 0.5;
                 let g = if odd { 0.03 } else { 0.045 };
-                nearest = Some((t, [g, g * 1.05, g * 1.2]));
+                nearest = Some((t, light(0.3, 0.42, 1.0, g)));
             }
         }
         let over = quadric_hit(quadric, origin, heading)
@@ -302,9 +308,7 @@ mod render {
             (behind, Some((_, n))) => {
                 let k = lit(n, view.lamp, 0.45) as f32;
                 let base = behind.map_or(super::PANEL, |(_, c)| c);
-                Some(core::array::from_fn(|i| {
-                    (1.0 - ALPHA) * base[i] + ALPHA * colour[i] * k
-                }))
+                Some(mix(base, fade(colour, k), ALPHA))
             }
         }
     }
@@ -313,8 +317,10 @@ mod render {
 use manipulability::*;
 
 const SECONDS: f32 = 8.0;
-/// The panels' backdrop.
-const PANEL: Rgb = [0.012, 0.014, 0.022];
+/// The panels' backdrop: a faint dark blue.
+const PANEL: Light = light(0.55, 0.64, 1.0, 0.022);
+/// The intensity of the lit surfaces, facing the lamp squarely.
+const SURFACE: f32 = 1.0;
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
@@ -323,13 +329,14 @@ fn draw(c: &mut Canvas, t: f32) {
     let view = render::view(18.0, -60.0, Point::xyz(-0.9, 0.25, 1.3), 2.2);
     let boxes: Vec<render::BoxShape> = pose.bodies.iter().map(|b| render::prepare(*b)).collect();
     let colours = [
-        srgb(0.45, 0.47, 0.52),
-        srgb(0.62, 0.64, 0.70),
-        srgb(0.78, 0.60, 0.30),
-        srgb(0.30, 0.55, 0.62),
-        srgb(0.55, 0.40, 0.60),
+        srgb(0.45, 0.47, 0.52, SURFACE),
+        srgb(0.62, 0.64, 0.70, SURFACE),
+        srgb(0.78, 0.60, 0.30, SURFACE),
+        srgb(0.30, 0.55, 0.62, SURFACE),
+        srgb(0.55, 0.40, 0.60, SURFACE),
     ];
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let top = h * 0.15;
     let side = (h - top - h * 0.06).min((w - w * 0.09) / 2.0);
     let gap = w - 2.0 * side - w * 0.06;
@@ -339,80 +346,49 @@ fn draw(c: &mut Canvas, t: f32) {
             true,
             "VELOCITY ELLIPSOID",
             "TIP SPEEDS AT UNIT JOINT RATES",
-            srgb(0.25, 0.45, 0.85),
+            srgb(0.25, 0.45, 0.85, SURFACE),
         ),
         (
             false,
             "FORCE ELLIPSOID",
             "TIP FORCES AT UNIT JOINT TORQUES",
-            srgb(0.92, 0.55, 0.20),
+            srgb(0.92, 0.55, 0.20, SURFACE),
         ),
     ]
     .into_iter()
     .enumerate()
     {
-        let x0 = w * 0.03 + k as f32 * (side + gap);
-        let rect = [x0, top, x0 + side, top + side];
-        c.fill(
-            &[
-                [rect[0], rect[1]],
-                [rect[2], rect[1]],
-                [rect[2], rect[3]],
-                [rect[0], rect[3]],
-            ],
-            PANEL,
-            1.0,
-        );
-        let q = if velocity { pose.velocity } else { pose.force };
-        let extent = view.extent;
-        let to_screen = move |x: f32, y: f32| {
-            (
-                (f64::from((x - rect[0]) / side) * 2.0 - 1.0) * extent,
-                (1.0 - f64::from((y - rect[1]) / side) * 2.0) * extent,
-            )
+        // The square panel, side by side with the other.
+        let lo = Point2::xy(w * 0.03, top) + Point2::direction(side + gap, 0.0).gp(k as f32);
+        let rect = Rect {
+            lo,
+            hi: lo + Point2::direction(side, side),
         };
+        let corners = [rect.lo, rect.top_right(), rect.hi, rect.bottom_left()];
+        c.fill(&corners, PANEL, 1.0);
+        let q = if velocity { pose.velocity } else { pose.force };
+        // The panel onto the view's screen plane, the square `extent` either way of its centre.
+        let e = view.extent as f32;
+        let to_view = box_map(
+            [rect.bottom_left(), rect.top_right()],
+            [Point2::xy(-e, -e), Point2::xy(e, e)],
+        );
         c.clip(rect);
         let boxes = &boxes;
-        c.shade(2, |x, y| {
-            let (u, v) = to_screen(x, y);
-            render::shade(boxes, &colours, q, colour, &view, u, v)
+        c.shade(2, |p| {
+            let at = to_view.of(p).map_coefs(f64::from);
+            render::shade(boxes, &colours, q, colour, &view, at)
         });
         // The tip.
-        let [u, v] = view.screen(pose.tip);
-        let px = [
-            rect[0] + ((u / extent + 1.0) * 0.5) as f32 * side,
-            rect[1] + ((1.0 - v / extent) * 0.5) as f32 * side,
-        ];
-        c.disk(px, 2.5, palette::ink(), 1.0);
+        let tip = to_view.inverse().of(view.screen(pose.tip).point2());
+        c.disk(tip, 2.5, palette::ink());
         c.unclip();
-        c.polyline(
-            &[
-                [rect[0], rect[1]],
-                [rect[2], rect[1]],
-                [rect[2], rect[3]],
-                [rect[0], rect[3]],
-            ],
-            1.0,
-            palette::grid(),
-            1.0,
-            true,
-        );
-        c.text(
-            title,
-            rect[0] + s * 0.6,
-            rect[1] + s * 1.5,
-            s,
-            mix(colour, palette::ink(), 0.4),
-            Align::Left,
-        );
-        c.text(
-            sub,
-            rect[0] + s * 0.6,
-            rect[1] + s * 2.8,
-            s * 0.75,
-            scale(palette::ink(), 0.6),
-            Align::Left,
-        );
+        c.polyline(&corners, 1.0, palette::grid(), true);
+        let inside = |down: f32| rect.lo + Point2::direction(s * 0.6, s * down);
+        let tone = mix(colour, palette::ink(), 0.4);
+        c.text(title, inside(1.5), s, tone, Align::Left);
+        let faint = fade(palette::ink(), 0.6);
+        c.text(sub, inside(2.8), s * 0.75, faint, Align::Left);
     }
     caption(
         c,
@@ -558,6 +534,6 @@ mod tests {
             0.5,
             &mut draw,
         );
-        assert!(c.mean()[0] > 0.0);
+        assert!(gax_light::luma(c.mean()) > 0.0);
     }
 }

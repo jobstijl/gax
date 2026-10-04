@@ -1,52 +1,56 @@
-//! From world coordinates to pixels: a 2D view (a rectangle of the plane) and a 3D camera whose
-//! pose is a PGA3D motor (`Motor::look_at`), with perspective or parallel projection, and the
-//! ray through each pixel for the ray-traced examples.
+//! From the world to pixels: a 2D view (a rectangle of the plane) and a 3D camera whose pose is a
+//! PGA3D motor (`Motor::look_at`), with perspective or parallel projection, and the ray through
+//! each pixel for the ray-traced examples. Both end in a map of the plane onto the canvas.
 
-use crate::canvas::Px;
-use crate::points::{Point2, Pos2, Pos3};
+use crate::canvas::Rect;
+use crate::points::{Map2, ORIGIN2, ORIGIN3, Point2, Point3, Pos2, Pos3, box_map, from_above};
 use gax::Unit;
-use gax::pga3d::{Motor, Point};
+use gax::pga3d::{Motor, Plane, Point};
 
 /// A rectangle of the plane on the canvas: `centre` in the middle, `half_height` units from the
 /// middle to the top edge, y up.
 #[derive(Clone, Copy, Debug)]
 pub struct View2 {
-    centre: Point2,
+    /// The plane onto the canvas, and back.
+    to_px: Map2,
+    from_px: Map2,
     /// Pixels per world unit.
     pub scale: f32,
-    /// Width and height in pixels.
-    size: Px,
+    /// The world's half width.
+    half_width: f32,
 }
 
 impl View2 {
     /// The view of a `width` x `height` canvas.
     pub fn new(width: usize, height: usize, centre: impl Pos2, half_height: f32) -> View2 {
+        let scale = height as f32 * 0.5 / half_height;
+        let half_width = width as f32 * 0.5 / scale;
+        // The world's top left and bottom right corners onto the canvas's.
+        let centre = centre.point2().unitized();
+        let half = Point2::direction(half_width, -half_height);
+        let canvas = Rect::new(0.0, 0.0, width as f32, height as f32);
+        let to_px = box_map([centre - half, centre + half], [canvas.lo, canvas.hi]);
         View2 {
-            centre: centre.point2().unitized(),
-            scale: height as f32 * 0.5 / half_height,
-            size: [width as f32, height as f32],
+            to_px,
+            from_px: to_px.inverse(),
+            scale,
+            half_width,
         }
     }
 
     /// The pixel of a world point.
-    pub fn px(&self, p: impl Pos2) -> Px {
-        // Its displacement from the centre, in pixels (y down).
-        let d = p.point2().unitized() - self.centre;
-        [
-            self.size[0] * 0.5 + d.e20() * self.scale,
-            self.size[1] * 0.5 - d.e01() * self.scale,
-        ]
+    pub fn px(&self, p: impl Pos2) -> Point2 {
+        self.to_px.of(p.point2())
     }
 
     /// The world point at pixel `q`.
-    pub fn world(&self, q: Px) -> Point2 {
-        let (dx, dy) = (q[0] - self.size[0] * 0.5, self.size[1] * 0.5 - q[1]);
-        self.centre + Point2::direction(dx, dy).gp(self.scale.recip())
+    pub fn world(&self, q: Point2) -> Point2 {
+        self.from_px.of(q).unitized()
     }
 
     /// The world's half width.
     pub fn half_width(&self) -> f32 {
-        self.size[0] * 0.5 / self.scale
+        self.half_width
     }
 }
 
@@ -66,10 +70,8 @@ pub struct Camera {
     pub pose: Unit<Motor<(), f32>>,
     /// The projection.
     pub lens: Lens,
-    /// The viewport's top left corner on the canvas, in pixels.
-    origin: Px,
-    /// Its width and height in pixels.
-    size: Px,
+    /// Where on the canvas it draws.
+    viewport: Rect,
 }
 
 impl Camera {
@@ -88,8 +90,7 @@ impl Camera {
                 Point::direction(0.0, 0.0, 1.0),
             ),
             lens,
-            origin: [0.0, 0.0],
-            size: [width as f32, height as f32],
+            viewport: Rect::new(0.0, 0.0, width as f32, height as f32),
         }
     }
 
@@ -115,12 +116,12 @@ impl Camera {
 
     /// A parallel camera orbiting the origin (see [`Camera::orbit`]) that draws into the canvas
     /// rectangle `view` at `scale` pixels per world unit.
-    pub fn parallel(view: [f32; 4], scale: f32, azimuth: f32, elevation: f32) -> Camera {
-        let height = view[3] - view[1];
+    pub fn parallel(view: Rect, scale: f32, azimuth: f32, elevation: f32) -> Camera {
+        let height = view.height();
         Camera::orbit(
-            (view[2] - view[0]) as usize,
+            view.width() as usize,
             height as usize,
-            Point::xyz(0.0, 0.0, 0.0),
+            ORIGIN3,
             20.0,
             azimuth,
             elevation,
@@ -129,35 +130,45 @@ impl Camera {
         .viewport(view)
     }
 
-    /// The same camera drawing into the pixel rectangle `[x0, y0, x1, y1]` of a larger canvas (a
-    /// panel): its view fills the rectangle, and [`Camera::px`] and [`Camera::ray`] work in the
-    /// canvas's pixels. Pair it with `canvas.clip(rect)` to keep the drawing inside.
-    pub fn viewport(self, rect: [f32; 4]) -> Camera {
+    /// The same camera drawing into `rect` of a larger canvas (a panel): its view fills the
+    /// rectangle, and [`Camera::px`] and [`Camera::ray`] work in the canvas's pixels. Pair it
+    /// with `canvas.clip(rect)` to keep the drawing inside.
+    pub fn viewport(self, rect: Rect) -> Camera {
         Camera {
-            origin: [rect[0], rect[1]],
-            size: [rect[2] - rect[0], rect[3] - rect[1]],
+            viewport: rect,
             ..self
         }
     }
 
-    /// Pixels per unit at unit depth (perspective) or per world unit (parallel).
+    /// Pixels per unit of the image plane: at unit depth (perspective) or per world unit
+    /// (parallel).
     fn focal(&self) -> f32 {
+        let half = 0.5 * self.viewport.height();
         match self.lens {
             Lens::Perspective(fov) => {
                 // The edge of the view: the direction along x turned by half the field of view;
                 // its height over its width is the tangent.
-                let origin = gax::pga2d::Point::xy(0.0, 0.0);
-                let edge = gax::pga2d::Motor::rotation(origin, fov * 0.5)
+                let edge = gax::pga2d::Motor::rotation(ORIGIN2, fov * 0.5)
                     >> gax::pga2d::Point::direction(1.0, 0.0);
-                self.size[1] * 0.5 * edge.e20() / edge.e01()
+                half * edge.e20() / edge.e01()
             }
-            Lens::Parallel(half) => self.size[1] * 0.5 / half,
+            Lens::Parallel(half_height) => half / half_height,
         }
     }
 
-    /// A world point in the camera's frame, which looks along `+z` with `+y` up (so `+x` is to
-    /// the left on screen).
-    pub fn local(&self, p: impl Pos3) -> Point {
+    /// The image plane onto the viewport: its origin to the viewport's centre, `focal` pixels a
+    /// unit, `y` up to down, and `x` mirrored (the frame looks along `+z` with `+y` up, so its
+    /// `+x` is to the left on screen).
+    fn image_to_px(&self) -> Map2 {
+        let (c, f) = (self.viewport.centre(), self.focal());
+        box_map(
+            [ORIGIN2, Point2::xy(1.0, 1.0)],
+            [c, c + Point2::direction(-f, -f)],
+        )
+    }
+
+    /// A world point in the camera's frame.
+    pub fn local(&self, p: impl Pos3) -> Point3 {
         self.pose.reverse() >> p.point3()
     }
 
@@ -166,49 +177,47 @@ impl Camera {
         self.local(p).unitized().e021()
     }
 
-    /// The pixel of a world point, or `None` behind the camera or at infinity.
-    pub fn px(&self, p: impl Pos3) -> Option<Px> {
-        let local = self.local(p);
+    /// Where a camera-frame point lands on the image plane, seen along `z`: for perspective, the
+    /// meet of its ray from the eye with the plane `z = 1`; for parallel, the point itself.
+    /// `None` behind the camera or at infinity.
+    fn image(&self, local: Point3) -> Option<Point2> {
         if local.e123().abs() < 1e-12 {
             return None;
         }
-        let [x, y, z] = local.to_euclidean();
-        // Screen x runs against the frame's x.
-        let x = -x;
-        let f = self.focal();
-        let (sx, sy) = match self.lens {
-            Lens::Perspective(_) if z <= 1e-3 => return None,
-            Lens::Perspective(_) => (x / z, y / z),
-            Lens::Parallel(_) => (x, y),
-        };
-        Some([
-            self.origin[0] + self.size[0] * 0.5 + sx * f,
-            self.origin[1] + self.size[1] * 0.5 - sy * f,
-        ])
+        match self.lens {
+            Lens::Perspective(_) if local.unitized().e021() <= 1e-3 => None,
+            Lens::Perspective(_) => {
+                let screen = Plane::from_normal([0.0, 0.0, 1.0], 1.0);
+                Some(from_above((ORIGIN3 & local) ^ screen))
+            }
+            Lens::Parallel(_) => Some(from_above(local)),
+        }
+    }
+
+    /// The pixel of a world point, or `None` behind the camera or at infinity.
+    pub fn px(&self, p: impl Pos3) -> Option<Point2> {
+        self.image(self.local(p))
+            .map(|i| self.image_to_px().of(i).unitized())
     }
 
     /// The ray through pixel `q`: its origin (a point) and its direction (a unit ideal point).
-    pub fn ray(&self, q: Px) -> (Point<(), f32>, Point<(), f32>) {
-        let f = self.focal();
-        let (sx, sy) = (
-            (q[0] - self.origin[0] - self.size[0] * 0.5) / f,
-            (self.origin[1] + self.size[1] * 0.5 - q[1]) / f,
-        );
+    pub fn ray(&self, q: Point2) -> (Point3, Point3) {
+        let [x, y] = self.image_to_px().inverse().of(q).to_euclidean();
         match self.lens {
             Lens::Perspective(_) => {
-                let d = Point::direction(-sx, sy, 1.0);
+                let d = Point::direction(x, y, 1.0);
                 let dir = self.pose >> d.gp(d.ideal_norm().recip());
-                (self.pose >> Point::xyz(0.0, 0.0, 0.0), dir)
+                (self.eye(), dir)
             }
             Lens::Parallel(_) => (
-                self.pose >> Point::xyz(-sx, sy, 0.0),
+                self.pose >> Point::xyz(x, y, 0.0),
                 self.pose >> Point::direction(0.0, 0.0, 1.0),
             ),
         }
     }
 
     /// The camera's position.
-    pub fn eye(&self) -> Point<(), f32> {
-        self.pose >> Point::xyz(0.0, 0.0, 0.0)
+    pub fn eye(&self) -> Point3 {
+        self.pose >> ORIGIN3
     }
 }

@@ -6,10 +6,9 @@
 //! weight line twice turns the precision into a polarity whose zero locus is the 1σ ellipse.
 //! The animation turns, slides and stretches the cloud and refits it every frame.
 
-use gax::pga2d::Point;
-use gax_numga_examples::canvas::{mix, srgb};
+use gax_light::{Light, blend, fade};
 use gax_numga_examples::{
-    Align, Anim, Axes, Canvas, Marker, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Canvas, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod gaussian {
@@ -88,13 +87,15 @@ mod gaussian {
 
 use gaussian::*;
 
-/// The density's colour: from the backdrop through blue to pale sky blue at the peak.
-fn shade(d: f32) -> gax_numga_examples::Rgb {
+/// The density's colour: from the backdrop through blue to sky blue at the peak, faint enough
+/// for the points and the conic to shine over it.
+fn shade(d: f32) -> Light {
     let d = d.clamp(0.0, 1.0);
+    let (blue, sky) = (fade(palette::blue(), 0.2), fade(palette::sky(), 0.45));
     if d < 0.5 {
-        mix(palette::bottom(), palette::blue(), d * 2.0)
+        blend(palette::bottom(), blue, d * 2.0)
     } else {
-        mix(palette::blue(), palette::sky(), d * 2.0 - 1.0)
+        blend(blue, sky, d * 2.0 - 1.0)
     }
 }
 
@@ -103,28 +104,26 @@ const Y: [f32; 2] = [-5.0, 4.0];
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
     let phase = f64::from(t) / 10.0 * core::f64::consts::TAU;
     let base = cloud(4, 400, [1.5, 0.5]);
     let points = placed(&base, phase);
     let fit = fit(&points);
 
-    let rect = plot::inset([0.0, 0.0, w * 0.86, h], 60.0, 76.0, 10.0, 40.0);
-    // Equal scales: the data box widened to the rectangle's aspect.
+    let screen = c.rect();
+    let rect =
+        Rect::new(0.0, 0.0, screen.width() * 0.86, screen.height()).inset(60.0, 76.0, 10.0, 40.0);
+    // Equal scales about the middle of the data box, widened to the rectangle's aspect.
     let ax = {
-        let (rw, rh) = (rect[2] - rect[0], rect[3] - rect[1]);
-        let half = ((Y[1] - Y[0]) / 2.0).max((X[1] - X[0]) / 2.0 * rh / rw);
-        Axes::equal(
-            rect,
-            Point::xy((X[0] + X[1]) / 2.0, (Y[0] + Y[1]) / 2.0),
-            half,
-        )
+        let half = ((Y[1] - Y[0]) / 2.0).max((X[1] - X[0]) / 2.0 * rect.height() / rect.width());
+        let middle = (Point2::xy(X[0], Y[0]) + Point2::xy(X[1], Y[1])).unitized();
+        Axes::equal(rect, middle, half)
     };
     ax.image(c, 1, |p| {
         let d = fit.density(p.map_coefs(f64::from)) as f32;
         Some(shade(d))
     });
-    ax.scatter(c, &points, Marker::Dot, 3.5, srgb(0.15, 0.21, 0.29), 0.8);
+    let cloud = fade(palette::ink(), 0.35);
+    ax.scatter(c, &points, Marker::Dot, 3.5, cloud);
     ax.contour(
         c,
         |p| fit.level(p.map_coefs(f64::from)) as f32,
@@ -137,35 +136,34 @@ fn draw(c: &mut Canvas, t: f32) {
     ax.legend(
         c,
         &[
-            ("POINT CLOUD", srgb(0.15, 0.21, 0.29)),
+            ("POINT CLOUD", cloud),
             ("1 SIGMA: Q(P) & P = 0", palette::orange()),
         ],
     );
-    // A colour bar for the density.
-    let bar = [w * 0.89, 76.0, w * 0.91, h - 40.0];
+    // A colour bar for the density: the point a fraction `x` across and `f` up the bar.
+    let bar = Rect::new(
+        screen.width() * 0.89,
+        76.0,
+        screen.width() * 0.91,
+        screen.height() - 40.0,
+    );
+    let at =
+        |x: f32, f: f32| bar.bottom_left() + Point2::direction(x * bar.width(), -f * bar.height());
     let steps = 64;
     for i in 0..steps {
         let (a, b) = (i as f32 / steps as f32, (i + 1) as f32 / steps as f32);
-        let y0 = bar[3] - a * (bar[3] - bar[1]);
-        let y1 = bar[3] - b * (bar[3] - bar[1]);
         c.fill(
-            &[[bar[0], y0], [bar[2], y0], [bar[2], y1], [bar[0], y1]],
+            &[at(0.0, a), at(1.0, a), at(1.0, b), at(0.0, b)],
             shade(a),
             1.0,
         );
     }
     for (v, s) in [(0.0, "0"), (0.5, "0.5"), (1.0, "1")] {
-        let y = bar[3] - v * (bar[3] - bar[1]);
-        c.text(s, bar[2] + 6.0, y + 4.0, 11.0, palette::ink(), Align::Left);
+        let label = at(1.0, v) + Point2::direction(6.0, 4.0);
+        c.text(s, label, 11.0, palette::ink(), Align::Left);
     }
-    c.text(
-        "DENSITY",
-        (bar[0] + bar[2]) / 2.0,
-        bar[1] - 8.0,
-        10.0,
-        palette::grid(),
-        Align::Center,
-    );
+    let title = at(0.5, 1.0) + Point2::direction(0.0, -8.0);
+    c.text("DENSITY", title, 10.0, palette::grid(), Align::Center);
     caption(
         c,
         "A GAUSSIAN AND ITS 1 SIGMA CONIC FROM POINT MOMENTS",

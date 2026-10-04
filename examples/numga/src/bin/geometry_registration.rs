@@ -14,9 +14,11 @@
 
 use gax::Unit;
 use gax::pga3d::{Line, Motor, Plane, Point, Rotor, Scalar};
+use gax_light::fade;
 use gax_numga_examples::rng::{Draw, Rng, rng};
+use gax_numga_examples::scene3::panel3;
 use gax_numga_examples::{
-    Align, Anim, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, run,
+    Align, Anim, Camera, Canvas, Lens, Marker, Point2, Rect, backdrop, caption, palette, run,
 };
 
 mod registration {
@@ -144,49 +146,48 @@ mod registration {
 
 use registration::*;
 
-fn panel(c: &mut Canvas, source: &[P], target: &[P], estimate: M, s: f64, az: f32, title: &str) {
-    backdrop(c);
+/// One fit in the rectangle `rect`: the source moved part of the way `s` along the estimated
+/// motion toward the target, seen from azimuth `az`, with the title above and the remaining
+/// distance below.
+#[allow(clippy::too_many_arguments)]
+fn panel(
+    c: &mut Canvas,
+    rect: Rect,
+    source: &[P],
+    target: &[P],
+    estimate: M,
+    s: f64,
+    az: f32,
+    title: &str,
+) {
     let centre = (mean(source) + mean(target)).gp(0.5);
     let cam = Camera::orbit(
-        c.width,
-        c.height,
+        rect.width() as usize,
+        rect.height() as usize,
         centre,
         15.0,
         az,
         0.5,
         Lens::Perspective(0.6),
     );
-    let mut scene = Scene3::new(cam);
-    // The source moved part of the way along the estimated motion.
     let identity = Motor::<(), f64>::translation(0.0, 0.0, 0.0);
     let along = Motor::interpolate(identity, estimate, s);
     let moving: Vec<P> = source.iter().map(|p| along >> *p).collect();
-    for ((p, q), m) in source.iter().zip(target).zip(&moving) {
-        scene.dot(*p, Marker::Dot, 4.0, palette::grid());
-        scene.dot(*q, Marker::Cross, 7.0, palette::sky());
-        scene.seg(*m, *q, 0.8, palette::red(), 0.45);
-        scene.dot(*m, Marker::Dot, 5.0, palette::red());
-    }
-    scene.draw(c);
-    let size = (c.height as f32 / 32.0).clamp(8.0, 13.0);
-    let mid = c.width as f32 * 0.5;
-    c.text(
-        title,
-        mid,
-        c.height as f32 * 0.17,
-        size,
-        palette::ink(),
-        Align::Center,
-    );
+    panel3(c, rect, cam, |scene| {
+        for ((p, q), m) in source.iter().zip(target).zip(&moving) {
+            scene.dot(*p, Marker::Dot, 4.0, palette::grid());
+            scene.dot(*q, Marker::Cross, 7.0, palette::sky());
+            scene.seg(*m, *q, 0.8, fade(palette::red(), 0.45));
+            scene.dot(*m, Marker::Dot, 5.0, palette::red());
+        }
+    });
+    let size = (rect.height() / 32.0).clamp(8.0, 13.0);
+    // The title at a sixth of the way down the middle, the distance near the bottom.
+    let down = |f: f32| rect.top_middle() + Point2::direction(0.0, f * rect.height());
+    c.text(title, down(0.17), size, palette::ink(), Align::Center);
     let rms = (cartesian(&moving, target) / source.len() as f64).sqrt();
-    c.text(
-        &format!("RMS DISTANCE {rms:.4}"),
-        mid,
-        c.height as f32 * 0.94,
-        size,
-        palette::ink(),
-        Align::Center,
-    );
+    let note = format!("RMS DISTANCE {rms:.4}");
+    c.text(&note, down(0.94), size, palette::ink(), Align::Center);
 }
 
 const SECONDS: f32 = 6.0;
@@ -204,11 +205,11 @@ fn draw(c: &mut Canvas, t: f32) {
         ),
         (fit_motor(&source, &target), "ONE-SIDED MOTOR RESIDUAL"),
     ];
-    let w = c.width / 2;
+    backdrop(c);
+    let screen = c.rect();
     for (i, (estimate, title)) in fits.into_iter().enumerate() {
-        let mut sub = Canvas::new(w, c.height);
-        panel(&mut sub, &source, &target, estimate, s, az, title);
-        c.blit(&sub, i * w, 0);
+        let rect = screen.column(i, 2);
+        panel(c, rect, &source, &target, estimate, s, az, title);
     }
     caption(
         c,

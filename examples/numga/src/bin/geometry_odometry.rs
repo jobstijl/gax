@@ -14,10 +14,11 @@
 //! one module per algebra). The animation closes the lap a fifth of the way at a time: in the
 //! plane on the left with each pose's 2σ ellipse, and a short lap in space on the right.
 
-use gax_numga_examples::canvas::mix;
+use gax_light::{fade, mix};
 use gax_numga_examples::rng::{Draw, rng};
 use gax_numga_examples::{
-    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Scene3, backdrop, caption, palette, plot, run,
+    Align, Anim, Axes, Camera, Canvas, Lens, Marker, Point2, Rect, Scene3, backdrop, caption,
+    palette, run,
 };
 use std::sync::OnceLock;
 
@@ -591,7 +592,8 @@ fn between<P: Copy, C: Copy + core::ops::Add<Output = C> + core::ops::Sub<Output
 
 fn draw(c: &mut Canvas, t: f32) {
     backdrop(c);
-    let (w, h) = (c.width as f32, c.height as f32);
+    let screen = c.rect();
+    let (w, h) = (screen.width(), screen.height());
     let (lap, space_lap) = runs();
     let (poses, uncertainty, k) =
         between(&lap.iterates, t, gax::pga2d::Motor::interpolate, |c, f| {
@@ -601,22 +603,26 @@ fn draw(c: &mut Canvas, t: f32) {
     let positions =
         |ps: &[plane::M]| -> Vec<plane::P> { ps.iter().map(|p| plane::position(*p)).collect() };
     let (truth, dead) = (positions(&lap.truth), positions(&lap.dead));
-    let left = plot::inset([0.0, 50.0, w * 0.6, h], 10.0, 10.0, 10.0, 10.0);
-    let ax = Axes::fitting(left, truth.iter().chain(&dead).copied(), 1.15);
-    ax.polyline(c, &truth, 4.0, palette::grid(), 1.0);
-    ax.dashed(c, &dead, 1.5, 5.0, palette::orange(), 0.9);
+    let left = Rect::new(0.0, 50.0, w * 0.6, h);
+    let ax = Axes::fitting(
+        left.inset(10.0, 10.0, 10.0, 10.0),
+        truth.iter().chain(&dead).copied(),
+        1.15,
+    );
+    ax.polyline(c, &truth, 4.0, palette::grid());
+    ax.dashed(c, &dead, 1.5, 5.0, fade(palette::orange(), 0.9));
     for ((p, u), at) in lap.dead.iter().zip(&lap.reckoned).zip(&dead) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.0, palette::orange(), 0.35);
+        ax.polyline(c, &ring, 1.0, fade(palette::orange(), 0.35));
     }
     let likely = positions(&poses);
     for ((p, u), at) in poses.iter().zip(&uncertainty).zip(&likely) {
         let ring = plane::ring(plane::ellipse(*p, *u), *at, 64);
-        ax.polyline(c, &ring, 1.2, palette::sky(), 0.85);
+        ax.polyline(c, &ring, 1.2, fade(palette::sky(), 0.85));
     }
-    ax.polyline(c, &likely, 1.4, palette::sky(), 1.0);
-    ax.scatter(c, &likely, Marker::Dot, 4.0, palette::sky(), 1.0);
-    ax.scatter(c, &truth[..1], Marker::Dot, 9.0, palette::ink(), 1.0);
+    ax.polyline(c, &likely, 1.4, palette::sky());
+    ax.scatter(c, &likely, Marker::Dot, 4.0, palette::sky());
+    ax.scatter(c, &truth[..1], Marker::Dot, 9.0, palette::ink());
     ax.legend(
         c,
         &[
@@ -658,22 +664,22 @@ fn draw(c: &mut Canvas, t: f32) {
         Lens::Perspective(0.8),
     );
     let mut scene = Scene3::new(cam);
-    scene.polyline(&truth, 3.5, palette::grid(), 1.0);
-    scene.polyline(&positions(&space_lap.dead), 1.4, palette::orange(), 0.9);
+    scene.polyline(&truth, 3.5, palette::grid());
+    let dead = positions(&space_lap.dead);
+    scene.polyline(&dead, 1.4, fade(palette::orange(), 0.9));
     let spath = positions(&sposes);
-    scene.polyline(&spath, 1.6, palette::sky(), 1.0);
+    scene.polyline(&spath, 1.6, palette::sky());
     for (p, q) in sposes.iter().zip(&spath) {
         scene.dot(*q, Marker::Dot, 5.0, palette::sky());
         // Each pose's heading, a short arrow along its local x.
         let ahead = *p >> gax::pga3d::Point::xyz(0.25, 0.0, 0.0);
-        scene.seg(*q, ahead, 1.4, palette::yellow(), 0.9);
+        scene.seg(*q, ahead, 1.4, fade(palette::yellow(), 0.9));
     }
     scene.dot(truth[0], Marker::Dot, 8.0, palette::ink());
     scene.draw(&mut sub);
     sub.text(
         "A SHORT LAP IN SPACE (PGA3D)",
-        8.0,
-        16.0,
+        sub.rect().lo + Point2::direction(8.0, 16.0),
         11.0,
         palette::ink(),
         Align::Left,
@@ -686,18 +692,17 @@ fn draw(c: &mut Canvas, t: f32) {
     );
     // The gradient at the iterate the animation is leaving.
     let gradient = plane::max_abs(&lap.problem.gradient(&lap.iterates[k].0));
+    // Two lines in the bottom right corner of the plane's side.
     c.text(
         &format!("GRADIENT {gradient:.1e}"),
-        w * 0.6 - 12.0,
-        h - 32.0,
+        left.hi - Point2::direction(12.0, 32.0),
         12.0,
         palette::grid(),
         Align::Right,
     );
     c.text(
         &format!("STEP {} / {ITERATIONS}, DAMPED TO 1/5", k.min(ITERATIONS)),
-        w * 0.6 - 12.0,
-        h - 14.0,
+        left.hi - Point2::direction(12.0, 14.0),
         12.0,
         palette::ink(),
         Align::Right,
